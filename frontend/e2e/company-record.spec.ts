@@ -144,11 +144,13 @@ test.describe("company record — the glance's page shape", () => {
       const company = await response.json();
       return Boolean(company?.relationship_types?.includes("partner"));
     });
-    await expect(page.locator("[data-testid='co-tabs'] .recordtabs-tab")).toHaveCount(
-      isPartnerAccount ? 8 : 7,
-    );
     await expect(
-      page.locator("[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]"),
+      page.locator("[data-testid='co-tabs'] .recordtabs-tab"),
+    ).toHaveCount(isPartnerAccount ? 8 : 7);
+    await expect(
+      page.locator(
+        "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
+      ),
     ).toHaveCount(1);
   });
 
@@ -222,7 +224,9 @@ test.describe("company record — the glance's page shape", () => {
     await expect(rail).toBeHidden();
 
     await page
-      .locator("[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]")
+      .locator(
+        "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
+      )
       .click();
     await expect(rail).toBeVisible();
 

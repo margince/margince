@@ -8,9 +8,9 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { AGENT_EDGE_STILL, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { LABELS } from "./agentrail-copy";
 import { meFixture } from "./mefixture";
 
 // A mailbox import is the one long run the AI-activity feed cannot carry, so
@@ -184,7 +184,7 @@ describe("a mailbox import", () => {
     // The section's own idle line, once every read has answered.
     await waitFor(() =>
       expect(container.querySelector(".arline")?.textContent).toBe(
-        LABELS.allClear,
+        en["agent.line.allClear"],
       ),
     );
     expect(block(container).getAttribute("data-core-state")).toBe("idle");

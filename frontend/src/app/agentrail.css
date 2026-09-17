@@ -276,14 +276,14 @@
 }
 /* The figure leads, because it is the thing being watched. Baseline INSIDE the
    row while the row itself centres: the money and its scope are one reading and
-   sit on one baseline, and the chevron is a glyph rather than a word. */
+   sit on one baseline, and the chevron is a glyph rather than a word.
+   The TYPE is the row's own (`.t-caption .t-num` on `.arlast`), so nothing here
+   sizes it: this rule places the two readings and nothing else. */
 .arspend {
   display: flex;
   align-items: baseline;
   gap: var(--space-1);
   min-width: 0;
-  font-family: var(--fontFamilyBody);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 /* The figure is never the thing that gets shortened: the scope beside it is. */
@@ -777,7 +777,12 @@
   grid-column: 2;
   white-space: nowrap;
 }
-.arpmoney b {
+/* The figure itself, in the panel's head and on the rail's last line: ONE
+   reading drawn twice, so it is spelled once. Primary ink against the caption
+   ink of the month beside it, and medium rather than the UA's bold — a figure
+   this small in bold reads as a heading. */
+.arpmoney b,
+.arspend b {
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }

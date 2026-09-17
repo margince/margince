@@ -276,7 +276,7 @@ const A_DAYS_WORK = [
 /** The one gesture every panel story starts with. */
 const openThePanel: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
-  await userEvent.click(await canvas.findByRole("button", { name: /expand/i }));
+  await userEvent.click(await canvas.findByRole("button", { name: /open/i }));
 };
 
 const meta: Meta<typeof AgentRail> = {

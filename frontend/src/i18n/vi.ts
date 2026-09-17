@@ -423,7 +423,7 @@ export const vi = {
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
-  "shell.agent.scope": "Trợ lý của bạn chỉ đọc những gì bạn xem được.",
+  "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử thư",
   "shell.capture.share": "{percent} · {scanned} trên {total} thư",
   "shell.capture.count": "{scanned} thư cho đến nay",
@@ -4057,174 +4057,184 @@ export const vi = {
   // đúng cách gọi ở trang chủ; một lượt chạy dừng giữa đường không bao giờ
   // được nghe như đã hoàn tất.
   "agent.activity.weeklyReview.queued": "Tuần của bạn đang chờ được tóm tắt.",
-  "agent.activity.weeklyReview.running": "Đang tóm tắt tuần của bạn…",
+  "agent.activity.weeklyReview.running": "Tôi đang tóm tắt tuần của bạn.",
   "agent.activity.weeklyReview.stalled":
-    "Việc tóm tắt tuần của bạn lâu hơn dự kiến.",
-  "agent.activity.weeklyReview.done": "Tuần của bạn đã có tóm tắt.",
+    "Việc tóm tắt tuần của bạn kéo dài bất thường.",
+  "agent.activity.weeklyReview.done": "Bản tóm tắt tuần của bạn đã sẵn sàng.",
   "agent.activity.weeklyReview.degraded":
-    "Tuần của bạn đã được đo, không có tóm tắt — các số liệu vẫn đầy đủ.",
-  "agent.activity.weeklyReview.failed":
-    "Lần này không có tóm tắt tuần của bạn. Các số liệu vẫn là của tuần đó.",
-  "agent.activity.weeklyLearnings.queued":
-    "Tuần của bạn đang chờ được đọc để rút ra bài học.",
+    "Tuần của bạn đã được đo, nhưng chưa có tóm tắt.",
+  "agent.activity.weeklyReview.failed": "Tôi không tóm tắt được tuần của bạn.",
+  "agent.activity.weeklyLearnings.queued": "Tuần của bạn đang chờ rút bài học.",
   "agent.activity.weeklyLearnings.running":
-    "Đang đọc tuần của bạn để rút ra bài học…",
+    "Tôi đang đọc tuần của bạn để rút bài học.",
   "agent.activity.weeklyLearnings.stalled":
-    "Việc đọc tuần của bạn mất nhiều thời gian hơn dự kiến.",
-  "agent.activity.weeklyLearnings.done": "Tuần của bạn đã có bài học.",
+    "Việc đọc tuần của bạn kéo dài bất thường.",
+  "agent.activity.weeklyLearnings.done":
+    "Bài học trong tuần của bạn đã sẵn sàng.",
   "agent.activity.weeklyLearnings.degraded":
-    "Tuần của bạn đã được đo, nhưng không có bài học — các số liệu vẫn đầy đủ.",
+    "Tuần của bạn đã được đo, nhưng chưa có bài học.",
   "agent.activity.weeklyLearnings.failed":
-    "Lần này không có bài học từ tuần của bạn. Các số liệu vẫn là của tuần.",
+    "Tôi không rút ra được bài học từ tuần của bạn.",
   "agent.activity.morningBrief.queued":
     "Bản tóm tắt buổi sáng của bạn đã xếp hàng.",
   "agent.activity.morningBrief.running":
-    "Tôi đang soạn bản tóm tắt buổi sáng cho bạn.",
+    "Tôi đang viết bản tóm tắt buổi sáng cho bạn.",
   "agent.activity.morningBrief.done":
     "Bản tóm tắt buổi sáng của bạn đã sẵn sàng.",
   "agent.activity.morningBrief.degraded":
-    "Tôi mới làm được một phần bản tóm tắt buổi sáng rồi dừng lại.",
+    "Tôi dừng giữa chừng bản tóm tắt buổi sáng.",
   "agent.activity.morningBrief.failed":
     "Tôi không hoàn thành được bản tóm tắt buổi sáng của bạn.",
   "agent.activity.morningBrief.stalled":
-    "Bản tóm tắt buổi sáng của bạn đang chạy lâu bất thường. Có thể nó đã dừng.",
-  "agent.activity.riskSweep.queued": "Đợt kiểm tra rủi ro ban đêm đã xếp hàng.",
+    "Bản tóm tắt buổi sáng của bạn kéo dài bất thường.",
+  "agent.activity.riskSweep.queued": "Đợt kiểm tra rủi ro đang chờ.",
   "agent.activity.riskSweep.running":
     "Tôi đang kiểm tra rủi ro trong các deal của bạn.",
   "agent.activity.riskSweep.done":
-    "Xong. Tôi đã kiểm tra rủi ro trong các deal của bạn qua đêm.",
+    "Tôi đã kiểm tra rủi ro cho các deal của bạn.",
   "agent.activity.riskSweep.degraded":
-    "Tôi mới kiểm tra được một phần rủi ro rồi dừng lại.",
+    "Tôi dừng giữa chừng đợt kiểm tra rủi ro.",
   "agent.activity.riskSweep.failed":
-    "Tôi không hoàn thành được đợt kiểm tra rủi ro ban đêm.",
-  "agent.activity.riskSweep.stalled":
-    "Đợt kiểm tra rủi ro đang chạy lâu bất thường. Có thể nó đã dừng.",
+    "Tôi không hoàn tất được đợt kiểm tra rủi ro.",
+  "agent.activity.riskSweep.stalled": "Đợt kiểm tra rủi ro kéo dài bất thường.",
   "agent.activity.documentExtract.queued":
     "Tài liệu của bạn đang chờ được đọc.",
   "agent.activity.documentExtract.running": "Tôi đang đọc tài liệu của bạn.",
   "agent.activity.documentExtract.stalled":
-    "Việc đọc tài liệu của bạn kéo dài bất thường. Có thể nó đã dừng. Mở tệp và yêu cầu đọc lại.",
+    "Việc đọc tài liệu kéo dài bất thường. Mở lại tệp để thử lại.",
   "agent.activity.documentExtract.done": "Tôi đã đọc xong tài liệu của bạn.",
   "agent.activity.documentExtract.degraded":
-    "Tôi mới đọc được một phần tài liệu của bạn rồi dừng.",
+    "Tôi mới đọc được một nửa tài liệu của bạn.",
   "agent.activity.documentExtract.failed":
     "Tôi không đọc được tài liệu của bạn.",
   "agent.activity.documentExtractNamed.queued": "{name} đang chờ được đọc.",
   "agent.activity.documentExtractNamed.running": "Tôi đang đọc {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở tệp và yêu cầu đọc lại.",
+    "Việc đọc {name} kéo dài bất thường. Mở lại tệp để thử lại.",
   "agent.activity.documentExtractNamed.done": "Tôi đã đọc xong {name}.",
   "agent.activity.documentExtractNamed.degraded":
-    "Tôi mới đọc được một phần {name} rồi dừng.",
+    "Tôi mới đọc được một nửa {name}.",
   "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
   "agent.activity.accountScan.queued": "Việc đọc một tài khoản đang chờ xử lý.",
   "agent.activity.accountScan.running":
-    "Tôi đang đọc các trao đổi và deal của một tài khoản.",
+    "Tôi đang đọc lịch sử của một tài khoản.",
   "agent.activity.accountScan.stalled":
-    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
-  "agent.activity.accountScan.done": "Những gì một tài khoản cần đã sẵn sàng.",
+    "Việc đọc một tài khoản kéo dài bất thường. Mở lại tài khoản để thử lại.",
+  "agent.activity.accountScan.done": "Tôi đã đọc xong một tài khoản.",
   "agent.activity.accountScan.degraded":
-    "Tôi đã đọc một tài khoản đến mức các bản ghi cho phép rồi dừng.",
+    "Tôi đã đọc một tài khoản đến mức dữ liệu cho phép.",
   "agent.activity.accountScan.failed":
     "Tôi không hoàn thành được việc đọc một tài khoản.",
   "agent.activity.accountScanNamed.queued": "Việc đọc {name} đang chờ xử lý.",
-  "agent.activity.accountScanNamed.running":
-    "Tôi đang đọc các trao đổi và deal của {name}.",
+  "agent.activity.accountScanNamed.running": "Tôi đang đọc lịch sử của {name}.",
   "agent.activity.accountScanNamed.stalled":
-    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng. Mở lại tài khoản để bắt đầu đọc lại từ đầu.",
-  "agent.activity.accountScanNamed.done": "Những gì {name} cần đã sẵn sàng.",
+    "Việc đọc {name} kéo dài bất thường. Mở lại tài khoản để thử lại.",
+  "agent.activity.accountScanNamed.done": "Tôi đã đọc xong {name}.",
   "agent.activity.accountScanNamed.degraded":
-    "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
+    "Tôi đã đọc {name} đến mức dữ liệu cho phép.",
   "agent.activity.accountScanNamed.failed":
     "Tôi không hoàn thành được việc đọc {name}.",
   "agent.activity.transcriptRead.queued": "Bản chép lời đang chờ được đọc.",
-  "agent.activity.transcriptRead.running":
-    "Tôi đang đọc bản chép lời để tìm các bước tiếp theo.",
+  "agent.activity.transcriptRead.running": "Tôi đang đọc bản chép lời.",
   "agent.activity.transcriptRead.stalled":
-    "Việc đọc bản chép lời kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc bản chép lời kéo dài bất thường.",
   "agent.activity.transcriptRead.done": "Tôi đã đọc xong bản chép lời.",
   "agent.activity.transcriptRead.degraded":
-    "Tôi đã dừng trước khi đọc hết bản chép lời.",
+    "Tôi mới đọc được một nửa bản chép lời.",
   "agent.activity.transcriptRead.failed": "Tôi không đọc được bản chép lời.",
   "agent.activity.voiceBuild.queued": "Việc học giọng văn của bạn đang chờ.",
   "agent.activity.voiceBuild.running": "Tôi đang học giọng văn của bạn.",
   "agent.activity.voiceBuild.stalled":
-    "Việc học giọng văn của bạn mất nhiều thời gian bất thường. Có thể nó đã dừng.",
+    "Việc học giọng văn của bạn kéo dài bất thường.",
   "agent.activity.voiceBuild.done": "Tôi đã học được giọng văn của bạn.",
   "agent.activity.voiceBuild.degraded":
-    "Tôi đã dừng giữa chừng khi đang học giọng văn của bạn.",
+    "Tôi mới học được một phần giọng văn của bạn.",
   "agent.activity.voiceBuild.failed": "Tôi không thể học giọng văn của bạn.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":
-    "Việc đọc trang web của công ty kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc trang web của công ty kéo dài bất thường.",
   "agent.activity.siteRead.done": "Tôi đã đọc xong trang web của công ty.",
   "agent.activity.siteRead.degraded":
-    "Tôi đã dừng trước khi đọc hết trang web của công ty.",
+    "Tôi mới đọc được một nửa trang web của công ty.",
   "agent.activity.siteRead.failed": "Tôi không đọc được trang web của công ty.",
   "agent.activity.siteReadNamed.queued":
     "Trang web của {name} đang chờ được đọc.",
   "agent.activity.siteReadNamed.running": "Tôi đang đọc trang web của {name}.",
   "agent.activity.siteReadNamed.stalled":
-    "Việc đọc trang web của {name} kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc đọc trang web của {name} kéo dài bất thường.",
   "agent.activity.siteReadNamed.done": "Tôi đã đọc xong trang web của {name}.",
   "agent.activity.siteReadNamed.degraded":
-    "Tôi đã dừng trước khi đọc hết trang web của {name}.",
+    "Tôi mới đọc được một nửa trang web của {name}.",
   "agent.activity.siteReadNamed.failed":
     "Tôi không đọc được trang web của {name}.",
   "agent.activity.summarize.queued": "Một bản tổng hợp đang chờ xử lý.",
-  "agent.activity.summarize.running": "Tôi đang tổng hợp lại.",
+  "agent.activity.summarize.running": "Tôi đang viết một bản tóm tắt.",
   "agent.activity.summarize.done": "Bản tổng hợp của bạn đã sẵn sàng.",
-  "agent.activity.summarize.degraded":
-    "Tôi mới tổng hợp được một phần rồi dừng.",
+  "agent.activity.summarize.degraded": "Tôi mới tổng hợp được một nửa.",
   "agent.activity.summarize.failed": "Tôi không hoàn thành được bản tổng hợp.",
-  "agent.activity.summarize.stalled":
-    "Việc tổng hợp kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.activity.summarizeNamed.queued":
-    "Việc tổng hợp thông tin về {name} đang chờ xử lý.",
-  "agent.activity.summarizeNamed.running":
-    "Tôi đang tổng hợp những gì tôi biết về {name}.",
+  "agent.activity.summarize.stalled": "Việc tổng hợp kéo dài bất thường.",
+  "agent.activity.summarizeNamed.queued": "Việc tóm tắt {name} đang chờ.",
+  "agent.activity.summarizeNamed.running": "Tôi đang tóm tắt {name}.",
   "agent.activity.summarizeNamed.done":
-    "Những gì tôi biết về {name} đã sẵn sàng.",
+    "Bản tóm tắt của tôi về {name} đã sẵn sàng.",
   "agent.activity.summarizeNamed.degraded":
-    "Tôi mới tổng hợp được một phần thông tin về {name} rồi dừng.",
-  "agent.activity.summarizeNamed.failed":
-    "Tôi không hoàn thành được việc tổng hợp về {name}.",
+    "Tôi mới tổng hợp được một nửa về {name}.",
+  "agent.activity.summarizeNamed.failed": "Tôi không tóm tắt được {name}.",
   "agent.activity.summarizeNamed.stalled":
-    "Việc tổng hợp về {name} kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc tổng hợp về {name} kéo dài bất thường.",
   "agent.activity.draftReply.queued": "Thư trả lời của bạn đang chờ được soạn.",
   "agent.activity.draftReply.running": "Tôi đang soạn thư trả lời của bạn.",
   "agent.activity.draftReply.done": "Bản nháp thư trả lời của bạn đã sẵn sàng.",
   "agent.activity.draftReply.degraded":
-    "Tôi mới soạn được một phần thư trả lời của bạn rồi dừng.",
+    "Tôi mới soạn được một nửa thư trả lời.",
   "agent.activity.draftReply.failed":
     "Tôi không soạn được thư trả lời của bạn.",
   "agent.activity.draftReply.stalled":
-    "Việc soạn thư trả lời của bạn kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc soạn thư trả lời kéo dài bất thường.",
   "agent.activity.offerDraft.queued": "Báo giá của bạn đang chờ được soạn.",
   "agent.activity.offerDraft.running": "Tôi đang soạn báo giá của bạn.",
   "agent.activity.offerDraft.done": "Bản nháp báo giá của bạn đã sẵn sàng.",
-  "agent.activity.offerDraft.degraded":
-    "Tôi mới soạn được một phần báo giá của bạn rồi dừng.",
+  "agent.activity.offerDraft.degraded": "Tôi mới soạn được một nửa báo giá.",
   "agent.activity.offerDraft.failed": "Tôi không soạn được báo giá của bạn.",
-  "agent.activity.offerDraft.stalled":
-    "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
-  "agent.panel.runningNow": "Đang chạy",
-  "agent.state.idle": "Đang rảnh",
-  "agent.state.ingest": "Đang tiếp nhận",
+  "agent.activity.offerDraft.stalled": "Việc soạn báo giá kéo dài bất thường.",
+  "agent.rail.region": "Trợ lý Margince",
+  "agent.panel.label": "Bảng trợ lý",
+  "agent.rail.open": "Mở bảng trợ lý",
+  "agent.rail.close": "Đóng bảng trợ lý",
+  "agent.state.idle": "Rảnh",
+  "agent.state.ingest": "Đang đọc",
   "agent.state.working": "Đang làm việc",
-  "agent.state.warning": "Cần xem lại",
-  "agent.state.error": "Không chạy",
+  "agent.state.warning": "Cảnh báo",
+  "agent.state.error": "Ngừng chạy",
+  "agent.thisMonth": "tháng này",
+  "agent.rail.spend": "Chi phí tháng này",
+  "agent.panel.runningNow": "Đang chạy",
+  "agent.panel.needsYou": "Cần bạn",
+  "agent.panel.recent": "Hoạt động gần đây",
+  "agent.panel.runtime": "Thời gian chạy",
+  "agent.panel.fullLog": "Nhật ký đầy đủ",
+  "agent.panel.decisions": "Quyết định",
+  "agent.panel.nothingWaiting": "Không có gì chờ",
+  "agent.panel.nothingToday": "Hôm nay chưa xong việc nào",
   "agent.fact.model": "Mô hình",
   "agent.fact.tools": "Công cụ",
   "agent.fact.sources": "Nguồn",
-  "agent.panel.nothingWaiting": "Không có quyết định nào đang chờ",
-
-  // Bốn câu phần agent nói khi không còn tin gì mới. Giữ ngắn: dòng
-  // trên rail bị cắt sau hai dòng.
-  "agent.tip.day": "Việc, quyết định và bản trùng đều nằm ở {name}.",
-  "agent.tip.ask": "Hỏi tôi từ bất kỳ đâu bằng ⌘K.",
-  "agent.tip.recap": "Mở tôi để xem hôm nay tôi đã làm gì.",
+  "agent.fact.offline": "ngoại tuyến",
+  "agent.fact.noCalls": "Chưa có lượt gọi",
+  "agent.fact.hidden": "Ẩn với chỗ ngồi này",
+  "agent.fact.noModel": "Chưa cấu hình mô hình",
+  "agent.line.waiting_one": "{count} quyết định đang chờ",
+  "agent.line.waiting_other": "{count} quyết định đang chờ",
+  "agent.line.allClear": "Không có gì cần bạn",
+  "agent.line.cannotReach": "Không kết nối được {sources}",
+  "agent.line.runFailed": "Một lượt chạy thất bại",
+  "agent.line.runStopped": "Một lượt chạy dừng sớm",
+  "agent.line.justNow": "vừa xong",
+  "agent.setting.edgeLight": "Viền màn hình phát sáng",
+  "agent.tip.day": "Việc cần làm, quyết định và bản trùng nằm ở {name}.",
+  "agent.tip.ask": "Hỏi tôi ở bất cứ đâu bằng ⌘K.",
+  "agent.tip.recap": "Mở tôi để xem hoạt động hôm nay.",
   "agent.tip.edge": "Viền màn hình sáng lên khi tôi làm việc.",
 
   "agents.connected": "Agent đã kết nối",

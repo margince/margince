@@ -164,7 +164,10 @@ live("the contact page on live data", () => {
  */
 live("the other surfaces that draw a message", () => {
   test("the account page loads and opens its messages", async ({ page }) => {
-    test.skip(!process.env.E2E_COMPANY, "set E2E_COMPANY to an account on this stack");
+    test.skip(
+      !process.env.E2E_COMPANY,
+      "set E2E_COMPANY to an account on this stack",
+    );
     await signIn(page);
     await page.goto(`/#/companies/${process.env.E2E_COMPANY}`, {
       waitUntil: "networkidle",

@@ -418,7 +418,7 @@ export const en = {
   // told about is one nobody can rely on — "what can this thing see" is the
   // question a contact most reasonably has about an agent working over their
   // data. Held by AC-shell-8.
-  "shell.agent.scope": "Your agent reads only what you can see.",
+  "shell.agent.scope": "Margince reads only what you can see.",
   "shell.capture.importing": "Importing mail history",
   "shell.capture.share": "{percent} · {scanned} of {total} messages",
   "shell.capture.count": "{scanned} messages so far",
@@ -4241,54 +4241,50 @@ export const en = {
   // state). First contact for what Margince did, result first, and never a word
   // that reads as finished on a run that stopped part-way.
   "agent.activity.weeklyReview.queued": "Your week is queued for a summary.",
-  "agent.activity.weeklyReview.running": "Summarising your week…",
+  "agent.activity.weeklyReview.running": "I'm summarising your week.",
   "agent.activity.weeklyReview.stalled":
-    "The summary of your week is taking longer than expected.",
-  "agent.activity.weeklyReview.done": "Your week has a summary.",
+    "Your weekly summary is taking unusually long.",
+  "agent.activity.weeklyReview.done": "Your weekly summary is ready.",
   "agent.activity.weeklyReview.degraded":
-    "Your week is measured, without a summary — the numbers are all there.",
-  "agent.activity.weeklyReview.failed":
-    "No summary of your week this time. The numbers are still the week's own.",
+    "Your week is measured, but has no summary.",
+  "agent.activity.weeklyReview.failed": "I couldn't summarise your week.",
   // What the week TAUGHT, which is a different promise from the summary above:
   // a learning is advice, so the failed and degraded lines say the numbers
   // still stand rather than implying the week went unmeasured.
-  "agent.activity.weeklyLearnings.queued":
-    "Your week is queued to be read for lessons.",
-  "agent.activity.weeklyLearnings.running": "Reading your week for lessons…",
+  "agent.activity.weeklyLearnings.queued": "Your week is queued for lessons.",
+  "agent.activity.weeklyLearnings.running":
+    "I'm reading your week for lessons.",
   "agent.activity.weeklyLearnings.stalled":
-    "Reading your week for lessons is taking longer than expected.",
-  "agent.activity.weeklyLearnings.done": "Your week has its lessons.",
+    "Reading your week for lessons is taking unusually long.",
+  "agent.activity.weeklyLearnings.done": "Your week's lessons are ready.",
   "agent.activity.weeklyLearnings.degraded":
-    "Your week is measured, without lessons — the numbers are all there.",
+    "Your week is measured, but has no lessons.",
   "agent.activity.weeklyLearnings.failed":
-    "No lessons from your week this time. The numbers are still the week's own.",
+    "I couldn't draw lessons from your week.",
   "agent.activity.morningBrief.queued": "Your morning brief is queued.",
-  "agent.activity.morningBrief.running":
-    "I'm putting your morning brief together.",
+  "agent.activity.morningBrief.running": "I'm writing your morning brief.",
   "agent.activity.morningBrief.done": "Your morning brief is ready.",
   "agent.activity.morningBrief.degraded":
-    "I got partway through your morning brief and stopped.",
+    "I stopped partway through your morning brief.",
   "agent.activity.morningBrief.failed": "I couldn't finish your morning brief.",
   "agent.activity.morningBrief.stalled":
-    "Your morning brief has been running unusually long. It may have stopped.",
-  "agent.activity.riskSweep.queued": "The overnight risk sweep is queued.",
+    "Your morning brief is taking unusually long.",
+  "agent.activity.riskSweep.queued": "The risk sweep is queued.",
   "agent.activity.riskSweep.running": "I'm checking your deals for risk.",
-  "agent.activity.riskSweep.done":
-    "Done. I checked your deals for risk overnight.",
+  "agent.activity.riskSweep.done": "I checked your deals for risk.",
   "agent.activity.riskSweep.degraded":
-    "I got partway through the risk sweep and stopped.",
-  "agent.activity.riskSweep.failed":
-    "I couldn't finish the overnight risk sweep.",
+    "I stopped partway through the risk sweep.",
+  "agent.activity.riskSweep.failed": "I couldn't finish the risk sweep.",
   "agent.activity.riskSweep.stalled":
-    "The risk sweep has been running unusually long. It may have stopped.",
+    "The risk sweep is taking unusually long.",
   "agent.activity.documentExtract.queued":
     "Your document is queued to be read.",
   "agent.activity.documentExtract.running": "I'm reading your document.",
   "agent.activity.documentExtract.stalled":
-    "Reading your document has taken unusually long. It may have stopped. Open the file and ask for it to be read again.",
+    "Reading your document is taking unusually long. Open the file again to retry.",
   "agent.activity.documentExtract.done": "I've read your document.",
   "agent.activity.documentExtract.degraded":
-    "I got partway through your document and stopped.",
+    "I stopped partway through your document.",
   "agent.activity.documentExtract.failed": "I couldn't read your document.",
   // The same six, with the document NAMED. A rail that says "I'm reading your
   // document" reports that software is busy; one that says "I'm reading
@@ -4298,47 +4294,46 @@ export const en = {
   "agent.activity.documentExtractNamed.queued": "{name} is queued to be read.",
   "agent.activity.documentExtractNamed.running": "I'm reading {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Reading {name} has taken unusually long. It may have stopped. Open the file and ask for it to be read again.",
+    "Reading {name} is taking unusually long. Open the file again to retry.",
   "agent.activity.documentExtractNamed.done": "I've read {name}.",
   "agent.activity.documentExtractNamed.degraded":
-    "I got partway through {name} and stopped.",
+    "I stopped partway through {name}.",
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
   // A company's website being read. The same shape as the document lines: the
   // unnamed pair says which kind of thing, the named one says which company.
   "agent.activity.transcriptRead.queued":
-    "The meeting transcript is queued to be read.",
-  "agent.activity.transcriptRead.running":
-    "I'm reading the transcript for next steps.",
+    "The transcript is queued to be read.",
+  "agent.activity.transcriptRead.running": "I'm reading the transcript.",
   "agent.activity.transcriptRead.stalled":
-    "Reading the transcript has taken unusually long. It may have stopped.",
+    "Reading the transcript is taking unusually long.",
   "agent.activity.transcriptRead.done": "I've read the transcript.",
   "agent.activity.transcriptRead.degraded":
-    "I stopped before finishing the transcript.",
+    "I stopped partway through the transcript.",
   "agent.activity.transcriptRead.failed": "I couldn't read the transcript.",
   "agent.activity.voiceBuild.queued": "Learning your writing voice is queued.",
   "agent.activity.voiceBuild.running": "I'm learning your writing voice.",
   "agent.activity.voiceBuild.stalled":
-    "Learning your writing voice has taken unusually long. It may have stopped.",
+    "Learning your writing voice is taking unusually long.",
   "agent.activity.voiceBuild.done": "I've learned your writing voice.",
   "agent.activity.voiceBuild.degraded":
-    "I stopped before learning your writing voice.",
+    "I only partly learned your writing voice.",
   "agent.activity.voiceBuild.failed": "I couldn't learn your writing voice.",
   "agent.activity.siteRead.queued": "The company website is queued to be read.",
   "agent.activity.siteRead.running": "I'm reading the company website.",
   "agent.activity.siteRead.stalled":
-    "Reading the company website has taken unusually long. It may have stopped.",
+    "Reading the company website is taking unusually long.",
   "agent.activity.siteRead.done": "I've read the company website.",
   "agent.activity.siteRead.degraded":
-    "I stopped before finishing the company website.",
+    "I stopped partway through the company website.",
   "agent.activity.siteRead.failed": "I couldn't read the company website.",
   "agent.activity.siteReadNamed.queued":
     "The {name} website is queued to be read.",
   "agent.activity.siteReadNamed.running": "I'm reading the {name} website.",
   "agent.activity.siteReadNamed.stalled":
-    "Reading the {name} website has taken unusually long. It may have stopped.",
+    "Reading the {name} website is taking unusually long.",
   "agent.activity.siteReadNamed.done": "I've read the {name} website.",
   "agent.activity.siteReadNamed.degraded":
-    "I stopped before finishing the {name} website.",
+    "I stopped partway through the {name} website.",
   "agent.activity.siteReadNamed.failed": "I couldn't read the {name} website.",
   // The AI work a contact ASKS for and then waits on. Same rules as the
   // scheduled lines above — first contact, result first, and never a word that
@@ -4350,22 +4345,20 @@ export const en = {
   // The account scan: one reader's read of one account, filed under them
   // and named for the account the rail can say which one is ready.
   "agent.activity.accountScan.queued": "Reading an account is queued.",
-  "agent.activity.accountScan.running":
-    "I'm reading an account's exchanges and deals.",
+  "agent.activity.accountScan.running": "I'm reading an account's history.",
   "agent.activity.accountScan.stalled":
-    "Reading an account has taken unusually long. It may have stopped. Opening the account again starts a fresh read.",
-  "agent.activity.accountScan.done": "What an account needs is ready.",
+    "Reading an account is taking unusually long. Open the account again to retry.",
+  "agent.activity.accountScan.done": "I've read up on an account.",
   "agent.activity.accountScan.degraded":
-    "I read an account as far as the records let me and stopped.",
+    "I read an account as far as the records allowed.",
   "agent.activity.accountScan.failed": "I couldn't finish reading an account.",
   "agent.activity.accountScanNamed.queued": "Reading {name} is queued.",
-  "agent.activity.accountScanNamed.running":
-    "I'm reading {name}'s exchanges and deals.",
+  "agent.activity.accountScanNamed.running": "I'm reading {name}'s history.",
   "agent.activity.accountScanNamed.stalled":
-    "Reading {name} has taken unusually long. It may have stopped. Opening the account again starts a fresh read.",
-  "agent.activity.accountScanNamed.done": "What {name} needs is ready.",
+    "Reading {name} is taking unusually long. Open the account again to retry.",
+  "agent.activity.accountScanNamed.done": "I've read up on {name}.",
   "agent.activity.accountScanNamed.degraded":
-    "I read {name} as far as the records let me and stopped.",
+    "I read {name} as far as the records allowed.",
   "agent.activity.accountScanNamed.failed": "I couldn't finish reading {name}.",
   //
   // summarize is five sites over three kinds of record — a company, a contact,
@@ -4374,55 +4367,88 @@ export const en = {
   // than no name. The NAMED pair below is the line a reader should see; these
   // are what an occurrence without a subject falls back to.
   "agent.activity.summarize.queued": "A summary is queued.",
-  "agent.activity.summarize.running": "I'm pulling a summary together.",
+  "agent.activity.summarize.running": "I'm writing a summary.",
   "agent.activity.summarize.done": "Your summary is ready.",
-  "agent.activity.summarize.degraded":
-    "I gathered part of a summary and stopped.",
+  "agent.activity.summarize.degraded": "I stopped partway through the summary.",
   "agent.activity.summarize.failed": "I couldn't finish the summary.",
-  "agent.activity.summarize.stalled":
-    "The summary has taken unusually long. It may have stopped.",
+  "agent.activity.summarize.stalled": "The summary is taking unusually long.",
   // The same six with the record NAMED — the company, the contact or the
   // meeting the summary is about, in the name the product shows for it
   // elsewhere. Whenever the rail names what it is working on, it names the
   // actual record: "what I know about Acme", never "about this company".
-  "agent.activity.summarizeNamed.queued": "Reading up on {name} is queued.",
-  "agent.activity.summarizeNamed.running":
-    "I'm pulling together what I know about {name}.",
-  "agent.activity.summarizeNamed.done": "What I know about {name} is ready.",
+  "agent.activity.summarizeNamed.queued": "Summarising {name} is queued.",
+  "agent.activity.summarizeNamed.running": "I'm summarising {name}.",
+  "agent.activity.summarizeNamed.done": "My summary of {name} is ready.",
   "agent.activity.summarizeNamed.degraded":
-    "I gathered some of what I know about {name} and stopped.",
-  "agent.activity.summarizeNamed.failed":
-    "I couldn't finish reading up on {name}.",
+    "I stopped partway through my summary of {name}.",
+  "agent.activity.summarizeNamed.failed": "I couldn't summarise {name}.",
   "agent.activity.summarizeNamed.stalled":
-    "Reading up on {name} has taken unusually long. It may have stopped.",
+    "Summarising {name} is taking unusually long.",
   "agent.activity.draftReply.queued": "Your reply is queued to be drafted.",
   "agent.activity.draftReply.running": "I'm drafting your reply.",
   "agent.activity.draftReply.done": "Your draft reply is ready.",
-  "agent.activity.draftReply.degraded":
-    "I got partway through your reply and stopped.",
+  "agent.activity.draftReply.degraded": "I stopped partway through your reply.",
   "agent.activity.draftReply.failed": "I couldn't draft your reply.",
   "agent.activity.draftReply.stalled":
-    "Drafting your reply has taken unusually long. It may have stopped.",
+    "Drafting your reply is taking unusually long.",
   "agent.activity.offerDraft.queued": "Your offer is queued to be drafted.",
   "agent.activity.offerDraft.running": "I'm drafting your offer.",
   "agent.activity.offerDraft.done": "Your draft offer is ready.",
-  "agent.activity.offerDraft.degraded":
-    "I got partway through your offer and stopped.",
+  "agent.activity.offerDraft.degraded": "I stopped partway through your offer.",
   "agent.activity.offerDraft.failed": "I couldn't draft your offer.",
   "agent.activity.offerDraft.stalled":
-    "Drafting your offer has taken unusually long. It may have stopped.",
-  "agent.panel.runningNow": "Running now",
+    "Drafting your offer is taking unusually long.",
+  // ── THE AGENT SURFACE'S OWN WORDS ──────────────────────────────────────────
+  //
+  // The rail's one line and the panel it opens, in one place. They were split
+  // between this catalog and an English-only table in `agentrail-copy.ts`,
+  // which is why a German reader met "Across the workspace" over a translated
+  // sentence. Every word either surface renders is here now.
+  //
+  // SHORT. The rail clamps its line to two lines at about 200px (`.arline` in
+  // agentrail.css) and the panel is 408px wide, so a heading is a noun phrase
+  // and a status is one clause. Every translation is held to the same ceiling.
 
-  // THE STATE IN A WORD, in the panel's head under the agent's name. The Core's
-  // own vocabulary is five machine words and the head used to print whichever
-  // one it was in, so a panel opened on a broken installation said "error" at a
-  // reader in the product's voice. The sentence beside these says WHAT is
-  // happening; these say what the agent IS.
+  // The two regions, for a reader who navigates by landmark.
+  "agent.rail.region": "Margince agent",
+  "agent.panel.label": "Agent panel",
+  // The one button, named for what pressing it does.
+  "agent.rail.open": "Open the agent panel",
+  "agent.rail.close": "Close the agent panel",
+
+  // THE STATE IN A WORD, under the agent's name. The Core's own vocabulary is
+  // five machine words and the head used to print whichever one it was in, so a
+  // panel opened on a broken installation said "error" at a reader in the
+  // product's voice. The sentence beside these says what is HAPPENING; these
+  // say what the agent is. One word each, because they sit beside a dot.
   "agent.state.idle": "Idle",
   "agent.state.ingest": "Reading",
   "agent.state.working": "Working",
-  "agent.state.warning": "Needs a look",
-  "agent.state.error": "Not running",
+  "agent.state.warning": "Warning",
+  "agent.state.error": "Down",
+
+  // The month's figure: what it names, beside it in the head and in the rail's
+  // own line. ONE string for both — they were two identical entries.
+  "agent.thisMonth": "this month",
+  // The same fact spelled out, for the button's accessible name: on a collapsed
+  // rail the name is the only place the figure's scope is said.
+  "agent.rail.spend": "Cost this month",
+
+  // The four section titles. Noun phrases: a heading names a thing, and "What
+  // it has done" was a sentence pretending to be one.
+  "agent.panel.runningNow": "Running now",
+  "agent.panel.needsYou": "Needs you",
+  "agent.panel.recent": "Recent activity",
+  "agent.panel.runtime": "Runtime",
+  "agent.panel.fullLog": "Full log",
+
+  // What the reader acts on, and the two quiet lines for when there is nothing.
+  // Three different facts, so three different sentences: the head's resting
+  // line, this section's empty arm and the log's empty arm all said some
+  // version of "nothing" and two of them said the same four words.
+  "agent.panel.decisions": "Decisions",
+  "agent.panel.nothingWaiting": "Nothing waiting",
+  "agent.panel.nothingToday": "Nothing finished today",
 
   // THE RUNTIME FACTS, as terms beside their values. Sentence case, because a
   // <dt> is a name rather than an inline word in a sentence — which is what
@@ -4430,25 +4456,34 @@ export const en = {
   "agent.fact.model": "Model",
   "agent.fact.tools": "Tools",
   "agent.fact.sources": "Sources",
-  // The workspace section when the read ANSWERED zero. Its own sentence rather
-  // than the resting line's "Nothing needs you": both were on the panel at once
-  // on a quiet installation, 150px apart, and one surface saying the same four
-  // words twice reads as a surface that was assembled rather than written. This
-  // one names what is not waiting, which is what the section is about.
-  "agent.panel.nothingWaiting": "No decisions are waiting",
+  "agent.fact.offline": "offline",
+  // The two reasons there is no model to name, in the value's own slot.
+  "agent.fact.noCalls": "No calls yet",
+  "agent.fact.hidden": "Hidden on this seat",
+  // The fault a badge carries, above the facts it invalidates.
+  "agent.fact.noModel": "No model configured",
 
-  // The four things the agent section says once it has run out of news
-  // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
-  // standing facts about the product, which is what lets them be written here
-  // rather than read from the installation.
-  //
-  // SHORT, and that is a hard constraint rather than a style: the rail clamps
-  // its line to two lines at about 200px (`.arline` in agentrail.css), so a
-  // sentence past roughly fifty characters is a sentence with its end cut off.
-  // Every translation of these is held to the same ceiling.
+  // THE RAIL'S LINE. What the agent is doing, or the fault that stops it, in
+  // one clause. A count is a plural base, because "1 decisions" is the tell of
+  // a surface that pastes a number onto a noun.
+  "agent.line.waiting_one": "{count} decision waiting",
+  "agent.line.waiting_other": "{count} decisions waiting",
+  "agent.line.allClear": "Nothing needs you",
+  "agent.line.cannotReach": "Cannot reach {sources}",
+  "agent.line.runFailed": "A run failed",
+  "agent.line.runStopped": "A run stopped early",
+  "agent.line.justNow": "just now",
+
+  // The panel's one setting, named for what a reader SEES rather than for the
+  // surface that draws it — nobody outside this tree calls it the edge.
+  "agent.setting.edgeLight": "Screen edge light",
+
+  // The four things the agent says once it has run out of news. None claims the
+  // agent did anything: they are standing facts about the product, which is
+  // what lets them be written here rather than read from the installation.
   "agent.tip.day": "To-dos, decisions and duplicates live on {name}.",
   "agent.tip.ask": "Ask me from anywhere with ⌘K.",
-  "agent.tip.recap": "Open me for what I have done today.",
+  "agent.tip.recap": "Open me for today's activity.",
   "agent.tip.edge": "The screen edge lights while I work.",
 
   "agents.connected": "Connected agents",

@@ -23,7 +23,13 @@ import {
 } from "../design-system/margince-core";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { settingsHref } from "../screens/settingsrouting";
 import {
@@ -32,7 +38,7 @@ import {
   publishAgentEdge,
 } from "./agent-edge-signal";
 import { type AgentFault, useAgentFault } from "./agent-fault";
-import { LABELS, RUNNING } from "./agentrail-copy";
+import { RUNNING } from "./agentrail-copy";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
 import type {
@@ -45,6 +51,8 @@ import type {
 } from "./agentrail-reads";
 import { useAiSpend, useLastCall, useSignals } from "./agentrail-reads";
 import {
+  type RailWords,
+  railWords,
   restingReadings,
   restingTips,
   stillNews,
@@ -140,10 +148,15 @@ const ROW_TONE: Readonly<
  * When it happened, as a contact would say it. A wall-clock stamp answers "at
  * what time", and the question a recap answers is "how long ago".
  */
-function agoFor(iso: string, locale: Locale, now: number): string {
+function agoFor(
+  iso: string,
+  locale: Locale,
+  now: number,
+  t: Translator,
+): string {
   const seconds = Math.round((now - Date.parse(iso)) / 1000);
   if (Number.isNaN(seconds)) {
-    return LABELS.justNow;
+    return t("agent.line.justNow");
   }
   const format = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "unit",
@@ -170,12 +183,13 @@ function agoFor(iso: string, locale: Locale, now: number): string {
  */
 function modelText(
   read: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>,
+  t: Translator,
 ): string {
   const latest = read.calls[0];
   if (latest) {
     return `${latest.provider}/${latest.served_model}`;
   }
-  return read.allowed ? LABELS.noCallsYet : LABELS.unreadable;
+  return t(read.allowed ? "agent.fact.noCalls" : "agent.fact.hidden");
 }
 
 /**
@@ -250,7 +264,7 @@ function Recap({
     })
     .slice(0, RECAP_ROWS);
   if (said.length === 0) {
-    return <p className="arempty t-caption">{LABELS.nothingToday}</p>;
+    return <p className="arempty t-caption">{t("agent.panel.nothingToday")}</p>;
   }
   return (
     <>
@@ -271,7 +285,7 @@ function Recap({
               says so — and `started_at` is what is left if a server ever sends
               one that does not. */}
           <span className="armuted t-caption t-num">
-            {agoFor(item.finished_at ?? item.started_at, locale, now)}
+            {agoFor(item.finished_at ?? item.started_at, locale, now, t)}
           </span>
         </p>
       ))}
@@ -313,7 +327,7 @@ function RuntimeFacts({
       {(ai === "unconfigured" || licenceFault) && (
         <div className="arflags">
           {ai === "unconfigured" && (
-            <Badge tone="warning">{LABELS.noModel}</Badge>
+            <Badge tone="warning">{t("agent.fact.noModel")}</Badge>
           )}
           {/* The badge names a fault the reader can repair only on the seats
               page, so a link around it takes them there: the badge stays the
@@ -337,9 +351,9 @@ function RuntimeFacts({
             there is none, not a value. */}
         <dd>
           {model.calls.length > 0 ? (
-            modelText(model)
+            modelText(model, t)
           ) : (
-            <i>{modelText(model)}</i>
+            <i>{modelText(model, t)}</i>
           )}
         </dd>
         {tools > 0 && (
@@ -355,7 +369,7 @@ function RuntimeFacts({
               {offline.map((source) => (
                 <span className="arconn" key={source}>
                   <i aria-hidden="true" />
-                  {`${source} ${LABELS.offline}`}
+                  {`${source} ${t("agent.fact.offline")}`}
                 </span>
               ))}
             </dd>
@@ -443,7 +457,7 @@ function PanelHead({
       {spend.allowed && spend.minor !== undefined && (
         <p className="arpmoney t-caption t-num">
           <b>{formatMoney(spend.minor, spend.currency, locale)}</b>{" "}
-          {LABELS.thisMonth}
+          {t("agent.thisMonth")}
         </p>
       )}
       <Heading size="medium" as="h2" className="arptitle">
@@ -498,7 +512,7 @@ function AgentPanel({
     <section
       className="arpanel"
       ref={panel}
-      aria-label={LABELS.panel}
+      aria-label={t("agent.panel.label")}
       style={{
         left: frame.left,
         right: frame.right,
@@ -529,7 +543,7 @@ function AgentPanel({
           A read that ANSWERED zero is different, and it earns the sentence:
           the agent looked, and there is nothing waiting. */}
       {signals.waiting !== undefined && (
-        <PanelSection title={LABELS.acrossWorkspace}>
+        <PanelSection title={t("agent.panel.needsYou")}>
           {signals.waiting === 0 ? (
             // A quiet line rather than a dashed plate. The plate said "a tile
             // failed to load" to every reader who met it before they read the
@@ -548,10 +562,10 @@ function AgentPanel({
               <a
                 className="arbox artile"
                 href="#/worklist"
-                aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
+                aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
               >
                 <b>{formatNumber(signals.waiting, locale)}</b>
-                <span>{LABELS.approvals}</span>
+                <span>{t("agent.panel.decisions")}</span>
               </a>
             </div>
           )}
@@ -559,19 +573,19 @@ function AgentPanel({
       )}
 
       <PanelSection
-        title={LABELS.recap}
+        title={t("agent.panel.recent")}
         action={
           // A verb, beside the title rather than inside it: worn as part of the
           // heading it took the heading's weight and read as a second title.
           <a className="link-button" href={AI_SETTINGS_HREF}>
-            {LABELS.fullLog}
+            {t("agent.panel.fullLog")}
           </a>
         }
       >
         <Recap settled={settled} />
       </PanelSection>
 
-      <PanelSection title={LABELS.runtime} className="arstrip">
+      <PanelSection title={t("agent.panel.runtime")} className="arstrip">
         <RuntimeFacts
           offline={signals.offline}
           model={model}
@@ -755,34 +769,17 @@ function usePanelFrame(
  * could never cause. What the TOOL is doing is still reported, in its own
  * quieter line under this one, and it no longer borrows the agent's voice.
  *
- * The subject stayed the agent when a second observer of it was added. Two
- * things watch the same work from different ends: the server's projection, which
- * knows what a run IS and is the only thing that may name it, and this tab's own
- * count of requests it is holding open to a route whose handler calls a model
- * and waits (`asking`, from api/model-inflight.ts). The projection arrives on a
- * poll, so between a contact pressing "Draft with AI" and the next read there was
- * a live model call nothing on screen reported: the orb sat at rest through the
- * whole of the work it exists to show. `asking` closes that window and claims
- * nothing else: it ranks BELOW every occurrence the feed carries, so it can
- * never outrank a run, and the moment the feed can name the work it does.
- *
- * The correction that ranking allows is real and is the design working, not a
- * defect to hide: `asking` answers `working` because a request in flight cannot
- * say which half of the lifecycle it is in, so a route whose task turns out to
- * be `ingest` (the enrich and cold-start lanes) shows `working` for the
- * moment before the feed arrives and settles into its own lane after. A guess
- * the owner of the fact overrules is the right shape for a bridge.
- *
- * A mailbox import is the third observer, and the one the feed cannot replace:
- * the feed carries capture as per-message classifications the router announces
- * once each call is over, so an import that runs for an hour reaches it as a
- * trickle of settled lines and never as work in flight. The run's own status
- * row (capture-progress.ts) is the server's projection of that work, read from
- * the connections list this section already holds, and it is `ingest` by
- * definition: mail arriving that the agent did not hold a moment ago. It ranks
- * below a named occurrence for the same reason `asking` does — the feed names
- * a run and this names a lane — and above `asking`, because it knows which
- * half of the lifecycle it is in.
+ * THREE observers watch the same work, and they rank. The server's projection
+ * knows what a run IS and is the only thing that may name it. This tab's own
+ * count of requests held open to a model route (`asking`, api/model-inflight.ts)
+ * closes the window between a contact pressing "Draft with AI" and the next
+ * poll, in which the orb used to sit at rest through the whole of the work it
+ * exists to show; it ranks below every occurrence the feed carries, and answers
+ * `working` because a request in flight cannot say which half of the lifecycle
+ * it is in. A mailbox import is the third, and the one the feed cannot replace:
+ * it reaches the feed as a trickle of settled classifications and never as work
+ * in flight, so the import's own status row (capture-progress.ts) reports it,
+ * as `ingest` by definition — above `asking`, because it knows its half.
  *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
@@ -835,18 +832,12 @@ function derive(
   // REFUSED only, and it stays amber rather than escalating, because escalating
   // would make the chrome a sales surface.
   //
-  // An installation that never had a licence is deliberately not a fault here.
-  // It used to be, and the result was that every demo and every fresh dev stack
-  // wore a permanent amber orb: the state stopped reading as "a fault that can
-  // wait" and started reading as "this is a default install", which is the way a
-  // signal that is always on stops being a signal at all. Asking and being told
-  // no is different, because there is a repair behind it.
-  //
-  // Nothing in the chrome says the licence is missing, and that is the trade
-  // rather than an oversight: the fact is a standing condition, so it is stated
-  // once where an operator goes looking for it — the licence card in settings
-  // names both absences and says what each one costs — instead of spending the
-  // chrome's only ambient warning channel on something that is permanently true.
+  // An installation that never had a licence is deliberately not a fault: every
+  // demo and every fresh dev stack is in that state, and an orb that is amber
+  // for all of them has stopped being a signal. Asked and refused is different,
+  // because there is a repair behind it. The missing licence is stated once
+  // where an operator goes looking for it, on the licence card in settings,
+  // rather than spending the chrome's only ambient warning on it.
   if (signals.license === "refused") {
     return { state: "warning", cause: null, register: "agent" };
   }
@@ -861,14 +852,11 @@ function derive(
   if (live) {
     return { state: laneFor(live), cause: live, register: "agent" };
   }
-  // Mail being imported. No cause travels with it because it is not an
-  // occurrence the feed can name; the line under the orb is the import's own,
-  // from the signals (`barLine`), with its share where a preview gave it one.
-  // The margins take the import's register unless this tab has a call open
-  // underneath it: the orb keeps the import (the ask below cannot say which
-  // half of the lifecycle it is in, and this can), but a model call in flight
-  // is the agent's own work, and the margin lights for THAT in the register it
-  // always has.
+  // Mail being imported. No cause travels with it — it is not an occurrence the
+  // feed can name — so the line is the import's own, from the signals. The
+  // margins take the import's register unless this tab has a call open under
+  // it: a model call in flight is the agent's own work, and the margin lights
+  // for that.
   if (signals.capture !== null) {
     return {
       state: "ingest",
@@ -878,12 +866,10 @@ function derive(
   }
   // This tab's own ask, which the feed has not caught up with yet. `working`
   // rather than a lane read from the kind, because the kind is exactly what is
-  // not known here: a request in flight says the agent is busy and says nothing
-  // about which half of its lifecycle it is in. `working` is the same answer
-  // laneFor gives an unnamed kind, and for the same reason: the honest half of
-  // what is known. No cause travels with it, so the line under the orb falls
-  // back to the generic word instead of borrowing a sentence about some other
-  // run, and the moment the feed carries the occurrence the branch above wins
+  // not known here: a request in flight says the agent is busy and nothing
+  // about which half of its lifecycle it is in. No cause travels with it, so
+  // the line falls back to the generic word rather than borrowing a sentence
+  // about some other run, and the moment the feed carries the occurrence
   // and names it.
   if (server.asking) {
     return { state: "working", cause: null, register: "agent" };
@@ -916,10 +902,10 @@ function causeLine(
     return said;
   }
   if (cause.state === "failed") {
-    return plain(LABELS.runFailed);
+    return plain(t("agent.line.runFailed"));
   }
   return cause.state === "degraded" || cause.state === "stalled"
-    ? plain(LABELS.runStopped)
+    ? plain(t("agent.line.runStopped"))
     : null;
 }
 
@@ -938,20 +924,23 @@ function barLine(
   signals: Signals,
   devLine: string,
   agentLine: SpokenLine | null,
+  said: RailWords,
 ): SpokenLine {
   if (state === "error" || state === "warning") {
-    return faultLine(state, signals, agentLine);
+    return faultLine(state, signals, agentLine, said.t);
   }
   if (state === "working") {
     // The named run outranks the generic word: "Working" is true of an overnight
     // brief and of a one-line summary, and only one of them is news.
-    return agentLine ?? plain(LABELS.working);
+    return agentLine ?? plain(said.t("agent.state.working"));
   }
   if (state === "ingest") {
-    return agentLine ?? plain(signals.capture?.line ?? LABELS.reading);
+    return (
+      agentLine ?? plain(signals.capture?.line ?? said.t("agent.state.ingest"))
+    );
   }
   if (signals.waiting !== undefined && signals.waiting > 0) {
-    return plain(`${signals.waiting} ${LABELS.waiting}`);
+    return plain(said.waiting(signals.waiting));
   }
   // A deployment on the development path is not disconnected — it answers — but
   // every answer it gives is invented, and a reader who does not know that is
@@ -961,7 +950,7 @@ function barLine(
   if (signals.ai === "development") {
     return plain(devLine);
   }
-  return plain(LABELS.idle);
+  return plain(said.t("agent.state.idle"));
 }
 
 /**
@@ -979,17 +968,20 @@ function faultLine(
   state: "error" | "warning",
   signals: Signals,
   agentLine: SpokenLine | null,
+  t: Translator,
 ): SpokenLine {
   if (state === "warning") {
     return agentLine ?? plain(signals.licenseLine);
   }
   if (signals.ai === "unconfigured") {
-    return plain(LABELS.noModel);
+    return plain(t("agent.fact.noModel"));
   }
   if (signals.offline.length > 0) {
-    return plain(`${LABELS.cannotReach} ${signals.offline.join(", ")}`);
+    return plain(
+      t("agent.line.cannotReach", { sources: signals.offline.join(", ") }),
+    );
   }
-  return agentLine ?? plain(LABELS.runFailed);
+  return agentLine ?? plain(t("agent.line.runFailed"));
 }
 
 /**
@@ -1016,17 +1008,13 @@ function importRing(
 /**
  * The block's one click, wherever on it a pointer lands.
  *
- * The words stand beside the button rather than inside it, because the record
- * a line names is a link and a link inside a button is a control inside a
- * control. So the toggle listens on the whole hit area: a click on the orb, on
- * the words or on the chevron opens the panel, and the button's own Enter and
- * Space arrive here as the same click. The one exception is the record link
- * itself — following it is the reader leaving for the record, not asking for
- * the panel.
+ * The words stand beside the button rather than inside it, because the record a
+ * line names is a link and a link inside a button is a control inside a control.
+ * So the toggle listens on the whole hit area, and the one exception is the
+ * record link itself — following it is the reader leaving for the record.
  *
- * Opening the panel is what acknowledges a broken run: it is the reader turning
- * to the agent's report, so it is the moment the fault stops needing to be
- * held. Until then the orb holds it, however many hours it takes them to look.
+ * Opening the panel is also what acknowledges a broken run: it is the reader
+ * turning to the agent's report. Until then the orb holds it.
  */
 function useHit(
   open: boolean,
@@ -1064,10 +1052,11 @@ function railHitLabel(
   open: boolean,
   spend: Readonly<{ allowed: boolean; minor?: number }>,
   money: string,
+  t: Translator,
 ): string {
-  const name = open ? LABELS.collapse : LABELS.expand;
+  const name = t(open ? "agent.rail.close" : "agent.rail.open");
   return spend.allowed && spend.minor !== undefined
-    ? `${name}. ${LABELS.spend}: ${money}`
+    ? `${name}. ${t("agent.rail.spend")}: ${money}`
     : name;
 }
 
@@ -1171,6 +1160,10 @@ export function AgentRail({
   const ticker = useAgentTicker();
   const spend = useAiSpend();
   const { locale } = useLocale();
+  // The rail's own words, bundled once per render: the queue's line is a COUNT
+  // and goes through the reader's plural rule rather than a pasted number.
+  const plural = usePlural();
+  const said: RailWords = railWords(t, plural, locale);
   const { fault, acknowledge } = useAgentFault(server.faults);
   const { state, cause, register } = derive(signals, server, fault);
   const hit = useHit(open, setOpen, acknowledge);
@@ -1206,7 +1199,7 @@ export function AgentRail({
     spend.minor === undefined
       ? ""
       : formatMoney(spend.minor, spend.currency, locale);
-  const hitLabel = railHitLabel(open, spend, money);
+  const hitLabel = railHitLabel(open, spend, money, t);
   // Above the early return with every other hook: a screen this section draws
   // nothing on is still a render it has to make the same calls in.
   //
@@ -1220,12 +1213,15 @@ export function AgentRail({
     return said === null ? [] : [said];
   });
   const resting = useRestingLine(
-    restingReadings({
-      waiting: signals.waiting,
-      developmentLine:
-        signals.ai === "development" ? t("auth.coreDevelopment") : null,
-      settled,
-    }),
+    restingReadings(
+      {
+        waiting: signals.waiting,
+        developmentLine:
+          signals.ai === "development" ? t("auth.coreDevelopment") : null,
+        settled,
+      },
+      said,
+    ),
     restingTips(route.screen, t),
   );
 
@@ -1250,7 +1246,7 @@ export function AgentRail({
   const line =
     state === "idle"
       ? resting
-      : barLine(state, signals, t("auth.coreDevelopment"), agentLine);
+      : barLine(state, signals, t("auth.coreDevelopment"), agentLine, said);
   // ONE line under the orb, whoever is talking. While this tab is fetching
   // something it can name, that sentence is the orb's line — "Reading Acme" is
   // the status a reader is waiting on at that moment — and the agent's own line
@@ -1267,7 +1263,7 @@ export function AgentRail({
     <section
       className="arblock"
       data-core-state={state}
-      aria-label={LABELS.region}
+      aria-label={t("agent.rail.region")}
       ref={block}
     >
       {/* Out of the rail and into the body: the rail clips what hangs beside it
@@ -1339,7 +1335,10 @@ export function AgentRail({
             on it: the chevron reports whether the panel is open, which is a fact
             about the block rather than about the spend, so a row that came and
             went with the money would take the disclosure with it. */}
-        <span className="arlast">
+        {/* The same reading as the panel's head, in the width a rail has:
+            small, secondary and tabular, with the figure in the primary ink.
+            The classes are the type; this file only places the row. */}
+        <span className="arlast t-caption t-num">
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
@@ -1347,14 +1346,14 @@ export function AgentRail({
               price. */}
           {spend.allowed && spend.minor !== undefined && (
             <span className="arspend">
-              {money}
+              <b>{money}</b>
               {/* The scope beside the figure, in the slot the stylesheet
                   reserved for it (`.arspend > .arscope`, "the money, and the
                   scope it was spent in, on one line"): a bare currency amount
                   names nothing. The expanded panel says "Cost this month";
                   this is the same fact in the space a rail has, from the same
                   string. */}
-              <span className="arscope">{LABELS.spendScope}</span>
+              <span className="arscope">{t("agent.thisMonth")}</span>
             </span>
           )}
           <ChevronRight

@@ -11,7 +11,6 @@ import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { AgentRail } from "./agentrail";
-import { LABELS } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 
 // THE PANEL'S SHAPE, which is the half of it no other suite asserts.
@@ -222,11 +221,13 @@ describe("the agent panel's hierarchy", () => {
   it("puts the full-log verb beside the recap's title, not inside it", async () => {
     const opened = await openPanel();
     const head = [...opened.querySelectorAll(".arsecthead")].find((one) =>
-      one.textContent?.includes(LABELS.recap),
+      one.textContent?.includes(en["agent.panel.recent"]),
     );
-    expect(head?.querySelector("h3")?.textContent).toBe(LABELS.recap);
+    expect(head?.querySelector("h3")?.textContent).toBe(
+      en["agent.panel.recent"],
+    );
     expect(head?.querySelector("a.link-button")?.textContent).toBe(
-      LABELS.fullLog,
+      en["agent.panel.fullLog"],
     );
   });
 
@@ -321,6 +322,8 @@ describe("the agent panel's report", () => {
       ),
     );
     expect(opened.querySelector(".arnone")?.className).toContain("t-caption");
-    expect(en["agent.panel.nothingWaiting"]).not.toBe(LABELS.allClear);
+    expect(en["agent.panel.nothingWaiting"]).not.toBe(
+      en["agent.line.allClear"],
+    );
   });
 });

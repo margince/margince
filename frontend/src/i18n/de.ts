@@ -420,7 +420,7 @@ export const de = {
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
-  "shell.agent.scope": "Ihr Agent liest nur das, was Sie sehen können.",
+  "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "E-Mail-Verlauf wird importiert",
   "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",
   "shell.capture.count": "Bisher {scanned} Nachrichten",
@@ -4106,187 +4106,203 @@ export const de = {
   // klingen, als wäre er fertig.
   "agent.activity.weeklyReview.queued":
     "Deine Woche wartet auf eine Zusammenfassung.",
-  "agent.activity.weeklyReview.running": "Deine Woche wird zusammengefasst…",
+  "agent.activity.weeklyReview.running": "Ich fasse deine Woche zusammen.",
   "agent.activity.weeklyReview.stalled":
-    "Die Zusammenfassung deiner Woche dauert länger als erwartet.",
-  "agent.activity.weeklyReview.done": "Deine Woche hat eine Zusammenfassung.",
+    "Die Zusammenfassung deiner Woche dauert ungewöhnlich lange.",
+  "agent.activity.weeklyReview.done": "Deine Wochenzusammenfassung ist fertig.",
   "agent.activity.weeklyReview.degraded":
-    "Deine Woche ist ausgewertet, ohne Zusammenfassung — die Zahlen sind vollständig.",
+    "Deine Woche ist ausgewertet, aber ohne Zusammenfassung.",
   "agent.activity.weeklyReview.failed":
-    "Diesmal keine Zusammenfassung deiner Woche. Die Zahlen sind trotzdem die der Woche.",
+    "Ich konnte deine Woche nicht zusammenfassen.",
   "agent.activity.weeklyLearnings.queued":
-    "Ihre Woche wartet darauf, auf Erkenntnisse gelesen zu werden.",
+    "Deine Woche wartet auf Erkenntnisse.",
   "agent.activity.weeklyLearnings.running":
-    "Ich lese Ihre Woche auf Erkenntnisse…",
+    "Ich lese deine Woche auf Erkenntnisse durch.",
   "agent.activity.weeklyLearnings.stalled":
-    "Das Lesen Ihrer Woche dauert länger als erwartet.",
-  "agent.activity.weeklyLearnings.done": "Ihre Woche hat ihre Erkenntnisse.",
+    "Das Lesen deiner Woche dauert ungewöhnlich lange.",
+  "agent.activity.weeklyLearnings.done":
+    "Die Erkenntnisse deiner Woche sind fertig.",
   "agent.activity.weeklyLearnings.degraded":
-    "Ihre Woche ist gemessen, ohne Erkenntnisse — die Zahlen sind vollständig.",
+    "Deine Woche ist ausgewertet, aber ohne Erkenntnisse.",
   "agent.activity.weeklyLearnings.failed":
-    "Diesmal keine Erkenntnisse aus Ihrer Woche. Die Zahlen bleiben die der Woche.",
+    "Ich konnte keine Erkenntnisse aus deiner Woche ziehen.",
   "agent.activity.morningBrief.queued": "Dein Morgenbriefing ist eingereiht.",
-  "agent.activity.morningBrief.running":
-    "Ich stelle dein Morgenbriefing zusammen.",
+  "agent.activity.morningBrief.running": "Ich schreibe dein Morgenbriefing.",
   "agent.activity.morningBrief.done": "Dein Morgenbriefing ist fertig.",
   "agent.activity.morningBrief.degraded":
-    "Ich bin bei deinem Morgenbriefing nur zum Teil gekommen und habe gestoppt.",
+    "Ich bin bei deinem Morgenbriefing auf halbem Weg stehengeblieben.",
   "agent.activity.morningBrief.failed":
     "Ich konnte dein Morgenbriefing nicht abschließen.",
   "agent.activity.morningBrief.stalled":
-    "Dein Morgenbriefing läuft ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.riskSweep.queued":
-    "Die nächtliche Risikoprüfung ist eingereiht.",
+    "Dein Morgenbriefing dauert ungewöhnlich lange.",
+  "agent.activity.riskSweep.queued": "Die Risikoprüfung ist eingereiht.",
   "agent.activity.riskSweep.running": "Ich prüfe deine Deals auf Risiken.",
-  "agent.activity.riskSweep.done":
-    "Fertig. Ich habe deine Deals nachts auf Risiken geprüft.",
+  "agent.activity.riskSweep.done": "Ich habe deine Deals auf Risiken geprüft.",
   "agent.activity.riskSweep.degraded":
-    "Ich bin bei der Risikoprüfung nur zum Teil gekommen und habe gestoppt.",
+    "Ich bin bei der Risikoprüfung auf halbem Weg stehengeblieben.",
   "agent.activity.riskSweep.failed":
-    "Ich konnte die nächtliche Risikoprüfung nicht abschließen.",
+    "Ich konnte die Risikoprüfung nicht beenden.",
   "agent.activity.riskSweep.stalled":
-    "Die Risikoprüfung läuft ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
+    "Die Risikoprüfung dauert ungewöhnlich lange.",
   "agent.activity.documentExtract.queued":
     "Dein Dokument steht zum Lesen in der Warteschlange.",
   "agent.activity.documentExtract.running": "Ich lese dein Dokument.",
   "agent.activity.documentExtract.stalled":
-    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne die Datei und lass sie erneut lesen.",
+    "Das Lesen deines Dokuments dauert ungewöhnlich lange. Öffne die Datei erneut.",
   "agent.activity.documentExtract.done": "Ich habe dein Dokument gelesen.",
   "agent.activity.documentExtract.degraded":
-    "Ich bin bei deinem Dokument nur teilweise durchgekommen und habe gestoppt.",
+    "Ich habe dein Dokument nur halb gelesen.",
   "agent.activity.documentExtract.failed":
     "Ich konnte dein Dokument nicht lesen.",
   "agent.activity.documentExtractNamed.queued":
     "{name} steht zum Lesen in der Warteschlange.",
   "agent.activity.documentExtractNamed.running": "Ich lese {name}.",
   "agent.activity.documentExtractNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne die Datei und lass sie erneut lesen.",
+    "Das Lesen von {name} dauert ungewöhnlich lange. Öffne die Datei erneut.",
   "agent.activity.documentExtractNamed.done": "Ich habe {name} gelesen.",
   "agent.activity.documentExtractNamed.degraded":
-    "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
+    "Ich habe {name} nur halb gelesen.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
   "agent.activity.accountScan.queued":
     "Das Lesen eines Accounts steht in der Warteschlange.",
-  "agent.activity.accountScan.running":
-    "Ich lese die Korrespondenz und die Deals eines Accounts.",
+  "agent.activity.accountScan.running": "Ich lese die Historie eines Accounts.",
   "agent.activity.accountScan.stalled":
-    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne den Account erneut, damit er neu gelesen wird.",
-  "agent.activity.accountScan.done": "Was ein Account braucht, ist fertig.",
+    "Das Lesen eines Accounts dauert ungewöhnlich lange. Öffne den Account erneut.",
+  "agent.activity.accountScan.done":
+    "Ich habe mich in einen Account eingelesen.",
   "agent.activity.accountScan.degraded":
-    "Ich habe einen Account so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
+    "Ich habe einen Account so weit gelesen, wie die Daten es zuließen.",
   "agent.activity.accountScan.failed":
     "Ich konnte das Lesen eines Accounts nicht abschließen.",
   "agent.activity.accountScanNamed.queued":
     "Das Lesen von {name} steht in der Warteschlange.",
   "agent.activity.accountScanNamed.running":
-    "Ich lese die Korrespondenz und die Deals von {name}.",
+    "Ich lese die Historie von {name}.",
   "agent.activity.accountScanNamed.stalled":
-    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen. Öffne den Account erneut, damit er neu gelesen wird.",
-  "agent.activity.accountScanNamed.done": "Was {name} braucht, ist fertig.",
+    "Das Lesen von {name} dauert ungewöhnlich lange. Öffne den Account erneut.",
+  "agent.activity.accountScanNamed.done": "Ich habe mich in {name} eingelesen.",
   "agent.activity.accountScanNamed.degraded":
-    "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
+    "Ich habe {name} so weit gelesen, wie die Daten es zuließen.",
   "agent.activity.accountScanNamed.failed":
     "Ich konnte das Lesen von {name} nicht abschließen.",
-  "agent.activity.transcriptRead.queued":
-    "Das Transkript steht zum Lesen in der Warteschlange.",
-  "agent.activity.transcriptRead.running":
-    "Ich lese das Transkript auf nächste Schritte durch.",
+  "agent.activity.transcriptRead.queued": "Das Transkript steht zum Lesen an.",
+  "agent.activity.transcriptRead.running": "Ich lese das Transkript.",
   "agent.activity.transcriptRead.stalled":
-    "Das Lesen des Transkripts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen des Transkripts dauert ungewöhnlich lange.",
   "agent.activity.transcriptRead.done": "Ich habe das Transkript gelesen.",
   "agent.activity.transcriptRead.degraded":
-    "Ich habe das Transkript nicht zu Ende gelesen.",
+    "Ich habe das Transkript nur halb gelesen.",
   "agent.activity.transcriptRead.failed":
     "Ich konnte das Transkript nicht lesen.",
   "agent.activity.voiceBuild.queued":
-    "Das Erlernen Ihres Schreibstils steht an.",
-  "agent.activity.voiceBuild.running": "Ich lerne Ihren Schreibstil.",
+    "Das Erlernen deines Schreibstils steht an.",
+  "agent.activity.voiceBuild.running": "Ich lerne deinen Schreibstil.",
   "agent.activity.voiceBuild.stalled":
-    "Das Erlernen Ihres Schreibstils dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.activity.voiceBuild.done": "Ich habe Ihren Schreibstil gelernt.",
+    "Das Erlernen deines Schreibstils dauert ungewöhnlich lange.",
+  "agent.activity.voiceBuild.done": "Ich habe deinen Schreibstil gelernt.",
   "agent.activity.voiceBuild.degraded":
-    "Ich habe aufgehört, bevor ich Ihren Schreibstil gelernt hatte.",
+    "Ich habe deinen Schreibstil nur teilweise gelernt.",
   "agent.activity.voiceBuild.failed":
-    "Ich konnte Ihren Schreibstil nicht lernen.",
+    "Ich konnte deinen Schreibstil nicht lernen.",
   "agent.activity.siteRead.queued":
     "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
   "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
   "agent.activity.siteRead.stalled":
-    "Das Lesen der Firmenwebsite dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen der Firmenwebsite dauert ungewöhnlich lange.",
   "agent.activity.siteRead.done": "Ich habe die Firmenwebsite gelesen.",
   "agent.activity.siteRead.degraded":
-    "Ich habe die Firmenwebsite nicht zu Ende gelesen.",
+    "Ich habe die Firmenwebsite nur halb gelesen.",
   "agent.activity.siteRead.failed": "Ich konnte die Firmenwebsite nicht lesen.",
   "agent.activity.siteReadNamed.queued":
     "Die Website von {name} steht zum Lesen in der Warteschlange.",
   "agent.activity.siteReadNamed.running": "Ich lese die Website von {name}.",
   "agent.activity.siteReadNamed.stalled":
-    "Das Lesen der Website von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Lesen der Website von {name} dauert ungewöhnlich lange.",
   "agent.activity.siteReadNamed.done":
     "Ich habe die Website von {name} gelesen.",
   "agent.activity.siteReadNamed.degraded":
-    "Ich habe die Website von {name} nicht zu Ende gelesen.",
+    "Ich habe die Website von {name} nur halb gelesen.",
   "agent.activity.siteReadNamed.failed":
     "Ich konnte die Website von {name} nicht lesen.",
   "agent.activity.summarize.queued":
     "Eine Zusammenfassung steht in der Warteschlange.",
-  "agent.activity.summarize.running":
-    "Ich stelle eine Zusammenfassung zusammen.",
+  "agent.activity.summarize.running": "Ich schreibe eine Zusammenfassung.",
   "agent.activity.summarize.done": "Deine Zusammenfassung ist fertig.",
   "agent.activity.summarize.degraded":
-    "Ich habe nur einen Teil der Zusammenfassung geschafft und dann aufgehört.",
+    "Ich habe die Zusammenfassung nur halb geschafft.",
   "agent.activity.summarize.failed":
     "Ich konnte die Zusammenfassung nicht abschließen.",
   "agent.activity.summarize.stalled":
-    "Die Zusammenfassung dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
+    "Die Zusammenfassung dauert ungewöhnlich lange.",
   "agent.activity.summarizeNamed.queued":
-    "Das Zusammentragen zu {name} steht in der Warteschlange.",
-  "agent.activity.summarizeNamed.running":
-    "Ich trage zusammen, was ich über {name} weiß.",
-  "agent.activity.summarizeNamed.done": "Was ich über {name} weiß, ist fertig.",
+    "Die Zusammenfassung zu {name} steht an.",
+  "agent.activity.summarizeNamed.running": "Ich fasse {name} zusammen.",
+  "agent.activity.summarizeNamed.done":
+    "Meine Zusammenfassung zu {name} ist fertig.",
   "agent.activity.summarizeNamed.degraded":
-    "Ich habe zu {name} nur teilweise Informationen zusammengetragen und dann aufgehört.",
+    "Ich habe meine Zusammenfassung zu {name} nur halb geschafft.",
   "agent.activity.summarizeNamed.failed":
-    "Ich konnte das Zusammentragen zu {name} nicht abschließen.",
+    "Ich konnte {name} nicht zusammenfassen.",
   "agent.activity.summarizeNamed.stalled":
-    "Das Zusammentragen zu {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Die Zusammenfassung zu {name} dauert ungewöhnlich lange.",
   "agent.activity.draftReply.queued":
     "Deine Antwort steht zum Entwerfen in der Warteschlange.",
   "agent.activity.draftReply.running": "Ich entwerfe deine Antwort.",
   "agent.activity.draftReply.done": "Dein Antwortentwurf ist fertig.",
   "agent.activity.draftReply.degraded":
-    "Ich bin bei deiner Antwort nur teilweise durchgekommen und habe gestoppt.",
+    "Ich habe deine Antwort nur halb entworfen.",
   "agent.activity.draftReply.failed":
     "Ich konnte deine Antwort nicht entwerfen.",
   "agent.activity.draftReply.stalled":
-    "Das Entwerfen deiner Antwort dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Das Entwerfen deiner Antwort dauert ungewöhnlich lange.",
   "agent.activity.offerDraft.queued":
     "Dein Angebot steht zum Entwerfen in der Warteschlange.",
   "agent.activity.offerDraft.running": "Ich entwerfe dein Angebot.",
   "agent.activity.offerDraft.done": "Dein Angebotsentwurf ist fertig.",
   "agent.activity.offerDraft.degraded":
-    "Ich bin bei deinem Angebot nur teilweise durchgekommen und habe gestoppt.",
+    "Ich habe dein Angebot nur halb entworfen.",
   "agent.activity.offerDraft.failed":
     "Ich konnte dein Angebot nicht entwerfen.",
   "agent.activity.offerDraft.stalled":
-    "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
-  "agent.panel.runningNow": "Läuft jetzt",
-  "agent.state.idle": "Im Leerlauf",
-  "agent.state.ingest": "Liest ein",
+    "Das Entwerfen deines Angebots dauert ungewöhnlich lange.",
+  "agent.rail.region": "Margince-Agent",
+  "agent.panel.label": "Agentenbereich",
+  "agent.rail.open": "Agentenbereich öffnen",
+  "agent.rail.close": "Agentenbereich schließen",
+  "agent.state.idle": "Inaktiv",
+  "agent.state.ingest": "Liest",
   "agent.state.working": "Arbeitet",
-  "agent.state.warning": "Braucht Aufmerksamkeit",
-  "agent.state.error": "Läuft nicht",
+  "agent.state.warning": "Warnung",
+  "agent.state.error": "Ausgefallen",
+  "agent.thisMonth": "diesen Monat",
+  "agent.rail.spend": "Kosten diesen Monat",
+  "agent.panel.runningNow": "Läuft jetzt",
+  "agent.panel.needsYou": "Braucht dich",
+  "agent.panel.recent": "Letzte Aktivität",
+  "agent.panel.runtime": "Laufzeit",
+  "agent.panel.fullLog": "Volles Protokoll",
+  "agent.panel.decisions": "Entscheidungen",
+  "agent.panel.nothingWaiting": "Nichts offen",
+  "agent.panel.nothingToday": "Heute nichts fertig",
   "agent.fact.model": "Modell",
   "agent.fact.tools": "Werkzeuge",
   "agent.fact.sources": "Quellen",
-  "agent.panel.nothingWaiting": "Es warten keine Entscheidungen",
-
-  // Vier Dinge, die der Agentenbereich sagt, wenn es nichts Neues gibt. Kurz
-  // halten: die Zeile im Rail wird nach zwei Zeilen abgeschnitten.
-  "agent.tip.day": "To-dos, Entscheidungen und Dubletten: {name}.",
+  "agent.fact.offline": "offline",
+  "agent.fact.noCalls": "Noch keine Aufrufe",
+  "agent.fact.hidden": "Für diesen Platz verborgen",
+  "agent.fact.noModel": "Kein Modell konfiguriert",
+  "agent.line.waiting_one": "{count} Entscheidung offen",
+  "agent.line.waiting_other": "{count} Entscheidungen offen",
+  "agent.line.allClear": "Nichts zu tun",
+  "agent.line.cannotReach": "Kein Zugriff auf {sources}",
+  "agent.line.runFailed": "Ein Lauf ist fehlgeschlagen",
+  "agent.line.runStopped": "Ein Lauf brach früh ab",
+  "agent.line.justNow": "gerade eben",
+  "agent.setting.edgeLight": "Leuchtender Bildschirmrand",
+  "agent.tip.day": "To-dos, Entscheidungen und Dubletten stehen auf {name}.",
   "agent.tip.ask": "Frag mich überall mit ⌘K.",
-  "agent.tip.recap": "Öffne mich für alles, was ich heute getan habe.",
+  "agent.tip.recap": "Öffne mich für die heutige Aktivität.",
   "agent.tip.edge": "Der Bildschirmrand leuchtet, während ich arbeite.",
 
   "agents.connected": "Verbundene Agenten",
