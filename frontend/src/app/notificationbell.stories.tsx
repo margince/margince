@@ -86,6 +86,12 @@ const openIt = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
 const meta: Meta<typeof NotificationBell> = {
   title: "Shell/Notification bell",
   component: NotificationBell,
+  // FULLSCREEN, like the top bar's own stories, and here it decides whether
+  // the panel is reviewable at all: the panel is positioned against the
+  // viewport the way the app's chrome is, so a canvas that insets the strip
+  // leaves the panel where the app would put it and the strip somewhere else —
+  // drawn over the bell it hangs from, which is a geometry that never ships.
+  parameters: { layout: "fullscreen" },
 };
 export default meta;
 type Story = StoryObj<typeof NotificationBell>;
