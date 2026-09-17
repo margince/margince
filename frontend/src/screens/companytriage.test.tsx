@@ -87,8 +87,12 @@ it("reports a failed read as unavailable rather than as nothing checked", async 
   render(<CompanyTriageSection companyId={COMPANY} />);
   await openSection();
 
-  // The distinction the whole section turns on: "no domain was checked" is a
-  // claim about how this record came to exist, and a request that did not
+  // Waited for and asserted POSITIVELY. An absence assertion alone passes
+  // before the request settles and passes over a section that rendered nothing
+  // at all, which is the same vacuous green either way.
+  expect(await screen.findByText(/Could not be loaded/)).toBeInTheDocument();
+  // And the distinction the whole section turns on: "no domain was checked" is
+  // a claim about how this record came to exist, and a request that did not
   // answer cannot support it.
   expect(
     screen.queryByText(/recorded by hand or brought in from elsewhere/),
