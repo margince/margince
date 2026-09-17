@@ -26,8 +26,21 @@ import (
 // reads. Unknown fields are ignored — the raw original is stored verbatim as
 // evidence (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID          string        `json:"id"`
-	Status      string        `json:"status"` // "confirmed" | "tentative" | "cancelled"
+	ID string `json:"id"`
+	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
+	// Google's own numbering, so the same meeting read from Google and from
+	// Graph carries two ids and would dedupe as two meetings.
+	//
+	// The tag is Google's own spelling. Microsoft writes `iCalUId`, and both
+	// decode either payload because encoding/json matches field names case
+	// INSENSITIVELY — so the two spellings are documentation of each vendor's
+	// wire format, not a correctness boundary, and no test can tell them apart.
+	//
+	// With singleEvents=true (client.go) Google returns it per OCCURRENCE, and
+	// every occurrence of one series carries the same value — so it names the
+	// series and the occurrence's start names the meeting within it.
+	ICalUID     string        `json:"iCalUID"` //nolint:tagliatelle // Google's wire format
+	Status      string        `json:"status"`  // "confirmed" | "tentative" | "cancelled"
 	Summary     string        `json:"summary"`
 	Description string        `json:"description"`
 	Start       eventDateTime `json:"start"`
@@ -103,6 +116,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 	}
 	return meetingmap.Event{
 		ID:            ev.ID,
+		ICalUID:       strings.TrimSpace(ev.ICalUID),
 		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), "cancelled"),
 		OwnerDeclined: ownerDeclined(ev.Attendees, owner),
 		Subject:       ev.Summary,

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,8 +39,36 @@ const (
 // weekly call is one UID and fifty-two meetings — so the UID names the series
 // and the occurrence's own start names the meeting within it. Keying on the UID
 // alone would resolve every occurrence to the first one.
+//
+// BOTH ingestion doors compose their key here, which is what stops them
+// disagreeing: an importer states `ical_instance` as text, a connector reads the
+// occurrence from the provider as an instant, and normalizedInstant folds either
+// into one spelling. A second composition would fail silently — the resolve
+// would simply never match, and both doors would go on landing a row each.
 func MeetingIdentityKey(icalUID, instance string) string {
-	return strings.TrimSpace(icalUID) + "/" + strings.TrimSpace(instance)
+	return strings.TrimSpace(icalUID) + "/" + normalizedInstant(strings.TrimSpace(instance))
+}
+
+// normalizedInstant folds an occurrence start to one spelling, so the same
+// instant written by two callers compares equal.
+//
+// The contract asks for "the occurrence's own original start, as the calendar
+// states it", which leaves the offset and the precision to whoever writes it:
+// Google says `2026-09-23T10:00:00+02:00`, Graph says
+// `2026-09-23T08:00:00.0000000Z`, and a client may say either. One instant, so
+// one key.
+//
+// A value that will not parse is kept VERBATIM rather than refused. This key is
+// an opaque identity, not a validated field, and failing here would refuse an
+// import over a format question the identity does not care about — while two
+// callers who spell an unparseable instance the same way still meet.
+func normalizedInstant(instance string) string {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"} {
+		if t, err := time.Parse(layout, instance); err == nil {
+			return t.UTC().Format(time.RFC3339)
+		}
+	}
+	return instance
 }
 
 // ResolveIdentity answers which activity already holds an external identity.

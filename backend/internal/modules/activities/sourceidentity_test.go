@@ -3,7 +3,10 @@
 
 package activities
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // Whether two rows may be bound into one message turns on whether one seat
 // wrote both. A Message-ID is typed by whoever sent the message, so binding on
@@ -89,5 +92,74 @@ func TestAMeetingIdentityNamesTheOccurrence(t *testing.T) {
 	}
 	if MeetingIdentityKey(" series-1@example.test ", " 2026-09-16T10:00:00Z ") != first {
 		t.Fatal("the same occurrence spelled with stray spacing is a different identity")
+	}
+}
+
+// One meeting read from two calendars is ONE identity, however each provider
+// spells the occurrence.
+//
+// This is the agreement the whole meeting dedupe rests on, and the failure it
+// guards is silent: Google states the start as `+02:00`, Graph as `Z` with
+// seven decimal places, and a client may state either. Three spellings of one
+// instant that compared unequal would give one meeting three identities, and
+// nothing would fail — a missed match looks exactly like a meeting nobody else
+// has.
+func TestOneOccurrenceIsOneIdentityHoweverItsStartIsSpelled(t *testing.T) {
+	const series = "series-42@google.com"
+	want := MeetingIdentityKey(series, "2026-09-23T08:00:00Z")
+	for _, spelling := range []struct {
+		name, instance string
+	}{
+		{"Google's offset form", "2026-09-23T10:00:00+02:00"},
+		{"Graph's sub-second UTC", "2026-09-23T08:00:00.0000000Z"},
+		{"plain UTC", "2026-09-23T08:00:00Z"},
+		{"a different offset for the same instant", "2026-09-23T03:00:00-05:00"},
+	} {
+		t.Run(spelling.name, func(t *testing.T) {
+			if got := MeetingIdentityKey(series, spelling.instance); got != want {
+				t.Fatalf("%s keyed as %q, want %q — one instant must be one identity",
+					spelling.name, got, want)
+			}
+		})
+	}
+	// And a connector holding the start as an INSTANT reaches the same key,
+	// which is what lets the capture door meet the import door at all. It
+	// formats through the same function, so there is one spelling rather than
+	// two that have to be kept in step.
+	start := time.Date(2026, 9, 23, 8, 0, 0, 0, time.UTC)
+	if got := MeetingIdentityKey(series, start.UTC().Format(time.RFC3339)); got != want {
+		t.Fatalf("a connector's instant keyed as %q, want %q", got, want)
+	}
+}
+
+// Two occurrences of one series are two meetings.
+//
+// A weekly call is one iCal UID and fifty-two meetings, so keying on the series
+// alone would resolve every one of them onto the first.
+func TestTwoOccurrencesOfOneSeriesAreTwoIdentities(t *testing.T) {
+	const series = "weekly@google.com"
+	first := MeetingIdentityKey(series, "2026-09-23T08:00:00Z")
+	second := MeetingIdentityKey(series, "2026-09-30T08:00:00Z")
+	if first == second {
+		t.Fatalf("two occurrences share the identity %q, so the series would be one meeting", first)
+	}
+}
+
+// An unparseable occurrence is kept verbatim rather than refused, and two
+// callers who spell it the same way still meet.
+//
+// The key is an opaque identity, not a validated field: refusing here would
+// fail an import over a format question the identity does not care about.
+func TestAnUnreadableOccurrenceStillKeysConsistently(t *testing.T) {
+	const series = "odd@example.test"
+	// The value survives into the key rather than being dropped or rewritten,
+	// which is what lets two callers who spell it the same way still meet.
+	// Asserting the function agrees with itself would prove only that it is a
+	// function.
+	if got := MeetingIdentityKey(series, "whenever"); got != series+"/whenever" {
+		t.Fatalf("an unparseable occurrence keyed as %q, want it carried verbatim", got)
+	}
+	if MeetingIdentityKey(series, "whenever") == MeetingIdentityKey(series, "later") {
+		t.Fatal("two different unparseable occurrences collapsed into one identity")
 	}
 }
