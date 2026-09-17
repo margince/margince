@@ -460,10 +460,17 @@ func archiveAbsorbedEcho(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.
 	//
 	// archived_at is coalesced: a row a noise disposition already hid keeps the
 	// moment it was hidden, which is the fact its undo window is measured from.
+	//
+	// source_id alone is cleared, and source_system deliberately stays. The key
+	// this row is giving up is uq_activity_source, which is PARTIAL on both
+	// columns being non-null — so nulling either one releases it, and the
+	// audit images below already name source_id as the thing surrendered.
+	// Keeping source_system also keeps the row's answer to "where did this come
+	// from", which an absorbed echo still has: it was captured from somewhere,
+	// and only its claim on the natural key was wrong.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity
-		   SET source_system = NULL,
-		       source_id     = NULL,
+		   SET source_id     = NULL,
 		       archived_at   = coalesce(archived_at, now())
 		 WHERE id = $1 AND source_id = $2`, echoID, stamped)
 	if err != nil {

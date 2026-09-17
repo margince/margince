@@ -122,6 +122,11 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		  -- being emptied here, so it is a fact about erased text rather than
 		  -- about the row.
 		  language = NULL,
+		  -- The byline an import carried in from the system this row came from:
+		  -- a human's name in free text, written by neither party to the
+		  -- exchange. It is content about somebody rather than the record of
+		  -- who the exchange was with, so it goes with the words.
+		  source_author_name = NULL,
 		  source_id = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
 		                   THEN NULL ELSE a.source_id END,
 		  thread_key = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
