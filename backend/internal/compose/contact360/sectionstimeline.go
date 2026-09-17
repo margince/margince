@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -108,7 +107,7 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID id
 	if err != nil {
 		return err
 	}
-	page, err := sectionPage(rows, hasMore)
+	page, err := sectionPage(ctx, rows, hasMore)
 	if err != nil {
 		return err
 	}
@@ -160,14 +159,19 @@ const (
 )
 
 // sectionPage is the section's edge in the activities list's own cursor
-// vocabulary: the same (occurred_at, id) keyset GET /activities orders by, so
-// the record page continues from this page's last row rather than fetching
-// page one again and showing every row twice.
-func sectionPage(rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageInfo, error) {
+// vocabulary, so the record page continues from this page's last row rather
+// than fetching page one again and showing every row twice.
+//
+// Minted by the LIST rather than here. The token carries the order it was
+// minted under, and the list refuses one minted under another — which is right,
+// and which makes a hand-built token beside this section a page boundary that
+// works until the day the list's order is expressed differently. It was: the
+// timeline is a sort-aware keyset now, and this is the caller that would
+// otherwise have found out through a 422 in front of a reader.
+func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageInfo, error) {
 	info := crmcontracts.PageInfo{HasMore: hasMore}
 	if hasMore && len(rows) > 0 {
-		last := rows[len(rows)-1]
-		cursor, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		cursor, err := activities.TimelineCursor(ctx, rows[len(rows)-1])
 		if err != nil {
 			return crmcontracts.PageInfo{}, err
 		}

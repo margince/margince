@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -76,6 +77,30 @@ const (
 // sort keys is a different machine — so this arm keeps its order, refuses a
 // caller's sort outright rather than ignoring it, and hands out no cursor.
 const requestPriorityOrder = " ORDER BY (a.owed_verdict = 'asks_us') DESC NULLS LAST, a.occurred_at DESC, a.id DESC"
+
+// TimelineCursor mints the token the activity list continues from, for a
+// SECTION that paged the same rows itself.
+//
+// One invariant on both sides of a wire: a record page shows the first few
+// activities and hands out a cursor, and the list the reader then opens has to
+// resume from it rather than showing page one again. The two are different
+// queries, so the token is the only thing that ties them — and it carries the
+// ORDER it was minted under, which is why it cannot be built by hand beside
+// each of them.
+//
+// Held by TestTheContact360TimelineCursorContinuesIntoTheActivityList, which
+// walks a real 360 and then the real list with what it handed out.
+func TimelineCursor(ctx context.Context, last crmcontracts.Activity) (string, error) {
+	spec := defaultTimelineSort
+	// No binder: this vocabulary is plain columns, and a sort that rendered an
+	// expression would need one (ParseListSort says so where it refuses).
+	sorted, err := storekit.ParseListSort(ctx, &spec, activitySortFields, nil)
+	if err != nil {
+		return "", err
+	}
+	key := last.OccurredAt.Format(time.RFC3339Nano)
+	return sorted.EncodePageCursor(&key, last.CreatedAt, ids.UUID(last.Id))
+}
 
 // timelineSort resolves the order one read runs in: the caller's spec where
 // they gave one, else the default this narrowing implies.
