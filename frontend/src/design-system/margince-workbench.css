@@ -308,7 +308,11 @@
      an intrinsic floor here would spend that length on the row rather than on
      the chip — the rail's own width is the budget. */
   min-width: 0;
-  padding: 5px var(--space-2);
+  /* The height is the invariant and the inset falls out of it, the way every
+     other control in the tree states it — this said 5px above and below a 20px
+     line and arrived at the same 32 by arithmetic nobody could check. */
+  min-block-size: var(--controlHeight);
+  padding-inline: var(--space-2);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-full);
   corner-shape: round;

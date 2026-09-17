@@ -124,7 +124,7 @@
   }
 }
 .app.railexpanded {
-  --railW: 224px;
+  --railW: 256px;
 }
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
@@ -383,8 +383,6 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
-/* The label is absolutely positioned for the collapse animation, so it does not
-   flow around the shortcut cap — it is held clear of it instead. */
 /* The head: the brand block, then the line that says what it runs on and what
    stage it is at. TWO ROWS, so the marker stands beside the attribution instead
    of at the foot of a column a demo never scrolls to — and the control that
@@ -416,7 +414,12 @@
   min-height: var(--topbarH);
   /* A breath between the head and the first destination: with the marker on the
      head's last line the row under it read as one more item in its stack. */
-  margin-bottom: var(--space-3);
+  margin-block-end: var(--space-5);
+  /* No inline margin. The panel's own padding (`.rail.expanded, .rail.collapsed`
+     above) already stands every child --space-2 in from the edge, the rows
+     included; a margin here would ADD to it and indent the mark from the
+     destinations it heads — and collapsed, where the padding leaves a 40px
+     column, would take the mark's own box away. One rule owns that inset. */
 }
 /* Collapsed the head is the mark and the marker under it, and neither has a
    text column to stand on: at 56px the axis is the column's own centre, which is
@@ -811,7 +814,7 @@
 /* ===== a navigation level =====
  * The panel shows ONE level at a time: on a section route the ten destinations
  * step aside for that section's entries, with the way back up above them. 56px
- * cannot carry two levels, and 224px carrying both reads as a list of twenty
+ * cannot carry two levels, and 256px carrying both reads as a list of twenty
  * places to go.
  *
  * The rows are the same `.navitem`s as the destinations, deliberately: every

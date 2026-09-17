@@ -9,8 +9,11 @@
 .theme-toggle {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  /* The one control height, like every other icon affordance: this button is
+     the only control on the sign-in and onboarding surfaces, and a smaller one
+     there was a second answer to how tall a control is. */
+  inline-size: var(--controlHeight);
+  block-size: var(--controlHeight);
   flex: none;
   padding: 0;
   border: 0;

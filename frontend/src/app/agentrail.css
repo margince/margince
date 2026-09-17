@@ -16,7 +16,7 @@
  * lives in that line, and the light the orb spills on the rail floor has no edge
  * to stop it.
  *
- * The panel is taken out of the flow, sideways: a 224px column cannot carry five
+ * The panel is taken out of the flow, sideways: a 256px column cannot carry five
  * sections, and a panel that pushed the rail wider would move every destination
  * above it.
  */

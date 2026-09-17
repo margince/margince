@@ -151,24 +151,16 @@
   text-overflow: ellipsis;
 }
 /* One cap per KEY. Two small squares read as keys because they are shaped like
-   keys; the single wide box they replace read as a label. */
+   keys; the single wide box they replace read as a label. This rule only PLACES
+   them in the strip — the cap itself is `Kbd`, the one key cap
+   (design-system/atoms.css `.kbd`), so the strip cannot draw a second key.
+   Each cap is still sized to its own character: ⌘ and K are different widths
+   and two caps forced to one width read as a pair of buttons. */
 .topbar-keys {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   flex: none;
-}
-.topbar-keys kbd {
-  display: grid;
-  place-items: center;
-  /* Sized to the character, not to a common floor: ⌘ and K are different widths
-     and two caps forced to one width read as a pair of buttons. 18px tall, 4px
-     inset, 6px radius, 11px at medium — the reference's own measurements. */
-  height: 18px;
-  padding: 0 4px; /* ds:ignore optical inset on a key cap, not rhythm */
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgPage);
 }
 
 /* Focus rings in this strip take `--accent`, the THEMED state colour, not

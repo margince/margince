@@ -262,10 +262,9 @@
  * not a dismissal.
  *
  * The 44px target is this variant's own floor rather than `--controlHeight`'s.
- * That token is the shared control height and sits below 44 for a fine pointer,
- * rising to 44 only for a coarse one — tall enough for a verb in a row of them,
- * and short of the target a sign-in door owes every pointer, since a door taken
- * with a mouse is the same door. `max()` rather than a flat 44, so a future rise
+ * That token is the shared control height, and it is 32 for every pointer —
+ * tall enough for a verb in a row of them, and short of the target a sign-in
+ * door owes every pointer, since a door taken with a mouse is the same door. `max()` rather than a flat 44, so a future rise
  * in the shared control height is not capped here. */
 .btn-federated {
   inline-size: 100%;

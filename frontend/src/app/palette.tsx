@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   EmptyState,
+  Kbd,
   PendingBody,
   SearchField,
 } from "../design-system/atoms";
@@ -359,7 +360,10 @@ export function CommandPalette({
               }
             }}
           />
-          <span className="kbd">{"esc"}</span>
+          {/* The key's own name, not copy: it is what is printed on the cap a
+              reader is looking at, in every locale, the way the ⌘/Ctrl caps
+              beside the search box are. */}
+          <Kbd>{"esc"}</Kbd>
         </div>
         <div className="palette-list">
           {/* A failed search says so and keeps the builtin commands beside it.

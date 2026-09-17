@@ -28,13 +28,15 @@
 
 /* A day is a circle the size of the tap target, not a cell: the selected day
    is marked by a disc, and a square mark in a grid of squares reads as a
-   highlighted table cell rather than as a date chosen. */
+   highlighted table cell rather than as a date chosen. The target is the one
+   control height — a day is pressed like any other control — rather than a
+   second number that happened to agree with it. */
 .calendar-day {
   display: flex;
   align-items: center;
   justify-content: center;
-  inline-size: 2rem;
-  block-size: 2rem;
+  inline-size: var(--controlHeight);
+  block-size: var(--controlHeight);
   padding: 0;
   border: 0;
   border-radius: var(--r-full);

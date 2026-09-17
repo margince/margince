@@ -480,9 +480,8 @@ describe("base.css draws the federated door without touching the mark", () => {
     const rule =
       /(?:^|\n)\.btn-federated\s*\{([^}]*min-block-size[^}]*)\}/.exec(css);
     expect(rule).not.toBeNull();
-    // `--controlHeight` sits below 44 for a fine pointer and rises to 44 only for a
-    // coarse one, so leaning on the shared height alone lands this box short of
-    // the target on a mouse. The floor is declared here, and `max()` keeps the
+    // `--controlHeight` is 32 for every pointer, so leaning on the shared height
+    // alone lands this box short of the target a door owes. The floor is declared here, and `max()` keeps the
     // shared height wherever it is the taller of the two.
     // The RENDERED height is what actually matters and jsdom cannot compute
     // `max()`; the login spec measures it. This asserts the declaration survives,
