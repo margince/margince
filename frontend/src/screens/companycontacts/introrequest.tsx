@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Modal } from "../../design-system/atoms";
+import { Button, Field, Modal } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
@@ -137,32 +137,34 @@ export function IntroRequestModal({
               <span className="t-caption"> {t("co.intro.fromTemplate")}</span>
             )}
           </p>
-          <label className="cp-intro-field" htmlFor={`${titleId}-subject`}>
-            {t("co.intro.subject")}
-          </label>
-          <input
-            id={`${titleId}-subject`}
-            value={subject}
-            onChange={(event) => {
-              setEdited({ subject: event.target.value, body });
-              setCopied(false);
-            }}
-          />
-          <label className="cp-intro-field" htmlFor={`${titleId}-body`}>
-            {t("co.intro.body")}
-          </label>
-          <textarea
-            id={`${titleId}-body`}
-            rows={10}
-            value={body}
-            onChange={(event) => {
-              setEdited({ subject, body: event.target.value });
-              // The clipboard still holds the OLDER text, so a button that
-              // went on saying "Copied" would be describing a message the
-              // reader can no longer paste.
-              setCopied(false);
-            }}
-          />
+          <Field className="cp-intro-field" label={t("co.intro.subject")}>
+            {(control) => (
+              <input
+                {...control}
+                value={subject}
+                onChange={(event) => {
+                  setEdited({ subject: event.target.value, body });
+                  setCopied(false);
+                }}
+              />
+            )}
+          </Field>
+          <Field className="cp-intro-field" label={t("co.intro.body")}>
+            {(control) => (
+              <textarea
+                {...control}
+                rows={10}
+                value={body}
+                onChange={(event) => {
+                  setEdited({ subject, body: event.target.value });
+                  // The clipboard still holds the OLDER text, so a button that
+                  // went on saying "Copied" would be describing a message the
+                  // reader can no longer paste.
+                  setCopied(false);
+                }}
+              />
+            )}
+          </Field>
           {written.reasoning && written.reasoning.length > 0 && (
             <>
               <p className="cp-intro-why">{t("co.intro.basedOn")}</p>

@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Button, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { useCompany360 } from "./company360";
@@ -62,37 +62,39 @@ export function AccountDraftContext({
   }
   return (
     <>
-      <label className="t-body compose-check">
-        {t("compose.draftTo")}
-        <Select
-          aria-label={t("compose.draftTo")}
-          options={[
-            { value: "", label: t("compose.draftToUnset") },
-            ...contacts.map((contact) => ({
-              value: contact.contact_id,
-              label: contact.full_name,
-            })),
-          ]}
-          value={recipientId}
-          onChange={onRecipientChange}
-        />
-      </label>
-      {deals.length > 0 && (
-        <label className="t-body compose-check">
-          {t("compose.relatedTo")}
+      <Field label={t("compose.draftTo")}>
+        {(control) => (
           <Select
-            aria-label={t("compose.relatedTo")}
+            {...control}
             options={[
-              { value: "", label: t("compose.relatedToNone") },
-              ...deals.map((deal) => ({
-                value: deal.deal_id,
-                label: deal.name,
+              { value: "", label: t("compose.draftToUnset") },
+              ...contacts.map((contact) => ({
+                value: contact.contact_id,
+                label: contact.full_name,
               })),
             ]}
-            value={dealId}
-            onChange={onDealChange}
+            value={recipientId}
+            onChange={onRecipientChange}
           />
-        </label>
+        )}
+      </Field>
+      {deals.length > 0 && (
+        <Field label={t("compose.relatedTo")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={[
+                { value: "", label: t("compose.relatedToNone") },
+                ...deals.map((deal) => ({
+                  value: deal.deal_id,
+                  label: deal.name,
+                })),
+              ]}
+              value={dealId}
+              onChange={onDealChange}
+            />
+          )}
+        </Field>
       )}
     </>
   );
@@ -206,35 +208,41 @@ export function DraftOffer({
       {!replying && (
         <p className="t-caption">{t("compose.draftContextHint")}</p>
       )}
-      <div className="compose-draftbar">
-        <TextInput
-          // A NAME, not just a placeholder. The placeholder is the example and
-          // disappears the moment the reader types; a field whose only name was
-          // the example had none at all the instant it held anything.
-          aria-label={t(replying ? "compose.replyIntent" : "compose.newIntent")}
-          placeholder={t(
-            replying ? "compose.replyIntent" : "compose.newIntent",
-          )}
-          value={intent}
-          onChange={(event) => onIntentChange(event.target.value)}
-        />
-        {/* The agent's own verb, so it carries the agent's own colour and its
-            mark. Drawn as an ordinary ghost button it read as the quietest
-            control in the drawer when it is the one thing in here a machine
-            does. Indigo means "Margince does this" everywhere else on the
-            record; a composer that said it in grey is the one surface where
-            the reader has to guess. */}
-        <Button
-          variant="ai"
-          onClick={draft.run}
-          disabled={draft.disabled}
-          pending={draft.pending}
-          busyLabel={t("compose.drafting")}
-        >
-          <Sparkles aria-hidden="true" />
-          {t(replying ? "compose.draftReply" : "compose.draftWithAi")}
-        </Button>
-      </div>
+      {/* A NAME above the box, not only a placeholder: the placeholder is the
+          example and disappears the moment the reader types, so a field named
+          that way had no name at all the instant it held anything. The verb
+          stays on the box's own line — it acts on what was typed there, and a
+          row is how the pair reads as one ask. */}
+      <Field label={t(replying ? "compose.replyIntent" : "compose.newIntent")}>
+        {(control) => (
+          <div className="compose-draftbar">
+            <TextInput
+              {...control}
+              placeholder={t(
+                replying ? "compose.replyIntent" : "compose.newIntent",
+              )}
+              value={intent}
+              onChange={(event) => onIntentChange(event.target.value)}
+            />
+            {/* The agent's own verb, so it carries the agent's own colour and
+                its mark. Drawn as an ordinary ghost button it read as the
+                quietest control in the drawer when it is the one thing in here
+                a machine does. Indigo means "Margince does this" everywhere
+                else on the record; a composer that said it in grey is the one
+                surface where the reader has to guess. */}
+            <Button
+              variant="ai"
+              onClick={draft.run}
+              disabled={draft.disabled}
+              pending={draft.pending}
+              busyLabel={t("compose.drafting")}
+            >
+              <Sparkles aria-hidden="true" />
+              {t(replying ? "compose.draftReply" : "compose.draftWithAi")}
+            </Button>
+          </div>
+        )}
+      </Field>
       {unavailable && (
         <p>
           {unavailable === "no_model"

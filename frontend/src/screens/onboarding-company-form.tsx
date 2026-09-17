@@ -1,7 +1,13 @@
 import { Bot, CheckCircle2, Circle, ShieldCheck } from "lucide-react";
 import { useId } from "react";
 import type { components } from "../api/schema";
-import { Checkbox, Radio, Textarea, TextInput } from "../design-system/atoms";
+import {
+  Checkbox,
+  Field,
+  Radio,
+  Textarea,
+  TextInput,
+} from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import {
   ConfidenceMeter,
@@ -338,7 +344,6 @@ function CompanyFormField({
   onBlur: () => void;
 }>) {
   const t = useT();
-  const id = `co-${field}`;
   // A grounding can be real without carrying a score: a legal block the human
   // chose from the read's candidates has the page it was printed on and, when
   // the read captured one, a verbatim quote — but nothing ever measured a
@@ -349,57 +354,60 @@ function CompanyFormField({
   const level = confidenceLevel(grounded?.confidence);
   const snippet = grounded?.evidence_snippet;
   const quote = snippet !== undefined && snippet.trim() !== "" ? snippet : null;
-  // The design-system field shape (create.tsx RecordFormBody is the reference):
-  // .field + .t-label + .input/.textarea. The trust adornments (confidence,
-  // read-from-site, typed-by-you) ride the label; the evidence chip sits under
-  // the control. Onboarding gets no bespoke input styling — the form must read
-  // as the same product as every other screen.
+  // The design-system field, so onboarding gets no bespoke label, refusal or
+  // input styling — the form must read as the same product as every other
+  // screen. The trust adornments (confidence, read-from-site, typed-by-you)
+  // ride the label; the evidence chip sits under the control it is proof for,
+  // which is why it is rendered beside the control rather than after the field.
   return (
-    <div className="field">
-      <label className="t-label" htmlFor={id}>
-        {coldFieldLabel(field, t)}
-        {required ? " *" : ""} {level && <ConfidenceMeter level={level} />}
-        {grounded && (
-          <span className="rfprov">
-            <Bot aria-hidden /> {t("ob.readFromSite")}
-          </span>
-        )}
-        {edited && <ProvenanceTag provenance={{ kind: "human", self: true }} />}
-      </label>
-      {multiline ? (
-        <Textarea
-          id={id}
-          value={value}
-          required={required}
-          aria-invalid={error ? true : undefined}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-        />
-      ) : (
-        <TextInput
-          id={id}
-          value={value}
-          required={required}
-          aria-invalid={error ? true : undefined}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-        />
+    <Field
+      label={
+        <>
+          {coldFieldLabel(field, t)}{" "}
+          {level && <ConfidenceMeter level={level} />}
+          {grounded && (
+            <span className="rfprov">
+              <Bot aria-hidden /> {t("ob.readFromSite")}
+            </span>
+          )}
+          {edited && (
+            <ProvenanceTag provenance={{ kind: "human", self: true }} />
+          )}
+        </>
+      }
+      required={required}
+      error={error ?? undefined}
+    >
+      {(control) => (
+        <>
+          {multiline ? (
+            <Textarea
+              {...control}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={onBlur}
+            />
+          ) : (
+            <TextInput
+              {...control}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={onBlur}
+            />
+          )}
+          {grounded && quote !== null && (
+            <EvidenceChip
+              evidence={{
+                snippet: quote,
+                // source_url is carried only by url-sourced evidence; text and
+                // self-description evidence names its origin instead of
+                // linking.
+                source: grounded.source_url ?? t("ob.readFromSite"),
+              }}
+            />
+          )}
+        </>
       )}
-      {grounded && quote !== null && (
-        <EvidenceChip
-          evidence={{
-            snippet: quote,
-            // source_url is carried only by url-sourced evidence; text and
-            // self-description evidence names its origin instead of linking.
-            source: grounded.source_url ?? t("ob.readFromSite"),
-          }}
-        />
-      )}
-      {error && (
-        <div className="urlnote err">
-          <Circle aria-hidden /> {error}
-        </div>
-      )}
-    </div>
+    </Field>
   );
 }

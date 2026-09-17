@@ -2430,11 +2430,11 @@
   padding: var(--space-4);
 }
 
-.ob-triage-row-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+/* The field fills the open row. The row is a column flex with
+   `align-items: flex-start`, which sizes an unconstrained child to its CONTENT
+   rather than to the row — so a shrink-wrapped field would stand its box at the
+   width of the label above it. */
+.ob-conv-confirm-missing-row > .field {
   width: 100%;
 }
 
@@ -2642,15 +2642,12 @@
   transform: rotate(90deg);
 }
 
-/* The summary's label carries the row, so it stretches rather than shrink-
-   wrapping the type's name: the count below rides to the far end on its own
-   auto margin, and a shrink-wrapped label would strand it mid-row. */
-.ob-triage-fact-type > .disclosure-summary > .t-label {
+/* The accordion's name holds the type and its count on one line; the stretch
+   that keeps the count at the far end is `.disclosure-label`'s own. */
+.ob-triage-fact-type > .disclosure-summary > .disclosure-label {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex: 1;
-  min-width: 0;
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
@@ -2945,18 +2942,7 @@
 /* The LinkedIn act's one input: the profile the imported network is
    attributed to. Matches the scope list beside it rather than the form
    modules, because it sits in the artifact panel and not in a form. */
-/* No margin of its own: every column this label sits in already sets a gap,
-   and the two used to add up — 12px of gap plus 12px of margin above one field
-   in a stack where everything else was 12px apart. Two of its siblings were
-   inset 16px from each side while the rest were not, so the panel showed four
-   different left edges in one column. */
-.ob-conv-field {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-}
-
-.ob-conv-field input {
+.ob-connect-linkedin-panel input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--borderSubtle);
@@ -2964,7 +2950,7 @@
   background: var(--bgElevated);
 }
 
-.ob-conv-field input:focus-visible {
+.ob-connect-linkedin-panel input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }

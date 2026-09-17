@@ -561,7 +561,6 @@ a:not([class]):focus-visible {
 .t-h3 {
   font-family: var(--fontFamilyHeading);
 }
-.t-label,
 .t-sub,
 .t-body,
 .t-eyebrow {
@@ -569,6 +568,15 @@ a:not([class]):focus-visible {
      `font: inherit` is the hook itself — the one shorthand this sheet keeps,
      because it is what holds the class name declared rather than a style. */
   font: inherit;
+}
+/* The NAME of a control, and of anything else a reader reads as a name — a
+   field's label, a disclosure's summary, the term in a definition row. Body S
+   so the name sits a rung under the value it introduces, and medium so it still
+   reads as a name at that size rather than as fine print. The weight is
+   declared AFTER the shorthand, which resets it to the token's own regular. */
+.t-label {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
 }
 /* The supporting line: a provenance note, the basis under a figure, the address
    under a name. Body S in the meta ink, and the two travel together — the size

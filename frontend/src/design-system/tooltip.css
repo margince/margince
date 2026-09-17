@@ -8,6 +8,10 @@
   z-index: 80;
   max-width: 320px;
   padding: var(--space-2) var(--space-3);
+  /* Body S: the tip is an aside about the row under the pointer, and at the
+     row's own size it reads as a second copy of the line rather than a note
+     about it. */
+  font: var(--fontBodySmall);
   border-radius: var(--r-sm);
   background: var(--textPrimary);
   color: var(--bgCard);

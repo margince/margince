@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
+  Field,
   SegmentedControl,
   StatCard,
   TextInput,
@@ -301,22 +302,26 @@ function ForecastCallEditor({
             The head band holds one line, and the half it would cut is the
             half that says no deal moves. */}
         <p className="t-sub">{t("forecast.callExplains")}</p>
-        <label className="field">
-          <span>{t("forecast.expectedTotal")}</span>
-          <MoneyInput
-            valueMinor={amountMinor}
-            currency={readings.base_currency}
-            onChangeMinor={(next) => setAmountMinor(next ?? 0)}
-          />
-        </label>
-        <label className="field">
-          <span>{t("forecast.supportingNote")}</span>
-          <TextInput
-            type="text"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </label>
+        <Field label={t("forecast.expectedTotal")}>
+          {(control) => (
+            <MoneyInput
+              {...control}
+              valueMinor={amountMinor}
+              currency={readings.base_currency}
+              onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+            />
+          )}
+        </Field>
+        <Field label={t("forecast.supportingNote")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="text"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          )}
+        </Field>
       </PanelBody>
     </Panel>
   );

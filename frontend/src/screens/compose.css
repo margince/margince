@@ -8,23 +8,6 @@
   margin-bottom: 12px;
 }
 
-/* A QUESTION the composer asks, below the message: the name above the field.
-
-   Two label positions in one drawer, deliberately. The mail's own head — how it
-   goes, who it is to, what it is about, what it carries — is a BLOCK a reader
-   sweeps down, so those names sit beside their fields in one column
-   (composehead.css). These are not that: "Why are you writing?" and the project
-   filing are questions about the message, asked in sentences under it, and a
-   sentence squeezed into a fixed label column breaks across two lines while the
-   control beside it runs full width — which is what this rule was written to
-   stop. The head is a table; this is prose. */
-.compose-check {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-1);
-}
-
 /* The card that says a machine wrote what is below it. The indigo edge, the
    indigo head band and its ink are `Panel tone="ai"` — the one spelling of
    machine authorship in the product — so all that is left here is how the card

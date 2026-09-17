@@ -93,7 +93,7 @@ export function RecordContextPanel({
               <div className="context-sections">
                 {sections.map((section) => (
                   <div key={section.name} className="context-section">
-                    <Heading size="medium" className="t-label">
+                    <Heading size="small" as="h3">
                       {SECTION_LABELS[section.name]
                         ? t(SECTION_LABELS[section.name])
                         : section.name.replaceAll("_", " ")}

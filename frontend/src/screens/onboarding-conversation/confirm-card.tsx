@@ -15,6 +15,7 @@ import {
   Button,
   Checkbox,
   Disclosure,
+  Field,
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import {
@@ -46,6 +47,7 @@ import {
   reviewGroups,
   rowFor,
   STATE_RANK,
+  STATE_WORD,
 } from "./company-review-state";
 import {
   FINDING_EXPAND_EVENT,
@@ -100,17 +102,6 @@ const GROUP_LABELS: Readonly<Record<ReviewGroupKey, MessageKey>> = {
   offer: "ob.s1.offerLabel",
   customer: "ob.s1.customerLabel",
   sales: "ob.s1.salesLabel",
-};
-
-const STATE_WORD: Readonly<Record<RowState, MessageKey>> = {
-  required: "ob.conv.triage.stateRequired",
-  empty: "ob.conv.triage.stateEmpty",
-  typed: "ob.conv.triage.stateTyped",
-  stored: "ob.conv.triage.stateStored",
-  quoted: "ob.conv.triage.stateQuoted",
-  high: "confidence.high",
-  med: "confidence.med",
-  low: "confidence.low",
 };
 
 function isBand(state: RowState): state is "high" | "med" | "low" {
@@ -273,7 +264,6 @@ function FieldRow({
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const controlId = `confirm-missing-${row.field}`;
   const onChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => setField(row.field, event.target.value);
@@ -361,34 +351,43 @@ function FieldRow({
       data-state={row.state}
       className="ob-triage-row ob-triage-row-open ob-conv-confirm-missing-row"
     >
-      <div className="ob-triage-row-head">
-        <label className="t-label" htmlFor={controlId}>
-          {row.label}
-          <em className="t-caption">{t(STATE_WORD[row.state])}</em>
-        </label>
-        <button
-          type="button"
-          className="ob-conv-field-expand"
-          aria-expanded
-          onClick={() => setExpanded(false)}
-        >
-          {t("ob.conv.review.showLess")}
-        </button>
-      </div>
-      {/* Above the control, not below it: the reader learns why the box is
-          empty BEFORE deciding what to type in it. */}
-      {row.omissionReasonKey !== null && (
-        <OmissionNotice
-          label={row.label}
-          reasonKey={row.omissionReasonKey}
-          t={t}
-        />
-      )}
-      {row.multiline ? (
-        <textarea id={controlId} value={row.value} onChange={onChange} />
-      ) : (
-        <input id={controlId} value={row.value} onChange={onChange} />
-      )}
+      <Field
+        label={
+          <>
+            {row.label}
+            <em className="t-caption">{t(STATE_WORD[row.state])}</em>
+          </>
+        }
+        labelEnd={
+          <button
+            type="button"
+            className="ob-conv-field-expand"
+            aria-expanded
+            onClick={() => setExpanded(false)}
+          >
+            {t("ob.conv.review.showLess")}
+          </button>
+        }
+      >
+        {(control) => (
+          <>
+            {/* Above the control, not below it: the reader learns why the box
+                is empty BEFORE deciding what to type in it. */}
+            {row.omissionReasonKey !== null && (
+              <OmissionNotice
+                label={row.label}
+                reasonKey={row.omissionReasonKey}
+                t={t}
+              />
+            )}
+            {row.multiline ? (
+              <textarea {...control} value={row.value} onChange={onChange} />
+            ) : (
+              <input {...control} value={row.value} onChange={onChange} />
+            )}
+          </>
+        )}
+      </Field>
       {/* Only the evidence pair below the control: the label's state word
           already says "typed by you", so the human tag would say it twice.
           The quote and the meter are separate claims — a value the human

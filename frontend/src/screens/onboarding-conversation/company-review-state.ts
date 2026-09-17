@@ -101,6 +101,18 @@ export const STATE_RANK: Readonly<Record<RowState, number>> = {
   quoted: 5,
 };
 
+/** The word a row's state is named by, wherever a surface states it. */
+export const STATE_WORD: Readonly<Record<RowState, MessageKey>> = {
+  required: "ob.conv.triage.stateRequired",
+  empty: "ob.conv.triage.stateEmpty",
+  typed: "ob.conv.triage.stateTyped",
+  stored: "ob.conv.triage.stateStored",
+  quoted: "ob.conv.triage.stateQuoted",
+  high: "confidence.high",
+  med: "confidence.med",
+  low: "confidence.low",
+};
+
 /** A row that still wants a decision or a value, as opposed to a skim row. */
 export function isWork(state: RowState): boolean {
   return STATE_RANK[state] < STATE_RANK.high;

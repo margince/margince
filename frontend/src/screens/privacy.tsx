@@ -655,7 +655,6 @@ function DsrRow({
   const t = useT();
   const queryClient = useQueryClient();
   const [resolution, setResolution] = useState(dsr.resolution ?? "");
-  const assigneeFieldId = useId();
   const panelId = useId();
   const toggleId = useId();
 
@@ -782,17 +781,20 @@ function DsrRow({
             </div>
 
             <div className="field">
-              <label className="t-label" htmlFor={assigneeFieldId}>
-                {t("privacy.assignee")}
-              </label>
-              <Select
-                id={assigneeFieldId}
-                options={assigneeOptions(assignableUsers, currentAssignee)}
-                value={dsr.assignee_id ?? ""}
-                disabled={patch.isPending}
-                onChange={(value) => patch.mutate({ assignee_id: value })}
-              />
-              <p className="t-caption">{t("privacy.assigneeUnassignable")}</p>
+              <Field
+                label={t("privacy.assignee")}
+                hint={t("privacy.assigneeUnassignable")}
+              >
+                {(control) => (
+                  <Select
+                    {...control}
+                    options={assigneeOptions(assignableUsers, currentAssignee)}
+                    value={dsr.assignee_id ?? ""}
+                    disabled={patch.isPending}
+                    onChange={(value) => patch.mutate({ assignee_id: value })}
+                  />
+                )}
+              </Field>
               {/* Who this list leaves out is already its subject, so a roster
                   that stopped short of the workspace belongs on the same line
                   rather than being the one omission nobody is told about. */}
@@ -981,16 +983,15 @@ function FulfilErasureModal({
       returnFocusTo={returnFocusTo}
     >
       <p>{t("privacy.erasureIrreversible")}</p>
-      <div className="field dsr-erase-field">
-        <label className="t-label" htmlFor="dsr-type-erase">
-          {t("privacy.typeErase")}
-        </label>
-        <TextInput
-          id="dsr-type-erase"
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-      </div>
+      <Field className="dsr-erase-field" label={t("privacy.typeErase")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        )}
+      </Field>
       <ErasureRefusals held={held} movedOn={movedOn} />
     </ConfirmModal>
   );

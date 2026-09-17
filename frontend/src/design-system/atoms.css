@@ -1176,7 +1176,7 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--fieldGap);
 }
 
 /* The picker's search field fills the picker: `.input-icon` is an inline-flex, so
@@ -1781,9 +1781,21 @@
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
+  /* The section's name reads at body size — it is a toggle rather than a
+     heading, so it takes no heading token — and medium is the emphasis that
+     tells a reader which line opens the section under it. */
+  font-weight: var(--fontWeightMedium);
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
   list-style: none;
+}
+/* The summary's NAME takes the line, so anything riding beside it — a count, a
+   badge, a teaser — reaches the far end instead of being stranded mid-row.
+   Declared here rather than at a call site: four screens had each written this
+   pair onto the shared span, which is one invariant with four authors. */
+.disclosure-label {
+  flex: 1;
+  min-inline-size: 0;
 }
 .disclosure-summary::-webkit-details-marker {
   display: none;

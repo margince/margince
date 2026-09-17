@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Button, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
@@ -916,7 +916,6 @@ function MailOnlyFields({
   onToEditing,
   subject,
   onSubjectChange,
-  subjectId,
   rejectionInFlight,
   answering,
   flagged,
@@ -945,7 +944,6 @@ function MailOnlyFields({
   onToEditing: () => void;
   subject: string;
   onSubjectChange: (next: string) => void;
-  subjectId: string;
   /** The fields a pressed Send is still waiting for. Empty until it is pressed. */
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
@@ -995,7 +993,6 @@ function MailOnlyFields({
         disabled={rejectionInFlight}
       />
       <SubjectRow
-        id={subjectId}
         subject={subject}
         onChange={onSubjectChange}
         invalid={flagged.has("subject")}
@@ -1381,7 +1378,6 @@ export function ComposeModal({
   const queryClient = useQueryClient();
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
-  const subjectId = useId();
   const bodyId = useId();
   // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
   // opening choice stands until the reader turns the dial; an empty selection
@@ -2505,7 +2501,6 @@ export function ComposeModal({
                 onToEditing={stopOfferingRecipient}
                 subject={subject}
                 onSubjectChange={setSubject}
-                subjectId={subjectId}
                 rejectionInFlight={rejectionInFlight}
                 deadRecipients={deadRecipients}
               />
@@ -2589,25 +2584,24 @@ export function ComposeModal({
             reading, which is how the dropdown this replaces ended up set to
             whatever came first in the list. */}
             {asksWhy(anchorActivity) ? (
-              <>
-                <label className="t-body compose-check">
-                  {t("compose.why")}
+              <Field
+                label={t("compose.why")}
+                hint={t("compose.whyHint")}
+                error={
+                  flagged.has("context") ? t("compose.missingWhy") : undefined
+                }
+              >
+                {(control) => (
                   <Select
-                    aria-label={t("compose.why")}
+                    {...control}
                     options={contextOptions(t)}
                     value={context}
-                    aria-invalid={flagged.has("context") || undefined}
                     onChange={(value) =>
                       setContext(value as CommunicationContext | "")
                     }
                   />
-                </label>
-                <FieldNeed
-                  show={flagged.has("context")}
-                  need={t("compose.missingWhy")}
-                />
-                <p className="t-caption">{t("compose.whyHint")}</p>
-              </>
+                )}
+              </Field>
             ) : (
               <p>{t("compose.derivedReply")}</p>
             )}

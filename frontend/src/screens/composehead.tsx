@@ -9,7 +9,7 @@
 
 import { Mail, MessageSquare } from "lucide-react";
 import type { components } from "../api/schema";
-import { Button, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { TokenInput, type TokenSuggestion } from "../design-system/tokeninput";
@@ -19,45 +19,6 @@ import "./composehead.css";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Company360 = components["schemas"]["Company360"];
-
-/**
- * One line of the mail's head: what it is, then what it says.
- *
- * Label BESIDE the value, in a fixed column, because these answers are read as a
- * BLOCK — who it is to, what it is about, what travels with it — and a stack of
- * label-above-field turned five answers into ten lines a reader travels rather
- * than five they scan. `trailing` is the slot at the right end of the row for a
- * control that acts on the row itself; it keeps the value column's right edge,
- * so the fields still line up in one margin with or without one.
- */
-export function MailRow({
-  label,
-  htmlFor,
-  trailing,
-  children,
-}: Readonly<{
-  label: string;
-  /** The control's id, where it has one. Absent leaves the label a caption and
-   *  the control names itself — which is what a token field does, since the box
-   *  a reader types into is not the only thing inside it. */
-  htmlFor?: string;
-  trailing?: React.ReactNode;
-  children: React.ReactNode;
-}>) {
-  return (
-    <div className="mailrow">
-      {htmlFor ? (
-        <label className="mailrow-label" htmlFor={htmlFor}>
-          {label}
-        </label>
-      ) : (
-        <span className="mailrow-label">{label}</span>
-      )}
-      <div className="mailrow-value">{children}</div>
-      {trailing && <div className="mailrow-trailing">{trailing}</div>}
-    </div>
-  );
-}
 
 /** What a pressed Send is still waiting for, under the field it waits on. */
 export function FieldNeed({
@@ -136,24 +97,26 @@ export function TransportRow({
   }
   const isChannel = selected != null && selected.id !== "email";
   return (
-    <MailRow label={t("compose.transport")}>
-      <div className="compose-transport">
-        {isChannel ? (
-          <MessageSquare size={15} aria-hidden="true" />
-        ) : (
-          <Mail size={15} aria-hidden="true" />
-        )}
-        <Select
-          aria-label={t("compose.transport")}
-          options={transports.map((transport) => ({
-            value: transport.id,
-            label: transport.label,
-          }))}
-          value={selected?.id ?? ""}
-          onChange={onChange}
-        />
-      </div>
-    </MailRow>
+    <Field label={t("compose.transport")}>
+      {(control) => (
+        <div className="compose-transport">
+          {isChannel ? (
+            <MessageSquare size={15} aria-hidden="true" />
+          ) : (
+            <Mail size={15} aria-hidden="true" />
+          )}
+          <Select
+            {...control}
+            options={transports.map((transport) => ({
+              value: transport.id,
+              label: transport.label,
+            }))}
+            value={selected?.id ?? ""}
+            onChange={onChange}
+          />
+        </div>
+      )}
+    </Field>
   );
 }
 
@@ -204,20 +167,20 @@ export function AddressBlock({
   const commit = (next: readonly string[]) => [...next];
   return (
     <>
-      <MailRow label={t("compose.to")}>
-        <TokenInput
-          values={to}
-          onChange={(next) => onToChange(commit(next))}
-          suggestions={suggestions}
-          onEditing={onToEditing}
-          disabled={disabled}
-          aria-label={t("compose.to")}
-          aria-invalid={invalidTo || undefined}
-          placeholder={t("compose.recipientHint")}
-        />
-        <FieldNeed show={invalidTo} need={needTo} />
-      </MailRow>
-      <MailRow
+      <Field label={t("compose.to")} error={invalidTo ? needTo : undefined}>
+        {(control) => (
+          <TokenInput
+            {...control}
+            values={to}
+            onChange={(next) => onToChange(commit(next))}
+            suggestions={suggestions}
+            onEditing={onToEditing}
+            disabled={disabled}
+            placeholder={t("compose.recipientHint")}
+          />
+        )}
+      </Field>
+      <Field
         label={t("compose.cc")}
         trailing={
           bccOpen ? undefined : (
@@ -229,28 +192,31 @@ export function AddressBlock({
           )
         }
       >
-        <TokenInput
-          values={cc}
-          onChange={(next) => onCcChange(commit(next))}
-          suggestions={suggestions}
-          disabled={disabled}
-          aria-label={t("compose.cc")}
-        />
-      </MailRow>
-      {bccOpen && (
-        <MailRow label={t("compose.bcc")}>
+        {(control) => (
           <TokenInput
-            values={bcc}
-            onChange={(next) => onBccChange(commit(next))}
+            {...control}
+            values={cc}
+            onChange={(next) => onCcChange(commit(next))}
             suggestions={suggestions}
             disabled={disabled}
-            aria-label={t("compose.bcc")}
           />
-          {/* What "blind" MEANS, beside the field that does it. A rep who reads
-              Bcc as "a quieter Cc" has told somebody about a conversation the
-              named recipients believe is between them. */}
-          <p className="t-caption">{t("compose.bccHint")}</p>
-        </MailRow>
+        )}
+      </Field>
+      {bccOpen && (
+        // What "blind" MEANS, beside the field that does it. A rep who reads
+        // Bcc as "a quieter Cc" has told somebody about a conversation the
+        // named recipients believe is between them.
+        <Field label={t("compose.bcc")} hint={t("compose.bccHint")}>
+          {(control) => (
+            <TokenInput
+              {...control}
+              values={bcc}
+              onChange={(next) => onBccChange(commit(next))}
+              suggestions={suggestions}
+              disabled={disabled}
+            />
+          )}
+        </Field>
       )}
       {/* Under the addresses, because it is about the ones standing there — and
           a warning rather than a refusal: the rep may know something the ledger
@@ -281,28 +247,25 @@ export function SubjectRow({
   invalid,
   need,
   disabled,
-  id,
 }: Readonly<{
   subject: string;
   onChange: (next: string) => void;
   invalid: boolean;
   need: string;
   disabled?: boolean;
-  id: string;
 }>) {
   const t = useT();
   return (
-    <MailRow label={t("compose.subject")} htmlFor={id}>
-      <TextInput
-        id={id}
-        aria-label={t("compose.subject")}
-        placeholder={t("compose.subjectHint")}
-        value={subject}
-        disabled={disabled}
-        aria-invalid={invalid || undefined}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      <FieldNeed show={invalid} need={need} />
-    </MailRow>
+    <Field label={t("compose.subject")} error={invalid ? need : undefined}>
+      {(control) => (
+        <TextInput
+          {...control}
+          placeholder={t("compose.subjectHint")}
+          value={subject}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
   );
 }

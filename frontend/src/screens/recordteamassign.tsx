@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { api } from "../api/client";
-import { Button, Modal, SegmentedControl } from "../design-system/atoms";
+import { Button, Field, Modal, SegmentedControl } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
@@ -198,19 +198,18 @@ export function RecordTeamAssign({
             disabled={write.isPending}
           />
         </div>
-        <div className="field">
-          <span className="t-label" id={`${headingId}-role`}>
-            {t("assignments.role")}
-          </span>
-          <Select
-            aria-labelledby={`${headingId}-role`}
-            options={options}
-            value={roleId}
-            onChange={setRoleId}
-            placeholder={t("assignments.rolePlaceholder")}
-            disabled={write.isPending || options.length === 0}
-          />
-        </div>
+        <Field label={t("assignments.role")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={options}
+              value={roleId}
+              onChange={setRoleId}
+              placeholder={t("assignments.rolePlaceholder")}
+              disabled={write.isPending || options.length === 0}
+            />
+          )}
+        </Field>
         <p className="t-caption">{t("assignments.noAccessNote")}</p>
         {write.isError && <RefusalLine error={write.error} />}
         <div className="actions">

@@ -224,22 +224,21 @@ function EditOfferHeaderModal({
             />
           )}
         </Field>
-        <div className="field">
-          <span className="t-label" id="offer-valid-until-label">
-            {t("offer.validUntil")}
-          </span>
-          <TextInput
-            type="date"
-            aria-labelledby="offer-valid-until-label"
-            value={values.valid_until}
-            onChange={(event) =>
-              setValues((prev) => ({
-                ...prev,
-                valid_until: event.target.value,
-              }))
-            }
-          />
-        </div>
+        <Field label={t("offer.validUntil")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="date"
+              value={values.valid_until}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  valid_until: event.target.value,
+                }))
+              }
+            />
+          )}
+        </Field>
         <div className="field">
           <span className="t-label">{t("offer.buyerCompany")}</span>
           <RecordPicker
@@ -260,52 +259,57 @@ function EditOfferHeaderModal({
             </p>
           )}
         </div>
-        <div className="field">
-          <span className="t-label" id="offer-template-label">
-            {t("offer.template")}
-          </span>
-          <Select
-            aria-labelledby="offer-template-label"
-            value={values.template_id ?? ""}
-            onChange={(value) =>
-              setValues((prev) => ({ ...prev, template_id: value || null }))
-            }
-            // The dash is a real OPTION for "no template", not the select's
-            // placeholder: a placeholder is only a face for an unset value, and
-            // an offer that picked a template has to be able to drop it again.
-            options={[
-              { value: "", label: "—" },
-              ...(templatesQuery.data ?? []).map((template: OfferTemplate) => ({
-                value: template.id,
-                label: template.name,
-              })),
-            ]}
-          />
-        </div>
-        <div className="field">
-          <span className="t-label" id="offer-intro-label">
-            {t("offer.introText")}
-          </span>
-          <TextInput
-            aria-labelledby="offer-intro-label"
-            value={values.intro_text}
-            onChange={(event) =>
-              setValues((prev) => ({ ...prev, intro_text: event.target.value }))
-            }
-          />
-        </div>
-        <div className="field">
-          <span className="t-label" id="offer-terms-label">
-            {t("offer.termsText")}
-          </span>
-          <TextInput
-            aria-labelledby="offer-terms-label"
-            value={values.terms_text}
-            onChange={(event) =>
-              setValues((prev) => ({ ...prev, terms_text: event.target.value }))
-            }
-          />
-        </div>
+        <Field label={t("offer.template")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={values.template_id ?? ""}
+              onChange={(value) =>
+                setValues((prev) => ({ ...prev, template_id: value || null }))
+              }
+              // The dash is a real OPTION for "no template", not the select's
+              // placeholder: a placeholder is only a face for an unset value, and
+              // an offer that picked a template has to be able to drop it again.
+              options={[
+                { value: "", label: "—" },
+                ...(templatesQuery.data ?? []).map(
+                  (template: OfferTemplate) => ({
+                    value: template.id,
+                    label: template.name,
+                  }),
+                ),
+              ]}
+            />
+          )}
+        </Field>
+        <Field label={t("offer.introText")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={values.intro_text}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  intro_text: event.target.value,
+                }))
+              }
+            />
+          )}
+        </Field>
+        <Field label={t("offer.termsText")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={values.terms_text}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  terms_text: event.target.value,
+                }))
+              }
+            />
+          )}
+        </Field>
       </div>
       {errorMessage && (
         <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>

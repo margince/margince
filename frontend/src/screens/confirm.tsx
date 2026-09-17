@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   EmptyState,
+  Field,
   Skeleton,
   TextInput,
 } from "../design-system/atoms";
@@ -233,17 +234,18 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         </Heading>
         <ul className="confirm-fields">
           {CORRECTABLE.map((field) => (
-            <li key={field} className="confirm-field">
-              <label htmlFor={`confirm-${field}`}>
-                {t(FIELD_LABELS[field])}
-              </label>
-              <TextInput
-                id={`confirm-${field}`}
-                value={edits[field] ?? card[field]}
-                onChange={(event) =>
-                  setEdits({ ...edits, [field]: event.target.value })
-                }
-              />
+            <li key={field}>
+              <Field label={t(FIELD_LABELS[field])}>
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    value={edits[field] ?? card[field]}
+                    onChange={(event) =>
+                      setEdits({ ...edits, [field]: event.target.value })
+                    }
+                  />
+                )}
+              </Field>
             </li>
           ))}
           <li className="confirm-field">

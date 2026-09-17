@@ -254,7 +254,7 @@ export function QualifyDialog({
     >
       <div className="lead-qualify">
         <section className="lead-qualify-block">
-          <Heading size="medium" className="t-label">
+          <Heading size="xsmall" as="h3">
             {t("lead.qualify.contact")}
           </Heading>
           <PreviewSentence preview={preview} t={t} />
@@ -334,7 +334,7 @@ export function QualifyDialog({
         </section>
 
         <section className="lead-qualify-block">
-          <Heading size="medium" className="t-label">
+          <Heading size="xsmall" as="h3">
             {t("lead.qualify.why")}
           </Heading>
           <p>{reasonSentence(lead, t, locale, zone)}</p>

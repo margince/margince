@@ -561,7 +561,7 @@ function SectionPickGroup({
   return (
     <div className="sectionpickgroup">
       {heading && (
-        <Heading size="medium" className="t-label">
+        <Heading size="xsmall" as="h3">
           {t(heading)}
         </Heading>
       )}

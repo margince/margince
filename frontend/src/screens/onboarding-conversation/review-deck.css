@@ -99,18 +99,6 @@
   padding: var(--space-5);
 }
 
-.rdeck-question {
-  color: var(--textPrimary);
-  font-family: var(--fontFamilyHeading);
-}
-
-/* What the field is for, quieter than the evidence below it: the evidence is
-   a claim the site made and earns the reader's attention first, this is
-   background a reader only needs once they wonder what to type. */
-.rdeck-hint {
-  margin: 0;
-}
-
 .rdeck-evidence {
   margin: 0;
 }

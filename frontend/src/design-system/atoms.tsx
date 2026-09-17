@@ -564,12 +564,13 @@ export function TextInput(props: ComponentPropsWithRef<"input">) {
  * column the results below it stand on. It is a variant rather than a caller
  * overriding `.input` from outside, because a call site that reaches in to
  * cancel a primitive's chrome is how the next surface grows a second search
- * field nobody can find.
- */
+ * field nobody can find. It takes a `ref` for the reason `TextInput` does: a
+ * caller moving focus here needs the node, and a field labelled by `Field`
+ * carries no id the caller minted to find it by. */
 export function SearchField({
   flush,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & Readonly<{ flush?: boolean }>) {
+}: ComponentPropsWithRef<"input"> & Readonly<{ flush?: boolean }>) {
   return (
     <span className={flush ? "input-icon input-icon-flush" : "input-icon"}>
       <Search aria-hidden />
@@ -1658,7 +1659,7 @@ export function Disclosure({
     >
       <summary className="disclosure-summary">
         <ChevronRight className="disclosure-chevron" aria-hidden="true" />
-        <span className="t-label">{summary}</span>
+        <span className="disclosure-label">{summary}</span>
       </summary>
       <div className="disclosure-body">{children}</div>
     </details>

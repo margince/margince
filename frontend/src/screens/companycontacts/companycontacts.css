@@ -57,8 +57,7 @@
 }
 
 .cp-intro-field {
-  display: block;
-  margin: var(--space-3) 0 var(--space-1);
+  margin: var(--space-3) 0 0;
 }
 
 .cp-intro-why {

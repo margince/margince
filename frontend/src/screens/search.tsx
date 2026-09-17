@@ -174,7 +174,7 @@ function SearchGroups({
         results.some((r) => r.type === type),
       ).map((type) => (
         <Card key={type} className="search-group">
-          <Heading size="large" className="t-label">
+          <Heading size="small" as="h2">
             {t(SEARCH_HIT_GROUP_KEY[type])}
           </Heading>
           <ul className="search-hits">

@@ -2,7 +2,7 @@ import { Check, Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Badge, Button, Disclosure } from "../../design-system/atoms";
+import { Badge, Button, Disclosure, Field } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { Row } from "../../design-system/stack";
@@ -735,17 +735,18 @@ function LinkedinPanel({
 
   return (
     <div className="ob-connect-linkedin-panel">
-      <label className="ob-conv-field" htmlFor="linkedin-profile">
-        {t("ob.conv.linkedin.profileLabel")}
-        <input
-          id="linkedin-profile"
-          type="url"
-          inputMode="url"
-          placeholder={t("ob.conv.linkedin.profilePlaceholder")}
-          value={profile}
-          onChange={(event) => setProfile(event.target.value)}
-        />
-      </label>
+      <Field label={t("ob.conv.linkedin.profileLabel")}>
+        {(control) => (
+          <input
+            {...control}
+            type="url"
+            inputMode="url"
+            placeholder={t("ob.conv.linkedin.profilePlaceholder")}
+            value={profile}
+            onChange={(event) => setProfile(event.target.value)}
+          />
+        )}
+      </Field>
       <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
       <div className="ob-connect-dialog-actions">
         <Button

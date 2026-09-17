@@ -1227,6 +1227,17 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* The sender lookup: the field takes the line and the verb stands on the box's
+   own baseline, not on the label's — the row is bottom-aligned because only the
+   field has a name above it. */
+.client-lookup {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.client-lookup > .field {
+  flex: 1;
+}
 .client-footer {
   margin-top: var(--space-6);
   display: flex;

@@ -8,7 +8,7 @@ import {
   User as UserIcon,
   Users as UsersIcon,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
@@ -419,15 +419,14 @@ function ShareScreenBody({
   // calendar date does this viewer see".
   const zone = viewerZone();
   const queryClient = useQueryClient();
-  const headingId = useId();
   // Where focus lands when a dialog closes on a control that no longer exists.
   // Both dialogs here destroy their own trigger on success — a revoked grant's
   // row leaves the roster, and a downgrade clears the picker that opened it —
   // so without this focus falls to the document body and a keyboard reader
   // starts the surface over. The subject field is the one control on this page
   // that is always present, which is what makes it the honest landing place.
-  const returnFocusToSubject = () =>
-    document.getElementById(`${headingId}-subject`);
+  const subjectField = useRef<HTMLInputElement>(null);
+  const returnFocusToSubject = () => subjectField.current;
   const grantsKey = ["record-grants", recordType, recordId];
 
   const grantsQuery = useQuery({
@@ -697,19 +696,21 @@ function ShareScreenBody({
       >
         <PanelBody className="form-stack">
           <div className="field">
-            <label className="t-label" htmlFor={`${headingId}-subject`}>
-              {t("share.subject")}
-            </label>
-            <SearchField
-              id={`${headingId}-subject`}
-              placeholder={t("share.subject")}
-              value={term}
-              onChange={(event) => {
-                setTerm(event.target.value);
-                setSubject(null);
-                dismissGrantFeedback();
-              }}
-            />
+            <Field label={t("share.subject")}>
+              {(control) => (
+                <SearchField
+                  {...control}
+                  ref={subjectField}
+                  placeholder={t("share.subject")}
+                  value={term}
+                  onChange={(event) => {
+                    setTerm(event.target.value);
+                    setSubject(null);
+                    dismissGrantFeedback();
+                  }}
+                />
+              )}
+            </Field>
             <RosterPicker
               usersQuery={usersQuery}
               teamsQuery={teamsQuery}

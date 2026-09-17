@@ -42,11 +42,10 @@
 
 /* The teaser sits after the section's name on one line, with the room between
    them that keeps it from reading as part of the name. */
-.co-thread-fold .disclosure-summary .t-label {
+.co-thread-fold .disclosure-summary .disclosure-label {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  min-width: 0;
 }
 
 /* The lead row of the needs list. The headline is set in the display face

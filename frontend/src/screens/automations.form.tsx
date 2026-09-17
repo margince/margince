@@ -1,6 +1,6 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { components } from "../api/schema";
-import { Button, Checkbox, TextInput } from "../design-system/atoms";
+import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
@@ -22,13 +22,11 @@ type Automation = components["schemas"]["Automation"];
 
 function ParamFieldControl({
   field,
-  formId,
   value,
   object,
   onChange,
 }: Readonly<{
   field: ParamField;
-  formId: string;
   value: string;
   object: string;
   onChange: (value: string) => void;
@@ -47,36 +45,35 @@ function ParamFieldControl({
     );
   }
   return (
-    <div className="field">
-      <span className="t-label" id={`${formId}-${field.key}`}>
-        {field.key}
-      </span>
-      {field.kind === "date_field" ? (
-        <DateFieldSelect
-          object={object}
-          value={value}
-          onChange={onChange}
-          labelId={`${formId}-${field.key}`}
-        />
-      ) : field.kind === "enum" ? (
-        <Select
-          aria-labelledby={`${formId}-${field.key}`}
-          options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
-          value={value}
-          onChange={onChange}
-        />
-      ) : (
-        <TextInput
-          type={field.kind === "integer" ? "number" : "text"}
-          aria-labelledby={`${formId}-${field.key}`}
-          min={field.min}
-          max={field.max}
-          required
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </div>
+    <Field label={field.key}>
+      {(control) =>
+        field.kind === "date_field" ? (
+          <DateFieldSelect
+            object={object}
+            value={value}
+            onChange={onChange}
+            control={control}
+          />
+        ) : field.kind === "enum" ? (
+          <Select
+            {...control}
+            options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
+            value={value}
+            onChange={onChange}
+          />
+        ) : (
+          <TextInput
+            {...control}
+            type={field.kind === "integer" ? "number" : "text"}
+            min={field.min}
+            max={field.max}
+            required
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )
+      }
+    </Field>
   );
 }
 
@@ -109,7 +106,6 @@ export function AutomationForm({
   onCancel: () => void;
 }>) {
   const t = useT();
-  const formId = useId();
   const fields = paramFields(entry.params_schema);
   const [name, setName] = useState(initialName);
   const [values, setValues] = useState<Record<string, string>>(() =>
@@ -140,21 +136,19 @@ export function AutomationForm({
       <p className="t-caption">
         {entry.trigger} {"->"} {entry.action}
       </p>
-      <div className="field">
-        <span className="t-label" id={`${formId}-name`}>
-          {t("auto.name")}
-        </span>
-        <TextInput
-          aria-labelledby={`${formId}-name`}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </div>
+      <Field label={t("auto.name")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        )}
+      </Field>
       {fields.map((field) => (
         <ParamFieldControl
           key={field.key}
           field={field}
-          formId={formId}
           value={values[field.key] ?? field.initial}
           object={values.object ?? ""}
           onChange={(next) =>

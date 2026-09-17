@@ -446,6 +446,11 @@
   --inputHeight: 40px;
   --inputPaddingX: 6px;
   --inputPaddingY: var(--space-2);
+  /* The gap between a field's label and the control it names. Off the 4px scale
+     because a name and the box under it are ONE object: at a rung's distance the
+     pair reads as two things stacked, and the label starts belonging to whatever
+     sits above it instead. */
+  --fieldGap: 2px;
 
   /* The height of a panel's header band, and it is a token for the same reason
      --controlHeight is one: every panel on every screen draws the SAME band,

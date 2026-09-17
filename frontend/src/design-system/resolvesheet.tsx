@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { Button, Modal, TextInput } from "./atoms";
+import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
 import { Heading } from "./heading";
@@ -40,12 +40,6 @@ export function ResolveSheet({
   const [remindAt, setRemindAt] = useState<ISODate | "">("");
   const [expiresAt, setExpiresAt] = useState<ISODate | "">("");
   const titleID = useId();
-  // Explicit id/htmlFor pairs rather than relying on the label wrapping the
-  // control. The controls here are COMPONENTS, and neither a linter nor a
-  // reader of this file can see through one to check the association holds.
-  const reasonID = useId();
-  const remindID = useId();
-  const expiresID = useId();
 
   const needsReason = suppresses(outcome);
   const needsRemind = outcome === "remind_later";
@@ -72,50 +66,44 @@ export function ResolveSheet({
           number is owed the reason it is not flagged, and the two suppressing
           outcomes are the only ones that take it away from them. */}
       {needsReason && (
-        <>
-          <label className="field" htmlFor={reasonID}>
-            <span>{labels.reason}</span>
+        <Field label={labels.reason} hint={labels.reasonHelp}>
+          {(control) => (
             <TextInput
-              id={reasonID}
+              {...control}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
-          </label>
-          {/* Outside the label on purpose: inside, it joins the field's
-              accessible name, and a screen reader would read the whole
-              sentence where a sighted reader sees one word. */}
-          <p className="sub">{labels.reasonHelp}</p>
-        </>
+          )}
+        </Field>
       )}
 
       {/* A deferral names when it comes back, or it is a dismissal wearing a
           different word. */}
       {needsRemind && (
-        <label className="field" htmlFor={remindID}>
-          <span>{labels.remindAt}</span>
-          <DateInput
-            id={remindID}
-            value={remindAt}
-            onChange={(event) => setRemindAt(asDate(event.target.value))}
-          />
-        </label>
+        <Field label={labels.remindAt}>
+          {(control) => (
+            <DateInput
+              {...control}
+              value={remindAt}
+              onChange={(event) => setRemindAt(asDate(event.target.value))}
+            />
+          )}
+        </Field>
       )}
 
       {/* Optional, and bounded. Left empty the server applies its own ceiling;
           past the ceiling it refuses rather than shortening, so the help text
           says the limit rather than letting somebody discover it. */}
       {needsReason && (
-        <>
-          <label className="field" htmlFor={expiresID}>
-            <span>{labels.expiresAt}</span>
+        <Field label={labels.expiresAt} hint={labels.expiresHelp}>
+          {(control) => (
             <DateInput
-              id={expiresID}
+              {...control}
               value={expiresAt}
               onChange={(event) => setExpiresAt(asDate(event.target.value))}
             />
-          </label>
-          <p className="sub">{labels.expiresHelp}</p>
-        </>
+          )}
+        </Field>
       )}
 
       <div className="card-actions">

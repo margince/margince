@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { SearchField } from "./atoms";
+import { Field, SearchField } from "./atoms";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
 import {
   ACTIVITY_KINDS,
@@ -57,7 +57,6 @@ export function TimelineFilterBar({
   onChange: (next: TimelineFilters) => void;
 }>) {
   const t = useT();
-  const id = useId();
   const [draft, setDraft] = useState(value.q ?? "");
   // The draft follows a filter reset from outside (a record change): a box
   // still showing the previous record's word would claim a search that is
@@ -108,28 +107,30 @@ export function TimelineFilterBar({
           }}
         />
         <span className="timeline-filters-range">
-          <label htmlFor={`${id}-after`} className="t-label">
-            {t("timeline.filters.from")}
-          </label>
-          <DateInput
-            id={`${id}-after`}
-            value={value.after ?? ""}
-            max={value.before || undefined}
-            onChange={(event) =>
-              onChange({ ...value, after: day(event.target.value) })
-            }
-          />
-          <label htmlFor={`${id}-before`} className="t-label">
-            {t("timeline.filters.to")}
-          </label>
-          <DateInput
-            id={`${id}-before`}
-            value={value.before ?? ""}
-            min={value.after || undefined}
-            onChange={(event) =>
-              onChange({ ...value, before: day(event.target.value) })
-            }
-          />
+          <Field label={t("timeline.filters.from")}>
+            {(control) => (
+              <DateInput
+                {...control}
+                value={value.after ?? ""}
+                max={value.before || undefined}
+                onChange={(event) =>
+                  onChange({ ...value, after: day(event.target.value) })
+                }
+              />
+            )}
+          </Field>
+          <Field label={t("timeline.filters.to")}>
+            {(control) => (
+              <DateInput
+                {...control}
+                value={value.before ?? ""}
+                min={value.after || undefined}
+                onChange={(event) =>
+                  onChange({ ...value, before: day(event.target.value) })
+                }
+              />
+            )}
+          </Field>
         </span>
       </div>
       {value.q && (

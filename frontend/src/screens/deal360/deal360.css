@@ -13,6 +13,17 @@
   text-wrap: balance;
 }
 
+/* What the close-confirmation dialog asks for before a terminal stage is
+   allowed: the lost reason, or the won vocabulary and its detail. A stack of
+   its own, because the `Field` carries no interval outside itself and the
+   dialog's other children are prose paragraphs on the paragraph rhythm — so
+   without this the reasons sat flush against the sentence above them. */
+.advance-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* Outcome review — what a closed deal recorded about how it went. One block per
    review, the question above its answer, because a reader scans the questions
    to find the one they came for. */

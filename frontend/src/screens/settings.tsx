@@ -1265,7 +1265,7 @@ function PassportCard() {
         >
           {mint.isSuccess && (
             <PanelPlate>
-              <p className="t-label">{t("settings.tokenOnce")}</p>
+              <p>{t("settings.tokenOnce")}</p>
               <p className="passport-token-value">{mint.data.token}</p>
             </PanelPlate>
           )}
@@ -1316,7 +1316,6 @@ function PassportCard() {
               {PASSPORT_SCOPES.map((scope) => (
                 <Checkbox
                   key={scope}
-                  className="t-label"
                   checked={scopes.has(scope)}
                   onChange={(event) => {
                     const next = new Set(scopes);
