@@ -48,7 +48,7 @@ func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.
 		`SELECT COALESCE(contract_number, title)
 		   FROM contract
 		  WHERE deal_id = $1 AND company_id <> $2
-		  ORDER BY created_at
+		  ORDER BY created_at, id
 		  LIMIT $3`,
 		dealID, companyID, namedInRefusal+1)
 	if err != nil {
@@ -89,8 +89,10 @@ func (e *DealContractsCrossCompanyError) Error() string {
 	if e.AndOthers {
 		named += ", and others"
 	}
-	return "a deal and its agreements must name the same company, and these still name the old one: " +
-		named + " — detach them from this deal, or record them against the new company, before moving it"
+	// "do not" rather than "still name the old one": a deal may have named
+	// nobody when the agreement was filed, and there is no old one to point at.
+	return "a deal and its agreements must name the same company, and these do not: " + named +
+		" — detach them from this deal, or record them against the new company, before moving it"
 }
 
 // FieldFault names the field the caller sent, so the refusal classifies as a
