@@ -11147,6 +11147,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/attribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record who authored imported records in the system they came from.
+         * @description Writes `source_author_id` / `source_author_name` onto records that already
+         *     exist here, from a source system that knows who wrote them. It creates
+         *     nothing: every row is named by the id it already has, and a row this
+         *     installation does not hold is reported as `skipped`, never conjured.
+         *
+         *     WHY THIS IS A ROUTE AND NOT A MIGRATION. The answer lives outside the
+         *     database — in a mirror of the system the records came from — so the
+         *     mapping has to be carried in by something that can read both. It arrives
+         *     in batches, over a network, across tens of thousands of records, which
+         *     means it will be interrupted and it will be re-run.
+         *
+         *     BOTH OF THOSE ARE CHEAP, and they are answered by two different things.
+         *     `source_revision` is a counter the caller stamps per record and only
+         *     ever increases; a row whose stored revision is greater than or equal to
+         *     the one offered is answered `unchanged` and nothing is written, so a
+         *     delayed retry of an old batch cannot overwrite a correction that landed
+         *     after it. Whether the answer DIFFERS from the one already on the record
+         *     is a separate question, and it is settled against the record's own
+         *     columns under its row lock — a clean re-run reports `unchanged` rather
+         *     than rewriting identical values and restamping the activity.
+         *
+         *     `captured_by` IS NOT TOUCHED and cannot be: it is stamped from the
+         *     authenticated principal and answers who recorded the row HERE. This
+         *     route answers the different question of who wrote it THERE. On an
+         *     imported record those are different colleagues, and the audit row this
+         *     writes names the caller — the repair is the caller's act, performed on
+         *     behalf of nobody.
+         *
+         *     NO IDEMPOTENCY KEY, deliberately. A replayed key pays back a recorded
+         *     response without re-running the write, and that is the wrong safety
+         *     here: `source_revision` already makes a retry a no-op per record, on the
+         *     record's own terms rather than on whether the caller reused a header. A
+         *     batch resent after a partial failure SHOULD re-execute — that is how a
+         *     resumed run finishes the records the first attempt never reached.
+         */
+        post: operations["repairSourceAttribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/attribution/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-derive the interaction graph after a run of attribution repairs.
+         * @description The who-knows-whom graph is folded from participant rows, and a repair
+         *     that corrected thousands of them leaves the graph describing the old
+         *     answer. This re-derives it in one pass.
+         *
+         *     SEPARATE FROM THE WRITE, deliberately. Re-folding per batch would repeat
+         *     the same whole-table work for every five hundred records; and a repair
+         *     that succeeded followed by a rebuild that failed is a state an operator
+         *     must be able to see and re-run, not one hidden inside a write that
+         *     already committed. Calling it twice costs time and changes nothing.
+         */
+        post: operations["rebuildAttributionGraph"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -16984,6 +17065,104 @@ export interface components {
              *     runs its own window, so this date names the next message to go rather than all of them.
              */
             deletes_at?: string;
+        };
+        /**
+         * @description One batch of author attributions. Every row names a record that already
+         *     exists here; nothing is created.
+         */
+        SourceAttributionRequest: {
+            /**
+             * @description Names this RUN, for an operator reading the ledger months later
+             *     ("hubspot-mirror-2026-09-17"). Not an id and not a foreign key: the
+             *     repair keeps its history in `audit_log` with everything else.
+             *
+             *     A LABEL, NOT A SENTENCE. Letters, digits, dot, underscore, colon
+             *     and hyphen carry a date and a source system; the pattern keeps the
+             *     column tidy and keeps a paragraph out of it.
+             *
+             *     It does NOT make the label safe, and nothing here pretends
+             *     otherwise: `alice-smith` satisfies the pattern and names a human.
+             *     The label is free text an operator types, so it is cleared on any
+             *     record whose content the Art. 17 erasure destroys, exactly as the
+             *     author's name and its digest are. What survives an erasure is the
+             *     ledger row and its revision, which is what stops a later run
+             *     re-attributing the erased record.
+             */
+            batch_ref: string;
+            /** @description Bounded at five hundred because each row is its own transaction and a batch is the unit an interrupted run resumes at. A larger batch buys nothing and takes longer to redo. */
+            rows: components["schemas"]["SourceAttributionRow"][];
+        };
+        SourceAttributionRow: {
+            /**
+             * @description Activities only, for now. The record tables carry the same column pair, but each lives behind its own module with its own write conventions and its own erasure obligations — so they arrive as their own change rather than as four more arms of this one. The enum is where that boundary is stated, so a caller sending a contact is refused rather than silently skipped.
+             * @enum {string}
+             */
+            object_type: "activity";
+            /**
+             * Format: uuid
+             * @description The record's id in THIS installation, not in the system it came from.
+             */
+            object_id: string;
+            /**
+             * Format: int64
+             * @description A counter the caller raises whenever it changes its mind about a record. A row whose stored revision is greater than or equal to this answers `unchanged` and is not written, so a delayed retry of an old batch cannot overwrite a correction that landed after it.
+             */
+            source_revision: number;
+            /**
+             * Format: uuid
+             * @description The member who wrote it, when the author holds a seat here.
+             */
+            source_author_id?: string | null;
+            /** @description The author's name as the source system spelled it, for somebody who never held a seat here. At least one of this and `source_author_id` must be given; sending neither is how a caller would silently clear an attribution, so it is refused. */
+            source_author_name?: string | null;
+        };
+        SourceAttributionResult: {
+            /** @description Records whose attribution this call wrote. */
+            applied: number;
+            /** @description Records already carrying this answer, or a newer one. */
+            unchanged: number;
+            /** @description Records not written; each carries its reason below. */
+            skipped: number;
+            /** @description One entry per row sent, in the order they were sent. */
+            rows: components["schemas"]["SourceAttributionRowResult"][];
+        };
+        SourceAttributionRowResult: {
+            object_type: string;
+            /** Format: uuid */
+            object_id: string;
+            /** @enum {string} */
+            outcome: "applied" | "unchanged" | "skipped";
+            /** @description Why a row was skipped, in words an operator can act on — the record is not here, it is archived, it came from no source system, or the author names a seat this installation does not have. Null on the other two outcomes. */
+            reason?: string | null;
+        };
+        /** @description Deliberately empty of counts. The edge table belongs to the search module and the composition layer does not read it, so a number here would be a second reader of somebody else's table, kept in step by hand, answering a question nobody asked. The status says the fold ran. */
+        AttributionRebuildResult: Record<string, never>;
+        /**
+         * @description Who wrote a record in the system it was imported from, when that is not
+         *     whoever recorded it here.
+         *
+         *     TWO WAYS TO NAME ONE AUTHOR, and a reader must handle both. An author who
+         *     holds a seat in this installation is named by `user_id`, so the display
+         *     name follows them when they change it and still resolves after they
+         *     leave — the read joins the member directory without a liveness filter,
+         *     because who wrote something in August is a fact about August. An author
+         *     who never worked here has no seat to point at, so the source system's own
+         *     spelling of their name is all there is, and `user_id` is null.
+         *
+         *     `display_name` is therefore always present and is what a surface renders;
+         *     `user_id` is the extra fact that makes them clickable when they are one
+         *     of us.
+         */
+        SourceAuthor: {
+            /**
+             * Format: uuid
+             * @description The member this author is, when they hold a seat here. Null for an author who never did.
+             */
+            user_id?: string | null;
+            /** @description What to show. The member's current display name when `user_id` is set, else the name the source system carried. */
+            display_name: string;
+            /** @description Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded. */
+            via?: string | null;
         };
         /**
          * @description One retained email, reduced to what a row shows without opening it. Present on an
@@ -24545,6 +24724,12 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /**
+             * @description Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+             *     WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
+             *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
+             */
+            readonly author?: components["schemas"]["SourceAuthor"] | null;
             raw?: {
                 [key: string]: unknown;
             } | null;
@@ -52741,6 +52926,55 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    repairSourceAttribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceAttributionRequest"];
+            };
+        };
+        responses: {
+            /** @description What happened to each named record, in the order they were sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceAttributionResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rebuildAttributionGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The graph was re-derived. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributionRebuildResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     claimRecord: {

@@ -608,6 +608,8 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/public/rooms/threads/{threadId}/comments":                     {Op: "replyBuyerRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/record-grants":                                                {Op: "createRecordGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/record-roles":                                                 {Op: "createRecordRole", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/records/attribution":                                          {Op: "repairSourceAttribution", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/records/attribution/rebuild":                                  {Op: "rebuildAttributionGraph", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{entity_type}/{id}/history/{audit_id}/restore":        {Op: "restoreRecordChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{record_type}/{id}/claim":                             {Op: "claimRecord", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{record_type}/{record_id}/assignments":                {Op: "createRecordAssignment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

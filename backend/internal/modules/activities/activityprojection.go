@@ -54,6 +54,13 @@ type activityScan struct {
 	// the content, not with the markers: "held because personnel" describes
 	// what the message is about.
 	audienceReason *string
+	// Who wrote the row in the system it was imported from, in the two spellings
+	// the column pair carries: a seat here (sourceAuthorID, whose current name
+	// arrives as sourceAuthorSeatName) or a name the source knew and nothing
+	// else (sourceAuthorName). Assembled into the record's one `author` object
+	// by authorOf, which is where the precedence between them is decided.
+	sourceAuthorID                         *ids.UUID
+	sourceAuthorName, sourceAuthorSeatName *string
 	// raw is the source system's own representation of an imported activity.
 	// It is content — it holds the message text an importer handed over — so
 	// it is scanned aside and only reaches the record when the audience test
@@ -104,6 +111,19 @@ var activityProjection = []activityColumn{
 	{"a.source_activity_id", func(s *activityScan) any { return &s.sourceActivityID }},
 	{"a.language", func(s *activityScan) any { return &s.language }},
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
+	{"a.source_author_id", func(s *activityScan) any { return &s.sourceAuthorID }},
+	{"a.source_author_name", func(s *activityScan) any { return &s.sourceAuthorName }},
+	// The author's CURRENT display name: sourceAuthorSeatNameSQL, below the table.
+	// Three readers compose their own `FROM activity a WHERE …` around this
+	// projection, so a join would have to be added to each of them and to the
+	// next one somebody writes — which is precisely how the contact360 timeline
+	// came to be missing a column for a whole slice, twice. A column that
+	// carries its own source needs nothing of its callers.
+	//
+	// NO liveness filter, deliberately. Who wrote something in August is a fact
+	// about August: a colleague who has since left was still its author, and
+	// readEmailParties already refuses the same filter for the same reason.
+	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
 	{"a.version", func(s *activityScan) any { return &s.version }},
 	{"a.created_at", func(s *activityScan) any { return &s.a.CreatedAt }},
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
@@ -115,6 +135,51 @@ var activityProjection = []activityColumn{
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
+}
+
+// sourceAuthorSeatNameSQL resolves the author's current display name, and it is
+// a SUBSELECT rather than a join.
+//
+// Three readers compose their own `FROM activity a WHERE …` around this
+// projection, so a join would have to be added to each of them and to the next
+// one somebody writes — which is precisely how the contact360 timeline came to
+// be missing a column for a whole slice, twice. A column that carries its own
+// source needs nothing of its callers.
+//
+// NO liveness filter, deliberately. Who wrote something in August is a fact
+// about August: a colleague who has since left was still its author, and
+// readEmailParties already refuses the same filter for the same reason.
+const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u WHERE u.id = a.source_author_id)`
+
+// SourceAuthorOf builds the record's `author` from the column pair and the
+// seat name the projection resolved, or answers nil when the row has no author.
+//
+// PRECEDENCE, and it only looks like a detail: the seat's CURRENT name wins
+// over the name the source carried. An author who works here may have married,
+// corrected a spelling, or been entered into the old system wrong, and the
+// directory is the thing that knows. The source's spelling is the fallback for
+// somebody who never held a seat — and it is also what survives when a seat is
+// hard-deleted, because the FK nulls the id and leaves the name standing.
+//
+// A row with an id that resolves to nothing keeps the id: the reader still
+// learns that an identified member wrote it, and rendering it as unattributed
+// would be a stronger claim than the data supports.
+func SourceAuthorOf(id *ids.UUID, seatName, sourceName, sourceSystem *string) *crmcontracts.SourceAuthor {
+	name := ""
+	switch {
+	case seatName != nil && *seatName != "":
+		name = *seatName
+	case sourceName != nil && *sourceName != "":
+		name = *sourceName
+	}
+	if id == nil && name == "" {
+		return nil
+	}
+	return &crmcontracts.SourceAuthor{
+		UserId:      uuidPtr(id),
+		DisplayName: name,
+		Via:         sourceSystem,
+	}
 }
 
 // activityLive is the not-archived predicate, for the alias every read of this
@@ -176,6 +241,19 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// meeting is a marker like its date and its direction, and a caller who may
 	// discover the row may know whose meeting it was.
 	a.HostUserId = uuidPtr(s.hostUserID)
+	// Who wrote it in the system it came from — WITHHELD with the content, not
+	// carried like the host above.
+	//
+	// The host is a colleague's seat on our own side of a meeting. This is a
+	// free-text name that arrived with imported text, about a human who is
+	// usually neither party to the exchange, and the Art. 17 redaction clears
+	// it alongside the subject and the body for exactly that reason. A field
+	// the erasure treats as content cannot be a marker here: a reader outside a
+	// held message's audience would learn who wrote it while being refused
+	// every word of it.
+	if s.contentAvailable {
+		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
+	}
 	if s.language != nil && s.contentAvailable {
 		lang := crmcontracts.ActivityLanguage(*s.language)
 		a.Language = &lang
