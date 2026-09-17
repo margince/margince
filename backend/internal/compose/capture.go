@@ -308,6 +308,11 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// seam.
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence, because a
+			// provider's own event id differs per calendar: two colleagues on one
+			// meeting sync two ids for it, and without this it lands twice.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		).

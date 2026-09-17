@@ -95,6 +95,11 @@ func captureWithTakeOver(
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)
@@ -143,6 +148,11 @@ func TestAConnectorWithoutUpdateCannotTakeOverItsOwnImport(t *testing.T) {
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)
@@ -205,6 +215,11 @@ func TestAnErasureRacingTheTakeOverSkipsInsteadOfStalling(t *testing.T) {
 		WithAssertedTakeOver(racing).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)
@@ -276,6 +291,11 @@ func TestASentMessageIsNotRewrittenByAColleaguesMailbox(t *testing.T) {
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)
