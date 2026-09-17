@@ -4307,16 +4307,22 @@ public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
+public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))
 public.lead.lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES lead(id) ON DELETE SET NULL (merged_into_id)
+public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.lead.lead_pkey PRIMARY KEY (id)
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
+public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
 public.lead.lead_qualified_deal_id_fkey FOREIGN KEY (qualified_deal_id) REFERENCES deal(id) ON DELETE SET NULL
+public.lead.lead_score_computed_range CHECK (((score_computed IS NULL) OR ((score_computed >= 0) AND (score_computed <= 100))))
 public.lead.lead_score_override_reason_check CHECK (((score_override_reason IS NULL) OR (length(btrim(score_override_reason)) > 0)))
+public.lead.lead_score_range CHECK (((score >= 0) AND (score <= 100)))
+public.lead.lead_sla_breach_follows_creation CHECK (((sla_breached_at IS NULL) OR (sla_breached_at >= created_at)))
 public.lead.lead_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.lead.lead_status_check CHECK ((status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text, 'promoted'::text, 'disqualified'::text])))
-public.lead.lead_status_set_by_check CHECK ((status_set_by = ANY (ARRAY['human'::text, 'system'::text])))
+public.lead.lead_status_set_by_check CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human'::text, 'system'::text]))))
 public.lead.legal_hold boolean NOT NULL gen=- def=false
 public.lead.linkedin_url text gen=- def=-
 public.lead.merged_into_id uuid gen=- def=-

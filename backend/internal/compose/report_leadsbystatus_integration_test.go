@@ -128,6 +128,22 @@ func seedLeadAt(t *testing.T, e *integration.Env, status string, terminal bool) 
 	if terminal {
 		archived = "now()"
 	}
-	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, archived_at)
-		VALUES ($1, 'Terminal Fixture', $2, 'inbound', 'human:x', `+archived+`)`, id, status)
+	// A promoted lead names the contact it became, which the table now requires
+	// — the promotion writes both in one statement, so a row with the status
+	// and no contact is one the product cannot produce. The contact is seeded
+	// for the same reason: the pointer is a foreign key, and a fixture naming
+	// nobody would be a different impossible row.
+	promotedContact := "NULL"
+	if status == "promoted" {
+		contact := ids.NewV7()
+		e.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Promoted Fixture', 'manual', 'human:x')`, contact)
+		promotedContact = "'" + contact.String() + "'"
+	}
+	promotedAt := "NULL"
+	if status == "promoted" {
+		promotedAt = "now()"
+	}
+	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, archived_at, promoted_at, promoted_contact_id)
+		VALUES ($1, 'Terminal Fixture', $2, 'inbound', 'human:x', `+archived+`, `+promotedAt+`, `+promotedContact+`)`, id, status)
 }
