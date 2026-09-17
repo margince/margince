@@ -71,6 +71,21 @@ func (e *EmptyUploadError) FieldFault() (field, code, message string) {
 // land an object (no storage abuse). The object is put before the row commits
 // (a committed row always has its bytes; a failed write leaves at worst an
 // orphan object, never a row promising bytes that are not there).
+// storeAttachmentBytes declares the key provisional and then stores the bytes,
+// in that order.
+//
+// THE ORDER IS THE POINT. A transaction that fails after the put leaves an
+// object nothing references, and an erasure reads storage_key off the
+// attachment row — so an object with no row is one it cannot reach. The
+// declaration is what a later pass finds instead, and it has to exist before
+// the bytes do. See storedobjectintent.go.
+func (s *Store) storeAttachmentBytes(ctx context.Context, key string, in AttachmentInput, size int64) error {
+	if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+		return err
+	}
+	return s.blob.Put(ctx, key, in.Content, size, in.ContentType)
+}
+
 func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmcontracts.Attachment, error) {
 	if s.blob == nil {
 		return crmcontracts.Attachment{}, ErrBlobstoreUnconfigured
@@ -121,7 +136,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		return crmcontracts.Attachment{}, &EmptyUploadError{Filename: in.Filename}
 	}
 
-	if err := s.blob.Put(ctx, key, in.Content, size, in.ContentType); err != nil {
+	if err := s.storeAttachmentBytes(ctx, key, in, size); err != nil {
 		return crmcontracts.Attachment{}, err
 	}
 
@@ -164,6 +179,13 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 			"filename":      in.Filename,
 			"byte_size":     size,
 		}); err != nil {
+			return err
+		}
+		// The key stops being provisional in the SAME transaction that gave it
+		// a row. A clear that committed separately could land while this
+		// transaction then failed, which is the orphan the ledger exists to
+		// catch, re-created one step along.
+		if err := clearStoredObjectIntent(ctx, tx, key); err != nil {
 			return err
 		}
 		att, err := readAttachment(ctx, tx, id)

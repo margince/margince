@@ -116,6 +116,14 @@ func (s *Store) StageCapturedFiles(
 		id := ids.NewV7()
 		key := blobstore.WorkspaceKey(workspace, "attachment", id.String())
 		sum := sha256.Sum256(file.Body)
+		// Declared provisional BEFORE the bytes exist, on its own transaction,
+		// so the declaration survives the failure of the caller's — which is
+		// exactly the failure that leaves an object nothing references, and an
+		// erasure reads storage_key off the attachment row. See
+		// storedobjectintent.go.
+		if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+			return nil, err
+		}
 		if err := s.blob.Put(ctx, key, bytes.NewReader(file.Body),
 			int64(len(file.Body)), file.ContentType); err != nil {
 			return nil, fmt.Errorf("store a captured file: %w", err)
@@ -170,6 +178,11 @@ func (s *Store) RecordCapturedFiles(
 	}
 	for _, file := range staged {
 		if err := insertCapturedAttachment(ctx, tx, activityID, rollUp, from, file); err != nil {
+			return err
+		}
+		// On the CALLER's transaction, the one that just gave the key a row:
+		// the pair commits together or neither does.
+		if err := clearStoredObjectIntent(ctx, tx, file.key); err != nil {
 			return err
 		}
 	}

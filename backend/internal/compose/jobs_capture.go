@@ -78,6 +78,23 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 // while these depend on different things and several on nothing at all. The
 // two analysis passes that register without a model lane each say below why a
 // missing lane is not a reason to leave their work undone.
+// addStoredObjectJobs registers the orphaned-object reap, and only for a role
+// that composed an object store.
+//
+// Nil is the honest answer rather than a degraded one: a pass that cannot reach
+// the bytes would retire ledger rows for objects still sitting in the bucket,
+// which turns a recoverable orphan into one nothing can find. It sits in this
+// file because the reap is the same kind of thing the capture purge is — bytes
+// a row no longer speaks for — and both need the one collaborator the
+// database-only sweeps deliberately do not take.
+func addStoredObjectJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
+	reaper := storedObjectReaperFor(pool, cfg.Blobstore, log)
+	if reaper == nil {
+		return
+	}
+	addDeclaredWorker[StoredObjectReapArgs](reg, reaper)
+}
+
 func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	// The Telegram ingest job is not periodic — a poll enqueues one per accepted
 	// update in the same transaction as the raw capture row; the worker role only
