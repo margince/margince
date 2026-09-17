@@ -284,7 +284,12 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// configures outbound mail once, and deriving the brief's channel here
 		// rather than resolving it a second time is what keeps the two from
 		// disagreeing about whether this installation can send at all.
-		BriefMail:              compose.BriefMailConfig(weeklyMail),
+		BriefMail: compose.BriefMailConfig(weeklyMail),
+		// And the same relay a third time, for the one notice that leaves the
+		// product the moment it is raised rather than on a schedule. Converted
+		// like the brief's is: three resolutions of one operator setting could
+		// disagree about whether this installation can send at all.
+		NotificationMail:       compose.NotificationMailConfig(weeklyMail),
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		StageEvidenceBrain:     modelPath.StageEvidenceExtract,
 		// The account scan registers regardless too: a queued scan on a

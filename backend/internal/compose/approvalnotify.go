@@ -39,12 +39,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,21 +63,41 @@ const approvalNotifyActor = "system:approval-notify"
 // is that something is waiting rather than a guess at what.
 const unsummarisedProposal = "A proposal is waiting for your decision"
 
+// noticeMailQueue stages one notice's immediate message durably.
+//
+// Narrowed to the one method the lane uses, the way commsjobs narrows the
+// dispatcher it drives: the queue is a true boundary, and the decision this
+// file makes — WHICH seats get a message staged — is the half worth proving
+// without River. The worker binary passes *jobs.Runner, asserted below.
+type noticeMailQueue interface {
+	EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error
+}
+
+var _ noticeMailQueue = (*jobs.Runner)(nil)
+
 // ApprovalNotify announces a staged approval to the seats that could decide it.
 type ApprovalNotify struct {
 	db        *database.DB
 	approvals *approvals.Service
 	notices   *notices.Store
 	identity  *identity.Service
+	mail      noticeMailQueue
 }
 
 // NewApprovalNotify builds the consumer over the installation's handle.
-func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB) *ApprovalNotify {
+//
+// A nil mail queue is the lane with no immediate email leg: every notice is
+// still written and every reader still sees it on their Worklist, and nothing
+// leaves the product. That is the honest posture for a role that cannot stage a
+// job rather than a boot error, and it is the same shape a nil relay takes one
+// layer on.
+func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue) *ApprovalNotify {
 	return &ApprovalNotify{
 		db:        db,
 		approvals: approvals.NewService(db),
 		notices:   notices.NewStore(db),
 		identity:  identity.NewService(pool),
+		mail:      mail,
 	}
 }
 
@@ -204,9 +226,48 @@ func (a *ApprovalNotify) announceToSeat(
 	// switched off writes nothing at all — no row, no audit entry, no
 	// announcement — and answers the zero id this caller already ignores.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := a.notices.CreateTx(ctx, tx, approvalNoticeFor(seat, approvalID, staged))
-		return err
+		noticeID, err := a.notices.CreateTx(ctx, tx, approvalNoticeFor(seat, approvalID, staged))
+		if err != nil || noticeID.IsZero() {
+			return err
+		}
+		return a.stageMail(ctx, tx, wsID, seat, noticeID)
 	})
+}
+
+// stageMail asks for this notice to leave the product, when the seat asked for
+// that.
+//
+// THE PREFERENCE IS READ HERE, in the transaction that writes the notice, and
+// that ordering is the whole design: a colleague who reads their queue on
+// screen never has a durable job staged about them at all. The worker re-reads
+// it before sending, which covers only the window between this transaction and
+// that one.
+//
+// The job rides the notice's OWN transaction, so a rollback takes the message
+// with it. The other order — a job staged outside — can name a notice that was
+// never written, and the worker would then claim nothing and look like a lane
+// that silently drops messages.
+//
+// A second delivery of this envelope re-enters here and stages a second job,
+// because the dedupe key answers the first notice's id rather than a zero one.
+// That is free: the job's claim finds the attempt spent and sends nothing. It
+// is the reason the claim exists rather than a hole in this check.
+func (a *ApprovalNotify) stageMail(
+	ctx context.Context, tx pgx.Tx, wsID, seat ids.UUID, noticeID ids.UUID,
+) error {
+	if a.mail == nil {
+		return nil
+	}
+	delivery, err := notices.DeliveryFor(ctx, tx, ids.From[ids.UserKind](seat), notices.ClassApprovalPending)
+	if err != nil {
+		return err
+	}
+	if delivery != notices.DeliveryEmail {
+		return nil
+	}
+	return a.mail.EnqueueTx(ctx, tx, SendNotificationEmailArgs{
+		Workspace: wsID, NoticeID: noticeID.String(),
+	}, notificationMailOpts())
 }
 
 // seatContext binds one seat's own authority, and a fresh correlation id so

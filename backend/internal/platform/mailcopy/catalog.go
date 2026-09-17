@@ -37,6 +37,7 @@ func buildCatalog() map[Language]Copy {
 	inviteLines(line)
 	weeklyLines(line)
 	morningLines(line)
+	notificationLines(line)
 	confirmLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
@@ -251,6 +252,34 @@ func morningLines(line writeLine) {
 		"Open your day:",
 		"Öffne deinen Tag:",
 		"Mở ngày của bạn:")
+}
+
+// notificationLines is the one notice mailed the moment it is raised: an
+// approval waiting on the colleague who can answer it.
+//
+// It names the READER's part rather than the product's. "An approval is
+// waiting for your decision" is the sentence the Worklist card already makes,
+// and the message exists to carry that sentence out of a tab nobody has open —
+// so a wording about the notification itself would describe the envelope
+// instead of what is in it.
+//
+// The German is INFORMAL, like the reset, invite and brief copy above and
+// unlike the confirm sections below: this message goes to a colleague who works
+// here, and a product that says "du" every morning and "Sie" when a decision is
+// waiting is two voices in one mailbox.
+func notificationLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.NotificationSubject },
+		"Waiting on you: ",
+		"Wartet auf dich: ",
+		"Đang chờ bạn: ")
+	line(func(c *Copy) *string { return &c.NotificationIntro },
+		"An approval is waiting for your decision.",
+		"Eine Freigabe wartet auf deine Entscheidung.",
+		"Một phê duyệt đang chờ bạn quyết định.")
+	line(func(c *Copy) *string { return &c.NotificationOpen },
+		"Open your worklist",
+		"Arbeitsliste öffnen",
+		"Mở danh sách công việc")
 }
 
 // confirmLines is the copy for messages addressed to a contact the installation

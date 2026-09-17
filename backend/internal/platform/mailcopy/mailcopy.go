@@ -282,6 +282,22 @@ type Copy struct {
 	// heading over an empty list reads as a message that failed to render.
 	MorningQuiet   string
 	MorningOpenDay string
+
+	// The one notice that leaves the product: a decision waiting on a
+	// colleague, mailed because they asked for that class by mail.
+	//
+	// Shorter than either digest, and deliberately so. It carries no counts and
+	// no ranking — the notice's own line is the whole of what it has to say —
+	// because it arrives the moment the decision is staged rather than on a
+	// schedule, and a reader opening it is deciding whether to switch tabs now.
+	//
+	// NotificationSubject is a PREFIX the notice's own subject follows, the
+	// shape the two digests take: the subject is what tells two of these apart
+	// in a list, and what it names has to be the thing waiting rather than the
+	// message.
+	NotificationSubject string
+	NotificationIntro   string
+	NotificationOpen    string
 }
 
 // OneLine collapses any run of line breaks and other control separators into

@@ -17,9 +17,13 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -50,6 +54,7 @@ type approvalNotifyEnv struct {
 	db     *database.DB
 	svc    *approvals.Service
 	notify *ApprovalNotify
+	queue  *recordingNoticeMailQueue
 	deal   ids.UUID
 }
 
@@ -57,9 +62,41 @@ func newApprovalNotifyEnv(t *testing.T) approvalNotifyEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
-	a := approvalNotifyEnv{e: e, db: db, svc: approvals.NewService(db), notify: NewApprovalNotify(e.Pool, db)}
+	queue := &recordingNoticeMailQueue{}
+	a := approvalNotifyEnv{
+		e: e, db: db, svc: approvals.NewService(db), queue: queue,
+		notify: NewApprovalNotify(e.Pool, db, queue),
+	}
 	a.deal = a.seedDeal(t)
 	return a
+}
+
+// recordingNoticeMailQueue stands in for River's insert. The durable queue is a
+// true boundary, which is what makes a fake the right shape here: what this
+// suite asserts is WHICH notices get a mail job staged, and River's own insert
+// is proven by the kinds the census walks.
+type recordingNoticeMailQueue struct {
+	mu   sync.Mutex
+	jobs []SendNotificationEmailArgs
+}
+
+func (q *recordingNoticeMailQueue) EnqueueTx(
+	_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts,
+) error {
+	staged, mine := args.(SendNotificationEmailArgs)
+	if !mine {
+		return fmt.Errorf("the notify lane staged a %s, which is not its to stage", args.Kind())
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.jobs = append(q.jobs, staged)
+	return nil
+}
+
+func (q *recordingNoticeMailQueue) staged() []SendNotificationEmailArgs {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return slices.Clone(q.jobs)
 }
 
 // seedDeal builds the record a staged correction points at, through the deal
