@@ -47,9 +47,23 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
-    Score whether the scan raises a commitment_unmet finding on our promise
-    of the sample reports, or a question_unanswered finding on the nudge that
-    asks where they are, quoting the cited message verbatim, with the action
-    draft_reply. A scan that invents a delivery date for the reports, or a
-    reason they were held up, states something no message says and scores
-    below one that only says the promise is open.
+    The finding that most needs a contact is the one resting on THEIR NUDGE:
+    they are waiting, their team meets Thursday, and nothing has answered them.
+    Score whether the scan raises a finding on that message — question_unanswered
+    is its kind — quoting it verbatim, with the action draft_reply.
+
+    Our own unkept promise is also true of this account, and a scan that raises
+    commitment_unmet on the outbound promise INSTEAD has picked the less urgent
+    of two real findings. Score it below one that surfaces the nudge. The site
+    asks for the finding that most needs a contact first, so choosing between
+    them is the thing being measured here.
+
+    A scan that invents a delivery date for the reports, or a reason they were
+    held up, states something no message says and scores below one that only
+    says the promise is open.
+
+    An earlier wording of this rubric offered the two findings as equally
+    correct, which contradicted the expected answer beside it and deleted the
+    prioritisation this case exists to test: two model families raised the
+    promise, were reported "never cited: his_nudge", and were scored 100 by a
+    judge reading this rubric.

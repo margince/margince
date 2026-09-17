@@ -123,12 +123,7 @@ func (c *companyDossierCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: "no sentence cited a record of this company",
 		}
 	}
-	var missing []string
-	for _, name := range c.expected {
-		if !cited[c.label[name]] {
-			missing = append(missing, name)
-		}
-	}
+	missing := uncitedExpectations(c.expected, c.label, cited)
 	if len(missing) > 0 {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,

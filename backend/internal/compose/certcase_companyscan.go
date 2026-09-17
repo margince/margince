@@ -197,12 +197,7 @@ func (c *companyScanCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			cited[evidence.EntityId.String()] = true
 		}
 	}
-	var missing []string
-	for _, name := range c.expected {
-		if !cited[c.label[name]] {
-			missing = append(missing, name)
-		}
-	}
+	missing := uncitedExpectations(c.expected, c.label, cited)
 	if len(missing) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: "never cited: " + strings.Join(missing, ", ")}
 	}
