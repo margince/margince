@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
 import { DealActions } from "./dealactions";
@@ -112,16 +112,28 @@ export const Archived: Story = {
     ),
 };
 
-/** The overflow opened on a closed deal: the fixed order, Archive last. */
+/**
+ * The overflow opened on a closed deal: Reopen is offered, with Archive under
+ * it — the fixed order a reader learns once and keeps.
+ *
+ * Two things about driving it. The panel is PORTALLED to the body, so its rows
+ * are reached through `screen` and never through a canvas-scoped query; and
+ * `OverflowMenu` defers them to the first open, so they are FOUND after the
+ * press rather than got before it.
+ */
 export const OverflowOnAClosedDeal: Story = {
   render: () => actions({ status: "lost" }),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "More actions" }),
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
     );
     await expect(
-      canvas.getByRole("button", { name: "Reopen" }),
-    ).toBeInTheDocument();
+      await screen.findByRole("button", { name: "Reopen" }),
+    ).toBeVisible();
+    await expect(
+      await screen.findByRole("button", { name: "Archive deal" }),
+    ).toBeVisible();
   },
 };
