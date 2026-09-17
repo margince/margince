@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RelationshipsTab } from "./relationships";
+import { RelationshipsTab } from "./relationshiprows";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // RelationshipsTab reads GET /relationships?contact_id=… (there is no

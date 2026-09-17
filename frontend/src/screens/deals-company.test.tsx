@@ -661,8 +661,10 @@ describe("the deals table", () => {
 describe("a deal's fact line", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  // A bare mask on a line of joined facts says only "something is hidden".
-  // Each withheld fact names the field it withholds.
+  // A bare mask on a strip of named cells says only "something is hidden".
+  // Each withheld fact names the field it withholds. The header's own strip,
+  // because the same masked field is ALSO guarded in the details pane's edit
+  // form, and a query over the whole page would find both.
   it("names which of the facts is withheld", async () => {
     const single = deal({
       company_id: null,
@@ -671,7 +673,8 @@ describe("a deal's fact line", () => {
     vi.stubGlobal("fetch", stubBackend({ deals: [single], single }));
     render(<DealScreen id="d1" />);
 
-    const mask = await screen.findByRole("img", { name: MASK });
-    expect(mask.parentElement?.textContent).toContain("Company");
+    const masks = await screen.findAllByRole("img", { name: MASK });
+    const mask = masks.find((candidate) => candidate.closest(".record-facts"));
+    expect(mask?.closest(".record-fact")?.textContent).toContain("Company");
   });
 });

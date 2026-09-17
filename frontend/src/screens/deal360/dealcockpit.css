@@ -1,0 +1,13 @@
+/* The cockpit band: the deal's standing, alone, at full width. */
+.deal-cockpit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+}
+
+/* The ladder owns its row, so a stepper never wraps its last rungs under
+   itself to buy room it did not need. */
+.deal-cockpit-ladder {
+  min-width: 0;
+}

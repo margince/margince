@@ -17,9 +17,9 @@ import { problemMessageOf, throwProblem } from "./common";
 // the endpoint shipped and nothing rendered it, so the interaction projection
 // was a fact the product held and never showed anybody.
 //
-// The deal COVERAGE card was the other half and is gone. Its seats moved to the
-// deal rail (deal360/dealseats.tsx) when the readings band started counting
-// them, and its findings became chips (dealsignals.tsx) — leaving a card nothing
+// The deal COVERAGE card was the other half and is gone. Its seats are the rows
+// of the deal's committee card (deal360/dealcommitteecard.tsx), which carry the verbs that
+// change them, and its findings became chips (dealsignals.tsx) — leaving a card nothing
 // rendered, still carrying its own withheld-before-empty ordering and its own
 // copy. Two spellings of one card, and the dead one had passing tests, which is
 // what made it look maintained.

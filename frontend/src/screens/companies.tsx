@@ -149,7 +149,7 @@ import {
   standardViews,
   tagsColumn,
 } from "./recordlist";
-import { RelationshipsTab } from "./relationships";
+import { RelationshipsTab } from "./relationshiprows";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { listQueryParams } from "./tagfilter";
 import {

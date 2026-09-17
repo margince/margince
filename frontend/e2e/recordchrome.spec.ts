@@ -279,6 +279,21 @@ test.describe("the record's details pane", () => {
       await detailsSwitch(page).click();
       await expect(pane, "the switch did not reopen the pane").toBeVisible();
 
+      // At rest before measuring. The tab strip is STICKY (composed.css), so
+      // once the record is scrolled it pins to the top while the pane travels
+      // with the content — and the two boxes stop describing the layout this
+      // asserts. Clicking the switch scrolls it into view, and how far depends
+      // on how tall the head above it is, which is a property of the record
+      // rather than of the rule being checked here.
+      //
+      // The shell scrolls an inner `.scroll` container, not the window, so
+      // `window.scrollTo` is a no-op here and the strip stayed pinned through
+      // one.
+      await page.evaluate(() => {
+        for (const box of document.querySelectorAll(".scroll")) {
+          box.scrollTop = 0;
+        }
+      });
       const paneBox = await pane.boundingBox();
       const work = await page.locator(".page-zones-main").boundingBox();
       const tabs = await page.locator("[data-testid='record-tabs']").boundingBox();

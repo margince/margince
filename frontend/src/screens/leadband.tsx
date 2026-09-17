@@ -28,9 +28,10 @@ function writeRefusal(writer: LeadWriter) {
   return writer.patch.error ?? writer.claim.error;
 }
 
-// The band under the header: what the lead has to say about itself as a whole
-// — a write it refused, the sentence that says it is closed, and the way back
-// out of a disqualification.
+// The band under the strip: what the lead has to say about itself as a whole —
+// a write it refused, the sentence that says it is closed, and the way back out
+// of a disqualification. Where the lead STANDS is not here: the ladder is at
+// the foot of the head, under the facts (RecordView's `standing`).
 //
 // RecordView draws the band's element and its two intervals for anything it is
 // handed, so this answers `undefined` rather than a fragment that renders

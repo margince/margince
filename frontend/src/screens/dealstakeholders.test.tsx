@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { RelationshipsTab } from "./relationships";
+import { RelationshipsTab } from "./relationshiprows";
 
 // A deal's stakeholders were readable on three surfaces — the rail's seats, the
 // committee map, the coverage findings — and writable on none: the edge was

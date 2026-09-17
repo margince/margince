@@ -52,7 +52,6 @@ const RECORD_TYPE_NAME_KEYS = [
   "lead.qualify.contact",
   "approval.field.contact_name",
   "today.source.contacts",
-  "deal.strip.contacts",
   "provider.backlogRemaining_one",
   "provider.backlogRemaining_other",
   // The one sentence that names the type rather than labelling it: it tells a
@@ -480,8 +479,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deal.committee.legendGap",
     "deal.committee.threads",
     "deal.ownerKeep",
-    "deal.strip.contacts.champion",
-    "deal.strip.contacts.noChampion",
     "deal360.buyer",
     "deals.bulkOwner",
     "deals.bulkOwnerPick",
