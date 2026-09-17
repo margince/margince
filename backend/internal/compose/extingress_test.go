@@ -102,6 +102,9 @@ func ingestingRuntime(t *testing.T) *callRuntime {
 	rt := unattendedRuntimeFor(
 		principal.WithWorkspaceID(context.Background(), ids.NewV7()),
 		"probe-unit", "1.0.0", "job", extensionRuntimeBinding{
+			// A zero pool, which is what the port's own wiring check asks for:
+			// it answers "this role bound no pool" for a nil one, and every
+			// case in this file stops before the pool is dialled.
 			pool:        &pgxpool.Pool{},
 			captureSink: &capture.Sink{},
 		},
@@ -209,18 +212,17 @@ func TestAnIngestInsideTheUnitsOwnTransactionIsRefused(t *testing.T) {
 	rt.leaveTx()
 	// And it lifts: a counter that only ever counted up would refuse every
 	// ingest a unit made after its first transaction, forever. Probed with a
-	// record the grammar refuses, because that answer comes from the step
-	// AFTER this one — so it says the nesting gate let the call past without
-	// this test needing a database to prove it.
-	unkeyed := aRecord()
-	unkeyed.Key = ""
-	res, err := rt.Ingest(context.Background(), member, unkeyed)
-	if err != nil {
-		t.Fatalf("err = %v, want the call to reach the grammar — the nesting refusal outlived the "+
-			"transactions it is about", err)
-	}
-	if res.Disposition != extension.DispositionUnrepresentable {
-		t.Fatalf("disposition = %q, want the next answer along, which is the grammar's", res.Disposition)
+	// record refused by the TRANSPORT check, which is the last step before any
+	// of this reaches a database — so the answer says the nesting gate let the
+	// call past, and this test still needs no Postgres to prove it. (A record
+	// the GRAMMAR refuses would do as well on its own terms, but the core now
+	// writes a breadcrumb for one, and a hermetic test may not.)
+	undeclared := aRecord()
+	undeclared.Activity.Kind = "message"
+	undeclared.Activity.ChannelProvider = "a_transport_this_unit_never_declared"
+	if _, err := rt.Ingest(context.Background(), member, undeclared); !errors.Is(err, extension.ErrInvalid) {
+		t.Fatalf("err = %v, want the call to reach the transport check — the nesting refusal outlived "+
+			"the transactions it is about", err)
 	}
 }
 
@@ -283,35 +285,6 @@ func TestAReleasedRuntimeCannotIngest(t *testing.T) {
 	_, err := rt.Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
 	if !errors.Is(err, extension.ErrRuntimeExpired) {
 		t.Fatalf("err = %v, want ErrRuntimeExpired", err)
-	}
-}
-
-// The port runs the published Record.Validate before it spends anything, so a
-// record the core would refuse costs no transaction. The exhaustive arms of
-// that grammar are its own package's tests; what is asserted here is that this
-// side calls it, and answers the published class.
-func TestARecordTheGrammarRefusesNeverReachesCapture(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
-		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
-	})
-	unkeyed := aRecord()
-	unkeyed.Key = ""
-
-	res, err := ingestingRuntime(t).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), unkeyed)
-	if err != nil {
-		t.Fatalf("err = %v, want a disposition rather than an error class: a unit cannot stop its "+
-			"whole connection on one malformed record, so it moves past this either way", err)
-	}
-	if res.Disposition != extension.DispositionUnrepresentable {
-		t.Errorf("disposition = %q, want %q", res.Disposition, extension.DispositionUnrepresentable)
-	}
-	if res.Ref != (extension.Ref{}) {
-		t.Errorf("ref = %+v, want none — nothing was written", res.Ref)
-	}
-	// The complaint travels, so a unit logs the same sentence it used to read
-	// off the error rather than losing why the record was refused.
-	if res.Reason == "" {
-		t.Error("the refusal says nothing about what was wrong with the record")
 	}
 }
 

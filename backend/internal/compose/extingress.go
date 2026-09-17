@@ -90,8 +90,13 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	// complaint still travels: a unit that logs the reason gets the same
 	// sentence it used to read off the error.
 	if err := rec.Validate(); err != nil {
+		// The breadcrumb the core keeps, before the answer the unit gets: the
+		// unit already knows it dropped this one, and the installation is the
+		// party that could not tell. See extingressrefusal.go.
+		r.noteRefusal(ctx, extension.RefusalOf(err))
 		return extension.Result{
 			Disposition: extension.DispositionUnrepresentable,
+			Refusal:     extension.RefusalOf(err),
 			Reason:      err.Error(),
 		}, nil
 	}

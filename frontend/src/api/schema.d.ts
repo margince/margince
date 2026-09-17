@@ -298,6 +298,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/extension-ingest-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which composed units are handing the core records it cannot express.
+         * @description Admin-only. Reports, per composed unit, how many records the core's ingress grammar refused over the reporting window and which check refused them.
+         *
+         *     A unit moves its cursor past a record the core cannot express — stopping on one malformed message parks the whole connection — so the drop leaves the unit's own logs and nothing else. Without this an installation reading only the CRM cannot tell a provider format change from a feed with nothing on it: every record refused presents exactly like a healthy quiet feed.
+         *
+         *     COUNTS AND A CLASS ONLY. Never the refused record, and never the core's own sentence about it: that sentence quotes the record back — a participant's account id, a provider name — and the extension tier deliberately holds no third-party content and no retention apparatus for any. The class is the core's closed vocabulary and is the granularity an operator acts on. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getExtensionIngestHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -28482,6 +28506,47 @@ export interface components {
             exhausted: number;
             oldest_pending_age_seconds?: number | null;
         };
+        /**
+         * @description Which composed units are handing the core records it cannot express, for an
+         *     administrator asking whether a connector is broken or merely quiet.
+         *
+         *     COUNTS AND A CLASS ONLY — never the refused record and never the core's sentence
+         *     about it, which quotes the record back. A unit with nothing refused in the window
+         *     is absent rather than listed at zero: this page answers "what is wrong", and a roll
+         *     of healthy units is the thing a reader has to scan past to find it.
+         */
+        ExtensionIngestHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description How many days back the counts reach, ending today (UTC). */
+            window_days: number;
+            /** @description One row per composed unit with anything refused in the window. */
+            units: components["schemas"]["ExtensionUnitIngestHealth"][];
+        };
+        ExtensionUnitIngestHealth: {
+            /** @description The composed unit's name. */
+            unit: string;
+            /** @description Records the core refused from this unit over the whole window. */
+            refused: number;
+            /** Format: date-time */
+            last_refused_at?: string;
+            /** @description The same total broken out by the check that refused, largest first. */
+            refusals: components["schemas"]["ExtensionIngestRefusal"][];
+        };
+        ExtensionIngestRefusal: {
+            /**
+             * @description Which check refused the record — the core's closed vocabulary
+             *     (`extension.RecordRefusal`), one per check the ingress grammar runs. It is what
+             *     names the mapping to fix: "every record fails its participants" is a different
+             *     bug from "every record fails its key".
+             * @enum {string}
+             */
+            refusal: "key" | "activity" | "addresses" | "counterparty" | "participants" | "size";
+            /** @description Records this check refused in the window. */
+            refused: number;
+            /** Format: date-time */
+            last_refused_at?: string;
+        };
         JobHealth: {
             /** Format: date-time */
             generated_at: string;
@@ -36794,6 +36859,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptureHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getExtensionIngestHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the core has refused from this installation's units. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionIngestHealth"];
                 };
             };
             401: components["responses"]["Unauthorized"];
