@@ -40,9 +40,10 @@ func identityOf(in LogActivityInput) (kind, key string) {
 //
 //   - The incumbent is out of this caller's scope → they must not learn it
 //     exists, so nothing is disclosed and their own row is created.
-//   - A different seat wrote the incumbent → binding would make one colleague's
-//     mail reachable through the other's, on the strength of a header the
-//     sender typed. See BindableTo.
+//   - A different seat wrote the incumbent, or it is no longer live → both are
+//     ResolveBindableIdentity's refusals, and both answer not-found. That
+//     function is where the rule about who may bind is stated, for this door and
+//     the capture door alike, so neither can drift from the other.
 //   - The kinds disagree → a Message-ID on a note and the same one on an email
 //     are not one message.
 func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
@@ -50,12 +51,8 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	if key == "" {
 		return crmcontracts.Activity{}, false, nil
 	}
-	incumbent, found, err := ResolveIdentity(ctx, tx, kind, key)
+	incumbent, found, err := ResolveBindableIdentity(ctx, tx, kind, key)
 	if err != nil || !found {
-		return crmcontracts.Activity{}, false, err
-	}
-	bindable, err := BindableTo(ctx, tx, incumbent)
-	if err != nil || !bindable {
 		return crmcontracts.Activity{}, false, err
 	}
 	same, err := sameKindAs(ctx, tx, incumbent, in.Kind)
