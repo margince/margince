@@ -21,6 +21,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -45,6 +47,7 @@ const activityKindTask = "task"
 // escalation target the event names (the owner today), titled after the
 // breach.
 type leadSLAEscalation struct {
+	db         *database.DB
 	activities *activities.Store
 	notices    *notices.Store
 	now        func() time.Time
@@ -60,6 +63,7 @@ type leadSLAEscalation struct {
 // dependency reaches both callers without either being edited.
 func newLeadSLAEscalation(db *database.DB, now func() time.Time) leadSLAEscalation {
 	return leadSLAEscalation{
+		db:         db,
 		activities: activities.NewStore(db),
 		notices:    notices.NewStore(db),
 		now:        now,
@@ -105,30 +109,38 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		target := ids.From[ids.UserKind](ids.UUID(*payload.EscalationTarget))
 		in.AssigneeID = &target
 	}
-	if _, _, err := w.activities.LogActivity(ctx, in); err != nil {
-		return workflow.RunResult{}, fmt.Errorf("log sla escalation task: %w", err)
-	}
-	// The notify half RC-5 promised, now that a transport exists: the same
-	// contact the task escalates to gets the durable line on their Worklist.
-	// A breach with no named target still writes its task; there is nobody
-	// to address the notice to, and inventing one would misdeliver it.
-	if payload.EscalationTarget != nil {
-		target := ids.From[ids.UserKind](ids.UUID(*payload.EscalationTarget))
-		// THE SAME KEY THE TASK USES. The bus is at-least-once and Apply is
-		// documented idempotent on its own key, so the notice needs what the
-		// task has always had: a natural key that makes the second delivery a
-		// no-op. Without it one breach put two identical lines on one contact's
-		// Worklist while the task beside them stayed single, which reads as
-		// the notice being right and the task being lost.
-		if _, err := w.notices.Create(ctx, notices.NewNotice{
-			Recipient: target,
+	// ONE TRANSACTION, because the task and the notice are one escalation. The
+	// engine claims a run BEFORE Apply, so a half that fails is never
+	// redelivered: a task committed beside a lost notice asks a rep to work a
+	// breach with nothing on their Worklist saying why, and nothing will ever
+	// supply the missing line. Either the breach is recorded whole or it is not
+	// recorded, and a run that answers an error is a breach still unescalated.
+	//
+	// Both halves carry the breach's natural key — the task's
+	// (source_system, source_id) and the notice's dedupe key are the same
+	// string — so the at-least-once bus redelivering one event lands one task
+	// and one line rather than a second copy of either.
+	if err := w.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, _, err := w.activities.LogActivityTx(ctx, tx, in); err != nil {
+			return fmt.Errorf("log sla escalation task: %w", err)
+		}
+		// A breach with no named target still writes its task; there is nobody
+		// to address the notice to, and inventing one would misdeliver it.
+		if in.AssigneeID == nil {
+			return nil
+		}
+		if _, err := w.notices.CreateTx(ctx, tx, notices.NewNotice{
+			Recipient: *in.AssigneeID,
 			Kind:      noticeKindLeadSLA,
 			Subject:   subject,
 			Body:      "A lead's first response is overdue; its escalation task is on your list.",
 			DedupeKey: leadSLATaskSource + ":" + sourceID,
 		}); err != nil {
-			return workflow.RunResult{}, fmt.Errorf("record sla escalation notice: %w", err)
+			return fmt.Errorf("record sla escalation notice: %w", err)
 		}
+		return nil
+	}); err != nil {
+		return workflow.RunResult{}, err
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
