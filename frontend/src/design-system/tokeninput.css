@@ -89,7 +89,13 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--textMeta);
+  /* The CHIP's ink, because this control sits on the token's own fill.
+     --textMeta is the same role on an opaque ground and has no headroom left
+     once a translucent fill eats into it; --textChip is the token that exists
+     for exactly this. Held by tokens.test.ts's chip call-site scan, which
+     reaches this rule through the components rather than through the selector
+     — nothing here names `token`. */
+  color: var(--textChip);
   cursor: pointer;
 }
 
