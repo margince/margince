@@ -15,14 +15,16 @@ import type { Screen } from "./router";
  */
 
 export const LABELS = {
-  /** The month's estimated spend, and it says estimated by saying "so far":
-   *  the server prices on read, so the figure moves as rates change. */
+  /** What the figure IS, in the rail button's accessible name: the panel head
+   *  draws the figure beside its own label, and on the collapsed rail the
+   *  button's name is the only place the scope is said at all. */
   spend: "Cost this month",
   /** The same fact in the width a collapsed rail has: the figure leads and
    *  this names it. One word rather than the panel's sentence, because the
    *  rail is 235px wide and the figure must not be what gets shortened. */
   spendScope: "this month",
-  /** Under the figure in the panel head, where the label is the second line. */
+  /** Beside the figure in the panel head, where the figure leads and this
+   *  names the month it covers. */
   thisMonth: "this month",
   /** The panel's own name. It is portalled to the body, so it is not inside the
    *  region that would otherwise have named it. */
@@ -36,15 +38,11 @@ export const LABELS = {
    *  It is bounded to what SETTLED today, so an empty list is a quiet morning
    *  rather than an agent that has never run. */
   nothingToday: "nothing has finished today",
-  model: "model",
-  sources: "sources",
-  tools: "tools",
   approvals: "Decisions waiting",
   offline: "offline",
   idle: "Idle",
   reading: "Loading",
   working: "Working",
-  unreachable: "Cannot reach Margince",
   /** A broken run whose kind this build writes no sentence for. The feed is
    *  asked only for the kinds the rail narrates, so these two are the words for
    *  a server that answered with more than it was asked, never the daily case. */
@@ -52,12 +50,7 @@ export const LABELS = {
   runStopped: "A run stopped early",
   waiting: "waiting for you",
   cannotReach: "Cannot reach",
-  reconnect: "Reconnect",
-  configure: "Set up",
   noModel: "No AI model is configured",
-  devModel: "development (offline fake)",
-  devLine: "Running on the offline model",
-  duplicatesRow: "Duplicate pairs open",
   expand: "Expand the agent panel",
   collapse: "Collapse the agent panel",
   region: "Margince agent",
@@ -65,14 +58,10 @@ export const LABELS = {
   noCallsYet: "nothing has run yet",
   /** The resting line when every read came back with nothing to report. */
   allClear: "Nothing needs you",
-  /** The shape of the month's spend, for the reader who cannot see the line. */
-  spendShape: "What the agent has cost, day by day",
   /** The panel's one setting: whether the window's own margins light while the
    *  agent works. Named for what a reader SEES rather than for the surface that
    *  draws it — nobody outside this tree calls it the edge. */
   edgeLight: "Screen edge light",
-  nothingPriced: "nothing priced yet",
-  runningOn: "running on",
 } as const;
 
 /**

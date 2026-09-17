@@ -4277,6 +4277,10 @@ export const de = {
   "agent.state.working": "Arbeitet",
   "agent.state.warning": "Braucht Aufmerksamkeit",
   "agent.state.error": "Läuft nicht",
+  "agent.fact.model": "Modell",
+  "agent.fact.tools": "Werkzeuge",
+  "agent.fact.sources": "Quellen",
+  "agent.panel.nothingWaiting": "Es warten keine Entscheidungen",
 
   // Vier Dinge, die der Agentenbereich sagt, wenn es nichts Neues gibt. Kurz
   // halten: die Zeile im Rail wird nach zwei Zeilen abgeschnitten.

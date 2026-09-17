@@ -26,6 +26,7 @@ import {
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   AGENT_EDGE_STILL,
   clearAgentEdge,
@@ -660,17 +661,14 @@ describe("AgentRail", () => {
     stubAgentRailApi();
     const { container } = render(ROUTE);
     await openPanel(user, container);
-    // Scoped to the workspace section on purpose: the resting LINE in the
-    // header reads all-clear too, so a whole-panel match would still pass with
-    // this paragraph gone and prove nothing about the answered zero.
+    // The section's OWN sentence. This used to be scoped to the workspace
+    // section by hand, because the resting line in the head said "Nothing needs
+    // you" too and a whole-panel match would have passed with the paragraph
+    // gone; the two no longer share a sentence, so matching one matches it.
     await waitFor(() =>
-      expect(
-        [...panel().querySelectorAll(".arsect")]
-          .find((section) =>
-            section.textContent?.includes(LABELS.acrossWorkspace),
-          )
-          ?.querySelector(".arnone")?.textContent,
-      ).toBe(LABELS.allClear),
+      expect(panel().querySelector(".arnone")?.textContent).toBe(
+        en["agent.panel.nothingWaiting"],
+      ),
     );
     // A real zero is an answer, not a tile: "0 Decisions waiting" is a number
     // nobody has to act on dressed as one somebody does.

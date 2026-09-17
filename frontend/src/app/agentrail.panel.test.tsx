@@ -297,7 +297,7 @@ describe("the agent panel's report", () => {
     const terms = [...(facts?.querySelectorAll("dt") ?? [])].map(
       (el) => el.textContent,
     );
-    expect(terms).toContain(LABELS.model);
+    expect(terms).toContain(en["agent.fact.model"]);
     // Every term answered: a dt with no dd is a label for nothing.
     expect(facts?.querySelectorAll("dd")).toHaveLength(terms.length);
     await waitFor(() =>
@@ -309,13 +309,18 @@ describe("the agent panel's report", () => {
 
   // A quiet line rather than a dashed plate: the dashes read as a tile whose
   // number failed to load, which is the opposite of what an all-clear says.
-  it("says the all-clear as a plain line, undashed", async () => {
+  //
+  // And its OWN sentence. The head's resting line says "Nothing needs you" on
+  // exactly the installation this section is empty on, so the two stood on one
+  // panel saying the same four words.
+  it("says the all-clear as a plain line, undashed and in its own words", async () => {
     const opened = await openPanel();
     await waitFor(() =>
       expect(opened.querySelector(".arnone")?.textContent).toBe(
-        LABELS.allClear,
+        en["agent.panel.nothingWaiting"],
       ),
     );
     expect(opened.querySelector(".arnone")?.className).toContain("t-caption");
+    expect(en["agent.panel.nothingWaiting"]).not.toBe(LABELS.allClear);
   });
 });

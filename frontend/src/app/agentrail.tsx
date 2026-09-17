@@ -332,7 +332,7 @@ function RuntimeFacts({
             <dd>{t("auth.coreModeDevelopment")}</dd>
           </>
         )}
-        <dt>{LABELS.model}</dt>
+        <dt>{t("agent.fact.model")}</dt>
         {/* Italic where there is no model to name: the words are the reason
             there is none, not a value. */}
         <dd>
@@ -344,13 +344,13 @@ function RuntimeFacts({
         </dd>
         {tools > 0 && (
           <>
-            <dt>{LABELS.tools}</dt>
+            <dt>{t("agent.fact.tools")}</dt>
             <dd>{formatNumber(tools, locale)}</dd>
           </>
         )}
         {offline.length > 0 && (
           <>
-            <dt>{LABELS.sources}</dt>
+            <dt>{t("agent.fact.sources")}</dt>
             <dd>
               {offline.map((source) => (
                 <span className="arconn" key={source}>
@@ -534,7 +534,13 @@ function AgentPanel({
             // A quiet line rather than a dashed plate. The plate said "a tile
             // failed to load" to every reader who met it before they read the
             // words in it, which is the opposite of what an all-clear is for.
-            <p className="arnone t-caption">{LABELS.allClear}</p>
+            //
+            // Its own sentence, not the resting line's: that line says "Nothing
+            // needs you" in the head of this very panel, and one surface saying
+            // the same four words twice reads as assembled rather than written.
+            <p className="arnone t-caption">
+              {t("agent.panel.nothingWaiting")}
+            </p>
           ) : (
             <div className="artiles">
               {/* The tile leads with the number a reader scans for; its NAME

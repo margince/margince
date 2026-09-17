@@ -4424,6 +4424,19 @@ export const en = {
   "agent.state.warning": "Needs a look",
   "agent.state.error": "Not running",
 
+  // THE RUNTIME FACTS, as terms beside their values. Sentence case, because a
+  // <dt> is a name rather than an inline word in a sentence — which is what
+  // these were when the strip was one wrapped line of fragments.
+  "agent.fact.model": "Model",
+  "agent.fact.tools": "Tools",
+  "agent.fact.sources": "Sources",
+  // The workspace section when the read ANSWERED zero. Its own sentence rather
+  // than the resting line's "Nothing needs you": both were on the panel at once
+  // on a quiet installation, 150px apart, and one surface saying the same four
+  // words twice reads as a surface that was assembled rather than written. This
+  // one names what is not waiting, which is what the section is about.
+  "agent.panel.nothingWaiting": "No decisions are waiting",
+
   // The four things the agent section says once it has run out of news
   // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
   // standing facts about the product, which is what lets them be written here

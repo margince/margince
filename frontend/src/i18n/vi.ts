@@ -4215,6 +4215,10 @@ export const vi = {
   "agent.state.working": "Đang làm việc",
   "agent.state.warning": "Cần xem lại",
   "agent.state.error": "Không chạy",
+  "agent.fact.model": "Mô hình",
+  "agent.fact.tools": "Công cụ",
+  "agent.fact.sources": "Nguồn",
+  "agent.panel.nothingWaiting": "Không có quyết định nào đang chờ",
 
   // Bốn câu phần agent nói khi không còn tin gì mới. Giữ ngắn: dòng
   // trên rail bị cắt sau hai dòng.
