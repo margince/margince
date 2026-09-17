@@ -23,39 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// crossCompanyFixture is the pairing every case here is about: an agreement
-// belonging to a company the reader cannot open, and a deal belonging to one
-// they can.
-type crossCompanyFixture struct {
-	hidden   ids.UUID // the company whose agreements these are, private to Rep1
-	visible  ids.UUID // the company whose deal Rep3 works
-	deal     ids.DealID
-	pipeline ids.PipelineID
-	open     ids.StageID
-}
-
-func crossCompanySetup(t *testing.T, e *Env) crossCompanyFixture {
-	t.Helper()
-	pipeline, open, _ := DealFixture(t, e)
-	hidden := e.SeedCompany(t, "Acme", &e.Rep1)
-	e.MakeCapturePrivate(t, "company", hidden, e.Rep1)
-	visible := e.SeedCompany(t, "Contoso", &e.Rep3)
-
-	visibleID := ids.From[ids.CompanyKind](visible)
-	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Contoso expansion", PipelineID: pipeline, StageID: open,
-		CompanyID: &visibleID, OwnerID: userIDPtr(&e.Rep3),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return crossCompanyFixture{
-		hidden: hidden, visible: visible,
-		deal:     ids.From[ids.DealKind](ids.UUID(deal.Id)),
-		pipeline: pipeline, open: open,
-	}
-}
-
 // seedAgreement files one agreement past the store's own door, which is the
 // only way to reach a pairing every writer refuses.
 func seedAgreement(t *testing.T, e *Env, title string, company ids.UUID, deal *ids.DealID) ids.ContractID {
@@ -88,13 +55,26 @@ func seedAgreement(t *testing.T, e *Env, title string, company ids.UUID, deal *i
 // This case stays meaningful if a route nobody has thought of appears.
 func TestADealAnchorPublishesAnAgreementOfAnotherCompany(t *testing.T) {
 	e := Setup(t)
-	fx := crossCompanySetup(t, e)
+	pipeline, open, _ := DealFixture(t, e)
+	// Acme is capture-private to Rep1, so Rep3 cannot see it by any route of
+	// its own; Contoso's deal is Rep3's own work.
+	acme := e.SeedCompany(t, "Acme", &e.Rep1)
+	e.MakeCapturePrivate(t, "company", acme, e.Rep1)
+	contoso := ids.From[ids.CompanyKind](e.SeedCompany(t, "Contoso", &e.Rep3))
+	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Contoso expansion", PipelineID: pipeline, StageID: open,
+		CompanyID: &contoso, OwnerID: userIDPtr(&e.Rep3),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
 
-	misfiled := seedAgreement(t, e, "Acme MSA", fx.hidden, &fx.deal)
+	misfiled := seedAgreement(t, e, "Acme MSA", acme, &dealID)
 	// The control: the same company's agreement with no deal on it. It proves
 	// the read below is the DEAL arm admitting the row and not this reader
 	// being able to see Acme after all.
-	unanchored := seedAgreement(t, e, "Acme pilot", fx.hidden, nil)
+	unanchored := seedAgreement(t, e, "Acme pilot", acme, nil)
 
 	rep3 := e.As(e.Rep3, []ids.UUID{e.Team2}, ContractRepPerms)
 	if _, err := e.Contracts.GetContract(rep3, unanchored); !errors.Is(err, apperrors.ErrNotFound) {
