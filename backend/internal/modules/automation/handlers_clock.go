@@ -220,7 +220,7 @@ func (w noActivityReminder) Plan(ctx context.Context, ev workflow.Event) (workfl
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Check in — no activity since %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject, w)
 }
 
 func (w noActivityReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -309,7 +309,7 @@ func (w checkInCadence) Plan(ctx context.Context, ev workflow.Event) (workflow.E
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Time for a check-in — last touched %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject, w)
 }
 
 func (w checkInCadence) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -450,7 +450,10 @@ func (w renewalReminder) Plan(ctx context.Context, ev workflow.Event) (workflow.
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Renewal coming up — %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
+	// Due AT the firing, not three days out like the quiet-account reminders:
+	// the renewal this warns about can be today, so a horizon would file the
+	// task after the date it exists to get ahead of.
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, subject, ev.OccurredAt)
 }
 
 func (w renewalReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

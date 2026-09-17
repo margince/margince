@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -60,8 +61,15 @@ func lastTouchCandidateQuery() string {
 				FROM activity a
 				WHERE a.archived_at IS NULL
 				  `+auth.OriginIsEngagement("a")+`
+				  `+auth.AudienceWorkspaceOnly("a")+`
 				  AND NOT (a.source = $1
 				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
+			), live_accounts AS (
+				SELECT o.id
+				FROM company o
+				JOIN deal d ON d.company_id = o.id
+				           AND d.status = 'open' AND d.archived_at IS NULL
+				WHERE o.archived_at IS NULL AND o.created_at < $2
 			), direct AS (
 				SELECT al.entity_type AS entity_type,
 				       %[1]s AS entity_id,
@@ -89,14 +97,13 @@ func lastTouchCandidateQuery() string {
 			         SELECT 1 FROM deal d
 			         WHERE d.id = q.entity_id
 			           AND d.status = 'open' AND d.archived_at IS NULL
-			           AND d.created_at < $2))
+			           AND d.created_at < $2)
+			       AND NOT EXISTS (
+			         SELECT 1 FROM deal d
+			         JOIN live_accounts la ON la.id = d.company_id
+			         WHERE d.id = q.entity_id))
 			   OR (q.entity_type = '%[3]s' AND EXISTS (
-			         SELECT 1 FROM company o
-			         JOIN deal d ON d.company_id = o.id
-			                    AND d.status = 'open' AND d.archived_at IS NULL
-			         WHERE o.id = q.entity_id
-			           AND o.archived_at IS NULL
-			           AND o.created_at < $2))
+			         SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id))
 			   OR (q.entity_type = '%[4]s' AND EXISTS (
 			         SELECT 1 FROM contact p
 			         JOIN relationship r ON r.contact_id = p.id
@@ -106,18 +113,71 @@ func lastTouchCandidateQuery() string {
 			                    AND d.status = 'open' AND d.archived_at IS NULL
 			         WHERE p.id = q.entity_id
 			           AND p.archived_at IS NULL
-			           AND p.created_at < $2))
+			           AND p.created_at < $2)
+			       AND NOT EXISTS (%[7]s))
 			   OR (q.entity_type = '%[5]s' AND EXISTS (
 			         SELECT 1 FROM lead l
 			         WHERE l.id = q.entity_id
 			           AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
 			           AND l.created_at < $2)))
+			  AND NOT EXISTS (%[8]s)
 			ORDER BY q.last_touch, q.entity_id
 			LIMIT $3`,
 		linkIDCoalesceQualified("al"),
 		datasource.RecordDeal, datasource.RecordCompany,
 		datasource.RecordContact, datasource.RecordLead,
-		CompanyReachSet())
+		CompanyReachSet(),
+		contactCollapsesIntoAccount(),
+		openReminderHoldsEntity())
+}
+
+// contactCollapsesIntoAccount is the contact arm's collapse test: a stakeholder
+// currently employed by a live account is ALREADY covered by that account's own
+// reminder, because CompanyReachSet folds a contact's touches into their
+// employer (companyscope.go's companyArms). Reminding them separately asks one
+// rep about one silence twice.
+//
+// Employment, not the stakeholder seat: the seat is what makes the contact a
+// candidate at all, while employment is what makes the account's anchor include
+// this contact's mail. A seat on a live account's deal does not fold the touch,
+// so collapsing on the seat would silence a contact nobody else covers.
+//
+// Its own statement rather than a clause on the arm above, so the employment
+// currency test stands alone: gates/employmentcurrency_test.go matches per
+// STATEMENT, and mixing this with the seat's own `ended_at IS NULL` would read
+// as an employment arm that skips the helper.
+func contactCollapsesIntoAccount() string {
+	return `SELECT 1 FROM relationship e
+		         JOIN live_accounts la ON la.id = e.company_id
+		         WHERE e.contact_id = q.entity_id
+		           AND e.kind = 'employment'
+		           AND ` + employment.IsCurrentSQL("e.ended_at") + `
+		           AND e.archived_at IS NULL`
+}
+
+// openReminderHoldsEntity excludes an entity that already carries an OPEN
+// reminder from this handler — the SQL half of "a task still open is not asked
+// twice".
+//
+// Here rather than in the handler's Plan for the reason the eligibility arms
+// are here: one pass draws at most 200 candidates, so an entity whose reminder
+// is already open would occupy that batch every tick and starve the records
+// that still need one. A post-filter cannot give the batch back.
+//
+// Keyed on source_system so a handler holds only its OWN reminders: widened to
+// "any system task", a lead follow-up would hold an entity out of the check-in
+// draw entirely. The source/captured_by pair rides along because source alone
+// is a client's to spell, exactly as the genuine CTE reads it.
+func openReminderHoldsEntity() string {
+	return `SELECT 1 FROM activity t
+		         JOIN activity_link tl ON tl.activity_id = t.id
+		         WHERE tl.entity_type = q.entity_type
+		           AND ` + linkIDCoalesceQualified("tl") + ` = q.entity_id
+		           AND t.kind = 'task'
+		           AND t.is_done = false AND t.archived_at IS NULL
+		           AND t.source_system = $6
+		           AND t.source = $1
+		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`
 }
 
 // LastTouchBefore returns the entities that are BOTH quiet and worth
@@ -184,7 +244,10 @@ func lastTouchCandidateQuery() string {
 // because activities backfilled onto it are older than N days. One
 // cutoff, one meaning — the coarse scan and the handler's precise Match
 // (automation/handlers_clock.go) cannot drift onto two thresholds.
-func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int) ([]LastTouchCandidate, error) {
+// reminder names the handler asking, so the draw can skip an entity whose
+// reminder from THAT handler is still open. Each clock handler passes its own
+// Spec().Name, which is also the source_system its task carries.
+func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]LastTouchCandidate, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -198,7 +261,7 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
 		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), systemSource, cutoff, limit,
-			systemCapturedBy, systemCapturedByPattern)
+			systemCapturedBy, systemCapturedByPattern, reminder)
 		if err != nil {
 			return err
 		}
