@@ -328,9 +328,13 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	if withheld {
 		return &summary
 	}
+	// The narrow word, always. This projection has no transaction and so cannot
+	// ask whether a workspace audience is narrowed by the records the message
+	// is filed against; WithEmailRowFacts asks that for the whole page and
+	// widens the rows that reach everyone. A label that guesses guesses DOWN.
 	summary.DisplayStatus = crmcontracts.EmailAccessStatusTeam
 	if a.Audience != nil {
-		summary.DisplayStatus = statusForAudience(*a.Audience)
+		summary.DisplayStatus = narrowStatusForAudience(*a.Audience)
 	}
 	summary.Subject = a.Subject
 	if a.Body != nil {

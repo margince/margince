@@ -1824,7 +1824,9 @@ export const de = {
   "email.notSent": "Nicht gesendet",
   "email.bouncedFrom": "Hat {who} nicht erreicht",
   "email.bounced": "Nicht angekommen",
-  "email.access.sentence.team": "Alle im Unternehmen können das lesen.",
+  "email.access.sentence.workspace": "Alle im Unternehmen können das lesen.",
+  "email.access.sentence.team":
+    "Alle, die die zugeordneten Datensätze öffnen können, können das lesen.",
   "email.access.sentence.participants":
     "Nur die Beteiligten dieser Nachricht können sie lesen.",
   "email.access.sentence.selected":

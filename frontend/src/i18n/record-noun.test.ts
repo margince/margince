@@ -386,7 +386,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "connectors.mailPosture.help.held",
     "email.access.sentence.participants",
     "email.access.sentence.selected",
-    "email.access.sentence.team",
+    "email.access.sentence.workspace",
     "email.access.unnamedMember",
     "hold.confirmAddressBody",
     "hold.confirmDomainBody",
