@@ -2092,9 +2092,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   }) => {
     await page.goto("/#/leads/l-1");
     await page.waitForLoadState("networkidle");
-    await page
-      .getByRole("button", { name: "Qualifizieren", exact: true })
-      .click();
+    // The header's own verb, by testid: the rail's deal slice offers the same
+    // act, and the name alone no longer says which control was pressed.
+    await page.getByTestId("lead-qualify").click();
     await page
       .getByRole("dialog")
       .getByRole("button", { name: /^Qualifizieren/ })

@@ -84,9 +84,23 @@ const (
 	ReasonAwaitingBatch        Reason = "awaiting_batch"
 	ReasonLabelled             Reason = "labelled"
 
-	// StageCompanyTriage and StageMaterialEvents contribute no reasons yet: both
-	// are `planned`, so nothing produces one. Their vocabulary arrives with the
-	// derivation that emits it (#1434), rather than sitting here unproducible.
+	// StageMaterialEvents. The extractor reads a CONVERSATION, so every reason
+	// here is about the thread rather than about this message — and each one is
+	// an arm of the offer the extractor itself applies, named where that rule is
+	// spelled so the two cannot come to mean different things.
+	ReasonEventsRaised      Reason = "events_raised"
+	ReasonNothingMaterial   Reason = "nothing_material"
+	ReasonThreadStillMoving Reason = "thread_still_moving"
+	ReasonAwaitingScan      Reason = "awaiting_scan"
+	ReasonReadingParked     Reason = "reading_parked"
+	ReasonNoSingleAccount   Reason = "no_single_account"
+	ReasonTwoBodiesOfWork   Reason = "two_bodies_of_work"
+	ReasonThreadNotAllOpen  Reason = "thread_not_all_open"
+	ReasonNoNamedReader     Reason = "no_named_reader"
+
+	// StageCompanyTriage contributes no reasons yet: it is `planned`, so nothing
+	// produces one. Its vocabulary arrives with the derivation that emits it
+	// (#1434), rather than sitting here unproducible.
 )
 
 // Absence reasons. Why a whole STAGE reports nothing, as against why one message

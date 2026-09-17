@@ -148,7 +148,8 @@ func insertVoiceVersion(ctx context.Context, tx pgx.Tx, row voiceVersionRow) (Vo
 	args := valuesOf(bound)
 	return scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(
 		`INSERT INTO voice_profile_version (%s) VALUES (%s) RETURNING %s`,
-		strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args)), voiceVersionColumns),
+		strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args)), voiceVersionColumns,
+	),
 		args...))
 }
 

@@ -72,8 +72,14 @@ type InstallationValue func(context.Context, pgx.Tx) (string, error)
 // constructor with four bare functions in a row invites a swapped pair that
 // still compiles — currency and zone are both strings.
 type Installation struct {
-	// Name is the display name an offer's issuer snapshot records.
+	// Name is the installation's own settings name — the fallback an offer
+	// issues under while nobody has confirmed a legal one.
 	Name InstallationValue
+	// IssuerLegalName is the anchor company's legal name when a human has
+	// confirmed it, and the empty string otherwise. `contacts` owns the company
+	// and its provenance sidecar, so the read lives there and the edge is
+	// injected here (ADR-0054).
+	IssuerLegalName InstallationValue
 	// BaseCurrency is the currency amounts are reported in and frozen against.
 	BaseCurrency InstallationValue
 	// Timezone is the IANA zone a "today" is computed in.
@@ -122,6 +128,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
 		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
+		"IssuerLegalName": &i.IssuerLegalName,
 	} {
 		if *f == nil {
 			*f = refusing(name)
@@ -157,7 +164,7 @@ func refusing(field string) InstallationValue {
 	return func(context.Context, pgx.Tx) (string, error) {
 		return "", errors.New("deals: the installation " + field + " seam was not injected; " +
 			"construct this store with installseam.Deals(), which binds identity's " +
-			"NameOf/BaseCurrencyOf/TimezoneOf")
+			"NameOf/BaseCurrencyOf/TimezoneOf and contacts's ConfirmedIssuerLegalName")
 	}
 }
 

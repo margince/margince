@@ -44,6 +44,23 @@ import (
 type objectGate struct {
 	// object is the RBAC object name AND the table name.
 	object string
+	// objectGateSatisfies marks a census whose question auth.Require(ctx,
+	// object, …) answers: "may this caller read a record of this kind at all".
+	// For the five record censuses that call IS the admission; only the edge
+	// adds a seed of its own.
+	//
+	// A FIELD MASK asks a different question — which COLUMN of a readable row
+	// this reader may have — and the object gate cannot answer it, because
+	// every masked read passes the object gate too. So the default is off, and
+	// a census that wants the object half says so: the direction of the mistake
+	// is what decides that. A census that forgets the field reports reads it
+	// should have admitted, and somebody reads the failure. A census that takes
+	// the object gate for an answer it does not give reports PASS over the read
+	// it exists to find, and nothing says so at all — which is what happened
+	// here: the relationship graph ordered an account's open deals by
+	// d.amount_minor with no mask anywhere, and the deal-amount census read it
+	// as guarded because readOpenDeals opens with auth.Require(ctx, "deal").
+	objectGateSatisfies bool
 	// literal matches a SQL string literal reading the table.
 	literal *regexp.Regexp
 	// gateSeeds are the spellings that ARE the admission, anywhere in the tree.
@@ -204,7 +221,7 @@ func (g objectGate) holdsSeedGate(refs references, pkg string) bool {
 	// because a body holding RequireHuman(ctx) and, separately, an unrelated
 	// object-name string — an entity-type constant, a table name in a comment's
 	// sibling literal — would otherwise vouch for itself.
-	if refs.gatedObjects[g.object] {
+	if g.objectGateSatisfies && refs.gatedObjects[g.object] {
 		return true
 	}
 	if !slices.Contains(g.rowHalfOwners, pkg) {

@@ -270,6 +270,31 @@ or stale waiver fails the test. See
 [reference/modules.md](../reference/modules.md) for the ownership map and
 [write-backbone.md](write-backbone.md) for the write shape these purges still ride.
 
+## What an erasure reaches in the AI telemetry, and what it does not
+
+With payload capture enabled (`ai.capture_payloads`, opt-in), `ai_call_payload` holds the request and
+response of every model call. For a reading of a meeting transcript that request **is** the transcript,
+which makes it the largest copy of somebody's words this product holds.
+
+An erasure reaches that table two ways, and the difference is worth knowing before you rely on either.
+
+**By citation.** A call that said which record it was about carries that record on `ai_call`
+(`subject_type`, `subject_id`), and the erasure deletes the payloads of every call that named the
+subject, an activity of theirs, or a lead wiped with them. This is the lane that reaches a transcript:
+a transcript names its speakers rather than addressing them, so it can hold a whole conversation
+without spelling one address.
+
+**By content.** Any payload whose text names one of the subject's addresses, matched crudely and on
+purpose — over-deleting captured telemetry is recoverable, under-deleting personal data is not.
+
+**The citation is an optimisation for the reachable half, not the boundary.** A call whose input spans
+several records names none, deliberately: a list that is right half the time is a citation nobody can
+trust for a purge. Those calls are reached by the content match or not at all, exactly as they were
+before the column existed, and their guaranteed end is the `ai_call_payload` retention window an
+installation configures. `backend/gates/aicallsubject_test.go` is the census that keeps the covered
+half honest: every model call in the tree either names its subject, says why it is about no single
+record, or is listed as owing one.
+
 ## Jurisdiction retention floors
 
 A destructive retention action must not violate a statutory floor. Country packs register through the

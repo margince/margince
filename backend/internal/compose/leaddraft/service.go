@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -128,7 +129,10 @@ func (s *Service) Draft(
 	// Loaded after the lead read, so a caller who may not see this lead is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
-	draft, by, err := contactdraft.Write(ctx, s.lane, in, voice)
+	// The draft is written FOR this lead, out of their correspondence — the
+	// request carries what they wrote. Naming them is what lets an erasure that
+	// wipes the lead destroy the captured payload holding those words.
+	draft, by, err := contactdraft.Write(ai.WithSubject(ctx, leadID.Ref(), ""), s.lane, in, voice)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}

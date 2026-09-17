@@ -17,7 +17,7 @@ import (
 )
 
 func TestActivityLogInputRefusesTheImporterNamespace(t *testing.T) {
-	reserved := "mirror:hubspot"
+	reserved := "mirror:legacy_crm"
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind: "email", SourceSystem: &reserved, SourceId: strPtr("emails:900"),
 	})
@@ -71,7 +71,7 @@ func TestActivityLogInputRefusesTheMailIdentity(t *testing.T) {
 // could write the namespace there could have a planted row adopted.
 func TestActivityLogInputRefusesAReservedSource(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "note", Source: "mirror:hubspot:activity:a-1",
+		Kind: "note", Source: "mirror:legacy_crm:activity:a-1",
 	})
 	var refused *provenance.ReservedError
 	if !errors.As(err, &refused) {

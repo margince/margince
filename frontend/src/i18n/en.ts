@@ -87,6 +87,10 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
+  "brief.focus.inQueue": "In the queue",
+  "brief.focus.position": "{at} of {count}",
+  "worklist.bandCount_one": "{count} item",
+  "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to queue",
@@ -181,8 +185,8 @@ export const en = {
   "brief.readings.unavailable": "Unknown",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
   "brief.feed.fullWorklist": "Open full work queue",
-  "brief.feed.visible_one": "{count} focus card",
-  "brief.feed.visible_other": "{count} focus cards",
+  "brief.feed.visible_one": "{count} priority in focus",
+  "brief.feed.visible_other": "{count} priorities in focus",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads": "{count} leads assigned.",
   "brief.week.responses": "{count} leads answered within target.",
@@ -1129,6 +1133,10 @@ export const en = {
     "Conversations whose content you may not open are left out of a search.",
   "tab.contacts": "Contacts",
   "tab.deals": "Deals",
+  // Shared by the account's own tab and the lead's: both hold a deal AND the
+  // projects beside it, unlike `tab.deals`, which the contact page's own
+  // Deals tab uses for a list with no projects in it.
+  "tab.dealsProjects": "Deals & projects",
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
@@ -1367,6 +1375,10 @@ export const en = {
   "finance.unmapped":
     "Connected, but this company is not matched to a customer in the accounting system yet",
   "finance.netInvoiced": "Net invoiced · 12 months",
+  "finance.coveragePeriod":
+    "These figures cover invoices issued {from} – {to}.",
+  "finance.overdueRelationshipEnded":
+    "Not shown: this relationship has ended, so an overdue figure would read as a collection to make.",
   "finance.overdue": "Overdue",
   "finance.behaviour": "Payment behaviour",
   "finance.behaviourShape": "Days late per settled invoice, oldest first",
@@ -1739,11 +1751,6 @@ export const en = {
   "co.rail.contacts.inTouch": "Already in touch with them",
   "co.rail.projects.title": "Projects",
   "co.rail.projects.empty": "No projects yet.",
-
-  // Its own key rather than the shared `tab.deals`: the contact page's own
-  // Deals tab holds no projects, so renaming that key would rename a tab that
-  // did not change.
-  "co.tab.deals": "Deals & projects",
 
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -2366,6 +2373,7 @@ export const en = {
   "lead.bulkOutcomeNotFound": "no longer in your list",
   "lead.bulkSelectRow": "Select {name}",
   "lead.unnamed": "Unnamed lead",
+  "lead.timeline.empty": "Nothing is logged on this lead yet.",
   "lead.sla.breached": "Overdue",
   "lead.sla.atRisk": "Due soon",
   "lead.sla.withinTarget": "On time",
@@ -2381,6 +2389,12 @@ export const en = {
   "lead.details": "Details",
   "lead.ladder.title": "Where this lead stands",
   "lead.detailsUnset": "Not set",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
+  "lead.rail.project.title": "Project",
+  "lead.rail.project.empty": "No project yet.",
+  "lead.rail.project.attach": "Attach project",
+  "lead.rail.project.change": "Change project",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
     "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",
@@ -5753,6 +5767,8 @@ export const en = {
   "blockedDomains.source.human": "A person",
   "blockedDomains.source.unevidenced": "Nothing on the site named a company",
   "blockedDomains.source.staleEvidence": "The mail arguing for it is too old",
+  "blockedDomains.source.nearDuplicate":
+    "A company with this name is already here",
   "blockedDomains.rowAdmit": "Allow this one",
   "blockedDomains.rowRefuse": "Refuse this one",
   "blockedDomains.rowReopen": "Ask again",
@@ -6358,6 +6374,12 @@ export const en = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "or",
+  // The card at an installation that closed the password door and whose
+  // provider is not offering the flow yet — the deployment mounted it, the
+  // OAuth app is not stored. It names what is missing without blaming the
+  // reader, who cannot fix either half.
+  "auth.noMethodOffered":
+    "This company signs in through its identity provider, which is not available right now. Ask an administrator to finish setting it up.",
   // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or
@@ -7275,6 +7297,26 @@ export const en = {
     "this sender was suppressed, so no record was made",
   "pipeline.reason.no_open_question":
     "there was no open question about this sender",
+  "pipeline.reason.thread_not_captured":
+    "no captured conversation remains on this thread, so there was nothing to read",
+  "pipeline.reason.events_raised":
+    "this conversation was read, and the events it raised were filed on the account",
+  "pipeline.reason.nothing_material":
+    "this conversation was read, and it said nothing worth filing",
+  "pipeline.reason.thread_still_moving":
+    "this conversation is still moving; it is read once it has been quiet for a while",
+  "pipeline.reason.awaiting_scan":
+    "this conversation is due to be read and has not been reached yet",
+  "pipeline.reason.reading_parked":
+    "reading this conversation was refused several times, so it is paused until it changes or the pause expires",
+  "pipeline.reason.no_single_account":
+    "this conversation does not reach exactly one account, so its findings would have nowhere certain to go",
+  "pipeline.reason.two_bodies_of_work":
+    "this conversation spans two projects, so its findings would be wrong for one of them",
+  "pipeline.reason.thread_not_all_open":
+    "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.no_named_reader":
+    "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
     "this step reads email only, and the message arrived over another transport",
   "pipeline.reason.sender_undecided":
@@ -10071,6 +10113,7 @@ export const en = {
   "contact.readings.title": "Where this contact stands",
   "deal360.brief": "What this deal is",
   "deal.strip.lastTouch": "Last touch",
+  "lead.brief.title": "Lead brief",
   "lead.standing.qualified": "Qualified",
   "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a contact now.",
   "lead.standing.qualifiedUndated": "This lead is a contact now.",
@@ -10102,6 +10145,8 @@ export const en = {
   "lead.today.answer": "Answer {name}",
   "lead.today.answerMeta": "First response owed",
   "lead.today.nextTask": "Next task",
+  "lead.today.reply": "Reply",
+  "lead.today.openTasks": "Open tasks",
   "lead.readings.answered": "Answered",
   "lead.standing.dueBy":
     "Nobody has answered yet. The first response is due by {at}.",

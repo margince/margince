@@ -156,16 +156,22 @@ var registrations = []Registration{{
 		ReasonLabelled, ReasonRecordNotAvailable,
 	},
 }, {
-	// Runs, but not reported here yet. Worth deriving together with the
-	// email-only predicate it shares with the classifier (#1433): for a chat
-	// transport the honest answer is transport_not_read, so the derivation
-	// would be reporting a gap rather than a state.
-	Stage:        StageMaterialEvents,
-	Order:        110,
-	SubjectKind:  SubjectThread,
-	Sources:      []Source{SourcePlanned},
-	AbsentReason: AbsentNotReportedYet,
-	Issue:        "#1434",
+	// Derived from the extractor's own rule: the arms it applies to decide
+	// whether a conversation is read, asked of this message's thread. Its chat
+	// answer is transport_not_read and that is a real answer rather than a gap
+	// report — material events do not widen to chat until the grouping question
+	// is settled (#1433), so a transport with no thread key has no unit of work
+	// for this stage to have run over.
+	Stage:       StageMaterialEvents,
+	Order:       110,
+	SubjectKind: SubjectThread,
+	Sources:     []Source{SourceDerived},
+	Reasons: []Reason{
+		ReasonTransportNotRead, ReasonArchived, ReasonRecordNotAvailable,
+		ReasonEventsRaised, ReasonNothingMaterial, ReasonThreadStillMoving,
+		ReasonAwaitingScan, ReasonReadingParked, ReasonNoSingleAccount,
+		ReasonTwoBodiesOfWork, ReasonThreadNotAllOpen, ReasonNoNamedReader,
+	},
 }, {
 	Stage:        StageClaimExtraction,
 	Order:        120,

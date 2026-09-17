@@ -12,7 +12,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { stillHeld } from "./employmentcurrency";
-import { patchEmployment } from "./employmentpatch";
+import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type Patch = components["schemas"]["UpdateRelationshipRequest"];
@@ -72,9 +72,7 @@ export function EmploymentEdit({
       onClose();
     },
   });
-  const validDate = (value: string) =>
-    value === "" || /^\d{4}-\d{2}(-\d{2})?$/.test(value);
-  const valid = validDate(start) && validDate(end);
+  const valid = validDateEntry(start) && validDateEntry(end);
   return (
     <Modal open={open} onClose={onClose} labelledBy={id}>
       <h2 id={id} className="t-h2" style={{ marginBottom: "var(--space-3)" }}>
@@ -168,14 +166,4 @@ export function EmploymentEdit({
       </div>
     </Modal>
   );
-}
-
-function datePatch(value: string): {
-  date?: string;
-  precision?: "month" | "day";
-} {
-  if (!value) return {};
-  return value.length === 7
-    ? { date: `${value}-01`, precision: "month" }
-    : { date: value, precision: "day" };
 }

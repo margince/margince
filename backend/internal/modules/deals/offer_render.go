@@ -165,11 +165,40 @@ func (s *Store) resolveRenderIssuerName(ctx context.Context, tx pgx.Tx, offer cr
 			return name, nil
 		}
 	}
-	name, err := s.installation.Name(ctx, tx)
+	name, err := s.issuerName(ctx, tx)
 	if err != nil {
 		return "", fmt.Errorf("render: read the installation's issuer name: %w", err)
 	}
 	return name, nil
+}
+
+// issuerName is who this installation issues a document AS, and it is the one
+// answer the draft render and the send snapshot both take.
+//
+// A confirmed legal name first. An offer names two companies, and until this
+// existed they were sourced by two different rules: the buyer block reads
+// `legal_name` off a company record with its whole provenance sidecar behind
+// it, while the issuer — the party making the legal claim on the same page —
+// read a settings value with no provenance at all. The one with less evidence
+// was the one signing.
+//
+// The settings name otherwise, and that fallback is not a lesser answer: it is
+// what an installation has been printing, and it goes on printing until
+// somebody confirms another. contacts.ConfirmedIssuerLegalName carries why
+// an unconfirmed proposal must never reach a document.
+//
+// ONE resolver for both callers, because the two must not disagree: a draft
+// that renders one name and a send that freezes another would put a different
+// issuer on the page the customer sees than on the record of what was sent.
+func (s *Store) issuerName(ctx context.Context, tx pgx.Tx) (string, error) {
+	confirmed, err := s.installation.IssuerLegalName(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	if confirmed != "" {
+		return confirmed, nil
+	}
+	return s.installation.Name(ctx, tx)
 }
 
 // resolveRenderTemplate resolves an offer's render locale AND layout

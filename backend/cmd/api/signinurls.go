@@ -3,7 +3,11 @@
 
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"log/slog"
+)
 
 // The three URLs every federated sign-in flow travels through, and the check
 // that they are safe to build into an outbound redirect.
@@ -51,6 +55,53 @@ func validateSignInBases(cfg apiConfig, provider string) error {
 		}
 	}
 	return nil
+}
+
+// checkALoginMethodRemains refuses at boot the one deployment nobody could sign
+// into: the password method turned off with no federated provider wired to
+// replace it.
+//
+// deployconfig cannot ask this. Which providers are mounted is decided by the
+// credentials and URLs this role composes rather than by that document, so the
+// file that holds the switch can only say what it was told — and a validation
+// that guesses would either refuse a legitimate IdP-only installation or admit
+// one with no door at all.
+//
+// The surviving posture is SAID OUT LOUD rather than merely allowed, for the
+// reason the data-reset line is: an operator who closed the password door
+// should learn which door is left at the moment the api starts, not from a
+// login screen that offers nothing.
+func checkALoginMethodRemains(cfg apiConfig, passwordEnabled bool, logger *slog.Logger) error {
+	if passwordEnabled {
+		return nil
+	}
+	mounted := federatedSignInProviders(cfg)
+	if len(mounted) == 0 {
+		return errors.New("api: auth.password.enabled=false and this deployment mounts no federated sign-in provider — nobody could sign in. Configure Google or Microsoft sign-in, or leave the password method enabled")
+	}
+	logger.Info("password sign-in disabled", "federated", mounted)
+	return nil
+}
+
+// federatedSignInProviders names the providers this deployment MOUNTS — the
+// ones whose routes exist and will run a flow for whichever OAuth client
+// arrives, from the environment or from the app an admin stores under Settings.
+//
+// Mounted is the honest bar and a weaker one than "somebody can sign in today":
+// a mounted provider with no client yet offers no button, by design, because
+// that is what lets a first-run admin configure sign-in without a restart. So
+// this answers "did the deployment wire a second door", which is the question
+// the password switch needs, and not "is that door unlocked right now", which
+// only the installation's own rows can answer.
+func federatedSignInProviders(cfg apiConfig) []string {
+	var mounted []string
+	if googleSignInConfig(cfg).Enabled() {
+		mounted = append(mounted, "google")
+	}
+	if microsoftSignInConfig(cfg).Enabled() {
+		mounted = append(mounted, "microsoft")
+	}
+	return mounted
 }
 
 // trimTrailingSlash normalises a base before a path is appended, so the result

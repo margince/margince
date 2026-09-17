@@ -118,6 +118,21 @@ func WithDataResetAvailable(allowed bool) Option {
 	}
 }
 
+// WithPasswordLogin carries the deployment's `auth.password.enabled` to the one
+// place that answers both halves of it: the anonymous capabilities probe the
+// login screen renders from, and the routes that would serve the method.
+//
+// Absent this option the password method is offered, which is what every
+// composition did before the switch was wired and what an installation with no
+// `auth` section still means. The composition root refuses to boot the
+// dangerous combination — no password and no federated provider — because that
+// is the question only it can answer.
+func WithPasswordLogin(enabled bool) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.authHandlers = s.WithPasswordLogin(enabled)
+	}
+}
+
 // Every send option below records onto s.send and NOTHING else. The HTTP
 // handlers' own store is reconciled from that one value once every option has
 // run (New's applySendPath), and the tool surface is rebuilt over it here, so

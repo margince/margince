@@ -136,17 +136,15 @@ function ContactFacts({
   // rather than drawn blank.
   const employer = view.contact?.employer;
   const role = view.contact?.title;
+  // Required on the wire; an answer without it is version skew, read as a
+  // record with nothing withheld rather than as one with nothing to say.
+  const withheld = (view.sections_omitted ?? []).includes("last_touch");
   const facts: Fact[] = [
-    {
-      key: "inbound",
-      term: t("worklist.pane.lastInbound"),
-      value: spoken(view.last_inbound_at, t, locale, zone),
-    },
-    {
-      key: "outbound",
-      term: t("worklist.pane.lastOutbound"),
-      value: spoken(view.last_outbound_at, t, locale, zone),
-    },
+    ...lastTouch(withheld ? undefined : view, t, locale, zone).map((fact) => ({
+      key: fact.term,
+      term: fact.term,
+      value: fact.value,
+    })),
     // The company is a LINK, for the reason the contact's name is: a rep
     // deciding how to answer often needs the account rather than the contact,
     // and the name is already resolved on this read.
@@ -190,4 +188,41 @@ function spoken(
   zone: string,
 ): string {
   return at ? formatDateTime(at, locale, zone) : t("worklist.pane.never");
+}
+
+/** The two moments as any read spells them: the contact's own page and a
+ *  queue row's `contact.touch` carry the same pair under the same names. */
+export type TouchMoments = Readonly<{
+  last_inbound_at?: string | null;
+  last_outbound_at?: string | null;
+}>;
+
+/**
+ * When they last wrote and when we did, as the two facts every surface that
+ * answers a row prints — the pane beside the queue, the Brief's row in hand
+ * and every queue row — so one relationship is never described two ways.
+ * Spelled once here, beside the read that first carried them.
+ *
+ * NOTHING when the moments were withheld: a reader without the activity grant
+ * is not told "Never", which is a claim about the relationship the server
+ * declined to make. The caller passes nothing then, and a missing pair printed
+ * as "Never" would be the wrong fact rather than no fact.
+ */
+export function lastTouch(
+  touch: TouchMoments | undefined,
+  t: Translator,
+  locale: Locale,
+  zone: string,
+): readonly { term: string; value: string }[] {
+  if (!touch) return [];
+  return [
+    {
+      term: t("worklist.pane.lastInbound"),
+      value: spoken(touch.last_inbound_at, t, locale, zone),
+    },
+    {
+      term: t("worklist.pane.lastOutbound"),
+      value: spoken(touch.last_outbound_at, t, locale, zone),
+    },
+  ];
 }

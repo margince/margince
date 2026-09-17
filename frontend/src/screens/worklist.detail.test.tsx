@@ -4,10 +4,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // The supporting line, and the words for a group's cause.
@@ -262,5 +264,47 @@ describe("a group names what is broken", () => {
     expect(document.body.textContent ?? "").not.toMatch(
       /[0-9a-f]{8}-[0-9a-f]{4}-/,
     );
+  });
+});
+
+// THE PANE BESIDE THE QUEUE, on the surface that has the width for it.
+//
+// A `notice_case` row is review work rather than selling work, and the queue
+// used to exclude it from having a record to open at all — a rep took it in
+// hand and got nothing beside it. It opens the record's own pane like any
+// other row whose subject is a record.
+//
+// Asserted HERE rather than in the drawer's suite, which is where it used to
+// live. The drawer draws no pane: the row already names whom it is about and
+// when each side last wrote, and repeating that in a third of an already
+// narrow list is the one place this column does not earn its width
+// (brief.queue.test.tsx holds that half).
+describe("a review row on the queue's own page", () => {
+  it("opens the record's pane beside it", async () => {
+    const user = userEvent.setup();
+    draw([
+      {
+        id: "privacy",
+        source: "notice_case",
+        category: "system",
+        destination: "review",
+        level: 5,
+        consequence: "none",
+        title: "Review the disclosure",
+        because: [],
+        actions: [],
+        subject: { type: "contact", id: "contact", label: "Alice" },
+      },
+    ]);
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Show what 1, Review the disclosure/,
+      }),
+    );
+    expect(
+      await screen.findByRole("complementary", {
+        name: en["worklist.pane.title"],
+      }),
+    ).toBeTruthy();
   });
 });

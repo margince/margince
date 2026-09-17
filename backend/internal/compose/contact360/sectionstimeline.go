@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/network"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -45,14 +44,21 @@ import (
 // message on their employer's deals would put colleagues' threads they were
 // never on onto their record.
 //
-// The single %d bind is used by both arms, so every call site passes the contact
-// position exactly once.
+// The one %s expression is used by both arms: a bind ("$3") on the page's own
+// reads, a correlated column ("c.id") where a set of contacts is answered in one
+// statement. Every call site passes it exactly once.
 const contactReachesActivity = `(EXISTS (
 	SELECT 1 FROM activity_link l
-	WHERE l.activity_id = a.id AND l.contact_id = $%[1]d)
+	WHERE l.activity_id = a.id AND l.contact_id = %[1]s)
  OR EXISTS (
 	SELECT 1 FROM activity_participant ap
-	WHERE ap.activity_id = a.id AND ap.contact_id = $%[1]d))`
+	WHERE ap.activity_id = a.id AND ap.contact_id = %[1]s))`
+
+// bind spells one placeholder for the predicates that take the contact as an
+// expression.
+func bind(pos int) string {
+	return fmt.Sprintf("$%d", pos)
+}
 
 // activityScope renders the caller's activity CONTENT gate for the timeline
 // rows this section hands back, defaulting to the permissive clause when the
@@ -217,7 +223,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		contentArm, contactPos, fmt.Sprintf(contactReachesActivity, contactPos), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		contentArm, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -304,38 +310,20 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 // one "last touch" hides the only distinction a reader acts on: a contact
 // we mailed a fortnight ago with no reply and one who wrote to us this
 // morning have the same last-touch date and opposite meanings.
+//
+// The set reader over a set of one: this page and a queue row naming the same
+// contact are answered by the statement in lasttouch.go, under the same
+// scopes. The record read above already admitted the contact, so the set
+// reader's own row scope narrows nothing here.
 func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
-	if err := requireRead(ctx, "activity"); err != nil {
-		return err
-	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	contactPos := arg(contactID)
-	scope, err := activityDiscoverScope(ctx, arg)
+	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
 	if err != nil {
 		return err
 	}
-	// An aggregate, not a per-row read: it has to agree for every colleague,
-	// so it asks whether the WORKSPACE may see the row (auth.AudienceWorkspaceOnly)
-	// rather than the caller-scoped arm readActivities uses above for content —
-	// a private message narrowed to its participants must not move the date a
-	// colleague outside them reads here, the same rule relationship strength
-	// holds (contacts/strength.go).
-	// THE TWO DIRECTIONS ASK DIFFERENT QUESTIONS, and only one of them is about
-	// reachability. "You wrote to them" is satisfied by the message reaching
-	// them, which is what an outbound message linked to this contact means. "THEY
-	// wrote" is a claim about authorship, and a thread is linked to everybody it
-	// concerns — so reading it off reachability told a reader "they wrote last"
-	// about a message somebody else sent into a conversation this contact is on.
-	return tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT max(a.occurred_at) FILTER (WHERE a.direction = 'inbound' AND %s),
-		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound')
-		FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
-		contacts.SenderPredicate(fmt.Sprintf("$%d", contactPos), "a"),
-		fmt.Sprintf(contactReachesActivity, contactPos), scope, projectScope(opts, arg),
-		auth.AudienceWorkspaceOnly("a")), args...).
-		Scan(&out.LastInboundAt, &out.LastOutboundAt)
+	touch := touched[contactID]
+	out.LastInboundAt = touch.InboundAt
+	out.LastOutboundAt = touch.OutboundAt
+	return nil
 }
 
 // networkSection answers "who here knows them", warmest first — the
@@ -426,7 +414,7 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactI
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, fmt.Sprintf(contactReachesActivity, contactPos), scope, projectScope(opts, arg)), args...).
+		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg)), args...).
 		Scan(&view.NewActivities); err != nil {
 		return fmt.Errorf("count new activities: %w", err)
 	}

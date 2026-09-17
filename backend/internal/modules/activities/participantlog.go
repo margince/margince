@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -92,6 +93,17 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 // uniqueness index — the log path has its own replay guard, and this must not
 // become a second place that can fail on a retry.
 func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID) error {
+	return insertParticipantRow(ctx, tx, activityID, role, userID, contactID, "")
+}
+
+// insertParticipantRow writes one row, idempotently against the ACT-DDL-3
+// uniqueness index — the log path has its own replay guard, and this must not
+// become a second place that can fail on a retry.
+//
+// A participant is identified by a user, a contact, or — for an imported
+// message whose addresses match nobody here — the bare address off the header.
+// The table's own CHECK requires exactly one of the three.
+func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID, address string) error {
 	// The user arm is written through a SELECT over app_user rather than a
 	// bare VALUES: a principal's UserID is not guaranteed to name a workspace
 	// member. An agent or a service principal can carry an id that belongs to
@@ -100,12 +112,43 @@ func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 	// operation. Guarding here rather than pre-checking also avoids a race
 	// with a member being archived between the check and the insert.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, role)
-		SELECT $1, $2, $3, $4
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, role, address)
+		SELECT $1, $2, $3, $4, NULLIF($5, '')
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
-		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role); err != nil {
+		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role, address); err != nil {
 		return fmt.Errorf("activities: recording who was in a logged interaction: %w", err)
+	}
+	return nil
+}
+
+// stampSuppliedEmailParticipants records the address headers an importer
+// stated, for every address on the message that matches no contact here yet.
+//
+// Capture writes these rows from the message it holds; an import has only the
+// headers its source kept, so it hands them over and they land the same way.
+// Without them an imported email names nobody at all — the contact-link rows
+// above cover only addresses that already resolved to a contact here.
+func stampSuppliedEmailParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, in LogActivityInput) error {
+	if in.Kind != string(crmcontracts.ActivityKindEmail) {
+		return nil
+	}
+	for _, party := range []struct {
+		role      string
+		addresses []string
+	}{
+		{"from", []string{in.EmailFrom}},
+		{"to", in.EmailTo},
+		{"cc", in.EmailCc},
+	} {
+		for _, address := range party.addresses {
+			if address == "" {
+				continue
+			}
+			if err := insertParticipantRow(ctx, tx, activityID, party.role, nil, nil, address); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

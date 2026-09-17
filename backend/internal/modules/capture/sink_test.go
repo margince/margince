@@ -56,7 +56,7 @@ func TestUpsertAdmissionGuards(t *testing.T) {
 			ctx:  connectorCtx,
 			rec: func() connector.NormalizedRecord {
 				r := record()
-				r.CapturedBy = "connector:hubspot"
+				r.CapturedBy = "connector:legacy_crm"
 				return r
 			},
 		},
@@ -100,9 +100,9 @@ func TestCaptureSourceFallsBackToTheNaturalKeySystem(t *testing.T) {
 		{
 			name: "empty source names the system",
 			record: connector.NormalizedRecord{
-				NaturalKey: connector.NaturalKey{SourceSystem: "hubspot"},
+				NaturalKey: connector.NaturalKey{SourceSystem: "legacy_crm"},
 			},
-			want: "hubspot",
+			want: "legacy_crm",
 		},
 	}
 	for _, tc := range cases {

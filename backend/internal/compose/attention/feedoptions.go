@@ -71,6 +71,17 @@ func (s *Service) WithDealFacts(f DealFacts) *Service {
 	return s
 }
 
+// WithContactTouch binds the reader that puts, on every row naming a contact,
+// when they last wrote to us and when we last wrote to them. An option for the
+// reason WithDealFacts is one.
+//
+// Unbound, a row names its contact and says nothing about the silence — what
+// every row did before this seam, and never a wrong date.
+func (s *Service) WithContactTouch(r ContactTouch) *Service {
+	s.contactTouch = r
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //

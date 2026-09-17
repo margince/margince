@@ -74,8 +74,10 @@ type Call struct {
 	SecretKinds    []string
 	CorrelationID  *ids.UUID
 	// Subject is the record the call was about, when the site that made it
-	// said so. It travels to the rail's occurrence and never to ai_call: the
-	// trace is about the call, the occurrence is about the reader's work.
+	// said so. It travels to the rail's occurrence — what the reader is told
+	// this work is about — and to ai_call's own citation columns, which is what
+	// lets an erasure find the payloads of calls made ABOUT somebody rather
+	// than only the ones that spell their address.
 	Subject               Subject
 	Task                  Task
 	Tier                  Tier
@@ -237,7 +239,7 @@ func (m *CallMeter) Record(ctx context.Context, attempts []Call) error {
 //
 // Paired rather than written as three parallel lists because nothing checks
 // that a statement's columns, placeholders and arguments agree: this table
-// takes thirty-one of them, and the failure mode of a miscount is not a
+// takes three dozen of them, and the failure mode of a miscount is not a
 // compile error but a value landing in the neighbouring column.
 // The column names here are schema identifiers. Two of them happen to be
 // spelled the same as a log key in tracing.go and a request-field name in
@@ -281,6 +283,15 @@ func aiCallBindings(c Call) []boundColumn {
 	if c.ErrorSentinel != "" {
 		errorSentinel = &c.ErrorSentinel
 	}
+	// Both citation columns or neither, from one value: the schema says so and
+	// the purge that reads them cannot use half a citation.
+	var subjectType *string
+	var subjectID *ids.UUID
+	if !c.Subject.Ref.ID.IsZero() {
+		kind := c.Subject.Ref.Type
+		id := c.Subject.Ref.ID
+		subjectType, subjectID = &kind, &id
+	}
 	return []boundColumn{
 		{"correlation_id", c.CorrelationID},
 		{"task", string(c.Task)},
@@ -315,6 +326,8 @@ func aiCallBindings(c Call) []boundColumn {
 		{"config_hash", c.ConfigHash},
 		{"secrets_removed", c.SecretsRemoved},
 		{"secret_kinds", secretKinds},
+		{"subject_type", subjectType},
+		{"subject_id", subjectID},
 	}
 }
 
@@ -327,7 +340,8 @@ func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Ca
 		var callID ids.UUID
 		err := tx.QueryRow(ctx, storekit.SQLf(
 			`INSERT INTO ai_call (%s) VALUES (%s) RETURNING id`,
-			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args))),
+			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args)),
+		),
 			args...).Scan(&callID)
 		if err != nil {
 			return fmt.Errorf("ai: recording call: %w", err)

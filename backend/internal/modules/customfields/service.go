@@ -17,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -152,6 +153,32 @@ func (e *ColumnTakenError) Is(target error) bool { return target == apperrors.Er
 // in scanCustomField's scan order.
 const catalogColumns = `id, object, slug, label, type, status, archived_at,
 	column_name, currency, options, created_by, created_at, updated_at, version`
+
+// scanCustomFieldPage scans one row of a sorted page: the catalog columns, and
+// the sort's cursor key where the sort appends one.
+//
+// The key is scanned HERE rather than recomputed from the scanned field,
+// because the two are not the same value: the key is the ordering expression's
+// own Postgres text form, which is what the next page's typed bind cast
+// compares against. Deriving it in Go would be a second rendering of the sort.
+func scanCustomFieldPage(row pgx.Row, sorted *storekit.ListSort) (crmcontracts.CustomField, *string, error) {
+	if sorted.CursorKeySuffix() == "" {
+		out, err := scanCustomField(row)
+		return out, nil, err
+	}
+	var key *string
+	out, err := scanCustomField(cursorKeyRow{row: row, key: &key})
+	return out, key, err
+}
+
+// cursorKeyRow scans the sort's trailing cursor key without every caller of
+// scanCustomField having to know the column is there.
+type cursorKeyRow struct {
+	row pgx.Row
+	key **string
+}
+
+func (r cursorKeyRow) Scan(dest ...any) error { return r.row.Scan(append(dest, r.key)...) }
 
 // scanCustomField scans one catalogColumns row into the contract shape
 // (contract types as transport DTOs).

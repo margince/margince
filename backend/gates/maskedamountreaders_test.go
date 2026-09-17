@@ -7,9 +7,12 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
@@ -39,10 +42,22 @@ var dealTableRead = gatekit.TableReadPattern("deal")
 // maskOwner is the module that OWNS the deal object and the mask.
 const maskOwner = "internal/modules/deals/"
 
+// The seeds are LISTED rather than derived from platform/auth's Mask* surface,
+// and the direction of the failure is why. A new primitive that nobody adds
+// here does not go unnoticed: every statement using it reports as unmasked, so
+// the gate refuses a tree it cannot yet read. A derivation over the exported
+// names would admit whatever a future function is called, which is the same
+// list with the safe direction reversed.
+// A mask spelling is the WHOLE admission here, so objectGateSatisfies stays
+// off and auth.Require(ctx, "deal", …) vouches for nothing — the field's own
+// comment says why the object half cannot answer this question.
 var maskGate = objectGate{
-	object:    "deal",
-	literal:   dealAmountColumn,
-	gateSeeds: []string{"MaskedColumnSQL", "MaskExcludedClause", "MaskedFields", "MasksAnyRowOf", "maskedRowSelects"},
+	object:  "deal",
+	literal: dealAmountColumn,
+	gateSeeds: []string{
+		"MaskedColumnSQL", "MaskedExpressionSQL", "MaskExcludedClause",
+		"MaskedFields", "MasksAnyRowOf", "maskedRowSelects",
+	},
 }
 
 // predicateMaskedAmountReads: the statement names an amount column but no
@@ -97,10 +112,16 @@ var maskVerdicts = []namedVerdict{
 
 const wantMinimumMaskedAmountSites = 10
 
-var maskedAmountScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsADealAmount,
-	Exempt:  gatekit.Waive(map[string]string{}),
+// maskedAmountScope is built around the derived builder set, so the sweep and
+// the site extraction ask one question rather than two that can drift.
+func maskedAmountScope(builders map[string]bool) gatekit.Scope {
+	return gatekit.Scope{
+		Roots: []string{"internal"},
+		Subject: func(filePath string, file *ast.File) bool {
+			return readsADealAmount(filePath, file, builders)
+		},
+		Exempt: gatekit.Waive(map[string]string{}),
+	}
 }
 
 // readsADealAmount is the compound subject, and the compound is the point.
@@ -117,35 +138,107 @@ var maskedAmountScope = gatekit.Scope{
 // literal, because this tree routinely composes one statement from several
 // constants, and a literal-level test would stop seeing a read the moment
 // somebody moved its FROM clause into a fragment.
-func readsADealAmount(filePath string, file *ast.File) bool {
+func readsADealAmount(filePath string, file *ast.File, builders map[string]bool) bool {
 	if strings.HasPrefix(filePath, maskOwner) || strings.HasSuffix(filePath, "_gen.go") {
 		return false
 	}
 	for _, decl := range file.Decls {
-		if len(dealAmountReadsIn(decl)) > 0 {
+		if len(dealAmountReadsIn(decl, builders)) > 0 {
 			return true
 		}
 	}
 	return false
 }
 
-// dealAmountBuilders are helpers that RENDER a deal's money for a caller
-// outside the deals module.
+// A deal-amount BUILDER renders the figure as SQL for somebody else to compose.
+// It is part of the subject because its text is not: a statement built from one
+// names no amount column of its own, so a literal-only subject cannot see the
+// money it sums. The project report's open-value total was exactly that —
+// `sum(deals.OpenDealBaseValueSQL(...))` over every open deal, with no mask and
+// nothing here to say so.
 //
-// They are part of the subject because their text is not. The builder is
-// declared inside modules/deals, which this census exempts as the mask's own
-// owner, so a statement composing one names no amount column of its own and a
-// literal-only subject cannot see the figure it sums. The project report's
-// open-value total was exactly that: `sum(deals.OpenDealBaseValueSQL(...))`
-// over every open deal, with no mask and nothing here to say so. A reviewer
-// found it; this is what would have.
-var dealAmountBuilders = []string{"OpenDealBaseValueSQL", "BaseValueSQL"}
+// DERIVED from the tree rather than listed, and the list is why. It was two
+// names, written down when a reviewer found the first gap; it was already
+// missing a third. `briefs.briefBaseValueSQL` is a CHARACTER-IDENTICAL second
+// spelling of compose.BaseValueSQL, held so by TestOneSpellingOfADealsBaseValue
+// because the import direction forbids the call — so this tree states that the
+// two are one expression, and a hand-kept list saw one of them. Two statements
+// selecting a deal's money sat outside the census for as long as that list was
+// the answer.
+//
+// A builder is a function whose one result is a string and whose body names an
+// amount column INSIDE A STATEMENT FRAGMENT. Both halves are load-bearing:
+// deals.AmountCurrencyPairError.Error() names `amount_minor` in an English
+// sentence, and a rule reading the column alone would make every caller of an
+// error's Error() a money read. TestTheBuilderDerivationReadsFragmentsAndNotProse
+// holds both directions.
+var sqlFragmentMarker = regexp.MustCompile(`(?i)\b(SELECT|CASE|WHEN|COALESCE|SUM|ROUND|JOIN|WHERE)\b`)
+
+// dealAmountBuilderNames walks the same tree the scope sweeps, INCLUDING the
+// mask's owner and the packages a subject may not live in: a builder is named
+// where it is declared and called where it is composed, and the two are
+// routinely different modules — that separation is the whole reason the census
+// cannot see the read.
+func dealAmountBuilderNames(t testing.TB) map[string]bool {
+	t.Helper()
+	names := map[string]bool{}
+	fset := token.NewFileSet()
+	err := filepath.Walk("internal", func(filePath string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
+			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
+			return err
+		}
+		file, parseErr := parser.ParseFile(fset, filePath, nil, 0)
+		if parseErr != nil {
+			return parseErr
+		}
+		for _, decl := range file.Decls {
+			if name, isBuilder := builderName(decl); isBuilder {
+				names[name] = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("deriving the deal-amount builders: %v", err)
+	}
+	if len(names) == 0 {
+		t.Fatal("no deal-amount builder found in the tree — this derivation has stopped recognising " +
+			"the shape it reads, and a census whose subject got smaller reports PASS either way")
+	}
+	return names
+}
+
+// builderName reports the declaration's name when it renders a deal amount as
+// SQL. The two halves of that question are asked here and nowhere else, so a
+// reader changing what counts as a builder changes it in one place.
+func builderName(decl ast.Decl) (string, bool) {
+	fn, isFunc := decl.(*ast.FuncDecl)
+	if !isFunc || fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
+		return "", false
+	}
+	result, isIdent := fn.Type.Results.List[0].Type.(*ast.Ident)
+	if !isIdent || result.Name != "string" {
+		return "", false
+	}
+	// Statements rather than literals, because a fragment assembled with `+` is
+	// one statement to Postgres and several strings to the parser — and the
+	// halves are exactly where the two patterns fall: `"CASE WHEN " + alias +
+	// ".amount_minor IS NULL"` names the column in one piece and the keyword in
+	// another, and a per-literal reading sees neither whole.
+	for _, statement := range gatekit.SQLStatementsOf(fn) {
+		if dealAmountColumn.MatchString(statement) && sqlFragmentMarker.MatchString(statement) {
+			return fn.Name.Name, true
+		}
+	}
+	return "", false
+}
 
 // dealAmountReadsIn is the site extraction the subject predicate above states.
-func dealAmountReadsIn(decl ast.Decl) []gatekit.TableRead {
+func dealAmountReadsIn(decl ast.Decl, builders map[string]bool) []gatekit.TableRead {
 	amounts := gatekit.DeclReads(decl, dealAmountColumn)
 	if len(amounts) == 0 {
-		amounts = builtAmountsIn(decl)
+		amounts = builtAmountsIn(decl, builders)
 	}
 	if len(amounts) == 0 || len(gatekit.DeclReads(decl, dealTableRead)) == 0 {
 		return nil
@@ -155,7 +248,7 @@ func dealAmountReadsIn(decl ast.Decl) []gatekit.TableRead {
 
 // builtAmountsIn reports a site for a declaration that composes one of the
 // builders rather than naming a column, so the report reads as a read.
-func builtAmountsIn(decl ast.Decl) []gatekit.TableRead {
+func builtAmountsIn(decl ast.Decl, builders map[string]bool) []gatekit.TableRead {
 	name := ""
 	if fn, isFunc := decl.(*ast.FuncDecl); isFunc {
 		name = fn.Name.Name
@@ -166,7 +259,7 @@ func builtAmountsIn(decl ast.Decl) []gatekit.TableRead {
 		if !isCall {
 			return true
 		}
-		if slices.Contains(dealAmountBuilders, calleeName(call)) {
+		if builders[calleeName(call)] {
 			found = append(found, gatekit.TableRead{Function: name, SQL: calleeName(call) + "(...)"})
 		}
 		return true
@@ -174,9 +267,76 @@ func builtAmountsIn(decl ast.Decl) []gatekit.TableRead {
 	return found
 }
 
+// TestTheBuilderDerivationReadsFragmentsAndNotProse holds the rule the
+// derivation above turns on, in both directions.
+//
+// Under-recognition is the failure that matters: a builder this misses takes
+// every statement composing it out of the census, and the census then reports
+// PASS over a smaller tree. Over-recognition costs the other way and is not
+// harmless either — deals.AmountCurrencyPairError.Error() names `amount_minor`
+// in an English sentence, and admitting it would make every caller of an
+// error's Error() a money read and bury the ones that are.
+func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name    string
+		source  string
+		want    string
+		builder bool
+	}{
+		{
+			name:    "a fold rendering the column is a builder",
+			source:  "func baseValueSQL(alias string) string { return \"CASE WHEN \" + alias + \".amount_minor IS NULL THEN NULL END\" }",
+			want:    "baseValueSQL",
+			builder: true,
+		},
+		{
+			name:    "the converted column counts the same",
+			source:  "func total() string { return \"sum(d.amount_minor_base) FILTER (WHERE TRUE)\" }",
+			want:    "total",
+			builder: true,
+		},
+		{
+			name:   "an error message naming the column is prose",
+			source: "func (e *pairError) Error() string { return \"currency comes with amount_minor, and neither figure comes without it\" }",
+		},
+		{
+			name:   "a fixture's JSON body is not a statement",
+			source: "func createDeal() string { return `{\"amount_minor\": 25000}` }",
+		},
+		{
+			name:   "SQL naming no amount column is somebody else's fragment",
+			source: "func stageJoin() string { return \"JOIN stage s ON s.id = d.stage_id\" }",
+		},
+		{
+			name:   "a function returning rows rather than SQL is not a builder",
+			source: "func read() ([]string, error) { return nil, nil }",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", "package p\n"+c.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the fixture: %v", err)
+			}
+			if len(file.Decls) != 1 {
+				t.Fatalf("the fixture must hold exactly one declaration, it holds %d", len(file.Decls))
+			}
+			name, isBuilder := builderName(file.Decls[0])
+			if isBuilder != c.builder {
+				t.Fatalf("builderName = (%q, %v), want a builder: %v", name, isBuilder, c.builder)
+			}
+			if c.builder && name != c.want {
+				t.Fatalf("builderName = %q, want %q", name, c.want)
+			}
+		})
+	}
+}
+
 func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	t.Parallel()
-	files := maskedAmountScope.Files(t)
+	builders := dealAmountBuilderNames(t)
+	files := maskedAmountScope(builders).Files(t)
 	gated := maskGate.gatedFunctionsByPackage(t, files)
 	consts := constantTable{}
 
@@ -184,7 +344,7 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, decl := range parsed.File.Decls {
-			reads := dealAmountReadsIn(decl)
+			reads := dealAmountReadsIn(decl, builders)
 			if len(reads) == 0 {
 				continue
 			}
@@ -250,4 +410,73 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	notTheDealAmount.AssertAllMatched(t)
 	ruledMaskedAmountReads.AssertAllMatched(t)
 	deferredMaskedAmountReads.AssertAllMatched(t)
+}
+
+// TestTheObjectGateDoesNotVouchForAMask plants the shape this census could not
+// see, in both directions.
+//
+// auth.Require(ctx, "deal", …) is the whole admission the deal-TABLE census
+// asks for and no answer at all to this one — every masked read takes it too —
+// and while one flag served both, a statement that ranked an account's deals by
+// the figure a mask withholds reported as guarded.
+//
+// Both directions, because what was wrong is a distinction and not a
+// tightening: a walk that stopped recognising the object gate where it IS the
+// admission would fail every read dealreaders_test.go admits, and a census that
+// fails what it should admit teaches its readers to distrust it.
+func TestTheObjectGateDoesNotVouchForAMask(t *testing.T) {
+	t.Parallel()
+	const asksTheObjectGate = `func readDeals(ctx context.Context, tx pgx.Tx) error {
+		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+			return err
+		}
+		_, err := tx.Query(ctx, "SELECT d.amount_minor FROM deal d")
+		return err
+	}`
+	const rendersTheMask = `func readDeals(ctx context.Context, arg func(any) int) (string, error) {
+		return auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	}`
+	// Both gates are about the deal, so the census is named here rather than
+	// read off gate.object — a failure saying "the deal census" would leave a
+	// reader to guess which of the two it is.
+	for _, c := range []struct {
+		name    string
+		census  string
+		source  string
+		gate    objectGate
+		holding bool
+	}{
+		{
+			name:   "the object gate answers nothing about a mask",
+			census: "deal-amount mask",
+			source: asksTheObjectGate,
+			gate:   maskGate,
+		},
+		{
+			name:    "the same body IS gated for the census the object gate answers",
+			census:  "deal-table read",
+			source:  asksTheObjectGate,
+			gate:    dealGate,
+			holding: true,
+		},
+		{
+			name:    "a mask rendering is what this census asks for",
+			census:  "deal-amount mask",
+			source:  rendersTheMask,
+			gate:    maskGate,
+			holding: true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", "package p\n"+c.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the fixture: %v", err)
+			}
+			refs := referencesIn(file.Decls[0], map[string]string{})
+			if got := c.gate.holdsSeedGate(refs, "internal/compose/company360"); got != c.holding {
+				t.Errorf("the %s census reads this body as gated=%v, want %v", c.census, got, c.holding)
+			}
+		})
+	}
 }

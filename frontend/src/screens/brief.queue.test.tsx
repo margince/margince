@@ -55,8 +55,10 @@ it("restores the queue opener's keyboard focus after closing", async () => {
       jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")])),
   });
   render(<BriefScreen />);
-  await screen.findByText("Call Weber");
-  const opener = screen.getByRole("button", { name: en["brief.queue.show"] });
+  await screen.findAllByText("Call Weber");
+  const opener = screen.getByRole("button", {
+    name: new RegExp(en["brief.queue.show"]),
+  });
   await user.click(opener);
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await user.click(screen.getByRole("button", { name: /close/i }));
@@ -64,7 +66,12 @@ it("restores the queue opener's keyboard focus after closing", async () => {
   expect(document.activeElement).toBe(opener);
 });
 
-it("opens a review row's context without excluding it as non-selling work", async () => {
+// A review row is not excluded as non-selling work: it can be taken in hand
+// like any other. What it opens INTO differs by surface — the queue's own page
+// draws the record's pane beside it (worklist.detail.test.tsx), the drawer
+// draws none, because the row already names whom it is about and a drawer has
+// no third of its width to spend saying it twice.
+it("takes a review row in hand, and opens no column beside it", async () => {
   const user = userEvent.setup();
   window.location.hash = "#/home?queue=1";
   const review: components["schemas"]["WorklistItem"] = {
@@ -85,10 +92,11 @@ it("opens a review row's context without excluding it as non-selling work", asyn
       name: /Show what 1, Review the disclosure/,
     }),
   );
-  expect(
-    screen.getByRole("complementary", { name: en["worklist.pane.title"] }),
-  ).toBeTruthy();
   expect(window.location.hash).toContain("selected=notice_case-privacy");
+  expect(
+    screen.queryByRole("complementary", { name: en["worklist.pane.title"] }),
+    "the drawer spent a third of its width repeating the row above it",
+  ).toBeNull();
 });
 
 it("opens a task's evidence without replacing the Home overview", async () => {
@@ -123,4 +131,76 @@ it("opens a task's evidence without replacing the Home overview", async () => {
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(document.activeElement).toBe(opener);
+});
+
+it("opens a meeting's own record from its focus row", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  const meeting: components["schemas"]["WorklistItem"] = {
+    ...taskRow("held-meeting", "Discovery call with Turbinenbau"),
+    source: "meeting_outcome",
+    category: "meetings",
+    actions: ["decide"],
+  };
+  stubApi({
+    "GET /worklist": () => jsonResponse(readingsDay({}, [meeting])),
+    "GET /activities/held-meeting": () =>
+      jsonResponse({
+        id: meeting.id,
+        kind: "meeting",
+        subject: meeting.title,
+        body: "Organizer: Weber. Attendees: Weber, Ziethen.",
+        occurred_at: "2026-09-01T10:00:00Z",
+        version: 1,
+        is_done: false,
+      }),
+  });
+  render(<BriefScreen />);
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.focus.context"] }),
+  );
+  expect(
+    await screen.findByText("Organizer: Weber. Attendees: Weber, Ziethen."),
+  ).toBeTruthy();
+  // The row's own verbs answer a meeting; the read offers no "Done".
+  expect(
+    screen.queryByRole("button", { name: en["tasks.complete"] }),
+  ).toBeNull();
+});
+
+// THE BUTTON AND THE LIST IT OPENS NAME ONE QUEUE.
+//
+// The drawer keeps its scope in `queue_scope` and that survives the drawer
+// closing, so a reader who switched it to the team and shut it had a button
+// counting their own day over a list of somebody else's — two totals for one
+// control, and the one on screen was the wrong one.
+it("counts the queue the button actually opens", async () => {
+  window.location.hash = "#/home?queue_scope=team";
+  stubApi({
+    "GET /worklist": (_body, query) =>
+      jsonResponse(
+        query.get("scope") === "team"
+          ? {
+              ...readingsDay({}, [], undefined, { total: 42 }),
+              scope: "team",
+            }
+          : readingsDay({}, [taskRow("t", "Call Weber")], undefined, {
+              total: 3,
+            }),
+      ),
+  });
+  render(<BriefScreen />);
+
+  // The team's total, not the reader's own three. Read off the count element
+  // the switch carries rather than its accessible name, which is the verb
+  // alone — `OptionCount` is beside the words, not in them.
+  const toggle = await screen.findByRole("button", {
+    name: en["brief.queue.show"],
+  });
+  await waitFor(() => {
+    expect(
+      toggle.querySelector(".record-details-toggle-count")?.textContent,
+      "the switch counted a different queue from the one it opens",
+    ).toContain("42");
+  });
 });

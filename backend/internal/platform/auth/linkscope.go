@@ -182,3 +182,58 @@ func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 	}
 	return nil
 }
+
+// EnsureAttachTarget is EnsureLinkTarget for the ATTACH direction, and the
+// question that picks between them is:
+//
+//	WHOSE RECORD CHANGES?
+//
+// If the shared record only supplies a VALUE to a row the caller owns — a
+// contact named on their new deal, a company on their offer, a parent named on
+// a company they are editing — that is a REFERENCE, and EnsureLinkTarget's
+// visibility answer is the whole of it. If the shared record GAINS something a
+// reader of it will now see — an activity filed onto it, a file hung on it, a
+// membership, a tag — that is a write to their record, and this is the probe.
+//
+// What it narrows is the share arm and nothing else: a record reachable only
+// through a `read` grant is refused, a `write` grant passes, and the own/team
+// arms are untouched. So it is NOT write authority — a rep may still file work
+// against a record another team owns, which is how this product works on
+// purpose and what four integration tests say with their reasons beside them.
+// Applying the write-authority predicate here would have imported the row-scope
+// half and answered a question nobody asked.
+//
+// The two refusals are different on purpose. A record the caller cannot see at
+// all answers NOT FOUND, because existence stays hidden; a record they can see
+// through a read-only share answers PERMISSION DENIED, because they already
+// know it exists — the share told them.
+func EnsureAttachTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	// Visibility first, and it also takes the FOR SHARE lock every caller of
+	// this probe needs before it writes — the same pairing EnsureWritable makes
+	// with its own visibility probe, for the same reason.
+	if err := EnsureLinkTarget(ctx, tx, table, id); err != nil {
+		return err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos := arg(id)
+	clause, err := AttachClauseFor(ctx, table, "", arg)
+	if err != nil {
+		return err
+	}
+	if clause == "" {
+		// No narrowing to apply: the caller reads every row of this table, so
+		// the visibility probe above already answered everything this one could.
+		return nil
+	}
+	var permitted bool
+	if err := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND %s)`, table, idPos, clause),
+		args...).Scan(&permitted); err != nil {
+		return err
+	}
+	if !permitted {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
+}

@@ -49,8 +49,9 @@ const contactTable = "contact"
 // only that the caller was human; the row clause inside that helper is what had
 // been standing in for the grant.
 var contactGate = objectGate{
-	object:  contactTable,
-	literal: gatekit.TableReadPattern(contactTable),
+	object:              contactTable,
+	literal:             gatekit.TableReadPattern(contactTable),
+	objectGateSatisfies: true,
 }
 
 // predicateContactReads: the contact table appears only inside a JOIN or EXISTS
@@ -70,7 +71,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/compose/displaynamerepair.go:selectStaleDisplayNames":                   "`SELECT p.id` — which contacts carry a display name the repair backfill still owes. Ids only, on the backfill's own pass",
 	"internal/compose/network/accountcoverage.go:countAccountStakeholders":            "a count of distinct stakeholders at an account, under the edge admission AccountCoverageFor takes. A number, and deliberately reported as a BOOLEAN incompleteness flag rather than an exact one — the type's own comment says why an exact count would be an oracle",
 	"internal/compose/network/accountcoverage.go:visibleAccountStakeholders":          "the stakeholder ids and roles behind that same coverage, under auth.EdgeReadScope and the contact ROW scope. Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read governs; no contact column beyond the id the edge already carries is selected",
-	"internal/compose/signalextractread.go":                                           "the visibility roll-up inside the thread-extraction read: a contact's visibility and owner_id decide whether a thread counts as shared or as one owner's. No contact column is selected and the statement produces a thread key",
+	"internal/compose/signalextractrule.go":                                           "the visibility roll-up inside the conversation fold the thread extraction reads: a contact's visibility and owner_id decide whether a thread counts as shared or as one owner's. No contact column is selected and the statement produces a thread key",
 	"internal/modules/activities/activityrelink.go:repointDisplacedParticipants":      "the relink's repointing arm: which participants must move when an activity's links change. It runs inside the relink write and its effect is an UPDATE",
 	"internal/modules/activities/emailparties.go:readEmailParties":                    "the parties on one email, `LEFT JOIN contact` so a party with no contact record still appears. The projection is the activity's own participant rows under the activity grant; the join adds liveness, not a column",
 	"internal/modules/activities/followupcomplete.go:completeOpenSystemTasksLinkedBy": "`a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $n)` — the cut-off that stops a follow-up task older than the contact being completed by it. A timestamp inside the completing write's own predicate",

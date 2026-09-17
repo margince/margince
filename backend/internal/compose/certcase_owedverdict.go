@@ -22,10 +22,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -47,6 +49,21 @@ type owedFixtureMessage struct {
 	To              []string `json:"to,omitempty"`
 	Cc              []string `json:"cc,omitempty"`
 	HasCalendarPart bool     `json:"has_calendar_part,omitempty"`
+	// PriorOutbound is our own earlier message in the thread, which the backlog
+	// read supplies and the prompt renders as context. Absent for a message that
+	// opens a conversation, and for one carrying no thread at all.
+	PriorOutbound *owedFixturePrior `json:"prior_outbound,omitempty"`
+}
+
+// owedFixturePrior is our earlier message as the fixture supplies it.
+//
+// The date is the scenario's rather than one minted here, so the request a run
+// builds stays a pure function of the corpus and this build's code — the
+// property the certification stamp rests on.
+type owedFixturePrior struct {
+	Subject string    `json:"subject"`
+	Body    string    `json:"body"`
+	At      time.Time `json:"at"`
 }
 
 // owedVerdictCases serves the one site that judges whether a waiting message
@@ -105,6 +122,11 @@ func (owedVerdictCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 			Subject: m.Subject, Body: m.Body,
 			To: m.To, Cc: m.Cc, HasCalendarPart: m.HasCalendarPart,
 		}
+		if prior := m.PriorOutbound; prior != nil {
+			batch[i].PriorOutbound = &activities.PriorOutbound{
+				Subject: prior.Subject, Body: prior.Body, At: prior.At,
+			}
+		}
 	}
 	return &owedVerdictCase{batch: batch, expected: want}, nil
 }
@@ -127,6 +149,17 @@ func refuseUnreadableOwedBatch(messages owedFixture) error {
 			return fmt.Errorf(
 				"owed_verdict/owed: message %d carries a body of %d characters, but the backlog read truncates every body to %d",
 				i+1, n, owedBodyLimit)
+		}
+		// The context block has its own, tighter bound. A fixture past it
+		// certifies a prompt carrying more of our earlier message than the
+		// backlog read would ever hand the model.
+		if m.PriorOutbound == nil {
+			continue
+		}
+		if n := utf8.RuneCountInString(m.PriorOutbound.Body); n > owedPriorBodyLimit {
+			return fmt.Errorf(
+				"owed_verdict/owed: message %d carries a prior message of %d characters, but the backlog read truncates it to %d",
+				i+1, n, owedPriorBodyLimit)
 		}
 	}
 	return nil

@@ -98,7 +98,7 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		  AND a.occurred_at > $%d
-		  AND `+fmt.Sprintf(contactReachesActivity, linkPos)+`
+		  AND `+fmt.Sprintf(contactReachesActivity, bind(linkPos))+`
 		  AND (%s)%s
 		ORDER BY a.occurred_at, a.id
 		LIMIT 1`, dealScope, participantScope, nowPos, scope, projectScope(opts, arg)), args...).

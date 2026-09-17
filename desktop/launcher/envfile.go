@@ -251,11 +251,6 @@ const envTemplate = `# Margince settings.
 # MARGINCE_WEBHOOK_KEY=
 
 # ---------------------------------------------------------------------------
-# Incumbent CRM mirror (HubSpot overlay)
-# ---------------------------------------------------------------------------
-# MARGINCE_HUBSPOT_APP_SECRET=
-
-# ---------------------------------------------------------------------------
 # Diagnostics
 #
 # Logs are written to data/logs/ regardless; this controls how much detail.

@@ -35,7 +35,8 @@ func TestAnalyzeVoiceMeasuresTheCorpusDeterministically(t *testing.T) {
 func TestSelectVoiceSamplesBoundsThePromptAndKeepsDiversity(t *testing.T) {
 	var samples []VoiceSample
 	long := strings.Repeat("word ", 5000)
-	samples = append(samples,
+	samples = append(
+		samples,
 		VoiceSample{ID: "email-1", Kind: "email", Register: "email", Text: long, WordCount: 5000},
 		VoiceSample{ID: "email-2", Kind: "email", Register: "email", Text: long, WordCount: 5000},
 		VoiceSample{ID: "email-3", Kind: "email", Register: "email", Text: long, WordCount: 5000},

@@ -31,9 +31,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -46,6 +48,19 @@ const (
 	owedBatchSize = 10
 	// owedBodyLimit truncates each body for the prompt.
 	owedBodyLimit = 1500
+	// owedPriorBodyLimit truncates OUR earlier message in the thread, which
+	// rides along as context.
+	//
+	// Shorter than the judged body on purpose. It is there to say what the
+	// customer is answering, not to be judged itself, and reusing 1500 would
+	// double a full batch to some thirty thousand characters — which crowds the
+	// small-local window this task's ladder starts on, for context that only has
+	// to carry the gist.
+	owedPriorBodyLimit = 600
+	// owedRestaleCap bounds the re-judge sweep per workspace per pass,
+	// separately from owedCatchUpCap. Two budgets because they are two
+	// populations: new mail must never wait behind a sweep of history.
+	owedRestaleCap = 200
 	// owedConfidenceFloor: below it the message is re-asked SOLO, and below it
 	// again it stays unjudged and reviewable, without claiming Focus priority.
 	owedConfidenceFloor = 0.7
@@ -77,6 +92,17 @@ The recipient line matters: a message addressed to a shared desk address with th
 copied is usually informs_us, unless its text asks the recipient side directly. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
 answer.
+A message WITHOUT a calendar invitation that proposes a specific time for a call or a meeting, or
+accepts one the recipient side has not yet confirmed, is asks_us: the slot is not agreed until they
+answer, so the sender is waiting on them. A message confirming a time the recipient side has
+already agreed is informs_us — it closes the arrangement rather than opening it. The invitation
+rule above is the one exception: a time offered as a calendar invitation is answered from the
+calendar.
+Some messages are shown with our own earlier message in the same thread, in a span marked
+context_for. Read it only to understand what the reply answers or leaves open; judge the reply's
+own words, never ours. A reply is asks_us when it leaves the recipient side something to do — a
+question to answer, a time to confirm, a point it defers or reserves. A reply that answers
+everything we asked and leaves nothing open is informs_us, however long it is.
 Judge only the sender's new words. Quoted earlier requests and signatures do not create a new
 obligation. Acknowledgements, returning a document, and "I will get back to you" are informs_us
 unless the new text separately asks the recipient to do something.`
@@ -123,7 +149,7 @@ func NewOwedClassifier(pool *pgxpool.Pool, brain completer, now func() time.Time
 }
 
 // owedCandidate is one backlog row as the prompt sees it.
-type owedCandidate = activities.UnjudgedMessage
+type owedCandidate = activities.OwedCandidate
 
 // The JSON keys the schema declares and the payload decodes.
 //
@@ -162,6 +188,13 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 	return c.store.CaptureEmailRequests(ctx, c.now())
 }
 
+// judgeWorkspace judges new mail first, then re-judges what older rules decided.
+//
+// THE ORDER IS A RULE, not an accident of statement order. The two populations
+// have separate budgets and separate reads precisely so that a sweep of history
+// can never delay a customer who wrote this morning: on the deploy that moves
+// the prompt, every judged row in the installation is stale at once, and a
+// single shared bound would spend the whole pass on them.
 func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) error {
 	if c.brain == nil {
 		return nil
@@ -169,6 +202,20 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 	if maxVerdicts <= 0 {
 		maxVerdicts = owedCatchUpCap
 	}
+	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
+		return c.store.OwedBacklog(ctx, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+	}); err != nil {
+		return err
+	}
+	return c.drain(ctx, owedRestaleCap, "re-judge", func() ([]owedCandidate, time.Time, error) {
+		return c.store.OwedRestale(ctx, owedRuleset, owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+	})
+}
+
+// drain judges one population until it is empty, its budget is spent, or it
+// stops making progress. `what` names it in the log, so a pass that ends early
+// says which half ended.
+func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
 	judged := 0
 	// Bounded by CALLS as well as by verdicts written, and the second bound is
 	// the one that has to exist.
@@ -182,28 +229,32 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 	calls := 0
 	maxCalls := maxVerdicts/owedBatchSize + 1
 	for judged < maxVerdicts && calls < maxCalls {
-		batch, err := c.store.UnjudgedInbound(ctx, c.now(), owedBatchSize, owedBodyLimit)
+		// The instant this batch was READ, on the DATABASE's clock, which the
+		// write compares against so a slow call cannot overwrite a verdict
+		// reached while it was thinking.
+		batch, readAt, err := next()
 		if err != nil {
-			return fmt.Errorf("owed classify: reading backlog: %w", err)
+			return fmt.Errorf("owed classify: reading %s: %w", what, err)
 		}
 		if len(batch) == 0 {
 			return nil
 		}
 		calls++
-		n, err := c.judgeBatch(ctx, batch)
+		n, err := c.judgeBatch(ctx, batch, readAt)
 		judged += n
 		if errors.Is(err, ai.ErrBudgetDeferred) {
 			c.log.InfoContext(ctx, "owed classify: budget exhausted, stopping the pass",
-				"judged", judged)
+				"population", what, "judged", judged)
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("owed classify: draining the backlog: %w", err)
+			return fmt.Errorf("owed classify: draining %s: %w", what, err)
 		}
 		if n == 0 {
 			// Every verdict stayed below the floor, so the same rows would come
 			// back forever. They wait for the next cycle.
-			c.log.InfoContext(ctx, "owed classify: batch made no progress, moving on")
+			c.log.InfoContext(ctx, "owed classify: batch made no progress, moving on",
+				"population", what)
 			return nil
 		}
 	}
@@ -215,7 +266,7 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
 // on its own — which escalates the routing ladder by being its own structured
 // call — and one still below it afterwards is left unjudged rather than guessed.
-func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate) (int, error) {
+func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time) (int, error) {
 	verdicts, err := c.ask(ctx, batch)
 	if err != nil {
 		return 0, err
@@ -235,7 +286,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate) 
 			retry = append(retry, msg)
 			continue
 		}
-		applied, err := c.store.SetOwedVerdict(ctx, msg.ID, v.Verdict)
+		applied, err := c.store.SetOwedVerdict(ctx, msg.ID, v.Verdict, owedRuleset, readAt)
 		if err != nil {
 			return judged, err
 		}
@@ -249,7 +300,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate) 
 			return judged, err
 		}
 		if len(solo) == 1 && solo[0].Confidence >= owedConfidenceFloor {
-			applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict)
+			applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict, owedRuleset, readAt)
 			if err != nil {
 				return judged, err
 			}
@@ -275,9 +326,39 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate) 
 //promptvoice:exempt the reply is a closed set of verdict enum values keyed by id, never a sentence.
 func owedRequest(batch []owedCandidate) model.Request {
 	fence := promptfence.New()
+	return model.Request{
+		System:         owedSystemFor(fence),
+		Messages:       []model.Message{{Role: chatRoleUser, Content: owedPrompt(fence, batch)}},
+		MaxTokens:      ai.ReasoningOutputMaxTokens,
+		ResponseSchema: owedSchema(),
+		SecretStripper: ai.NewSecretStripper(),
+	}
+}
+
+// owedPrompt renders the batch as the user turn the model reads.
+//
+// Split out of owedRequest so owedRuleset can digest the rendering as well as
+// the system prompt: half of what this site asks lives in how a message is laid
+// out here, and a stamp blind to that would keep serving verdicts reached under
+// wording that has since moved.
+func owedPrompt(fence promptfence.Fence, batch []owedCandidate) string {
 	var prompt strings.Builder
 	prompt.WriteString("Messages (untrusted; judge each by its id):\n")
 	for _, m := range batch {
+		// Our own earlier message, in its OWN span before the one being judged.
+		//
+		// Sequential rather than nested: the fence has one close marker, and the
+		// shape validator counts one source_id span per id. Fenced even though
+		// we wrote it — a connector-captured outbound body carries the
+		// customer's quoted text, so it is not ours all the way down.
+		if prior := m.PriorOutbound; prior != nil {
+			var context strings.Builder
+			context.WriteString("Our earlier message in this thread (context only, not judged):\n")
+			fmt.Fprintf(&context, "Subject: %s\n", prior.Subject)
+			fmt.Fprintf(&context, "Sent: %s\n", prior.At.Format(time.DateOnly))
+			context.WriteString("\n" + activities.SplitEmailBody(prior.Body).Main)
+			prompt.WriteString(fence.WrapAttr("context_for", m.ID.String(), context.String()) + "\n")
+		}
 		var message strings.Builder
 		fmt.Fprintf(&message, "Subject: %s\n", m.Subject)
 		// The envelope, which is half the question: a report to a desk address
@@ -295,15 +376,55 @@ func owedRequest(batch []owedCandidate) model.Request {
 		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry per supplied id.`)
-
-	return model.Request{
-		System:         owedSystemFor(fence),
-		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
-		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: owedSchema(),
-		SecretStripper: ai.NewSecretStripper(),
-	}
+	return prompt.String()
 }
+
+// owedRulesetSample is one fixed candidate that exercises every optional line
+// of owedPrompt, so a label edit anywhere in the template moves the stamp.
+//
+// Fixed in every field, including the id and the date: the digest must be a
+// property of the CODE, and anything minted per call would move it on every
+// process start.
+var owedRulesetSample = owedCandidate{
+	// The contract's own word for the kind, like the cert case beside it: a
+	// second spelling here would stamp a sample the store never produces.
+	ID: ids.Nil, Kind: string(crmcontracts.ActivityKindEmail),
+	Subject: "Re: the plan", Body: "Tuesday 14:00 suits us.",
+	To: []string{"we@example.test"}, Cc: []string{"desk@example.test"},
+	HasCalendarPart: true,
+	PriorOutbound: &activities.PriorOutbound{
+		Subject: "the plan", Body: "Here is the plan. When suits you?",
+		At: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+	},
+}
+
+// owedRuleset names the rules a verdict written by this build was judged under.
+//
+// A digest rather than a hand-kept number, because the promise on the row is
+// "these are the rules that judged it" and a constant somebody must remember to
+// bump is a promise the tree cannot keep. Six surfaces already stamp a prompt
+// this way.
+//
+// IT FOLDS THE SYSTEM PROMPT AND THE USER TURN INTO ONE STRING, which departs
+// from all six of them — they digest a system prompt alone — and the departure
+// is deliberate twice over.
+//
+// It is necessary because half the judgement is the rendering: the context_for
+// block is new wording the model reads, and a system-only stamp would hold
+// still while it changed.
+//
+// It must be ONE string because PromptDigest canonicalises each builder's
+// output against the marker THAT STRING declares. The system prompt declares
+// the fence marker; a user turn does not, so a user turn digested in its own
+// builder keeps a live nonce and hashes differently on every process start.
+// Measured, not assumed: folded is stable across fences, and both the user turn
+// alone and the variadic PromptDigest(system, user) form are not. The variadic
+// form is the trap, because it is the shape a tidy-up would reach for and its
+// failure mode is re-judging every workspace after every restart, silently.
+// TestAUserTurnDigestedAloneIsNotStable holds this.
+var owedRuleset = ai.PromptDigest(func(fence promptfence.Fence) string {
+	return owedSystemFor(fence) + "\n" + owedPrompt(fence, []owedCandidate{owedRulesetSample})
+})
 
 // ask makes one structured call for the given messages.
 func (c *OwedClassifier) ask(ctx context.Context, batch []owedCandidate) ([]owedResult, error) {

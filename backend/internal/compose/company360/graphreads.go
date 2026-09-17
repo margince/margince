@@ -107,24 +107,39 @@ func (g *graphAssembly) readOpenDeals() error {
 	if err != nil {
 		return err
 	}
+	// The card ranks by size and keeps the top few, so the figure decides which
+	// deals are DRAWN and in what order — and ordering by a value is reading
+	// it. A reader whose role withholds an amount would otherwise learn from
+	// the layout what the deals band refuses to print: which of this account's
+	// deals is the biggest, and how the rest sort under it.
+	//
+	// So the key is the masked rendering, which is NULL on a row this reader
+	// may not price. NULLS LAST was already here for a deal nobody has priced,
+	// and a withheld figure sorts with them: the deal still appears, in id
+	// order at the tail, and the ranking above it is over figures this reader
+	// may read. No amount reaches Go at all — the card draws a name and a
+	// stage.
+	orderKey, err := auth.MaskedColumnSQL(g.ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return err
+	}
 	// The order is SQL's, so LIMIT gives the true top N — this bound costs no
 	// accuracy, unlike the contact scan above. The total rides the same
 	// statement, for the same reason readEmployment's headcount does: two
 	// snapshots could disagree and make dropped_count negative.
 	rows, err := g.tx.Query(g.ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, s.name, d.amount_minor, count(*) OVER () AS open_total
+		SELECT d.id, d.name, s.name, count(*) OVER () AS open_total
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		%s
-		ORDER BY d.amount_minor DESC NULLS LAST, d.id
-		LIMIT %d`, openDealsWhere(companyPos, dealScope), graphDealCap), args...)
+		ORDER BY %s DESC NULLS LAST, d.id
+		LIMIT %d`, openDealsWhere(companyPos, dealScope), orderKey, graphDealCap), args...)
 	if err != nil {
 		return err
 	}
 	g.openDeals, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (graphDeal, error) {
 		var deal graphDeal
-		err := row.Scan(&deal.dealID, &deal.name, &deal.stageName, &deal.amountMinor,
-			&g.openDealTotal)
+		err := row.Scan(&deal.dealID, &deal.name, &deal.stageName, &g.openDealTotal)
 		return deal, err
 	})
 	if err != nil {

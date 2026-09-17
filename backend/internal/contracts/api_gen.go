@@ -2480,6 +2480,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman         BlockedDomainSource = "human"
+	BlockedDomainSourceNearDuplicate BlockedDomainSource = "near_duplicate"
 	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
 	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
 	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
@@ -2491,6 +2492,8 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
+		return true
+	case BlockedDomainSourceNearDuplicate:
 		return true
 	case BlockedDomainSourceStaleEvidence:
 		return true
@@ -8896,7 +8899,6 @@ func (e ImportOnDuplicate) Valid() bool {
 // Defines values for ImportRunConnector.
 const (
 	ImportRunConnectorCsv        ImportRunConnector = "csv"
-	ImportRunConnectorHubspot    ImportRunConnector = "hubspot"
 	ImportRunConnectorSalesforce ImportRunConnector = "salesforce"
 )
 
@@ -8904,8 +8906,6 @@ const (
 func (e ImportRunConnector) Valid() bool {
 	switch e {
 	case ImportRunConnectorCsv:
-		return true
-	case ImportRunConnectorHubspot:
 		return true
 	case ImportRunConnectorSalesforce:
 		return true
@@ -20922,8 +20922,11 @@ type AuthCapabilities struct {
 type AuthenticationPolicy struct {
 	// SignInProviders Every provider this deployment mounted, each marked with whether the
 	// installation has chosen to offer it — which is a stored choice, not a
-	// guarantee the provider has working credentials. Password is never listed: it
-	// is the method every installation always has and cannot switch off.
+	// guarantee the provider has working credentials. Password is never listed, and
+	// not because it is always there: whether an installation offers it is the
+	// DEPLOYMENT's `auth.password.enabled`, which no stored choice can reach. What
+	// this document governs is the providers, and `/auth/capabilities` reports the
+	// methods a login screen may draw.
 	SignInProviders []SignInProvider `json:"sign_in_providers"`
 }
 
@@ -21292,7 +21295,9 @@ type BlockedDomain struct {
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 	// found named a company; `stale_evidence` means the newest mail from the domain is too
-	// old to mint one from today's site.
+	// old to mint one from today's site; `near_duplicate` means the name it resolved to is
+	// close to a company already here, and which of them this domain belongs to is a
+	// human's call rather than the machine's.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -21304,7 +21309,9 @@ type BlockedDomainAdmission string
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 // found named a company; `stale_evidence` means the newest mail from the domain is too
-// old to mint one from today's site.
+// old to mint one from today's site; `near_duplicate` means the name it resolved to is
+// close to a company already here, and which of them this domain belongs to is a
+// human's call rather than the machine's.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -23833,6 +23840,13 @@ type CompanyFinanceSummary struct {
 	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
 	CompanyId       openapi_types.UUID `json:"company_id"`
 
+	// CoverageEnd The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
+	CoverageEnd *openapi_types.Date `json:"coverage_end,omitempty"`
+
+	// CoverageStart The issue date of the OLDEST invoice this connection has mirrored for the customer, and with `coverage_end` the period every figure on this card describes. Null when the mirror holds none.
+	// A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
+	CoverageStart *openapi_types.Date `json:"coverage_start,omitempty"`
+
 	// LastSyncedAt When the last successful sync finished. Null when none has.
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
 
@@ -23851,6 +23865,8 @@ type CompanyFinanceSummary struct {
 	OpenBalance *Money `json:"open_balance,omitempty"`
 
 	// Overdue The share of the open balance already past its due date.
+	// ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
+	// `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
 	Overdue *Money `json:"overdue,omitempty"`
 
 	// PaymentBehaviour Days-late per settled invoice, oldest first, for the sparkline. Never padded with zeroes, because a zero here reads as "paid exactly on time".
@@ -26549,24 +26565,45 @@ type CreateActivityRequest struct {
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	Kind            CreateActivityRequestKind       `json:"kind"`
-	Links           *[]struct {
+
+	// IcalInstance Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
+	IcalInstance *string `json:"ical_instance,omitempty"`
+
+	// IcalUid The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting.
+	IcalUid *string                   `json:"ical_uid,omitempty"`
+	Kind    CreateActivityRequestKind `json:"kind"`
+	Links   *[]struct {
 		EntityId   openapi_types.UUID                   `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
-	Raw           *map[string]interface{}             `json:"raw,omitempty"`
+
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	Participants *struct {
+		Cc   *[]string `json:"cc,omitempty"`
+		From *string   `json:"from,omitempty"`
+		To   *[]string `json:"to,omitempty"`
+	} `json:"participants,omitempty"`
+
+	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
+	Raw *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
-	Source            string              `json:"source"`
-	SourceId          *string             `json:"source_id,omitempty"`
-	SourceSystem      *string             `json:"source_system,omitempty"`
-	Subject           *string             `json:"subject,omitempty"`
+
+	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
+	RfcMessageId *string `json:"rfc_message_id,omitempty"`
+	Source       string  `json:"source"`
+	SourceId     *string `json:"source_id,omitempty"`
+	SourceSystem *string `json:"source_system,omitempty"`
+	Subject      *string `json:"subject,omitempty"`
+
+	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
+	ThreadKey *string `json:"thread_key,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -26813,7 +26850,7 @@ type CreateDealRoomRequest struct {
 
 // CreateImportRunRequest defines model for CreateImportRunRequest.
 type CreateImportRunRequest struct {
-	// Connector The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
+	// Connector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
 
 	// ContextTagId A tag applied to every record this run CREATES, so a batch stays
@@ -26933,7 +26970,7 @@ type CreateImportRunRequest struct {
 	SourceRef string `json:"source_ref"`
 }
 
-// CreateImportRunRequestConnector The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
+// CreateImportRunRequestConnector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 type CreateImportRunRequestConnector string
 
 // CreateLeadDisqualifyReasonRequest defines model for CreateLeadDisqualifyReasonRequest.
@@ -39286,6 +39323,51 @@ type WorklistComparison struct {
 // when the two rows share a level.
 type WorklistComparisonComparator string
 
+// WorklistContactFacts The human behind the row — whom a reply would go to — and how the silence
+// runs both ways, so a reader knows whose row it is and who wrote last before
+// choosing a verb.
+//
+// Present on every row that names a contact: one whose `subject` is a contact,
+// a waiting message filed against one (whose `subject` may be the deal the
+// thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+// names no human — a deal drifting, a mailbox that stopped.
+//
+// The `id` is the producer's claim and always travels. The label and the
+// moments are the READER's, filled under their own grants; each is absent
+// where the reader may not have it, which is not the same as unnamed or never.
+type WorklistContactFacts struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Label The contact's display name. Absent when the caller may not read the contact.
+	Label *string `json:"label,omitempty"`
+
+	// Touch When they last wrote to us and when we last wrote to them — the same two dates,
+	// over the same walk, that the contact's own page reports as `last_inbound_at` and
+	// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+	// who wrote last.
+	//
+	// Absent from the row when the caller may not read activity, or may not read this
+	// contact: a withheld answer. Present with both nulls for a contact nobody has ever
+	// exchanged a message with.
+	Touch *WorklistContactTouch `json:"touch,omitempty"`
+}
+
+// WorklistContactTouch When they last wrote to us and when we last wrote to them — the same two dates,
+// over the same walk, that the contact's own page reports as `last_inbound_at` and
+// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+// who wrote last.
+//
+// Absent from the row when the caller may not read activity, or may not read this
+// contact: a withheld answer. Present with both nulls for a contact nobody has ever
+// exchanged a message with.
+type WorklistContactTouch struct {
+	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
+	LastInboundAt *time.Time `json:"last_inbound_at"`
+
+	// LastOutboundAt When we last wrote to them. Null means we never have.
+	LastOutboundAt *time.Time `json:"last_outbound_at"`
+}
+
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
 //
 // The same three figures `WorklistReach` reports per source, asked of the thing a
@@ -39569,6 +39651,20 @@ type WorklistItem struct {
 	// source, because one source has several honest answers: a deal past its close
 	// date slips, one merely idle drifts.
 	Consequence WorklistItemConsequence `json:"consequence"`
+
+	// Contact The human behind the row — whom a reply would go to — and how the silence
+	// runs both ways, so a reader knows whose row it is and who wrote last before
+	// choosing a verb.
+	//
+	// Present on every row that names a contact: one whose `subject` is a contact,
+	// a waiting message filed against one (whose `subject` may be the deal the
+	// thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+	// names no human — a deal drifting, a mailbox that stopped.
+	//
+	// The `id` is the producer's claim and always travels. The label and the
+	// moments are the READER's, filled under their own grants; each is absent
+	// where the reader may not have it, which is not the same as unnamed or never.
+	Contact *WorklistContactFacts `json:"contact,omitempty"`
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by

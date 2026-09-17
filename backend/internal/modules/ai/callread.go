@@ -180,7 +180,8 @@ func (s *CallReadStore) ListCalls(
 		// it is independent of this page's cursor and task filter — the
 		// dropdown stays complete no matter what is on screen. is_terminal
 		// matches this list's own universe, so no option filters to nothing.
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`SELECT COALESCE(array_agg(DISTINCT task ORDER BY task), '{}') FROM ai_call WHERE is_terminal`,
 		).Scan(&tasks)
 	})

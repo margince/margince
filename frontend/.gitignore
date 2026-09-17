@@ -4,6 +4,12 @@ dist/
 test-results/
 playwright-report/
 coverage
+# The shard lane's two working directories: .vitest-reports/ is the blob a
+# `make fe-unit FE_SHARD=k/N` run writes and `--merge-reports` reads back, and
+# it must hold BLOBS AND NOTHING ELSE — the merge parses every file in it. The
+# merge's own outputs therefore live one directory over.
+.vitest-reports/
+.vitest-merge/
 # Scratch left behind by a design-review session: a screenshot script or a
 # review tool's cache at the package root carries the author's machine paths,
 # which never belong in a public tree.

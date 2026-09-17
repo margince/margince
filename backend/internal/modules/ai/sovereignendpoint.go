@@ -63,11 +63,13 @@ func requireSovereignEndpoint(label, provider, baseURL string) error {
 		// not be. What is wrong is that it is a NAME.
 		return fmt.Errorf(
 			"ai: routing config: %s: profile sovereign needs an endpoint this installation can verify for itself, and %q is a name — what it resolves to is decided elsewhere and can change after boot. Give the address instead (an IP in a private range, or a loopback address); `localhost` is also accepted",
-			label, host)
+			label, host,
+		)
 	}
 	return fmt.Errorf(
 		"ai: routing config: %s: profile sovereign forbids the host %q — the profile promises zero egress, and that address is not on infrastructure this installation can see is yours. Point it at loopback or a private range (10.x, 172.16-31.x, 192.168.x, or an IPv6 unique-local address)",
-		label, host)
+		label, host,
+	)
 }
 
 // hostOf is parsedEndpoint's host, for the callers that judge the host alone.

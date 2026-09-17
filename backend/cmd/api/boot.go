@@ -208,6 +208,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// about whether the reset is live. It is stated by the deployment rather
 	// than inferred from MARGINCE_ENV, which is still read here for the posture
 	// itself — a different question, and no longer a destructive one.
+	// The one deployment nobody could sign into is refused before it serves.
+	if err := checkALoginMethodRemains(cfg, deployCfg.Auth.PasswordEnabled(), logger); err != nil {
+		return nil, nil, err
+	}
 	allowDataReset := deployCfg.Operations.AllowDataReset
 	// Said out loud at boot because each role reads its own --config: an api
 	// armed beside a worker that was not given the file purges the workspace and
@@ -219,6 +223,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// test_mailbox connector while another role's log claims it is armed.
 	logger.Info("test mailbox connector", "armed", deployCfg.Operations.AllowTestMailbox)
 	opts := []compose.Option{
+		// The switch the check above just validated, carried to the probe the
+		// login screen renders from and the routes behind it — one read, so an
+		// offered method and a served route cannot disagree.
+		compose.WithPasswordLogin(deployCfg.Auth.PasswordEnabled()),
 		compose.WithDataReset(schemaPool, deployCfg.Seeds, allowDataReset),
 		// The same seeds reach the ADR-0105 claim route, so an installation
 		// provisioned by claim lays down the module defaults this file asks
