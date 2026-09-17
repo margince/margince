@@ -950,6 +950,26 @@
   text-decoration: underline;
 }
 
+/* THE COUNT BESIDE AN OPTION, and it is one chip wherever it is drawn: a tab
+   strip, a segmented row, any option whose name is followed by how much sits
+   behind it. Declared here rather than by each host, because every host that
+   styled it reached a slightly different answer and the same record then drew
+   one figure two ways.
+   No ink of its own: it inherits the host's, so the figure goes quiet beside a
+   quiet label and dark beside a pressed one. The minimum width is what keeps a
+   column of chips the same size from 1 to 99, and the centring is what keeps
+   the digit in the middle of it. */
+.optioncount {
+  display: flex;
+  justify-content: center;
+  align-self: center;
+  min-inline-size: var(--space-6);
+  padding-inline: var(--space-1);
+  border-radius: var(--r-xs);
+  background: var(--bgChip);
+  font: var(--fontBodySmall);
+}
+
 .segmented {
   border: 0;
   margin: 0;
@@ -969,11 +989,16 @@
 .segmented button {
   font-family: var(--fontFamilyBody);
   border: 0;
+  /* A ROW, because an option is a word and then what sits behind it: the count
+     chip and the mark are laid on the word's line rather than under it, and
+     `align-items` is what holds all three on one centre line. */
+  display: inline-flex;
+  align-items: center;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
      --bgElevated and answers to that instead. */
   background: transparent;
-  padding: 5px 12px;
+  padding: var(--segmentPaddingY) var(--space-3);
   border-radius: var(--r-sm);
   cursor: pointer;
   /* Unselectable, for `.checkfield`'s reason. */
@@ -985,8 +1010,8 @@
   font-weight: var(--fontWeightMedium);
   box-shadow: var(--shadow-rest);
 }
-.segmented button > .segmented-count {
-  margin-left: 6px;
+.segmented button > .optioncount {
+  margin-left: var(--controlGap);
 }
 
 /* Something waits behind this option. An accent dot rather than an indigo one:
@@ -997,7 +1022,6 @@
   width: 5px;
   height: 5px;
   margin-left: 5px;
-  vertical-align: 2px;
   border-radius: 50%;
   corner-shape: round;
   background: var(--accent);
@@ -1997,11 +2021,13 @@
    The interval between a reading's three lines — what it is, the figure, what
    the figure rests on — is the CARD's, not the row's. ReadingsGrid used to open
    it up to --space-2 for its own cards while a strip's kept --space-1, which is
-   one reading drawn two ways on two pages of the same record. */
+   one reading drawn two ways on two pages of the same record.
+   Each line carries its OWN interval below it rather than one flex `gap` over
+   all of them, because the three are not equal: a name sits close to the figure
+   it names, and the figure stands further off the basis under it. */
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   padding: var(--space-4);
   /* The pane, not the card: a reading sits on translucent ground with a
      hairline, the same surface every zone of a record uses, so a row of them
@@ -2046,6 +2072,7 @@
   line-clamp: 2;
   overflow: hidden;
   text-wrap: pretty;
+  margin-block-end: var(--space-2);
 }
 /* A detail of two facts — how much is failing, and why — is two nodes, and the
    clamp's box lays inline children out on one line. Each fact keeps its own. */
@@ -2054,11 +2081,11 @@
 }
 
 /* The label NAMES the reading; it does not announce it. It is sentence-case
-   text at the meta size in the body's own ink and weight — the rule sets
-   neither, because the figure below it is what carries weight and colour, and
-   it is the figure a reader compares across a row. Five names over five
-   figures that each carried a weight or a tint of their own would read as five
-   headings the figures had to win a fight with.
+   text at the meta size in the SECONDARY ink — quieter than the figure below
+   it, which is what carries weight and colour and is what a reader compares
+   across a row. Five names in the primary ink over five figures read as five
+   headings the figures had to win a fight with; the step down in ink is what
+   settles that without a second weight or a tint.
    The rule owns the ROW: what QUALIFIES the reading — where it came from, what
    it rests on — sits at its far end, beside the name of the reading rather than
    under the figure, so neither competes with the number. */
@@ -2067,6 +2094,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
+  color: var(--textSecondary);
+  margin-block-end: var(--space-1);
 }
 /* The name itself clamps to ONE line, and the chips beside it do not: a row of
    readings whose labels wrap to two lines puts every figure in the row at a
@@ -2092,15 +2121,23 @@
    two readings of one record look like two products, and which face a reading
    drew in was a flag a caller could forget. Digits still line up, through
    `tabular-nums` rather than through a second family.
-   ONE size too, everywhere the card is drawn: 17px in a narrow slot up to 20px
-   on a wide page, which is the range where a money figure with its cents still
-   holds one line. A screen that re-sizes this is the second author of a scale
-   this tier owns. */
+   ONE size too, everywhere the card is drawn — the heading rung a page title
+   takes, so a figure reads as the largest thing on its card whatever the card
+   is sitting in. A screen that re-sizes this is the second author of a scale
+   this tier owns.
+   `font-variant-numeric` FOLLOWS the shorthand: `font` resets `font-variant`,
+   so tabular figures declared above it would be thrown away and a column of
+   readings would stop lining up. The figure holds ONE line and ellipsises what
+   does not fit, rather than breaking mid-number: a money reading wrapped
+   between its thousands and its cents reads as two figures. */
 .stat-card-value {
-  font-family: var(--fontFamilyHeading);
+  font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-block-end: var(--space-2);
 }
 
 /* The receipt under a reading. Not a fourth line of it — it is what the

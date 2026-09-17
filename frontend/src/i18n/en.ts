@@ -194,7 +194,6 @@ export const en = {
   "worklist.lead.lastTouch": "last activity {date}",
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} — unconfirmed",
-  "brief.readings.openRisk": "Review deal work",
   "brief.readings.riskBasis":
     "expected deal value; unpriced deals are excluded",
   "brief.readings.risk": "Deal value needing attention",
@@ -3199,14 +3198,6 @@ export const en = {
   "brief.readings.floorTip":
     "A source was read to its limit, so this figure is a floor.",
   "brief.readings.urgent": "Urgent",
-  // THE DOOR'S OWN WORD, per reading. Five cards each saying "Open" were five
-  // identical entries in a screen reader's control list. Each says what its
-  // door DOES instead — replacing the generic word rather than appending to it,
-  // which is what produced "Open Open pipeline".
-  "brief.readings.openUrgent": "Review urgent work",
-  "brief.readings.openMeetings": "View today's meetings",
-  "brief.readings.openLeads": "Review leads owed a reply",
-  "brief.readings.openDecisions": "Review decisions",
   "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
   "brief.readings.decisions": "Reviews needed",
   "brief.readings.decisionsBasis": "proposals and record checks",

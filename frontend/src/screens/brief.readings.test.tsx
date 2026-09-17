@@ -272,7 +272,10 @@ describe("the brief readings strip", () => {
       scope: "team",
     });
     await user.click(
-      screen.getByRole("button", { name: en["brief.readings.openRisk"] }),
+      screen.getByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.risk"],
+      }),
     );
     expect(window.location.hash).toContain("scope=team");
     expect(window.location.hash).toContain("filter=deals_at_risk");
@@ -478,7 +481,7 @@ describe("the brief readings strip", () => {
     // and a focus event bubbles to the wrapper carrying the tip.
     screen
       .getByRole("button", {
-        name: en["brief.readings.openUrgent"],
+        name: en["stat.open"],
         description: en["brief.readings.urgent"],
       })
       .focus();
@@ -575,40 +578,33 @@ describe("risk scope and reading actions", () => {
     const user = userEvent.setup();
     draw();
     await user.click(
-      screen.getByRole("button", { name: en["brief.readings.openRisk"] }),
+      screen.getByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.risk"],
+      }),
     );
     expect(window.location.hash).toContain("scope=mine");
     expect(window.location.hash).toContain("filter=deals_at_risk");
   });
-  // EVERY DOOR NAMES ITS OWN ACTION. The strip's doors all read "Open" once,
-  // which is one entry repeated in a screen reader's control list: the card
-  // above each says open WHAT, and a reader tabbing the strip never sees it.
+  // EVERY DOOR SAYS "OPEN", and the READING is what tells one from the next.
+  // One control, one word: a door that named its own destination gave the
+  // product several spellings of the same thing, and a reading already says
+  // what it is on the card the door sits in.
   //
-  // Both halves are asserted, because each covers the other's blind spot. The
-  // NAMES must be distinct — that is the defect. The DESCRIPTIONS must still
-  // carry each reading's label — that is what the generic word relied on, and a
-  // named door that dropped it would read as an action over no subject.
+  // So the strip's doors are told apart by their DESCRIPTION, which is what a
+  // screen reader reads after the name — and it must be there and must be the
+  // reading's own, or the strip is four identical entries in a control list.
   //
-  // Asserted as a SET: a per-card check passes on four doors named identically.
-  it("names every reading's door for its own action", async () => {
+  // Asserted as a SET: a per-card check passes on four doors described alike.
+  it("says Open on every reading's door and names the reading beside it", async () => {
     drawInZone("Europe/Berlin");
 
     await screen.findByText(en["brief.readings.urgent"]);
-    // Four of the five lanes come from the worklist answer and each has a door.
-    // The pipeline slot's read has not landed under this stub, and an unread
-    // figure is offered no way out.
-    const doors = [
-      en["brief.readings.openUrgent"],
-      en["brief.readings.openMeetings"],
-      en["brief.readings.openLeads"],
-      en["brief.readings.openDecisions"],
-    ].map((name) => screen.getByRole("button", { name }));
+    // All five readings on the plate offer a way out under this stub: the four
+    // worklist lanes and the deal-value slot beside them.
+    const doors = screen.getAllByRole("button", { name: en["stat.open"] });
 
-    expect(new Set(doors).size).toBe(4);
-    // Not one of them still says the generic word.
-    expect(
-      screen.queryAllByRole("button", { name: en["stat.open"] }),
-    ).toHaveLength(0);
+    expect(doors).toHaveLength(5);
 
     const descriptions = doors.map((door) =>
       (door.getAttribute("aria-describedby") ?? "")
@@ -617,7 +613,7 @@ describe("risk scope and reading actions", () => {
         .join(" "),
     );
     expect(descriptions.every((text) => text.length > 0)).toBe(true);
-    expect(new Set(descriptions).size).toBe(4);
+    expect(new Set(descriptions).size).toBe(5);
   });
 
   // NOBODY IS BLOCKED BY A DUPLICATE PAIR. The strip said "somebody is blocked
@@ -702,16 +698,17 @@ describe("risk scope and reading actions", () => {
     expect(screen.queryByText(/holding up customer work/)).toBeNull();
   });
 
-  // A NAMED DOOR HAS TO GO WHERE ITS NAME SAYS. Distinct names and distinct
+  // A DOOR HAS TO GO WHERE ITS READING SAYS. Distinct descriptions and distinct
   // destinations are two properties, and the test above only holds the first:
-  // it never presses anything, so swapping two labels — or wiring the meetings
-  // door to the leads lane — passes it. This one presses each door and reads
-  // where it landed.
+  // it never presses anything, so wiring the meetings door to the leads lane
+  // passes it. This one presses each door and reads where it landed — and it
+  // finds each by the reading it describes, because the word on all five is the
+  // same one.
   it.each([
-    { door: "openUrgent", filter: "urgent" },
-    { door: "openMeetings", filter: "meetings" },
-    { door: "openLeads", filter: "leads" },
-    { door: "openDecisions", filter: "decisions" },
+    { reading: "urgent", filter: "urgent" },
+    { reading: "meetings", filter: "meetings" },
+    { reading: "leads", filter: "leads" },
+    { reading: "decisions", filter: "decisions" },
   ] as const)("opens the $filter lane from its own door", async (each) => {
     draw();
     const user = userEvent.setup();
@@ -719,7 +716,8 @@ describe("risk scope and reading actions", () => {
     try {
       await user.click(
         screen.getByRole("button", {
-          name: en[`brief.readings.${each.door}`],
+          name: en["stat.open"],
+          description: en[`brief.readings.${each.reading}`],
         }),
       );
 
@@ -750,7 +748,10 @@ describe("risk scope and reading actions", () => {
     const user = userEvent.setup();
     draw({ revenue_at_risk_minor: null, revenue_currency: null });
     await user.click(
-      screen.getByRole("button", { name: en["brief.readings.openRisk"] }),
+      screen.getByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.risk"],
+      }),
     );
     expect(window.location.hash).toContain("filter=deals_at_risk");
   });

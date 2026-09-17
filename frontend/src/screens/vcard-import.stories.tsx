@@ -96,9 +96,11 @@ export const MixedReport: Story = {
         }),
       );
     }
-    await expect(
-      await canvas.findByTestId("vcard-import-report"),
-    ).toBeVisible();
+    // The report lands inside the same arriving dialog `Empty` waits out: the
+    // node is in the DOM a frame before `overlay-arrive` has faded it in, so
+    // the settled state is what this story asserts.
+    const report = await canvas.findByTestId("vcard-import-report");
+    await waitFor(() => expect(report).toBeVisible());
   },
 };
 
@@ -134,6 +136,9 @@ export const Refused: Story = {
         new File(["nonsense"], "kaputt.vcf", { type: "text/vcard" }),
       );
     }
-    await expect(await canvas.findByTestId("vcard-import-error")).toBeVisible();
+    // Same arrival as the report above: query the node, then wait for it to be
+    // visible rather than reading the half-faded dialog.
+    const error = await canvas.findByTestId("vcard-import-error");
+    await waitFor(() => expect(error).toBeVisible());
   },
 };

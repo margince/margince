@@ -108,7 +108,6 @@ export function StatCard({
   source,
   alert,
   onOpen,
-  openLabel,
   meter,
   narrow,
 }: Readonly<{
@@ -123,13 +122,6 @@ export function StatCard({
   // ONE control and not two — the basis trigger layers above it and keeps its
   // own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
-  // What the door SAYS, where "Open" is not enough. The default stays "Open"
-  // and 90-odd callers keep it, because doors each inventing a destination were
-  // several spellings of one control. Five readings on ONE plate are the case
-  // that does not cover: five buttons reading "Open" name none of them. This
-  // REPLACES the word rather than appending — appending produced "Open Open
-  // pipeline", which is why the name was generic.
-  openLabel?: string;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
@@ -225,16 +217,19 @@ export function StatCard({
           competed with the label for the first glance. */}
       {onOpen && (
         <span className="stat-card-foot">
-          {/* The card's label reaches a screen reader as this button's
-              DESCRIPTION whatever the word is — folded into the NAME it read
-              "Open Open pipeline". A named door names the ACTION. */}
+          {/* THE DOOR SAYS "Open", ALWAYS. One word for one control: a caller
+              naming its own destination gave the product several spellings of
+              the same door, and the reading a door belongs to is already said
+              beside it. Which reading it opens reaches a screen reader as this
+              button's DESCRIPTION — folded into the NAME it read "Open Open
+              pipeline", so it is `aria-describedby` and never the word. */}
           <button
             type="button"
             className="stat-card-open"
             onClick={onOpen}
             aria-describedby={labelId}
           >
-            {openLabel ?? t("stat.open")}
+            {t("stat.open")}
             <span className="stat-card-arrow" aria-hidden="true">
               {"\u2192"}
             </span>

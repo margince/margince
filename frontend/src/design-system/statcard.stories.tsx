@@ -40,9 +40,9 @@ type Story = StoryObj<typeof StatCard>;
 // foot has to lean from anywhere on the card and a keyboard Tab has to ring the
 // CARD rather than the two words at the bottom of it; without one the tile is
 // inert and must show neither. The word is the component's — every door in the
-// product says "Open →" — and only the accessible name differs, carrying the
-// reading so five doors on one page are five different doors to a screen
-// reader.
+// product says "Open →", and there is no prop to rename it — so what tells one
+// from another is the DESCRIPTION, which carries the reading a door opens and
+// is what a screen reader reads after the name.
 //
 // The first tile is the case the layering exists for. Its receipt chip sits
 // over the door's stretched target: pressing the chip has to open the working

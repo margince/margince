@@ -212,7 +212,6 @@ export const vi = {
   "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
   "worklist.deal.omitted": "không nằm trong dự báo",
   "worklist.deal.provisional": "dự kiến chốt {date} — chưa xác nhận",
-  "brief.readings.openRisk": "Xem công việc về cơ hội",
   "brief.readings.riskBasis":
     "giá trị giao dịch kỳ vọng; không gồm giao dịch chưa định giá",
   "brief.readings.risk": "Giá trị cơ hội cần chú ý",
@@ -3068,10 +3067,6 @@ export const vi = {
   "brief.readings.floorTip":
     "Một nguồn đã được đọc đến giới hạn, nên con số này là mức tối thiểu.",
   "brief.readings.urgent": "Việc gấp",
-  "brief.readings.openUrgent": "Xem việc gấp",
-  "brief.readings.openMeetings": "Xem lịch họp hôm nay",
-  "brief.readings.openLeads": "Xem lead cần trả lời",
-  "brief.readings.openDecisions": "Xem quyết định",
   "brief.readings.urgentBasis": "có người đang chờ hoặc một cam kết sắp lỡ",
   "brief.readings.decisions": "Cần xem xét",
   "brief.readings.decisionsBasis": "đề xuất và kiểm tra hồ sơ",

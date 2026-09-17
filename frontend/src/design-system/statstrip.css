@@ -168,6 +168,13 @@
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
+  /* The tile's own intervals are the COLUMN's — a name over a figure over its
+     basis. Folded into a row the three sit side by side on grid lines the plate
+     spaces, so the margins under them would open a gap where the plate asked
+     for none. */
+  .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row > * {
+    margin-block-end: 0;
+  }
   .stat-strip:has(.stat-card-narrow-row) .stat-card-label-text {
     display: block;
     overflow: visible;

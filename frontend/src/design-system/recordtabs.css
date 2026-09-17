@@ -171,12 +171,6 @@
   cursor: default;
 }
 
-/* Quieter than the label it follows: the word is what a reader is looking for
-   and the number is what they check once they have found it. */
-.recordtabs-count {
-  color: var(--textSecondary);
-}
-
 /* Something waits behind this tab. An accent dot rather than an indigo one:
    indigo claims an agent proposed something, and what this marks is only that
    a surface holds an action nobody has taken yet. */

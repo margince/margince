@@ -206,7 +206,6 @@ export const de = {
   "worklist.lead.lastTouch": "letzte Aktivität {date}",
   "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional": "Geplanter Abschluss {date} — unbestätigt",
-  "brief.readings.openRisk": "Dealaufgaben prüfen",
   "brief.readings.riskBasis":
     "erwarteter Deal-Wert; Deals ohne Bewertung sind nicht enthalten",
   "brief.readings.risk": "Dealwert mit Handlungsbedarf",
@@ -3099,10 +3098,6 @@ export const de = {
   "brief.readings.floorTip":
     "Eine Quelle wurde bis zur Grenze gelesen, diese Zahl ist also ein Mindestwert.",
   "brief.readings.urgent": "Dringend",
-  "brief.readings.openUrgent": "Dringendes prüfen",
-  "brief.readings.openMeetings": "Heutige Termine ansehen",
-  "brief.readings.openLeads": "Offene Leads prüfen",
-  "brief.readings.openDecisions": "Entscheidungen prüfen",
   "brief.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
   "brief.readings.decisions": "Offene Prüfungen",
   "brief.readings.decisionsBasis": "Vorschläge und Datenprüfungen",

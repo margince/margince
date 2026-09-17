@@ -1147,27 +1147,28 @@ export function SectionHeader({
  * each one.
  *
  * One component because the count is four decisions, not a number: tabular
- * figures so a column of them lines up, the reader's own number format, the host's
- * class, and the SEPARATOR — which is the one that was missing. Both strips
- * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
- * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
+ * figures so a column of them lines up, the reader's own number format, the
+ * CHIP it is drawn as, and the SEPARATOR — which is the one that was missing.
+ * Both strips rendered `{label}{count}` as adjacent nodes, so the accessible
+ * name a screen reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
  * visually hidden because the gap between them is already drawn in CSS; what it
  * fixes is the spoken name, where there was nothing between the two at all.
+ *
+ * The chip is the component's own (`.optioncount`, atoms.css) and takes no
+ * class from its caller: every host was styling the same figure itself, which
+ * is how one count came to be drawn two ways on two strips of one record. It
+ * carries no ink of its own either — it inherits the host's, so the figure goes
+ * quiet beside a quiet label and dark beside a pressed one.
  *
  * It renders INSIDE the option's button, which is what puts the figure in that
  * option's accessible name rather than leaving it to a sighted reader alone.
  */
-export function OptionCount({
-  count,
-  className,
-}: Readonly<{ count: number; className: string }>) {
+export function OptionCount({ count }: Readonly<{ count: number }>) {
   const { locale } = useLocale();
   return (
     <>
       <span className="sr-only">, </span>
-      <span className={`${className} t-num`}>
-        {formatNumber(count, locale)}
-      </span>
+      <span className="optioncount t-num">{formatNumber(count, locale)}</span>
     </>
   );
 }
@@ -1219,9 +1220,7 @@ export function SegmentedControl<Option extends string>({
             onClick={() => onChange(option)}
           >
             {labels[option]}
-            {count !== undefined && (
-              <OptionCount count={count} className="segmented-count" />
-            )}
+            {count !== undefined && <OptionCount count={count} />}
             {marks?.[option] && <span className="segmented-mark" aria-hidden />}
           </button>
         );

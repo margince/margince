@@ -254,7 +254,6 @@ export const RowSlotsInANarrowRail: Story = {
           value="2"
           detail="Assigned and awaiting your first reply"
           onOpen={() => {}}
-          openLabel="Review leads owed a reply"
         />
         <StatCard
           narrow="row"

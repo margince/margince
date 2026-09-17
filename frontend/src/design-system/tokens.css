@@ -415,6 +415,11 @@
   /* The line icon a control carries. Sized by the control rather than at the
      call site, because lucide's own default is 24px. */
   --controlIcon: 16px;
+  /* The vertical inset of ONE option inside a segmented track. Off the 4px
+     scale on purpose and therefore a token rather than a raw value: the track
+     draws its own 3px around the options, and the option repeats it so a
+     pressed one sits centred in a control that measures --controlHeight. */
+  --segmentPaddingY: 3px;
 
   /* A TEXT INPUT is taller than a button, and that is the one place the two
      part company: a button is a verb you hit, an input is a place you put
