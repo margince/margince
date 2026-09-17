@@ -489,3 +489,101 @@ func TestAnAccountWhoseOnlyMailIsItsContactsIsStillDrawnWhenItGoesQuiet(t *testi
 			"an account with no direct link is still an account somebody stopped talking to", got)
 	}
 }
+
+// One silence on a live account is ONE question, asked on the account.
+//
+// Before the collapse this seeded five tasks for one quiet spell — one on the
+// company, one on its open deal, one on each employed stakeholder — and a rep
+// opening the queue could not tell they were all the same silence. The deal and
+// the stakeholders fold into the account because CompanyReachSet already folds
+// their touches into its anchor: the account's reminder names the same date
+// their own would have.
+func TestOneQuietAccountAsksForOneCheckIn(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Quiet Account", nil)
+	deal := e.SeedDeal(t, "Quiet Account Renewal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+
+	stakeholders := make([]ids.UUID, 0, 3)
+	for _, name := range []string{"Champion", "Economic Buyer", "Technical Lead"} {
+		c := e.SeedContact(t, name, nil)
+		seedStakeholderSeat(t, owner, c, deal)
+		seedEmployment(t, owner, c, company)
+		backdateCreatedAt(t, owner, "contact", c, longEstablished)
+		linkQuietTouch(t, owner, e.WS, "contact", c)
+		stakeholders = append(stakeholders, c)
+	}
+	linkQuietTouch(t, owner, e.WS, "company", company)
+	linkQuietTouch(t, owner, e.WS, "deal", deal)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "company", company); got != 1 {
+		t.Errorf("reminder tasks on the quiet account = %d, want exactly 1", got)
+	}
+	if got := taskCountOn(t, e, "deal", deal); got != 0 {
+		t.Errorf("reminder tasks on the account's own open deal = %d, want 0 — it folds into the account", got)
+	}
+	for i, c := range stakeholders {
+		if got := taskCountOn(t, e, "contact", c); got != 0 {
+			t.Errorf("reminder tasks on employed stakeholder %d = %d, want 0 — they fold into their employer", i, got)
+		}
+	}
+}
+
+// A deal nobody filed under an account has no account to fold into, so it keeps
+// its own reminder: collapsing it would silence the only question anyone asks
+// about that deal.
+func TestADealWithNoAccountKeepsItsOwnCheckIn(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	deal := e.SeedDeal(t, "Unattached Deal", pipeline, open, nil)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+	linkQuietTouch(t, owner, e.WS, "deal", deal)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "deal", deal); got != 1 {
+		t.Errorf("reminder tasks on a deal with no account = %d, want exactly 1", got)
+	}
+}
+
+// A stakeholder employed SOMEWHERE ELSE is not covered by the account whose
+// deal they sit on: that account's anchor never sees their mail, because the
+// fold runs through employment. Collapsing on the seat would silence them.
+func TestAStakeholderEmployedElsewhereKeepsTheirOwnCheckIn(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	account := e.SeedCompany(t, "Buying Account", nil)
+	deal := e.SeedDeal(t, "Buying Account Deal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, account)
+	elsewhere := e.SeedCompany(t, "Consultancy", nil)
+	advisor := e.SeedContact(t, "External Advisor", nil)
+	seedStakeholderSeat(t, owner, advisor, deal)
+	seedEmployment(t, owner, advisor, elsewhere)
+	for _, row := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", account}, {"company", elsewhere}, {"deal", deal}, {"contact", advisor}} {
+		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
+	}
+	linkQuietTouch(t, owner, e.WS, "contact", advisor)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "contact", advisor); got != 1 {
+		t.Errorf("reminder tasks on a stakeholder employed elsewhere = %d, want exactly 1 — no account's anchor covers them", got)
+	}
+}
