@@ -569,3 +569,77 @@ func TestOfferRenderHandler_AnotherSeatsDealDeniedBeforeAnyBlobWrite(t *testing.
 		t.Fatalf("the owner's PDF must be byte-identical after a denied render, got %d bytes want %d", len(survived), len(sent))
 	}
 }
+
+// seedAnchorLegalName plants the installation's own company with a legal name,
+// and says whether it has been confirmed. Both rows, because the sidecar is
+// where the provenance lives and the column is where the value does — that
+// split is the whole subject of this pair.
+func seedAnchorLegalName(t *testing.T, e *Env, legalName string, confirmed bool) {
+	t.Helper()
+	anchor := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, display_name, legal_name, is_anchor, source, captured_by)
+		VALUES ($1, 'Anchor Display', $2, true, 'manual', 'human:x')`, anchor, legalName)
+	verified := `NULL::timestamptz, NULL::uuid`
+	if confirmed {
+		verified = `now(), $3`
+	}
+	args := []any{anchor, legalName}
+	if confirmed {
+		args = append(args, e.AdminUser)
+	}
+	e.WsExec(t, `INSERT INTO company_profile_field
+		(company_id, field, value, source, captured_by, evidence_snippet, source_url, confidence,
+		 verified_at, verified_by)
+		VALUES ($1, 'legal_name', $2, 'site_read', 'agent:enrich', 'Impressum: `+legalName+`',
+		        'https://anchor.test/impressum', 0.9, `+verified+`)`, args...)
+}
+
+// The issuer of an offer is the one making the legal claim on it, and until the
+// anchor company could answer, it was the only name on the page with no
+// provenance behind it — while the BUYER block on the same page read a
+// confirmed record.
+//
+// The pair is the point: the same installation, the same anchor legal name, and
+// the only thing that moves is whether it was confirmed by a human.
+func TestOfferRenderIssuerPrefersAConfirmedLegalName(t *testing.T) {
+	e := Setup(t)
+	seedAnchorLegalName(t, e, "Anchor Holding GmbH", true)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Issuer name fixture", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{})
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	if ing.IssuerName != "Anchor Holding GmbH" {
+		t.Errorf("a draft rendered as %q, want the confirmed legal name — the issuer block must "+
+			"mirror the buyer block it shares a page with", ing.IssuerName)
+	}
+}
+
+func TestOfferRenderIssuerIgnoresAnUnconfirmedLegalName(t *testing.T) {
+	e := Setup(t)
+	// The same name, proposed by a site read and confirmed by no one. Printing
+	// it would let a public web page re-brand the next quote this installation
+	// sends, which is the change nobody would see happen.
+	seedAnchorLegalName(t, e, "Anchor Holding GmbH", false)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Issuer name fixture", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{})
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	if ing.IssuerName == "Anchor Holding GmbH" {
+		t.Error("an unconfirmed proposal reached a document; only a human confirmation may change " +
+			"what an installation issues under")
+	}
+	if ing.IssuerName == "" {
+		t.Error("nothing was printed at all — the settings name is what an installation goes on " +
+			"issuing under until somebody confirms another")
+	}
+}
