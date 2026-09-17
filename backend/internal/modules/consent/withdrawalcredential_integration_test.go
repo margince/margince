@@ -881,3 +881,36 @@ func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
 		t.Errorf("refused with %v, which does not say what to do instead", err)
 	}
 }
+
+// A PRESS WITH NOBODY BEHIND IT WRITES NOTHING.
+//
+// communication_suppression.captured_by comes from the authenticated principal
+// and never from the request, so a context carrying no actor has no answer to
+// "who recorded this stop". The refusal is what stops the row being written
+// with that column unanswered — a live suppression a later reader cannot
+// attribute, and one no lift can be authorised against.
+func TestAPressWithNoActorBoundRecordsNothing(t *testing.T) {
+	e := setupChannelConsent(t)
+	address := "no-actor-" + e.ws.String() + "@example.test"
+	unattributed := principal.WithWorkspaceID(context.Background(), e.ws)
+
+	err := e.store.db.Tx(unattributed, func(tx pgx.Tx) error {
+		return e.store.StopForCredentialTx(unattributed, tx, WithdrawalRef{
+			Address: address,
+			Scope:   WithdrawalScopeAllMarketing,
+		})
+	})
+
+	if err == nil {
+		t.Fatal("a press with no principal recorded a stop; captured_by would name nobody")
+	}
+	var live int
+	if queryErr := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_suppression WHERE lower(address) = $1`,
+		address).Scan(&live); queryErr != nil {
+		t.Fatalf("reading what the refused press left: %v", queryErr)
+	}
+	if live != 0 {
+		t.Errorf("the refused press left %d row(s) behind", live)
+	}
+}
