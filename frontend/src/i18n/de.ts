@@ -4721,6 +4721,15 @@ export const de = {
     "Diese Pflichten nennen Kontakte und wie wir sie erhalten haben. Sie werden nur im Datenschutz-Eingang gezeigt.",
   "notice.dueAt": "Fällig am {date}",
   "notice.overdue": "Überfällig",
+  "notifications.bell": "Meldungen",
+  "notifications.bellWaiting": "Meldungen, {count} wartet",
+  "notifications.centre": "Meldungen",
+  "notifications.markAllRead": "Alle als gelesen markieren",
+  "notifications.markRead": "Als gelesen markieren",
+  "notifications.new": "Neu",
+  "notifications.byAgent": "Von einem Agenten",
+  "notifications.empty":
+    "Bisher ist nichts eingegangen. Was das Produkt Ihnen mitteilt, erscheint hier.",
   "notifications.title": "Wie Sie von welcher Art erfahren",
   "notifications.sub":
     "Jede Meldung bleibt in Ihrem Meldungszentrum, was Sie hier auch wählen. Dies entscheidet, was außerdem geschieht, wenn eine eintrifft.",

@@ -2,7 +2,7 @@ import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
 
-import { ENTITY, isEntityKind } from "../app/entity";
+import { ENTITY, recordRoute } from "../app/entity";
 import { routeHash } from "../app/router";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import {
@@ -44,17 +44,14 @@ type T = ReturnType<typeof useT>;
 
 // Which record an item points at, as an address the router understands.
 //
-// Through the entity registry, never a switch written here: the record types
-// have route names of their own (`contacts`, not `contacts`), and a second
-// spelling of them sends a reader to a page that does not exist. An activity
-// resolves to nothing on purpose — it is a timeline entry rather than a record
-// with a page, so naming it on the row is honest and linking it is not.
+// Through `recordRoute`, which is the one place the product decides whether a
+// typed reference off the wire may be linked at all — the approval undo and the
+// notification centre ask it too. A switch written here would be a second
+// spelling of the record types, and the reader it sent to a page that does not
+// exist would have no way of telling which copy was wrong.
 export function subjectHref(item: WorklistItem): string | undefined {
-  const subject = item.subject;
-  if (!subject || !isEntityKind(subject.type)) {
-    return undefined;
-  }
-  return routeHash(ENTITY[subject.type].route(subject.id));
+  const route = recordRoute(item.subject?.type, item.subject?.id);
+  return route === undefined ? undefined : routeHash(route);
 }
 
 // Sources without record pages link to their existing work surface.

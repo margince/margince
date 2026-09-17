@@ -4643,13 +4643,22 @@ export const vi = {
     "Những nghĩa vụ này nêu tên liên hệ và cách chúng ta có được họ, nên chỉ hiển thị trong hộp thư quyền riêng tư.",
   "notice.dueAt": "Đến hạn {date}",
   "notice.overdue": "Quá hạn",
+  "notifications.bell": "Thông báo",
+  "notifications.bellWaiting": "Thông báo, {count} đang chờ",
+  "notifications.centre": "Thông báo",
+  "notifications.markAllRead": "Đánh dấu tất cả đã đọc",
+  "notifications.markRead": "Đánh dấu đã đọc",
+  "notifications.new": "Mới",
+  "notifications.byAgent": "Do tác nhân tạo",
+  "notifications.empty":
+    "Chưa có gì gửi đến. Những điều sản phẩm cần cho bạn biết sẽ xuất hiện ở đây.",
   "notifications.title": "Mỗi loại đến với bạn bằng cách nào",
   "notifications.sub":
     "Mọi thông báo đều được giữ trong trung tâm thông báo của bạn, bất kể bạn chọn gì ở đây. Lựa chọn này quyết định điều gì xảy ra thêm khi một thông báo đến.",
   "notifications.saveFailed": "Lựa chọn đó chưa được lưu",
   "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
   "notifications.class.approval_pending.help":
-    "Có người cần quyết định của bạn để công việc của họ tiếp tục được.",
+    "Đồng nghiệp cần quyết định của bạn để công việc của họ tiếp tục được.",
   "notifications.class.automation.label": "Tự động hoá đã chạy",
   "notifications.class.automation.help":
     "Một quy tắc của công ty này đã chạy, hoặc đã không chạy được.",
@@ -4664,7 +4673,7 @@ export const vi = {
     "Bảo trì, một giới hạn đã đạt tới, và mọi điều khác mà bản cài đặt phải cho bạn biết.",
   "notifications.class.coach.label": "Lời nhắc của đồng nghiệp",
   "notifications.class.coach.help":
-    "Một người trong nhóm bạn chỉ ra một deal, một câu trả lời hoặc một khối tồn đọng của bạn. Những lời nhắc này luôn đến được với bạn theo cách nào đó, nên không thể tắt.",
+    "Đồng nghiệp trong nhóm bạn chỉ ra một deal, một câu trả lời hoặc một khối tồn đọng của bạn. Những lời nhắc này luôn đến được với bạn theo cách nào đó, nên không thể tắt.",
   "notifications.delivery.off": "Tắt",
   "notifications.delivery.in_app": "Trong ứng dụng",
   "notifications.delivery.email": "Qua email",

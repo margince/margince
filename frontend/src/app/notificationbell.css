@@ -1,0 +1,93 @@
+/* ===== the notification centre in the strip =====
+ * The bell and the panel behind it. Both live here rather than in topbar.css
+ * because the panel is PORTALLED to the body: the strip clips what hangs below
+ * it, so the panel is not a descendant of the bar and could never be styled
+ * from a rule nested under it. */
+
+/* The box the count is pinned to. `position: relative` is the whole job — the
+   trigger inside is an ordinary design-system Button and owns its own
+   geometry, which is why it wears no class of its own here. */
+.notifbell {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* The count, pinned to the glyph's corner the way the rail pins its own. It
+   only PLACES the badge; the badge draws itself. `pointer-events: none` so the
+   figure is part of the target rather than a second one inside it. */
+.notifbell-count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  pointer-events: none;
+}
+
+/* Under the strip and pinned to its right edge, where the bell is. The width is
+   a reading measure rather than the trigger's: this holds sentences.
+   Above the bar (20) because it hangs out of it, below the modal overlay (50),
+   which may legitimately cover the whole chrome. */
+.notifbell-loose {
+  position: fixed;
+  top: calc(var(--topbarH) + var(--space-1));
+  right: var(--pageGutter);
+  z-index: 25;
+  width: min(380px, calc(100vw - var(--space-8)));
+  /* The history is longer than the screen. The panel keeps its head in view and
+     scrolls its own body — a panel as tall as the list would push its own
+     "Mark all read" off the bottom of the window. */
+  max-height: min(560px, calc(100vh - var(--topbarH) - var(--space-8)));
+  overflow-y: auto;
+  box-shadow: var(--shadow-pop);
+}
+
+.notifbell-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.notifrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.notifrow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* A notice already answered is HISTORY, and reads as history: the ink comes
+   down to the caption's share so the eye passes over it on its way to what is
+   still waiting. Not hidden and not struck through — it is still something the
+   reader may want to find again. */
+.notifrow-settled .notifrow-subject {
+  color: var(--textMeta);
+}
+
+.notifrow-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.notifrow-subject {
+  font-size: var(--fs-body);
+  color: var(--textPrimary);
+}
+
+/* The words wear `.t-sub`; this only takes the paragraph margin off them. */
+.notifrow-body {
+  margin: 0;
+}
+
+.notifrow-verb {
+  display: flex;
+  justify-content: flex-start;
+}

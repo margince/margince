@@ -4843,6 +4843,15 @@ export const en = {
     "These duties name contacts and how we obtained them, so they are shown to the privacy inbox only.",
   "notice.dueAt": "Due {date}",
   "notice.overdue": "Overdue",
+  "notifications.bell": "Notifications",
+  "notifications.bellWaiting": "Notifications, {count} waiting",
+  "notifications.centre": "Notifications",
+  "notifications.markAllRead": "Mark all read",
+  "notifications.markRead": "Mark read",
+  "notifications.new": "New",
+  "notifications.byAgent": "By an agent",
+  "notifications.empty":
+    "Nothing has come in yet. What the product tells you about arrives here.",
   "notifications.title": "How each kind reaches you",
   "notifications.sub":
     "Every notice is kept in your notification centre whatever you choose here. This decides what else happens when one lands.",
