@@ -193,6 +193,17 @@ One host, not two, because three things cross the split:
 
 Point liveness at `/healthz` and readiness at `/readyz`.
 
+`/readyz` also answers 503 while the **database is behind the binary** — the
+versions this build ships that the ledger does not record, for the core and
+custom namespaces and for every composed unit. That is the ordinary rolling
+window: the new binary is up, the migration has not run, and its routes and
+jobs would fail on tables that do not exist yet. The process keeps running and
+recovers on its own once `migrate up` lands, so no restart is needed; the
+server log names the namespace and the versions, while the probe body names
+only the check (`unready: schema-migrations`). The worker probes the same
+thing, and for a sharper reason — its dispatcher ticks on a cadence, so there
+is no request to carry the failure back to anybody.
+
 Custom-field creation also needs the API's owner-role schema pool. The image
 entrypoint supplies it automatically from `MARGINCE_OWNER_DSN`; `make dev`
 supplies the selected stack's owner connection. For a direct binary launch,

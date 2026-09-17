@@ -69,6 +69,12 @@ var inlineMigrators = gatekit.Waive(map[string]string{
 		"whole suite, so the cost it opts back into is negligible. It now carries `integration && bench` " +
 		"and no merge gate runs it, but the waiver stays: this gate walks every _test.go file whatever tag " +
 		"it carries, and the file still calls dbmigrate.Up.",
+	"internal/compose/integration/schemaready/schemaready_integration_test.go": "migrating IS the act " +
+		"under test, the same ground the migrationsPackage carve-out stands on: the suite walks one " +
+		"synthetic unit's namespace through never-applied, applied-and-behind and at-head to prove " +
+		"/readyz answers each differently. A pre-migrated schema cannot stand in for a state whose " +
+		"whole point is that the schema is NOT there. It applies two trivial migrations of its own " +
+		"namespace and drops nothing, so the cost it opts back into is two statements.",
 })
 
 func TestIntegrationSuitesMigrateOncePerProcess(t *testing.T) {
