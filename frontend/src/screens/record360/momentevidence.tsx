@@ -54,7 +54,17 @@ export function MomentEvidence({
         return (
           <li key={`${item.type}-${item.id ?? item.label}`} className="t-sub">
             {item.id && onOpen ? (
-              <Button variant="link" onClick={() => onOpen(item)}>
+              // The label is a record's own name — an email subject, a deal
+              // title — and nothing about its length is ours to choose.
+              // `.btn` pins `nowrap` because every other label in the product
+              // IS ours; `btn-valuelabel` is the class for the other case, and
+              // without it a subject was drawn out of both sides of its own
+              // button in a phone-width panel.
+              <Button
+                variant="link"
+                className="btn-valuelabel"
+                onClick={() => onOpen(item)}
+              >
                 {glyph}
                 {item.label}
               </Button>

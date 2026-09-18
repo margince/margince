@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge, Button } from "../../design-system/atoms";
 import { StoryProviders } from "../story-utils";
+import { MomentEvidence } from "./momentevidence";
 import { FoundMove, TodayPanel, TodoRow } from "./today";
 
 // WHAT NEEDS A CONTACT TODAY, on its own — the pane four record pages draw, so
@@ -172,6 +173,64 @@ export const FoundMoveRefused: Story = {
           />
         </TodayPanel>
       </div>
+    </StoryProviders>
+  ),
+};
+
+// The three things that can each push this row off a phone, in one story,
+// because on the live record they arrive together.
+//
+// The basis is the REAL `MomentEvidence`, not a sentence standing in for it:
+// what a source names is a record of ours, so its label is an email subject and
+// nothing about its length is this pane's to choose. It has to give way inside
+// its own row.
+//
+// The second verb is REFUSED, which is what the story above could not show.
+// `Button`'s `reason` wraps the control in `.btn-with-reason`, and that box is
+// `contain: inline-size` so a long sentence cannot widen the verb column — but
+// a contained box also measures as nothing in a flex line, so the line never
+// wrapped and the refused verb and its sentence walked off the panel. A verb
+// per line is what holds it.
+export const FoundMoveNarrowRefusedAndLongBasis: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <StoryProviders>
+      <TodayPanel onOpenTasks={() => {}}>
+        <FoundMove
+          when="06:52"
+          kicker="Gone quiet"
+          title="No reply for 131 days"
+          why="Follow up before the thread goes cold."
+          basis={
+            <MomentEvidence
+              evidence={[
+                {
+                  type: "activity",
+                  id: "0f1c6b4e-2f4a-4a5c-9f0e-7d2b8a3c1e55",
+                  label: "Timeout behoben - Sammelabfrage ist live",
+                },
+              ]}
+              onOpen={() => {}}
+            />
+          }
+          action={
+            <>
+              <span className="today-verb">
+                <Button variant="ai">Draft a follow-up</Button>
+              </span>
+              <span className="today-verb">
+                <Button
+                  variant="ghost"
+                  reason="Asking a colleague for context isn't available yet"
+                >
+                  Ask for context
+                </Button>
+              </span>
+            </>
+          }
+        />
+      </TodayPanel>
     </StoryProviders>
   ),
 };

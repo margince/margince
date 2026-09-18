@@ -8853,14 +8853,15 @@ export const en = {
   "contact.moment.rule.public_signal": "In the news",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
   "contact.moment.rule.thin_relationship": "No interactions recorded",
-  "contact.moment.suggest.goneQuiet": "No reply in {days} days. Follow up.",
+  "contact.moment.suggest.goneQuiet": "Follow up before the thread goes cold.",
   "contact.moment.suggest.reEngaged": "They replied and are waiting on you.",
   "contact.moment.suggest.overduePromise":
     "You promised this and it's overdue.",
   "contact.moment.suggest.openPromise": "You promised this. It's due soon.",
   "contact.moment.suggest.jobChange": "They changed jobs. Reach out.",
   "contact.moment.suggest.publicSignal": "They were in the news. Reach out.",
-  "contact.moment.suggest.missingNextStep": "No next step planned. Set one.",
+  "contact.moment.suggest.missingNextStep":
+    "Agree the next step with them before the deal stalls.",
   "contact.moment.rule.nothing_needed": "Nothing needed",
 
   "contact.overview.detailsPermissions": "Details & permissions",
@@ -9079,7 +9080,7 @@ export const en = {
   "today.scan.readDeals_other": "{count} deals",
   "today.scan.stale":
     "The account has moved since. It is read again within the hour.",
-  "today.scan.resumes": "Reading resumes {when}; the AI budget deferred it.",
+  "today.scan.resumes": "Reading resumes {when}. Paused by the AI budget.",
   "provider.title": "Contact data",
   "provider.readOnly":
     "Read-only view — connecting a provider spends money, so it is an admin or ops action.",

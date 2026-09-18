@@ -5,11 +5,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
-import {
-  calendarDaysBetween,
-  formatDate,
-  formatNumber,
-} from "../format/format";
+import { formatDate } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
 import { contactTabRoute } from "./contacttab";
@@ -136,7 +132,6 @@ function MomentMove({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const secondary = moment.secondary_actions ?? [];
   return (
     <FoundMove
@@ -148,7 +143,7 @@ function MomentMove({
       // headline takes the row's loudest line. Read the other way round, a
       // reader met the template twice before the name of the thing to do.
       title={moment.headline}
-      why={suggestionFor(moment, view, t, locale) ?? moment.why_now}
+      why={suggestionFor(moment, t) ?? moment.why_now}
       kicker={t(MOMENT_RULE_LABEL[moment.rule])}
       basis={
         basisAddsARecord(moment) ? (
@@ -205,27 +200,11 @@ function MomentMove({
 // reader is owed that rather than a blank line under the headline.
 function suggestionFor(
   moment: ContactMoment,
-  view: Contact360,
   t: ReturnType<typeof useT>,
-  locale: Locale,
 ): string | undefined {
   switch (moment.rule) {
-    case "gone_quiet": {
-      // Counted from our last message: the silence is how long we have been
-      // waiting. The day count is read off the record's own dates rather than
-      // parsed back out of the server's sentence, and with no such date the
-      // server's own sentence stands rather than a reason with a blank where
-      // the count goes.
-      const since = view.last_outbound_at;
-      return since
-        ? t("contact.moment.suggest.goneQuiet", {
-            days: formatNumber(
-              calendarDaysBetween(new Date(since), new Date(view.as_of)),
-              locale,
-            ),
-          })
-        : undefined;
-    }
+    case "gone_quiet":
+      return t("contact.moment.suggest.goneQuiet");
     case "re_engaged":
       return t("contact.moment.suggest.reEngaged");
     case "overdue_promise":

@@ -348,6 +348,13 @@
    separator cannot end a line with the rule's name on the next one; the spaces
    either side of it are the byline's own gap. It takes no ink of its own — the
    whole line is the authorship claim and is lettered in one colour. */
+.co-move-kicker {
+  /* A rule's name wraps as a unit or not at all — the same thing the record
+     head's findings say about a figure and the rule it counts for. "Gone quiet"
+     broken over two lines reads as two words of the byline rather than as the
+     name of the thing that fired. */
+  white-space: nowrap;
+}
 .co-move-kicker::before {
   content: "·";
   margin-inline-end: var(--space-2);
@@ -365,9 +372,17 @@
   min-width: 0;
   flex: 1 1 auto;
 }
+/* The ask, and the row's lead line. Weight is what says so: the reason under it
+   wears `.t-sub`, which is still a role HOOK carrying `font: inherit`, so the
+   two came out at one size in one weight and the row had no line a reader's eye
+   lands on first — a list of moves then reads as a paragraph per row.
+   Medium and not a size or an ink of its own: a rung up would restate the
+   panel's own title, and this is text leading inside a component, which is what
+   `--fontWeightMedium` is for. */
 .co-move-ask {
   max-width: 62ch;
   color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
   text-wrap: pretty;
 }
 /* The reason: the part a rep judges, in a quieter voice than the ask. */
@@ -387,6 +402,14 @@
   align-items: center;
   gap: var(--space-1) var(--space-2);
   margin-top: var(--space-1);
+  /* The records this block names are records of OURS, so their names are an
+     email subject or a deal title — arbitrary length, and unbreakable as far as
+     a layout is concerned. A grid or flex item's automatic minimum is its
+     min-content, so one long name here does not widen the column it sits in:
+     it walks straight out of the panel and takes the page's scroll width with
+     it. Every box between that name and this one has to be allowed to shrink
+     below it, and this is the first of them. */
+  min-width: 0;
 }
 .co-move-basis-head {
   display: block;
@@ -1385,6 +1408,21 @@
      as the same column the move draws above the fold. */
   .co-lead .today-actions > .today-verb {
     flex: 1 1 auto;
+  }
+}
+/* At the fold every verb takes a line of its own, in the order it was handed
+   in. A BASIS of 100% and not a wrap left to the verbs' own widths, because a
+   verb that carries a refusal cannot state a width: `Button`'s `reason` wraps
+   it in `.btn-with-reason`, which is `contain: inline-size` (record360.css) so
+   that a long sentence cannot widen the column — and a contained box
+   contributes NOTHING to its flex line. Measured at nothing it always fitted,
+   so the line never wrapped: the refused verb was squeezed to a few characters,
+   its sentence came out one word per line, and the pair ran off the panel.
+   Given the whole line it is `.today-verb`'s own `align-items: stretch` that
+   hands the contained box a width, and the sentence reads across the row. */
+@media (max-width: 720px) {
+  .co-lead .today-actions > .today-verb {
+    flex: 1 1 100%;
   }
 }
 /* Putting a move off is not a second verb. Stripped of its border it reads as

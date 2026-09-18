@@ -8541,14 +8541,14 @@ export const vi = {
   "contact.moment.rule.missing_next_step": "Chưa có lịch",
   "contact.moment.rule.thin_relationship": "Chưa ghi nhận tương tác",
   "contact.moment.suggest.goneQuiet":
-    "{days} ngày chưa có hồi âm. Hãy theo dõi tiếp.",
+    "Hãy theo dõi tiếp trước khi mạch trao đổi nguội đi.",
   "contact.moment.suggest.reEngaged": "Họ đã trả lời và đang chờ bạn.",
   "contact.moment.suggest.overduePromise": "Bạn đã hứa việc này và đã quá hạn.",
   "contact.moment.suggest.openPromise": "Bạn đã hứa việc này. Sắp đến hạn.",
   "contact.moment.suggest.jobChange": "Họ đã đổi việc. Hãy liên hệ.",
   "contact.moment.suggest.publicSignal": "Họ vừa lên báo. Hãy liên hệ.",
   "contact.moment.suggest.missingNextStep":
-    "Chưa có bước tiếp theo. Hãy đặt một bước.",
+    "Hãy thống nhất bước tiếp theo với họ trước khi deal chững lại.",
   "contact.moment.rule.nothing_needed": "Không cần làm gì",
 
   "contact.overview.detailsPermissions": "Chi tiết và quyền liên hệ",
@@ -8762,7 +8762,8 @@ export const vi = {
   "today.scan.readDeals_other": "{count} deal",
   "today.scan.stale":
     "Tài khoản đã thay đổi kể từ đó. Nó sẽ được đọc lại trong vòng một giờ.",
-  "today.scan.resumes": "Việc đọc sẽ tiếp tục {when}; ngân sách AI đã hoãn nó.",
+  "today.scan.resumes":
+    "Việc đọc sẽ tiếp tục {when}. Tạm dừng do ngân sách AI.",
   "provider.readOnly":
     "Chế độ chỉ đọc — kết nối nhà cung cấp tiêu tốn tiền, nên đây là hành động của quản trị viên hoặc ops.",
   "provider.title": "Dữ liệu liên hệ",

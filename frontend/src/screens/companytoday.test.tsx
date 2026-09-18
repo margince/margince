@@ -619,7 +619,7 @@ describe("the account scan on the needs list", () => {
       },
     );
     expect(
-      screen.getByText(/Reading resumes .*the AI budget deferred it/),
+      screen.getByText(/Reading resumes .*Paused by the AI budget/),
     ).toBeTruthy();
   });
 
@@ -651,13 +651,13 @@ describe("the account scan on the needs list", () => {
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "deterministic",
           degrade_reason:
-            "No model lane is configured, so the rules' own advice stands alone.",
+            "No model is configured here, so only the rule-based advice is shown.",
           findings: [ruleRow],
           findings_dropped: 0,
         },
       },
     );
-    expect(screen.getByText(/No model lane is configured/)).toBeTruthy();
+    expect(screen.getByText(/No model is configured here/)).toBeTruthy();
     expect(screen.queryByText("Written by Margince")).toBeNull();
   });
 });

@@ -8667,8 +8667,7 @@ export const de = {
   "contact.moment.rule.public_signal": "In den Nachrichten",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
   "contact.moment.rule.thin_relationship": "Keine Interaktionen erfasst",
-  "contact.moment.suggest.goneQuiet":
-    "Seit {days} Tagen keine Antwort. Fasse nach.",
+  "contact.moment.suggest.goneQuiet": "Fasse nach, bevor der Kontakt abreißt.",
   "contact.moment.suggest.reEngaged":
     "Sie haben geantwortet und warten auf dich.",
   "contact.moment.suggest.overduePromise":
@@ -8680,7 +8679,7 @@ export const de = {
   "contact.moment.suggest.publicSignal":
     "Sie waren in den Nachrichten. Melde dich.",
   "contact.moment.suggest.missingNextStep":
-    "Kein nächster Schritt geplant. Lege einen fest.",
+    "Vereinbare den nächsten Schritt mit ihnen, bevor der Deal ins Stocken gerät.",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
 
   "contact.overview.detailsPermissions": "Details & Berechtigungen",
@@ -8901,7 +8900,7 @@ export const de = {
   "today.scan.stale":
     "Der Account hat sich seitdem verändert. Er wird innerhalb einer Stunde erneut gelesen.",
   "today.scan.resumes":
-    "Das Lesen wird {when} fortgesetzt; das KI-Budget hat es aufgeschoben.",
+    "Das Lesen wird {when} fortgesetzt. Vom KI-Budget pausiert.",
   "provider.readOnly":
     "Nur-Lese-Ansicht — einen Anbieter zu verbinden kostet Geld und ist eine Admin- oder Ops-Aktion.",
   "provider.title": "Kontaktdaten",

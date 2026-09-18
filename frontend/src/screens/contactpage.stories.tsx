@@ -886,17 +886,25 @@ const promised: View = {
 
 export const LeadMomentPromised: Story = {
   name: "Lead moment · a promise already on the list",
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <ContactToday
-          view={promised}
-          moment={openPromiseMoment}
-          onAction={() => {}}
-        />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => {
+    // The only lead-moment story with a task row under the move, so it is the
+    // only one whose verb reads the session. Routed here because the card is
+    // rendered on its own: the stub's list-shaped fallback reads as a
+    // malformed session, which closes every grant and draws a refused button
+    // instead of the one this story is about.
+    installFetchStub({ "GET /me": meRoute({ activity: ["read", "update"] }) });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <ContactToday
+            view={promised}
+            moment={openPromiseMoment}
+            onAction={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
 };
 
 // --- Rail --------------------------------------------------------------------
