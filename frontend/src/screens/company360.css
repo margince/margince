@@ -1401,28 +1401,19 @@
   .co-lead .today-actions {
     grid-column: 1;
     grid-row: auto;
-  }
-  /* Each verb fills the line it wrapped onto. Left at its own width, three
-     verbs that no longer fit one line came out ragged — three left-aligned
-     boxes of three widths, which reads as three kinds of control rather than
-     as the same column the move draws above the fold. */
-  .co-lead .today-actions > .today-verb {
-    flex: 1 1 auto;
-  }
-}
-/* At the fold every verb takes a line of its own, in the order it was handed
-   in. A BASIS of 100% and not a wrap left to the verbs' own widths, because a
-   verb that carries a refusal cannot state a width: `Button`'s `reason` wraps
-   it in `.btn-with-reason`, which is `contain: inline-size` (record360.css) so
-   that a long sentence cannot widen the column — and a contained box
-   contributes NOTHING to its flex line. Measured at nothing it always fitted,
-   so the line never wrapped: the refused verb was squeezed to a few characters,
-   its sentence came out one word per line, and the pair ran off the panel.
-   Given the whole line it is `.today-verb`'s own `align-items: stretch` that
-   hands the contained box a width, and the sentence reads across the row. */
-@media (max-width: 720px) {
-  .co-lead .today-actions > .today-verb {
-    flex: 1 1 100%;
+    /* And it stays a COLUMN. Sideways is what `.today-actions` turns for a
+       caller whose claim still sits beside it (record360.css); here the verbs
+       have just moved under the claim, so there is nothing left for a row to
+       win, and one is a layout this pane cannot make safe. A verb that carries
+       a refusal is wrapped by `Button` in `.btn-with-reason`, which is
+       `contain: inline-size` so a long sentence cannot widen the verb column —
+       and a contained box contributes NOTHING to a flex line's intrinsic size.
+       Measured at nothing it always fitted, so the line never broke however the
+       wrap was spelled: the refused verb was drawn OVER the one beside it and
+       its sentence came out one word per line. A column has no line to break,
+       and `align-items: stretch` hands every verb the same full width — which
+       is the shape the pane already draws above the fold. */
+    flex-direction: column;
   }
 }
 /* Putting a move off is not a second verb. Stripped of its border it reads as

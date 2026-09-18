@@ -77,24 +77,24 @@ export function ContactToday({
     <TodayPanel
       onOpenTasks={onOpenTasks}
       tasksLabel={t("today.workQueue")}
+      footer={
+        // How far the reading reached, in the band that says what the day was
+        // read from: "nothing needs you" about a relationship with almost
+        // nothing recorded is honest only with the reach of the records named
+        // beside it. In the foot and not the body, where a second block under
+        // the quiet line read as a second section rather than as a note about
+        // the one above it.
+        moment?.rule === "thin_relationship" ? (
+          <p className="t-sub">{t("contact.overview.coverage")}</p>
+        ) : undefined
+      }
       notice={
-        <>
-          {/* How far the reading reached, under the answer rather than beside
-              it: "nothing needs you" on a relationship with almost nothing
-              recorded is only honest with the records it was read from named
-              in the same breath. */}
-          {moment?.rule === "thin_relationship" && (
-            <p className="t-sub">{t("contact.overview.coverage")}</p>
-          )}
-          <WithheldNotice
-            sections={[
-              ...(omitted.has("moments") ? [t("today.source.moments")] : []),
-              ...(omitted.has("next_steps")
-                ? [t("today.source.nextSteps")]
-                : []),
-            ]}
-          />
-        </>
+        <WithheldNotice
+          sections={[
+            ...(omitted.has("moments") ? [t("today.source.moments")] : []),
+            ...(omitted.has("next_steps") ? [t("today.source.nextSteps")] : []),
+          ]}
+        />
       }
     >
       {/* No moment read at all is not a quiet day: the panel keeps its place

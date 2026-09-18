@@ -139,7 +139,7 @@ export const FoundMoveWithKicker: Story = {
 export const FoundAndOwedNarrow: Story = {
   globals: { viewport: { value: "phone" } },
   // And the tag beside it, because the two answer different readers: the global
-  // moves the manager's frame for a person opening the catalog, and the tag
+  // moves the manager's frame for a reader opening the catalog, and the tag
   // moves the BROWSER for `make fe-uat`, which loads the iframe directly and
   // never runs the manager.
   tags: ["uat-phone"],
