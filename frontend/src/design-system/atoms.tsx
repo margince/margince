@@ -347,7 +347,16 @@ function ButtonSentences({
   return (
     <span className={reason === undefined ? "btn-shell" : "btn-with-reason"}>
       {children}
-      {reason !== undefined && <span id={reasonId}>{reason}</span>}
+      {/* The supporting line under a control, which is what `t-caption` names:
+          Body S in `--textSecondary`. Worn HERE rather than at a call site, so
+          every refused verb in the tree says why at one size in one ink — and
+          so the rules already written against `.btn-with-reason > .t-caption`
+          (a right-aligned dialog row) have the caption they select. */}
+      {reason !== undefined && (
+        <span id={reasonId} className="t-caption">
+          {reason}
+        </span>
+      )}
       {/* Rendered whether or not the write is out, and emptied rather than
           removed. A description that arrives together with the element holding
           it is frequently missed; one that is already there and CHANGES is what

@@ -309,28 +309,26 @@
 
 /* One move: the ask at the row's loudest weight, the reason under it — the
    reason is the part a rep judges, and everything else is chrome around it.
-   Its hairline matches the accent bands above and below it. */
+   It is a `PanelRow` and draws as one. Every interval and every edge is the
+   row's own: the padding, the hairline over it and the inset that hairline
+   keeps are `.panel-row`'s (panel.css), and this rule only lays the content
+   out and tints the ground under it. A margin, a radius or a padding of its
+   own here is a second card inside the list — the move's words then start at
+   an x no other row in the panel uses, and a reader scanning the column has
+   two left edges to follow. No hover fill either: the row is not one press
+   target, its verbs are, and a fill behind them claims a hit area the row does
+   not have. */
 .co-move {
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
   /* Indigo, because the agent wrote this row — and a GROUND rather than a
      rule, because the list mixes what Margince proposed with the account's own
-     open tasks and the two were told apart only by a hairline of a different
-     hue. The tint is the same claim the card's band above it makes: this part
-     was written for you, the rest was already yours.
-
-     Inset to the panel's own padding and given the pane's corner, so the tint
-     reads as a card inside the list rather than as a full-bleed band. */
-  margin: var(--space-2) var(--space-4);
-  padding: var(--space-4);
-  border-radius: var(--r-md);
-  border-top-color: transparent;
+     open tasks, and a hairline of a different hue is the whole difference
+     between them. The tint is the same claim the band above it makes: this
+     part was written for you, the rest was already yours. Edge to edge, so
+     what it claims is the ROW. */
   background: linear-gradient(160deg, var(--aiLight), transparent 80%);
-  /* .panel-row already sets the padding and the hairline border (none on
-     the first row); this only lays the row's own content out. No hover fill:
-     the row is not one press target, its verbs are, and a fill behind them
-     would claim a hit area the row does not have. */
 }
 
 /* Who wrote the row, over what it says. An eyebrow rather than a badge beside
@@ -1302,11 +1300,14 @@
   font-family: var(--fontFamilyBody);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
-   Inset to the panel's own padding and set at meta size: it qualifies the
-   answer above it rather than being one more row of it. */
+   On the panel's own inset and at meta size: it qualifies the answer above it
+   rather than being one more row of it. The inset is `--padPanel` BY NAME and
+   not the rung that token happens to hold — spelled as a rung it agrees with
+   the rows above by coincidence, and stops agreeing the day the panel is
+   retuned. */
 .today-withheld {
   margin: 0;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--padPanel);
 }
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
