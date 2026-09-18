@@ -118,7 +118,7 @@ describe("what the day's work says it could not read", () => {
     mount("overview", { ...view, sections_omitted: ["moments"] });
     expect(
       await screen.findByText(
-        "Hidden from you: what Margince found. This list is assembled without them.",
+        "Not included: Margince's findings. You don't have access to them.",
       ),
     ).toBeTruthy();
   });
@@ -663,8 +663,7 @@ describe("logging an activity", () => {
     evidence_fingerprint: "quiet",
     rule: "nothing_needed",
     headline: "Nothing needs you today",
-    why_now:
-      "No meeting is close, nothing is owed, and nobody is waiting on a reply.",
+    why_now: "No meeting coming up, nothing owed, nobody waiting on a reply.",
     confidence: "observed_fact",
     evidence: [],
     recommended_action: {

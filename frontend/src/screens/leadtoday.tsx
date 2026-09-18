@@ -33,7 +33,7 @@ export function leadTodoRows(
   // sends the reader to the one place this page already writes a reply,
   // rather than opening a second one of its own.
   onReply: () => void,
-  // The same queue the panel head's "View tasks" opens: the lead names no
+  // The same queue the panel head's own way out opens: the lead names no
   // task id of its own, so the queue is the honest destination for "the next
   // one" too.
   onOpenTasks: () => void,

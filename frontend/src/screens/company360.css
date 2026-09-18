@@ -309,28 +309,26 @@
 
 /* One move: the ask at the row's loudest weight, the reason under it — the
    reason is the part a rep judges, and everything else is chrome around it.
-   Its hairline matches the accent bands above and below it. */
+   It is a `PanelRow` and draws as one. Every interval and every edge is the
+   row's own: the padding, the hairline over it and the inset that hairline
+   keeps are `.panel-row`'s (panel.css), and this rule only lays the content
+   out and tints the ground under it. A margin, a radius or a padding of its
+   own here is a second card inside the list — the move's words then start at
+   an x no other row in the panel uses, and a reader scanning the column has
+   two left edges to follow. No hover fill either: the row is not one press
+   target, its verbs are, and a fill behind them claims a hit area the row does
+   not have. */
 .co-move {
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
   /* Indigo, because the agent wrote this row — and a GROUND rather than a
      rule, because the list mixes what Margince proposed with the account's own
-     open tasks and the two were told apart only by a hairline of a different
-     hue. The tint is the same claim the card's band above it makes: this part
-     was written for you, the rest was already yours.
-
-     Inset to the panel's own padding and given the pane's corner, so the tint
-     reads as a card inside the list rather than as a full-bleed band. */
-  margin: var(--space-2) var(--space-4);
-  padding: var(--space-4);
-  border-radius: var(--r-md);
-  border-top-color: transparent;
+     open tasks, and a hairline of a different hue is the whole difference
+     between them. The tint is the same claim the band above it makes: this
+     part was written for you, the rest was already yours. Edge to edge, so
+     what it claims is the ROW. */
   background: linear-gradient(160deg, var(--aiLight), transparent 80%);
-  /* .panel-row already sets the padding and the hairline border (none on
-     the first row); this only lays the row's own content out. No hover fill:
-     the row is not one press target, its verbs are, and a fill behind them
-     would claim a hit area the row does not have. */
 }
 
 /* Who wrote the row, over what it says. An eyebrow rather than a badge beside
@@ -341,6 +339,23 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--aiText);
+}
+
+/* What the record was read AGAINST, as a second clause of the same byline. The
+   dot belongs to this clause rather than sitting loose between the two, so the
+   separator cannot end a line with the rule's name on the next one; the spaces
+   either side of it are the byline's own gap. It takes no ink of its own — the
+   whole line is the authorship claim and is lettered in one colour. */
+.co-move-kicker {
+  /* A rule's name wraps as a unit or not at all — the same thing the record
+     head's findings say about a figure and the rule it counts for. "Gone quiet"
+     broken over two lines reads as two words of the byline rather than as the
+     name of the thing that fired. */
+  white-space: nowrap;
+}
+.co-move-kicker::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
 }
 
 .co-move-spark {
@@ -355,9 +370,18 @@
   min-width: 0;
   flex: 1 1 auto;
 }
+/* The ask, and the row's lead line. Weight is the only thing that says so: the
+   reason under it wears `.t-sub`, which is still a role HOOK carrying
+   `font: inherit`, so at one weight the two stand at one size in one ink and
+   the row offers a reader's eye nowhere to land — a column of moves then reads
+   as a paragraph per row.
+   Medium and not a size or an ink of its own: a rung up restates the panel's
+   own title, and this is text leading inside a component, which is what
+   `--fontWeightMedium` is for. */
 .co-move-ask {
   max-width: 62ch;
   color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
   text-wrap: pretty;
 }
 /* The reason: the part a rep judges, in a quieter voice than the ask. */
@@ -376,7 +400,21 @@
      caption sat on the glyph's baseline hung under the words beside it. */
   align-items: center;
   gap: var(--space-1) var(--space-2);
-  margin-top: var(--space-1);
+  /* NO top margin, and the absence is the decision: the move lays this block
+     out as one row of its own grid (`.co-lead .co-move-body`), whose row gap is
+     the whole step between the reason and the records it rests on. A margin
+     here is a second opinion about that step, and the two together stand the
+     evidence further from its reason than the reason stands from the ask it
+     argues for.
+
+     The records named here are records of OURS, so a name is an email subject
+     or a deal title: arbitrary length, and one unbreakable word as far as a
+     layout is concerned. A grid or flex item's automatic minimum is its
+     min-content, so every box between that name and the panel has to be allowed
+     to shrink below it or the widest one leaves the panel and takes the page's
+     scroll width with it. This is the first of them; `.today-evidence` and its
+     `li` (record360.css) are the rest. */
+  min-width: 0;
 }
 .co-move-basis-head {
   display: block;
@@ -1262,11 +1300,14 @@
   font-family: var(--fontFamilyBody);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
-   Inset to the panel's own padding and set at meta size: it qualifies the
-   answer above it rather than being one more row of it. */
+   On the panel's own inset and at meta size: it qualifies the answer above it
+   rather than being one more row of it. The inset is `--padPanel` BY NAME and
+   not the rung that token happens to hold — spelled as a rung it agrees with
+   the rows above by coincidence, and stops agreeing the day the panel is
+   retuned. */
 .today-withheld {
   margin: 0;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--padPanel);
 }
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
@@ -1345,6 +1386,26 @@
   grid-column: 2;
   grid-row: 1 / -1;
 }
+/* Under the fold the two columns become one, and the verbs move from opposite
+   the claim to under it. That is the whole collapse: the verb column is a
+   column at every width (`.today-actions`, record360.css) and nothing here
+   turns it, so a verb is full width above the fold and below it, and a refusal
+   that cannot state its own width — `Button` wraps one in `.btn-with-reason`,
+   which is `contain: inline-size` so a sentence cannot widen the column, and a
+   contained box contributes nothing to a flex line — never meets a line that
+   has to measure it.
+
+   `grid-row: auto` and not the span: with one column the span would lay the
+   verbs over the very lines they are meant to follow. */
+@media (max-width: 900px) {
+  .co-lead .co-move-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .co-lead .today-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
 /* Putting a move off is not a second verb. Stripped of its border it reads as
    the aside it is, and the row keeps exactly one control that looks pressable
    for the thing it wants done. */
@@ -1354,6 +1415,29 @@
 }
 .co-move-defer:hover:not(:disabled) {
   background: none;
+}
+/* A finger is not a cursor. `--controlHeight` is the rung a pointer hits, and
+   under a thumb it is the row a reader misses — a miss among these verbs
+   undoes a promise or sends a draft.
+   THE VERBS AND THE WAY OUT, and nothing else. A move's verbs, a to-do's verb
+   and the head's link are the three things in this pane a reader aims at; the
+   sources under a reason are an inline run inside a sentence, and a 44px floor
+   there spaces a citation row like a list of buttons. Naming the three rather
+   than the pane is what keeps that distinction — `.co-lead .btn` reaches every
+   chip in the basis as well.
+   Each selector is three classes deep, which also settles the head: the link
+   variant declares `min-block-size: 0` at two, so these outrank it on
+   specificity rather than on whichever sheet the bundler emits first, and a
+   contract that rests on load order is not a contract.
+   The floor is the pane's, not the rung's: what height a button stands at
+   everywhere is the design system's to say, and a screen sheet answering it a
+   second time is how two heights of one control ship. */
+@media (pointer: coarse) {
+  .co-lead .today-verb .btn,
+  .co-lead .co-todo .btn,
+  .co-lead .panel-head .btn {
+    min-block-size: 44px;
+  }
 }
 /* The panel's own name, at body weight and laid out as a row, moved into
    Panel's tone="accent" (design-system/panel.css): the record's tabs and its
@@ -1455,24 +1539,6 @@
   display: block;
 }
 
-/* The needs pane's head actions: the disclosure that a machine read the
-   record, and the way to the record's own list, as ONE item at the far end of
-   `Panel`'s head band. They are grouped rather than handed in loose because
-   they are one strip of controls and read as one — what keeps each of them
-   whole beside a title long enough to fill the band is panel.css, which holds
-   everything after the title block at its natural width, so the TITLE is what
-   gives way and the ellipsis is on it. Same on every record: the pane is the
-   record-360 kit's, not the company's, and its rules sit with `.co-reading`'s
-   here for the reason record360/README.md gives. */
-.co-reading-today-actions {
-  display: flex;
-  align-items: center;
-  /* A control row's own rung, by role rather than by rung: the disclosure and
-     the verb read as one strip of controls, and the head band beside them is
-     spaced by the panel. */
-  gap: var(--gapActions);
-  flex: none;
-}
 /* The three rated dimensions under the verdict, as a row of readings the
    card's own body separates from the word above it. */
 .co-360-dims {
@@ -1727,6 +1793,13 @@
 .co-todo-title {
   color: var(--textPrimary);
 }
+/* What is owed and the verb that settles it: ONE item at reading width, where
+   they are simply the row's last two children and the wrapper draws no box, so
+   the layout above is untouched. Under the fold they move together, and being
+   one item is what lets them move as one line. */
+.co-todo-owed {
+  display: contents;
+}
 /* When the to-do is owed, at the row's far end. Quiet unless it is late: a
    list where every date is coloured has no colour left for the one that
    matters, and the one that matters is the promise nobody kept. */
@@ -1744,9 +1817,52 @@
 /* The row's verb keeps its own width. The row is a flex line, and a flex line
    shrinks a button before it wraps the title beside it — a verb squeezed to
    half a word is one a reader can no longer read. Whose work it is says itself
-   in `Button`'s own aiQuiet variant, not here. */
-.co-todo > .btn {
+   in `Button`'s own aiQuiet variant, not here.
+   A descendant selector and not a child one: `.co-todo-owed` is
+   `display: contents`, which keeps the button a flex ITEM of this row while
+   making it no longer a child of it, and only the DOM tree answers a `>`. */
+.co-todo .btn {
   flex: none;
+}
+
+/* At the fold the row's three parts stop sharing a line. The title is what a
+   reader scans by, and a date and a button each holding their own width beside
+   it left it one word wide with the date over the words. The mark keeps the
+   title company; what is owed drops to a line of its own at the row's end,
+   where a reader's eye already goes for it.
+   720px is the tree's own fold (`FOLD_MAX_WIDTH`, src/app/viewport.ts), which
+   a stylesheet cannot read — the two are changed together. */
+@media (max-width: 720px) {
+  .co-todo {
+    flex-wrap: wrap;
+  }
+  /* The mark keeps the title company, and a zero BASIS is what holds it there.
+     A wrapping flex line breaks on base sizes before anything grows, so a
+     title measured at its own content width did not fit beside the mark and
+     took the next line — leaving a lone monogram over a full-width title,
+     which reads as a heading for the rows under it rather than as the anchor
+     this column of initials is. */
+  .co-todo-body {
+    flex-basis: 0;
+  }
+  .co-todo-owed {
+    display: flex;
+    /* Its own line, because it is the only item wide enough to take one. */
+    flex: 1 1 100%;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+  /* Two lines and then an ellipsis: the title may wrap, but a task named in a
+     sentence would otherwise push the whole row past a phone's height and
+     bury the rows under it. */
+  .co-todo-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
 }
 
 /* What happened lately, as a list to scan. One row per exchange: the mark, the

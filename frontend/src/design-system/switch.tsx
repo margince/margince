@@ -183,8 +183,15 @@ export function Switch({
           {hint}
         </p>
       )}
+      {/* A refusal is the supporting line under a control, and `Button` prints
+          its own `reason` at exactly this role. The two components state the
+          same contract in each other's docs, so they say it in the same type:
+          a sentence set a rung louder on one of them reads as a different kind
+          of claim about the same kind of denial. `switchreason` stays beside it
+          for the margin a `<p>` still owes (switch.css) and for the one screen
+          that hides this sentence while keeping it announced. */}
       {reason !== undefined && (
-        <p className="switchreason" id={reasonId}>
+        <p className="switchreason t-caption" id={reasonId}>
           {reason}
         </p>
       )}

@@ -347,7 +347,13 @@ function ButtonSentences({
   return (
     <span className={reason === undefined ? "btn-shell" : "btn-with-reason"}>
       {children}
-      {reason !== undefined && <span id={reasonId}>{reason}</span>}
+      {/* `t-caption` is the supporting line's role: one size and one ink for
+          every refusal, and the class atoms.css's dialog rule selects. */}
+      {reason !== undefined && (
+        <span id={reasonId} className="t-caption">
+          {reason}
+        </span>
+      )}
       {/* Rendered whether or not the write is out, and emptied rather than
           removed. A description that arrives together with the element holding
           it is frequently missed; one that is already there and CHANGES is what
@@ -936,15 +942,6 @@ const PENDING_LINES = [
 
 /**
  * The pending state of a surface — the ONE spelling of it in this product.
- *
- * Four grew before this: `QueryStates`' three inline-styled bars, `SurfaceState`'s
- * single silent 32px bar, `ListTable`'s five unanimated bone rows, and a page's
- * worth of hand-rolled bars and "Loading…" lines. They disagreed about the shape,
- * about the height, about whether the pulse ran at all, and — the part that
- * mattered — about whether a reader who cannot see the bars is told anything.
- * Three call sites had already bolted their own `sr-only` line beside one of
- * these, which is the tell that the primitive was missing something rather than
- * that those screens were special.
  *
  * `label` is REQUIRED and not defaulted. A placeholder carries no text, so the
  * spoken line is the only thing a screen reader has; making it a required prop

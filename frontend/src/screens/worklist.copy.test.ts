@@ -201,7 +201,7 @@ describe("the verbs the row can and cannot take a reader to", () => {
       ...movingRow("open_task", "task-1"),
       subject: { type: "deal", id: "d-1" },
     };
-    expect(moveLabel(item, t)).toBe("Open existing task");
+    expect(moveLabel(item, t)).toBe("Open task");
     expect(moveHref(item)).toBeDefined();
   });
 

@@ -1553,7 +1553,7 @@ export const en = {
   "co.next.empty": "No open task on this account.",
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
-  "co.next.undated": "No date",
+  "co.next.undated": "No due date",
   "co.facts.pipeline": "Open pipeline",
   "co.facts.inFlight": "In flight",
   "co.facts.reading": "Reading\u2026",
@@ -1740,7 +1740,7 @@ export const en = {
   "co.suggest.kind.risk_raised": "Risk raised",
   "co.suggest.kind.need_raised": "Need raised",
   "co.suggest.more": "{count} more not shown here.",
-  "co.suggest.basedOn": "What this is based on",
+  "co.suggest.basedOn": "Based on",
   "co.cite.open": "Open the record",
   "co.suggest.dismiss": "Not now",
   "co.suggest.byline": "Margince suggests",
@@ -3508,18 +3508,17 @@ export const en = {
   "co.spine.earlier_other": "{count} earlier conversations",
   "co.spine.earlier_one": "{count} earlier conversation",
   "today.failed":
-    "This could not be assembled. The rest of the page still shows what it could read.",
-  "today.quiet": "No outstanding work found in this view.",
+    "This section couldn't load. The rest of the page is unaffected.",
+  "today.quiet": "Nothing needs you right now.",
   "task.untitled": "Untitled task",
-  "today.withheld":
-    "Hidden from you: {sections}. This list is assembled without them.",
-  "today.source.moments": "what Margince found",
+  "today.withheld": "Not included: {sections}. You don't have access to them.",
+  "today.source.moments": "Margince's findings",
   "today.source.nextSteps": "open tasks",
   "today.source.nextMeeting": "the calendar",
   "today.source.deals": "deals",
   "today.meeting.prepare": "Prepare meeting",
   "today.source.contacts": "the contacts",
-  "today.source.standing": "whose move it is and the signals",
+  "today.source.standing": "the account's standing",
   "today.source.activities": "what was said",
   "today.silence.days": "no answer in {count} days",
   "today.draft.new": "Start a new email",
@@ -3527,6 +3526,7 @@ export const en = {
   "today.moment.act.openTask": "Open task",
   "today.moment.act.followUp": "Follow up",
   "today.moment.act.writeToThem": "Write to them",
+  "today.workQueue": "Work queue",
 
   "evidence.mark": "read",
   "evidence.confirm": "Confirm",
@@ -6747,7 +6747,7 @@ export const en = {
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
-  "deal360.openTask": "Open existing task",
+  "deal360.openTask": "Open task",
   "deal360.createTask": "Add this task",
   "deal360.openBrief": "Open the meeting brief",
   "deal360.unreadable":
@@ -8846,25 +8846,13 @@ export const en = {
 
   "contact.moment.rule.meeting_prep": "Meeting soon",
   "contact.moment.rule.re_engaged": "They came back",
-  "contact.moment.rule.job_change": "They moved on",
+  "contact.moment.rule.job_change": "Changed jobs",
   "contact.moment.rule.overdue_promise": "Promise overdue",
   "contact.moment.rule.gone_quiet": "Gone quiet",
-  "contact.moment.rule.open_promise": "You owe them",
-  "contact.moment.rule.public_signal": "Said in public",
+  "contact.moment.rule.open_promise": "Promise due",
+  "contact.moment.rule.public_signal": "In the news",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
   "contact.moment.rule.thin_relationship": "No interactions recorded",
-  "contact.moment.suggest.goneQuiet":
-    "Follow up now: nothing has come back in {days} days.",
-  "contact.moment.suggest.reEngaged":
-    "Reply now: they wrote back and are waiting on us.",
-  "contact.moment.suggest.overduePromise":
-    "Deliver what was promised: it is overdue.",
-  "contact.moment.suggest.openPromise":
-    "Deliver what was promised before it falls due.",
-  "contact.moment.suggest.jobChange": "Reach out: they have changed jobs.",
-  "contact.moment.suggest.publicSignal": "Reach out about the news on them.",
-  "contact.moment.suggest.missingNextStep":
-    "Set the next step: nothing is planned with them.",
   "contact.moment.rule.nothing_needed": "Nothing needed",
 
   "contact.overview.detailsPermissions": "Details & permissions",
@@ -8872,7 +8860,7 @@ export const en = {
   "contact.overview.detailsHide": "Hide details & permissions",
   "contact.overview.partial":
     "Some sections are not available to your role. This summary covers the records you can see.",
-  "contact.overview.coverage": "Based on the records available to you.",
+  "contact.overview.coverage": "Read from the records you can see.",
   "contact.overview.about": "About this contact",
   "contact.overview.profileOnly":
     "From the contact details on file. Add context when you learn more.",
@@ -9083,7 +9071,7 @@ export const en = {
   "today.scan.readDeals_other": "{count} deals",
   "today.scan.stale":
     "The account has moved since. It is read again within the hour.",
-  "today.scan.resumes": "Reading resumes {when}; the AI budget deferred it.",
+  "today.scan.resumes": "Reading resumes {when}. Paused by the AI budget.",
   "provider.title": "Contact data",
   "provider.readOnly":
     "Read-only view — connecting a provider spends money, so it is an admin or ops action.",

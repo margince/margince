@@ -518,8 +518,7 @@ describe("the meetings tab", () => {
         evidence_fingerprint: "fp-1",
         rule: "meeting_prep",
         headline: "Prepare for Contract review",
-        why_now:
-          "Preparation is worth something before the meeting and nothing after it.",
+        why_now: "Prepare before the meeting, not after.",
         confidence: "observed_fact",
         evidence: [],
         recommended_action: {
@@ -539,7 +538,7 @@ describe("the meetings tab", () => {
       />,
     );
     expect(screen.getByText("Upcoming")).toBeTruthy();
-    expect(screen.getByText(/Preparation is worth something/)).toBeTruthy();
+    expect(screen.getByText(/Prepare before the meeting/)).toBeTruthy();
     const draft = screen.getByRole("button", { name: "Draft agenda" });
     await userEvent.setup().click(draft);
     expect(acted).toEqual([draftAgenda]);
