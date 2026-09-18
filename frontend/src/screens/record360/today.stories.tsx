@@ -9,26 +9,23 @@ import { FoundMove, TodayPanel, TodoRow } from "./today";
 // WHAT NEEDS A CONTACT TODAY, on its own — the pane four record pages draw, so
 // what it claims has to be right on all four at once.
 //
-// The claim is authorship: the moves are what the agent found and the drafts
-// are what it would write, so the pane is indigo and its head says
-// "AI-assisted" in words. What the stories are for is the DIVIDE inside it —
-// a found move at the pane's loudest weight, and under it the record's own
-// to-dos, where only the verb the agent performs carries the hue. A to-do
-// somebody else owes is the account's, not the machine's, and its verb is a
-// plain outlined one; the two rows side by side are the only way to see that
-// the tint still means something.
+// The claim is authorship, and the pane's indigo is where it is made. What the
+// stories are for is the DIVIDE inside it — a found move at the pane's loudest
+// weight, carrying its own byline, and under it the record's own to-dos, where
+// only the verb the agent performs takes the hue. A to-do somebody else owes is
+// the account's, not the machine's, and its verb is a plain outlined one; the
+// two rows side by side are the only way to see that the tint still means
+// something, and that nothing on the head claims both.
 //
-// The head is `Panel`'s own, and the fixture below gives it the widest thing
-// it has to hold: a title, the disclosure and the verb on one band, with what
-// the day counts down to and what it was read from in the band UNDER the rows.
-// Crammed into the head those three read as one long line and the badge broke
-// in half, so the story carries the full foot rather than a single chip.
+// The head is `Panel`'s own: a title and the way to the record's own list, with
+// what the day counts down to and what it was read from in the band UNDER the
+// rows. The fixture below carries that full foot rather than a single chip,
+// because three blocks wedged beside the title left none of them whole.
 //
-// Check both themes. Every indigo here is a color-mix() that lifts on dark,
-// the badge and the tinted verb included. Check the narrow width too: the
-// story's own frame is the desktop measure, and the pane draws at 390px on
-// four record pages, where the title takes the second line and the head's
-// actions stay whole.
+// Check both themes. Every indigo here is a color-mix() that lifts on dark, the
+// foot's badges and the tinted verb included. Check the phone story too: the
+// pane draws at 390px on four record pages, and it is the only width where the
+// move's verbs sit under its claim rather than beside it.
 
 const meta: Meta<typeof TodayPanel> = {
   title: "Records/Record reading/What needs you",
@@ -52,15 +49,29 @@ const foot = (
   </>
 );
 
-function Pane({ width = 720 }: Readonly<{ width?: number }>) {
+function Pane({
+  width = 720,
+  kicker,
+  taskTitle = "Send the promised line-item 3 breakdown",
+}: Readonly<{
+  width?: number;
+  kicker?: string;
+  taskTitle?: string;
+}>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: width }}>
         <TodayPanel onOpenTasks={() => {}} footer={foot}>
           <FoundMove
             when="06:52"
+            kicker={kicker}
             title="Send the breakdown Lena promised on 5 August."
             why="Lena promised this breakdown in the 5 August session and it never went out. The sheet is generated, so this can go on its own."
+            // The fourth line of the left column, and the reason it is here:
+            // byline, ask, reason and basis are the interval this pane is
+            // judged on, and a fixture that stops at the reason cannot show
+            // whether the evidence still reads as part of the case for the move.
+            basis="The 5 August session note, and the thread the promise was made in."
             // Two verbs and a defer, in the one column FoundMove itself owns:
             // the leading verb ai-tinted, the second and the defer both
             // ghost, every one the same width and stacked, never a verb
@@ -80,7 +91,7 @@ function Pane({ width = 720 }: Readonly<{ width?: number }>) {
           {/* The agent's own verb: it writes the draft, so the chip is tinted. */}
           <TodoRow
             who="Lena Fischer"
-            title="Send the promised line-item 3 breakdown"
+            title={taskTitle}
             meta="Lena Fischer · promised 05/08"
             due={{ label: "19 days late", tone: "danger" }}
             verb={{ label: "Draft", onAct: () => {}, byMargince: true }}
@@ -107,10 +118,34 @@ export const FoundAndOwedDark: Story = {
   globals: { theme: "dark" },
 };
 
-// The pane at phone measure, which is where its head has least room: the title
-// takes the second line and the disclosure beside the verb stays whole. The
-// same pane the four record pages draw — none of them narrows it further.
-export const FoundAndOwedNarrow: Story = { render: () => <Pane width={390} /> };
+// The rule the record was read against, as the byline's second clause. It
+// qualifies the authorship claim — read against WHAT — so it sits beside
+// "Margince suggests" rather than over the ask, which is the move itself.
+export const FoundMoveWithKicker: Story = {
+  render: () => <Pane kicker="Promise overdue" />,
+};
+
+// The pane at phone measure, and the only story where the move's verbs sit
+// UNDER its claim instead of opposite it — the two-column move and the to-do's
+// three-part line both turn here, so this is where a regression in either one
+// shows. The frame is the VIEWPORT rather than a capped div, because both folds
+// are media queries: a narrow box inside a desktop window still draws the wide
+// layout, which is exactly the false pass this story used to give.
+//
+// The to-do carries a title no phone column can hold on one line: it wraps to
+// two and then ends in an ellipsis, rather than pushing the rows under it off
+// the screen.
+export const FoundAndOwedNarrow: Story = {
+  globals: { viewport: { value: "phone" } },
+  // And the tag beside it, because the two answer different readers: the global
+  // moves the manager's frame for a person opening the catalog, and the tag
+  // moves the BROWSER for `make fe-uat`, which loads the iframe directly and
+  // never runs the manager.
+  tags: ["uat-phone"],
+  render: () => (
+    <Pane taskTitle="Send the promised line-item 3 breakdown for the Hamburg retrofit, including the depot slot Tomas confirmed" />
+  ),
+};
 
 // A verb the record cannot back yet: `reason` bars the press and states why
 // under the button, in the same column a working verb draws in — never a

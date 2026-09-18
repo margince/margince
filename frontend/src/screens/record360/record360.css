@@ -202,6 +202,11 @@
 @media (max-width: 900px) {
   .today-actions {
     flex-direction: row;
+    /* A row too narrow for its verbs takes a second line rather than shrinking
+       them. Sideways the column's one-width rule no longer holds anything
+       together, and a flex line shrinks its items before it wraps: unwrapped,
+       three verbs at phone width each came out half a label wide. */
+    flex-wrap: wrap;
   }
 }
 

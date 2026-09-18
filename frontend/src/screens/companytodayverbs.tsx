@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The leading card's own fallback verb column, split out of companytoday.tsx
-// (the file-length ratchet) rather than folded into it: `MomentRow`'s own doc
-// says why a verb belongs here whenever the server's own recommended action
-// names no destination, and the split keeps that reasoning and the column it
-// draws in one place a reader can hold at once.
+// The leading card's verb column, split out of companytoday.tsx (the
+// file-length ratchet) rather than folded into it: which verb the card closes
+// with is one question — the server's own wherever it named somewhere to go,
+// the account's own where it did not — and the split keeps that reasoning and
+// the column it draws in one place a reader can hold at once.
 
 import { CheckSquare, FileText, Send } from "lucide-react";
 import type { ReactNode } from "react";
@@ -41,7 +41,10 @@ function MomentVerb({
   onAct,
 }: Readonly<{
   label: string;
-  icon: ReactNode;
+  // The glyph naming the verb's kind. Absent on the server's own verb, whose
+  // label is the server's sentence rather than one of the kinds this page
+  // draws — a guessed glyph there would name a kind nobody stated.
+  icon?: ReactNode;
   primary?: boolean;
   onAct: () => void;
 }>) {
@@ -55,17 +58,48 @@ function MomentVerb({
   );
 }
 
+// The leading card's verb: the moment's own wherever the server named a
+// surface for it to open, and the account's own fallback where it did not. A
+// page that invented a destination would offer a press that lands nowhere,
+// and a card naming what is owed with nothing to press is an answer with no
+// working verb — this is the one place that choice is made.
+export function momentVerb({
+  moment,
+  onOpenRecord,
+  fallback,
+}: Readonly<{
+  moment: NonNullable<Company360["moment"]>;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  fallback: ReactNode;
+}>): ReactNode {
+  const { destination, label, state } = moment.recommended_action;
+  if (
+    state !== "available" ||
+    !onOpenRecord ||
+    destination?.entity_type == null ||
+    destination.entity_id == null
+  ) {
+    return fallback;
+  }
+  const { entity_type: type, entity_id: id } = destination;
+  // Indigo, because pressing it hands the work to Margince: the hue is the
+  // product's one claim about who is acting, and a verb the agent performs
+  // drawn in the accent would read as the reader's own move.
+  return (
+    <MomentVerb primary label={label} onAct={() => onOpenRecord(type, id)} />
+  );
+}
+
 // The leading card's own fallback verb, drawn only where the moment named no
-// destination of its own (`MomentRow` prefers the server's verb whenever it
-// has one). Read off the account's own state rather than the moment: a task
+// destination of its own (`momentVerb` above prefers the server's verb
+// whenever it has one). Read off the account's own state rather than the moment: a task
 // already on the list, whether we owe the reply or they owe us, are facts
 // this page holds regardless of which rule fired, and every one of them backs
 // a control the page already owns — a task modal, the composer, the log
 // drawer — so the fallback never offers a press that lands nowhere.
 //
 // Returns a fragment of `.today-verb` items rather than a column of its own:
-// `MomentRow` owns the one `.today-actions` column its row draws, the same
-// way `FoundMove` owns its.
+// `FoundMove` owns the one `.today-actions` column its row draws.
 export function momentFallbackVerb({
   view,
   t,

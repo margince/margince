@@ -27,12 +27,19 @@ import {
   HEALTH_STANDING_TONE,
   useAccountStanding,
 } from "./companylookups";
-import { byStrengthThenId, momentFallbackVerb } from "./companytodayverbs";
+import {
+  byStrengthThenId,
+  momentFallbackVerb,
+  momentVerb,
+} from "./companytodayverbs";
 import { EntityRef } from "./entityref";
 import {
+  basisAddsARecord,
   CallCard,
+  FoundMove,
   type Grounding,
-  MomentRow,
+  MOMENT_RULE_LABEL,
+  MomentEvidence,
   momentIsARow,
   type StandingTone,
   TodayPanel,
@@ -256,13 +263,23 @@ export function useTodayReading({
   // WHAT WE OWE leads the list. A promise past its date outranks a reading of
   // the account: one is a thing to do today and the other is context for it.
   const rows: ReactNode[] = [
+    // The same row the contact page leads with, drawn by the same component:
+    // the rule as the kicker, the server's headline as the ask, why now under
+    // it. Two spellings of "here is the move" is what a rep met reading two
+    // records of one account.
     ...(view.moment && momentIsARow(view.moment, besidesTheMoment > 0)
       ? [
-          <MomentRow
+          <FoundMove
             key="moment"
-            moment={view.moment}
-            onOpenRecord={onOpenRecord}
-            action={momentAction}
+            title={view.moment.headline}
+            why={view.moment.why_now}
+            kicker={t(MOMENT_RULE_LABEL[view.moment.rule])}
+            basis={momentBasis(view.moment)}
+            action={momentVerb({
+              moment: view.moment,
+              onOpenRecord,
+              fallback: momentAction,
+            })}
           />,
         ]
       : []),
@@ -287,6 +304,15 @@ export function useTodayReading({
         <TodayWithheld view={view} />
       ) : undefined,
   };
+}
+
+// What the moment rests on, drawn only where that is a record its own
+// headline does not already name: a chip restating the ask captions "based
+// on" over the sentence the reader has just finished reading.
+function momentBasis(moment: Company360["moment"]): ReactNode {
+  return moment && basisAddsARecord(moment) ? (
+    <MomentEvidence evidence={moment.evidence} />
+  ) : undefined;
 }
 
 /**

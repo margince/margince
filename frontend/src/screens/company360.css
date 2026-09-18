@@ -343,6 +343,16 @@
   color: var(--aiText);
 }
 
+/* What the record was read AGAINST, as a second clause of the same byline. The
+   dot belongs to this clause rather than sitting loose between the two, so the
+   separator cannot end a line with the rule's name on the next one; the spaces
+   either side of it are the byline's own gap. It takes no ink of its own — the
+   whole line is the authorship claim and is lettered in one colour. */
+.co-move-kicker::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+}
+
 .co-move-spark {
   width: 0.75rem;
   height: 0.75rem;
@@ -1335,6 +1345,14 @@
 .co-lead .co-move-basis {
   grid-column: 1;
 }
+/* The basis's own top margin belongs to the FLEX spelling of the move, where
+   nothing else separates it from the reason above. Here the grid's row gap
+   already does, and the two together opened a wider step between the reason
+   and the records it rests on than between the ask and the reason arguing for
+   it — which reads as the evidence belonging to something else. */
+.co-lead .co-move-basis {
+  margin-top: 0;
+}
 /* The wrapper stops being a box of its own so its two halves can land in the
    row's own two columns: the evidence belongs under the reason it supports,
    and the verbs opposite all of it. */
@@ -1345,6 +1363,30 @@
   grid-column: 2;
   grid-row: 1 / -1;
 }
+/* Under the fold the two columns become one. The verb column already reads
+   left to right at this width (`.today-actions`, record360.css) and a ROW of
+   verbs sized to its own contents beside the claim leaves the ask a word per
+   line — so the same query that turns the column turns the grid, because the
+   two are one collapse rather than two decisions that happen to agree.
+
+   `grid-row: auto` and not the span: with one column the span would lay the
+   verbs over the very lines they are meant to follow. */
+@media (max-width: 900px) {
+  .co-lead .co-move-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .co-lead .today-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  /* Each verb fills the line it wrapped onto. Left at its own width, three
+     verbs that no longer fit one line came out ragged — three left-aligned
+     boxes of three widths, which reads as three kinds of control rather than
+     as the same column the move draws above the fold. */
+  .co-lead .today-actions > .today-verb {
+    flex: 1 1 auto;
+  }
+}
 /* Putting a move off is not a second verb. Stripped of its border it reads as
    the aside it is, and the row keeps exactly one control that looks pressable
    for the thing it wants done. */
@@ -1354,6 +1396,23 @@
 }
 .co-move-defer:hover:not(:disabled) {
   background: none;
+}
+/* A finger is not a cursor. Every verb in this pane is a `Button`, and
+   `--controlHeight` is the rung a pointer hits — under a thumb it is the row a
+   reader misses, and the miss here undoes a promise or sends a draft.
+   The pane raises the floor for the controls IT lays out rather than the rung
+   itself: what height a button stands at everywhere is the design system's to
+   say, and a screen sheet answering it a second time is how two heights of one
+   control get shipped.
+   The `.btn-link` arm is spelled at its own specificity because the link
+   variant declares `min-block-size: 0`; at equal weight the winner would be
+   whichever sheet the bundler emitted first, and a contract that rests on load
+   order is not a contract. */
+@media (pointer: coarse) {
+  .co-lead .btn,
+  .co-lead .btn.btn-link {
+    min-block-size: 44px;
+  }
 }
 /* The panel's own name, at body weight and laid out as a row, moved into
    Panel's tone="accent" (design-system/panel.css): the record's tabs and its
@@ -1455,24 +1514,6 @@
   display: block;
 }
 
-/* The needs pane's head actions: the disclosure that a machine read the
-   record, and the way to the record's own list, as ONE item at the far end of
-   `Panel`'s head band. They are grouped rather than handed in loose because
-   they are one strip of controls and read as one — what keeps each of them
-   whole beside a title long enough to fill the band is panel.css, which holds
-   everything after the title block at its natural width, so the TITLE is what
-   gives way and the ellipsis is on it. Same on every record: the pane is the
-   record-360 kit's, not the company's, and its rules sit with `.co-reading`'s
-   here for the reason record360/README.md gives. */
-.co-reading-today-actions {
-  display: flex;
-  align-items: center;
-  /* A control row's own rung, by role rather than by rung: the disclosure and
-     the verb read as one strip of controls, and the head band beside them is
-     spaced by the panel. */
-  gap: var(--gapActions);
-  flex: none;
-}
 /* The three rated dimensions under the verdict, as a row of readings the
    card's own body separates from the word above it. */
 .co-360-dims {
@@ -1727,6 +1768,13 @@
 .co-todo-title {
   color: var(--textPrimary);
 }
+/* What is owed and the verb that settles it: ONE item at reading width, where
+   they are simply the row's last two children and the wrapper draws no box, so
+   the layout above is untouched. Under the fold they move together, and being
+   one item is what lets them move as one line. */
+.co-todo-owed {
+  display: contents;
+}
 /* When the to-do is owed, at the row's far end. Quiet unless it is late: a
    list where every date is coloured has no colour left for the one that
    matters, and the one that matters is the promise nobody kept. */
@@ -1744,9 +1792,52 @@
 /* The row's verb keeps its own width. The row is a flex line, and a flex line
    shrinks a button before it wraps the title beside it — a verb squeezed to
    half a word is one a reader can no longer read. Whose work it is says itself
-   in `Button`'s own aiQuiet variant, not here. */
-.co-todo > .btn {
+   in `Button`'s own aiQuiet variant, not here.
+   Reached through the wrapper rather than as a child: `display: contents`
+   keeps the button a flex item of this row but not a child of it, and a `>`
+   here would have stopped matching the moment the pair was grouped. */
+.co-todo .btn {
   flex: none;
+}
+
+/* At the fold the row's three parts stop sharing a line. The title is what a
+   reader scans by, and a date and a button each holding their own width beside
+   it left it one word wide with the date over the words. The mark keeps the
+   title company; what is owed drops to a line of its own at the row's end,
+   where a reader's eye already goes for it.
+   720px is the tree's own fold (`FOLD_MAX_WIDTH`, src/app/viewport.ts), which
+   a stylesheet cannot read — the two are changed together. */
+@media (max-width: 720px) {
+  .co-todo {
+    flex-wrap: wrap;
+  }
+  /* The mark keeps the title company, and a zero BASIS is what holds it there.
+     A wrapping flex line breaks on base sizes before anything grows, so a
+     title measured at its own content width did not fit beside the mark and
+     took the next line — leaving a lone monogram over a full-width title,
+     which reads as a heading for the rows under it rather than as the anchor
+     this column of initials is. */
+  .co-todo-body {
+    flex-basis: 0;
+  }
+  .co-todo-owed {
+    display: flex;
+    /* Its own line, because it is the only item wide enough to take one. */
+    flex: 1 1 100%;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+  /* Two lines and then an ellipsis: the title may wrap, but a task named in a
+     sentence would otherwise push the whole row past a phone's height and
+     bury the rows under it. */
+  .co-todo-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
 }
 
 /* What happened lately, as a list to scan. One row per exchange: the mark, the

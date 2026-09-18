@@ -29,14 +29,7 @@ export {
   signalKindLabel,
   signalTone,
 } from "./labels";
-export {
-  type ContactMomentEvidence,
-  isLate,
-  MOMENT_RULE_LABEL,
-  MomentRow,
-  momentIsARow,
-  standingTone,
-} from "./moment";
+export { basisAddsARecord, MOMENT_RULE_LABEL, momentIsARow } from "./moment";
 export { MomentEvidence } from "./momentevidence";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
 export {

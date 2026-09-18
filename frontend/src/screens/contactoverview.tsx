@@ -46,7 +46,12 @@ export function ContactOverview({
     setParams(next);
   };
   const commitments = hasOpenCommitments(view);
-  const work = hasContactWork(view) || commitments;
+  // Where the day's work stands, never WHETHER it stands: it leads the stack
+  // when it carries work and follows the brief when its answer is that
+  // nothing does. Counting commitments here skipped the panel altogether on a
+  // record whose only open item was one, which left the page's own question
+  // unanswered on the records that had an answer for it.
+  const work = hasContactWork(view);
   const today = (
     <ContactToday
       moment={view.moment}
@@ -58,7 +63,7 @@ export function ContactOverview({
   );
   return (
     <div className="record-stack">
-      {hasContactWork(view) && today}
+      {work && today}
       {commitments && (
         <ContactCommitmentsCard
           view={view}

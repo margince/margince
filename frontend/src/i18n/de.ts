@@ -1472,7 +1472,7 @@ export const de = {
   "co.next.empty": "Keine offene Aufgabe zu diesem Account.",
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
-  "co.next.undated": "Ohne Datum",
+  "co.next.undated": "Kein Fälligkeitsdatum",
   "co.facts.pipeline": "Offene Pipeline",
   "co.facts.inFlight": "Laufend",
   "co.facts.reading": "Wird gelesen\u2026",
@@ -1659,7 +1659,7 @@ export const de = {
   "co.suggest.kind.risk_raised": "Risiko benannt",
   "co.suggest.kind.need_raised": "Bedarf benannt",
   "co.suggest.more": "{count} weitere hier nicht gezeigt.",
-  "co.suggest.basedOn": "Worauf das beruht",
+  "co.suggest.basedOn": "Beruht auf",
   "co.cite.open": "Datensatz öffnen",
   "co.suggest.dismiss": "Nicht jetzt",
   "co.suggest.byline": "Margince schlägt vor",
@@ -3372,18 +3372,18 @@ export const de = {
   "co.spine.earlier_other": "{count} frühere Gespräche",
   "co.spine.earlier_one": "{count} früheres Gespräch",
   "today.failed":
-    "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
-  "today.quiet": "In dieser Ansicht wurde keine offene Arbeit gefunden.",
+    "Dieser Abschnitt konnte nicht geladen werden. Der Rest der Seite ist davon nicht betroffen.",
+  "today.quiet": "Gerade braucht dich nichts.",
   "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
-    "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",
-  "today.source.moments": "was Margince gefunden hat",
+    "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
+  "today.source.moments": "Marginces Funde",
   "today.source.nextSteps": "offene Aufgaben",
   "today.source.nextMeeting": "der Kalender",
   "today.source.deals": "Deals",
   "today.meeting.prepare": "Meeting vorbereiten",
   "today.source.contacts": "die Kontakte",
-  "today.source.standing": "wer am Zug ist und die Signale",
+  "today.source.standing": "der Stand des Accounts",
   "today.source.activities": "was gesprochen wurde",
   "today.silence.days": "seit {count} Tagen keine Antwort",
   "today.draft.new": "Neue E-Mail beginnen",
@@ -3391,6 +3391,7 @@ export const de = {
   "today.moment.act.openTask": "Aufgabe öffnen",
   "today.moment.act.followUp": "Nachfassen",
   "today.moment.act.writeToThem": "An sie schreiben",
+  "today.workQueue": "Arbeitsliste",
 
   "evidence.mark": "gelesen",
   "evidence.confirm": "Bestätigen",
@@ -6528,7 +6529,7 @@ export const de = {
   "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
   "deal360.readFull": "Vollständige Einschätzung lesen",
-  "deal360.openTask": "Vorhandene Aufgabe öffnen",
+  "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Aufgabe anlegen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
   "deal360.unreadable":
@@ -8659,27 +8660,27 @@ export const de = {
 
   "contact.moment.rule.meeting_prep": "Termin steht an",
   "contact.moment.rule.re_engaged": "Sie haben sich gemeldet",
-  "contact.moment.rule.job_change": "Neue Stelle",
+  "contact.moment.rule.job_change": "Stelle gewechselt",
   "contact.moment.rule.overdue_promise": "Zusage überfällig",
   "contact.moment.rule.gone_quiet": "Still geworden",
-  "contact.moment.rule.open_promise": "Offenes Versprechen",
-  "contact.moment.rule.public_signal": "Öffentlich gesagt",
+  "contact.moment.rule.open_promise": "Zusage fällig",
+  "contact.moment.rule.public_signal": "In den Nachrichten",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
   "contact.moment.rule.thin_relationship": "Keine Interaktionen erfasst",
   "contact.moment.suggest.goneQuiet":
-    "Jetzt nachfassen: seit {days} Tagen kam nichts zurück.",
+    "Seit {days} Tagen keine Antwort. Fasse nach.",
   "contact.moment.suggest.reEngaged":
-    "Jetzt antworten: sie haben geschrieben und warten auf uns.",
+    "Sie haben geantwortet und warten auf dich.",
   "contact.moment.suggest.overduePromise":
-    "Das Versprochene liefern: es ist überfällig.",
+    "Du hast es zugesagt, und es ist überfällig.",
   "contact.moment.suggest.openPromise":
-    "Das Versprochene liefern, bevor es fällig wird.",
+    "Du hast es zugesagt. Es wird bald fällig.",
   "contact.moment.suggest.jobChange":
-    "Melden: sie haben die Stelle gewechselt.",
+    "Sie haben die Stelle gewechselt. Melde dich.",
   "contact.moment.suggest.publicSignal":
-    "Melden: es gibt Neuigkeiten über sie.",
+    "Sie waren in den Nachrichten. Melde dich.",
   "contact.moment.suggest.missingNextStep":
-    "Nächsten Schritt festlegen: mit ihnen ist nichts geplant.",
+    "Kein nächster Schritt geplant. Lege einen fest.",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
 
   "contact.overview.detailsPermissions": "Details & Berechtigungen",

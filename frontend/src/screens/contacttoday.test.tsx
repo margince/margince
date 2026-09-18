@@ -5,13 +5,19 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ContactToday } from "./contacttoday";
 import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 
-// THE DAY'S WORK GIVES ONE ANSWER. The quiet rung is the answer a reader came
-// for on a record with nothing pending, and a contradiction on one that has
-// something — so which of the two it is depends on the rest of the list, and
-// that is what these cases hold.
+// THE DAY'S WORK GIVES ONE ANSWER, AND GIVES IT ONCE. The panel answers "what
+// needs me" on every contact, so the quiet rung and the thin relationship are
+// answers inside it rather than a reason to draw nothing; and the one thing
+// the move is about is named once, rather than as the ask, the record it
+// rests on and a chore underneath it.
+//
+// Assertions read the catalog rather than quoting English: the sentences here
+// are product copy and a test pinning them fails on a rewrite that changed
+// nothing about the behaviour.
 //
 // Mounted on the card rather than through the whole page: the page's own suite
 // is at its length ceiling, and what is under test here is the panel's
@@ -54,8 +60,7 @@ const QUIET: ContactMoment = {
   evidence_fingerprint: "quiet",
   rule: "nothing_needed",
   headline: "Nothing needs you today",
-  why_now:
-    "No meeting is close, nothing is owed, and nobody is waiting on a reply.",
+  why_now: "No meeting coming up, nothing owed, nobody waiting on a reply.",
   confidence: "observed_fact",
   evidence: [],
   recommended_action: {
@@ -64,6 +69,14 @@ const QUIET: ContactMoment = {
     state: "available",
     destination: { surface: "activity_log" },
   },
+};
+
+const THIN: ContactMoment = {
+  ...QUIET,
+  claim_key: "moment:thin_relationship",
+  rule: "thin_relationship",
+  headline: "No interactions recorded",
+  why_now: "Nothing has been written down about this contact yet.",
 };
 
 const OPEN_TASK = {
@@ -75,7 +88,31 @@ const OPEN_TASK = {
   ...CAPTURED,
 } as const;
 
-function show(view: Contact360, moment: ContactMoment) {
+const OTHER_TASK = {
+  ...OPEN_TASK,
+  id: "a-8",
+  subject: "Book the site visit",
+} as const;
+
+// A promise, as the ladder sends one: the headline is written FROM the task,
+// so the same commitment is the ask, the record it rests on and a row on the
+// list unless the card says it once.
+const PROMISE: ContactMoment = {
+  claim_key: "moment:open_promise",
+  evidence_fingerprint: "promise",
+  rule: "open_promise",
+  headline: "You owe them: Send the renewal quote",
+  why_now: "A commitment with a date on it, still open.",
+  confidence: "observed_fact",
+  evidence: [{ type: "task", id: "a-9", label: "Send the renewal quote" }],
+  recommended_action: {
+    kind: "complete_task",
+    label: "Open it",
+    state: "available",
+  },
+};
+
+function show(view: Contact360, moment?: ContactMoment) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -87,6 +124,57 @@ function show(view: Contact360, moment: ContactMoment) {
     </QueryClientProvider>,
   );
 }
+
+describe("the move the panel leads with", () => {
+  it("asks for THIS contact's move and keeps the rule as its reason", () => {
+    show(VIEW, PROMISE);
+
+    expect(screen.getByText(PROMISE.headline)).toBeTruthy();
+    expect(
+      screen.getByText(en["contact.moment.suggest.openPromise"]),
+    ).toBeTruthy();
+    // The rule qualifies the byline: what the record was read against, beside
+    // whose reading it is.
+    expect(
+      screen.getByText(en["contact.moment.rule.open_promise"]),
+    ).toBeTruthy();
+  });
+
+  it("names the task it is about once, not as a chore under itself too", () => {
+    show(
+      {
+        ...VIEW,
+        next_steps: {
+          data: [OPEN_TASK, OTHER_TASK],
+          page: { has_more: false },
+        },
+      },
+      PROMISE,
+    );
+
+    expect(screen.getByText(PROMISE.headline)).toBeTruthy();
+    // The subject is in the ask and nowhere else: no row of its own under the
+    // move that already asks for it.
+    expect(screen.queryByText(OPEN_TASK.subject)).toBeNull();
+    // Every other commitment the record carries still stands.
+    expect(screen.getByText(OTHER_TASK.subject)).toBeTruthy();
+  });
+
+  it("shows what it rests on only where that is a record the ask does not name", () => {
+    show(VIEW, PROMISE);
+    expect(screen.queryByText(en["co.suggest.basedOn"])).toBeNull();
+
+    cleanup();
+    show(VIEW, {
+      ...PROMISE,
+      evidence: [
+        { type: "activity", id: "a-1", label: "Re: the retrofit timeline" },
+      ],
+    });
+    expect(screen.getByText(en["co.suggest.basedOn"])).toBeTruthy();
+    expect(screen.getByText("Re: the retrofit timeline")).toBeTruthy();
+  });
+});
 
 describe("the day's work on a contact", () => {
   // The ladder reaches rung 10 with work still on the page whenever the reader
@@ -102,20 +190,54 @@ describe("the day's work on a contact", () => {
       QUIET,
     );
 
-    expect(screen.getByText("Send the renewal quote")).toBeTruthy();
-    expect(screen.queryByText("Nothing needs you today")).toBeNull();
+    expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
+    expect(screen.queryByText(QUIET.headline)).toBeNull();
   });
 
-  // Dropped only where it would contradict. With nothing else in the list a
-  // quiet record already said so in the brief, so the panel renders nothing
-  // rather than presenting the absence of work as a suggestion of its own.
-  it("renders nothing for a quiet record rather than presenting absence as a suggestion", () => {
+  // The quiet rung IS the answer to the panel's question, so it is answered
+  // where the question is asked. Rendering nothing at all left a reader
+  // unable to tell a quiet day from a pane that failed to load.
+  it("answers a quiet record inside the panel", () => {
     show(VIEW, QUIET);
 
-    expect(screen.queryByText(QUIET.why_now)).toBeNull();
-    expect(screen.queryByText("Margince suggests")).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: en["today.title"] }),
+    ).toBeTruthy();
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    // Nobody suggested that nothing needs doing, and there is nothing to press
+    // about it.
+    expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
-    expect(document.body.textContent).toBe("");
+  });
+
+  it("says how far the reading reached on a thin relationship", () => {
+    show(VIEW, THIN);
+
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
+    expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
+  });
+
+  // No moment read is not a quiet record: the panel keeps its place and says
+  // the reading is not shown rather than claiming nothing needs the reader.
+  it("keeps an unread moment inside the panel as a reading it does not have", () => {
+    show(VIEW);
+
+    expect(screen.getByText(en["record.notShown"])).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
+  });
+
+  it("names the sources the day's work could not be read from", () => {
+    show({ ...VIEW, sections_omitted: ["next_steps"] }, QUIET);
+
+    expect(
+      screen.getByText(
+        en["today.withheld"].replace(
+          "{sections}",
+          en["today.source.nextSteps"],
+        ),
+      ),
+    ).toBeTruthy();
   });
 });
 
@@ -125,8 +247,10 @@ it("opens the actual task from the contact's attention list", async () => {
     { ...VIEW, next_steps: { data: [OPEN_TASK], page: { has_more: false } } },
     QUIET,
   );
-  await user.click(screen.getByRole("button", { name: "Open existing task" }));
+  await user.click(
+    screen.getByRole("button", { name: en["deal360.openTask"] }),
+  );
   expect(
-    await screen.findByRole("dialog", { name: "Send the renewal quote" }),
+    await screen.findByRole("dialog", { name: OPEN_TASK.subject }),
   ).toBeTruthy();
 });

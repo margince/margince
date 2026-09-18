@@ -48,18 +48,6 @@
   gap: var(--space-2);
 }
 
-/* The lead row of the needs list. The headline is set in the display face
-   because it is the one sentence about the reader on the page, and the verb
-   under it is the page's one filled control (DESIGN.md §6). */
-.co-move-lead .co-move-headline {
-  font-family: var(--fontFamilyHeading);
-}
-/* The lead's verb ends its row like every other verb in the list: one margin
-   for everything a reader can press, whichever row they are on. */
-.co-move-lead .co-move-do {
-  margin-top: var(--space-3);
-}
-
 /* Ask as prepared questions: each one a full-width row rather than a chip in
    a wrapping line. The buttons are the assistant's own — the indigo that says
    the agent answers them is `Button`'s aiQuiet variant — and only their

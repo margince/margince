@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { UnsavedGuard } from "../app/unsaved";
+import { en } from "../i18n/en";
 import { mount, view } from "./contactpage.testkit";
 import { jsonResponse } from "./story-utils";
 
@@ -47,20 +48,24 @@ describe("a contact with little context", () => {
     expect(
       await screen.findByRole("heading", { name: "About this contact" }),
     ).toBeTruthy();
-    expect(screen.getByText("No interactions recorded")).toBeTruthy();
+    // The day's work is answered where the question is asked, and a thin
+    // relationship's answer says how far the reading reached — not a move
+    // read out of records that are not there.
+    expect(
+      await screen.findByRole("heading", { name: en["today.title"] }),
+    ).toBeTruthy();
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
     for (const label of [
-      "Margince suggests",
+      en["co.suggest.byline"],
+      en["co.suggest.basedOn"],
       "One thread only",
-      "What this rests on",
       "Nothing captured, nobody connected",
       "One-sided",
     ]) {
       expect(screen.queryByText(label)).toBeNull();
     }
     expect(screen.queryByRole("heading", { name: "Consent" })).toBeNull();
-    expect(
-      screen.queryByRole("heading", { name: "What needs you" }),
-    ).toBeNull();
     const sourceFact = screen.getByText("Source").closest(".record-fact");
     if (!(sourceFact instanceof HTMLElement)) {
       throw new Error("the Source fact is not on the page");
@@ -250,7 +255,7 @@ it("names restricted overview sections even when an open commitment leads", asyn
   ).toBeTruthy();
   expect(
     screen.getByText(
-      /Not shown: Activity, Where this contact stands, what Margince found, open tasks/,
+      /Not shown: Activity, Where this contact stands, Margince's findings, open tasks/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText("No interactions recorded")).toBeNull();
