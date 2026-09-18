@@ -55,10 +55,10 @@ import (
 //
 // NO UPPER BOUND, which is what makes the promise ONE A DAY rather than one
 // each morning. The pass ticks hourly from the local morning and the claim is
-// per (person, day): a colleague holding nothing when the morning opened takes
-// no claim then, so their first unread of the afternoon makes them a candidate
-// on the next tick and their batch leaves that day. Nothing downstream says
-// otherwise — the subject names no time of day for exactly this reason.
+// per (recipient, day): a colleague holding nothing when the morning opened
+// takes no claim then, so their first unread of the afternoon makes them a
+// candidate on the next tick and their batch leaves that day. Nothing
+// downstream says otherwise — the subject names no time of day for this reason.
 func digestWindowSQL(boundAt int) string {
 	return fmt.Sprintf(`notice.read_at IS NULL
 	   AND notice.created_at >= $%d

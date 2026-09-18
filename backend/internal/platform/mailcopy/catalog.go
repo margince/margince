@@ -297,7 +297,7 @@ func notificationLines(line writeLine) {
 // the same morning is two voices in one mailbox.
 func digestLines(line writeLine) {
 	// NO TIME OF DAY in the subject, and the lane is why. The pass runs hourly
-	// from the local morning and the claim is per (person, day), so what it
+	// from the local morning and the claim is per (recipient, day), so what it
 	// promises is one message a day — not one that leaves in the morning. A
 	// colleague holding nothing when the morning opened takes no claim then, so
 	// their first unread of the afternoon sends their batch on the next tick.
