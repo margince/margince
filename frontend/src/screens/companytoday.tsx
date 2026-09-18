@@ -38,9 +38,9 @@ import {
   CallCard,
   FoundMove,
   type Grounding,
-  MOMENT_RULE_LABEL,
   MomentEvidence,
   momentIsARow,
+  momentKicker,
   type StandingTone,
   TodayPanel,
   TodoRow,
@@ -263,17 +263,18 @@ export function useTodayReading({
   // WHAT WE OWE leads the list. A promise past its date outranks a reading of
   // the account: one is a thing to do today and the other is context for it.
   const rows: ReactNode[] = [
-    // The same row the contact page leads with, drawn by the same component:
-    // the rule as the kicker, the server's headline as the ask, why now under
-    // it. Two spellings of "here is the move" is what a rep met reading two
-    // records of one account.
+    // The same row the contact page leads with, drawn by the same component,
+    // so a rep reading two records of one account meets one spelling of "here
+    // is the move". The quiet rung is a reading rather than a find, so it
+    // carries neither the byline nor the rule beside it.
     ...(view.moment && momentIsARow(view.moment, besidesTheMoment > 0)
       ? [
           <FoundMove
             key="moment"
+            suggested={view.moment.rule !== "nothing_needed"}
             title={view.moment.headline}
             why={view.moment.why_now}
-            kicker={t(MOMENT_RULE_LABEL[view.moment.rule])}
+            kicker={momentKicker(view.moment, t)}
             basis={momentBasis(view.moment)}
             action={momentVerb({
               moment: view.moment,
@@ -307,8 +308,7 @@ export function useTodayReading({
 }
 
 // What the moment rests on, drawn only where that is a record its own
-// headline does not already name: a chip restating the ask captions "based
-// on" over the sentence the reader has just finished reading.
+// headline does not already name (`basisAddsARecord` says why).
 function momentBasis(moment: Company360["moment"]): ReactNode {
   return moment && basisAddsARecord(moment) ? (
     <MomentEvidence evidence={moment.evidence} />

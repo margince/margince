@@ -8540,15 +8540,6 @@ export const vi = {
   "contact.moment.rule.public_signal": "Lên báo",
   "contact.moment.rule.missing_next_step": "Chưa có lịch",
   "contact.moment.rule.thin_relationship": "Chưa ghi nhận tương tác",
-  "contact.moment.suggest.goneQuiet":
-    "Hãy theo dõi tiếp trước khi mạch trao đổi nguội đi.",
-  "contact.moment.suggest.reEngaged": "Họ đã trả lời và đang chờ bạn.",
-  "contact.moment.suggest.overduePromise": "Bạn đã hứa việc này và đã quá hạn.",
-  "contact.moment.suggest.openPromise": "Bạn đã hứa việc này. Sắp đến hạn.",
-  "contact.moment.suggest.jobChange": "Họ đã đổi việc. Hãy liên hệ.",
-  "contact.moment.suggest.publicSignal": "Họ vừa lên báo. Hãy liên hệ.",
-  "contact.moment.suggest.missingNextStep":
-    "Hãy thống nhất bước tiếp theo với họ trước khi deal chững lại.",
   "contact.moment.rule.nothing_needed": "Không cần làm gì",
 
   "contact.overview.detailsPermissions": "Chi tiết và quyền liên hệ",
@@ -8556,7 +8547,7 @@ export const vi = {
   "contact.overview.detailsHide": "Ẩn chi tiết và quyền liên hệ",
   "contact.overview.partial":
     "Một số phần không khả dụng với vai trò của bạn. Tóm tắt này chỉ bao gồm các bản ghi bạn có thể xem.",
-  "contact.overview.coverage": "Dựa trên các hồ sơ bạn được phép xem.",
+  "contact.overview.coverage": "Đọc từ các hồ sơ bạn được phép xem.",
   "contact.overview.about": "Về liên hệ này",
   "contact.overview.profileOnly":
     "Từ thông tin liên hệ đã lưu. Bổ sung ngữ cảnh khi bạn biết thêm.",

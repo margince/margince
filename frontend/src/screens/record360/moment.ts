@@ -15,6 +15,7 @@ import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
 
 type ContactMoment = components["schemas"]["ContactMoment"];
+type MomentEvidence = ContactMoment["evidence"][number];
 
 // The rule that fired, in one word over the sentence it produced.
 //
@@ -23,7 +24,7 @@ type ContactMoment = components["schemas"]["ContactMoment"];
 // rather than left implicit: "Gone quiet" and "Promise overdue" lead to
 // different moves, and a reader who sees only the sentence has to infer which
 // kind of thing they are looking at.
-export const MOMENT_RULE_LABEL = {
+const MOMENT_RULE_LABEL = {
   meeting_prep: "contact.moment.rule.meeting_prep",
   re_engaged: "contact.moment.rule.re_engaged",
   job_change: "contact.moment.rule.job_change",
@@ -35,6 +36,22 @@ export const MOMENT_RULE_LABEL = {
   thin_relationship: "contact.moment.rule.thin_relationship",
   nothing_needed: "contact.moment.rule.nothing_needed",
 } as const satisfies Record<ContactMoment["rule"], MessageKey>;
+
+/**
+ * The word for the rule beside the byline, and none for the quiet rung.
+ *
+ * "Margince suggests · Nothing needed" spends the row's one authorship claim
+ * on a non-event: the all-clear is a reading rather than a find, and naming
+ * the rung it came from reads as a rule that fired on something.
+ */
+export function momentKicker(
+  moment: ContactMoment,
+  t: (key: MessageKey) => string,
+): string | undefined {
+  return moment.rule === "nothing_needed"
+    ? undefined
+    : t(MOMENT_RULE_LABEL[moment.rule]);
+}
 
 /**
  * Whether the moment is a ROW in the day's work, given what else is in the
@@ -70,26 +87,55 @@ export function momentIsARow(
  * a reader can check. A verbatim snippet is the other case: those are the
  * words the moment was read out of, which no headline carries, so an item
  * carrying one always stands.
+ *
+ * Counted over the DEDUPED evidence, the same key `MomentEvidence` draws
+ * with: the server can send one record twice — a task read as evidence and
+ * again as the promise it carries — and counting before the duplicate goes
+ * calls one chip two, which is enough to draw a caption over a chip that
+ * repeats the ask.
  */
 export function basisAddsARecord(moment: ContactMoment): boolean {
-  const [only, ...rest] = moment.evidence;
+  const [only, ...rest] = dedupedEvidence(moment.evidence);
   if (!only) {
     return false;
   }
-  return (
-    rest.length > 0 || Boolean(only.snippet) || !namesIt(moment.headline, only)
-  );
+  if (rest.length > 0 || only.snippet) {
+    return true;
+  }
+  return !(COMPOSED_FROM_EVIDENCE.has(moment.rule) && namesIt(moment, only));
 }
 
+// The rungs whose headline the server composes FROM the record it rests on —
+// the promise rungs write "You owe them: <task subject>", meeting prep writes
+// the meeting's own name. Only on these does a headline containing the label
+// mean the chip repeats the ask. Every other rung's headline is written about
+// the RELATIONSHIP, where a label it happens to contain ("Reply" inside "No
+// reply for 14 days") is a different fact and the reader's only way into the
+// record.
+const COMPOSED_FROM_EVIDENCE: ReadonlySet<ContactMoment["rule"]> = new Set([
+  "open_promise",
+  "overdue_promise",
+  "meeting_prep",
+]);
+
 // The headline names the record when it already contains the record's label.
-// Containment rather than equality, and in this direction: the server writes
-// the headline FROM the evidence, so "You owe them: send the quote" over
-// "Send the quote" is one thing said twice while the reverse would be a
-// headline narrower than its own source.
-function namesIt(
-  headline: string,
-  item: ContactMoment["evidence"][number],
-): boolean {
+// Containment rather than equality, and in this direction: on these rungs the
+// server writes the headline FROM the evidence, so "You owe them: send the
+// quote" over "Send the quote" is one thing said twice, while the reverse
+// would be a headline narrower than its own source.
+function namesIt(moment: ContactMoment, item: MomentEvidence): boolean {
   const fold = (text: string) => text.trim().toLowerCase();
-  return fold(headline).includes(fold(item.label));
+  return fold(moment.headline).includes(fold(item.label));
+}
+
+// One entry per record, keyed as `MomentEvidence` keys its chips so the two
+// cannot disagree about how many records there are.
+function dedupedEvidence(
+  evidence: readonly MomentEvidence[],
+): MomentEvidence[] {
+  return [
+    ...new Map(
+      evidence.map((item) => [`${item.type}:${item.id ?? item.label}`, item]),
+    ).values(),
+  ];
 }

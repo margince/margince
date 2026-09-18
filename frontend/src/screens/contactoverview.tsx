@@ -48,9 +48,9 @@ export function ContactOverview({
   const commitments = hasOpenCommitments(view);
   // Where the day's work stands, never WHETHER it stands: it leads the stack
   // when it carries work and follows the brief when its answer is that
-  // nothing does. Counting commitments here skipped the panel altogether on a
-  // record whose only open item was one, which left the page's own question
-  // unanswered on the records that had an answer for it.
+  // nothing does. Open commitments have a card of their own and do not move
+  // it — a record whose only open item is one still asks the panel's question
+  // and still gets its answer.
   const work = hasContactWork(view);
   const today = (
     <ContactToday

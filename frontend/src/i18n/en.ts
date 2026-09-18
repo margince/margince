@@ -8853,15 +8853,6 @@ export const en = {
   "contact.moment.rule.public_signal": "In the news",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
   "contact.moment.rule.thin_relationship": "No interactions recorded",
-  "contact.moment.suggest.goneQuiet": "Follow up before the thread goes cold.",
-  "contact.moment.suggest.reEngaged": "They replied and are waiting on you.",
-  "contact.moment.suggest.overduePromise":
-    "You promised this and it's overdue.",
-  "contact.moment.suggest.openPromise": "You promised this. It's due soon.",
-  "contact.moment.suggest.jobChange": "They changed jobs. Reach out.",
-  "contact.moment.suggest.publicSignal": "They were in the news. Reach out.",
-  "contact.moment.suggest.missingNextStep":
-    "Agree the next step with them before the deal stalls.",
   "contact.moment.rule.nothing_needed": "Nothing needed",
 
   "contact.overview.detailsPermissions": "Details & permissions",
@@ -8869,7 +8860,7 @@ export const en = {
   "contact.overview.detailsHide": "Hide details & permissions",
   "contact.overview.partial":
     "Some sections are not available to your role. This summary covers the records you can see.",
-  "contact.overview.coverage": "Based on the records available to you.",
+  "contact.overview.coverage": "Read from the records you can see.",
   "contact.overview.about": "About this contact",
   "contact.overview.profileOnly":
     "From the contact details on file. Add context when you learn more.",

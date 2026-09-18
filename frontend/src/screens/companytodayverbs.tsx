@@ -82,9 +82,10 @@ export function momentVerb({
     return fallback;
   }
   const { entity_type: type, entity_id: id } = destination;
-  // Indigo, because pressing it hands the work to Margince: the hue is the
-  // product's one claim about who is acting, and a verb the agent performs
-  // drawn in the accent would read as the reader's own move.
+  // Indigo marks the verb the agent RECOMMENDS: the moment proposed this
+  // move, whatever the press then does — open a record, start a draft. The
+  // accent is the brand asking, and it would claim the move as the reader's
+  // own rather than the one Margince found.
   return (
     <MomentVerb primary label={label} onAct={() => onOpenRecord(type, id)} />
   );
@@ -92,8 +93,9 @@ export function momentVerb({
 
 // The leading card's own fallback verb, drawn only where the moment named no
 // destination of its own (`momentVerb` above prefers the server's verb
-// whenever it has one). Read off the account's own state rather than the moment: a task
-// already on the list, whether we owe the reply or they owe us, are facts
+// whenever it has one). Read off the account's own state rather than the
+// moment: a task already on the list, whether we owe the reply or they owe
+// us, are facts
 // this page holds regardless of which rule fired, and every one of them backs
 // a control the page already owns — a task modal, the composer, the log
 // drawer — so the fallback never offers a press that lands nowhere.

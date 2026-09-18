@@ -372,12 +372,13 @@
   min-width: 0;
   flex: 1 1 auto;
 }
-/* The ask, and the row's lead line. Weight is what says so: the reason under it
-   wears `.t-sub`, which is still a role HOOK carrying `font: inherit`, so the
-   two came out at one size in one weight and the row had no line a reader's eye
-   lands on first — a list of moves then reads as a paragraph per row.
-   Medium and not a size or an ink of its own: a rung up would restate the
-   panel's own title, and this is text leading inside a component, which is what
+/* The ask, and the row's lead line. Weight is the only thing that says so: the
+   reason under it wears `.t-sub`, which is still a role HOOK carrying
+   `font: inherit`, so at one weight the two stand at one size in one ink and
+   the row offers a reader's eye nowhere to land — a column of moves then reads
+   as a paragraph per row.
+   Medium and not a size or an ink of its own: a rung up restates the panel's
+   own title, and this is text leading inside a component, which is what
    `--fontWeightMedium` is for. */
 .co-move-ask {
   max-width: 62ch;
@@ -401,14 +402,20 @@
      caption sat on the glyph's baseline hung under the words beside it. */
   align-items: center;
   gap: var(--space-1) var(--space-2);
-  margin-top: var(--space-1);
-  /* The records this block names are records of OURS, so their names are an
-     email subject or a deal title — arbitrary length, and unbreakable as far as
-     a layout is concerned. A grid or flex item's automatic minimum is its
-     min-content, so one long name here does not widen the column it sits in:
-     it walks straight out of the panel and takes the page's scroll width with
-     it. Every box between that name and this one has to be allowed to shrink
-     below it, and this is the first of them. */
+  /* NO top margin, and the absence is the decision: the move lays this block
+     out as one row of its own grid (`.co-lead .co-move-body`), whose row gap is
+     the whole step between the reason and the records it rests on. A margin
+     here is a second opinion about that step, and the two together stand the
+     evidence further from its reason than the reason stands from the ask it
+     argues for.
+
+     The records named here are records of OURS, so a name is an email subject
+     or a deal title: arbitrary length, and one unbreakable word as far as a
+     layout is concerned. A grid or flex item's automatic minimum is its
+     min-content, so every box between that name and the panel has to be allowed
+     to shrink below it or the widest one leaves the panel and takes the page's
+     scroll width with it. This is the first of them; `.today-evidence` and its
+     `li` (record360.css) are the rest. */
   min-width: 0;
 }
 .co-move-basis-head {
@@ -1368,14 +1375,6 @@
 .co-lead .co-move-basis {
   grid-column: 1;
 }
-/* The basis's own top margin belongs to the FLEX spelling of the move, where
-   nothing else separates it from the reason above. Here the grid's row gap
-   already does, and the two together opened a wider step between the reason
-   and the records it rests on than between the ask and the reason arguing for
-   it — which reads as the evidence belonging to something else. */
-.co-lead .co-move-basis {
-  margin-top: 0;
-}
 /* The wrapper stops being a box of its own so its two halves can land in the
    row's own two columns: the evidence belongs under the reason it supports,
    and the verbs opposite all of it. */
@@ -1386,11 +1385,14 @@
   grid-column: 2;
   grid-row: 1 / -1;
 }
-/* Under the fold the two columns become one. The verb column already reads
-   left to right at this width (`.today-actions`, record360.css) and a ROW of
-   verbs sized to its own contents beside the claim leaves the ask a word per
-   line — so the same query that turns the column turns the grid, because the
-   two are one collapse rather than two decisions that happen to agree.
+/* Under the fold the two columns become one, and the verbs move from opposite
+   the claim to under it. That is the whole collapse: the verb column is a
+   column at every width (`.today-actions`, record360.css) and nothing here
+   turns it, so a verb is full width above the fold and below it, and a refusal
+   that cannot state its own width — `Button` wraps one in `.btn-with-reason`,
+   which is `contain: inline-size` so a sentence cannot widen the column, and a
+   contained box contributes nothing to a flex line — never meets a line that
+   has to measure it.
 
    `grid-row: auto` and not the span: with one column the span would lay the
    verbs over the very lines they are meant to follow. */
@@ -1401,27 +1403,6 @@
   .co-lead .today-actions {
     grid-column: 1;
     grid-row: auto;
-    /* And it stays a COLUMN. Sideways is what `.today-actions` turns for a
-       caller whose claim still sits beside it (record360.css); here the verbs
-       have just moved under the claim, so there is nothing left for a row to
-       win, and one is a layout this pane cannot make safe. A verb that carries
-       a refusal is wrapped by `Button` in `.btn-with-reason`, which is
-       `contain: inline-size` so a long sentence cannot widen the verb column —
-       and a contained box contributes NOTHING to a flex line's intrinsic size.
-       Measured at nothing it always fitted, so the line never broke however the
-       wrap was spelled: the refused verb was drawn OVER the one beside it and
-       its sentence came out one word per line. A column has no line to break,
-       and `align-items: stretch` hands every verb the same full width — which
-       is the shape the pane already draws above the fold.
-
-       The WRAP comes back off with it. A direction and its wrap are one
-       decision, and the shared rule turns both together — left on, a column
-       that wraps is a multi-line container asked to fill a block size it does
-       not have, and Chromium answered by handing the last verb a hundred
-       pixels of nothing. The plate then ended a long way under its own last
-       line. A column of verbs has no line to break. */
-    flex-direction: column;
-    flex-wrap: nowrap;
   }
 }
 /* Putting a move off is not a second verb. Stripped of its border it reads as
@@ -1434,20 +1415,26 @@
 .co-move-defer:hover:not(:disabled) {
   background: none;
 }
-/* A finger is not a cursor. Every verb in this pane is a `Button`, and
-   `--controlHeight` is the rung a pointer hits — under a thumb it is the row a
-   reader misses, and the miss here undoes a promise or sends a draft.
-   The pane raises the floor for the controls IT lays out rather than the rung
-   itself: what height a button stands at everywhere is the design system's to
-   say, and a screen sheet answering it a second time is how two heights of one
-   control get shipped.
-   The `.btn-link` arm is spelled at its own specificity because the link
-   variant declares `min-block-size: 0`; at equal weight the winner would be
-   whichever sheet the bundler emitted first, and a contract that rests on load
-   order is not a contract. */
+/* A finger is not a cursor. `--controlHeight` is the rung a pointer hits, and
+   under a thumb it is the row a reader misses — a miss among these verbs
+   undoes a promise or sends a draft.
+   THE VERBS AND THE WAY OUT, and nothing else. A move's verbs, a to-do's verb
+   and the head's link are the three things in this pane a reader aims at; the
+   sources under a reason are an inline run inside a sentence, and a 44px floor
+   there spaces a citation row like a list of buttons. Naming the three rather
+   than the pane is what keeps that distinction — `.co-lead .btn` reaches every
+   chip in the basis as well.
+   Each selector is three classes deep, which also settles the head: the link
+   variant declares `min-block-size: 0` at two, so these outrank it on
+   specificity rather than on whichever sheet the bundler emits first, and a
+   contract that rests on load order is not a contract.
+   The floor is the pane's, not the rung's: what height a button stands at
+   everywhere is the design system's to say, and a screen sheet answering it a
+   second time is how two heights of one control ship. */
 @media (pointer: coarse) {
-  .co-lead .btn,
-  .co-lead .btn.btn-link {
+  .co-lead .today-verb .btn,
+  .co-lead .co-todo .btn,
+  .co-lead .panel-head .btn {
     min-block-size: 44px;
   }
 }
@@ -1830,9 +1817,9 @@
    shrinks a button before it wraps the title beside it — a verb squeezed to
    half a word is one a reader can no longer read. Whose work it is says itself
    in `Button`'s own aiQuiet variant, not here.
-   Reached through the wrapper rather than as a child: `display: contents`
-   keeps the button a flex item of this row but not a child of it, and a `>`
-   here would have stopped matching the moment the pair was grouped. */
+   A descendant selector and not a child one: `.co-todo-owed` is
+   `display: contents`, which keeps the button a flex ITEM of this row while
+   making it no longer a child of it, and only the DOM tree answers a `>`. */
 .co-todo .btn {
   flex: none;
 }

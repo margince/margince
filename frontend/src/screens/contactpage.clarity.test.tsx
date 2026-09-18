@@ -48,13 +48,16 @@ describe("a contact with little context", () => {
     expect(
       await screen.findByRole("heading", { name: "About this contact" }),
     ).toBeTruthy();
-    // The day's work is answered where the question is asked, and a thin
-    // relationship's answer says how far the reading reached — not a move
-    // read out of records that are not there.
+    // The day's work is answered where the question is asked. On a thin
+    // relationship the answer is what the server found and how far the
+    // reading reached — never "nothing needs you", which is a claim about a
+    // record nobody has written anything about, and never a move read out of
+    // records that are not there.
     expect(
       await screen.findByRole("heading", { name: en["today.title"] }),
     ).toBeTruthy();
-    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    expect(screen.getByText("No interactions recorded")).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
     expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
     for (const label of [
       en["co.suggest.byline"],

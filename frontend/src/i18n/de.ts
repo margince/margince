@@ -8667,19 +8667,6 @@ export const de = {
   "contact.moment.rule.public_signal": "In den Nachrichten",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
   "contact.moment.rule.thin_relationship": "Keine Interaktionen erfasst",
-  "contact.moment.suggest.goneQuiet": "Fasse nach, bevor der Kontakt abreißt.",
-  "contact.moment.suggest.reEngaged":
-    "Sie haben geantwortet und warten auf dich.",
-  "contact.moment.suggest.overduePromise":
-    "Du hast es zugesagt, und es ist überfällig.",
-  "contact.moment.suggest.openPromise":
-    "Du hast es zugesagt. Es wird bald fällig.",
-  "contact.moment.suggest.jobChange":
-    "Sie haben die Stelle gewechselt. Melde dich.",
-  "contact.moment.suggest.publicSignal":
-    "Sie waren in den Nachrichten. Melde dich.",
-  "contact.moment.suggest.missingNextStep":
-    "Vereinbare den nächsten Schritt mit ihnen, bevor der Deal ins Stocken gerät.",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
 
   "contact.overview.detailsPermissions": "Details & Berechtigungen",
@@ -8688,7 +8675,7 @@ export const de = {
   "contact.overview.partial":
     "Einige Bereiche sind für Ihre Rolle nicht verfügbar. Diese Zusammenfassung umfasst die für Sie sichtbaren Einträge.",
   "contact.overview.coverage":
-    "Berücksichtigt werden die für Sie verfügbaren Einträge.",
+    "Gelesen aus den Einträgen, die du sehen darfst.",
   "contact.overview.about": "Über diesen Kontakt",
   "contact.overview.profileOnly":
     "Aus den gespeicherten Kontaktdaten. Ergänzen Sie Kontext, sobald Sie mehr wissen.",

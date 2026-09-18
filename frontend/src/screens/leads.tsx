@@ -1038,8 +1038,8 @@ function LeadOverviewPane({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The lead carries no task id of its own, so both the panel head's "View
-  // tasks" and the "Next task" row's own verb open the same queue.
+  // The lead carries no task id of its own, so both the panel head's way out
+  // and the "Next task" row's own verb open the same queue.
   const onOpenTasks = () => navigate({ screen: "worklist" });
   return (
     <div className="record-stack">
@@ -1061,7 +1061,7 @@ function LeadOverviewPane({
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
         <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
-        <TodayPanel onOpenTasks={onOpenTasks}>
+        <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
           {leadTodoRows(
             lead,
             t,

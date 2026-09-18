@@ -130,8 +130,8 @@ export const FoundMoveWithKicker: Story = {
 // UNDER its claim instead of opposite it — the two-column move and the to-do's
 // three-part line both turn here, so this is where a regression in either one
 // shows. The frame is the VIEWPORT rather than a capped div, because both folds
-// are media queries: a narrow box inside a desktop window still draws the wide
-// layout, which is exactly the false pass this story used to give.
+// are media queries: a narrow box inside a desktop window draws the WIDE layout
+// and passes a story that has proved nothing.
 //
 // The to-do carries a title no phone column can hold on one line: it wraps to
 // two and then ends in an ellipsis, rather than pushing the rows under it off

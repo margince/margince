@@ -126,13 +126,13 @@ function show(view: Contact360, moment?: ContactMoment) {
 }
 
 describe("the move the panel leads with", () => {
-  it("asks for THIS contact's move and keeps the rule as its reason", () => {
+  it("asks for THIS contact's move and gives the server's own reason", () => {
     show(VIEW, PROMISE);
 
     expect(screen.getByText(PROMISE.headline)).toBeTruthy();
-    expect(
-      screen.getByText(en["contact.moment.suggest.openPromise"]),
-    ).toBeTruthy();
+    // The server's reason and no other: the facts in it are what a rep
+    // judges, and the account brief reads the same moment the same way.
+    expect(screen.getByText(PROMISE.why_now)).toBeTruthy();
     // The rule qualifies the byline: what the record was read against, beside
     // whose reading it is.
     expect(
@@ -210,12 +210,37 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("says how far the reading reached on a thin relationship", () => {
+  // A relationship with nothing recorded is not a quiet one: the panel's own
+  // line claims that nothing needs the reader, and a record nobody has
+  // written anything about gives it no basis for that claim.
+  it("says what a thin relationship HAS, and how far the reading reached", () => {
     show(VIEW, THIN);
 
-    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    expect(screen.getByText(THIN.headline)).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
     expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
+  });
+
+  // A truncated list with no count reads as "that is everything", which is
+  // the one thing a list of commitments may not say.
+  it("says how many open tasks the cut left out", () => {
+    const many = [1, 2, 3, 4, 5].map((n) => ({
+      ...OPEN_TASK,
+      id: `a-${n}`,
+      subject: `Task ${n}`,
+    }));
+    show(
+      { ...VIEW, next_steps: { data: many, page: { has_more: false } } },
+      QUIET,
+    );
+
+    expect(
+      screen.getAllByRole("button", { name: en["deal360.openTask"] }),
+    ).toHaveLength(3);
+    expect(
+      screen.getByText(en["co.suggest.more"].replace("{count}", "2")),
+    ).toBeTruthy();
   });
 
   // No moment read is not a quiet record: the panel keeps its place and says

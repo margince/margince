@@ -195,21 +195,6 @@
   align-items: stretch;
 }
 
-/* Under the fold the column reads sideways instead: the phone width a record
-   page draws at has no room for the claim beside a column of verbs, so the
-   verbs move under it and read left to right the way the rest of the row's
-   controls do. */
-@media (max-width: 900px) {
-  .today-actions {
-    flex-direction: row;
-    /* A row too narrow for its verbs takes a second line rather than shrinking
-       them. Sideways the column's one-width rule no longer holds anything
-       together, and a flex line shrinks its items before it wraps: unwrapped,
-       three verbs at phone width each came out half a label wide. */
-    flex-wrap: wrap;
-  }
-}
-
 /* The moment's evidence: what the rule fired on, each openable. They are the
    difference between a verdict and a claim with its receipts. What the move
    rests on, as an inline run of links after its caption: one quiet meta line
@@ -252,9 +237,10 @@
 /* A source that takes a second line reads from the left, like the caption above
    it and the reason above that. `.btn` centres its contents because a verb's
    label is one short line in the middle of a control; a record's name is a run
-   of prose, and centred it read as a heading over the row rather than as the
-   thing the move was read FROM. Where the words sit in this row is the row's to
-   say; what the control looks like is still the design system's. */
+   of prose, and prose centred over two lines reads as a heading for the row
+   rather than as the thing the move was read FROM. Where the words sit in this
+   row is the row's to say; what the control looks like is still the design
+   system's. */
 .today-evidence .btn {
   justify-content: flex-start;
   text-align: start;

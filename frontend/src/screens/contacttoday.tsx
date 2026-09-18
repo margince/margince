@@ -5,7 +5,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
 import { contactTabRoute } from "./contacttab";
@@ -14,8 +14,8 @@ import { MoveButton } from "./movebutton";
 import {
   basisAddsARecord,
   FoundMove,
-  MOMENT_RULE_LABEL,
   MomentEvidence,
+  momentKicker,
   TodayPanel,
   TodoRow,
   WithheldNotice,
@@ -27,11 +27,10 @@ import "./record360/record360.css";
 // under it.
 //
 // The panel is drawn on every contact, whatever rung the ladder reached. A
-// quiet record and a thin relationship are ANSWERS to "what needs me" and the
-// panel has a sentence for each; answering with no panel at all left the one
-// question the page exists to answer with nothing standing where it belongs,
-// and a reader who could not find it had no way to tell a quiet day from a
-// pane that failed to load.
+// quiet record and a thin relationship are ANSWERS to "what needs me", and
+// each has a sentence of its own inside the panel: the question the page
+// exists to answer is answered where it is asked, and a reader can always
+// tell a quiet day from a pane that has not loaded.
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
@@ -70,24 +69,16 @@ export function ContactToday({
   // The one move the panel leads with, where the ladder found one. A quiet or
   // thin rung is an answer rather than an ask, so it draws no row and the
   // panel's own sentence speaks for the day.
+  const { locale } = useLocale();
   const move = moment && actionableMoment(moment) ? moment : undefined;
-  const taskRows = useOpenTaskRows(view, move);
+  const tasks = useOpenTaskRows(view, move);
+  const standing = standingSentence(moment, t);
   const omitted = new Set(view.sections_omitted ?? []);
   return (
     <TodayPanel
       onOpenTasks={onOpenTasks}
       tasksLabel={t("today.workQueue")}
-      footer={
-        // How far the reading reached, in the band that says what the day was
-        // read from: "nothing needs you" about a relationship with almost
-        // nothing recorded is honest only with the reach of the records named
-        // beside it. In the foot and not the body, where a second block under
-        // the quiet line read as a second section rather than as a note about
-        // the one above it.
-        moment?.rule === "thin_relationship" ? (
-          <p className="t-sub">{t("contact.overview.coverage")}</p>
-        ) : undefined
-      }
+      footer={panelFoot({ moment, more: tasks.more, t, locale })}
       notice={
         <WithheldNotice
           sections={[
@@ -97,13 +88,13 @@ export function ContactToday({
         />
       }
     >
-      {/* No moment read at all is not a quiet day: the panel keeps its place
-          and says the reading is not shown, rather than drawing the quiet
-          sentence, which is a claim about the record that a withheld or
-          unread section gives it no basis for. */}
-      {!moment && (
+      {/* Neither a move nor a quiet day. The panel's own sentence claims that
+          nothing needs the reader, and an unread reading and a relationship
+          with nothing recorded are both short of the basis for that claim, so
+          each says what it does know in the quiet line's place. */}
+      {standing && (
         <PanelBody>
-          <EmptyState>{t("record.notShown")}</EmptyState>
+          <EmptyState>{standing}</EmptyState>
         </PanelBody>
       )}
       {move && (
@@ -114,7 +105,7 @@ export function ContactToday({
           onOpenEmail={onOpenEmail}
         />
       )}
-      {taskRows}
+      {tasks.rows}
     </TodayPanel>
   );
 }
@@ -136,15 +127,18 @@ function MomentMove({
   return (
     <FoundMove
       suggested
-      // THIS contact's move first. The server writes the headline from the
-      // record itself ("You owe them: call Alice back about the retrofit")
-      // and the rule's own sentence is the same advice for everyone on that
-      // rung, so the rule leads as the kicker and argues underneath while the
-      // headline takes the row's loudest line. Read the other way round, a
-      // reader met the template twice before the name of the thing to do.
+      // THIS contact's move first: the server writes the headline from the
+      // record itself ("You owe them: call Alice back about the retrofit"),
+      // and it takes the row's loudest line while the rule it fired on
+      // qualifies the byline beside it.
       title={moment.headline}
-      why={suggestionFor(moment, t) ?? moment.why_now}
-      kicker={t(MOMENT_RULE_LABEL[moment.rule])}
+      // The server's `why_now` is the ONLY reason, here and on the account
+      // brief: one moment gives one reason, and the facts in it ("no reply
+      // after 14 days is the rule; yours went out 131 days ago") are the part
+      // a rep judges. A sentence composed from the rule instead would be the
+      // same words for every contact on that rung.
+      why={moment.why_now}
+      kicker={momentKicker(moment, t)}
       basis={
         basisAddsARecord(moment) ? (
           <MomentEvidence
@@ -194,32 +188,60 @@ function MomentMove({
   );
 }
 
-// Why the rung fired, in the ladder's own words — the reason under the ask,
-// which is the part a rep judges. Undefined where the rule has no sentence of
-// its own: the server's `why_now` is then the only reason there is, and a
-// reader is owed that rather than a blank line under the headline.
-function suggestionFor(
-  moment: ContactMoment,
+// What the body says where there is no move to draw. The panel's own quiet
+// line is a claim that nothing needs the reader; a reading nobody may see and
+// a relationship with nothing recorded are both short of the basis for it, so
+// each stands in its place — the first says the reading is not shown, the
+// second says what the server actually found. The quiet rung has the basis,
+// and leaves the line to the panel.
+function standingSentence(
+  moment: ContactMoment | undefined,
   t: ReturnType<typeof useT>,
 ): string | undefined {
-  switch (moment.rule) {
-    case "gone_quiet":
-      return t("contact.moment.suggest.goneQuiet");
-    case "re_engaged":
-      return t("contact.moment.suggest.reEngaged");
-    case "overdue_promise":
-      return t("contact.moment.suggest.overduePromise");
-    case "open_promise":
-      return t("contact.moment.suggest.openPromise");
-    case "job_change":
-      return t("contact.moment.suggest.jobChange");
-    case "public_signal":
-      return t("contact.moment.suggest.publicSignal");
-    case "missing_next_step":
-      return t("contact.moment.suggest.missingNextStep");
-    default:
-      return undefined;
+  if (!moment) {
+    return t("record.notShown");
   }
+  return moment.rule === "thin_relationship" ? moment.headline : undefined;
+}
+
+// The band under the rows: what the list did not show, and how far the reading
+// reached. Both are facts about the READING rather than work, so they sit in
+// the foot; as rows they would read as two more things to do. A truncated list
+// with no count reads as "that is everything", which is the one thing a list
+// of commitments may not say.
+function panelFoot({
+  moment,
+  more,
+  t,
+  locale,
+}: Readonly<{
+  moment: ContactMoment | undefined;
+  more: number;
+  t: ReturnType<typeof useT>;
+  locale: Locale;
+}>): ReactNode | undefined {
+  const lines = [
+    ...(more > 0
+      ? [t("co.suggest.more", { count: formatNumber(more, locale) })]
+      : []),
+    // "Nothing needs you" about a relationship with almost nothing recorded is
+    // honest only with the reach of the records behind it named beside it.
+    ...(moment?.rule === "thin_relationship"
+      ? [t("contact.overview.coverage")]
+      : []),
+  ];
+  if (lines.length === 0) {
+    return undefined;
+  }
+  return (
+    <>
+      {lines.map((line) => (
+        <p key={line} className="t-caption">
+          {line}
+        </p>
+      ))}
+    </>
+  );
 }
 
 // The open tasks already on this contact's record, quieter than the move
@@ -228,11 +250,11 @@ function suggestionFor(
 // Rows rather than a component, because the panel counts what it is handed to
 // decide whether the day is quiet — and a component that renders nothing is
 // still one child. A withheld section yields no rows; the rail says what was
-// withheld.
+// withheld. `more` is what the cut left out, which the foot reports.
 function useOpenTaskRows(
   view: Contact360,
   move: ContactMoment | undefined,
-): ReactNode[] {
+): { rows: ReactNode[]; more: number } {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -255,9 +277,8 @@ function useOpenTaskRows(
     return entry && "display_name" in entry ? entry.display_name : undefined;
   };
   const asOf = Date.parse(view.as_of);
-  return tasks
-    .slice(0, OPEN_TASKS_SHOWN)
-    .map((task) => (
+  return {
+    rows: tasks.slice(0, OPEN_TASKS_SHOWN).map((task) => (
       <TodoRow
         key={task.id}
         who={nameOf(task.assignee_id)}
@@ -266,33 +287,29 @@ function useOpenTaskRows(
         action={
           <MoveButton
             contactId={view.contact.id}
-            move={{ action: "open_task", arguments: { activity_id: task.id } }}
+            move={{
+              action: "open_task",
+              arguments: { activity_id: task.id },
+            }}
           />
         }
       />
-    ));
+    )),
+    more: Math.max(tasks.length - OPEN_TASKS_SHOWN, 0),
+  };
 }
 
 // The records the move above the list is itself about. A task the move names
 // is the subject of that row, and listed again underneath it reads as a second
 // thing to do — the same commitment counted twice, once as the ask and once as
 // a chore.
+// Read off the evidence alone, which is where the server names a record: a
+// destination is a surface to open (composer, brief, research, record, the log
+// form) and never a second naming of the row the move is about.
 function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
-  if (!move) {
-    return new Set();
-  }
-  const verbs = [move.recommended_action, ...(move.secondary_actions ?? [])];
-  return new Set([
-    ...move.evidence.flatMap((item) => (item.id ? [item.id] : [])),
-    // The verb's own destination too, for a move read out of the promise in a
-    // conversation rather than out of the task somebody filed for it: the
-    // evidence is then the message and only the button names the task.
-    ...verbs.flatMap((verb) =>
-      verb.destination?.surface === "task" && verb.destination.entity_id
-        ? [verb.destination.entity_id]
-        : [],
-    ),
-  ]);
+  return new Set(
+    (move?.evidence ?? []).flatMap((item) => (item.id ? [item.id] : [])),
+  );
 }
 
 // How many open tasks the day's work lists before the reader is sent to the
@@ -334,12 +351,11 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // Every verb on this card is one the agent proposed and one the agent
-  // carries out on the press: the brief it assembles, the research it runs,
-  // the draft it writes into the composer. So the leading verb wears the AI
-  // fill and the rest the plain outline, whatever the verb: one colour rule
-  // for the column, read once. A green verb among them said "a human does
-  // this one" about a draft the agent writes.
+  // Indigo marks the verb the agent RECOMMENDS, not work the agent performs:
+  // every verb in this column was proposed by the moment, and the leading one
+  // is the move it is asking for. So the lead wears the AI fill and the rest
+  // the plain outline, whatever each verb goes on to do — one colour rule for
+  // the column, read once.
   const variant = primary ? "ai" : "ghost";
   return (
     <span className="today-verb">

@@ -2318,7 +2318,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       "More actions",
       // The day's work opens the task LIST: a door to another screen, which
       // writes nothing on this record.
-      "View tasks",
+      en["today.workQueue"],
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
       "Evidence",

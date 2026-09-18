@@ -29,7 +29,7 @@ export {
   signalKindLabel,
   signalTone,
 } from "./labels";
-export { basisAddsARecord, MOMENT_RULE_LABEL, momentIsARow } from "./moment";
+export { basisAddsARecord, momentIsARow, momentKicker } from "./moment";
 export { MomentEvidence } from "./momentevidence";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
 export {
