@@ -277,6 +277,10 @@ func TestAMessageUnderAStatutoryHoldIsNotTakenOver(t *testing.T) {
 		SELECT activity_id FROM activity_identity
 		 WHERE identity_kind = 'mail' AND identity_key = $1`, messageID)
 	holdUnderTheStatutoryFloor(t, e, held)
+	// The version AFTER the hold is written, because placing the hold is itself
+	// an UPDATE and bumps it. What this pins is that nothing touched the row
+	// between the hold and the end of the test.
+	heldVersion := scalar[int](t, e, `SELECT version FROM activity WHERE id = $1`, held)
 
 	// The rep's mailbox syncs the message. captureWithTakeOver fails the test on
 	// any error, and that is an assertion in its own right: a capture that
@@ -299,6 +303,16 @@ func TestAMessageUnderAStatutoryHoldIsNotTakenOver(t *testing.T) {
 	capturedBy := scalar[string](t, e, `SELECT captured_by FROM activity WHERE id = $1`, held)
 	if capturedBy != "human:"+e.Rep2.String() {
 		t.Fatalf("the held row is stamped %q — a take-over restamped a row under a statutory hold", capturedBy)
+	}
+	// NOTHING wrote to the row at all, which the three columns above cannot
+	// show on their own: trg_activity_updated bumps version on every UPDATE of
+	// this table, so an unchanged version means no statement reached it. Without
+	// this the test would pass against a take-over that wrote the row and
+	// happened to write the same values back.
+	version := scalar[int](t, e, `SELECT version FROM activity WHERE id = $1`, held)
+	if version != heldVersion {
+		t.Fatalf("the held row's version moved from %d to %d — something wrote to a row under a statutory hold",
+			heldVersion, version)
 	}
 	// And the hold itself is intact: still held, still archived.
 	stillHeld := scalar[bool](t, e, `
