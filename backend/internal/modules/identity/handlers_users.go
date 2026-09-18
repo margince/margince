@@ -22,6 +22,38 @@ import (
 // actor.hasRole("admin")); the handler resolves the acting Identity the
 // middleware bound and returns the resulting member row.
 
+// seatIdentity reads the two fields every route that CREATES a seat carries: the
+// address the seat is keyed on, and the name a colleague is shown by.
+//
+// It exists because the contract's `format: email` and `maxLength` are
+// documentation — the generated binding enforces neither, so a route that
+// skipped these checks would take a malformed address or an empty name and
+// create a member from it. Both routes need exactly the same two refusals, and
+// the second one was a copy of the first until this was extracted.
+//
+// It takes the two strings rather than a request, because the two requests are
+// different generated types that happen to agree on these fields; a parameter
+// naming one of them would make the other one's route convert into a shape it
+// is not.
+//
+// Writes its own refusal and answers false, in the idiom h.actor uses: a caller
+// that gets false has already answered the request and returns.
+func seatIdentity(
+	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
+) (values.Email, string, bool) {
+	email, perr := values.ParseEmail(rawEmail)
+	if perr != nil {
+		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
+		return values.Email{}, "", false
+	}
+	name := strings.TrimSpace(rawName)
+	if name == "" || utf8.RuneCountInString(name) > 255 {
+		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+		return values.Email{}, "", false
+	}
+	return email, name, true
+}
+
 // InviteUser (POST /users): provision a new member and mail the set-password link.
 func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.actor(w, r)
@@ -32,16 +64,8 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// The contract's format/length constraints are not enforced by the binding —
-	// validate here so a malformed email or empty name can't create a member.
-	email, perr := values.ParseEmail(string(req.Email))
-	if perr != nil {
-		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
-		return
-	}
-	name := strings.TrimSpace(req.DisplayName)
-	if name == "" || utf8.RuneCountInString(name) > 255 {
-		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	if !ok {
 		return
 	}
 	// An invite creates an ACTIVE member with no password whose only way in is
@@ -356,16 +380,8 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// The contract's format and length constraints are not enforced by the
-	// binding, exactly as on the invite path beside this one.
-	email, perr := values.ParseEmail(string(req.Email))
-	if perr != nil {
-		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
-		return
-	}
-	name := strings.TrimSpace(req.DisplayName)
-	if name == "" || utf8.RuneCountInString(name) > 255 {
-		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	if !ok {
 		return
 	}
 	in := FormerMemberInput{Email: email.String(), DisplayName: name}
