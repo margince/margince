@@ -96,13 +96,30 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if err := lockStopKey(ctx, tx, stopSubjectKey(ref)); err != nil {
 		return false, err
 	}
-	// THE DEDUP KEYS ON PURPOSE TOO, or a broad live row would silently absorb
-	// a narrow press (the recipient asked to leave one list and the row would
-	// say they already had, when what already stood was the OTHER kind of
-	// stop) and a narrow live row would block a broad one for a different
-	// purpose from ever being recorded. IS NOT DISTINCT FROM treats two NULLs
-	// as equal, which is what lets a second all-marketing press still read as
-	// "already stopped" exactly as it did before this column existed.
+	// THE DEDUP IS ASYMMETRIC, because "already stopped" is.
+	//
+	// A BROAD live row ABSORBS a narrow press. Somebody who has already left
+	// all marketing and then presses one list's link has asked for nothing
+	// they do not have: inserting would write a second live objection, audit
+	// it, and answer "you are now unsubscribed" to somebody who already was —
+	// and leave their Art. 15 export showing two objections for one standing
+	// refusal.
+	//
+	// A NARROW live row does NOT absorb a broad press, nor a press for another
+	// purpose. Those ask for strictly more than what stands, so each records.
+	//
+	// WHAT THIS COSTS, stated because it is a real trade and not a free win:
+	// the narrow preference is not written down while the broad row covers it,
+	// so lifting the broad stop later would not leave the narrow one behind.
+	// That is unreachable today — this door refuses contacts outright, and a
+	// lead's stop has no lift path at all (lift.go admits a ContactID only) —
+	// so nothing can currently observe the difference. A lift path for leads
+	// is the slice that has to decide it, and it should read this comment.
+	//
+	// `live.purpose_id IS NULL` is the absorbing arm; `= $7` is the exact
+	// match. A broad press sends NULL for $7, where `= $7` is never true, so
+	// the two arms together leave a broad press matching broad rows only —
+	// exactly the behaviour this dedup had before the column existed.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
 		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
@@ -111,7 +128,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
 		          AND live.kind = $3
-		          AND live.purpose_id IS NOT DISTINCT FROM $7
+		          AND (live.purpose_id IS NULL OR live.purpose_id = $7)
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,

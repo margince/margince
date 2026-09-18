@@ -365,3 +365,77 @@ func TestANamedPurposeLinkMustNameItsPurpose(t *testing.T) {
 			"a refusal from somewhere else leaves the widening press unproven", err)
 	}
 }
+
+// WHAT "ALREADY STOPPED" MEANS IS ASYMMETRIC, and the dedup has to be too.
+//
+// A press that asks for no more than what already stands must answer "nothing
+// moved" — otherwise somebody who left all marketing, then pressed one list's
+// link, is told they have now been unsubscribed and carries two live
+// objections into their Art. 15 export for one standing refusal. A press that
+// asks for MORE than what stands must record, or the narrower row silently
+// caps the broader request.
+//
+// All four pairings, because the two halves fail in opposite directions and a
+// dedup that only ever widens or only ever absorbs passes half of them.
+func TestABroadStopAbsorbsANarrowPressButNotTheOtherWayAround(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	purpose := marketingPurposeID(t, e)
+	address := "absorbed-" + e.ws.String() + "@example.test"
+
+	press := func(t *testing.T, scope string, purposeID ids.UUID) bool {
+		t.Helper()
+		token := mintWithdrawal(t, e, WithdrawalMintInput{
+			Address: address, Scope: scope, PurposeID: purposeID,
+		})
+		moved, err := e.store.StopForCredential(pressCtx(e), token)
+		if err != nil {
+			t.Fatalf("the press errored: %v", err)
+		}
+		return moved
+	}
+	live := func(t *testing.T) int {
+		t.Helper()
+		var n int
+		if err := e.owner.QueryRow(context.Background(), `
+			SELECT count(*) FROM communication_suppression
+			 WHERE lower(address) = $1 AND revoked_at IS NULL`, address).Scan(&n); err != nil {
+			t.Fatalf("counting live stops: %v", err)
+		}
+		return n
+	}
+
+	// The broad press lands, as it always has.
+	if !press(t, WithdrawalScopeAllMarketing, ids.UUID{}) {
+		t.Fatal("the first all-marketing press reported that nothing moved")
+	}
+	if n := live(t); n != 1 {
+		t.Fatalf("live stops after the broad press = %d, want 1", n)
+	}
+
+	// A narrow press behind it asks for nothing new: absorbed.
+	if press(t, WithdrawalScopeNamedPurpose, purpose.UUID) {
+		t.Error("a narrow press behind a live all-marketing stop reported that it moved " +
+			"something — the presser is already unsubscribed from this list and everything else")
+	}
+	if n := live(t); n != 1 {
+		t.Errorf("live stops after the absorbed narrow press = %d, want 1 — a second objection "+
+			"for one standing refusal reaches the subject's own Art. 15 export", n)
+	}
+
+	// The mirror: a narrow stop standing alone must NOT absorb a broad press,
+	// which asks for strictly more than the one list it names.
+	other := "widening-" + e.ws.String() + "@example.test"
+	address = other
+	if !press(t, WithdrawalScopeNamedPurpose, purpose.UUID) {
+		t.Fatal("the narrow press on a fresh address reported that nothing moved")
+	}
+	if !press(t, WithdrawalScopeAllMarketing, ids.UUID{}) {
+		t.Error("an all-marketing press behind a live narrow stop was absorbed — the presser " +
+			"asked to leave every list and only one of them would stop")
+	}
+	if n := live(t); n != 2 {
+		t.Errorf("live stops after narrow-then-broad = %d, want 2 — the broad request is the "+
+			"wider one and the narrow row may not cap it", n)
+	}
+}
