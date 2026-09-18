@@ -16,6 +16,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -308,5 +309,47 @@ func TestANamedPurposeLinkNamingOnlyAnAddressStopsThatOneList(t *testing.T) {
 	if broad != 0 {
 		t.Errorf("a link for one subscription wrote %d broad stop(s) on an address that "+
 			"asked to leave one list", broad)
+	}
+}
+
+// A NAMED-PURPOSE LINK THAT NAMES NO PURPOSE IS NOT MINTABLE, which is what
+// keeps the narrow press from ever widening.
+//
+// The press reads the scope to decide how narrow the row is, and takes the
+// purpose off the credential. A credential claiming named_purpose while naming
+// none would resolve with a zero purpose, and the press would write the BROAD
+// row for a link minted to leave one list — the exact over-stop the column
+// exists to prevent, arriving through the one path that looks correct.
+//
+// It cannot happen, and this says where that is decided: NOT in Go, but in
+// withdrawal_credential_scope_names_its_target, which holds
+// `(scope = 'named_purpose') = (purpose_id IS NOT NULL)` over every row any
+// door has ever written. A second check in validWithdrawalMint would be a
+// second writer of one invariant, and the weaker one — it would bind the two
+// mint doors while the constraint binds the table. So the mint is asked to do
+// the impossible thing here rather than the rule being restated beside it.
+func TestANamedPurposeLinkMustNameItsPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, mintErr := e.store.EnsureWithdrawalCredentialTx(e.ctx, tx, WithdrawalMintInput{
+			Address: "no-purpose-named@example.test",
+			Scope:   WithdrawalScopeNamedPurpose,
+		})
+		return mintErr
+	})
+
+	if err == nil {
+		t.Fatal("a named-purpose credential minted without a purpose; its press would " +
+			"resolve a zero purpose and write the broad all-marketing row for a link " +
+			"issued to leave one list")
+	}
+	// WHICH refusal, because the wrong one would pass this test while leaving
+	// the hazard open: a mint refused for want of a grant says nothing about
+	// what the table accepts, and would go on passing if the constraint were
+	// dropped tomorrow.
+	if !strings.Contains(err.Error(), "scope_names_its_target") {
+		t.Errorf("the mint was refused with %v, which is not the constraint this rests on — "+
+			"a refusal from somewhere else leaves the widening press unproven", err)
 	}
 }
