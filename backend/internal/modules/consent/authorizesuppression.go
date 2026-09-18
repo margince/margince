@@ -62,7 +62,7 @@ func applySuppression(d commsauthz.Decision, stops []liveStop, sendPurpose *ids.
 	// the moment a stop could name one list. privacy/sarcommunication.go hands
 	// these columns to the subject in their Art. 15 export, so the unexplained
 	// row is not an internal curiosity — it is a self-contradiction shown to
-	// the person it is about.
+	// the subject it is about.
 	//
 	// So a narrow row is left off this field rather than misdescribed. It is
 	// not lost: the suppression table still holds it, and a review opened from

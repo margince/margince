@@ -374,6 +374,7 @@ export const vi = {
   "history.field.reply_verdict": "Đánh giá phản hồi",
   "history.field.reply_verdict_by": "Đánh giá phản hồi bởi",
   "history.field.research_claims_accepted": "Thông tin nghiên cứu đã nhận",
+  "history.field.scope": "Phạm vi",
   "history.field.stopped": "Đã dừng",
   "history.field.stops_carried": "Lệnh dừng đã chuyển",
   "history.field.submission_decision": "Quyết định về yêu cầu",

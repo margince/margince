@@ -154,29 +154,34 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// event for the same reason. Widening the contract to leads is a question
 	// for the slice that asks it.
 	//
-	// HOW NARROW, alongside what and where from. The kind is the same word for
-	// a link that left one list and a link that left all marketing, so an
+	// HOW WIDE, alongside what and where from. The kind is the same word for a
+	// link that left one list and a link that left all marketing, so an
 	// auditor reading this payload alone could not tell the two presses apart
-	// — the distinction this press exists to make. A narrow row names its
-	// purpose; a broad one says so in as many words rather than omitting the
-	// key, because an absent field reads as one nobody thought to write.
-	stopped := map[string]any{
+	// — the distinction this press exists to make. Both cases state it rather
+	// than the narrow one adding a key, because an absent field reads as one
+	// nobody thought to write.
+	//
+	// THE SCOPE, NOT THE PURPOSE ID. This payload is projected into the
+	// History tab a human reads, where a consent_purpose uuid would be the
+	// same unreadable thing the subject-access export was just corrected for.
+	// Which purpose is on the suppression row itself, for a reader who needs
+	// it; what History owes is how far the press reached.
+	scope := auditScopeAllMarketing
+	if purposeID != nil {
+		scope = auditScopeOnePurpose
+	}
+	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID, map[string]any{
 		"stopped": commsauthz.ReasonObjection,
 		"source":  sourcePublicLink,
-		"scope":   auditScopeAllMarketing,
-	}
-	if purposeID != nil {
-		stopped["scope"] = auditScopeOnePurpose
-		stopped["purpose_id"] = purposeID.String()
-	}
-	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID, stopped); err != nil {
+		"scope":   scope,
+	}); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-// The two shapes a press's audit row can describe, spelled once so the payload
-// and any later reader of it agree on the words.
+// The two widths a press's audit row can describe, so the payload and any
+// later reader of it agree on the words.
 const (
 	auditScopeAllMarketing = "all_marketing"
 	auditScopeOnePurpose   = "one_purpose"
