@@ -18819,7 +18819,7 @@ paths:
         Copies the sent offer's header + lines into revision N+1 as a new `draft`, marks the prior revision
         `superseded` and emits `offer.superseded` + `offer.created`. A sent offer is never
         mutated in place. When an AI draft applies (regenerate-from-signal), the response Offer
-        also carries the Art. 50 disclosure (`ai_generated`/`ai_disclosure`) and the
+        also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
         `diff_from_previous` line-item summary versus the prior revision; a mechanical
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
         produced draft still cannot leave without the send gate, which is human-only too.
@@ -19139,7 +19139,7 @@ paths:
       description: |
         Names the route-in contact (the strongest live relationship at the resolved
         company), the relationship we have, and a concrete suggested next move with a
-        drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
+        drafted message carrying the AI provenance notice and evidence back to the
         warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
         send rides the governed send tool (POST /activities/{id}/send-email); the warm
         room proposes, the rep sends.
@@ -34940,8 +34940,8 @@ components:
         body: { type: string }
         to: { type: array, items: { type: string, format: email } }
         in_reply_to_activity_id: { type: [string, 'null'], format: uuid }
-        ai_generated: { type: boolean, readOnly: true, description: 'Art. 50 AI-assisted disclosure: true when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false.' }
-        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.' }
+        ai_generated: { type: boolean, readOnly: true, description: 'True when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false.' }
+        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.' }
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
         voice_degraded: { type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.' }
@@ -35031,11 +35031,14 @@ components:
         ai_generated:
           type: boolean
           readOnly: true
-          description: 'Art. 50 AI-assisted disclosure: true when a model produced this draft. Stamped on the drafting call, never persisted.'
+          description: 'True when a model produced this draft. Stamped on the drafting call, never persisted.'
         ai_disclosure:
           type: [string, 'null']
           readOnly: true
-          description: The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
+          description: >-
+            The provenance notice shown to the drafting user, marking the text as model-written so they
+            review it before sending; non-null iff ai_generated=true. Carried beside the draft rather
+            than inside body, and not appended to it on send.
         voice_profile_version:
           type: [integer, 'null']
           readOnly: true
@@ -36865,8 +36868,8 @@ components:
               enum: [draft_to_contact, intro_request]
               description: 'intro_request when the signal resolved (under consent) to a specific contact other than the route-in contact; otherwise a direct draft to the contact.'
             draft_subject: { type: string }
-            draft_body: { type: string, description: Renders the Art. 50 AI-assisted disclosure (features/07 §11 gate 9). }
-            ai_disclosure: { type: string, description: The machine-readable Art. 50 disclosure line the draft carries. }
+            draft_body: { type: string, description: 'Ends with the AI provenance notice, so a rep who sends this body unchanged sends the notice with it.' }
+            ai_disclosure: { type: string, description: 'The provenance notice, repeated here as its own field; unlike the composer drafts this one is also rendered into draft_body above.' }
         evidence:
           type: object
           description: Provenance back to the warm signal (evidence-or-omit).
@@ -43881,8 +43884,8 @@ components:
         template_id: { type: [string, 'null'], format: uuid, description: The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale. }
         pdf_asset_ref: { type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer (B-E03.22/WP7).' }
         accepted_at: { type: [string, 'null'], format: date-time, readOnly: true }
-        ai_generated: { type: boolean, readOnly: true, default: false, description: 'Art. 50 AI-assisted disclosure (features/07 §11 gate 9). true only on the response of the regenerate call that produced this draft revision; false on every other read — disclosure is stamped on the drafting call itself, not persisted across future reads.' }
-        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line (features/07 §11 gate 9); non-null iff ai_generated=true.' }
+        ai_generated: { type: boolean, readOnly: true, default: false, description: 'True only on the response of the regenerate call that produced this draft revision; false on every other read — provenance is stamped on the drafting call itself, not persisted across future reads.' }
+        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.' }
         diff_from_previous:
           type: [object, 'null']
           readOnly: true

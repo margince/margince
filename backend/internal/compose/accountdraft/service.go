@@ -218,7 +218,7 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		}
 		out.To = &to
 	}
-	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, textlang.Lang(lang))
+	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
 	return out
 }
 

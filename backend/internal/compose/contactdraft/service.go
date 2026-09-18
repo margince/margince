@@ -162,8 +162,8 @@ func (s *Service) Draft(
 //
 // Exported because the LEAD drafter answers the same contract type from the
 // same writer, and a second mapping of one Draft onto one CompanyEmailDraft is
-// two answers to one question — including which of them stamps the Art. 50
-// disclosure, which is the half a reader would notice missing.
+// two answers to one question — including which of them stamps the AI
+// provenance notice, which is the half a reader would notice missing.
 //
 // lang is the DRAFT's language, from the envelope its caller resolved. Passed
 // rather than read here because the two callers resolve their own, and a wire
@@ -185,7 +185,7 @@ func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		}
 		out.To = &to
 	}
-	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, textlang.Lang(lang))
+	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
 	return out
 }
 

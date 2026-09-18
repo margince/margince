@@ -15,7 +15,8 @@ import "./compose.css";
 // over them. What differs between the frames is what the band has to ADMIT: a
 // disclosure the server omitted, a voice that could not be looked up, a profile
 // still provisional. None of those makes the draft weaker, and none may be
-// quietly dropped — Art. 50 is why this card is the loudest thing in the drawer.
+// quietly dropped — the rep is about to send these words under their own name,
+// which is why this card is the loudest thing in the drawer.
 //
 // The band's child is the offer the composer puts there, so a frame shows the
 // block as the drawer assembles it rather than a slot filled for the picture.

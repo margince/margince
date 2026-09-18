@@ -23868,10 +23868,10 @@ type CompanyDossierSectionKind string
 // needs to see what the draft is standing on, and `generated_by`, because the
 // deterministic floor is a real outcome here rather than an error.
 type CompanyEmailDraft struct {
-	// AiDisclosure The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
+	// AiDisclosure The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.
 	AiDisclosure *string `json:"ai_disclosure,omitempty"`
 
-	// AiGenerated Art. 50 AI-assisted disclosure: true when a model produced this draft. Stamped on the drafting call, never persisted.
+	// AiGenerated True when a model produced this draft. Stamped on the drafting call, never persisted.
 	AiGenerated *bool `json:"ai_generated,omitempty"`
 
 	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
@@ -28644,10 +28644,10 @@ type EmailDeliveryFile struct {
 
 // EmailDraft A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡).
 type EmailDraft struct {
-	// AiDisclosure The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
+	// AiDisclosure The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.
 	AiDisclosure *string `json:"ai_disclosure,omitempty"`
 
-	// AiGenerated Art. 50 AI-assisted disclosure: true when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false.
+	// AiGenerated True when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false.
 	AiGenerated *bool  `json:"ai_generated,omitempty"`
 	Body        string `json:"body"`
 
@@ -32458,10 +32458,10 @@ type NoticeOrigin struct {
 type Offer struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
 
-	// AiDisclosure The machine-readable Art. 50 disclosure line (features/07 §11 gate 9); non-null iff ai_generated=true.
+	// AiDisclosure The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.
 	AiDisclosure *string `json:"ai_disclosure,omitempty"`
 
-	// AiGenerated Art. 50 AI-assisted disclosure (features/07 §11 gate 9). true only on the response of the regenerate call that produced this draft revision; false on every other read — disclosure is stamped on the drafting call itself, not persisted across future reads.
+	// AiGenerated True only on the response of the regenerate call that produced this draft revision; false on every other read — provenance is stamped on the drafting call itself, not persisted across future reads.
 	AiGenerated *bool      `json:"ai_generated,omitempty"`
 	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
 
@@ -36416,10 +36416,10 @@ type SignalIntroPath struct {
 		SourceSignalId    openapi_types.UUID   `json:"source_signal_id"`
 	} `json:"evidence"`
 	NextMove struct {
-		// AiDisclosure The machine-readable Art. 50 disclosure line the draft carries.
+		// AiDisclosure The provenance notice, repeated here as its own field; unlike the composer drafts this one is also rendered into draft_body above.
 		AiDisclosure string `json:"ai_disclosure"`
 
-		// DraftBody Renders the Art. 50 AI-assisted disclosure (features/07 §11 gate 9).
+		// DraftBody Ends with the AI provenance notice, so a rep who sends this body unchanged sends the notice with it.
 		DraftBody    string `json:"draft_body"`
 		DraftSubject string `json:"draft_subject"`
 
