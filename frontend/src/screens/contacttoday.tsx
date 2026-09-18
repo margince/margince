@@ -133,10 +133,10 @@ function MomentMove({
       // qualifies the byline beside it.
       title={moment.headline}
       // The server's `why_now` is the ONLY reason, here and on the account
-      // brief: one moment gives one reason, and the facts in it ("no reply
-      // after 14 days is the rule; yours went out 131 days ago") are the part
-      // a rep judges. A sentence composed from the rule instead would be the
-      // same words for every contact on that rung.
+      // brief: one moment gives one reason, and the facts in it ("your last
+      // message went out 131 days ago") are the part a rep judges. A sentence
+      // composed from the rule instead would be the same words for every
+      // contact on that rung.
       why={moment.why_now}
       kicker={momentKicker(moment, t)}
       basis={
