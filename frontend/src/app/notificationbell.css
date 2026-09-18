@@ -67,7 +67,7 @@
    still waiting. Not hidden and not struck through — it is still something the
    reader may want to find again. */
 .notifrow-settled .notifrow-subject {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 
 .notifrow-head {
@@ -78,7 +78,6 @@
 }
 
 .notifrow-subject {
-  font-size: var(--fs-body);
   color: var(--textPrimary);
 }
 

@@ -147,7 +147,6 @@ function NotificationCentre({
       title={t("notifications.centre")}
       titleAction={
         <Button
-          small
           pending={settleAll.isPending}
           onClick={() => settleAll.mutate()}
         >
@@ -267,7 +266,7 @@ function NoticeRow({
           notice settled by a visit they had not made yet. */}
       {!settled && (
         <div className="notifrow-verb">
-          <Button small pending={settling} onClick={() => onSettle(notice.id)}>
+          <Button pending={settling} onClick={() => onSettle(notice.id)}>
             {t("notifications.markRead")}
           </Button>
         </div>
