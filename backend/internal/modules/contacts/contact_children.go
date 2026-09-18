@@ -265,9 +265,13 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 	return nil
 }
 
-const contactColumns = `id, full_name, first_name, last_name, title, owner_id, visibility,
+// A var rather than a const: the seat-name subselect is built by a
+// function, the way leadColumns already composes its own two.
+var contactColumns = `id, full_name, first_name, last_name, title, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
 	merged_into_id, converted_from_lead_id, source, captured_by,
+	source_system, source_author_id, source_author_name,
+	` + sourceAuthorSeatNameSQL("contact") + `,
 	version, created_at, updated_at, archived_at, last_activity_at`
 
 // readContact resolves one contact row; active names the custom-field
@@ -304,11 +308,14 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var addr crmcontracts.Address
 	var version int64
 	var visibility string
+	var sourceSystem, authorName, authorSeatName *string
+	var authorID *ids.UUID
 
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
+		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt,
 	}
 	cf := storekit.ScanDests(active)
@@ -330,6 +337,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.Address = a
 	}
 	p.Version = &version
+	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	return p, nil
 }
 

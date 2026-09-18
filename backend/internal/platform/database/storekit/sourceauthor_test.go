@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package activities
+package storekit
 
 // Whether the row already carries exactly the answer being offered.
 //
@@ -47,8 +47,9 @@ func TestOnlyAnIdenticalAnswerCountsAsUnchanged(t *testing.T) {
 		{what: "an absent stored name against an empty offered one", in: SourceAuthorInput{AuthorName: ptr(empty)}},
 		{what: "an empty stored name against an empty offered one", beforeNam: ptr(empty), same: true, in: SourceAuthorInput{AuthorName: ptr(empty)}},
 	} {
-		if got := sameAuthor(c.beforeID, c.beforeNam, c.in); got != c.same {
-			t.Errorf("%s: sameAuthor = %v, want %v", c.what, got, c.same)
+		before := SourceAuthorBefore{ID: c.beforeID, Name: c.beforeNam}
+		if got := before.Same(c.in); got != c.same {
+			t.Errorf("%s: Same = %v, want %v", c.what, got, c.same)
 		}
 	}
 }

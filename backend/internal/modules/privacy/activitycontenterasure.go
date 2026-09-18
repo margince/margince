@@ -81,7 +81,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	// Here rather than beside each of those column writes, for the reason this
 	// function exists at all: the sweep and the lift both run this, and a clear
 	// spelled separately at each of them is the second list that goes short.
-	if err := clearAttributionLedgerNames(ctx, tx, []ids.UUID{id}); err != nil {
+	if err := clearAttributionLedgerNames(ctx, tx, "activity", []ids.UUID{id}); err != nil {
 		return err
 	}
 	// What a classifier concluded the message MEANT, and every human correction

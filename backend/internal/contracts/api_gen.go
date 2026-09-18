@@ -13120,12 +13120,27 @@ func (e SiteReadStartedStatus) Valid() bool {
 // Defines values for SourceAttributionRowObjectType.
 const (
 	SourceAttributionRowObjectTypeActivity SourceAttributionRowObjectType = "activity"
+	SourceAttributionRowObjectTypeCompany  SourceAttributionRowObjectType = "company"
+	SourceAttributionRowObjectTypeContact  SourceAttributionRowObjectType = "contact"
+	SourceAttributionRowObjectTypeDeal     SourceAttributionRowObjectType = "deal"
+	SourceAttributionRowObjectTypeLead     SourceAttributionRowObjectType = "lead"
+	SourceAttributionRowObjectTypeProject  SourceAttributionRowObjectType = "project"
 )
 
 // Valid indicates whether the value is a known member of the SourceAttributionRowObjectType enum.
 func (e SourceAttributionRowObjectType) Valid() bool {
 	switch e {
 	case SourceAttributionRowObjectTypeActivity:
+		return true
+	case SourceAttributionRowObjectTypeCompany:
+		return true
+	case SourceAttributionRowObjectTypeContact:
+		return true
+	case SourceAttributionRowObjectTypeDeal:
+		return true
+	case SourceAttributionRowObjectTypeLead:
+		return true
+	case SourceAttributionRowObjectTypeProject:
 		return true
 	default:
 		return false
@@ -22581,6 +22596,10 @@ type Company struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// Author Who created this company in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
@@ -25366,6 +25385,10 @@ type Contact struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// Author Who created this contact in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
@@ -27639,6 +27662,10 @@ type Deal struct {
 
 	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
 	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
+
+	// Author Who created this deal in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -30942,6 +30969,10 @@ type KnowledgeDocumentList struct {
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// Author Who created this lead in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
+
 	// CandidateCompanyKey Loose key for ABM routing without creating a company.
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
 
@@ -33391,6 +33422,10 @@ type ProductListResponse struct {
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
 type Project struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// Author Who created this project in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
@@ -36600,7 +36635,8 @@ type SourceAttributionRow struct {
 	// ObjectId The record's id in THIS installation, not in the system it came from.
 	ObjectId openapi_types.UUID `json:"object_id"`
 
-	// ObjectType Activities only, for now. The record tables carry the same column pair, but each lives behind its own module with its own write conventions and its own erasure obligations — so they arrive as their own change rather than as four more arms of this one. The enum is where that boundary is stated, so a caller sending a contact is refused rather than silently skipped.
+	// ObjectType Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
+	// The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
 	ObjectType SourceAttributionRowObjectType `json:"object_type"`
 
 	// SourceAuthorId The member who wrote it, when the author holds a seat here.
@@ -36613,7 +36649,8 @@ type SourceAttributionRow struct {
 	SourceRevision int64 `json:"source_revision"`
 }
 
-// SourceAttributionRowObjectType Activities only, for now. The record tables carry the same column pair, but each lives behind its own module with its own write conventions and its own erasure obligations — so they arrive as their own change rather than as four more arms of this one. The enum is where that boundary is stated, so a caller sending a contact is refused rather than silently skipped.
+// SourceAttributionRowObjectType Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
+// The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
 type SourceAttributionRowObjectType string
 
 // SourceAttributionRowResult defines model for SourceAttributionRowResult.
@@ -47093,6 +47130,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
 	if raw, found := object["captured_by"]; found {
 		err = json.Unmarshal(raw, &a.CapturedBy)
 		if err != nil {
@@ -47374,6 +47419,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
@@ -47629,6 +47681,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
 	if raw, found := object["captured_by"]; found {
 		err = json.Unmarshal(raw, &a.CapturedBy)
 		if err != nil {
@@ -47867,6 +47927,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
 		}
 	}
 
@@ -50490,6 +50557,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "arr_source_offer_id")
 	}
 
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
 	if raw, found := object["captured_by"]; found {
 		err = json.Unmarshal(raw, &a.CapturedBy)
 		if err != nil {
@@ -50838,6 +50913,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["arr_source_offer_id"], err = json.Marshal(a.ArrSourceOfferId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'arr_source_offer_id': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
 		}
 	}
 
@@ -52059,6 +52141,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
 	if raw, found := object["candidate_company_key"]; found {
 		err = json.Unmarshal(raw, &a.CandidateCompanyKey)
 		if err != nil {
@@ -52410,6 +52500,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
 		}
 	}
 
@@ -53521,6 +53618,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
 	if raw, found := object["captured_by"]; found {
 		err = json.Unmarshal(raw, &a.CapturedBy)
 		if err != nil {
@@ -53712,6 +53817,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
 		}
 	}
 

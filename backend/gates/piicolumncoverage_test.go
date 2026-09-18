@@ -204,6 +204,12 @@ var erasureColumnBaseline = map[string][]string{
 	"contact": {
 		"captured_by",
 		"source",
+		// Which system the record was imported FROM — a system's name, not the
+		// subject's, drawn from the closed set an importer writes. What the
+		// Art. 17 redaction DOES clear on this table is the free text beside
+		// it, source_author_name, which is a human's name. `lead` carries the
+		// same column and the same reading, a few entries up.
+		"source_system",
 		"visibility",
 	},
 	"provider_run": {
