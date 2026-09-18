@@ -166,6 +166,18 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	if _, err := d.workspace(ctx); err != nil {
 		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 	}
+	// The ambient snapshot, joined here for the reason WithWorkspaceTx joins it
+	// — and this is the seam most stores actually reach, so a join spelled only
+	// there would leave a composed read holding TWO connections per request:
+	// the snapshot, plus one per handle-based lane. At MaxConns that is how a
+	// morning's concurrent reads wait on each other instead of the database.
+	//
+	// The budget is NOT applied to a joined transaction. BoundStatement is SET
+	// LOCAL, so a per-handle ceiling would silently re-time every later lane in
+	// somebody else's snapshot; the transaction's own opener sets its budget.
+	if tx, joined := snapshotOf(ctx); joined {
+		return fn(tx)
+	}
 	if d.budget != 0 {
 		bounded := fn
 		fn = func(tx pgx.Tx) error {
