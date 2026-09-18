@@ -223,6 +223,12 @@ export const en = {
   "trust.typedByHuman": "Typed by a person",
   "trust.typedByBuyer": "Typed by a buyer",
   "trust.typedByPrefix": "Typed by",
+  // An imported row names who wrote it in the system it came from, which is
+  // neither the reader nor the administrator who ran the import. The first
+  // form names that system too, because "logged in HubSpot" tells a reader why
+  // a colleague who left years ago is on a row this installation holds.
+  "trust.loggedInByVia": "Logged in {via} by {name}",
+  "trust.loggedInBy": "Logged by {name}",
   "trust.sourceUnknown": "Source not recorded",
   "trust.agentTag": "Automated by {agent}",
   // A passport call stamps an opaque id and nothing on this side resolves it to

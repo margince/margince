@@ -1015,9 +1015,18 @@ function messageLead(
     };
   }
   if (entry.direction === "outbound") {
+    // An imported row knows who sent it, and neither "we" nor "you" is that
+    // colleague: the import ran as one administrator, so every row it wrote
+    // reads as that seat's own sending. The author is asked first for the same
+    // reason the provenance tag asks it first.
+    const author =
+      entry.provenance.kind === "human"
+        ? entry.provenance.author?.display_name
+        : undefined;
     const self = entry.provenance.kind === "human" && entry.provenance.self;
     return {
-      actor: self ? t("timeline.thread.you") : t("timeline.thread.we"),
+      actor:
+        author ?? (self ? t("timeline.thread.you") : t("timeline.thread.we")),
       verb: who
         ? t("timeline.thread.sentTo", { who })
         : t("timeline.thread.sent"),

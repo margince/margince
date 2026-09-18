@@ -239,6 +239,8 @@ export const vi = {
   "trust.typedByHuman": "Do người nhập",
   "trust.typedByBuyer": "Do người mua nhập",
   "trust.typedByPrefix": "Nhập bởi",
+  "trust.loggedInByVia": "Được {name} ghi nhận trong {via}",
+  "trust.loggedInBy": "Được {name} ghi nhận",
   "trust.sourceUnknown": "Không ghi nhận nguồn",
   "trust.agentTag": "Tự động bởi {agent}",
   "trust.agentUnnamed": "Tự động bởi một agent",
