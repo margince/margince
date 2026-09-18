@@ -20,6 +20,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -128,4 +129,45 @@ func TestAFormerMemberIsASeatNobodyCanEnterAndNobodyPaysFor(t *testing.T) {
 		t.Fatalf("recording the same colleague twice -> %d, want 409", status)
 	}
 	assertActionableRefusal(t, "duplicate former member", dupe, "email_taken")
+}
+
+// The contract bounds `source` at 200 characters and the generated wrapper
+// enforces no maxLength, so the handler is the only thing between a caller and
+// an unbounded string riding into the audit row's `after` image. It is an
+// operator's label — "hubspot-mirror-2026-09-17" — not content, and nothing
+// downstream truncates it.
+//
+// CHARACTERS, not bytes, which is why the over-long value below is built from
+// a multi-byte letter: at 201 runes it is 402 bytes, and a byte-counting bound
+// would refuse it for the wrong reason while passing a 200-rune accented label
+// that the contract permits.
+func TestAFormerMemberSourceIsBoundedTheWayTheContractSaysItIs(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var refused refusalWire
+	if status := e.Call(t, "POST", "/v1/users/former", map[string]any{
+		"email": "toolong@gradion.test", "display_name": "Source Too Long",
+		"source": strings.Repeat("ä", 201),
+	}, nil, &refused); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a 201-character source -> %d, want 422", status)
+	}
+	// `validation_error` rather than `length`: httperr.Validation carries the
+	// field and its reason in the body, and stamps ONE wire code for every
+	// field refusal. A client branches on the code and reads the field from the
+	// detail, so asserting the reason here would be asserting a string this
+	// surface does not put on the wire.
+	assertActionableRefusal(t, "over-long source", refused, "validation_error")
+
+	// The positive control, without which the assertion above would pass on a
+	// route that refused every source: 200 runes of the same letter is exactly
+	// the contract's limit and must be accepted.
+	var accepted userWire
+	if status := e.Call(t, "POST", "/v1/users/former", map[string]any{
+		"email": "atlimit@gradion.test", "display_name": "Source At Limit",
+		"source": strings.Repeat("ä", 200),
+	}, nil, &accepted); status != http.StatusCreated {
+		t.Fatalf("a 200-character source -> %d, want 201 — the bound counts characters, "+
+			"and a byte-counting one would refuse a name the contract permits", status)
+	}
 }

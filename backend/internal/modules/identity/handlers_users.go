@@ -5,6 +5,7 @@ package identity
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -367,6 +368,13 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
 // CreateFormerMember (POST /users/former): record a colleague who already left,
 // as a deactivated seat with no password and no invitation.
 //
+// formerSourceMax is the contract's own bound on `source`, enforced in the
+// handler because the generated wrapper enforces no maxLength.
+const formerSourceMax = 200
+
+// CreateFormerMember (POST /users/former) records a colleague who already left,
+// as a deactivated seat with no password and no invitation.
+//
 // The three refusals InviteUser carries that this one does not are all about
 // delivery: there is no set-password token, so no mail channel is required and
 // no "this member could never sign in" conflict applies. Being unable to sign
@@ -392,6 +400,16 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 		in.LeftAt = req.LeftAt
 	}
 	if req.Source != nil {
+		// CHARACTERS, not bytes, and bounded here because the generated wrapper
+		// enforces no maxLength — the same gap seatIdentity covers one function
+		// over. Unbounded, this string rides into the audit row's `after` image
+		// at whatever length a caller sends: an operator's label, not content,
+		// and nothing downstream truncates it.
+		if utf8.RuneCountInString(*req.Source) > formerSourceMax {
+			httperr.Write(w, r, httperr.Validation("source", "length",
+				fmt.Sprintf("Name where this record came from in %d characters or fewer.", formerSourceMax)))
+			return
+		}
 		in.Source = *req.Source
 	}
 	userID, err := h.svc.CreateFormerMember(r.Context(), actor, in)
