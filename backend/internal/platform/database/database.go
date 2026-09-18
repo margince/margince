@@ -155,8 +155,79 @@ func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) er
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return ErrNoWorkspace
 	}
-
+	// A read composed from many statements binds ONE snapshot to the context
+	// and every store beneath it lands here; joining that snapshot is what
+	// makes the composition cost one transaction instead of forty.
+	if tx, joined := snapshotOf(ctx); joined {
+		return fn(tx)
+	}
 	return runTx(ctx, pool, fn)
+}
+
+// snapshotKey is the context key the ambient read snapshot travels under. A
+// package-private zero-size type, so nothing outside this file can reach the
+// transaction or plant one.
+type snapshotKey struct{}
+
+// snapshotOf answers the snapshot bound to ctx, if any.
+//
+// no struct behind it to return instead.
+//
+//nolint:ireturn // pgx.Tx IS the transaction in this driver — an interface with
+func snapshotOf(ctx context.Context) (pgx.Tx, bool) {
+	tx, ok := ctx.Value(snapshotKey{}).(pgx.Tx)
+	return tx, ok
+}
+
+// WithWorkspaceSnapshot runs fn against ONE read-only snapshot, which every
+// WithWorkspaceTx reached beneath it joins instead of opening its own.
+//
+// FOR A READ WHOSE ANSWER IS COMPOSED FROM MANY STATEMENTS, and the worklist is
+// the largest in the product: it assembles six fixed lanes and sixteen optional
+// ones, and before this each of those ~40 dependency calls paid BEGIN + SELECT
+// + COMMIT of its own — ~120 sequential round trips, which is most of the
+// 400 ms that surface answered in (margince#4912).
+//
+// THE CORRECTNESS ARGUMENT IS THE STRONGER ONE. Those lanes were reading in
+// twenty-odd different snapshots, so two lanes could disagree inside a single
+// answer — a deal that closed between lane 3 and lane 11 appeared in one and
+// not the other, and nothing on the response said so. REPEATABLE READ is what
+// makes one assembled day one instant.
+//
+// READ-ONLY IS LOAD-BEARING, not caution. The join is ambient: a store beneath
+// this cannot see that its transaction is somebody else's and would otherwise
+// commit a domain write as part of a page assembly, so that a failure three
+// lanes later silently rolls the write back. Postgres refusing the write is the
+// loud version of that, and a write path that genuinely belongs under a
+// composed read takes Detached below and says why.
+//
+// Nesting JOINS rather than opening a second transaction, so a composed read
+// that calls another composed read still costs one.
+func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
+		return ErrNoWorkspace
+	}
+	if _, joined := snapshotOf(ctx); joined {
+		return fn(ctx)
+	}
+	opts := pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}
+	return runTxWith(ctx, pool, opts, func(tx pgx.Tx) error {
+		return fn(context.WithValue(ctx, snapshotKey{}, tx))
+	})
+}
+
+// Detached returns ctx with no ambient snapshot on it, so a call made with it
+// opens its own transaction and commits on its own terms.
+//
+// For the write a composed read legitimately makes. It is deliberately awkward
+// to reach for: a write that joins a read-only snapshot is refused by Postgres,
+// and a caller reaching here is answering that refusal, so the reason belongs
+// at the call site.
+func Detached(ctx context.Context) context.Context {
+	if _, joined := snapshotOf(ctx); !joined {
+		return ctx
+	}
+	return context.WithValue(ctx, snapshotKey{}, nil)
 }
 
 // WithInfraTx runs fn in a transaction for the narrow infra paths that run

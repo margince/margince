@@ -309,6 +309,55 @@ You don't have to remember these — a fitness test fails your PR if you break o
 
 ---
 
+## 8. The read counterpart — one snapshot for a composed read
+
+`WithWorkspaceTx` gives a write its unit of work. A READ composed from many
+statements has the mirror problem, and until recently it had no answer: every
+store opened its own transaction, so a page assembled from twenty lanes cost
+twenty transactions and answered from twenty instants.
+
+`WithWorkspaceSnapshot` is that answer. It opens ONE read-only `REPEATABLE READ`
+transaction, binds it to the context, and every `WithWorkspaceTx` reached
+beneath it **joins** that transaction instead of opening its own:
+
+```go
+err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+    // every store called with this ctx reads from one snapshot
+    return assemble(ctx)
+})
+```
+
+Two things it buys, and the second is the bigger one:
+
+- **Cost.** The worklist's ~40 dependency calls each paid `BEGIN` + `SELECT` +
+  `COMMIT` — ~120 round trips in series, which was most of the 400 ms p95 that
+  surface answered in.
+- **Agreement.** Lanes reading in separate snapshots could contradict each other
+  inside a single answer: a deal that closed between lane 3 and lane 11 appeared
+  in one and not the other, and nothing on the response said so.
+
+**Read-only is load-bearing, not caution.** The join is ambient — a store beneath
+the snapshot cannot tell that its transaction belongs to somebody else. Without
+`ReadOnly`, a domain write would silently commit as part of a page assembly and
+be rolled back by a failure three lanes later. Postgres refusing the write is the
+loud version of that.
+
+A write that genuinely belongs under a composed read takes
+`database.Detached(ctx)`, which strips the ambient snapshot so the write opens
+and commits on its own terms. It is deliberately awkward to reach for, and the
+reason belongs at the call site — `attention`'s walk freeze is the worked
+example.
+
+**Consumers do not need to know.** Nothing about a store changes: it calls
+`WithWorkspaceTx` as it always did. That is why this reached a 32k-line package
+without touching any of the 36 reader interfaces it composes.
+
+Held by `worklistsnapshot_integration_test.go`, which measures a composed page
+against a trivial route in the same run and fails when the count starts scaling
+with lanes again.
+
+---
+
 ## Rules of thumb
 
 - **Never `INSERT` into `audit_log` or `event_outbox` directly** — always `storekit.Audit` / `Emit`,
@@ -333,6 +382,7 @@ You don't have to remember these — a fitness test fails your PR if you break o
 | | |
 |---|---|
 | Write shape (`Audit`, `AuditWithEvidence`, `Emit`, `Patch`) | `internal/platform/database/storekit/{storekit,patch}.go` |
+| Composed-read snapshot (`WithWorkspaceSnapshot`, `Detached`) | `internal/platform/database/database.go` |
 | Envelope + catalog (types, streams, versions, groups) | `internal/shared/kernel/events/{envelope,catalog}.go` |
 | The relay | `internal/platform/events/relay.go` |
 | Consumer subscriber + dedupe | `internal/platform/events/{subscriber,dedupe}.go` |

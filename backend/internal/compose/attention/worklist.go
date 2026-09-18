@@ -49,6 +49,22 @@ const worklistMaxPage = 100
 func (s *Service) Worklist(
 	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
 ) (crmcontracts.Worklist, error) {
+	// ONE snapshot around the whole page, for the two reasons assemble.go
+	// gives: the lanes cost one transaction between them, and they answer from
+	// one instant so the page cannot disagree with itself.
+	var out crmcontracts.Worklist
+	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
+		return err
+	})
+	return out, err
+}
+
+// worklistIn is Worklist's body, reading inside the snapshot Worklist opened.
+func (s *Service) worklistIn(
+	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
+) (crmcontracts.Worklist, error) {
 	// Membership first, then the scope. resolveScope below already refuses a
 	// scope the reader does not hold, which is the narrower question; this is
 	// the one it assumes — that there is a seat behind the call at all.
@@ -97,22 +113,9 @@ func (s *Service) Worklist(
 	// that had already happened.
 	// Deeper than the lane feed reads: a batch row counts a pile, and a count
 	// taken from a page of ten would report ten over a hundred and fifty.
-	reader := s.countingDecisions()
-	switch {
-	// A named owner outranks the scope word: "their queue" is a narrower
-	// question than any of mine/team/all, and answering the wider one would
-	// hand back a page that looks like the rep's day and is not.
-	case !namedOwner.IsZero():
-		reader = reader.forOwner(namedOwner)
-	case mineOnly(resolved):
-		reader = reader.forReader()
-	case resolved == scopeUnassigned:
-		reader = reader.forUnowned()
-	case resolved == scopeTeam:
-		reader, err = reader.forNoticeTeam(ctx)
-		if err != nil {
-			return crmcontracts.Worklist{}, err
-		}
+	reader, err := s.readerFor(ctx, resolved, namedOwner)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
 	}
 	// The day AND what the night knows about each deal — its finding and its
 	// score — from one read of the brief lane. Both travel as values rather than

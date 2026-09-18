@@ -388,8 +388,11 @@ func (s *Service) pageOf(
 func (s *Service) freezeWalk(
 	ctx context.Context, rows []ranked, asOf time.Time, scope, filter string,
 ) walkState {
+	// DETACHED: the one write a composed read makes. Joined, the read-only
+	// snapshot would refuse it — and the refusal is swallowed below, so the
+	// reader would silently lose paging rather than see an error.
 	id, err := s.walks.Freeze(
-		ctx, fingerprint(scope, filter, s.taskOwner), asOf,
+		s.detached(ctx), fingerprint(scope, filter, s.taskOwner), asOf,
 		frozenBuckets(bucketsOf(rows)), frozenRows(rows))
 	if err != nil {
 		return walkState{}
