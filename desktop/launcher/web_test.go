@@ -73,3 +73,18 @@ func TestRegularFileExistsSeparatesAbsentFromUnreadable(t *testing.T) {
 		}
 	})
 }
+
+// TestWebBindHostIsLoopbackUnlessTheEnvironmentSaysOtherwise pins the
+// container escape hatch: a desktop install never sets MARGINCE_WEB_BIND and
+// keeps loopback; an image that publishes the port sets it and gets what it
+// asked for, verbatim.
+func TestWebBindHostIsLoopbackUnlessTheEnvironmentSaysOtherwise(t *testing.T) {
+	t.Setenv("MARGINCE_WEB_BIND", "")
+	if got := webBindHost(); got != loopbackHost {
+		t.Fatalf("webBindHost() with no setting = %q, want %q", got, loopbackHost)
+	}
+	t.Setenv("MARGINCE_WEB_BIND", "0.0.0.0")
+	if got := webBindHost(); got != "0.0.0.0" {
+		t.Fatalf("webBindHost() = %q, want 0.0.0.0", got)
+	}
+}

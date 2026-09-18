@@ -52,6 +52,18 @@ type ui struct {
 
 func (u *ui) baseURL() string { return fmt.Sprintf("http://%s:%d", loopbackHost, u.port) }
 
+// webBindHost is the interface the UI listener binds. The desktop binds
+// loopback so nothing on the network can reach it; a container has to bind
+// every interface so a published port works. MARGINCE_WEB_BIND is read from
+// the process environment, not margince.env, because it describes the host
+// the launcher runs on, not the installation.
+func webBindHost() string {
+	if h := os.Getenv("MARGINCE_WEB_BIND"); h != "" {
+		return h
+	}
+	return loopbackHost
+}
+
 func (u *ui) start(ctx context.Context) error {
 	target, err := url.Parse(u.apiURL)
 	if err != nil {
@@ -67,7 +79,7 @@ func (u *ui) start(ctx context.Context) error {
 	// restarts for a bookmark to keep working. Refusing a taken port is
 	// deliberate — silently moving would break that bookmark and leave the
 	// user hunting for the new address.
-	addr := fmt.Sprintf("%s:%d", loopbackHost, u.port)
+	addr := fmt.Sprintf("%s:%d", webBindHost(), u.port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf(
