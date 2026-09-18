@@ -68,7 +68,17 @@ func (s *Store) SetContactSourceAuthorTx(
 	}
 	// The row probe, after the object grant and before the write. The grant says
 	// this caller may edit contacts at all; this says they may edit THIS one.
+	//
+	// ITS ErrNotFound IS A SKIP, not an error, and in the SAME words the missing
+	// row gets. EnsureWritable asks EnsureVisible first, which applies capture
+	// privacy on top of row scope — so an owner-private contact answers "not
+	// found" even to an admin whose ordinary scope is unbounded. Returned as an
+	// error it would abort the whole batch transaction, discarding the rows
+	// already attributed before it and doing so again on every resumed run.
 	if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return storekit.SourceAuthorSkipped, storekit.SourceAuthorMissingReason("contact"), nil
+		}
 		return storekit.SourceAuthorSkipped, "", err
 	}
 	before, reason, err := storekit.AttributableNow(ctx, tx, "contact", id.UUID, in)
@@ -116,7 +126,14 @@ func (s *Store) SetCompanySourceAuthorTx(
 	if err != nil {
 		return storekit.SourceAuthorSkipped, "", err
 	}
+	// Its ErrNotFound is a skip in the same words the missing row gets, for the
+	// reason SetContactSourceAuthorTx states: capture privacy hides an
+	// owner-private row from EnsureVisible, and an error here would take the
+	// whole batch down with it.
 	if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return storekit.SourceAuthorSkipped, storekit.SourceAuthorMissingReason("company"), nil
+		}
 		return storekit.SourceAuthorSkipped, "", err
 	}
 	before, reason, err := storekit.AttributableNow(ctx, tx, "company", id.UUID, in)
@@ -159,7 +176,12 @@ func (s *Store) SetLeadSourceAuthorTx(
 	if err != nil {
 		return storekit.SourceAuthorSkipped, "", err
 	}
+	// Its ErrNotFound is a skip in the same words the missing row gets — see
+	// SetContactSourceAuthorTx.
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return storekit.SourceAuthorSkipped, storekit.SourceAuthorMissingReason("lead"), nil
+		}
 		return storekit.SourceAuthorSkipped, "", err
 	}
 	before, reason, err := storekit.AttributableNow(ctx, tx, "lead", id.UUID, in)

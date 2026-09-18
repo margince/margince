@@ -52,7 +52,15 @@ func (s *Store) SetProjectSourceAuthorTx(
 	}
 	// The row probe, after the object grant and before the write. The grant says
 	// this caller may edit projects at all; this says they may edit THIS one.
+	//
+	// ITS ErrNotFound IS A SKIP, in the same words the missing row gets above.
+	// EnsureWritable asks EnsureVisible first, and a row the caller's scope hides
+	// answers "not found" — returned as an error it would abort the batch
+	// transaction and discard every row attributed before it.
 	if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return storekit.SourceAuthorSkipped, storekit.SourceAuthorMissingReason(projectObject), nil
+		}
 		return storekit.SourceAuthorSkipped, "", err
 	}
 	before, reason, err := storekit.AttributableNow(ctx, tx, projectObject, id.UUID, in)
