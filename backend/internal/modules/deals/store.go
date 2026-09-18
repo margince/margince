@@ -100,6 +100,10 @@ type Installation struct {
 	// partner programme. `contacts` owns that table, so the edge is injected
 	// here rather than read across the module boundary (ADR-0054).
 	EnsurePartner EnsurePartner
+	// EnsureContractsShareCompany refuses a company_id the agreements already
+	// filed against this deal do not name (contractseam.go). `contracts` owns
+	// that table, so the edge is injected here for the same reason.
+	EnsureContractsShareCompany EnsureContractsShareCompany
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -145,6 +149,9 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.EnsurePartner == nil {
 		i.EnsurePartner = refusingEnsurePartner()
+	}
+	if i.EnsureContractsShareCompany == nil {
+		i.EnsureContractsShareCompany = refusingEnsureContractsShareCompany()
 	}
 	return i
 }

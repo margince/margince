@@ -46,8 +46,9 @@ var clearableMapsByRecordType = map[string]string{
 	// and a census that read only that map would report a store clearing fewer
 	// fields than it does — under-recognition, the one way this gate must not
 	// break. Both declarations serve the deal, and the walk unions them.
-	"dealClearPairs":          "deal",
-	"clearableProjectColumns": "project",
+	"dealClearPairs":           "deal",
+	"clearableProjectColumns":  "project",
+	"clearableContractColumns": "contract",
 }
 
 // storeClearableFields walks the module sources for the clearable-column maps
@@ -65,6 +66,7 @@ func storeClearableFields(t *testing.T) map[string][]string {
 		filepath.Join("internal", "modules", "deals"),
 		filepath.Join("internal", "modules", "projects"),
 		filepath.Join("internal", "modules", "activities"),
+		filepath.Join("internal", "modules", "contracts"),
 	}
 	for _, root := range roots {
 		entries, err := os.ReadDir(root)

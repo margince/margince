@@ -131,7 +131,7 @@ func (h Handlers) UpdateContract(w http.ResponseWriter, r *http.Request, id crmc
 	if !ok {
 		return
 	}
-	contract, err := h.store.UpdateContract(r.Context(), pathID(id), req, ifVersion)
+	contract, err := h.store.UpdateContract(r.Context(), pathID(id), req, httperr.ClearedFields(r), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // applyDealLinkPatches sets the fields that point at another record. They are
@@ -29,12 +30,12 @@ import (
 func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
 	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
+	ensureContractsShareCompany EnsureContractsShareCompany,
 ) error {
 	if in.CompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+		if err := applyCompanyLinkPatch(ctx, tx, current, *in.CompanyID, p, ensureContractsShareCompany); err != nil {
 			return err
 		}
-		p.Set("company_id", current.CompanyId, *in.CompanyID)
 	}
 	if in.OwnerID != nil {
 		// A named owner is an assignment, and the destination is checked the
@@ -53,4 +54,47 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		p.Set("project_id", current.ProjectId, *in.ProjectID)
 	}
 	return applyPartnerAttributionPatch(ctx, tx, current, in, p, clearPartner, ensurePartner)
+}
+
+// applyCompanyLinkPatch re-points a deal at another company: a read of that
+// company, and a question about the agreements already filed against the deal.
+//
+// The question is asked here because the answer is invisible from the contract
+// side. A contract with a deal is judged visible by that DEAL alone, so a deal
+// that moves to company B hands company A's agreements to everyone who can see
+// B's deal — the leak the filing check refuses to create, arrived at from the
+// other end.
+//
+// The deal row is HELD before the agreements are read, and that ordering is
+// the check rather than tidiness: a contract being filed against this deal
+// concurrently takes a share lock on the same row to read its company, so
+// whichever transaction arrives second waits and then asks its own question of
+// what the first committed. Read first, lock later, and both commit — each
+// having seen a world the other had already left.
+//
+// It is held AFTER the company link probe above, which takes a share lock on
+// `company`, because that is the order every other deal write already takes:
+// the company first, the deal at the patch. Holding the deal first would add
+// the reverse edge to an order this transaction is already committed to.
+//
+// CLEARING the company is a different act and stays on the clear path: a deal
+// that names nobody publishes its agreements to exactly the readers its own
+// scope already admits, which is why the filing check lets a company-less deal
+// take a contract in the first place.
+func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
+	companyID ids.CompanyID, p *storekit.Patch,
+	ensureContractsShareCompany EnsureContractsShareCompany,
+) error {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", companyID.UUID); err != nil {
+		return err
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(current.Id))
+	if err := auth.HoldWritableLive(ctx, tx, dealTable, dealID.UUID); err != nil {
+		return err
+	}
+	if err := ensureContractsShareCompany(ctx, tx, dealID, companyID); err != nil {
+		return err
+	}
+	p.Set("company_id", current.CompanyId, companyID)
+	return nil
 }

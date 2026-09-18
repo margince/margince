@@ -37743,10 +37743,12 @@ type UpdateContactRequestVisibility string
 // UpdateContractRequest Partial. Status is absent by design — it moves through changeContractStatus.
 type UpdateContractRequest struct {
 	// ArrMinor Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
-	ArrMinor             *int64                           `json:"arr_minor,omitempty"`
-	AutoRenew            *bool                            `json:"auto_renew,omitempty"`
-	ContractNumber       *string                          `json:"contract_number,omitempty"`
-	Currency             *string                          `json:"currency,omitempty"`
+	ArrMinor       *int64  `json:"arr_minor,omitempty"`
+	AutoRenew      *bool   `json:"auto_renew,omitempty"`
+	ContractNumber *string `json:"contract_number,omitempty"`
+	Currency       *string `json:"currency,omitempty"`
+
+	// DealId The deal this agreement came from. Null DETACHES it, leaving the agreement anchored to its own company — the move a refused deal-company change tells the caller to make. The deal must belong to the same company as the agreement (else 422 `cross_company_link`).
 	DealId               *openapi_types.UUID              `json:"deal_id,omitempty"`
 	EndsOn               *openapi_types.Date              `json:"ends_on,omitempty"`
 	NoticePeriodDays     *int                             `json:"notice_period_days,omitempty"`
@@ -37787,8 +37789,10 @@ type UpdateDealRequest struct {
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
-	CompanyId        *openapi_types.UUID                `json:"company_id,omitempty"`
-	Currency         *string                            `json:"currency,omitempty"`
+
+	// CompanyId The account this deal is for. Moving it is refused 422 (`deal_contracts_cross_company`) while agreements filed against the deal still name the previous company — a deal and its agreements must name the same one, because a contract with a deal is visible through that deal alone. The refusal names the agreements that block; detach them (`deal_id: null` on each) or record them against the new company first. Null forgets the account, which is not refused: a deal naming nobody publishes its agreements to exactly the readers its own scope already admits.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+	Currency  *string             `json:"currency,omitempty"`
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`
