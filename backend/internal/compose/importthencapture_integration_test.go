@@ -100,7 +100,11 @@ func captureWithTakeOver(
 			// sync two ids for it.
 			activities.IdentityKindMeeting,
 			activities.MeetingIdentityKey,
-			activities.ResolveBindableIdentity,
+			// The proving variant, spelled the way compose/capture.go spells it:
+			// a sink wired with the plain resolve cannot bind across seats at
+			// all, so a test using one would report the same-seat behaviour as
+			// though it were the new rule.
+			activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx),
 			activities.ClaimIdentity,
 		)
 	if _, err := sink.Upsert(connectorCtx(e, adapter, owner), parsed.ToRecord(adapter, raw)); err != nil {
