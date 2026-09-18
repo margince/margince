@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
 import { problemMessageOf, throwProblem } from "./common";
@@ -114,7 +115,6 @@ export function CompanyRejectAction({
   return (
     <>
       <Button
-        small
         variant="danger"
         reasonId={disabledReasonId}
         onClick={open}
@@ -127,13 +127,14 @@ export function CompanyRejectAction({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <h2
+        <Heading
+          size="large"
           id={headingId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           {t("company.reject")}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: "var(--space-4)" }}>
           {t("company.rejectConfirm", {
             name: company.display_name,
@@ -158,24 +159,18 @@ export function CompanyRejectAction({
           // role="alert" so a refused rejection is announced: the dialog stays
           // open either way, and without this the only difference between "it
           // failed" and "it is still working" is a line of red text.
-          <p
-            className="t-caption"
-            role="alert"
-            style={{ color: "var(--dangerText)" }}
-          >
+          <p role="alert" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}
         <div className="actions">
           <Button
-            small
             onClick={() => setConfirming(false)}
             disabled={mutation.isPending}
           >
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             // The reason is REQUIRED by the contract, so the control that
             // sends it says so before the server has to: a refusal for an

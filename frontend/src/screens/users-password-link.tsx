@@ -2,6 +2,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -117,10 +118,10 @@ export function PasswordLinkModal({
       {/* `modal-title` is the dialog heading's own interval, spelled once in
           atoms.css. It was an inline style here, which is a second author for a
           rhythm the design system already owns. */}
-      <h2 id={headingId} className="t-h3 modal-title">
+      <Heading size="large" id={headingId} className="t-h3 modal-title">
         {t("users.link.title", { name: memberName })}
-      </h2>
-      {pending && <p className="t-caption">{t("users.link.pending")}</p>}
+      </Heading>
+      {pending && <p>{t("users.link.pending")}</p>}
       {/* `danger`: the credential does not exist. The member exists either way
           — only the link failed, and the retry is the whole point of this
           branch: without it the admin is left with an account nobody can sign
@@ -144,7 +145,7 @@ export function PasswordLinkModal({
       )}
       {link && !pending && (
         <>
-          <p className="t-caption">{t("users.link.body")}</p>
+          <p>{t("users.link.body")}</p>
           <CopyableLink url={link.url} />
           <Expiry iso={link.expiresAt} />
         </>
@@ -189,7 +190,6 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
         onFocus={(e) => e.currentTarget.select()}
       />
       <Button
-        small
         onClick={() => {
           // navigator.clipboard is UNDEFINED outside a secure context, and a
           // bare property access would throw synchronously — leaving the admin

@@ -235,10 +235,7 @@ export function PageAsideToggle({
       <PanelRight aria-hidden="true" />
       {open ? words.hide : words.show}
       {controlled?.count !== undefined && (
-        <OptionCount
-          count={controlled.count}
-          className="record-details-toggle-count"
-        />
+        <OptionCount count={controlled.count} />
       )}
     </Button>
   );

@@ -9,6 +9,7 @@ import {
   Skeleton,
   TableScroll,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -82,9 +83,9 @@ export function CoverageExplorer({
         labelledBy={titleId}
         size="wide"
       >
-        <h2 id={titleId} className="t-h2 modal-title">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {t("acctCoverage.title")}
-        </h2>
+        </Heading>
         {everOpened && <CoverageGrid companyId={companyId} />}
       </Modal>
     </>
@@ -168,7 +169,6 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
           return (
             <Button
               key={colleague.id}
-              small
               disabled={full}
               // aria-pressed, not a glyph: a toggle's state belongs in the
               // control's semantics, where a screen reader can hear it, rather
@@ -244,9 +244,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
                           {t(BAND_LABELS[band])}
                         </Badge>
                       ) : (
-                        <span className="t-caption">
-                          {t("acctCoverage.untried")}
-                        </span>
+                        <span>{t("acctCoverage.untried")}</span>
                       )}
                     </td>
                   );

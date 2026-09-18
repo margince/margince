@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
+import { Heading } from "./heading";
 import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
@@ -34,7 +35,9 @@ function Harness() {
       <Button onClick={() => setOpen(true)}>Open</Button>
       <Button>Behind the dialog</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="t">
-        <h2 id="t">Log activity</h2>
+        <Heading size="large" id="t">
+          Log activity
+        </Heading>
         <Button>First</Button>
         <Button>Last</Button>
       </Modal>
@@ -49,7 +52,9 @@ function ProseReceipt() {
     <>
       <Button onClick={() => setOpen(true)}>Open</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="p">
-        <h2 id="p">Won this quarter</h2>
+        <Heading size="large" id="p">
+          Won this quarter
+        </Heading>
         <Popover label="Basis">
           <p>Six of nine, since April.</p>
         </Popover>
@@ -69,7 +74,9 @@ function TwoReceipts() {
     <>
       <Button onClick={() => setOpen(true)}>Open</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="w">
-        <h2 id="w">Won this quarter</h2>
+        <Heading size="large" id="w">
+          Won this quarter
+        </Heading>
         <Popover label="Basis" onHover>
           <p>Six of nine, since April.</p>
         </Popover>
@@ -216,7 +223,9 @@ describe("a dialog holds the keyboard", () => {
     const [open, setOpen] = useState(true);
     return (
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="n">
-        <h2 id="n">Nothing to answer</h2>
+        <Heading size="large" id="n">
+          Nothing to answer
+        </Heading>
       </Modal>
     );
   }
@@ -282,7 +291,9 @@ describe("a dialog whose mutation removes its own opener", () => {
           labelledBy="row-h"
           returnFocusTo={named ? () => row.current : undefined}
         >
-          <h2 id="row-h">Deactivate Ada Active?</h2>
+          <Heading size="large" id="row-h">
+            Deactivate Ada Active?
+          </Heading>
           <Button
             onClick={() => {
               setOff(true);
@@ -333,7 +344,9 @@ describe("a dialog whose mutation removes its own opener", () => {
           labelledBy="prec-h"
           returnFocusTo={resolve}
         >
-          <h2 id="prec-h">Confirm</h2>
+          <Heading size="large" id="prec-h">
+            Confirm
+          </Heading>
           <Button>Confirm</Button>
         </Modal>
       </>
@@ -379,7 +392,9 @@ describe("a dialog that is leaving", () => {
   function twoStops(open: boolean, onClose: () => void) {
     return (
       <Modal open={open} onClose={onClose} labelledBy="x">
-        <h2 id="x">Log activity</h2>
+        <Heading size="large" id="x">
+          Log activity
+        </Heading>
         <Button>First</Button>
       </Modal>
     );
@@ -420,7 +435,9 @@ describe("a dialog that is leaving", () => {
     try {
       const withProbe = (open: boolean) => (
         <Modal open={open} onClose={() => undefined} labelledBy="p">
-          <h2 id="p">Log activity</h2>
+          <Heading size="large" id="p">
+            Log activity
+          </Heading>
           <Probe mounted={mounted} />
         </Modal>
       );
@@ -510,7 +527,9 @@ describe("a drawer is a dialog anchored to the right edge", () => {
           labelledBy="d"
           placement="right"
         >
-          <h2 id="d">Write email</h2>
+          <Heading size="large" id="d">
+            Write email
+          </Heading>
           {/* A drawer a rep works IN always has a control before the way out,
               and that is what puts the initial focus somewhere other than the
               close — see the tip spec below for why that distinction matters. */}
@@ -536,7 +555,9 @@ describe("a drawer is a dialog anchored to the right edge", () => {
         placement="right"
         size="wide"
       >
-        <h2 id="d">Evidence</h2>
+        <Heading size="large" id="d">
+          Evidence
+        </Heading>
       </Modal>,
     );
     const dialog = screen.getByRole("dialog", { name: "Evidence" });

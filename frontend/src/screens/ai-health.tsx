@@ -170,7 +170,7 @@ function LastCell({ row, zone }: Readonly<{ row: RungHealth; zone: string }>) {
       {row.last_call_at ? (
         <span>{formatDateTime(row.last_call_at, locale, zone)}</span>
       ) : (
-        <span className="t-caption">—</span>
+        <span>—</span>
       )}
       {row.last_sentinel ? (
         <span className="t-caption">{row.last_sentinel}</span>

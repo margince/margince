@@ -327,6 +327,11 @@ it rather than relying on the bake file staying correct.
 
 - **Outbound mail needs the worker** — the api only stages sends; `cmd/worker`
   transmits them.
+- **Failed-login lock:** five wrong passwords in 15 minutes lock an account
+  for 15 minutes. A browser that has signed in to that account within the last
+  90 days (under its current password) is still let in with the right password,
+  so a lock tripped by somebody else does not keep the owner out; a new browser
+  waits out the lock or resets the password.
 - **Admin lockout break-glass:** `margince-migrate reset-password --dsn <owner>
   --email <admin-email>` (reads the new password from stdin). It will also set
   a password on a member who has none, so it *can* onboard — but it needs the

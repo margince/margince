@@ -91,10 +91,10 @@ export function useDecisionSink(): {
         alignItems: "center",
       }}
     >
-      <p className="t-caption" style={{ color: "var(--dangerText)", flex: 1 }}>
+      <p style={{ color: "var(--dangerText)", flex: 1 }}>
         {t("decision.alreadyDecided")}
       </p>
-      <Button small onClick={() => setAlreadyDecided(false)}>
+      <Button onClick={() => setAlreadyDecided(false)}>
         {t("decision.dismiss")}
       </Button>
     </Card>

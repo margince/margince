@@ -62,9 +62,7 @@ export function ActivityReferenceList({
               />
             ) : (
               <span className="activityrefs__other">
-                <span className="activityrefs__kind">
-                  {t(`timeline.kind.${reference.kind}`)}
-                </span>
+                <span>{t(`timeline.kind.${reference.kind}`)}</span>
                 {/* Withheld first: the subject is null in that case anyway,
                     and saying WHY is what separates a limited exchange from
                     one that carried no subject of its own. */}

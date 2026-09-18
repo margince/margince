@@ -7822,6 +7822,7 @@ const (
 	EmailAccessStatusSelected     EmailAccessStatus = "selected"
 	EmailAccessStatusTeam         EmailAccessStatus = "team"
 	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
+	EmailAccessStatusWorkspace    EmailAccessStatus = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the EmailAccessStatus enum.
@@ -7834,6 +7835,8 @@ func (e EmailAccessStatus) Valid() bool {
 	case EmailAccessStatusTeam:
 		return true
 	case EmailAccessStatusWithheld:
+		return true
+	case EmailAccessStatusWorkspace:
 		return true
 	default:
 		return false
@@ -21732,10 +21735,31 @@ type CaptureConsent struct {
 	} `json:"marketing,omitempty"`
 
 	// PolicyVersion Version id of the consent wording shown to the subject.
-	PolicyVersion string             `json:"policy_version"`
-	PurposeId     openapi_types.UUID `json:"purpose_id"`
+	PolicyVersion string `json:"policy_version"`
+
+	// PurposeId The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+	// — the booking doors are, to the `transactional` lane — and the server resolves that
+	// lane's own id for this installation.
+	//
+	// Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+	// per-installation uuids minted at seed time and there is no anonymous read of them, so
+	// an anonymous form that names one is naming a value it was never given. Sending an id
+	// is for a caller that read the catalog; it is still admitted only if it IS the lane the
+	// surface is confined to.
+	PurposeId *openapi_types.UUID `json:"purpose_id,omitempty"`
 
 	// Wording The exact wording shown, stored with the consent event for demonstrability.
+	//
+	// Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+	// that cannot say what the subject read — before a contact row exists, because the
+	// door is anonymous and a refusal further in would grow the contact table one rejected
+	// request at a time. Omitting it is a 422 naming this field. It is not marked required
+	// here because tightening a shipped request field is the breaking change the contract
+	// gate refuses; the obligation lives in the doors, and it is stated here so a caller
+	// reading the schema is not surprised by it.
+	//
+	// Unlike `purpose_id`, this is something only the surface knows: the server cannot
+	// resolve what a page put in front of somebody.
 	Wording *string `json:"wording,omitempty"`
 }
 
@@ -26709,6 +26733,10 @@ type CreateActivityRequest struct {
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
 
+	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
+
 	// IcalInstance Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
 	IcalInstance *string `json:"ical_instance,omitempty"`
 
@@ -28524,8 +28552,13 @@ type EmailAccess struct {
 	ContentState EmailAccessContentState `json:"content_state"`
 
 	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
-	// badge can print. `team` never means the whole workspace: the linked record's own scope
-	// still decides who may discover the row at all.
+	// badge can print.
+	//
+	// `workspace` means what it says: a seat with no standing of any kind — no team, no
+	// ownership, nothing shared with it — can still find this message, so everyone who reads
+	// mail here reads this one. `team` is the narrower answer, where the linked record's own
+	// scope decides who may discover the row at all. The two used to be one word, and the
+	// badge printed `team` over a sentence saying everyone in the company could read it.
 	//
 	// `withheld` is the only value that says the content is not this caller's, and it never
 	// travels with a reason: why a message is private describes what it is about.
@@ -28559,8 +28592,13 @@ type EmailAccessChangeScope string
 type EmailAccessContentState string
 
 // EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
-// badge can print. `team` never means the whole workspace: the linked record's own scope
-// still decides who may discover the row at all.
+// badge can print.
+//
+// `workspace` means what it says: a seat with no standing of any kind — no team, no
+// ownership, nothing shared with it — can still find this message, so everyone who reads
+// mail here reads this one. `team` is the narrower answer, where the linked record's own
+// scope decides who may discover the row at all. The two used to be one word, and the
+// badge printed `team` over a sentence saying everyone in the company could read it.
 //
 // `withheld` is the only value that says the content is not this caller's, and it never
 // travels with a reason: why a message is private describes what it is about.
@@ -28763,8 +28801,13 @@ type EmailSummary struct {
 	Direction *EmailSummaryDirection `json:"direction,omitempty"`
 
 	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
-	// badge can print. `team` never means the whole workspace: the linked record's own scope
-	// still decides who may discover the row at all.
+	// badge can print.
+	//
+	// `workspace` means what it says: a seat with no standing of any kind — no team, no
+	// ownership, nothing shared with it — can still find this message, so everyone who reads
+	// mail here reads this one. `team` is the narrower answer, where the linked record's own
+	// scope decides who may discover the row at all. The two used to be one word, and the
+	// badge printed `team` over a sentence saying everyone in the company could read it.
 	//
 	// `withheld` is the only value that says the content is not this caller's, and it never
 	// travels with a reason: why a message is private describes what it is about.
@@ -30077,7 +30120,13 @@ type ImportSourceProfile struct {
 	// SuggestedMapping Proposed `{source column → target field}`. Normalized-name matches only; an unmatched column is absent rather than guessed.
 	SuggestedMapping map[string]string `json:"suggested_mapping"`
 
-	// Targets Every field this object can receive, custom fields included — the closed set a mapping may name.
+	// Targets The closed set a mapping may name — every field this object can receive THROUGH AN
+	// IMPORT, which is not every field it has.
+	//
+	// Custom fields are absent on purpose. An import writes through the stores'
+	// caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+	// target would be accepted, reported as written, and dropped. Naming one is refused by
+	// `createImportRun` rather than silently ignored.
 	Targets []string `json:"targets"`
 }
 
@@ -31715,11 +31764,11 @@ type MeetingBriefSectionKind string
 // Assessments and recommendations cite records the caller can open, or they are dropped
 // whole — the same grounding rule every sentence in `sections` runs.
 type MeetingPlan struct {
-	// AccountArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
-	AccountArc []MeetingPlanArcMoment `json:"account_arc"`
-
 	// Advance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
 	Advance MeetingPlanAdvance `json:"advance"`
+
+	// CompanyArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
+	CompanyArc []MeetingPlanArcMoment `json:"company_arc"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured

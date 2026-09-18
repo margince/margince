@@ -74,17 +74,20 @@ func (s lockoutState) fail(now time.Time) lockoutState {
 // before password verification was exactly that oracle.
 var errAccountLocked = errors.New("crmauth: account locked")
 
-// loginCredentials is the account a verified password attempt resolved.
+// loginCredentials is the account a verified password attempt resolved, and
+// the device proof that login hands the browser.
 type loginCredentials struct {
 	UserID      ids.UserID
 	DisplayName string
 	SeatType    string
+	DeviceProof string
 }
 
 // checkCredentials resolves email+password to the account allowed to
 // open a session, applying the login gates in refusal order: status,
 // then the §27 lock, then the password itself. A verified login resets
-// the §27 streak in the same transaction.
+// the §27 streak in the same transaction. device is the proof the browser
+// presented, empty when it presented none (see logindevice.go).
 //
 // Two DIFFERENT gates refuse cases that look alike, and it is worth
 // naming which does what. `status = 'active'` refuses a suspended or
@@ -94,7 +97,7 @@ type loginCredentials struct {
 // must never be a thing that signs in, and it falls to the same decoy
 // branch below. Remove that branch believing the status check covers
 // everything and the agent seat becomes reachable.
-func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaintext string) (loginCredentials, error) {
+func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaintext, device string) (loginCredentials, error) {
 	var account loginCredentials
 	var hash *string
 	var lock lockoutState
@@ -118,7 +121,14 @@ func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaint
 	// from bad credentials, so run the decoy verify here too: the locked
 	// path then does the same Argon2 work as the unknown-email and
 	// wrong-password paths, and Login renders all three as one 401.
-	if lock.locked(s.now()) {
+	//
+	// The one exemption is a browser holding a proof this account issued it
+	// under its current password: that browser has signed in before, so its
+	// owner is not the one guessing, and the lock must not be a way for
+	// somebody else to keep them out. It is judged on its password below —
+	// the same Argon2 work the decoy does — and a wrong one still counts.
+	// A proof for any other account, or none, changes nothing.
+	if lock.locked(s.now()) && !deviceProofVouches(device, account.UserID, *hash, s.now()) {
 		//craft:ignore swallowed-errors the decoy verification exists only to equalize timing with the bad-credentials path; its result is meaningless by design
 		_ = password.Verify(plaintext, decoyHash)
 		return loginCredentials{}, errAccountLocked
@@ -138,6 +148,7 @@ func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaint
 			return loginCredentials{}, err
 		}
 	}
+	account.DeviceProof = mintDeviceProof(account.UserID, *hash, s.now())
 	return account, nil
 }
 

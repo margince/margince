@@ -74,21 +74,6 @@ var otherSenses = gatekit.Waive(map[string]string{
 	"named causes that account for the whole difference": "the ordinary verb, and the ordinary noun twice beside it",
 })
 
-// owedItsOwnBreak ratifies a catalog occurrence that DOES mean this record type
-// and cannot be renamed here.
-//
-// Separate from otherSenses on purpose: that register says "this word means
-// something else", and saying it of one of these would be false. This one says
-// "this word means the company, and moving it is a break somebody has to
-// decide" — which is a different cost, owed a different follow-up, and visible
-// as such to the next reader.
-var owedItsOwnBreak = gatekit.Waive(map[string]string{
-	"account_arc": "the meeting plan's history of the relationship with the company, and a REQUIRED property of " +
-		"GET /activities/{id}/meeting-brief's 200 response — contract-breaking-check refuses its removal, so it needs " +
-		"a deliberate re-sync or a deprecation window carrying both spellings. It is also an enum value in the AI task " +
-		"contract and a field a model is prompted to fill, so the rename re-certifies the meeting-brief sites too. Tracked as margince#5874",
-})
-
 func TestTheToolCatalogCallsTheRecordACompany(t *testing.T) {
 	t.Parallel()
 
@@ -108,7 +93,6 @@ func TestTheToolCatalogCallsTheRecordACompany(t *testing.T) {
 	}
 
 	defer otherSenses.AssertAllMatched(t)
-	defer owedItsOwnBreak.AssertAllMatched(t)
 	for _, where := range sortedCatalogKeys(said) {
 		word := accountWord.FindStringSubmatch(where)
 		if word == nil {
@@ -116,9 +100,6 @@ func TestTheToolCatalogCallsTheRecordACompany(t *testing.T) {
 		}
 		if quote, ratified := ratifyingQuote(where); ratified {
 			otherSenses.Waived(t, quote)
-			continue
-		}
-		if owedItsOwnBreak.Waived(t, where) {
 			continue
 		}
 		t.Errorf("the published catalog says %q in %q.\n"+

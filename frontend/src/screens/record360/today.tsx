@@ -153,7 +153,7 @@ export function WithheldNotice({
     return null;
   }
   return (
-    <p className="today-withheld t-caption">
+    <p className="today-withheld">
       {t("today.withheld", { sections: sections.join(", ") })}
     </p>
   );
@@ -221,7 +221,7 @@ export function FoundMove({
           <span className="co-move-by">
             <Sparkles aria-hidden="true" className="co-move-spark" />
             {t("co.suggest.byline")}
-            {when && <span className="t-num co-move-when">{when}</span>}
+            {when && <span className="t-num">{when}</span>}
           </span>
         )}
         <span className="co-move-ask">{title}</span>
@@ -242,7 +242,6 @@ export function FoundMove({
                 <span className="today-verb">
                   <Button
                     variant="ghost"
-                    small
                     className="co-move-defer"
                     onClick={defer.onDefer}
                     disabled={defer.pending}
@@ -284,7 +283,7 @@ export function TodoRow({
   meta?: ReactNode;
   // When it is owed, coloured only where it is bad news: a late promise is the
   // one thing on the row that may shout.
-  due?: { label: string; tone?: "warn" | "danger" };
+  due?: { label: string; tone?: "warning" | "danger" };
   // The verb that advances it. `byMargince` marks a verb whose work the agent
   // does — a draft it writes — because the indigo mark means authorship and
   // nothing else.
@@ -294,7 +293,7 @@ export function TodoRow({
 }>) {
   return (
     <PanelRow className="co-todo">
-      {who && <Avatar name={who} size="xs" />}
+      {who && <Avatar name={who} />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
         {meta && <span className="t-caption">{meta}</span>}
@@ -315,7 +314,6 @@ export function TodoRow({
       {action ??
         (verb && (
           <Button
-            small
             // Tinted, not filled: three filled buttons down a column outshout
             // the one move above them that the pane is actually recommending,
             // and `aiQuiet` is that volume for an agent's verb among equals.

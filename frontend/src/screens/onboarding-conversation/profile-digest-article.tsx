@@ -105,7 +105,7 @@ export function ProfileArticle({
           </Eyebrow>
           {factGroups.map((group) => (
             <div key={group.category} className="pdigest-factgroup">
-              <p className="pdigest-subhead t-caption">
+              <p className="pdigest-subhead">
                 {t(factCategoryLabelKey(group.category))}
               </p>
               {group.facts.map((fact) => (
@@ -148,7 +148,7 @@ export function ProfileArticle({
                 <span className="pdigest-source-path t-caption">
                   {referenceAddressOf(cite.url)}
                 </span>
-                <span className="pdigest-source-label">
+                <span>
                   {t(pageKindLabelKey(pageOf(pages, cite.url)?.kind))}
                 </span>
               </li>

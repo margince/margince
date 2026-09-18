@@ -58,12 +58,7 @@ export function leadTodoRows(
         meta={t("lead.today.answerMeta")}
         due={firstResponseDue(lead, t, locale, zone)}
         action={
-          <Button
-            small
-            variant="ghost"
-            reasonId={replyReasonId}
-            onClick={onReply}
-          >
+          <Button variant="ghost" reasonId={replyReasonId} onClick={onReply}>
             {t("lead.today.reply")}
           </Button>
         }
@@ -109,7 +104,7 @@ function firstResponseDue(
   t: Translator,
   locale: Locale,
   zone: string,
-): { label: string; tone?: "warn" | "danger" } | undefined {
+): { label: string; tone?: "warning" | "danger" } | undefined {
   if (!lead.sla_deadline_at || !lead.sla_state) {
     return undefined;
   }
@@ -120,6 +115,6 @@ function firstResponseDue(
     label: t("co.next.due", {
       when: formatDateTime(lead.sla_deadline_at, locale, zone),
     }),
-    tone: lead.sla_state === "at_risk" ? "warn" : undefined,
+    tone: lead.sla_state === "at_risk" ? "warning" : undefined,
   };
 }

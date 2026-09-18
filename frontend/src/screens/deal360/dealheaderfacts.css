@@ -2,7 +2,7 @@
    empty fields take, rather than the cell vanishing and the question with
    it. */
 .deal-fact-unset {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 
 /* The close date over what qualifies it: how long until it lands, whether a
@@ -17,5 +17,5 @@
 /* A date nobody confirmed, or one already past, is a warning about the DATE
    rather than about the deal: the tone marks the figure alone. */
 .deal-fact-close-warn {
-  color: var(--warnText);
+  color: var(--warningText);
 }

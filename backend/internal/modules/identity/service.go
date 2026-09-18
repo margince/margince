@@ -238,11 +238,21 @@ func mustRandomSecret() string {
 	return base64.RawURLEncoding.EncodeToString(buf)
 }
 
+// LoginSession is what a successful password login hands the browser: the
+// session token its cookie carries, and a device proof that exempts this
+// browser from a §27 lock on the same account later (see logindevice.go).
+type LoginSession struct {
+	Token       string
+	DeviceProof string
+}
+
 // Login verifies credentials inside the tenant transaction and mints an
 // opaque session. Every attempt outcome — success or failure — lands in
 // audit_log (the failure row commits in its own transaction, because the
-// attempt's transaction rolls back with the error).
-func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity, string, error) {
+// attempt's transaction rolls back with the error). device is the proof the
+// browser presented from an earlier login, empty for none; it matters only
+// while the account is §27-locked (see checkCredentials).
+func (s *Service) Login(ctx context.Context, email, plaintext, device string) (Identity, LoginSession, error) {
 	rawWsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		// The middleware binds the singleton company on every request
@@ -250,17 +260,18 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		// not bootstrapped — and the answer must not disclose that:
 		// credentials against a not-yet-existing company read exactly
 		// like wrong credentials.
-		return Identity{}, "", ErrBadCredentials
+		return Identity{}, LoginSession{}, ErrBadCredentials
 	}
 	wsID := ids.From[ids.WorkspaceKind](rawWsID)
 	token, tokenHash, err := mintSessionToken()
 	if err != nil {
-		return Identity{}, "", err
+		return Identity{}, LoginSession{}, err
 	}
 
 	var id Identity
+	session := LoginSession{Token: token}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		account, err := s.checkCredentials(ctx, tx, email, plaintext)
+		account, err := s.checkCredentials(ctx, tx, email, plaintext, device)
 		if err != nil {
 			return err
 		}
@@ -271,6 +282,7 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 			return err
 		}
 
+		session.DeviceProof = account.DeviceProof
 		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
 		// Failing here would answer correct credentials with a 500 while
 		// wrong ones still got 401 — telling an attacker which passwords
@@ -294,7 +306,7 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		// itself be an oracle). The in-memory per-IP+email limiter still
 		// counts it (the handler Records every 401), so a locked account is
 		// no longer a rate-limit blind spot either.
-		return Identity{}, "", ErrBadCredentials
+		return Identity{}, LoginSession{}, ErrBadCredentials
 	}
 	if errors.Is(err, ErrBadCredentials) {
 		// The attempt's transaction rolled back with the error, so the
@@ -302,14 +314,14 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		// brute-force is exactly what the audit trail exists to catch.
 		// A failure writing it outranks the 401.
 		if auditErr := s.recordFailedLogin(ctx, email); auditErr != nil {
-			return Identity{}, "", auditErr
+			return Identity{}, LoginSession{}, auditErr
 		}
-		return Identity{}, "", err
+		return Identity{}, LoginSession{}, err
 	}
 	if err != nil {
-		return Identity{}, "", err
+		return Identity{}, LoginSession{}, err
 	}
-	return id, token, nil
+	return id, session, nil
 }
 
 // Authenticate resolves a session cookie value to its Identity, enforcing

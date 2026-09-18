@@ -5,12 +5,13 @@ import { useId, useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { middayInstant } from "../format/calendarday";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { EntityRef } from "./entityref";
 import {
   useAnswerCommitment,
@@ -27,7 +28,6 @@ export function TeamPlanReview({
   return (
     <>
       <Button
-        small
         variant="ghost"
         onClick={(event) => {
           event.stopPropagation();
@@ -60,7 +60,9 @@ function TeamPlanDialog({
   const headingId = useId();
   return (
     <Modal open labelledBy={headingId} onClose={onClose}>
-      <h2 id={headingId}>{t("brief.team.planFor", { name })}</h2>
+      <Heading size="large" id={headingId}>
+        {t("brief.team.planFor", { name })}
+      </Heading>
       {plan.data && (
         <p>
           {t("brief.plan.period", {
@@ -154,7 +156,6 @@ function TeamCommitment({
                   )}
                 </Field>
                 <Button
-                  small
                   pending={answer.isPending}
                   disabled={
                     response.trim() === "" ||
@@ -173,9 +174,7 @@ function TeamCommitment({
             ) : (
               <p>{commitment.manager_response}</p>
             )}
-            {answer.isError && (
-              <p role="alert">{problemMessageOf(answer.error, t)}</p>
-            )}
+            {answer.isError && <RefusalLine error={answer.error} />}
           </>
         )}
       </div>

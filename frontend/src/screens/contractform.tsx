@@ -4,10 +4,11 @@ import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
 import { FileDropzoneControl } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
@@ -235,9 +236,9 @@ export function ContractForm({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>
+      <Heading size="large" id={titleId}>
         {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
-      </h2>
+      </Heading>
 
       <ContractTermsFields
         draft={draft}
@@ -258,11 +259,7 @@ export function ContractForm({
         onPick={setFile}
       />
 
-      {save.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(save.error, t)}
-        </p>
-      )}
+      {save.error && <RefusalLine error={save.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

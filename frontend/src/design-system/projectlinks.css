@@ -8,18 +8,10 @@
   width: 100%;
 }
 
-.pl-name {
-  font-weight: var(--fw-medium);
-}
-
 /* The verb goes to the trailing edge, and the key/phase keep their natural
    place next to the name. */
 .pl-row > :last-child {
   margin-left: auto;
-}
-
-.pl-key {
-  color: var(--textMeta);
 }
 
 /* The section's own verbs, side by side in the panel header. */

@@ -15,6 +15,7 @@ import { EmailText } from "./emailtext";
 import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
+import { Heading } from "./heading";
 
 // One email, read whole, in the drawer form of the shared Modal.
 //
@@ -169,9 +170,9 @@ export function EmailDetail({
     >
       <div className="emaildetail__head">
         <div className="emaildetail__heading">
-          <h2 id={titleId} className="emaildetail__title">
+          <Heading size="large" id={titleId} className="emaildetail__title">
             {title}
-          </h2>
+          </Heading>
           {/* WHO may read this message, and the verb that changes it, under
               its subject. A limit is a fact about a message like its date, and
               a reader wants it before they read rather than after: under the
@@ -299,7 +300,7 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   }
   return (
     <div className="emaildetail__files">
-      <p className="emaildetail__filesLabel">
+      <p>
         {translatePlural(locale, "email.detail.attachments", files.length, {
           count: formatNumber(files.length, locale),
         })}

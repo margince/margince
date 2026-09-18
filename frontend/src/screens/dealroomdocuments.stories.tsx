@@ -5,10 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { AddDocument } from "./dealroomdocuments";
 import {
-  installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
+  stubWithSession,
 } from "./story-utils";
 
 type DealRoom = components["schemas"]["DealRoom"];
@@ -54,9 +54,14 @@ const FILES: readonly DealDocument[] = [
 
 const DEAL_DOCUMENTS = `GET /deals/${ROOM.deal_id}/documents`;
 
+// The session is routed as well as the deal's files, because this form mounts
+// the deal's upload dialog behind "Upload a file" and that dialog asks whether
+// the reader may write the deal. An unrouted session is not a neutral omission:
+// it reads as a malformed one, fails the grant closed, and the form would draw
+// its refusal under a story named for the picker.
 function addDocument(routes: RouteMap, refusal?: string) {
   return () => {
-    installFetchStub(routes);
+    stubWithSession(routes, { deal: ["update"] });
     return (
       <StoryProviders>
         <AddDocument room={ROOM} refusal={refusal} />

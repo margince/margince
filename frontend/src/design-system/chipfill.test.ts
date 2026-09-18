@@ -27,8 +27,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 // derives the corpus instead: every rule under src/ that paints
 // --bgChip, plus every rule that draws INSIDE one — the same element in another
 // state, or a descendant — and the ink each sets. An unmeasured ink is the
-// failure nothing else would see: --textMeta on the chip fill reads 3.99:1 over
-// --bgCard and looks like an ordinary declaration.
+// failure nothing else would see: it reads as an ordinary declaration and no
+// pair anywhere says what it comes out at over the fill.
 //
 // A rule is in scope when ANY compound of its selector carries every class the
 // chip's SUBJECT does: `.segmented` paints a track with no ink, and `.segmented
@@ -54,8 +54,7 @@ describe("the chip fill's call sites", () => {
   const inside = renderedInside(sources);
 
   // WCAG 1.4.3 exempts an inactive control, which is the whole point of the
-  // dimmed tone a disabled segment takes; --textTertiary is out of the contrast
-  // corpus above for the same reason and in the same words.
+  // dimmed tone a disabled segment takes.
   function isDisabledState(selector: string): boolean {
     return /:disabled|\[disabled\]|\[aria-disabled="true"\]/.test(selector);
   }
@@ -147,9 +146,9 @@ describe("the chip fill's call sites", () => {
   // The other way the fill goes wrong, and the one that broke the segmented
   // strip: --bgChip painted on a DESCENDANT of something already painted in it.
   // The two composite, the ground goes a step past where the ink was measured,
-  // and every pair above is measuring the wrong colour — --textChip on a
-  // doubled fill is 3.99:1 in light and 3.45:1 in dark. A chip is one step off
-  // its host by construction, so a chip on a chip is never what was meant; the
+  // and every pair above is measuring the wrong colour — the strip's own label
+  // came out under 4.5:1 on the doubled fill. A chip is one step off its host
+  // by construction, so a chip on a chip is never what was meant; the
   // state that wants to look pressed takes a ground from the ladder instead.
   it("never paints --bgChip inside something already painted in it", () => {
     const chips = allRules.filter(({ body }) =>

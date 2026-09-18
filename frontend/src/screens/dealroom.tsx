@@ -44,23 +44,23 @@ export const STATE_LABELS: Record<DealRoomState, MessageKey> = {
 // What each state SAYS, in the badge vocabulary. `live` is the one state that
 // is good news about a room — a buyer can walk in right now — so it is the one
 // that takes the success tone; the two that stopped a buyer at the door take
-// warn; a room nobody can enter again takes danger. The states before a room
+// warning; a room nobody can enter again takes danger. The states before a room
 // has ever opened are standing rather than verdict and take no tone at all: a
 // draft is not going badly.
 //
 // Keyed by the contract's closed union for the same reason the labels are.
 const STATE_TONES: Record<
   DealRoomState,
-  "success" | "warn" | "danger" | "accent" | undefined
+  "success" | "warning" | "danger" | "accent" | undefined
 > = {
   draft: undefined,
   building: undefined,
   ready: undefined,
   publishing: "accent",
   live: "success",
-  paused: "warn",
+  paused: "warning",
   closed: undefined,
-  expired: "warn",
+  expired: "warning",
   archived: "danger",
 };
 

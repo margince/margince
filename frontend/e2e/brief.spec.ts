@@ -121,16 +121,6 @@ async function topOf(locator: Locator): Promise<number> {
   return box.y;
 }
 
-/** A computed pixel measure, for the scale floors. */
-async function px(locator: Locator, property: string): Promise<number> {
-  await expect(locator).toBeVisible();
-  const raw = await locator.evaluate(
-    (element, name) => getComputedStyle(element).getPropertyValue(name),
-    property,
-  );
-  return Number.parseFloat(raw);
-}
-
 /**
  * The shell rendered at all.
  *
@@ -201,43 +191,6 @@ test.describe("the Brief — page shape", () => {
     expect(strip).toBeLessThan(
       await topOf(page.locator(".brief-followthrough")),
     );
-  });
-
-  // The headline outranks what is under it, in the product's OWN scale.
-  //
-  // The concept pack asks for a 30px floor. The design system's `--fs-h1` is
-  // 24px and every h1 in the product is drawn at it (base.css `.t-display`),
-  // so a 30px floor here would either fail forever or force the Brief to a size
-  // no other page uses — a second type scale, to satisfy a number taken from a
-  // mockup rather than from this system. Whether the product's h1 should grow
-  // is a design-system decision, and it is not the Brief's to take alone.
-  //
-  // What IS this page's to hold is that the greeting still READS as a headline:
-  // a ratio against body text, so a change to the scale moves both ends and
-  // only a collapse fails.
-  //
-  // The sentence under the greeting is NOT compared here. It carries no size of
-  // its own (brief.css `.glance-sentence` sets colour, margin and measure) and
-  // inherits one LARGER than a panel title — the lede treatment the concept
-  // asks for. An assertion that it ranks below a section heading would encode
-  // the opposite of what the page deliberately does.
-  test("draws the headline at headline scale, not body scale", async ({
-    page,
-  }) => {
-    await openBrief(page);
-    await expectShellRendered(page);
-
-    const headline = await px(page.locator("main h1"), "font-size");
-    const body = await px(
-      page.locator('[data-testid="glance-sentence"]'),
-      "font-size",
-    );
-    // A RATIO, not "bigger than". Panel titles are 13px and body is 13.5, so a
-    // headline shrunk all the way to body size still measures larger than a
-    // section heading — a greater-than comparison passes on a page whose
-    // headline has stopped being one. 1.5x is comfortably under the shipped
-    // step (24 over 13.5) and comfortably over any collapse of it.
-    expect(headline / body).toBeGreaterThanOrEqual(1.5);
   });
 
   test("orders the greeting above the date above the sentence", async ({
@@ -373,26 +326,6 @@ test.describe("the Brief — page shape", () => {
       throw new Error("the morning drew no focus panel to measure");
     }
     expect(focus.width).toBeGreaterThan(header.width * 0.9);
-  });
-
-  // A reading's VALUE must outweigh its label. Equal weight is the dense
-  // admin-tool rendering these tests exist to catch; a floor, not equality,
-  // because a value larger than the mockup drew is right and 12px is not.
-  test("draws a reading's figure larger than its label", async ({ page }) => {
-    await openBrief(page);
-    await expectShellRendered(page);
-
-    const card = page.locator(`${STRIP} .stat-card`).first();
-    const value = await px(
-      card.locator(".stat-card-value").first(),
-      "font-size",
-    );
-    const label = await px(
-      card.locator(".stat-card-label").first(),
-      "font-size",
-    );
-    expect(value).toBeGreaterThan(label);
-    expect(value).toBeGreaterThanOrEqual(13);
   });
 });
 

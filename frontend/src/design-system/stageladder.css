@@ -44,25 +44,23 @@
    every pair made the row read as a breadcrumb, which says where a reader
    CAME FROM; a line says how far the record has climbed, which is the
    question this row answers. The character stays in the markup and out of
-   the reader's way: it is what a stylesheet-less render still shows. */
+   the reader's way — it is what a stylesheet-less render still shows — and
+   the box is the track itself, clipping the glyph rather than shrinking it:
+   what size type is gets decided in tokens.css and nowhere else. */
 .stage-ladder-sep {
-  font-size: 0; /* ds:ignore the chevron is replaced by the drawn track below, and any rung of the ramp would still print it */
-  display: inline-flex;
-  align-items: center;
-}
-.stage-ladder-sep::after {
-  content: "";
-  display: block;
+  display: inline-block;
   inline-size: var(--space-5);
   block-size: 2px;
+  overflow: hidden;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--borderSubtle);
+  color: transparent;
 }
 /* The track BEHIND the record is filled: the line leading into a rung already
    climbed, and the one leading into the rung it stands on. */
-.stage-ladder-step.is-done > .stage-ladder-sep::after,
-.stage-ladder-step:has(> .stage-ladder-here) > .stage-ladder-sep::after {
+.stage-ladder-step.is-done > .stage-ladder-sep,
+.stage-ladder-step:has(> .stage-ladder-here) > .stage-ladder-sep {
   background: var(--accent);
 }
 
@@ -73,29 +71,25 @@
 .stage-ladder-here {
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--control-h-sm);
+  min-block-size: var(--controlHeight);
   padding-inline: var(--space-3);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
 }
 
-/* The trail behind the current step. Weight rather than another fill: the row
-   already has one filled thing and it is where the record stands, so a second
-   fill would make the reader find the current step twice. */
+/* The trail behind the current step, carried by the ink: the row already has
+   one filled thing and it is where the record stands, so a second accent fill
+   would make the reader find the current step twice. */
 .stage-ladder-step.is-done > .btn {
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
 }
 
 /* A rung ahead of the record is told apart by what it LACKS — the chip below
-   and the weight above — rather than by a quieter ink. A meta ink here read as
-   a colour on the chip ground to any scan that cannot see the :not(), and
-   --textMeta over --bgChip is a pair nothing measures; the fill and the weight
-   already make the row read left to right as climbed, here, ahead. */
+   and the carrying ink above — rather than by a quieter ink of its own. There
+   are two neutral inks and no third, and the fill already makes the row read
+   left to right as climbed, here, ahead. */
 
 /* A ladder nobody may move is a record of where the deal went rather than a
    row of controls that refuse, so its rungs keep their chip and lose only the
@@ -105,9 +99,9 @@
 .stage-ladder-step > .btn:disabled {
   opacity: 1;
 }
-/* A climbed rung carries the quiet fill as well as the weight: a filled chip
-   behind the record and a hollow one ahead of it is what makes the row read
-   as a climb at a glance rather than as six equal words. */
+/* A climbed rung carries the quiet fill: a filled chip behind the record and a
+   hollow one ahead of it is what makes the row read as a climb at a glance
+   rather than as six equal words. */
 .stage-ladder-step.is-done > .btn {
   background: var(--bgChip);
   border-color: transparent;
@@ -127,5 +121,4 @@
   flex: 0 1 auto;
   min-inline-size: 0;
   text-align: end;
-  color: var(--textMeta);
 }

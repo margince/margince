@@ -115,12 +115,12 @@ export function noticeOwner(row: NoticeCase): string | null {
 // ordinary case shout.
 export function noticeStateTone(
   state: NoticeCaseState,
-): "danger" | "warn" | undefined {
+): "danger" | "warning" | undefined {
   if (state === "blocked" || state === "delivery_failed") {
-    return "warn";
+    return "warning";
   }
   if (state === "exempt_with_reason" || state === "provided_elsewhere") {
-    return "warn";
+    return "warning";
   }
   return undefined;
 }

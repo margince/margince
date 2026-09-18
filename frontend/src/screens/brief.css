@@ -126,15 +126,12 @@
   color: var(--accentText);
 }
 
-/* THE DISPLAY RUNG, fluid: this is the page a day opens on and the first
- * thing anyone sees after signing in, so the greeting is the one heading in
- * the product allowed the full-viewport rung — a step over a record's name,
- * and in the same face. */
+/* THE LARGEST RUNG: this is the page a day opens on and the first thing anyone
+ * sees after signing in, so the greeting is the one heading in the product
+ * allowed a step over a record's name — which is `Heading size="xlarge"` at the
+ * call site, in the same face, and nothing for this sheet to spell. */
 .glance-greeting {
   margin: 0;
-  font-size: var(--fs-display-fluid);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
   text-wrap: balance;
 }
 
@@ -145,9 +142,7 @@
    the morning composed the sentence from the ranked queue or the view fell
    back to its own standing line. */
 .glance-sentence {
-  color: var(--textContent);
-  font-size: var(--fs-lead);
-  line-height: var(--lh-normal);
+  font: var(--fontBodyLarge);
   margin: var(--space-1) 0 0;
   max-width: 62ch;
   /* TWO LINES, the same clamp `.stat-card-detail` takes. A row title is user
@@ -291,12 +286,10 @@
 .rail-count-label {
   flex: 1;
   min-width: 0;
-  color: var(--textMeta);
 }
 
 .rail-count-value {
   flex: none;
-  font-weight: var(--fw-semibold);
 }
 
 .rail-money {
@@ -304,11 +297,6 @@
   flex-direction: column;
   gap: var(--space-1);
   width: 100%;
-}
-
-.rail-money-raw {
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
 }
 
 .rail-projects {
@@ -354,7 +342,7 @@
 .rail-schedule-when {
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
   min-width: 3rem;
 }
@@ -414,7 +402,6 @@
 /* What the panel cannot tell you, under what it can. Quiet like every other
    line where a surface reports on its own limits. */
 .rail-promise-note {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -425,12 +412,6 @@
 .brief-wrap > .record-details-toggle {
   margin-left: auto;
 }
-/* The queue's count on the switch that opens it, a weight up from the verb so
-   the figure reads before the words do. */
-.record-details-toggle-count {
-  font-weight: var(--fw-semibold);
-}
-
 /* ── The queue drawer ──────────────────────────────────────────────────────
  * The focus-context drawer's head carries a heading AND a way back to the
  * queue behind it — the one head here that has two things to divide. The
@@ -494,14 +475,14 @@
  * A display-size greeting on a phone costs three lines before a reader has
  * learned anything. */
 @media (max-width: 720px) {
-  /* The greeting steps down a rung: at the display rung it cost three lines
+  /* The greeting steps down a rung: at the largest rung it cost three lines
      before a reader learned anything. */
   .glance-greeting {
-    font-size: var(--fs-h1);
+    font: var(--fontHeadingLarge);
   }
 
   .glance-sentence {
-    font-size: var(--fs-body);
+    font: var(--fontBody);
   }
 
   /* The controls have wrapped under the greeting, so they take one wrapping

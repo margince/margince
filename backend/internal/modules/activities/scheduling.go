@@ -341,8 +341,11 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 		OccurredAt:    &occurred,
 		HostUserID:    &in.Host,
 		MeetingStatus: &booked,
-		Links:         in.Links,
-		Source:        source,
+		// This door takes the slot, which is what the overlap guard refuses a
+		// second of. Both booking doors arrive here; nothing else sets it.
+		ClaimsHostSlot: true,
+		Links:          in.Links,
+		Source:         source,
 	})
 	if _, excluded := storekit.ExclusionViolation(err); excluded {
 		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}

@@ -61,7 +61,7 @@ export const MOMENT_RULE_LABEL = {
 // the relationship that wants a move rather than a verdict on it.
 export function standingTone(rule: ContactMoment["rule"]): StandingTone {
   if (isLate(rule)) {
-    return "warn";
+    return "warning";
   }
   return rule === "nothing_needed" ? "calm" : "accent";
 }
@@ -153,7 +153,6 @@ export function MomentRow({
             verb the agent performs drawn in the accent would read as
             the reader's own move. */}
         <Button
-          small
           variant="ai"
           onClick={() => onOpenRecord(target.type, target.id)}
         >

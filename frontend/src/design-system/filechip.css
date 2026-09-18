@@ -11,12 +11,9 @@
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.2;
   text-decoration: none;
 }
 .file-chip svg {
-  color: var(--textMeta);
   flex: none;
 }
 /* The kind reads as a stamp on the card rather than as part of the name:
@@ -26,10 +23,6 @@
   padding: 2px 5px;
   border-radius: var(--r-xs);
   background: var(--bgChip);
-  color: var(--textChip);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-eyebrow);
 }
 /* The name truncates rather than running the row wide: a scanned filename can
    be sixty characters, and the row it sits in carries other facts. */
@@ -42,8 +35,6 @@
    tight — it informs the click, it is not what the card is for. */
 .file-chip-size {
   flex: none;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 .file-chip:hover {
   border-color: var(--accent);

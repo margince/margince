@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { formatNumber, ordinalNumber } from "../format/format";
@@ -107,7 +108,7 @@ function ClaimMapRow({
             webUrl(source.url) ? (
               <a
                 key={source.url}
-                className="pe-memory-channel t-caption"
+                className="pe-memory-channel"
                 href={source.url}
                 target="_blank"
                 rel="noreferrer"
@@ -116,12 +117,12 @@ function ClaimMapRow({
                 <ExternalLink size={12} aria-hidden="true" />
               </a>
             ) : (
-              <span key={source.url} className="pe-memory-channel t-caption">
+              <span key={source.url} className="pe-memory-channel">
                 {source.label}
               </span>
             ),
           )}
-          <Badge tone={claim.confidence === "high" ? "success" : "warn"}>
+          <Badge tone={claim.confidence === "high" ? "success" : "warning"}>
             {claim.confidence}
           </Badge>
         </div>
@@ -180,7 +181,7 @@ function ClaimMapRow({
                 )}
               </Field>
               {!complete && !badUrl && (
-                <p className="pe-claim-incomplete t-caption">
+                <p className="t-caption">
                   {t("contact.research.mapIncomplete")}
                 </p>
               )}
@@ -188,9 +189,7 @@ function ClaimMapRow({
           )}
         </div>
       </div>
-      <Button small onClick={onDismiss}>
-        {t("contact.research.dismiss")}
-      </Button>
+      <Button onClick={onDismiss}>{t("contact.research.dismiss")}</Button>
     </article>
   );
 }
@@ -302,9 +301,9 @@ export function ContactResearchDrawer({
     >
       <div className="drawer-head">
         <div className="pe-drawer-title">
-          <h2 id="contact-research-title">
+          <Heading size="large" id="contact-research-title">
             {t("contact.research.title", { name: contactName })}
-          </h2>
+          </Heading>
         </div>
         <Badge>{t("contact.research.publicOnly")}</Badge>
       </div>

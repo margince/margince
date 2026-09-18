@@ -195,7 +195,7 @@ func TestTheArcsOwnCitationsAreGrounded(t *testing.T) {
 	in := fullInput()
 	in.History = []HistoryIn{mail(activityID, 3, "Security review", "inbound")}
 	wired := wirePlan(DeterministicPlan(in, rankClaims(in)), in)
-	if len(wired.AccountArc) == 0 {
+	if len(wired.CompanyArc) == 0 {
 		t.Fatal("the arc was dropped whole — its own history is not in the allowlist")
 	}
 }
@@ -223,7 +223,7 @@ func TestThePlanNeverSpellsARecordIDInItsProse(t *testing.T) {
 	if plan.Opening != nil {
 		prose = append(prose, plan.Opening.Text)
 	}
-	for _, moment := range plan.AccountArc {
+	for _, moment := range plan.CompanyArc {
 		prose = append(prose, moment.Title, moment.Summary.Text)
 	}
 	for _, question := range plan.Questions {

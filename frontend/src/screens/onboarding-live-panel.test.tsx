@@ -164,7 +164,7 @@ describe("CoverageCard", () => {
     expect(screen.getByText("Stopped early")).toBeTruthy();
     expect(screen.queryByText("Read up to its limit")).toBeNull();
     expect(
-      document.querySelector('.ob-live-coverage[data-kind="warn"]'),
+      document.querySelector('.ob-live-coverage[data-kind="warning"]'),
     ).toBeTruthy();
   });
 
@@ -184,7 +184,7 @@ describe("CoverageCard", () => {
     ).map((row) => row.getAttribute("data-kind"));
     // Warnings first, then skipped pages, then failed ones — and the three
     // never collapse into one alarm.
-    expect(kinds).toEqual(["warn", "skip", "fail"]);
+    expect(kinds).toEqual(["warning", "skip", "fail"]);
   });
 
   it("names which page was missed when the read says what kind it was", async () => {

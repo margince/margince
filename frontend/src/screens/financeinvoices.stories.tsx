@@ -9,7 +9,7 @@ import "./company360.css";
 
 // The finance card's invoice table on its own, one row per status family, so
 // the status column can be read down its length: neutral for the states that
-// ask nothing of a reader, warn for the ones that need a look, danger for money
+// ask nothing of a reader, warning for the ones that need a look, danger for money
 // past due, success for settled. How late folds into the same badge rather than
 // a caption beside it.
 

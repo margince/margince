@@ -8,9 +8,10 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { stillHeld } from "./employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
 
@@ -75,9 +76,14 @@ export function EmploymentEdit({
   const valid = validDateEntry(start) && validDateEntry(end);
   return (
     <Modal open={open} onClose={onClose} labelledBy={id}>
-      <h2 id={id} className="t-h2" style={{ marginBottom: "var(--space-3)" }}>
+      <Heading
+        size="large"
+        id={id}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {t("employment.edit")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <Field label={t("rel.role")}>
           {(control) => (
@@ -138,9 +144,7 @@ export function EmploymentEdit({
           disabled={status !== "current" || saving.isPending}
           onChange={(e) => setPrimary(e.target.checked)}
         />
-        {saving.isError && (
-          <p role="alert">{problemMessageOf(saving.error, t)}</p>
-        )}
+        {saving.isError && <RefusalLine error={saving.error} />}
         <Button
           disabled={!valid || saving.isPending}
           onClick={() => {

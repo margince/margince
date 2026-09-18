@@ -13,6 +13,7 @@ import {
   filesUnder,
   parseSource,
 } from "../../scripts/lib/source-tree";
+import { classNamesOn } from "../testing/classnames";
 import { withoutComments } from "../testing/css";
 
 // A CLASS ON AN ELEMENT MATCHES A RULE SOMEWHERE, OR IT IS A LIE.
@@ -225,166 +226,20 @@ function declaredIn(css: string): Set<string> {
 type Rendered = { name: string; where: string; line: number };
 
 /**
- * The class names a `className` attribute can be shown to produce.
+ * Where each class name a module renders comes from.
  *
- * Read as VALUES rather than as every string in the subtree, which is the
- * difference between auditing a class list and auditing the code around it.
- * `` `lt-arrow${state === "asc" ? " up" : ""}` `` produces `lt-arrow` and
- * sometimes `up`; `asc` is a column state being compared, and a gate that
- * counted it would report a class nobody wrote. So a conditional contributes
- * its two branches and not its question, a comparison contributes nothing, and
- * a template's interpolations are not descended into at all.
- *
- * What IS read: literals, both branches of a conditional, both sides of `&&`,
- * `||`, `??` and `+`, every argument of a call (`cx("row", open && "row-open")`)
- * and every element of an array that is joined into one. The ordinary dynamic
- * class list is covered rather than waved past.
- *
- * THE ONE BLIND SPOT is a name whose own text is computed — the `tone-` of
- * `` `tone-${level}` ``. It is not a class this can look up, and guessing at the
- * variants would make the gate report names that exist and miss names that do
- * not. So the token touching an interpolation is dropped rather than half-read,
- * and what remains of such a template — every whole token in it — is still
- * checked. The base class of a variant pair is nearly always one of those, so
- * the shape the blind spot hides is a suffix on a base this gate has seen.
+ * The reading itself is `../testing/classnames`, shared with the control-height
+ * spec: what a `className` can be shown to produce is ONE question, and two
+ * readers of it drift until the narrower one reports PASS over a smaller tree.
+ * What this adds is the only thing this gate needs on top — the file and the
+ * line, so a finding names where to go.
  */
 function renderedIn(source: ts.SourceFile, where: string): Rendered[] {
-  const out: Rendered[] = [];
-  const bound = bindingsIn(source);
-  const following = new Set<ts.Node>();
-  const at = (node: ts.Node) =>
-    source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
-  const add = (text: string, node: ts.Node) => {
-    for (const name of text.split(/\s+/).filter(Boolean)) {
-      out.push({ name, where, line: at(node) });
-    }
-  };
-  const value = (node: ts.Node): void => {
-    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) {
-      value(node.expression);
-      return;
-    }
-    if (ts.isJsxExpression(node)) {
-      if (node.expression) {
-        value(node.expression);
-      }
-      return;
-    }
-    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-      add(node.text, node);
-      return;
-    }
-    if (ts.isTemplateExpression(node)) {
-      // `head` runs up to the first `${`, and each span's literal runs from one
-      // interpolation to the next. A piece flush against an interpolation ends
-      // in a PREFIX rather than a name, or begins with a suffix — both are
-      // dropped, leaving the whole tokens between them.
-      add(whole(node.head.text, false, true), node.head);
-      node.templateSpans.forEach((span, index) => {
-        const last = index === node.templateSpans.length - 1;
-        add(whole(span.literal.text, true, !last), span.literal);
-      });
-      return;
-    }
-    if (ts.isConditionalExpression(node)) {
-      value(node.whenTrue);
-      value(node.whenFalse);
-      return;
-    }
-    if (ts.isBinaryExpression(node)) {
-      const joins =
-        node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
-        node.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
-        node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken ||
-        node.operatorToken.kind === ts.SyntaxKind.PlusToken;
-      if (joins) {
-        value(node.left);
-        value(node.right);
-      }
-      return;
-    }
-    if (ts.isCallExpression(node)) {
-      for (const argument of node.arguments) {
-        value(argument);
-      }
-      // `[…].filter(Boolean).join(" ")` — the list is the callee's subject
-      // rather than an argument, and it is the list that holds the names.
-      if (ts.isPropertyAccessExpression(node.expression)) {
-        value(node.expression.expression);
-      }
-      return;
-    }
-    if (ts.isArrayLiteralExpression(node)) {
-      for (const element of node.elements) {
-        value(element);
-      }
-      return;
-    }
-    // A LOCAL BINDING IS FOLLOWED. `const classes = [...].join(" ")` and then
-    // `className={classes}` is the ordinary way a component with three or four
-    // conditional classes is written, and a reader that stopped at the
-    // identifier recorded nothing for it — an orphan in one of those was
-    // invisible. Followed ONCE per name, because a binding that refers to
-    // itself would otherwise be walked forever.
-    if (ts.isIdentifier(node)) {
-      const initializer = bound.get(node.text);
-      if (initializer && !following.has(initializer)) {
-        following.add(initializer);
-        value(initializer);
-        following.delete(initializer);
-      }
-    }
-  };
-  const visit = (node: ts.Node) => {
-    if (
-      ts.isJsxAttribute(node) &&
-      node.name.getText() === "className" &&
-      node.initializer
-    ) {
-      value(node.initializer);
-      return;
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return out;
-}
-
-/**
- * Every `const` in the module, by name, with what it was assigned.
- *
- * Read once per file rather than resolved through the checker: what a class
- * list is assembled from is nearly always a literal in the same module, and a
- * name shadowed in an inner scope resolves to whichever the walk saw last —
- * which over-reads rather than under-reads, the direction this gate is allowed
- * to be wrong in.
- */
-function bindingsIn(source: ts.SourceFile): Map<string, ts.Expression> {
-  const out = new Map<string, ts.Expression>();
-  const visit = (node: ts.Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      out.set(node.name.text, node.initializer);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return out;
-}
-
-/** A template piece with the partial token at either flush end removed. */
-function whole(text: string, dropFirst: boolean, dropLast: boolean): string {
-  const tokens = text.split(/\s+/);
-  if (dropFirst && !/^\s/.test(text)) {
-    tokens.shift();
-  }
-  if (dropLast && !/\s$/.test(text)) {
-    tokens.pop();
-  }
-  return tokens.join(" ");
+  return classNamesOn(source).map(({ name, at }) => ({
+    name,
+    where,
+    line: source.getLineAndCharacterOfPosition(at.getStart(source)).line + 1,
+  }));
 }
 
 /**
@@ -510,7 +365,7 @@ describe("what a className can be shown to produce", () => {
 
   // The blind spot, stated as behaviour: the whole tokens of a template are
   // read and the one touching the interpolation is dropped rather than
-  // half-read. `tone-` is not a class and `tone-warn` is not one this can know.
+  // half-read. `tone-` is not a class and `tone-warning` is not one this can know.
   it("reads a template's whole tokens and drops the one it cannot finish", () => {
     expect(names("<p className={`card tone-${level}`}>x</p>")).toEqual([
       "card",
@@ -544,7 +399,11 @@ describe("what a className can be shown to produce", () => {
   });
 });
 
-describe("every class an element carries is declared by a sheet", () => {
+// Reads every stylesheet and every module, resolving each className expression
+// it meets. The heaviest sweep in this file, and past 10s under coverage.
+describe("every class an element carries is declared by a sheet", {
+  timeout: 60_000,
+}, () => {
   const sheetFiles = sheets();
   const moduleFiles = modules();
 

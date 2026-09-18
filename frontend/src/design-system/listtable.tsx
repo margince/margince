@@ -6,7 +6,7 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import { Check, ChevronDown, Columns3, Rows3 } from "lucide-react";
+import { ChevronDown, Columns3, Rows3 } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -1256,12 +1256,7 @@ export function ListTable<Row>({
                         stays above it either way: "clear filters" undoes every narrowing, and a
                         screen's own way back usually undoes one. */}
                     {emptyNote && (
-                      <p
-                        className="t-caption"
-                        style={{ marginTop: "var(--space-2)" }}
-                      >
-                        {emptyNote}
-                      </p>
+                      <p style={{ marginTop: "var(--space-2)" }}>{emptyNote}</p>
                     )}
                   </td>
                 </tr>
@@ -1488,23 +1483,20 @@ function TableTools<Row>({
             aria-expanded={open}
             onClick={() => setOpen(!open)}
           >
-            <Columns3 size={13} strokeWidth={1.5} aria-hidden="true" />
+            <Columns3 strokeWidth={1.5} aria-hidden="true" />
             {t("table.columns")}
           </button>
           <Menu open={open} head={t("table.shownColumns")} align="right">
+            {/* Which columns are shown is a set, so each row is a `Checkbox` and
+                the menu stays open while the reader builds it. */}
             {optional.map((column) => (
-              <button
-                type="button"
+              <Checkbox
                 key={column.key}
-                className={`lt-mi${hidden.has(column.key) ? "" : " on"}`}
-                aria-pressed={!hidden.has(column.key)}
-                onClick={() => onToggleColumn(column.key)}
-              >
-                <span className="lt-cb">
-                  <Check size={10} strokeWidth={3} aria-hidden="true" />
-                </span>
-                {column.header}
-              </button>
+                className="lt-mi"
+                checked={!hidden.has(column.key)}
+                label={column.header}
+                onChange={() => onToggleColumn(column.key)}
+              />
             ))}
           </Menu>
         </span>
@@ -1516,7 +1508,7 @@ function TableTools<Row>({
         aria-pressed={dense}
         onClick={onDense}
       >
-        <Rows3 size={13} strokeWidth={1.5} aria-hidden="true" />
+        <Rows3 strokeWidth={1.5} aria-hidden="true" />
         {t("table.compact")}
       </button>
     </>

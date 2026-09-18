@@ -188,9 +188,7 @@ function EnrichedField({
         >
           {/* Semibold, the heading weight, not the element's own bold: six of
             these labels down one card at 700 outweighed the panel's title. */}
-          <strong style={{ fontWeight: "var(--fw-semibold)" }}>
-            {t(`contact.enriched.field.${field.field}`)}
-          </strong>
+          <strong>{t(`contact.enriched.field.${field.field}`)}</strong>
           {editing ? (
             // This field sits beside its label on one line rather than filling a
             // form column, so it keeps its intrinsic width instead of the atom's.
@@ -232,7 +230,6 @@ function EnrichedField({
             {t("contact.enriched.replaced", { was: field.superseded_value })}{" "}
             {mayCorrect && (
               <Button
-                small
                 pending={restore.isPending}
                 onClick={() => restore.mutate()}
               >
@@ -267,7 +264,6 @@ function EnrichedField({
                   is refused. Disabling on both would move focus off the control
                   they pressed, at the moment they are waiting on it. */}
               <Button
-                small
                 pending={record.isPending}
                 disabled={draft.trim() === ""}
                 onClick={() =>
@@ -277,7 +273,6 @@ function EnrichedField({
                 {t("contact.enriched.save")}
               </Button>
               <Button
-                small
                 disabled={record.isPending}
                 onClick={() => setEditing(false)}
               >
@@ -296,7 +291,6 @@ function EnrichedField({
                   filled, because confirming is what most rows get and the
                   filled control is the one the eye lands on. */}
               <Button
-                small
                 onClick={() => {
                   setDraft(field.value);
                   setShown({
@@ -315,7 +309,6 @@ function EnrichedField({
                   and `suppressed` is a decision to stop being asked at all. */}
               {!field.verdict && (
                 <Button
-                  small
                   variant="primary"
                   disabled={record.isPending}
                   onClick={() => record.mutate({ verdict: "confirmed" })}

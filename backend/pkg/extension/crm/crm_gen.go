@@ -292,6 +292,7 @@ const (
 	EmailAccessStatusSelected     EmailAccessStatus = "selected"
 	EmailAccessStatusTeam         EmailAccessStatus = "team"
 	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
+	EmailAccessStatusWorkspace    EmailAccessStatus = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the EmailAccessStatus enum.
@@ -304,6 +305,8 @@ func (e EmailAccessStatus) Valid() bool {
 	case EmailAccessStatusTeam:
 		return true
 	case EmailAccessStatusWithheld:
+		return true
+	case EmailAccessStatusWorkspace:
 		return true
 	default:
 		return false
@@ -525,6 +528,10 @@ type CreateActivityRequest struct {
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
 
+	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+	HostUserId *string `json:"host_user_id,omitempty"`
+
 	// IcalInstance Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
 	IcalInstance *string `json:"ical_instance,omitempty"`
 
@@ -578,8 +585,13 @@ type CreateActivityRequestLinksEntityType string
 type CreateActivityRequestMeetingStatus string
 
 // EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
-// badge can print. `team` never means the whole workspace: the linked record's own scope
-// still decides who may discover the row at all.
+// badge can print.
+//
+// `workspace` means what it says: a seat with no standing of any kind — no team, no
+// ownership, nothing shared with it — can still find this message, so everyone who reads
+// mail here reads this one. `team` is the narrower answer, where the linked record's own
+// scope decides who may discover the row at all. The two used to be one word, and the
+// badge printed `team` over a sentence saying everyone in the company could read it.
 //
 // `withheld` is the only value that says the content is not this caller's, and it never
 // travels with a reason: why a message is private describes what it is about.
@@ -666,8 +678,13 @@ type EmailSummary struct {
 	Direction *EmailSummaryDirection `json:"direction,omitempty"`
 
 	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
-	// badge can print. `team` never means the whole workspace: the linked record's own scope
-	// still decides who may discover the row at all.
+	// badge can print.
+	//
+	// `workspace` means what it says: a seat with no standing of any kind — no team, no
+	// ownership, nothing shared with it — can still find this message, so everyone who reads
+	// mail here reads this one. `team` is the narrower answer, where the linked record's own
+	// scope decides who may discover the row at all. The two used to be one word, and the
+	// badge printed `team` over a sentence saying everyone in the company could read it.
 	//
 	// `withheld` is the only value that says the content is not this caller's, and it never
 	// travels with a reason: why a message is private describes what it is about.

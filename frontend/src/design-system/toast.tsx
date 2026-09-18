@@ -52,15 +52,28 @@ export type ToastAction = Readonly<{
 const TOAST_MS = 3500;
 
 /**
- * `mark` is the green dot that reads as "done", and it belongs to the MESSAGE
- * rather than to the region: the same region shows a save that worked and a save
- * that was refused, and the copies this replaces put a completion tick beside
- * both. A failure with a green dot beside it is worse than a failure with no
- * glyph — it says the opposite of what the sentence says.
+ * What the message SAYS about itself, in the five-state vocabulary, as a VALUE
+ * the type is read from so the story and the region walk one list.
+ *
+ * It replaces a `mark` boolean that could only turn the dot off. The dot was
+ * green whatever the sentence said, so a refusal had to drop it entirely — and
+ * the message a reader most needs to notice ended up as the one with no mark at
+ * all. A refusal now carries a RED dot, which is the same signal doing the
+ * opposite work rather than an absence standing in for it.
  */
+export const TOAST_TONES = [
+  "info",
+  "success",
+  "warning",
+  "danger",
+  "discovery",
+] as const;
+
+export type ToastTone = (typeof TOAST_TONES)[number];
+
 type ToastMessage = Readonly<{
   node: ReactNode;
-  mark: boolean;
+  tone: ToastTone;
   /** Whether it withdraws itself, which decides whether it needs a way out. */
   sticky: boolean;
   action: ToastAction | null;
@@ -74,8 +87,13 @@ export type ToastOptions = Readonly<{
    * them three and a half seconds later.
    */
   sticky?: boolean;
-  /** False for anything that is not a completion — a refusal, a warning. */
-  mark?: boolean;
+  /**
+   * What the message is. `success` by default, because the confirmation that a
+   * write landed is what this region is mostly for; anything that is not a
+   * completion says so — `danger` for a refusal, `warning` for a caveat, `info`
+   * for a report, `discovery` for something the reader has just been given.
+   */
+  tone?: ToastTone;
   /** The verb the message carries. Makes it sticky, and gives it a way out. */
   action?: ToastAction;
 }>;
@@ -135,7 +153,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
     const action = options?.action ?? null;
     const arriving: ToastMessage = {
       node: message,
-      mark: options?.mark ?? true,
+      tone: options?.tone ?? "success",
       sticky: options?.sticky ?? action !== null,
       action,
     };
@@ -260,7 +278,7 @@ export function ToastRegion() {
       {/* `.arrive` (enter.css): it rises into place from below, which is the
           direction it comes from — the region is anchored to the bottom edge. */}
       <output className="toast arrive">
-        {shown.mark && <span className="dot dot-auto" />}
+        <span className={`dot toast-dot-${shown.tone}`} />
         <span className="toast-said">{shown.node}</span>
         {act !== null && (
           <button

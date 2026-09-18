@@ -135,7 +135,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (157)
+## Census (159)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -228,6 +228,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `maskedamountreaders_test.go` | H2 | dealAmountColumn is a deal's money however a statement names it. |
+| `maskedamountroots_test.go` | H2 | What the deal-amount census's ROOTS are worth. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
@@ -261,6 +262,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `publictokencachecensus_test.go` | H3 | The no-store census covers every route the contract publishes on the two anonymous token prefixes. |
+| `ratparsebound_test.go` | H2 | A decimal string is shape-checked before math/big parses it. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
@@ -352,10 +354,11 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (68)
+## Prohibition (69)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `agentgateinstalled_test.go` | H1 | `x-agent-access: human-only` is enforced by ONE line, and this is what holds it there. |
 | `aidisclosure_test.go` | H1 | The Art. 50 disclosure has ONE spelling, and it is draftfloor.AIDisclosure. |
 | `arch_test.go` | H2 | Structural fitness functions (architecture/03 §1): these tests make the boundary rules mechanical, and they derive the package list from the tree instead of maintaining it by hand — a new package is enrolled the moment it exists (fitness function over point fix). |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
@@ -425,7 +428,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (16)
+## Claim (17)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -433,6 +436,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `draftpersistenceparity_test.go` | H3 | Two drafting tools answer the persistence question differently ON PURPOSE, and each says so beside the other's name. |
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the ONE spelling of 'this job is still theirs', and the only definition of a current employment in this product". |
+| `importtargetsclaim_test.go` | H3 | What the contract says an import can receive, against what it actually can. |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and TWO functions in two different packages each called themselves the ONE spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |
 | `meetingoverspelling_test.go` | H2 | "This meeting is over" is spelled twice, and the two must say the same thing. |

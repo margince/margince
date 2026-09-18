@@ -111,7 +111,7 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
     const message = screen.getByText("archive failed");
-    expect(message.className).toContain("t-caption");
+    expect(message.getAttribute("role")).toBe("alert");
     expect(message.getAttribute("style")).toContain("var(--dangerText)");
   });
 

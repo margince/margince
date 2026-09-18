@@ -37,7 +37,7 @@ func TestManagementSeesEveryRowAndAdministersNothing(t *testing.T) {
 	if err := e.svc.RedeemPasswordReset(principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()), rawToken, "a management password!"); err != nil {
 		t.Fatalf("redeeming the invite token: %v", err)
 	}
-	mgmt, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), "cso@acme.test", "a management password!")
+	mgmt, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), "cso@acme.test", "a management password!", noDevice)
 	if err != nil {
 		t.Fatalf("management login: %v", err)
 	}

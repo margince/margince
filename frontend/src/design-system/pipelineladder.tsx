@@ -28,13 +28,21 @@ type Rung = components["schemas"]["PipelineStageRung"];
 // tone on purpose: neither is a claim about the MESSAGE, they are statements
 // about what this surface can tell the reader, and a verdict colour would read
 // as one.
-const STATUS_TONE: Record<
+//
+// Exported for the reason `reasonText` beside it is: a rung's status is one
+// vocabulary, and the company's capture-triage section draws the same rungs.
+// A copy of this map there had already drifted — pending came out amber, which
+// is the one reading the comment below rules out.
+export const STATUS_TONE: Record<
   Rung["status"],
-  "success" | "warn" | "danger" | undefined
+  "info" | "success" | "danger" | undefined
 > = {
   done: "success",
   skipped: undefined,
-  pending: "warn",
+  // `info` and not `warning`: a rung the message has not reached yet is work
+  // still in flight, and amber told a reader to act on a delivery that is
+  // simply not finished.
+  pending: "info",
   failed: "danger",
   not_applicable: undefined,
   unknown: undefined,
@@ -75,7 +83,7 @@ function PipelineRung({ rung }: Readonly<{ rung: Rung }>) {
       <span className="pipeline-ladder__mark" aria-hidden="true" />
       <div className="pipeline-ladder__body">
         <p className="pipeline-ladder__head">
-          <span className="pipeline-ladder__stage">{stageName(rung, t)}</span>
+          <span>{stageName(rung, t)}</span>
           <Badge tone={STATUS_TONE[rung.status]}>
             {t(`pipeline.status.${rung.status}`)}
           </Badge>
@@ -99,11 +107,7 @@ function SubjectNote({ rung }: Readonly<{ rung: Rung }>) {
   if (rung.subject_kind === "message") {
     return null;
   }
-  return (
-    <span className="pipeline-ladder__subject">
-      {t(`pipeline.subject.${rung.subject_kind}`)}
-    </span>
-  );
+  return <span>{t(`pipeline.subject.${rung.subject_kind}`)}</span>;
 }
 
 function RungReason({ rung }: Readonly<{ rung: Rung }>) {

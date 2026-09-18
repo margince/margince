@@ -275,7 +275,6 @@ export function LeadBulkBar({
         }))}
       />
       <Button
-        small
         variant="primary"
         disabled={run.isPending || ownerId === "" || leads.length === 0}
         onClick={assign}
@@ -294,7 +293,6 @@ export function LeadBulkBar({
         }))}
       />
       <Button
-        small
         disabled={run.isPending || leads.length === 0}
         // The same requirement, and the same sentence, as the single-lead
         // dialog: a batch closed with no reason is exactly what the
@@ -320,21 +318,17 @@ export function LeadBulkBar({
         onConfirm={disqualify}
         pending={run.isPending}
       >
-        <p className="t-caption">
-          {t("lead.bulkDisqualifyBody", { reason: reasonLabel })}
-        </p>
+        <p>{t("lead.bulkDisqualifyBody", { reason: reasonLabel })}</p>
       </ConfirmModal>
       {/* A run refused as a WHOLE says so on its own. The per-row list below
           reads `outcomes`, which only fills on success — so a destination the
           server refused before touching any lead left the reader pressing
           Assign and watching nothing happen. */}
       {run.isError && (
-        <span className="t-caption t-danger">
-          {problemMessageOf(run.error, t)}
-        </span>
+        <span className="t-danger">{problemMessageOf(run.error, t)}</span>
       )}
       {failed.length > 0 && (
-        <span className="t-caption t-danger">
+        <span className="t-danger">
           {t("lead.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}

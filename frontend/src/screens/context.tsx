@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY_KINDS, type EntityKind } from "../app/entity";
 import { EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { EvidenceChip, toEvidence } from "../design-system/trust";
 import { useT } from "../i18n";
@@ -92,11 +93,11 @@ export function RecordContextPanel({
               <div className="context-sections">
                 {sections.map((section) => (
                   <div key={section.name} className="context-section">
-                    <h3 className="t-label">
+                    <Heading size="small" as="h3">
                       {SECTION_LABELS[section.name]
                         ? t(SECTION_LABELS[section.name])
                         : section.name.replaceAll("_", " ")}
-                    </h3>
+                    </Heading>
                     <ul className="context-items">
                       {section.items.map((item) => {
                         const self = `${item.ref.type}:${item.ref.id}`;

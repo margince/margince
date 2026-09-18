@@ -21,7 +21,7 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { Avatar, Badge, Button } from "./atoms";
+import { Avatar, Badge, Button, OptionCount } from "./atoms";
 import { type BoardDealMail, DealCard } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
@@ -328,15 +328,20 @@ function BoardLayout<Record extends BoardRecord>({
                 three open stages focusable to no effect. */}
             <div className="board-col-head" {...foldProps(column)}>
               <span className="stage">{column.label}</span>
-              {/* TWO SPANS, not one composed string. The name is data of
+              {/* ITS OWN NODE, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
                   and must not. Written as "{label}: {count}" into the truncating
                   span, a long stage name ellipsised the figure away — which is
                   the one thing this head was rearranged to keep on screen.
-                  Hidden from a screen reader, which is told "12 deals" below
-                  with the unit this bare figure leaves out. */}
+                  `OptionCount` is the product's one count chip, so the figure
+                  beside a stage is drawn exactly as the figure beside a tab.
+                  The WRAPPER is what carries `aria-hidden`: the chip speaks its
+                  own figure, and this column already tells a screen reader "12
+                  deals" below, with the unit a bare figure leaves out — so the
+                  whole chip, separator included, stays out of the accessible
+                  tree rather than announcing the number twice. */}
               <span className="board-col-count" aria-hidden="true">
-                {formatNumber(column.count ?? column.deals.length, locale)}
+                <OptionCount count={column.count ?? column.deals.length} />
               </span>
               {money && (
                 <span className="prob">
@@ -850,7 +855,7 @@ function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   }
   const direction = conversationDirection(entry);
   if (direction === "inbound") {
-    return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
+    return <Badge tone="warning">{t("convo.yourMove")}</Badge>;
   }
   if (direction === "outbound") {
     return <Badge>{t("convo.waitingOnThem")}</Badge>;
@@ -921,12 +926,11 @@ export function GroupedTimelineList({
 }
 
 /**
- * TimelineWhen is the row's place on the axis: the day, and under it the
- * time of day. The day alone told a reader two calls happened on the 26th
- * and not which came first, or whether the reply landed an hour after the
- * ask or a working day later — the one thing a chronology is opened to
- * settle. Tabular digits keep the column straight whatever each date's
- * digits are.
+ * TimelineWhen is the row's place on the axis: the day, and under it the time
+ * of day. The day alone told a reader two calls happened on the 26th and not
+ * which came first, or whether the reply landed an hour after the ask or a
+ * working day later — the one thing a chronology is opened to settle. Tabular
+ * digits keep the column straight whatever each date's digits are.
  */
 function TimelineWhen({
   atIso,
@@ -1011,9 +1015,18 @@ function messageLead(
     };
   }
   if (entry.direction === "outbound") {
+    // An imported row knows who sent it, and neither "we" nor "you" is that
+    // colleague: the import ran as one administrator, so every row it wrote
+    // reads as that seat's own sending. The author is asked first for the same
+    // reason the provenance tag asks it first.
+    const author =
+      entry.provenance.kind === "human"
+        ? entry.provenance.author?.display_name
+        : undefined;
     const self = entry.provenance.kind === "human" && entry.provenance.self;
     return {
-      actor: self ? t("timeline.thread.you") : t("timeline.thread.we"),
+      actor:
+        author ?? (self ? t("timeline.thread.you") : t("timeline.thread.we")),
       verb: who
         ? t("timeline.thread.sentTo", { who })
         : t("timeline.thread.sent"),
@@ -1058,8 +1071,7 @@ function threadMessageOpener(entry: TimelineEntry): (() => void) | undefined {
 
 // The mark beside a message: the sender's face on their word, a send mark on
 // ours, a lock on one the reader may not open, and the kind's own icon where
-// nobody is named. A monogram of "We" or of "Them" would be a face nobody
-// has.
+// nobody is named. A monogram of "We" or of "Them" would be a face nobody has.
 function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   if (entry.withheld) {
     return (
@@ -1072,7 +1084,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   // the phrase the lead line shows, whose monogram would be nobody's.
   const [face] = otherSideNames(entry);
   if (entry.direction === "inbound" && face) {
-    return <Avatar name={face} size="xs" />;
+    return <Avatar name={face} />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
@@ -1221,12 +1233,8 @@ function ThreadRow({
         <div className="tl-thread">
           <span className="tl-head">
             <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
-            <span className="tl-group-count">
-              {groupCountLabel(group, locale)}
-            </span>
-            {participants && (
-              <span className="tl-thread-with">{participants}</span>
-            )}
+            <span>{groupCountLabel(group, locale)}</span>
+            {participants && <span>{participants}</span>}
             {/* Whose move the conversation waits on, read off its newest
                 message — on the card that stands for it, never on the
                 members inside. */}
@@ -1260,7 +1268,6 @@ function ThreadRow({
           <span className="tl-meta">
             {folded > 0 && (
               <Button
-                small
                 aria-expanded={allOpen}
                 onClick={() => setAllOpen(!allOpen)}
               >
@@ -1278,7 +1285,7 @@ function ThreadRow({
                 of it. */}
             {group.partial &&
               (threadKey && onOpenThread ? (
-                <Button small onClick={() => onOpenThread(threadKey)}>
+                <Button onClick={() => onOpenThread(threadKey)}>
                   {t("timeline.group.openThread")}
                 </Button>
               ) : (
@@ -1374,11 +1381,9 @@ function BulkGroupRow({
           </>
         )}
         <span className="tl-meta">
-          <span className="tl-group-count">
-            {groupCountLabel(group, locale)}
-          </span>
+          <span>{groupCountLabel(group, locale)}</span>
           <ProvenanceTag provenance={newest.provenance} />
-          <Button small aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Button aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? t("timeline.group.collapse") : t("timeline.group.expand")}
           </Button>
           {/* A bulk send cannot be completed: it has no thread to ask the
@@ -1517,9 +1522,7 @@ export function TimelineRow({
           <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
           {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
-          {entry.qualifier && (
-            <span className="tl-direction">{entry.qualifier}</span>
-          )}
+          {entry.qualifier && <span>{entry.qualifier}</span>}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
               fact about the relationship, which is what the row is for.
@@ -1528,7 +1531,7 @@ export function TimelineRow({
               still says who this record is talking to, which is the thing the
               audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span className="tl-direction">
+            <span>
               {directionPhrase(
                 entry.withheld ? { ...entry, counterparts: undefined } : entry,
                 t,

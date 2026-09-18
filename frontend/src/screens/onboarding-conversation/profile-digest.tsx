@@ -176,11 +176,7 @@ function DigestCompanion({
           </p>
         </div>
         {onReadWhole === undefined ? null : (
-          <button
-            type="button"
-            className="pdigest-whole t-caption"
-            onClick={onReadWhole}
-          >
+          <button type="button" className="pdigest-whole" onClick={onReadWhole}>
             {t("ob.deck.readWhole")}
           </button>
         )}
@@ -271,15 +267,15 @@ function DigestDocument({
               <strong className="pdigest-figure-value">
                 {formatNumber(citedCount, locale)}
               </strong>
-              <span className="pdigest-figure-caption t-caption">
+              <span className="pdigest-figure-caption">
                 {t("ob.digest.citedCaption")}
               </span>
             </div>
-            <div className="pdigest-figure" data-warn={openCount > 0}>
+            <div className="pdigest-figure" data-warning={openCount > 0}>
               <strong className="pdigest-figure-value">
                 {formatNumber(openCount, locale)}
               </strong>
-              <span className="pdigest-figure-caption t-caption">
+              <span className="pdigest-figure-caption">
                 {t("ob.digest.openCaption")}
               </span>
             </div>

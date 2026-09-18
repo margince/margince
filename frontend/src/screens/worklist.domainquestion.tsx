@@ -109,16 +109,14 @@ export function DomainQuestionAnswer({
     <>
       {actions.includes("keep") ? (
         <Button
-          small
           pending={keep.isPending}
           disabled={busy}
           onClick={() =>
             keep.mutate(domain, {
-              onSuccess: () =>
-                toast.show(t("worklist.verb.domainKept"), { mark: true }),
+              onSuccess: () => toast.show(t("worklist.verb.domainKept")),
               onError: () =>
                 toast.show(t("worklist.verb.domainKeepFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             })
           }
@@ -128,16 +126,14 @@ export function DomainQuestionAnswer({
       ) : null}
       {actions.includes("discard") ? (
         <Button
-          small
           pending={discard.isPending}
           disabled={busy}
           onClick={() =>
             discard.mutate(domain, {
-              onSuccess: () =>
-                toast.show(t("worklist.verb.domainDiscarded"), { mark: true }),
+              onSuccess: () => toast.show(t("worklist.verb.domainDiscarded")),
               onError: () =>
                 toast.show(t("worklist.verb.domainDiscardFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             })
           }

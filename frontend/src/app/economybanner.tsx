@@ -55,7 +55,7 @@ export function EconomyBanner() {
     // wrapper the screen owns rather than on a primitive with no layout seam.
     <div className="appbanner">
       <Callout
-        tone={band === "queued" ? "danger" : "warn"}
+        tone={band === "queued" ? "danger" : "warning"}
         kind="standing"
         title={
           band === "queued"

@@ -9,8 +9,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { AgentRail } from "./agentrail";
-import { LABELS } from "./agentrail-copy";
 import { meFixture } from "./mefixture";
 
 // The panel's recap: what the agent has done, and WHICH RECORD it did it on.
@@ -142,7 +142,9 @@ describe("the agent panel's recap", () => {
     stubRail(() => new Promise<Response>(() => {}));
     const { container } = mount();
     await openPanel(container);
-    await waitFor(() => expect(panel().textContent).toContain(LABELS.recap));
+    await waitFor(() =>
+      expect(panel().textContent).toContain(en["agent.panel.recent"]),
+    );
     expect(panel().querySelector(".aritem")).toBeNull();
   });
 
@@ -164,7 +166,7 @@ describe("the agent panel's recap", () => {
     await openPanel(container);
     await waitFor(() =>
       expect(panel().querySelector(".arempty")?.textContent).toBe(
-        LABELS.nothingToday,
+        en["agent.panel.nothingToday"],
       ),
     );
     expect(panel().querySelector(".aritem:not(.arempty)")).toBeNull();

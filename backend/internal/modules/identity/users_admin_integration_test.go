@@ -402,7 +402,7 @@ func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
 	}
 
 	// Before redemption the seat is charged and the member signs in nowhere.
-	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "pending@acme.test", "whatever-they-guess"); err == nil {
+	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "pending@acme.test", "whatever-they-guess", noDevice); err == nil {
 		t.Fatal("an invited member signed in with a password they never set")
 	}
 	var seatsBefore int
@@ -423,7 +423,7 @@ func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
 	if member.Status != "active" {
 		t.Fatalf("after redemption status = %q, want active", member.Status)
 	}
-	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "pending@acme.test", "a-password-they-chose-1"); err != nil {
+	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "pending@acme.test", "a-password-they-chose-1", noDevice); err != nil {
 		t.Fatalf("activated member cannot sign in: %v", err)
 	}
 

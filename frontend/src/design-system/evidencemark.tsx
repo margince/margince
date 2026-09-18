@@ -196,9 +196,7 @@ export function EvidenceMark({
             <p className="evmark-row">
               <ProvenanceTag provenance={source.provenance} />
               {source.confidence && (
-                <span className="evmark-confidence">
-                  {t(`confidence.${source.confidence}`)}
-                </span>
+                <span>{t(`confidence.${source.confidence}`)}</span>
               )}
             </p>
             {source.snippet && (
@@ -212,7 +210,6 @@ export function EvidenceMark({
             {source.at && <p className="evmark-at">{source.at}</p>}
             {onOpenHistory && (
               <Button
-                small
                 onClick={() => {
                   setOpen(false);
                   onOpenHistory();

@@ -10,6 +10,7 @@ import {
   type TimelineGroup,
   TimelineList,
 } from "./composed";
+import { Heading } from "./heading";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { useTruncationTooltip } from "./tooltip";
 
@@ -111,10 +112,10 @@ function RecordHead({
               one line and truncated rather than allowed to grow the header;
               the tooltip is what carries the whole of it, and appears only
               when there was more name than row. */}
-          <h1 ref={nameTip.ref} {...nameTip.trigger}>
+          <Heading size="xlarge" ref={nameTip.ref} {...nameTip.trigger}>
             {name}
             {nameTip.tip}
-          </h1>
+          </Heading>
           {nameBadge}
         </div>
         {/* A div, not a p: a caller passing structure — the company page's
@@ -400,7 +401,9 @@ function RecordStory({
       className="record-timeline"
       aria-label={t("record.timeline")}
     >
-      <h2 className="t-sub">{t("record.timeline")}</h2>
+      <Heading size="large" className="t-sub">
+        {t("record.timeline")}
+      </Heading>
       {/* The dials above the list are one block with one rhythm: the cuts
           through the chronology, then the narrowing of whichever cut is open.
           Rendered as bare siblings they touched, and two rows of controls

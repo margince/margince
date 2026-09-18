@@ -233,9 +233,7 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
       {/* Named for what it opens, not for what it does: this button invites
           nobody, and the dialog's own submit reads "Invite". Two buttons with
           one name are ambiguous for a reader and for `getByRole` alike. */}
-      <Button small onClick={() => setOpen(true)}>
-        {t("users.inviteOpen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("users.inviteOpen")}</Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -390,17 +388,17 @@ function MemberVerbs({
   return (
     <OverflowMenu label={t("users.rowActions", { name: member.display_name })}>
       {canMintLink && (
-        <Button small disabled={pending} onClick={onMintLink}>
+        <Button disabled={pending} onClick={onMintLink}>
           {t("users.link.action")}
         </Button>
       )}
       {canDeactivate && (
-        <Button small disabled={pending} onClick={onDeactivate}>
+        <Button disabled={pending} onClick={onDeactivate}>
           {t("users.deactivate")}
         </Button>
       )}
       {canReactivate && (
-        <Button small disabled={pending} onClick={onReactivate}>
+        <Button disabled={pending} onClick={onReactivate}>
           {t("users.reactivate")}
         </Button>
       )}
@@ -414,14 +412,16 @@ function MemberVerbs({
 // flight is the ordinary first state of every seat, and painting a whole
 // column of new colleagues amber tells an admin something is wrong when
 // nothing is. Warn is kept for the states somebody has to act on.
-function statusTone(status: string): "success" | "warn" | "danger" | undefined {
+function statusTone(
+  status: string,
+): "success" | "warning" | "danger" | undefined {
   switch (status) {
     case "active":
       return "success";
     case "invited":
       return undefined;
     default:
-      return "warn";
+      return "warning";
   }
 }
 
@@ -644,7 +644,7 @@ function MemberRow({
             revoked) describes a colleague rather than an identity that signs in
             nowhere. The agent body's job is to say what does NOT stop: scheduled
             extension jobs keep running, because a tick acts as the job it is. */}
-        <p className="t-caption">
+        <p>
           {t(
             member.is_agent
               ? "users.deactivateAgentConfirmBody"

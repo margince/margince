@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Switch } from "../design-system/switch";
+import { useT } from "../i18n";
 import { setEdgeLightShown, useEdgeLightShown } from "./agent-edge-preference";
-import { LABELS } from "./agentrail-copy";
 
 /**
  * The panel's foot: whether the window's own margins light while the agent
@@ -27,10 +27,11 @@ import { LABELS } from "./agentrail-copy";
  */
 export function EdgeLightSetting() {
   const shown = useEdgeLightShown();
+  const t = useT();
   return (
     <div className="arfoot">
       <Switch
-        label={LABELS.edgeLight}
+        label={t("agent.setting.edgeLight")}
         checked={shown}
         onChange={setEdgeLightShown}
       />

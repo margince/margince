@@ -237,7 +237,18 @@ export const SecretRevealed: Story = {
       await canvas.findByLabelText(/target url/i),
       "https://hooks.acme.test/inbound",
     );
-    await userEvent.click(canvas.getByLabelText("deal.stage_changed"));
+    // The event set is a `MultiSelect` (create.tsx), not a page of checkboxes:
+    // the options live in a listbox it portals to the body, so choosing one is
+    // open-then-pick. The list STAYS open after a pick — that is what makes
+    // choosing three of a hundred three clicks — so it is dismissed before the
+    // submit, which it would otherwise cover.
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: "Event types" }),
+    );
+    await userEvent.click(
+      await canvas.findByRole("option", { name: "deal.stage_changed" }),
+    );
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
   },
 };

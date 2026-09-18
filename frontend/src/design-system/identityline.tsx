@@ -73,9 +73,7 @@ export function IdentityLine({
           // (a company that sold to itself through a partner).
           // biome-ignore lint/suspicious/noArrayIndexKey: positional facts, never reordered
           <span className="identity-pair" key={i}>
-            <span className="identity-sep" aria-hidden="true">
-              ·
-            </span>
+            <span aria-hidden="true">·</span>
             {fact}
           </span>
         ) : (

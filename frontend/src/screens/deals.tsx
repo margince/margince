@@ -1431,11 +1431,11 @@ function dealColumns(
               )}
             </span>
             {deal.stalled && (
-              <Badge tone="warn">{t("deal.stalledBadge")}</Badge>
+              <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
             )}
           </CellStrip>
         ) : (
-          <span className="t-caption">{t("deals.lastSignalNone")}</span>
+          <span>{t("deals.lastSignalNone")}</span>
         ),
     },
     lastMailColumn(t),
@@ -2444,10 +2444,7 @@ export function DealsScreen({
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
       {advance.isError && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
           {problemMessageOf(advance.error, t)}
         </p>
       )}
@@ -2713,7 +2710,6 @@ function DealApprovals({
               primary={
                 <Button
                   variant="primary"
-                  small
                   onClick={() =>
                     decide({ approvalId: approval.id, verdict: "approve" })
                   }
@@ -2725,7 +2721,6 @@ function DealApprovals({
               {/* Dismiss here sends the `reject` verdict — the same answer the
                 decision card's trash can gives, so it wears the same glyph. */}
               <IconAction
-                small
                 label={t("trust.dismiss")}
                 icon={<Trash2 aria-hidden />}
                 onClick={() =>
@@ -2774,7 +2769,6 @@ export function OffersPanel({
       // rather than to a strip under its rows.
       titleAction={
         <Button
-          small
           // `reason` disables the control AND points at the explanation. Passing
           // `disabled` beside it would cancel the refusal it sets, so the
           // in-flight case stays on `disabled` and the state case on `reason`.
@@ -3006,11 +3000,7 @@ function dealBand({
   if (reason === undefined) {
     return undefined;
   }
-  return (
-    <p id={reasonId} className="t-caption">
-      {reason}
-    </p>
-  );
+  return <p id={reasonId}>{reason}</p>;
 }
 
 /**
@@ -3348,7 +3338,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 />
                 {advance.isError && (
                   <p
-                    className="t-caption"
                     style={{
                       color: "var(--dangerText)",
                       marginTop: "var(--space-2)",

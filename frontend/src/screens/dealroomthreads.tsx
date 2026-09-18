@@ -52,7 +52,6 @@ export type BoardGroup = Readonly<{ key: string; label: string }>;
 
 export function DocumentBoard({
   title,
-  sub,
   titleAction,
   groups,
   documents,
@@ -62,7 +61,6 @@ export function DocumentBoard({
   footer,
 }: Readonly<{
   title: string;
-  sub: string;
   titleAction?: ReactNode;
   groups: readonly BoardGroup[];
   documents: readonly BoardDocument[];
@@ -93,10 +91,10 @@ export function DocumentBoard({
   );
   return (
     <>
-      <Panel title={title} sub={sub} titleAction={titleAction}>
+      <Panel title={title} titleAction={titleAction}>
         {documents.length === 0 ? (
           <PanelBody>
-            <p className="t-caption">{empty}</p>
+            <p>{empty}</p>
           </PanelBody>
         ) : (
           groups.map((group) => {
@@ -125,13 +123,10 @@ export function DocumentBoard({
       </Panel>
       <Panel
         title={t("threads.roomTitle")}
-        sub={t("threads.roomSub")}
         titleAction={<Badge>{formatNumber(roomThreads.length, locale)}</Badge>}
       >
         <PanelBody>
-          {roomThreads.length === 0 ? (
-            <p className="t-caption">{t("threads.empty")}</p>
-          ) : null}
+          {roomThreads.length === 0 ? <p>{t("threads.empty")}</p> : null}
           <ThreadList threads={roomThreads} verbs={verbs} />
           <ThreadComposer
             verbs={verbs}
@@ -206,7 +201,7 @@ function DocumentCard({
         ) : null}
         {unanswered > 0 ? (
           <span className="board-doc-unanswered">
-            <Badge tone="warn">
+            <Badge tone="warning">
               {plural("threads.unanswered", unanswered, {
                 count: formatNumber(unanswered, locale),
               })}
@@ -251,7 +246,6 @@ function DocumentCard({
           <div className="board-doc-verbs">
             {doc.read ? (
               <Button
-                small
                 variant="primary"
                 aria-label={t("threads.readTitle", { title: doc.title })}
                 onClick={doc.read}

@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Checkbox, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
@@ -253,7 +254,9 @@ export function QualifyDialog({
     >
       <div className="lead-qualify">
         <section className="lead-qualify-block">
-          <h3 className="t-label">{t("lead.qualify.contact")}</h3>
+          <Heading size="xsmall" as="h3">
+            {t("lead.qualify.contact")}
+          </Heading>
           <PreviewSentence preview={preview} t={t} />
         </section>
 
@@ -331,8 +334,10 @@ export function QualifyDialog({
         </section>
 
         <section className="lead-qualify-block">
-          <h3 className="t-label">{t("lead.qualify.why")}</h3>
-          <p className="t-caption">{reasonSentence(lead, t, locale, zone)}</p>
+          <Heading size="xsmall" as="h3">
+            {t("lead.qualify.why")}
+          </Heading>
+          <p>{reasonSentence(lead, t, locale, zone)}</p>
           <Field label={t("lead.evidenceNote")}>
             {(control) => (
               <Textarea
@@ -356,7 +361,7 @@ function PreviewSentence({
   t: ReturnType<typeof useT>;
 }>) {
   if (preview.isPending) {
-    return <p className="t-caption">{t("lead.previewPending")}</p>;
+    return <p>{t("lead.previewPending")}</p>;
   }
   // A failed preview does not block the qualification; the confirm still
   // runs the same ladder. It just cannot be described in advance.
@@ -364,13 +369,13 @@ function PreviewSentence({
     return null;
   }
   if (preview.data.outcome === "create") {
-    return <p className="t-caption">{t("lead.previewCreate")}</p>;
+    return <p>{t("lead.previewCreate")}</p>;
   }
   if (!preview.data.contact) {
-    return <p className="t-caption">{t("lead.previewMergeWithheld")}</p>;
+    return <p>{t("lead.previewMergeWithheld")}</p>;
   }
   return (
-    <p className="t-caption">
+    <p>
       {t("lead.previewMerge")}{" "}
       <EntityRef kind="contact" id={preview.data.contact.id} />
     </p>

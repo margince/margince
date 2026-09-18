@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { navGroupNames } from "../app/testing/shellharness";
 import { translate } from "../i18n";
 import {
   expectNavSettlesTo,
@@ -53,12 +54,8 @@ afterEach(() => {
 // links inside a single container, so the heading's parent is what says which
 // rows belong to which group — the flat list above cannot tell a mis-grouped
 // page from a correctly grouped one.
-function navGroupPages(heading: HTMLElement): string[] {
-  const container = heading.parentElement;
-  if (!container) {
-    throw new Error(`the group heading "${heading.textContent}" stands alone`);
-  }
-  return within(container)
+function navGroupPages(group: HTMLElement): string[] {
+  return within(group)
     .getAllByRole("link")
     .map((link) => link.textContent ?? "");
 }
@@ -313,23 +310,25 @@ describe("SettingsScreen page visibility", () => {
     );
     renderHome();
     await waitFor(() => expect(offeredPages()).toEqual(EVERY_PAGE));
-    // And each page is under the heading that claims it: the flat order above
+    // And each page is under the group that claims it: the flat order above
     // would read the same if a page were declared in the wrong group.
     const nav = screen.getByRole("navigation", { name: /primary navigation/i });
-    // The level's own name leads them — it heads the group the Overview row is
-    // in — so the subject headings start one along.
-    const headings = within(nav).getAllByRole("heading", { level: 2 }).slice(1);
-    // Asserted before any heading is read, so a level that lost a group fails
-    // on the missing heading rather than on a lookup inside it.
-    expect(headings.map((heading) => heading.textContent)).toEqual(
+    // The level's own name leads them — it names the group the Overview row is
+    // in — so the subjects start one along. Read by ROLE and accessible name:
+    // the rail publishes its groups as `role="group"`, so this asks the panel
+    // the question a reader's own software asks it.
+    const groups = within(nav).getAllByRole("group").slice(1);
+    // Asserted before any group is read into, so a level that lost one fails on
+    // the missing name rather than on a lookup inside it.
+    expect(navGroupNames(nav).slice(1)).toEqual(
       SETTINGS_GROUPS.map(groupLabelOf),
     );
     for (const [index, group] of SETTINGS_GROUPS.entries()) {
-      const heading = headings[index];
-      if (!heading) {
-        throw new Error(`the level published no heading for ${group}`);
+      const box = groups[index];
+      if (!box) {
+        throw new Error(`the level published no group for ${group}`);
       }
-      expect(navGroupPages(heading)).toEqual(pagesIn(group));
+      expect(navGroupPages(box)).toEqual(pagesIn(group));
     }
   });
 

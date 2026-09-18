@@ -30,7 +30,6 @@ function RemoveButton({
   return (
     <>
       <Button
-        small
         iconOnly
         aria-label={t("room.docs.remove", { title: doc.title })}
         reason={refusal}
@@ -42,9 +41,7 @@ function RemoveButton({
         <Trash2 aria-hidden />
       </Button>
       {remove.isError ? (
-        <p className="t-caption t-danger">
-          {problemMessageOf(remove.error, t)}
-        </p>
+        <p className="t-danger">{problemMessageOf(remove.error, t)}</p>
       ) : null}
     </>
   );
@@ -149,7 +146,6 @@ export function DealRoomConversation({
         {threads.data && docs.data ? (
           <DocumentBoard
             title={t("room.docs.title")}
-            sub={t("room.docs.sub")}
             groups={DOCUMENT_GROUPS.map((g) => ({
               key: g.key,
               label: t(g.labelKey),

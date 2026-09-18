@@ -2,6 +2,8 @@
  * Colours read tokens only; the conformance gate enforces it. */
 
 .badge {
+  /* Small body at regular weight; the rest of the type inherits. */
+  font: var(--fontBodySmall);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -18,20 +20,6 @@
   box-sizing: border-box;
   min-inline-size: 0;
   max-inline-size: 100%;
-  /* Type is stated, never inherited: a badge in an eyebrow heading or inside a
-     code sample must read as the badge beside it everywhere else. */
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-style: normal;
-  /* Medium at 20px: the pill states one standing fact beside a name and must
-     not outweigh the name. Semibold at this size reads as a warning. */
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  /* 20px tall and the label centred in it: a 1px hairline top and bottom
-     leaves 18px, and a line box of exactly that height is centred by
-     construction. No line-height rung is a length, hence the px. */
-  line-height: 18px; /* ds:ignore the 20px pill less its two 1px edges */
   min-block-size: 20px;
   padding: 0 8px;
   /* Every variant reserves the edge; soft draws it in its tone and primary
@@ -40,7 +28,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
-  color: var(--textChip);
 }
 .badge-label {
   min-inline-size: 0;
@@ -58,15 +45,24 @@
    already laid over --bgElevated, as one opaque colour — and reads the same on
    every surface. The ink is the Text token, never the base hue, which on its
    own tint at 12px is nowhere near 4.5:1. */
+/* `info` is the neutral report and work still in flight — a row a job has not
+   finished writing, a step that is only telling the reader something. It is a
+   status like the four below it and is painted the same way; what makes it the
+   quiet one is the hue, not a different anatomy. */
+.badge-info {
+  background: var(--infoSurface);
+  border-color: var(--infoBorder);
+  color: var(--infoText);
+}
 .badge-success {
   background: var(--successSurface);
   border-color: var(--successBorder);
   color: var(--successText);
 }
-.badge-warn {
-  background: var(--warnSurface);
-  border-color: var(--warnBorder);
-  color: var(--warnText);
+.badge-warning {
+  background: var(--warningSurface);
+  border-color: var(--warningBorder);
+  color: var(--warningText);
 }
 .badge-danger {
   background: var(--dangerSurface);
@@ -83,6 +79,14 @@
   border-color: var(--accentMed);
   color: var(--accentText);
 }
+/* `discovery` — something NEW — is painted the way the statuses above are, on
+   its own opaque Surface and lettered in its own Text ink, for the same reason:
+   the tint has to read the same on a card, a plate and the rail. */
+.badge-discovery {
+  background: var(--discoverySurface);
+  border-color: var(--discoveryBorder);
+  color: var(--discoveryText);
+}
 
 /* The PRIMARY variant: the same tone as a solid fill, for the one status a
  * surface must not let a reader miss. A filled status control's ground is the
@@ -95,12 +99,16 @@
   border-color: transparent;
   color: var(--bgPage);
 }
+.badge-primary.badge-info {
+  background: var(--infoText);
+  color: var(--textOnStatusControl);
+}
 .badge-primary.badge-success {
   background: var(--successText);
   color: var(--textOnStatusControl);
 }
-.badge-primary.badge-warn {
-  background: var(--warnText);
+.badge-primary.badge-warning {
+  background: var(--warningText);
   color: var(--textOnStatusControl);
 }
 .badge-primary.badge-danger {
@@ -110,6 +118,10 @@
 .badge-primary.badge-accent {
   background: var(--accent);
   color: var(--textOnAccentControl);
+}
+.badge-primary.badge-discovery {
+  background: var(--discoveryText);
+  color: var(--textOnStatusControl);
 }
 /* --ai does not lift in dark, so its ink is --textOnAccent, the light ink
  * shared by every fill that stays put: the dark --textOnAccentControl would
@@ -168,22 +180,15 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--fs-body);
 }
 .table th {
   text-align: left;
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  color: var(--textMeta);
   padding: 8px 12px;
   border-bottom: 1px solid var(--borderStrong);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 .table td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--borderSubtle);
-  color: var(--textContent);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
    none. Without this every table in the tree ended on a hairline pointing at
@@ -229,11 +234,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Semibold, the heading weight: initials are a label for the name beside
-     them, and --fw-bold is reserved for the rare word that must outrank a
-     heading. */
-  font-weight: var(--fw-semibold);
   flex: none;
+  /* The monogram is two letters standing in for a record, not prose, so it
+     takes the heading face at its smallest rung — declared HERE rather than per
+     rung, because a chip that changed its type with its diameter would tell a
+     reader the same two letters were two different kinds of thing. Inheriting
+     was not neutral either: the initials wore whatever the row around them was
+     set in, so the same contact was one size in a list and another in a card. */
+  font: var(--fontHeadingXXSmall);
 }
 
 /* A company's mark is a rounded square, not a circle. A logo is drawn on
@@ -243,24 +251,19 @@
   border-radius: var(--r-sm);
 }
 
-/* The dense rung: a list table that has chosen to pack its rows. */
-.avatar-xs {
-  width: 20px;
-  height: 20px;
-  font-size: var(--fs-eyebrow);
-}
-/* The default: every list row, every name a chip sits beside, the account
-   block in the rail. */
+/* The smallest rung, and the default: every list row, every name a chip sits
+   beside, the account block in the rail. A dense list table draws its chips
+   smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
+   in listtable.css — because density is the table's decision and not a rung of
+   this scale. */
 .avatar-sm {
   width: 28px;
   height: 28px;
-  font-size: var(--fs-eyebrow);
 }
 /* A record header. */
 .avatar-md {
   width: 44px;
   height: 44px;
-  font-size: var(--fs-h3);
 }
 /* A WIDE record header, where the chip is the page's own mark rather than a
    marker beside a name. Sized to sit beside the name rather than to tower over
@@ -269,7 +272,6 @@
 .avatar-lg {
   width: 46px;
   height: 46px;
-  font-size: var(--fs-h2);
 }
 /* The mark of a record PAGE: the one picture in the head, beside a name set
    at the record rung. Sized to the reference's 72, which reads as the page's
@@ -280,7 +282,6 @@
   width: 72px;
   height: 72px;
   border-radius: var(--r-lg);
-  font-size: var(--fs-h1);
 }
 /* A round mark keeps its circle at every rung: a contact is a portrait, an
    company is a tile. `.avatar-company` squares the small rungs and this one
@@ -408,7 +409,6 @@
 }
 .pending-note {
   margin: 0;
-  color: var(--textMeta);
 }
 .pending-line {
   height: 14px;
@@ -445,8 +445,6 @@
 .empty {
   text-align: start;
   padding: var(--space-5) var(--padCard);
-  color: var(--textMeta);
-  font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -478,8 +476,6 @@
 }
 .empty-plate-title {
   margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 /* What this kind of thing is FOR, under the line saying there is none of it.
@@ -489,15 +485,10 @@
 .empty-plate-note {
   margin: 0;
   max-inline-size: 46ch;
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-  color: var(--textMeta);
   text-wrap: pretty;
 }
 .empty-body {
   max-width: 52ch;
-  font-size: var(--fs-body);
-  line-height: 1.5;
 }
 .empty-body p {
   margin: 0;
@@ -575,7 +566,7 @@
   > .drawer-head
   > :first-child
   > :is(h1, h2, h3, .modal-title):first-child {
-  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
 }
 /* Roomier variant for content-dense dialogs (e.g. the cert-scenario export's
    YAML + response previews) that read cramped at the compact form width. */
@@ -956,13 +947,32 @@
   border: 0;
   background: none;
   color: var(--accentText);
-  font: inherit;
   cursor: pointer;
   text-align: left;
   text-decoration: none;
 }
 .entity-link:hover {
   text-decoration: underline;
+}
+
+/* THE COUNT BESIDE AN OPTION, and it is one chip wherever it is drawn: a tab
+   strip, a segmented row, any option whose name is followed by how much sits
+   behind it. Declared here rather than by each host, because every host that
+   styled it reached a slightly different answer and the same record then drew
+   one figure two ways.
+   No ink of its own: it inherits the host's, so the figure goes quiet beside a
+   quiet label and dark beside a pressed one. The minimum width is what keeps a
+   column of chips the same size from 1 to 99, and the centring is what keeps
+   the digit in the middle of it. */
+.optioncount {
+  display: flex;
+  justify-content: center;
+  align-self: center;
+  min-inline-size: var(--space-6);
+  padding-inline: var(--space-1);
+  border-radius: var(--r-xs);
+  background: var(--bgChip);
+  font: var(--fontBodySmall);
 }
 
 .segmented {
@@ -982,40 +992,31 @@
   gap: 2px;
 }
 .segmented button {
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  /* Medium at rest and semibold only when pressed, as FilterPills does: a row
-     of options all set semibold reads as a row of headings, and the weight
-     step is what marks the chosen one beside its plate. */
-  font-weight: var(--fw-medium);
+  font-family: var(--fontFamilyBody);
   border: 0;
+  /* A ROW, because an option is a word and then what sits behind it: the count
+     chip and the mark are laid on the word's line rather than under it, and
+     `align-items` is what holds all three on one centre line. */
+  display: inline-flex;
+  align-items: center;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
      --bgElevated and answers to that instead. */
   background: transparent;
-  color: var(--textChip);
-  padding: 5px 12px;
+  padding: var(--segmentPaddingY) var(--space-3);
   border-radius: var(--r-sm);
   cursor: pointer;
+  /* Unselectable, for `.checkfield`'s reason. */
+  user-select: none;
 }
 .segmented button[aria-pressed="true"] {
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fontWeightMedium);
   box-shadow: var(--shadow-rest);
 }
-/* How much is behind an option, beside its name. It keeps the quiet ink on the
-   pressed option too: the label says where you are, and a count that lit up
-   with it would read as the selection's own figure rather than as the size of
-   what is under it. Lighter weight for the same reason — it qualifies the
-   label, it does not compete with it. One ink across both states rather than
-   --textChip on the track and --textMeta on the plate, because a figure that
-   changed tone as the reader moved between options would read as a different
-   figure; --textChip is the darker of the two on either ground. */
-.segmented button > .segmented-count {
-  margin-left: 6px;
-  font-weight: 400;
-  color: var(--textChip);
+.segmented button > .optioncount {
+  margin-left: var(--controlGap);
 }
 
 /* Something waits behind this option. An accent dot rather than an indigo one:
@@ -1026,7 +1027,6 @@
   width: 5px;
   height: 5px;
   margin-left: 5px;
-  vertical-align: 2px;
   border-radius: 50%;
   corner-shape: round;
   background: var(--accent);
@@ -1051,9 +1051,7 @@
  * first. */
 .link-button,
 .btn.btn-link {
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: 600;
+  font-family: var(--fontFamilyBody);
   color: var(--accentText);
   background: transparent;
   border: 0;
@@ -1086,11 +1084,14 @@
    instead of leading it. `.btn` and `.iconbtn` each size their own icon for
    exactly this reason; this class carried the same shape and none of the rule,
    so a link button was the one affordance in the product where an icon was the
-   caller's problem. The size belongs to the control, not to the call site. */
+   caller's problem. The size belongs to the control, not to the call site —
+   and it is the same --controlIcon the other two spend, because a link verb's
+   mark standing a pixel off a ghost verb's beside it is the drift this rule
+   was written to end, not a smaller version of it. */
 .link-button svg,
 .btn.btn-link svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
   flex: none;
 }
 /* A SOLID outline, not the 9%-opacity ring the filled controls use.
@@ -1109,8 +1110,6 @@
 }
 
 .kbd {
-  font-size: var(--fs-eyebrow);
-  color: var(--textChip);
   background: var(--bgChip);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
@@ -1118,12 +1117,10 @@
   padding: 1px 5px;
 }
 
-/* Title over description, both across the card's full width. Side by side on
- * one baseline the two competed for the same line: a description long enough to
- * be worth writing pushed the title around, and at narrow widths one of them
- * lost. Stacked, the title is read first and the description is a full-width
- * line under it. Actions, when a section has them, are the only thing that sits
- * beside the pair. */
+/* The section's head: its title, and the verbs that act on it at the far end.
+ * Never a description — a sentence between the title and the body is a third
+ * voice repeating one of them, and copy that genuinely adds something is body
+ * content. */
 .section-header {
   display: flex;
   align-items: flex-start;
@@ -1132,12 +1129,10 @@
   width: 100%;
   margin: var(--space-6) 0 var(--space-3);
 }
-.section-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  /* min-width:0 so a long unbroken title ellipsises inside the row rather than
-   * widening it past the card. */
+/* The title takes the row's free space, so the actions sit at the far end.
+ * min-width:0 so a long unbroken title ellipsises inside the row rather than
+ * widening it past the card. */
+.section-header-title {
   min-width: 0;
   flex: 1;
 }
@@ -1167,53 +1162,26 @@
 .filter-tabs > .sub {
   display: block;
   margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
-  color: var(--textMeta);
 }
 .section-header h2 {
-  /* --fs-lead IS 15px: the same value the raw number held, now named. The
-     app's section titles and the token ramp's --fs-h2 (20px) disagree, and
-     that disagreement is a decision about the house scale rather than
-     something to settle inside one rule — so this names the size it draws
-     and does not change it. */
-  font-size: var(--fs-lead);
-  font-weight: 600;
   color: var(--textPrimary);
 }
-/* SectionHeader level={3}: a section inside a section. It steps down in size
-   as well as in outline depth — a nested heading drawn at its parent's size
-   tells the eye they are peers while the document says they are not, and the
-   eye is the one the reader believes. */
 .section-header h3 {
-  font-size: var(--fs-sm);
-  font-weight: 600;
   color: var(--textPrimary);
 }
-/* The page-naming variant (SectionHeader level={1}): a record whose surface
-   carries the page's only heading reads at the record scale, not the section
-   one, and it sets its margins rather than inheriting the UA's — the row is
-   baseline-aligned with the subtitle beside it. */
+/* The page-naming variant (SectionHeader level={1}): it sets its margins rather
+   than inheriting the UA's, so the row sits on the interval this head declares
+   instead of on the browser's own. */
 .section-header h1 {
   margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h1);
-  font-weight: 600;
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
-}
-/* A measure, not a width: a description that runs the whole width of a wide
-   card is a line the eye loses its place in. */
-.section-header .sub {
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-  line-height: var(--lh-snug);
-  max-width: 78ch;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--fieldGap);
 }
 
 /* The picker's search field fills the picker: `.input-icon` is an inline-flex, so
@@ -1255,8 +1223,6 @@
   border-radius: var(--r-sm);
   background: var(--accentLight);
   color: var(--textPrimary);
-  font-weight: 600;
-  font-size: var(--fs-body);
 }
 .recordpicker-selected-check {
   color: var(--accentText);
@@ -1365,33 +1331,38 @@
   margin: 4px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textMeta);
 }
 
-/* The horizontal padding is 11px rather than the button's 14px on purpose: a
-   field's text starts at its own left edge and a button's label is centred, so
-   matching the two numbers would put the field's first character further in
-   than it should be. The HEIGHT is shared, through --control-h — a field and
-   the button that submits it are the same box on screen, and before the floor
-   existed they computed 40.25px and 38.25px independently. */
+/* A place to TYPE, and the box says so: --inputHeight, with --inputPaddingY
+   and --inputPaddingX for the room around what a reader puts in it. This is the
+   one place a field and the button beside it part company — a verb you hit and
+   a box you fill are not the same object, and the room inside is what says
+   which is which. The Select trigger below takes this same box — it stands in a
+   form column where a text box would; every BUTTON stays on --controlHeight.
+
+   `font: inherit` and NOTHING else about type. What is typed here is the
+   reader's own text, not a component's label, so it wears the root face, size
+   and weight exactly as the prose around it does; the medium weight this rule
+   used to add made a reader's answer heavier than the question above it.
+   `color: inherit` for the same reason — which leaves the placeholder, the one
+   run of text in this control that nobody typed, as the only thing here with a
+   tone of its own. */
 .input {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  line-height: 1.25;
-  color: var(--textPrimary);
+  font: inherit;
+  color: inherit;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-control);
-  padding: 8px 11px;
-  min-block-size: var(--control-h);
+  padding: var(--inputPaddingY) var(--inputPaddingX);
+  min-block-size: var(--inputHeight);
   width: 100%;
   outline: none;
   /* Named properties, not `all` — `transition: <time>` alone means
-     `transition-property: all`, which put this field's own height, padding and
-     width on a timer. Most visibly the phone rule below: raising the text to
-     16px animated the FONT SIZE, so tapping a field on an iPhone grew its type
-     over 140ms. What should transition is what a field changes about itself
-     when it is focused, refused or disabled, and that is these four. */
+     `transition-property: all`, which put this field's own height, padding,
+     width and type on a timer: while a phone rule raised the text to 16px,
+     tapping a field on an iPhone GREW its type over 140ms. What should
+     transition is what a field changes about itself when it is focused,
+     refused or disabled, and that is these four. */
   box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
@@ -1399,13 +1370,41 @@
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
-/* The Select trigger is the one `.input` that is NOT a well: it holds a closed
-   face rather than a place to type, so it is verb-shaped and takes the surface
-   layer a button takes. Two classes, so it outranks `.input` on specificity
-   rather than on which sheet the bundler emitted first — the same reason
-   `.btn.btn-link` is spelled that way below, and not a theoretical one here:
-   select.css is its own chunk, so the order of the two is a routing decision.
-   In THIS sheet, so the hover and focus rules under it still win on order. */
+/* The placeholder is not a value, it is a prompt for one, so it reads in the
+   secondary ink: a field with nothing in it has to be legibly EMPTY, and at the
+   same tone as its own text it is legibly filled with the wrong words. Both
+   field shapes in one rule, because they are one field — the textarea's own
+   declarations are below and a second placeholder rule beside them would be the
+   same sentence twice, ready to drift. */
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--textSecondary);
+}
+/* The Select trigger is the one `.input` that is NOT a place to type — it holds
+   a closed face rather than a caret — but it is still a FIELD: it stands where a
+   text box would stand, in the same column of a form and under the same label,
+   so it keeps the field's box at --inputHeight. A trigger 8px shorter than the
+   text box above it is the ragged form column this height was bought to end.
+   What it keeps of the CONTROL is the inset and the medium weight: a trigger's
+   face is a component's text where a typed value is the reader's, so it is set
+   like a label rather than like an answer.
+
+   In THIS sheet rather than in select.css, which is its own chunk: the order of
+   the two sheets is a bundler routing decision, so a rule that has to beat
+   `.input` cannot stand on it. A single class declared AFTER `.input` here wins
+   on source order and spends no specificity — which matters, because
+   `.lt-perpage .select-control` and `.timeline-filters-row .select-control`
+   re-shape this trigger with two classes and would have tied with a
+   `.input.select-control` spelling. */
+.select-control {
+  min-block-size: var(--inputHeight);
+  padding: 0 var(--controlPaddingX);
+  font-weight: var(--fontWeightMedium);
+}
+/* Nor is it a well: a face rather than a hole, at the resting depth a button
+   takes. Two classes here, for the opposite reason to the rule above — this one
+   has to outrank `.input`'s own `--shadow-well` while still losing to the hover
+   and focus rules below it on source order alone. */
 .input.select-control {
   box-shadow: var(--shadow-rest);
 }
@@ -1453,7 +1452,6 @@
 .input[aria-disabled="true"],
 .textarea:disabled,
 .textarea[aria-disabled="true"] {
-  color: var(--textTertiary);
   background: var(--bgCard);
   cursor: not-allowed;
 }
@@ -1461,21 +1459,7 @@
    is the shell that has to dim — the input within it draws no fill of its own. */
 .field-shell:has(:disabled),
 .field-shell:has([aria-disabled="true"]) {
-  color: var(--textTertiary);
   background: var(--bgCard);
-}
-
-/* iOS Safari zooms the page whenever a focused input's text is under 16px, and
-   the field is 13.5px — so on an iPhone every form in this product jerked the
-   viewport on focus. The sign-in screens were the only surface that ever fixed
-   it, in their own sheet, for their own fork of the field; declared here it
-   reaches every input instead of one screen's. Only below the width where a
-   phone is what is holding the page: at desk widths 13.5px is the size the rest
-   of the type scale is set against. */
-@media (max-width: 35rem) {
-  .input {
-    font-size: 16px; /* ds:ignore iOS zooms any field under 16px — a platform floor, not a rung */
-  }
 }
 
 /* The field's OUTLINE, moved off the input, for the fields that have something
@@ -1485,9 +1469,12 @@
 .field-shell {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding-inline: 11px;
-  min-block-size: var(--control-h);
+  gap: var(--controlGap);
+  /* The shell IS the field, so it takes the field's box rather than a control's:
+     what sits inside it is a place to type, and a shelled field standing shorter
+     than the bare one under it in the same form is the same field twice. */
+  padding-inline: var(--inputPaddingX);
+  min-block-size: var(--inputHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -1533,10 +1520,15 @@
   box-shadow: var(--focus-glow-danger);
 }
 /* Inside the shell the input is only the text: the shell owns the fill, the
-   boundary, the radius, the focus ring and the horizontal padding. */
+   boundary, the radius, the focus ring, the horizontal padding and the HEIGHT.
+   The height is the one the rule used to leave on the input, and what that cost
+   was a shell two pixels taller than the field beside it — the input's own
+   `min-block-size` is a border-box figure and the shell's borders sit outside
+   it, so the two floors stacked instead of agreeing. */
 .field-shell > .input {
   flex: 1;
   min-inline-size: 0;
+  min-block-size: 0;
   border: 0;
   background: none;
   border-radius: 0;
@@ -1549,7 +1541,6 @@
 .field-shell-icon {
   display: inline-flex;
   flex: none;
-  color: var(--textMeta);
 }
 .field-shell-icon svg {
   inline-size: 15px;
@@ -1566,13 +1557,12 @@
 /* A refusal is not a caption. It reads in the danger tone at the caption's
    size, under the control it belongs to and above the rule that still applies. */
 .field-error {
-  font-size: var(--fs-sm);
   color: var(--dangerText);
-  font-weight: var(--fw-medium);
 }
 /* No `select.input` rule: there is no native dropdown in this product. The
    Margince select's trigger is a button that reads `.input` for the same field
-   surface and owns its own layout in select.css. */
+   surface, takes the control's box back from `.select-control` above, and owns
+   its own layout in select.css. */
 
 /* The Checkbox/Radio row: control, then its words, on one line the whole of
    which is the click target.
@@ -1600,6 +1590,9 @@
   align-content: center;
   column-gap: var(--space-2);
   cursor: pointer;
+  /* A double-click on a toggle's label selects the word instead of flipping the
+     control under it, so the words a reader clicks do not select. */
+  user-select: none;
 }
 /* Sized here rather than left to the platform. The box is native, so unsized it
    is whatever the engine draws — around 13px in Blink, a different figure in
@@ -1622,7 +1615,6 @@
    is not pointing never receives. */
 .checkfield:has(input:disabled) {
   cursor: not-allowed;
-  color: var(--textTertiary);
 }
 /* The box is native, so it was taking the PLATFORM's focus ring — the one blue
    this product otherwise refuses (see the caret and accent-color declarations in
@@ -1656,7 +1648,6 @@
   left: 9px;
   width: 15px;
   height: 15px;
-  color: var(--textMeta);
   pointer-events: none;
 }
 .input-icon .input {
@@ -1680,12 +1671,6 @@
   border-radius: 0;
   height: auto;
   padding: 0 0 0 24px;
-  /* NO font-size, and NOT the nearest rung either. The flush variant strips the
-     field's chrome — border, ground, radius — and the type is not chrome. A size
-     here, whatever its value, outranks the iOS floor above by specificity while
-     sitting outside that floor's media query, so a flush field was the one input
-     on a phone that still zoomed the viewport on focus. Inheriting is what keeps
-     the floor reachable; naming a rung passes the type gate and leaves the zoom. */
 }
 .input-icon-flush .input:focus,
 .input-icon-flush .input:focus-visible {
@@ -1695,9 +1680,12 @@
 }
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
-   other in the same form, so type size, padding and focus transition are the
-   SAME values, not near ones. Only `resize` differs — that is what makes it a
-   textarea.
+   other in the same form, so type, inset and focus transition are the SAME
+   values, not near ones. One thing differs, and it is `resize` — that is what
+   makes it a textarea. The weight used to differ too, on the argument that
+   prose is regular where a one-line value is a component's text; the field
+   above now takes the root weight as well, so the pair no longer needs a rule
+   to agree.
 
    `width: 100%` is part of the atom rather than each caller's job. Without it a
    textarea falls back to its intrinsic `cols`, which is narrower than the column
@@ -1705,13 +1693,16 @@
    three that did not (the ask panel, the onboarding company form, the activity
    logger) rendered a short box in a wide field. */
 .textarea {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  color: var(--textPrimary);
+  font: inherit;
+  color: inherit;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  padding: 9px 11px;
+  /* The field's own insets, so a textarea and the input above it start their
+     text in the same place. Both figures are stated: a box of several lines has
+     no single line for `align-items` to centre, so the room above the first one
+     is spelled rather than left to a height. */
+  padding: var(--inputPaddingY) var(--inputPaddingX);
   width: 100%;
   outline: none;
   box-shadow: var(--shadow-well);
@@ -1746,7 +1737,6 @@
   place-items: center;
   border: 0;
   background: transparent;
-  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -1796,8 +1786,21 @@
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
+  /* The section's name reads at body size — it is a toggle rather than a
+     heading, so it takes no heading token — and medium is the emphasis that
+     tells a reader which line opens the section under it. */
+  font-weight: var(--fontWeightMedium);
+  /* Unselectable, for `.checkfield`'s reason. */
+  user-select: none;
   list-style: none;
-  color: var(--textMeta);
+}
+/* The summary's NAME takes the line, so anything riding beside it — a count, a
+   badge, a teaser — reaches the far end instead of being stranded mid-row.
+   Declared here rather than at a call site: four screens had each written this
+   pair onto the shared span, which is one invariant with four authors. */
+.disclosure-label {
+  flex: 1;
+  min-inline-size: 0;
 }
 .disclosure-summary::-webkit-details-marker {
   display: none;
@@ -1891,7 +1894,10 @@
      navigation are unreachable, and only on the layout where the record page
      is longest. */
   z-index: 35;
-  min-width: 180px;
+  /* The menu anatomy's floor (tokens.css; the note on `.lt-menu` in
+     listtable.css is where it is spelled out), not a width of this panel's own:
+     a menu that states its own is the second answer this token replaced. */
+  min-inline-size: var(--menuMinInlineSize, 250px);
   /* On a 390px screen, or at high zoom, a menu that only states a minimum
      grows the page instead of itself: the panel goes off the right edge and
      takes its actions with it. The desktop ceiling is the OTHER half of the
@@ -1910,9 +1916,11 @@
   /* The panel's own chrome is the Select listbox's, declaration for
      declaration (select.css, .select-popup). Two popovers a reader opens from
      the same header, drawn with different padding, borders and radii, read as
-     two different products; a menu and a dropdown are one family, and the
-     family is defined once — there. Change one of these, change both. */
-  padding: var(--space-1);
+     two different products; a menu and a dropdown are one family — and both of
+     them now read the family's anatomy from tokens.css rather than from each
+     other, which is what keeps a change to one from needing a change to the
+     other. */
+  padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
@@ -1948,28 +1956,23 @@
   justify-content: flex-start;
   text-align: start;
   gap: var(--space-2);
-  padding: 7px 9px;
+  /* The anatomy's block inset, less the one pixel the row does not have to
+     spend: a `Button` carries a transparent 1px border inside its own box, so
+     6px above a line in a menu that draws no border is 5px here, and the row
+     lands on the same --controlHeight as every other option row. */
+  padding: calc(var(--controlGap) - 1px) 9px;
   min-block-size: 0;
   min-inline-size: 0;
   border-color: transparent;
   border-radius: var(--r-sm);
   background: none;
   box-shadow: none;
-  font-size: var(--fs-body);
-  font-weight: 500;
   color: var(--textPrimary);
   /* A verb long enough to need the ceiling above wraps onto a second line
      rather than being cut off: a menu item the reader cannot finish reading is
      a menu item they cannot choose. */
   white-space: normal;
   overflow-wrap: anywhere;
-}
-/* One glyph size in the panel, whichever rung the caller's button is on:
-   .btn draws 16px and .btn-sm 14px, and a menu mixing the two puts its icons
-   on two different left edges. */
-.overflow-menu-items .btn svg {
-  inline-size: 14px;
-  block-size: 14px;
 }
 /* Prose in the panel starts where the LABELS start, not at the panel's edge:
    a Button's own `reason`, and the one sentence a caller prints above a run of
@@ -2030,7 +2033,6 @@
 .overflow-menu-items .btn[aria-pressed="true"] {
   background: var(--accentLight);
   color: var(--accentText);
-  font-weight: 600;
 }
 .overflow-menu-items .btn-primary:hover:not(:disabled),
 .overflow-menu-items .btn[aria-expanded="true"]:hover:not(:disabled),
@@ -2045,11 +2047,13 @@
    The interval between a reading's three lines — what it is, the figure, what
    the figure rests on — is the CARD's, not the row's. ReadingsGrid used to open
    it up to --space-2 for its own cards while a strip's kept --space-1, which is
-   one reading drawn two ways on two pages of the same record. */
+   one reading drawn two ways on two pages of the same record.
+   Each line carries its OWN interval below it rather than one flex `gap` over
+   all of them, because the three are not equal: a name sits close to the figure
+   it names, and the figure stands further off the basis under it. */
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   padding: var(--space-4);
   /* The pane, not the card: a reading sits on translucent ground with a
      hairline, the same surface every zone of a record uses, so a row of them
@@ -2093,8 +2097,8 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  line-height: 1.25;
   text-wrap: pretty;
+  margin-block-end: var(--space-2);
 }
 /* A detail of two facts — how much is failing, and why — is two nodes, and the
    clamp's box lays inline children out on one line. Each fact keeps its own. */
@@ -2103,11 +2107,11 @@
 }
 
 /* The label NAMES the reading; it does not announce it. It is sentence-case
-   text at the meta size in the body's own ink and weight — the rule sets
-   neither, because the figure below it is what carries weight and colour, and
-   it is the figure a reader compares across a row. Five names over five
-   figures that each carried a weight or a tint of their own would read as five
-   headings the figures had to win a fight with.
+   text at the meta size in the SECONDARY ink — quieter than the figure below
+   it, which is what carries weight and colour and is what a reader compares
+   across a row. Five names in the primary ink over five figures read as five
+   headings the figures had to win a fight with; the step down in ink is what
+   settles that without a second weight or a tint.
    The rule owns the ROW: what QUALIFIES the reading — where it came from, what
    it rests on — sits at its far end, beside the name of the reading rather than
    under the figure, so neither competes with the number. */
@@ -2116,8 +2120,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  line-height: 1.25;
+  color: var(--textSecondary);
+  margin-block-end: var(--space-1);
 }
 /* The name itself clamps to ONE line, and the chips beside it do not: a row of
    readings whose labels wrap to two lines puts every figure in the row at a
@@ -2143,19 +2147,23 @@
    two readings of one record look like two products, and which face a reading
    drew in was a flag a caller could forget. Digits still line up, through
    `tabular-nums` rather than through a second family.
-   ONE size too, everywhere the card is drawn: 17px in a narrow slot up to 20px
-   on a wide page, which is the range where a money figure with its cents still
-   holds one line. A screen that re-sizes this is the second author of a scale
-   this tier owns. */
+   ONE size too, everywhere the card is drawn — the heading rung a page title
+   takes, so a figure reads as the largest thing on its card whatever the card
+   is sitting in. A screen that re-sizes this is the second author of a scale
+   this tier owns.
+   `font-variant-numeric` FOLLOWS the shorthand: `font` resets `font-variant`,
+   so tabular figures declared above it would be thrown away and a column of
+   readings would stop lining up. The figure holds ONE line and ellipsises what
+   does not fit, rather than breaking mid-number: a money reading wrapped
+   between its thousands and its cents reads as two figures. */
 .stat-card-value {
-  font-family: var(--f-display);
-  font-size: clamp(var(--fs-h3), 1.5vw, var(--fs-h2));
-  font-weight: var(--fw-medium);
+  font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
-  letter-spacing: var(--tracking-display);
-  line-height: 1.1;
   color: var(--textPrimary);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-block-end: var(--space-2);
 }
 
 /* The receipt under a reading. Not a fourth line of it — it is what the
@@ -2171,10 +2179,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
-  /* The text ink of the accent, as every other pressable word on a page wears
-     it: the fill token beside it is a second green a reader cannot tell from
-     the first and it fails AA at this size. */
   color: var(--accentText);
   white-space: nowrap;
   /* The card's own `cursor` cannot reach this control: the overlay that
@@ -2201,8 +2205,6 @@
      as a space in the markup: this is a flex line, and a whitespace-only text
      node between two items is not a flex item — the space simply vanished. */
   gap: var(--space-1);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
 }
 /* The arrow LEANS toward the door on the way in: the one movement on the tile,
    3px, at the state duration — a card that answers the pointer reads as one a
@@ -2324,36 +2326,47 @@
   display: block;
   block-size: 100%;
   border-radius: inherit;
-  background: var(--accent);
+  background: var(--success);
 }
 /* A reading whose figure carries a tone carries it into the bar too, in the
    SAME token: the bar is the same claim at a glance, and a bar a shade off the
    figure above it is the card disagreeing with itself about how it went. A
    reading with no tone is not a neutral reading, it is one that is fine, so the
-   untoned bar stays the accent (`.stat-card-meter-fill` above) — a row of
-   identical grey tracks made the reader compare lengths to find the one that is
-   wrong, when the colour already knows. */
-.stat-card-warn ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--warn);
+   untoned bar takes --success with the toned ones (`.stat-card-meter-fill`
+   above) — a row of identical grey tracks made the reader compare lengths to
+   find the one that is wrong, when the colour already knows. The brand accent
+   said the same thing in the colour of a primary action, which is how a bar
+   that reports came to look like one a reader could press. */
+.stat-card-warning ~ .stat-card-meter .stat-card-meter-fill {
+  background: var(--warning);
 }
 .stat-card-danger ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--danger);
 }
-.stat-card-good ~ .stat-card-meter .stat-card-meter-fill {
+.stat-card-success ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--success);
 }
+.stat-card-info ~ .stat-card-meter .stat-card-meter-fill {
+  background: var(--info);
+}
 
-/* The three tones a reading's figure can carry, and the ONE place each is
+/* The four tones a reading's figure can carry, and the ONE place each is
    spelled: the figure and its bar read the same token, so the two parts of one
    claim cannot come out two colours. The BASE status token and not its Text
    sibling: this is a 17-20px display figure and a 4px bar, which is the role
    the base hue is for — the Text tokens are the ink for anything smaller. */
-.stat-card-good {
+.stat-card-success {
   color: var(--success);
 }
 
-.stat-card-warn {
-  color: var(--warn);
+/* The reading a job has not finished writing — a figure still being counted,
+   a lane the read has not reached. */
+.stat-card-info {
+  color: var(--info);
+}
+
+.stat-card-warning {
+  color: var(--warning);
 }
 
 .stat-card-danger {
@@ -2403,7 +2416,6 @@
    choose looked exactly like one they could, and the whole control's job is
    telling the reader what is choosable. */
 .segmented button:disabled {
-  color: var(--textTertiary);
   cursor: not-allowed;
 }
 

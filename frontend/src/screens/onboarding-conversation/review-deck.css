@@ -99,26 +99,8 @@
   padding: var(--space-5);
 }
 
-.rdeck-question {
-  color: var(--textPrimary);
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  line-height: var(--lh-tight);
-}
-
-/* What the field is for, quieter than the evidence below it: the evidence is
-   a claim the site made and earns the reader's attention first, this is
-   background a reader only needs once they wonder what to type. */
-.rdeck-hint {
-  margin: 0;
-  line-height: var(--lh-normal);
-}
-
 .rdeck-evidence {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 .rdeck-card input,
@@ -129,12 +111,7 @@
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-}
-.rdeck-card input::placeholder,
-.rdeck-card textarea::placeholder {
-  color: var(--textMeta);
+  font-family: var(--fontFamilyBody);
 }
 .rdeck-card textarea {
   min-height: 6rem;
@@ -150,10 +127,6 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--fs-meta);
-}
-.rdeck-writes-lead {
-  color: var(--textMeta);
 }
 .rdeck-writes code {
   overflow-wrap: anywhere;
@@ -197,10 +170,7 @@
      door to the whole record moved onto the record itself. */
   margin: 0 auto 0 0;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
 }
 .rdeck-clear {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-lead);
 }

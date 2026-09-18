@@ -88,7 +88,6 @@ export function ChannelReplyAction({
   return (
     <>
       <Button
-        small
         variant={proposed ? "ai" : undefined}
         onClick={() =>
           setReply((prior) => ({ seq: (prior?.seq ?? 0) + 1, open: true }))

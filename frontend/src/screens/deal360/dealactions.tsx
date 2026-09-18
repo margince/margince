@@ -116,7 +116,6 @@ function ReopenAction({
   return (
     <>
       <Button
-        small
         reasonId={disabledReasonId}
         data-testid="reopen-open"
         onClick={() => setOpen(true)}
@@ -142,7 +141,6 @@ function ReopenAction({
           {openStages.map((s) => (
             <Button
               key={s.id}
-              small
               aria-pressed={stageId === s.id}
               data-testid={`reopen-stage-${s.id}`}
               onClick={() => setStageId(s.id)}
@@ -153,7 +151,6 @@ function ReopenAction({
         </div>
         {reopen.isError && (
           <p
-            className="t-caption"
             // The sentence arrives after the press, so it is announced: a
             // reader who cannot see the dialog change otherwise learns the
             // reopen failed only by tabbing back over it.
@@ -164,11 +161,8 @@ function ReopenAction({
           </p>
         )}
         <div className="actions">
-          <Button small onClick={() => setOpen(false)}>
-            {t("deals.cancel")}
-          </Button>
+          <Button onClick={() => setOpen(false)}>{t("deals.cancel")}</Button>
           <Button
-            small
             variant="primary"
             data-testid="reopen-confirm"
             // A write in flight is `pending`, never `disabled`: the two mean
@@ -224,9 +218,7 @@ export function DealActions({
   return (
     <>
       {!refusedByArchive && logGrantKnown && !canLog && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
+        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
       )}
       {/* Mail first, then the hairline, then what the reader records about
           this deal: the same two groups, in the same order, that the contact,
@@ -241,7 +233,7 @@ export function DealActions({
         reasonId={logRefused}
         onClick={() => setDrawer("log")}
       >
-        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" /> {t("log.title")}
       </Button>
       {/* Keeps its words rather than a glyph alone: a tick box is the mark
           for COMPLETING a task, so squaring this one would name the opposite
@@ -251,7 +243,7 @@ export function DealActions({
         reasonId={logRefused}
         onClick={() => setDrawer("task")}
       >
-        <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
+        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
       </Button>
       {drawer && (
         <LogActivityAction

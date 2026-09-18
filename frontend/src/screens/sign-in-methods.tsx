@@ -162,9 +162,7 @@ export function SignInMethodsCard() {
                   ))}
                 </SettingList>
                 {providers.length === 0 && (
-                  <p className="t-caption">
-                    {t("signInMethods.noneConfigured")}
-                  </p>
+                  <p>{t("signInMethods.noneConfigured")}</p>
                 )}
               </>
             );

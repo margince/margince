@@ -99,7 +99,9 @@ export function SettingRow({
       data-testid={testId}
     >
       <div className="settingrow-naming">
-        <span className="t-label" id={labelId}>
+        {/* The row's NAME, not a field's label: it heads a value and a control
+            at their own size, and `aria-labelledby` is what ties it to them. */}
+        <span className="t-name" id={labelId}>
           {label}
         </span>
         {description !== undefined && (

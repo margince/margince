@@ -129,11 +129,11 @@ export const Folded: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
+    await expect(canvasElement.querySelector("aside")).toBeNull();
     // The switch renders nothing until the screen's `usePageAside` effect has
     // claimed the pane, which is a commit past mount: the query has to wait for
     // it rather than assume the first paint carried it. This page starts
     // folded, so the switch reads "show" and the first press opens it.
-    await expect(canvasElement.querySelector("aside")).toBeNull();
     await user.click(
       await canvas.findByRole("button", {
         name: en["record.panel.showDetails"],

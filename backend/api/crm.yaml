@@ -253,7 +253,9 @@ paths:
       summary: Authenticate with email + password and open a session.
       description: |
         Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
-        and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
+        and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`), plus a
+        `crm_device` cookie (same attributes, 90-day `Max-Age`) whose proof lets this browser
+        sign in to the same account while a failed-login lock someone else tripped is in force. Accepts
         email + password only — no tenant selector (ADR-0061). Failures are neutral (no
         account enumeration), rate-limited, and verified at full cost either way. The MFA and
         SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
@@ -265,11 +267,11 @@ paths:
             schema: { $ref: '#/components/schemas/LoginRequest' }
       responses:
         '200':
-          description: Authenticated; session cookie set.
+          description: Authenticated; session and device cookies set.
           headers:
             Set-Cookie:
               schema: { type: string }
-              description: 'crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/'
+              description: 'crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ — and crm_device=<proof>; Max-Age=7776000; HttpOnly; Secure; SameSite=Strict; Path=/'
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeResponse' }
@@ -22133,8 +22135,15 @@ paths:
         neither starts nor reads a migration run.
 
         Mapping a source column to a field the object does not have is refused
-        here rather than at row 40,000: the mapping is validated against the
-        object's live field catalog, custom fields included.
+        here rather than at row 40,000: the mapping is validated against the set
+        of targets `uploadImportSource` reported for this object.
+
+        Custom fields are NOT in that set. An import lands its rows through the
+        stores' caller-opened transaction seams, which refuse custom fields by
+        design — reading the catalog is the second connection those seams exist
+        to avoid — so a `cf_` target would be accepted, reported as written, and
+        dropped. It is refused here instead, and it arrives when the seam can
+        carry it.
       requestBody:
         required: true
         content:
@@ -25226,11 +25235,16 @@ components:
       type: string
       x-email-presentation: exempt
       x-email-presentation-reason: A status word, not email content.
-      enum: [team, participants, selected, withheld]
+      enum: [workspace, team, participants, selected, withheld]
       description: |
         What a reader is allowed to know about who else reads this message, in one word the
-        badge can print. `team` never means the whole workspace: the linked record's own scope
-        still decides who may discover the row at all.
+        badge can print.
+
+        `workspace` means what it says: a seat with no standing of any kind — no team, no
+        ownership, nothing shared with it — can still find this message, so everyone who reads
+        mail here reads this one. `team` is the narrower answer, where the linked record's own
+        scope decides who may discover the row at all. The two used to be one word, and the
+        badge printed `team` over a sentence saying everyone in the company could read it.
 
         `withheld` is the only value that says the content is not this caller's, and it never
         travels with a reason: why a message is private describes what it is about.
@@ -26319,7 +26333,14 @@ components:
         targets:
           type: array
           items: { type: string }
-          description: 'Every field this object can receive, custom fields included — the closed set a mapping may name.'
+          description: |
+            The closed set a mapping may name — every field this object can receive THROUGH AN
+            IMPORT, which is not every field it has.
+
+            Custom fields are absent on purpose. An import writes through the stores'
+            caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+            target would be accepted, reported as written, and dropped. Naming one is refused by
+            `createImportRun` rather than silently ignored.
 
     CreateImportRunRequest:
       type: object
@@ -30484,7 +30505,7 @@ components:
         whole — the same grounding rule every sentence in `sections` runs.
       required:
         [generated_by, readiness, meeting_type, likely_asks, questions, scenarios,
-         account_arc, advance, unknowns]
+         company_arc, advance, unknowns]
       properties:
         generated_by:
           $ref: '#/components/schemas/WrittenBy'
@@ -30513,7 +30534,7 @@ components:
           type: array
           maxItems: 3
           items: { $ref: '#/components/schemas/MeetingPlanScenario' }
-        account_arc:
+        company_arc:
           type: array
           maxItems: 5
           description: >-
@@ -34648,6 +34669,19 @@ components:
         due_at: { type: [string, 'null'], format: date-time }
         remind_at: { type: [string, 'null'], format: date-time, description: Task only. }
         assignee_id: { type: [string, 'null'], format: uuid }
+        host_user_id:
+          type: string
+          format: uuid
+          description: >-
+            Meeting only: the member of this company who HELD it, which is not the same
+            question as who typed it up. Omit it for a meeting you held yourself and the
+            server fills in the caller; name a colleague when you are minuting theirs, so
+            it counts into their week rather than yours. A label and never an authority —
+            what a caller may read is decided before this field is filled in.
+
+            Not nullable: omitting it is how you say nothing, and the server answers that
+            with the caller. A meeting nobody here hosted is a state imports reach, not
+            one a human logging their own day can assert.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled] }
@@ -42561,11 +42595,38 @@ components:
         The consent passthrough every capture surface (booking, public forms, imports) must carry
         (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
         wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
-      required: [purpose_id, policy_version]
+      required: [policy_version]
       properties:
-        purpose_id: { type: string, format: uuid }
+        purpose_id:
+          type: string
+          format: uuid
+          description: |
+            The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+            — the booking doors are, to the `transactional` lane — and the server resolves that
+            lane's own id for this installation.
+
+            Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+            per-installation uuids minted at seed time and there is no anonymous read of them, so
+            an anonymous form that names one is naming a value it was never given. Sending an id
+            is for a caller that read the catalog; it is still admitted only if it IS the lane the
+            surface is confined to.
         policy_version: { type: string, maxLength: 200, description: Version id of the consent wording shown to the subject. }
-        wording: { type: [string, 'null'], maxLength: 2000, description: 'The exact wording shown, stored with the consent event for demonstrability.' }
+        wording:
+          type: [string, 'null']
+          maxLength: 2000
+          description: |
+            The exact wording shown, stored with the consent event for demonstrability.
+
+            Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+            that cannot say what the subject read — before a contact row exists, because the
+            door is anonymous and a refusal further in would grow the contact table one rejected
+            request at a time. Omitting it is a 422 naming this field. It is not marked required
+            here because tightening a shipped request field is the breaking change the contract
+            gate refuses; the obligation lives in the doors, and it is stated here so a caller
+            reading the schema is not surprised by it.
+
+            Unlike `purpose_id`, this is something only the surface knows: the server cannot
+            resolve what a page put in front of somebody.
         marketing:
           type: object
           description: |

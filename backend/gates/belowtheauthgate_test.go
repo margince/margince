@@ -51,8 +51,6 @@ var openToAnyone = gatekit.Waive(map[string]string{
 		"probe that needed a credential could not report a process too broken to check one",
 	"/readyz": "the readiness probe, same ground: the orchestrator asks it to decide whether to send " +
 		"traffic, and it has no session to ask with",
-	"/metrics": "the scrape endpoint, gated by its own bearer token (gateMetrics) rather than by a " +
-		"session — a scraper is not a seat and holds no login",
 	"GET /setup/status": "first-boot: says whether this installation has been claimed. It exists for the " +
 		"state where no account exists yet, so requiring one is impossible by construction",
 	"POST /setup/claim": "first-boot: mints the first account. The route that creates the credential " +
@@ -67,6 +65,10 @@ var openToAnyone = gatekit.Waive(map[string]string{
 // each proves its sender by another mechanism, named here so a route that lost
 // that mechanism is a visible change rather than a quiet one.
 var verifiesItsOwnCaller = gatekit.Waive(map[string]string{
+	"/metrics": "checks the configured metrics token as a bearer credential in constant time " +
+		"(gateMetrics), and refuses every scrape when none is configured — a scraper is not a seat and " +
+		"holds no login. Only an explicit --metrics-access=open serves it without one, for a port the " +
+		"deployment declares contained",
 	"/webhooks/gmail": "verifies a Google-signed OIDC token on the push notification (oidcverify.go). " +
 		"The sender is proven; what it does not carry is one of OUR sessions",
 	"/webhooks/graph": "the Microsoft Graph push, proven the same way by its own subscription secret",

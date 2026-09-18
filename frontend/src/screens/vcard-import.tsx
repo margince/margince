@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -20,11 +21,11 @@ type VCardResult = components["schemas"]["VCardImportResult"];
  * resembles somebody was written nowhere, and nobody finds that out unless the
  * report says so. */
 const OUTCOMES: Readonly<
-  Record<VCardResult["outcome"], { label: MessageKey; tone?: "warn" }>
+  Record<VCardResult["outcome"], { label: MessageKey; tone?: "warning" }>
 > = {
   created: { label: "vcardImport.outcome.created" },
   updated: { label: "vcardImport.outcome.updated" },
-  needs_review: { label: "vcardImport.outcome.needsReview", tone: "warn" },
+  needs_review: { label: "vcardImport.outcome.needsReview", tone: "warning" },
   skipped: { label: "vcardImport.outcome.skipped" },
 };
 
@@ -104,13 +105,13 @@ export function VCardImport() {
           creating a contact beside it are `CreateAction`s, which are small, and
           one control a rung taller in a row of three reads as a different kind
           of thing. */}
-      <Button small data-testid="vcard-import" onClick={() => setOpen(true)}>
+      <Button data-testid="vcard-import" onClick={() => setOpen(true)}>
         {t("vcardImport.action")}
       </Button>
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId} className="t-h2 modal-title">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {t("vcardImport.title")}
-        </h2>
+        </Heading>
         {/* One stack owns every interval in this dialog, so the dropzone, a
             refusal and the report do not each set a margin of their own — the
             report is drawn whether or not the refusal above it is. */}
@@ -176,10 +177,10 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
         const outcome = OUTCOMES[card.outcome];
         return (
           <li key={card.index}>
-            <span className="vcard-import-name">{card.full_name}</span>
+            <span>{card.full_name}</span>
             <span
               className={
-                outcome?.tone === "warn" ? "vcard-import-warn" : "t-sub"
+                outcome?.tone === "warning" ? "vcard-import-warning" : "t-sub"
               }
             >
               {/* An outcome this build has no name for is a server newer than

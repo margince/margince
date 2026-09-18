@@ -80,7 +80,7 @@ export const Registry: Story = { render: purposes(MAY_APPEND_PURPOSE) };
 // badges.
 export const ReadOnly: Story = { render: purposes({}) };
 
-// Dark, because the registry is a run of badges and one of them carries `warn`
+// Dark, because the registry is a run of badges and one of them carries `warning`
 // for a double-opt-in purpose: a tinted badge against `--bgElevated` is the pair
 // most likely to collapse when the ground goes dark.
 export const RegistryDark: Story = {

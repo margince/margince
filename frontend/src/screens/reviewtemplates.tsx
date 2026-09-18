@@ -27,7 +27,7 @@ export function ReviewTemplatesCard() {
   const canEdit = useCanWrite("custom_field", "update");
   const [editing, setEditing] = useState<ReviewTemplate | null>(null);
   return (
-    <Panel title={t("reviewTemplates.title")} sub={t("reviewTemplates.sub")}>
+    <Panel title={t("reviewTemplates.title")}>
       <PanelBody>
         {isPending || isError || templates.length === 0 ? (
           <SurfaceState
@@ -49,7 +49,7 @@ export function ReviewTemplatesCard() {
                 )}
               </div>
             ))}
-            <p className="t-caption">{t("reviewTemplates.editHint")}</p>
+            <p>{t("reviewTemplates.editHint")}</p>
             {editing && (
               <ReviewTemplateEditor
                 template={editing}

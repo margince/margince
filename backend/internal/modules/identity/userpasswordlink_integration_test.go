@@ -132,7 +132,7 @@ func TestAdminIssuedLinkIsRedeemableAndRevokesSessions(t *testing.T) {
 		t.Fatalf("redeem the admin-issued link: %v", err)
 	}
 	// The member can now actually sign in — the point of the whole feature.
-	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "redeemer@acme.test", chosen); err != nil {
+	if _, _, err := e.svc.Login(e.wsCtx(e.admin), "redeemer@acme.test", chosen, noDevice); err != nil {
 		t.Fatalf("login with the newly set password: %v", err)
 	}
 	// Single use: the same link cannot be replayed.

@@ -64,7 +64,6 @@ export function LeadPanel({
     <Panel
       tone="accent"
       title={verdict(route, mine, t)}
-      sub={t("contact.intro.leadEyebrow")}
       titleAction={
         <Badge tone={blocked ? undefined : "success"}>
           {blocked ?? t("contact.intro.leadRouteBadge")}
@@ -105,7 +104,7 @@ export function LeadPanel({
             {route.evidence.two_way ? (
               <Badge>{t("contact.intro.factReciprocal")}</Badge>
             ) : (
-              <Badge tone="warn">{t("contact.intro.factOneSided")}</Badge>
+              <Badge tone="warning">{t("contact.intro.factOneSided")}</Badge>
             )}
             <Badge>
               {route.through_display_name
@@ -220,9 +219,7 @@ function EvidencePlate({
             {formatNumber(ev.interactions_90d, locale)}
             <small>{t("contact.intro.evidenceWindow")}</small>
           </b>
-          <span className="t-caption">
-            {t("contact.intro.evidenceExchanges")}
-          </span>
+          <span>{t("contact.intro.evidenceExchanges")}</span>
           <ExchangeSplit
             evidence={ev}
             viaName={route.via_display_name}
@@ -232,9 +229,7 @@ function EvidencePlate({
         </div>
         <div className="pn-reading">
           <b>{lastContactReading(ev, t, locale)}</b>
-          <span className="t-caption">
-            {t("contact.intro.evidenceLastContact")}
-          </span>
+          <span>{t("contact.intro.evidenceLastContact")}</span>
         </div>
       </div>
       {receipts.length > 0 ? (

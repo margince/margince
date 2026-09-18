@@ -300,7 +300,7 @@ export function ExtensionAccessCard() {
           this is it. */}
       <Panel tone="accent" title={t("extAccess.title")}>
         <PanelBody>
-          <p className="t-caption ext-lead-sub">{t("extAccess.sub")}</p>
+          <p className="ext-lead-sub">{t("extAccess.sub")}</p>
           {/* Gate on the /me probe itself so the withheld notice appears only
               once it has answered — never as a flash while it loads. */}
           <QueryGate query={me} pendingLabel={t("extAccess.title")}>
@@ -412,7 +412,7 @@ function UnitCard({
             // hash comes from routeHash and the exported screen token, so
             // link and router cannot drift apart.
             <a
-              className="t-caption ext-unit-link"
+              className="ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
               <ArrowUpRight aria-hidden size={15} />
@@ -438,7 +438,7 @@ function UnitCard({
             to tell apart from a unit that simply has no page. A unit with a
             descriptor and nothing to show is neither, and says nothing. */}
         {descriptor ? null : (
-          <p className="t-caption ext-note ext-unit-nopage">
+          <p className="ext-note ext-unit-nopage">
             <Info aria-hidden size={15} />
             {t("extAccess.noPage", { name: unit.name })}
           </p>
@@ -463,7 +463,7 @@ function UnitCard({
             </div>
           ) : null}
           {unit.rbac_objects.length === 0 ? (
-            <p className="t-caption ext-note">{t("extAccess.noObjects")}</p>
+            <p className="ext-note">{t("extAccess.noObjects")}</p>
           ) : (
             unit.rbac_objects.map((object) => (
               <SettingRow
@@ -564,9 +564,7 @@ function BringsRow({
       </dt>
       <dd className="ext-brings-def">
         {items.length === 0 ? (
-          <span className="t-caption ext-none">
-            {t("extAccess.brings.none")}
-          </span>
+          <span>{t("extAccess.brings.none")}</span>
         ) : (
           <ul className="ext-chips">
             {items.map((item) => (
@@ -726,14 +724,14 @@ function ObjectMatrix({
         </table>
       </TableScroll>
       {nobodyReads ? (
-        // `warn` is exactly the claim: nothing is broken, and something will go
+        // `warning` is exactly the claim: nothing is broken, and something will go
         // wrong if nobody acts — every screen this unit ships renders "you do
         // not hold access" until a read grant exists. Standing, and yet spoken
         // deliberately: the sentence appears and disappears as the last read
         // grant is toggled, and a change nobody is told about is the silence
         // this screen exists to break.
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           live="status"
           title={t("extAccess.nobodyReadsTitle")}

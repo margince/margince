@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { ContactResearchDrawer } from "./contactdrawers";
 import "./contact360.css";
@@ -63,11 +64,9 @@ const readyRun = {
 function ContactBehind() {
   return (
     <div className="wrap">
-      <h1>Dana Buyer</h1>
+      <Heading size="xlarge">Dana Buyer</Heading>
       <p className="t-body">Head of Procurement · Brandt Automotive GmbH</p>
-      <Button small variant="ghost">
-        Deep research
-      </Button>
+      <Button variant="ghost">Deep research</Button>
     </div>
   );
 }

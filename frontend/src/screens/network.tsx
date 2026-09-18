@@ -37,11 +37,11 @@ type ContactNetworkColleague = components["schemas"]["ContactNetworkColleague"];
 // invite a reader to compare numbers that are not comparable.
 const COLLEAGUE_TONE: Record<
   ContactNetworkColleague["strength_bucket"],
-  "success" | "accent" | "warn" | undefined
+  "success" | "accent" | "warning" | undefined
 > = {
   strong: "success",
   moderate: "accent",
-  weak: "warn",
+  weak: "warning",
   none: undefined,
 };
 

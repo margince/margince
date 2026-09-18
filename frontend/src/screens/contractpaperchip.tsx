@@ -60,7 +60,7 @@ export function ContractPaper({
     // paragraph, and a paragraph inside phrasing content is invalid markup.
     // Both containers set their own `display: flex`, so nothing moves.
     <div className="rec-files">
-      <span className="t-caption rec-files-label">{t("contracts.files")}</span>
+      <span className="rec-files-label">{t("contracts.files")}</span>
       {/* The cards wrap as their OWN group. Left in the label's row they wrap
           back to the panel's edge, so a second file starts to the left of the
           first and the label stops reading as a label for both. */}

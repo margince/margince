@@ -104,7 +104,6 @@ export function ExportFilterMenu({
       {FORMATS.map((format) => (
         <Button
           key={format}
-          small
           disabled={run.isPending}
           onClick={() => run.mutate({ format })}
         >

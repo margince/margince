@@ -130,7 +130,6 @@
   padding: 0;
   border-color: transparent;
   background: none;
-  font-size: var(--fs-meta);
   color: var(--accentText);
 }
 .compose-thread-leave:hover {
@@ -163,7 +162,6 @@
   border-color: transparent;
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
-  font-weight: inherit;
 }
 .compose-choice:hover {
   background: var(--bgHover);
@@ -171,12 +169,7 @@
 }
 
 .compose-choice-subject {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
-}
-
-.compose-choice-meta {
-  color: var(--textMeta);
 }
 
 .compose-message-actions {

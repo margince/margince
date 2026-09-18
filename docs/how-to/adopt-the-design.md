@@ -33,7 +33,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 | `check-space-tokens.sh` | Every `var(--x)` is declared somewhere | Rename a token only with all its consumers |
 | `actionrow.test.ts` | Two or more sibling buttons sit in a container that gets `gap: var(--gapActions)` | Give a verb row its own class with that gap, or reach for `.form-actions` / `.actions` / `.card-actions`; a class no stylesheet defines is the failure this one exists for |
 | `onecard.test.ts` | No second rule declares `.card`'s full chrome | When `Panel` becomes the pane, `.card` must not end up identical to it |
-| `type-one-spelling.test.ts` | No screen rule says everything a `.t-*` utility says (`font-size: var(--fs-meta); color: var(--textMeta)` is `.t-caption`, whatever the rule is called); a frozen per-sheet count of rules drawing uppercase micro-type by hand | Put the class on the element and delete those properties from the rule; use `.t-eyebrow` and lower the baseline when a restyle removes copies |
+| `type-source.test.ts` | No size, leading, tracking or weight declared by VALUE outside `tokens.css`: `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`, `font` reads a `--font*` token and `font-weight` a `--fontWeight*` one. Capitals are refused by every road, including a rendered `.toUpperCase()` | Delete the declaration and let the element inherit, or name the token the role wants — a heading takes `Heading size=`, a caption `.t-caption`, a control's name `.t-label` |
 | `catalog.test.ts` | Every exported primitive named in the README table with a story | A new or renamed primitive ships with its row and story |
 | `native-controls.test.ts` | No `<select>` | Keep `Select` |
 | `table-scroll-coverage.test.ts` | Every table inside `TableScroll` | Keep it |
@@ -78,7 +78,7 @@ least risky once the tokens hold.
    through one `base.css` rule on `pre`, `code` and `samp`, plus `.code-block`; a
    `<kbd>` is body type. The mock's display face was tried in Step 1 and Outfit
    kept by decision; a family change is four places in one PR. Keep
-   `--f-display`, `--f-body`, `--f-mono` as the names.
+   `--fontFamilyHeading`, `--fontFamilyBody`, `--fontFamilyMono` as the names.
 6. **Type scale.** Make `base.css`'s `.t-*` classes read `--fs-*` instead of
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in

@@ -22,15 +22,9 @@ type Story = StoryObj<typeof ActionRow>;
 // whose consequence a reader has to read before pressing.
 export const WithTextSecondaries: Story = {
   render: () => (
-    <ActionRow
-      primary={
-        <Button variant="primary" small>
-          Save changes
-        </Button>
-      }
-    >
-      <Button small>Discard</Button>
-      <Button small>Preview</Button>
+    <ActionRow primary={<Button variant="primary">Save changes</Button>}>
+      <Button>Discard</Button>
+      <Button>Preview</Button>
     </ActionRow>
   ),
 };
@@ -40,16 +34,10 @@ export const WithTextSecondaries: Story = {
 // control that has something to say.
 export const WithIconSecondaries: Story = {
   render: () => (
-    <ActionRow
-      primary={
-        <Button variant="primary" small>
-          Accept
-        </Button>
-      }
-    >
-      <IconAction small label="Reject" icon={<Trash2 aria-hidden />} />
-      <IconAction small label="Later" icon={<RotateCcwClock aria-hidden />} />
-      <IconAction small label="Edit" icon={<Pencil aria-hidden />} />
+    <ActionRow primary={<Button variant="primary">Accept</Button>}>
+      <IconAction label="Reject" icon={<Trash2 aria-hidden />} />
+      <IconAction label="Later" icon={<RotateCcwClock aria-hidden />} />
+      <IconAction label="Edit" icon={<Pencil aria-hidden />} />
     </ActionRow>
   ),
 };
@@ -60,9 +48,9 @@ export const WithIconSecondaries: Story = {
 export const SecondariesOnly: Story = {
   render: () => (
     <ActionRow>
-      <IconAction small label="Reject" icon={<Trash2 aria-hidden />} />
-      <IconAction small label="Later" icon={<RotateCcwClock aria-hidden />} />
-      <IconAction small label="Edit" icon={<Pencil aria-hidden />} />
+      <IconAction label="Reject" icon={<Trash2 aria-hidden />} />
+      <IconAction label="Later" icon={<RotateCcwClock aria-hidden />} />
+      <IconAction label="Edit" icon={<Pencil aria-hidden />} />
     </ActionRow>
   ),
 };
@@ -74,13 +62,7 @@ export const SecondariesOnly: Story = {
 // air holding nothing.
 export const PrimaryOnly: Story = {
   render: () => (
-    <ActionRow
-      primary={
-        <Button variant="primary" small>
-          Save changes
-        </Button>
-      }
-    />
+    <ActionRow primary={<Button variant="primary">Save changes</Button>} />
   ),
 };
 
@@ -96,13 +78,7 @@ function NoVerbsHere() {
 
 export const SecondariesRenderNothing: Story = {
   render: () => (
-    <ActionRow
-      primary={
-        <Button variant="primary" small>
-          Save changes
-        </Button>
-      }
-    >
+    <ActionRow primary={<Button variant="primary">Save changes</Button>}>
       <NoVerbsHere />
     </ActionRow>
   ),
@@ -131,15 +107,9 @@ export const AtPhoneWidth: Story = {
     // rather than against the viewport edge. `fullscreen` keeps the catalog's
     // 2rem frame off it: 390px less two frames is not a width any reader has.
     <div style={{ padding: "var(--padCard)" }}>
-      <ActionRow
-        primary={
-          <Button variant="primary" small>
-            Save and continue
-          </Button>
-        }
-      >
-        <Button small>Discard changes</Button>
-        <Button small>Compare versions</Button>
+      <ActionRow primary={<Button variant="primary">Save and continue</Button>}>
+        <Button>Discard changes</Button>
+        <Button>Compare versions</Button>
       </ActionRow>
     </div>
   ),

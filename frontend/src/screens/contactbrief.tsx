@@ -113,7 +113,7 @@ export function ContactBriefCard({
         {failed && (
           <p role="alert">
             {t("contact.overview.briefFailed")}{" "}
-            <Button small variant="ghost" onClick={onRetry}>
+            <Button variant="ghost" onClick={onRetry}>
               {t("common.retry")}
             </Button>
           </p>
@@ -341,7 +341,7 @@ function Colleagues({ view }: Readonly<{ view: Contact360 }>): ReactNode {
     <ul className="pe-colleagues">
       {colleagues.map((colleague) => (
         <li key={colleague.user_id} className="pe-colleague">
-          <Avatar name={colleague.display_name} size="xs" />
+          <Avatar name={colleague.display_name} />
           <span>
             <span className="pe-colleague-name">{colleague.display_name}</span>
             <span className="pe-colleague-proof t-caption">

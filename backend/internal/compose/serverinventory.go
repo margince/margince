@@ -219,22 +219,26 @@ type Server struct {
 	appViews *apps.Provider
 
 	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
-	// admits — derived by WithMCPResource from the configured
-	// --public-base-url, never from a request header a caller controls.
+	// admits and its 401 challenge points at — derived by WithMCPResource
+	// from the configured --public-base-url, never from a request header a
+	// caller controls.
 	mcpAllowedOrigin string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
-	// deployment's --metrics-token. Empty — the default — serves the
-	// exposition to whatever reaches the port, which is what a scraper that
-	// cannot present a credential needs; a deployment whose network boundary
-	// does not contain that port sets one, because unlike /healthz and /readyz
-	// this endpoint discloses per-workspace job-runtime telemetry (queue
-	// depth, which connectors are configured). A token set here is checked over
-	// plain HTTP — this process terminates no TLS — so it authenticates a
-	// scraper across a trusted hop, the one the session cookie already takes,
-	// and is not a credential to carry over an untrusted network. See
-	// gateMetrics in routes.go.
+	// deployment's --metrics-token. Empty — the default — configures no
+	// credential, and with metricsOpen unset the exposition then refuses every
+	// scrape: unlike /healthz and /readyz this endpoint discloses the route
+	// catalogue and per-workspace job-runtime telemetry (queue depth, which
+	// connectors are configured). A token set here is checked over plain HTTP
+	// — this process terminates no TLS — so it authenticates a scraper across a
+	// trusted hop, the one the session cookie already takes, and is not a
+	// credential to carry over an untrusted network. See gateMetrics in
+	// routes.go.
 	metricsToken string
+	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
+	// explicit --metrics-access=open for a deployment whose network boundary
+	// already contains the port.
+	metricsOpen bool
 
 	// httpMetrics accumulates the HTTP request families /metrics serves. A
 	// POINTER, and that is load-bearing: contractAPI and operationalMux each

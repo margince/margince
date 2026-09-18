@@ -1,7 +1,6 @@
 /* Voice DNA settings card — a few structural helpers; colour inherits so the
    design-token purity gate stays satisfied. */
 .vdna-label {
-  font-weight: 600;
   margin-bottom: var(--space-1);
 }
 
@@ -23,7 +22,6 @@
    line breaks are the paragraphing. */
 .vdna-derived {
   white-space: pre-wrap;
-  line-height: 1.55;
 }
 
 /* The action sits on its own row under the box it commits, so the control reads
@@ -60,11 +58,6 @@
   gap: var(--space-1);
 }
 
-.vdna-works-not,
-.vdna-floornote {
-  color: var(--textMeta);
-}
-
 /* The distance to the first build, shown only below the floor. */
 .vdna-floor {
   display: flex;
@@ -86,8 +79,8 @@
   gap: var(--space-1);
 }
 
-.vdna-notice-warn {
-  color: var(--warnText);
+.vdna-notice-warning {
+  color: var(--warningText);
 }
 
 /* The speaker question sits above the composer: until it is answered the file
@@ -95,7 +88,7 @@
 .vdna-speaker {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--warnSurface);
+  background: var(--warningWash);
   padding: var(--space-3);
   margin: var(--space-3) 0 0;
   min-inline-size: 0; /* a fieldset otherwise refuses to shrink in a flex column */
@@ -169,20 +162,6 @@
   gap: var(--space-2);
 }
 
-.vdna-provenance {
-  /* No opacity dimming: 12px text must keep the full .t-caption contrast. */
-  font-weight: 500;
-}
-
-.vdna-thinking p {
-  line-height: 1.55;
-  font-size: var(--fs-body);
-}
-
-.vdna-identity {
-  line-height: 1.55;
-}
-
 .vdna-chips {
   display: flex;
   gap: var(--space-1);
@@ -199,7 +178,6 @@
 .vdna-moves li,
 .vdna-avoid li {
   margin-top: var(--space-1);
-  line-height: 1.5;
 }
 
 /* The two lists the build produces read as one pair, so the "what it avoids"
@@ -215,7 +193,6 @@
 .vdna-quote {
   display: block;
   font-style: italic;
-  opacity: 0.85;
 }
 
 /* The card surface itself comes from `Card as="div" inset`; what is left here
@@ -238,7 +215,6 @@
 
 .vdna-sample p {
   white-space: pre-wrap;
-  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
@@ -246,14 +222,8 @@
   font-style: italic;
 }
 
-.vdna-nextbest {
-  line-height: 1.5;
-}
-
 .vdna-register {
   margin-left: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  opacity: 0.75;
 }
 
 .vdna-candidate {
@@ -277,8 +247,4 @@
 
 .vdna-regmix {
   margin-bottom: var(--space-1);
-}
-
-.vdna-banddrop {
-  font-weight: 600;
 }

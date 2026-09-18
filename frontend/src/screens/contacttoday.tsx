@@ -337,7 +337,6 @@ function ActionVerb({
           a caption announcing it under the button was the same step twice. */}
       <Button
         variant={variant}
-        small
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >

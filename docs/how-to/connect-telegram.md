@@ -19,7 +19,7 @@ A bot binding is **not** a mailbox. A mailbox (**Settings → Connections → Co
 human's grant over their own mail; a Telegram bot is an **admin binding one bot for everybody**. Three
 consequences, all load-bearing:
 
-- **One live bot, full stop.** `uq_channel_connection_ws` is a partial unique index over the live rows,
+- **One live bot, full stop.** `uq_channel_connection_provider` is a partial unique index over the live rows,
   keyed on `(provider)` since `0282`. Every outbound reply resolves the installation's bot, so with two
   live bindings the send path refuses to guess: a second bot would not add a channel, it would remove
   the ability to reply on either. The card enforces this in the UI too — the **Connect a Telegram bot**

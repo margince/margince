@@ -8,6 +8,7 @@ import {
   providerBrandName,
 } from "../design-system/provider-mark";
 import { useT } from "../i18n";
+import { AuthCardTitle } from "./auth-core";
 import "./auth.css";
 
 // The federated half of the sign-in surface: the provider block, the divider
@@ -242,8 +243,8 @@ export function FederatedOnlyCard({
       {/* The same two lines the password card keeps in the accessibility tree
           and out of the composition: the greeting above is this page's visible
           heading. */}
-      <h1 className="sr-only">{t("auth.loginTitle")}</h1>
-      <p className="card-sub sr-only">{t("auth.loginSub")}</p>
+      <AuthCardTitle className="sr-only">{t("auth.loginTitle")}</AuthCardTitle>
+      <p className="sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
         passwordFormBelow={false}

@@ -43,9 +43,9 @@ const BAND_LABELS: Record<Band, MessageKey> = {
 // low score, and giving it a colour on the same scale as the other three would
 // place it on that scale — which is the single misreading this panel exists to
 // prevent. It renders as prose instead.
-const BAND_TONES: Partial<Record<Band, "success" | "warn">> = {
+const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
   strong: "success",
-  weak: "warn",
+  weak: "warning",
 };
 
 /**
@@ -148,7 +148,6 @@ export function GrowthFitPanel({
           <div className="co-brief-foot">
             <WrittenBy by={readable.generated_by} />
             <Button
-              small
               // The assessor's own verb on the assessor's own ground: tinted
               // rather than filled, so the panel's one filled control is not
               // spent on having the reading written a second time.
@@ -215,7 +214,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
           <Badge tone={BAND_TONES[fit.band]}>{t(BAND_LABELS[fit.band])}</Badge>{" "}
           {/* Both counts, always. A proportion without its denominator is not a
               completeness figure. */}
-          <span className="co-growth-fit-completeness">
+          <span>
             {t("co.growthFit.completeness", {
               present: formatNumber(present, locale),
               expected: formatNumber(expected, locale),
@@ -363,7 +362,7 @@ function GrowthFitReasons({
       )}
       {missing && missing.length > 0 && (
         <GrowthFitRow label="co.growthFit.missing">
-          <p className="co-growth-fit-missing">{missing.join(", ")}</p>
+          <p>{missing.join(", ")}</p>
         </GrowthFitRow>
       )}
     </>

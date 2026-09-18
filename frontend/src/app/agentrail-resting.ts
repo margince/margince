@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useState } from "react";
+import { formatNumber } from "../format/format";
+import type { Locale, PluralTranslator, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { IDLE_ORDER, type IdleKind, LABELS, TIPS } from "./agentrail-copy";
+import { IDLE_ORDER, type IdleKind, TIPS } from "./agentrail-copy";
 import { aroundTheName, plain, type SpokenLine } from "./ai-activity-speak";
 import type { Screen } from "./router";
 
@@ -112,6 +114,34 @@ export function stillNews<T extends Settled>(
     .slice(0, SETTLED_DEPTH);
 }
 
+/**
+ * The words the rail's line is said in.
+ *
+ * A bundle rather than a bare translator because one of them is a COUNT, and a
+ * count is not a lookup: "1 decisions waiting" is the tell of a surface that
+ * pastes a number onto a noun, so the queue's line goes through the reader's
+ * own plural rule and its number through their own grouping.
+ */
+export type RailWords = Readonly<{
+  t: Translator;
+  waiting: (count: number) => string;
+}>;
+
+/** The bundle, built once per render from the reader's locale. */
+export function railWords(
+  t: Translator,
+  plural: PluralTranslator,
+  locale: Locale,
+): RailWords {
+  return {
+    t,
+    waiting: (count) =>
+      plural("agent.line.waiting", count, {
+        count: formatNumber(count, locale),
+      }),
+  };
+}
+
 /** What the section has read, in the shape the resting line needs it. */
 export type RestingFacts = Readonly<{
   /** Decisions staged for this human; undefined until the read answers. */
@@ -138,7 +168,10 @@ export type RestingFacts = Readonly<{
  * sentence is a reading like any other — it is what a clean queue and a reachable
  * agent actually add up to.
  */
-export function restingReadings(facts: RestingFacts): readonly SpokenLine[] {
+export function restingReadings(
+  facts: RestingFacts,
+  words: RailWords,
+): readonly SpokenLine[] {
   const said: Partial<Record<IdleKind, readonly SpokenLine[]>> = {
     // What the scheduled runner finished while nobody was looking, newest
     // first and only while it is still news (`stillNews`). Several of them,
@@ -148,7 +181,7 @@ export function restingReadings(facts: RestingFacts): readonly SpokenLine[] {
     finished: facts.settled,
     waiting:
       facts.waiting !== undefined && facts.waiting > 0
-        ? [plain(`${facts.waiting} ${LABELS.waiting}`)]
+        ? [plain(words.waiting(facts.waiting))]
         : undefined,
     // The development path answers every call with an invention, and a reader who
     // does not know that is being misled by a product that looks like it works.
@@ -158,7 +191,7 @@ export function restingReadings(facts: RestingFacts): readonly SpokenLine[] {
         : [plain(facts.developmentLine)],
   };
   const lines = IDLE_ORDER.flatMap((kind) => said[kind] ?? []);
-  return lines.length === 0 ? [plain(LABELS.allClear)] : lines;
+  return lines.length === 0 ? [plain(words.t("agent.line.allClear"))] : lines;
 }
 
 /**

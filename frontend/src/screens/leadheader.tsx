@@ -50,7 +50,7 @@ export function LeadSubtitle({ lead }: Readonly<{ lead: Lead }>): ReactNode {
 }
 
 // The ladder's colours for the pill: a terminal status reads in the closure's
-// own tone (the same warn family the band and the readings tile already give
+// own tone (the same warning family the band and the readings tile already give
 // a promoted or disqualified lead) rather than the live ladder's, so the pill
 // agrees with the rest of the page about what a closed lead looks like.
 //
@@ -60,11 +60,11 @@ export function LeadSubtitle({ lead }: Readonly<{ lead: Lead }>): ReactNode {
 // holds it at that count.
 function statusPillTone(
   status: Lead["status"],
-): "accent" | "success" | "warn" | undefined {
+): "accent" | "success" | "warning" | undefined {
   switch (status) {
     case "promoted":
     case "disqualified":
-      return "warn";
+      return "warning";
     case "contacted":
       return "accent";
     case "engaged":
@@ -127,17 +127,13 @@ function AssigneePicker({
 }>) {
   const t = useT();
   if (roster.isPending) {
-    return <span className="t-caption">{t("share.rosterLoading")}</span>;
+    return <span>{t("share.rosterLoading")}</span>;
   }
   if (roster.isError) {
     return (
       <div className="lead-line">
-        <span className="t-caption share-error">
-          {t("share.rosterErrorUsers")}
-        </span>
-        <Button small onClick={() => roster.refetch()}>
-          {t("common.retry")}
-        </Button>
+        <span className="share-error">{t("share.rosterErrorUsers")}</span>
+        <Button onClick={() => roster.refetch()}>{t("common.retry")}</Button>
       </div>
     );
   }
@@ -146,7 +142,7 @@ function AssigneePicker({
   // lead as unassignable when the colleague to hand it to sits on a page
   // nothing here read.
   if (candidates.length === 0 && !rosterPartial) {
-    return <span className="t-caption">{t("lead.assignNobodyElse")}</span>;
+    return <span>{t("lead.assignNobodyElse")}</span>;
   }
   return (
     <>

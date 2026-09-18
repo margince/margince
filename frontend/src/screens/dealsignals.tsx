@@ -30,10 +30,10 @@ type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];
 const RISK_TONE: Record<DealCoverageRisk["kind"], SignalTone> = {
   champion_left: "danger",
   stakeholder_left: "danger",
-  going_cold: "warn",
-  single_threaded_theirs: "warn",
-  single_threaded_ours: "warn",
-  coverage_gap: "warn",
+  going_cold: "warning",
+  single_threaded_theirs: "warning",
+  single_threaded_ours: "warning",
+  coverage_gap: "warning",
 };
 
 const RISK_LABELS: Record<DealCoverageRisk["kind"], MessageKey> = {

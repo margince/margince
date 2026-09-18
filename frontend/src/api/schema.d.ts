@@ -85,7 +85,9 @@ export interface paths {
         /**
          * Authenticate with email + password and open a session.
          * @description Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
-         *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
+         *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`), plus a
+         *     `crm_device` cookie (same attributes, 90-day `Max-Age`) whose proof lets this browser
+         *     sign in to the same account while a failed-login lock someone else tripped is in force. Accepts
          *     email + password only — no tenant selector (ADR-0061). Failures are neutral (no
          *     account enumeration), rate-limited, and verified at full cost either way. The MFA and
          *     SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
@@ -15451,8 +15453,15 @@ export interface paths {
          *     neither starts nor reads a migration run.
          *
          *     Mapping a source column to a field the object does not have is refused
-         *     here rather than at row 40,000: the mapping is validated against the
-         *     object's live field catalog, custom fields included.
+         *     here rather than at row 40,000: the mapping is validated against the set
+         *     of targets `uploadImportSource` reported for this object.
+         *
+         *     Custom fields are NOT in that set. An import lands its rows through the
+         *     stores' caller-opened transaction seams, which refuse custom fields by
+         *     design — reading the catalog is the second connection those seams exist
+         *     to avoid — so a `cf_` target would be accepted, reported as written, and
+         *     dropped. It is refused here instead, and it arrives when the seam can
+         *     carry it.
          */
         post: operations["createImportRun"];
         delete?: never;
@@ -17443,8 +17452,13 @@ export interface components {
         };
         /**
          * @description What a reader is allowed to know about who else reads this message, in one word the
-         *     badge can print. `team` never means the whole workspace: the linked record's own scope
-         *     still decides who may discover the row at all.
+         *     badge can print.
+         *
+         *     `workspace` means what it says: a seat with no standing of any kind — no team, no
+         *     ownership, nothing shared with it — can still find this message, so everyone who reads
+         *     mail here reads this one. `team` is the narrower answer, where the linked record's own
+         *     scope decides who may discover the row at all. The two used to be one word, and the
+         *     badge printed `team` over a sentence saying everyone in the company could read it.
          *
          *     `withheld` is the only value that says the content is not this caller's, and it never
          *     travels with a reason: why a message is private describes what it is about.
@@ -17455,7 +17469,7 @@ export interface components {
          *     would branch on and never reach.
          * @enum {string}
          */
-        EmailAccessStatus: "team" | "participants" | "selected" | "withheld";
+        EmailAccessStatus: "workspace" | "team" | "participants" | "selected" | "withheld";
         /** @description One address on a message, resolved to a contact or a seat when it is one. */
         EmailParty: {
             address: string;
@@ -18448,7 +18462,15 @@ export interface components {
             suggested_mapping: {
                 [key: string]: string;
             };
-            /** @description Every field this object can receive, custom fields included — the closed set a mapping may name. */
+            /**
+             * @description The closed set a mapping may name — every field this object can receive THROUGH AN
+             *     IMPORT, which is not every field it has.
+             *
+             *     Custom fields are absent on purpose. An import writes through the stores'
+             *     caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+             *     target would be accepted, reported as written, and dropped. Naming one is refused by
+             *     `createImportRun` rather than silently ignored.
+             */
             targets: string[];
         };
         CreateImportRunRequest: {
@@ -21741,7 +21763,7 @@ export interface components {
             questions: components["schemas"]["MeetingPlanQuestion"][];
             scenarios: components["schemas"]["MeetingPlanScenario"][];
             /** @description The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it. */
-            account_arc: components["schemas"]["MeetingPlanArcMoment"][];
+            company_arc: components["schemas"]["MeetingPlanArcMoment"][];
             advance: components["schemas"]["MeetingPlanAdvance"];
             /** @description What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked. */
             unknowns: components["schemas"]["MeetingPlanUnknown"][];
@@ -25188,6 +25210,12 @@ export interface components {
             remind_at?: string | null;
             /** Format: uuid */
             assignee_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+             *     Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+             */
+            host_user_id?: string;
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
@@ -31649,11 +31677,35 @@ export interface components {
          *     wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
          */
         CaptureConsent: {
-            /** Format: uuid */
-            purpose_id: string;
+            /**
+             * Format: uuid
+             * @description The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+             *     — the booking doors are, to the `transactional` lane — and the server resolves that
+             *     lane's own id for this installation.
+             *
+             *     Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+             *     per-installation uuids minted at seed time and there is no anonymous read of them, so
+             *     an anonymous form that names one is naming a value it was never given. Sending an id
+             *     is for a caller that read the catalog; it is still admitted only if it IS the lane the
+             *     surface is confined to.
+             */
+            purpose_id?: string;
             /** @description Version id of the consent wording shown to the subject. */
             policy_version: string;
-            /** @description The exact wording shown, stored with the consent event for demonstrability. */
+            /**
+             * @description The exact wording shown, stored with the consent event for demonstrability.
+             *
+             *     Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+             *     that cannot say what the subject read — before a contact row exists, because the
+             *     door is anonymous and a refusal further in would grow the contact table one rejected
+             *     request at a time. Omitting it is a 422 naming this field. It is not marked required
+             *     here because tightening a shipped request field is the breaking change the contract
+             *     gate refuses; the obligation lives in the doors, and it is stated here so a caller
+             *     reading the schema is not surprised by it.
+             *
+             *     Unlike `purpose_id`, this is something only the surface knows: the server cannot
+             *     resolve what a page put in front of somebody.
+             */
             wording?: string | null;
             /**
              * @description An affirmative marketing tick the subject made on the same form. It does NOT record a
@@ -36948,10 +37000,10 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Authenticated; session cookie set. */
+            /** @description Authenticated; session and device cookies set. */
             200: {
                 headers: {
-                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ */
+                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ — and crm_device=<proof>; Max-Age=7776000; HttpOnly; Secure; SameSite=Strict; Path=/ */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };

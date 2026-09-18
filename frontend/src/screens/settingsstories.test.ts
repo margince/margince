@@ -61,18 +61,23 @@ const SURFACE_STORIES = new Set([
   "Settings/Settings home",
 ]);
 
-// The one group that is not a catalog group. Two stories put cards from
-// DIFFERENT pages side by side on purpose — the two price sheets an operator
-// reconciles, and the two AI readings — so no single page name is true of
-// either. Naming one would say the other card lives there.
+// The one group that is not a catalog group, and there are two ways into it.
 //
-// A declared exception with its members listed, not an open door: a third story
-// cannot join by accident, and the day one of these stops crossing pages, its
-// entry here fails rather than quietly staying.
+// A story can put cards from DIFFERENT pages side by side on purpose — the two
+// price sheets an operator reconciles, and the two AI readings — so that no
+// single page name is true of it. Or its SUBJECT can be one control that two
+// pages mount: the refresh verb rides the currency sheet and the model lanes
+// both, and filing it under either would tell a reader the other page does not
+// offer it.
+//
+// A declared exception with its members listed, not an open door: a fourth
+// story cannot join by accident, and the day one of these stops crossing pages,
+// its entry here fails rather than quietly staying.
 const ACROSS_PAGES = "Across pages";
 const ACROSS_PAGE_STORIES = new Set([
   "Settings/Across pages/Rates and model costs",
   "Settings/Across pages/AI readings",
+  "Settings/Across pages/Refresh from sources",
 ]);
 
 const settingsStories = storyFilesUnder(SCREENS)
@@ -97,9 +102,19 @@ describe("the settings stories are filed where the product files them", () => {
   // story whose title stops resolving, or whose root is edited away from
   // `Settings/`, drops out of the filtered corpus and is never checked again.
   // So the count is EXACT and derived from the tree: adding or removing a
-  // settings story is a deliberate edit to this number.
+  // settings story is a deliberate edit to this number. 80 → 83 for
+  // `You/Connections/Backfill run`, `Data/Capture rules/Refused domain
+  // decision` and `You/Capture activity/Pipeline drawer`; 83 → 86 for
+  // `Across pages/Refresh from sources`, `Governance/Privacy &
+  // retention/Corrections` and `Governance/Privacy & retention/Retention policy
+  // form`; 86 → 87 for `AI/Automations/Automation form`; 87 → 88 for
+  // `Governance/Privacy & retention/Notice duties`; 88 → 89 for
+  // `Governance/Privacy & retention/Linked case notice`; 89 → 90 for
+  // `AI/Automations/Date field picker`; 90 → 91 for `Governance/System
+  // health/Connector records refused`. 91 → 92 for
+  // `You/Notifications/How each kind reaches you`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(82);
+    expect(settingsStories.length).toBe(92);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

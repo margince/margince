@@ -29,16 +29,10 @@
 }
 
 .factlist-term {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
   margin: 0;
 }
 
 .factlist-value {
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
   /* The UA gives `dd` a 40px inline start margin. In a grid it is not an
    * indent, it is a second gutter nobody asked for. */
   margin: 0;
@@ -56,9 +50,6 @@
  * number, so it must not compete with it for the same line. */
 .factlist-note {
   display: block;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
   margin-top: var(--space-1);
 }
 

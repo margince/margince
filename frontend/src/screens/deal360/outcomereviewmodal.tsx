@@ -6,8 +6,9 @@ import {
   Modal,
   Textarea,
 } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
-import { problemMessageOf } from "../common";
+import { RefusalLine } from "../common";
 import {
   type ReviewTemplate,
   useCreateOutcomeReview,
@@ -144,13 +145,14 @@ export function OutcomeReviewModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {draftTemplate.label}
-      </h2>
+      </Heading>
       <div className="form-stack">
         {draftTemplate.questions.map((question) =>
           question.type === "multiselect" ? (
@@ -215,11 +217,7 @@ export function OutcomeReviewModal({
             />
           )}
         </Field>
-        {create.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(create.error, t)}
-          </p>
-        )}
+        {create.isError && <RefusalLine error={create.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={create.isPending}>
             {t("deals.cancel")}

@@ -17,7 +17,7 @@ import { useT } from "../i18n";
  *
  * The one loss a sender cannot see in the text — their own register is what
  * nobody proofreads for — so it is said rather than left to be noticed. An
- * `outcome`: it answers the Draft they pressed, and a `warn` outcome is
+ * `outcome`: it answers the Draft they pressed, and a `warning` outcome is
  * mentioned rather than allowed to interrupt.
  */
 export function VoiceDegradedNotice({
@@ -31,7 +31,11 @@ export function VoiceDegradedNotice({
     return null;
   }
   return (
-    <Callout tone="warn" kind="outcome" title={t("compose.voiceDegradedTitle")}>
+    <Callout
+      tone="warning"
+      kind="outcome"
+      title={t("compose.voiceDegradedTitle")}
+    >
       {t("compose.voiceDegraded")}
     </Callout>
   );
@@ -51,7 +55,7 @@ export function StaleThreadNotice({ stale }: Readonly<{ stale: boolean }>) {
     return null;
   }
   return (
-    <Callout tone="warn" kind="event" title={t("compose.threadGoneTitle")}>
+    <Callout tone="warning" kind="event" title={t("compose.threadGoneTitle")}>
       {t("compose.threadGone")}
     </Callout>
   );

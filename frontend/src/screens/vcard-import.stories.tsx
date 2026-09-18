@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { VCardImport } from "./vcard-import";
 
@@ -41,7 +41,12 @@ export const Empty: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = await openDialog(canvasElement);
-    await expect(await canvas.findByTestId("vcard-import-file")).toBeVisible();
+    // The dialog ARRIVES: `overlay-arrive` (atoms.css) fades the scrim and the
+    // box in over --dur-move, so the dropzone is in the DOM a frame before it
+    // is visible, and a query that resolves on the node alone reads the
+    // half-arrived state. The settled dialog is what this story is about.
+    const dropzone = await canvas.findByTestId("vcard-import-file");
+    await waitFor(() => expect(dropzone).toBeVisible());
   },
 };
 
@@ -91,9 +96,11 @@ export const MixedReport: Story = {
         }),
       );
     }
-    await expect(
-      await canvas.findByTestId("vcard-import-report"),
-    ).toBeVisible();
+    // The report lands inside the same arriving dialog `Empty` waits out: the
+    // node is in the DOM a frame before `overlay-arrive` has faded it in, so
+    // the settled state is what this story asserts.
+    const report = await canvas.findByTestId("vcard-import-report");
+    await waitFor(() => expect(report).toBeVisible());
   },
 };
 
@@ -129,6 +136,9 @@ export const Refused: Story = {
         new File(["nonsense"], "kaputt.vcf", { type: "text/vcard" }),
       );
     }
-    await expect(await canvas.findByTestId("vcard-import-error")).toBeVisible();
+    // Same arrival as the report above: query the node, then wait for it to be
+    // visible rather than reading the half-faded dialog.
+    const error = await canvas.findByTestId("vcard-import-error");
+    await waitFor(() => expect(error).toBeVisible());
   },
 };

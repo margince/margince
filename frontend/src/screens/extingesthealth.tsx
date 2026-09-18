@@ -66,7 +66,7 @@ function unitFacts(
     value: (
       <span>
         {unit.refusals.map((refusal) => (
-          <Badge key={refusal.refusal} tone="warn">
+          <Badge key={refusal.refusal} tone="warning">
             {t("extIngest.refusalCount", {
               count: formatNumber(refusal.refused, locale),
               refusal: t(REFUSAL_LABEL[refusal.refusal]),

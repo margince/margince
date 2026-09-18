@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import { emailDetailKey } from "./emaildetail";
 import { EmailText } from "./emailtext";
+import { Heading } from "./heading";
 import { SurfaceState } from "./surfacestate";
 import "./sourceemailpanel.css";
 
@@ -139,7 +140,9 @@ function SourceEmailBody({
   const subject = presentation.summary.subject?.trim() || t("email.noSubject");
   return (
     <section className="sourceemail">
-      <h4 className="sourceemail__label">{t("tasks.sourceEmail")}</h4>
+      <Heading size="small" className="sourceemail__label">
+        {t("tasks.sourceEmail")}
+      </Heading>
       <p className="sourceemail__subject">{subject}</p>
       <p className="sourceemail__when">
         {formatWhen(presentation.occurred_at)}

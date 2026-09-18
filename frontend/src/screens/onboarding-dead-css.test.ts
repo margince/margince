@@ -17,8 +17,7 @@ import { describe, expect, it } from "vitest";
 // onboarding tomorrow is gated the same day it lands, and NOTHING here is
 // scoped to a prefix: a gate that only knew `ob-` would have walked straight
 // past the dropzone set. The one hand-maintained list is `runtimeClasses`
-// below, and it is deliberately short. The sibling gate in
-// onboarding-typography.test.ts derives the same sheet list from the same rule.
+// below, and it is deliberately short.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const conversationDir = join(here, "onboarding-conversation");

@@ -456,7 +456,7 @@ describe("DecisionStatusChip", () => {
         }),
       }),
     );
-    expect(container.querySelector(".badge-warn")).toBeInTheDocument();
+    expect(container.querySelector(".badge-warning")).toBeInTheDocument();
     cleanup();
 
     const urgent = render(

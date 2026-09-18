@@ -200,8 +200,12 @@ var tableOwners = map[string]string{
 	"linkedin_account":    "internal/modules/contacts",
 	"linkedin_connection": "internal/modules/contacts",
 	"attachment":          "internal/modules/activities",
-	"deal_document_hide":  "internal/modules/activities",
-	"booking_page":        "internal/modules/activities",
+	// The intent ledger beside it: a key is provisional from before the bytes
+	// are stored until the attachment row that speaks for them commits, so it
+	// is written by exactly the module that writes those rows.
+	"stored_object_intent": "internal/modules/activities",
+	"deal_document_hide":   "internal/modules/activities",
+	"booking_page":         "internal/modules/activities",
 	// approvals (signing_key backs the approval-token JWS; the autonomy policy
 	// is what each rep has decided about a KIND of proposal, so it belongs to
 	// the module that owns the kinds and records the decisions it counts)

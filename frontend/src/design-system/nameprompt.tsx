@@ -58,9 +58,7 @@ export function NamePrompt({
 
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {trigger}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{trigger}</Button>
       <ConfirmModal
         open={open}
         onClose={close}
