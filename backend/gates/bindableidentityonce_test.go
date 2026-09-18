@@ -6,7 +6,8 @@
 package gates
 
 // Who may bind an arrival to the activity already holding its identity is
-// decided in ONE place: activities.ResolveBindableIdentity.
+// decided in ONE place: activities.bindableIdentityUnder, which both exported
+// entry points delegate to.
 //
 // Two ingestion doors ask the question — the import door through
 // boundToKnownMessage, the capture door through the IdentityResolver seam
@@ -16,15 +17,15 @@ package gates
 // answering, just differently, and the weaker one is the one an attacker picks.
 //
 // This gate holds the claim by counting the callers of the two predicates the
-// rule is made of. Each may be called only from inside ResolveBindableIdentity
-// itself — a second caller means somebody has assembled their own version of
-// the rule rather than asking the function that states it.
+// rule is made of. Each may be called only from inside that one body — a second
+// caller means somebody has assembled their own version of the rule rather than
+// asking the function that states it.
 //
 // What this gate CANNOT see: whether a caller obeys the answer. A door that
 // calls ResolveBindableIdentity and then binds anyway passes here. The
 // integration tests in compose/importthencapture_integration_test.go are what
-// cover that, and the cross-seat cases there are mutation-checked against this
-// function's removal.
+// cover that, and the cross-seat cases there are mutation-checked against the
+// removal of the arm each one covers.
 
 import (
 	"go/ast"
@@ -41,7 +42,14 @@ import (
 var theBindingRule = []string{"BindableTo", "identityHolderIsLive"}
 
 // theOneDecider is the function allowed to call them.
-const theOneDecider = "ResolveBindableIdentity"
+//
+// The UNEXPORTED body, not either exported entry point. There are two of those
+// — ResolveBindableIdentity for a door with nothing to prove, and
+// ResolveBindableIdentityProving for one that carries an address prover — and
+// they exist so a caller chooses which rule applies, not so either restates it.
+// Both delegate here, so this is still exactly one place where a bind is
+// decided, which is the property this gate holds.
+const theOneDecider = "bindableIdentityUnder"
 
 func TestOneFunctionDecidesWhoMayBindToAMessage(t *testing.T) {
 	t.Parallel()

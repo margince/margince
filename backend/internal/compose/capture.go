@@ -313,7 +313,16 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			// meeting sync two ids for it, and without this it lands twice.
 			activities.IdentityKindMeeting,
 			activities.MeetingIdentityKey,
-			activities.ResolveBindableIdentity,
+			// The cross-seat arm, injected HERE and only here: an import filed by
+			// one seat binds to the mailbox of the seat whose PROVEN address it
+			// names. The addresses come from the import and are forgeable, so they
+			// are only the lookup key; the answer comes from capture's own
+			// connection and delivery evidence, which an importer cannot write.
+			//
+			// capture answers it because capture owns those tables, activities
+			// asks it because activities owns the binding decision, and neither
+			// module may import the other — so the edge is this injection.
+			activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx),
 			activities.ClaimIdentity,
 		).
 		// The 24-hour trace's payload posture. It rides the Sink because the
