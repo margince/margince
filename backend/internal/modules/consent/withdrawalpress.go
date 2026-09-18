@@ -136,12 +136,34 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// that was told it could trust the type. stopcarry.go refuses the same
 	// event for the same reason. Widening the contract to leads is a question
 	// for the slice that asks it.
-	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID,
-		map[string]any{"stopped": commsauthz.ReasonObjection, "source": sourcePublicLink}); err != nil {
+	//
+	// HOW NARROW, alongside what and where from. The kind is the same word for
+	// a link that left one list and a link that left all marketing, so an
+	// auditor reading this payload alone could not tell the two presses apart
+	// — the distinction this press exists to make. A narrow row names its
+	// purpose; a broad one says so in as many words rather than omitting the
+	// key, because an absent field reads as one nobody thought to write.
+	stopped := map[string]any{
+		"stopped": commsauthz.ReasonObjection,
+		"source":  sourcePublicLink,
+		"scope":   auditScopeAllMarketing,
+	}
+	if purposeID != nil {
+		stopped["scope"] = auditScopeOnePurpose
+		stopped["purpose_id"] = purposeID.String()
+	}
+	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID, stopped); err != nil {
 		return false, err
 	}
 	return true, nil
 }
+
+// The two shapes a press's audit row can describe, spelled once so the payload
+// and any later reader of it agree on the words.
+const (
+	auditScopeAllMarketing = "all_marketing"
+	auditScopeOnePurpose   = "one_purpose"
+)
 
 // StopForCredential is the press in its own transaction, for the public
 // handler that has none of its own.

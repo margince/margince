@@ -291,3 +291,47 @@ func TestEveryStoredKindReachesANamedArmOfTheRule(t *testing.T) {
 		}
 	}
 }
+
+// TestAnAllowedDecisionRecordsOnlyAStopItCanExplain holds the field
+// applySuppression stamps when nothing binds.
+//
+// communication_decision stores kind and resolved_category and no purpose, and
+// privacy/sarcommunication.go exports all three to the subject. A BROAD stop
+// beside an allowed send of another category explains itself from those two
+// columns. A NARROW stop beside an allowed marketing send does not: it reads as
+// "objected to marketing, sent marketing", with the purpose that makes it
+// correct absent from the row.
+//
+// The combination could not arise before purpose_id — an objection always bound
+// a marketing send — so nothing caught it when it became ordinary.
+func TestAnAllowedDecisionRecordsOnlyAStopItCanExplain(t *testing.T) {
+	left, other := ids.NewV7(), ids.NewV7()
+	narrow := liveStop{Kind: commsauthz.ReasonObjection, PurposeID: &left}
+	broad := liveStop{Kind: commsauthz.ReasonObjection}
+
+	// A marketing send for a purpose the narrow stop does not name: allowed,
+	// and the row must not claim an objection stood against it.
+	allowed := applySuppression(
+		commsauthz.Decision{Verdict: commsauthz.VerdictAllow, Resolved: commsauthz.CategoryMarketing},
+		[]liveStop{narrow}, &other)
+	if allowed.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q, want allow — the narrow stop names another purpose", allowed.Verdict)
+	}
+	if allowed.Suppression != "" {
+		t.Errorf("the decision records suppression=%q beside resolved_category=marketing and "+
+			"verdict=allow — the subject's Art. 15 export reads that as knowingly mailing "+
+			"somebody who objected, and no column on the row says which list they left",
+			allowed.Suppression)
+	}
+
+	// A broad stop that does not reach this category still records, because
+	// kind and category together say why it did not bind.
+	invoice := applySuppression(
+		commsauthz.Decision{Verdict: commsauthz.VerdictAllow, Resolved: commsauthz.CategoryInvoiceOrPayment},
+		[]liveStop{broad}, nil)
+	if invoice.Suppression != commsauthz.ReasonObjection {
+		t.Errorf("a broad objection standing beside an allowed invoice recorded %q, want the "+
+			"objection — a stop that stood while mail went out is what a later reader needs",
+			invoice.Suppression)
+	}
+}

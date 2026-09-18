@@ -46,12 +46,19 @@ func TestTheExportNamesThePurposeAPerPurposeStopWasNarrowedTo(t *testing.T) {
 	if len(pkg.CommunicationSuppression) == 0 {
 		t.Fatal("the export carries no stop at all, though one was seeded")
 	}
-	got, ok := pkg.CommunicationSuppression[0]["purpose_id"]
+	// BY NAME, because the subject is the reader. An id would satisfy "the
+	// column is exported" and still leave them unable to tell which list they
+	// left, which is the whole reason this section names a purpose.
+	got, ok := pkg.CommunicationSuppression[0]["purpose_key"]
 	if !ok {
-		t.Fatal("the export's suppression row carries no purpose_id at all — a subject holding a " +
+		t.Fatal("the export's suppression row carries no purpose at all — a subject holding a " +
 			"per-purpose stop cannot tell it apart from one that objects to everything")
 	}
-	if got != purposeID.String() {
-		t.Errorf("the export's suppression row names purpose %v, want %q", got, purposeID.String())
+	if got != "newsletter" {
+		t.Errorf("the export's suppression row names purpose %v, want the key \"newsletter\" — "+
+			"a subject cannot read a consent_purpose id", got)
+	}
+	if label := pkg.CommunicationSuppression[0]["purpose_label"]; label != "Newsletter" {
+		t.Errorf("the export's suppression row labels the purpose %v, want %q", label, "Newsletter")
 	}
 }

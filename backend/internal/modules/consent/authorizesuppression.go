@@ -47,31 +47,44 @@ func applySuppression(d commsauthz.Decision, stops []liveStop, sendPurpose *ids.
 			return d
 		}
 	}
-	// None of them binds this send, so it stands and the row records that one
-	// stood anyway. Sorted for the record's sake only: an unordered read would
-	// make this field depend on the planner, and the same message would
-	// describe itself differently on two runs. Purpose breaks the tie a bare
-	// kind sort cannot: two narrow rows sharing one kind for different
-	// purposes are two distinct stops, both present when neither binds.
-	sorted := slices.Clone(stops)
-	slices.SortFunc(sorted, func(a, b liveStop) int {
-		if c := strings.Compare(a.Kind, b.Kind); c != 0 {
-			return c
+	// None of them binds this send, so it stands and the row records that a
+	// stop stood anyway — but only a BROAD one, because only a broad one's
+	// non-binding is explicable from what the row stores.
+	//
+	// communication_decision keeps kind and resolved_category and NO purpose.
+	// A broad objection recorded beside an allowed invoice explains itself:
+	// the two columns say marketing was refused and this was not marketing.
+	// A NARROW objection recorded beside an allowed marketing send does not —
+	// the columns read "we knew they objected to marketing and sent marketing
+	// anyway", and the purpose that makes it correct is nowhere in the row.
+	// That combination was impossible before purpose_id existed, because an
+	// objection always bound a marketing send; it became the ordinary outcome
+	// the moment a stop could name one list. privacy/sarcommunication.go hands
+	// these columns to the subject in their Art. 15 export, so the unexplained
+	// row is not an internal curiosity — it is a self-contradiction shown to
+	// the person it is about.
+	//
+	// So a narrow row is left off this field rather than misdescribed. It is
+	// not lost: the suppression table still holds it, and a review opened from
+	// this decision reads it through Decision.PurposeID.
+	//
+	// Sorted for the record's sake only: an unordered read would make this
+	// field depend on the planner, and the same message would describe itself
+	// differently on two runs.
+	broad := make([]liveStop, 0, len(stops))
+	for _, s := range stops {
+		if s.PurposeID == nil {
+			broad = append(broad, s)
 		}
-		return strings.Compare(purposeSortKey(a.PurposeID), purposeSortKey(b.PurposeID))
-	})
-	d.Suppression = sorted[0].Kind
-	return d
-}
-
-// purposeSortKey orders a nullable purpose id for applySuppression's
-// tie-break, with the broad (nil) case sorting first — a stable, low-drama
-// choice since only the record's determinism depends on it, never the verdict.
-func purposeSortKey(p *ids.UUID) string {
-	if p == nil {
-		return ""
 	}
-	return p.String()
+	if len(broad) == 0 {
+		return d
+	}
+	slices.SortFunc(broad, func(a, b liveStop) int {
+		return strings.Compare(a.Kind, b.Kind)
+	})
+	d.Suppression = broad[0].Kind
+	return d
 }
 
 // suppressionBindsAny reports whether ANY live stop binds this category and

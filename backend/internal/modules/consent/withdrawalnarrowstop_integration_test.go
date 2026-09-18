@@ -242,16 +242,28 @@ func TestANarrowPressBindsOnlyItsOwnPurpose(t *testing.T) {
 			"purpose it was never pressed against", allowedOther.Verdict, allowedOther.ReasonCode)
 	}
 
-	// DIRECTION 3: the coverage boundary. The lead's own reply resolves on
-	// its own evidence, with no purpose consulted at all, and a narrow row
-	// scoped to a purpose this send never named must not reach it.
-	evidence := decide(commsauthz.Request{AnchorActivityID: anchor}, commsauthz.PhaseStaging)
-	if evidence.Verdict != commsauthz.VerdictAllow {
-		t.Fatalf("verdict for the lead's own reply = %q (%s), want allow — a narrow stop must "+
-			"not reach a send that resolved no purpose at all", evidence.Verdict, evidence.ReasonCode)
+	// DIRECTION 3: the NARROWNESS is what spared the other purpose, and this
+	// is the leg that says so.
+	//
+	// DIRECTION 2 on its own is weak in the one direction that matters: it
+	// passes just as well if the press wrote NOTHING, which is the defect
+	// #5557 reports. Widening the row this press wrote — the same row, only
+	// its purpose_id cleared — must flip that same send to deny. If it does
+	// not, either the row is absent or the engine is not reading purpose, and
+	// DIRECTION 2 was green for the wrong reason both times.
+	if _, err := e.owner.Exec(ctx, `
+		UPDATE communication_suppression SET purpose_id = NULL
+		 WHERE lead_id = $1 AND revoked_at IS NULL`, lead.UUID); err != nil {
+		t.Fatalf("widening the stop this press wrote: %v", err)
 	}
-	if evidence.Resolved != commsauthz.CategoryReplyToInbound {
-		t.Errorf("resolved = %q, want reply_to_inbound", evidence.Resolved)
+	widened := decide(commsauthz.Request{LegacyPurposeKey: "narrow-bind-promotions"}, commsauthz.PhaseTransmit)
+	if widened.Verdict != commsauthz.VerdictDeny {
+		t.Fatalf("the same send read %q once the row was widened, want deny — the row either "+
+			"is not there or the engine never compared its purpose, which would make the "+
+			"allow above prove nothing", widened.Verdict)
+	}
+	if widened.ReasonCode != commsauthz.ReasonObjection {
+		t.Errorf("the widened stop denied for %q, want %q", widened.ReasonCode, commsauthz.ReasonObjection)
 	}
 }
 
