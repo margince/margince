@@ -1412,8 +1412,16 @@
        wrap was spelled: the refused verb was drawn OVER the one beside it and
        its sentence came out one word per line. A column has no line to break,
        and `align-items: stretch` hands every verb the same full width — which
-       is the shape the pane already draws above the fold. */
+       is the shape the pane already draws above the fold.
+
+       The WRAP comes back off with it. A direction and its wrap are one
+       decision, and the shared rule turns both together — left on, a column
+       that wraps is a multi-line container asked to fill a block size it does
+       not have, and Chromium answered by handing the last verb a hundred
+       pixels of nothing. The plate then ended a long way under its own last
+       line. A column of verbs has no line to break. */
     flex-direction: column;
+    flex-wrap: nowrap;
   }
 }
 /* Putting a move off is not a second verb. Stripped of its border it reads as
