@@ -262,6 +262,36 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AllowContact serves POST /contacts/{id}/consent/allow: a rep vouching that a
+// machine-level refusal for one category may be overruled for this contact.
+//
+// Wire-only, matching SuppressContact: the store owns the category vocabulary,
+// takes the authority from the session and decides whether this caller may
+// write about this subject — none of which belongs at this layer.
+func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AllowContactJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	overrideID, err := h.store.Allow(r.Context(), AllowInput{
+		ContactID: ids.From[ids.ContactKind](ids.UUID(id)),
+		Category:  string(req.Category),
+		Reason:    req.Reason,
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// 201 WITH THE ID, where SuppressContact answers 204. The revoke door takes
+	// this id in its path and nothing lists a contact's standing vouches, so a
+	// caller handed nothing here could never take back what they just recorded.
+	// consent.override_recorded carries it as well, but an event reaches a
+	// consumer holding a subscription — not the caller who made this request.
+	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.RecordedOverride{
+		OverrideId: openapi_types.UUID(overrideID),
+	})
+}
+
 // LiftSuppression serves POST /contacts/{id}/consent/suppress/{suppressionId}/lift:
 // somebody taking back a stop they outrank.
 //
@@ -283,6 +313,32 @@ func (h Handlers) LiftSuppression(
 		ContactID:     ids.From[ids.ContactKind](ids.UUID(id)),
 		SuppressionID: ids.UUID(suppressionID),
 		Reason:        req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RevokeOverride serves POST /contacts/{id}/consent/allow/{overrideId}/revoke:
+// somebody taking back a standing vouch their level may revoke.
+//
+// Wire-only, matching LiftSuppression exactly: the store judges the reason,
+// the row scope and the level. The comparison in particular belongs beside
+// the row and inside the transaction that revokes it — a handler that
+// pre-checked the level would be reading a value that can change before the
+// write lands.
+func (h Handlers) RevokeOverride(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, overrideID openapi_types.UUID,
+) {
+	var req crmcontracts.RevokeOverrideJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.RevokeOverride(r.Context(), RevokeOverrideInput{
+		ContactID:  ids.From[ids.ContactKind](ids.UUID(id)),
+		OverrideID: ids.UUID(overrideID),
+		Reason:     req.Reason,
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return

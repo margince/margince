@@ -250,6 +250,11 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"communication_basis.source_activity_id": "server-derived: the anchor the send already carries, and the send path put it through auth.EnsureLinkTarget before the consent gate ever saw it (activities.SendOrigin.resolve) — no caller names it here",
 	"communication_suppression.contact_id":   "server-derived: same subject-addressed privacy statements as communication_basis.contact_id, plus the SAR read of the subject's own rows",
 	"communication_suppression.lead_id":      "server-derived: same, keyed on the subject's lead twins",
+	// The override table breaks the basis/suppression pattern above: unlike
+	// them it HAS a live caller door, so contact_id is a reference a request
+	// names and is classified gated rather than server-derived.
+	"communication_override.contact_id": "client-supplied and gated on the door that records a vouch, server-derived on the rest. Allow (consent/override.go) takes a caller's ContactID and puts it through auth.Require(contact, update) then auth.EnsureWritable inside the write's own transaction before the INSERT — a rep cannot vouch for a contact they could not already change, and one they cannot see answers ErrNotFound. The other writers name no caller id: the merge carry (CarryOverridesTx) resolves the subject from the merge it is already inside, and privacy's subject-addressed erasure, retention and SAR statements key on the subject their own operation is about",
+	"communication_override.lead_id":    "server-derived only: the Allow door is contact-only (AllowInput names no lead), so no caller supplies this column. It is written by the merge carry keyed on the survivor's lead twin and by privacy's lead-twin erasure and retention statements — the same shape as communication_suppression.lead_id",
 	"contact_acquisition_evidence.contact_id": "child row: why one contact exists, written by recordAcquisition " +
 		"inside createContact's own transaction for the contact that transaction just created (contacts/acquisition.go, " +
 		"reached from contacts/resolvecreate.go) — so the id is never a caller's reference to a record. Merge re-points " +

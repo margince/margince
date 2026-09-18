@@ -401,6 +401,12 @@ var piiTables = map[string]piiHandling{
 	// reason: a contact asking what is held about them is owed the record that
 	// they said stop, and when.
 	"communication_suppression": {erasureWrite: true, sarRead: true},
+	// A rep's standing vouch that a machine-level refusal may be overruled.
+	// Not consent, not a lawful basis, but a human decision on the record
+	// about this subject — erased with them like the suppression above, and
+	// disclosed for the same reason: a subject is owed the record that a
+	// human decided to write to them anyway, and why.
+	"communication_override": {erasureWrite: true, sarRead: true},
 
 	"preference_token": {erasureWrite: true, sarForbidden: true},
 

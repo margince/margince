@@ -5,21 +5,29 @@
 
 package compose
 
-// A merge carries the retiring subject's STOPS, through the real contacts→consent
-// edge.
+// A merge carries the retiring subject's STOPS and OVERRIDES, through the real
+// contacts→consent edge.
 //
 // Here rather than in either module because neither can prove it alone: contacts
 // owns the merge and cannot import consent, consent owns
-// communication_suppression and cannot import contacts, and the seam between
-// them is wired in this package. A test on either side would have to fake the
-// other, and the defect this closes was precisely that nothing connected them.
+// communication_suppression and communication_override and cannot import
+// contacts, and the seam between them is wired in this package. A test on
+// either side would have to fake the other, and the defect this closes was
+// precisely that nothing connected them.
 //
-// The defect: a merge moved contact_consent and left communication_suppression
-// pointing at the retired record. The stop was not deleted — it was orphaned,
-// which is worse, because an export still shows it while the send path no
-// longer asks about it. Somebody objects to marketing, their contact is later
-// merged during ordinary cleanup, and marketing resumes against them with
-// nothing in the audit saying a stop was dropped.
+// The stop defect: a merge moved contact_consent and left
+// communication_suppression pointing at the retired record. The stop was not
+// deleted — it was orphaned, which is worse, because an export still shows it
+// while the send path no longer asks about it. Somebody objects to marketing,
+// their contact is later merged during ordinary cleanup, and marketing resumes
+// against them with nothing in the audit saying a stop was dropped.
+//
+// THE OVERRIDE DEFECT IS THE MIRROR IMAGE. A rep vouches that a machine-level
+// refusal may be overruled for one category (consent/override.go's Allow), the
+// contact carrying that vouch is later merged into a duplicate, and the vouch
+// stays on the retired id — so the very next send to the survivor for that
+// category is refused all over again, with nothing on file saying a rep
+// already cleared it.
 
 import (
 	"context"
@@ -31,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // liveObjections counts one subject's live marketing objections, which is the
@@ -388,5 +397,264 @@ func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
 		t.Fatalf("the survivor holds %d live objection(s), want 1 — a stop recorded "+
 			"during the merge landed only on the record the merge retired, so the "+
 			"send path will never see it", got)
+	}
+}
+
+// liveOverrideCount counts one subject's live "marketing" overrides, the
+// override table's equivalent of liveObjections above. Every case in this
+// file vouches for marketing — the one category seedMarketingPurpose wires a
+// Preview call to resolve — so a category parameter would carry a choice no
+// caller here makes.
+func liveOverrideCount(t *testing.T, e *integration.Env, contactID ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_override
+		 WHERE contact_id = $1 AND category = 'marketing' AND revoked_at IS NULL`,
+		contactID).Scan(&n); err != nil {
+		t.Fatalf("counting live overrides: %v", err)
+	}
+	return n
+}
+
+// seedMarketingPurpose plants a legacy consent purpose of class "marketing",
+// which is what lets a Preview request resolve LegacyPurposeKey to the
+// "marketing" category the override below is recorded for — the same mapping
+// consent's own resolveCategory tests (authorizeresolve_integration_test.go)
+// drive through seedPurpose.
+func seedMarketingPurpose(t *testing.T, e *integration.Env, key string) {
+	t.Helper()
+	e.WsExec(t, `
+		INSERT INTO consent_purpose (id, key, label, class, requires_double_opt_in)
+		VALUES ($1, $2, $2, 'marketing', false)`, ids.NewV7(), key)
+}
+
+// previewMarketing runs the SAME per-recipient decision a real send would —
+// Gate.Preview reaches decideOne exactly as AuthorizeStagingTx does — and
+// records nothing, so this can be asked before and after a merge without
+// itself changing what it is asking about.
+func previewMarketing(ctx context.Context, t *testing.T, gate *consent.Gate, address string) commsauthz.Decision {
+	t.Helper()
+	set, err := gate.Preview(ctx, commsauthz.Request{
+		Recipients:       []connector.Recipient{{Email: address}},
+		LegacyPurposeKey: "override-carry-newsletter",
+	})
+	if err != nil {
+		t.Fatalf("previewing the send: %v", err)
+	}
+	if len(set.Decisions) != 1 {
+		t.Fatalf("preview returned %d decisions, want 1", len(set.Decisions))
+	}
+	return set.Decisions[0]
+}
+
+// THE WHOLE POINT OF THIS SLICE: a rep's standing override is not merely a row
+// that gets copied — it has to go on PROTECTING THE SEND. This drives a real
+// engine decision before and after the merge, through the same Preview path a
+// real send would reach, rather than only reading communication_override back.
+func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	consentGate := consent.NewGate(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
+
+	// The contact whose rep vouched for marketing, and the duplicate it will
+	// be merged into.
+	vouched := e.SeedContact(t, "Rep Vouched", nil)
+	survivor := e.SeedContact(t, "Override Survivor", nil)
+
+	const address = "override-survivor@buyer.test"
+	addContactEmail(t, e, survivor, address)
+	seedMarketingPurpose(t, e, "override-carry-newsletter")
+
+	// BEFORE the merge: the survivor holds no consent on file, so the engine
+	// cannot support a marketing send to them on its own reading. Asserting
+	// this first is what makes the "after" assertion mean something — without
+	// it, an ALREADY-allowed send would pass whether or not the carry works.
+	before := previewMarketing(admin, t, consentGate, address)
+	if before.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow before any override reached the survivor — the fixture proves nothing")
+	}
+
+	if _, err := consentStore.Allow(admin, consent.AllowInput{
+		ContactID: ids.From[ids.ContactKind](vouched),
+		Category:  "marketing",
+		Reason:    "confirmed the opt-in on a call before the records were merged",
+	}); err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+	if got := liveOverrideCount(t, e, survivor); got != 0 {
+		t.Fatalf("precondition: the survivor already holds %d override(s)", got)
+	}
+
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	// THE ROW LANDED, and it says where it came from.
+	var carriedFrom *ids.UUID
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT carried_from FROM communication_override
+		 WHERE contact_id = $1 AND category = 'marketing' AND revoked_at IS NULL`,
+		survivor).Scan(&carriedFrom); err != nil {
+		t.Fatalf("reading the carried override: %v", err)
+	}
+	if carriedFrom == nil {
+		t.Error("the carried override names no origin, so nothing says which merge produced it")
+	}
+
+	// AND THE ORIGINAL SURVIVES, as evidence about the record whose rep
+	// actually made the vouch.
+	if got := liveOverrideCount(t, e, vouched); got != 1 {
+		t.Errorf("the retired record holds %d override(s), want its own kept as evidence", got)
+	}
+
+	// THE CARRIED VOUCH ACTUALLY WORKS: the same Preview call that refused
+	// before the merge now allows, because the survivor is the record the
+	// engine evaluates and it now carries the rep's override.
+	after := previewMarketing(admin, t, consentGate, address)
+	if after.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s) after the merge, want allow: a carried override should have "+
+			"vouched for this send", after.Verdict, after.ReasonCode)
+	}
+	if after.ReasonCode != commsauthz.ReasonAllowedByOverride {
+		t.Errorf("reason = %q, want %q", after.ReasonCode, commsauthz.ReasonAllowedByOverride)
+	}
+}
+
+// A SURVIVOR ALREADY HOLDING AN EQUALLY STRONG OVERRIDE FOR A CATEGORY MUST NOT
+// GAIN A SECOND ONE. Both rows here are recorded by the same admin, so this
+// pins the EQUAL-authority case and nothing wider: the carry's NOT EXISTS
+// compares authority, and a source row STRONGER than the survivor's is carried
+// on purpose, leaving two live rows — see overridecarry.go on why that is the
+// honest record for a vouch and TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry
+// for the read that decides between them.
+//
+// Mirrors TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds, which is the
+// same shape one tier down.
+func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
+
+	retiring := e.SeedContact(t, "Duplicate Override Source", nil)
+	survivor := e.SeedContact(t, "Duplicate Override Survivor", nil)
+
+	for _, id := range []ids.UUID{retiring, survivor} {
+		if _, err := consentStore.Allow(admin, consent.AllowInput{
+			ContactID: ids.From[ids.ContactKind](id),
+			Category:  "marketing",
+			Reason:    "confirmed the opt-in on a call",
+		}); err != nil {
+			t.Fatalf("recording the override: %v", err)
+		}
+	}
+
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](retiring), ids.From[ids.ContactKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	if got := liveOverrideCount(t, e, survivor); got != 1 {
+		t.Errorf("the survivor holds %d live overrides after the merge, want exactly 1", got)
+	}
+}
+
+// AN UNWIRED MERGE REFUSES ONLY WHEN AN OVERRIDE WOULD BE LOST, the override
+// carry's own version of TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost.
+func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	// Deliberately NOT .WithStopCarrier(...).
+	unwired := contacts.NewStore(e.DB())
+
+	vouched := e.SeedContact(t, "Unwired Override Source", nil)
+	survivor := e.SeedContact(t, "Unwired Override Survivor", nil)
+	if _, err := consentStore.Allow(admin, consent.AllowInput{
+		ContactID: ids.From[ids.ContactKind](vouched),
+		Category:  "marketing",
+		Reason:    "confirmed the opt-in on a call",
+	}); err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+
+	_, err := unwired.MergeContact(admin,
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor))
+	if err == nil {
+		t.Fatal("a merge that would have dropped a recorded override went through unnoticed")
+	}
+	var notWired *contacts.OverrideCarrierNotWiredError
+	if !errors.As(err, &notWired) {
+		t.Fatalf("the merge failed with %v, want OverrideCarrierNotWiredError", err)
+	}
+	// And the override is still where it was: the refusal rolled the merge
+	// back rather than half-applying it.
+	if got := liveOverrideCount(t, e, vouched); got != 1 {
+		t.Errorf("the refused merge left %d override(s) on the source, want its own intact", got)
+	}
+}
+
+// REVOKING BY A PRE-MERGE HANDLE MUST STOP THE SEND, and this is the one place
+// the override direction cannot borrow the stop's answer.
+//
+// A carry copies the vouch onto the survivor under a NEW id and leaves the
+// source row live as evidence. A caller who recorded the vouch before the merge
+// holds the SOURCE id — the only one the door ever gave them — and a revoke that
+// took back only that row would answer 204 while the survivor's copy kept
+// allowing the send.
+//
+// The stop direction survives the same shape because it fails safe: a stale lift
+// leaves the survivor still suppressed. A stale revoke fails OPEN, which is why
+// this is asserted on the send itself rather than on a row count.
+func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
+	consentGate := consent.NewGate(consentStore)
+
+	vouched := e.SeedContact(t, "Pre-merge Revoke Source", nil)
+	survivor := e.SeedContact(t, "Pre-merge Revoke Survivor", nil)
+
+	const address = "premerge-revoke@buyer.test"
+	addContactEmail(t, e, survivor, address)
+	seedMarketingPurpose(t, e, "override-carry-newsletter")
+
+	recorded, err := consentStore.Allow(admin, consent.AllowInput{
+		ContactID: ids.From[ids.ContactKind](vouched),
+		Category:  "marketing",
+		Reason:    "confirmed the opt-in on a call before the records were merged",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if got := previewMarketing(admin, t, consentGate, address); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s) after the merge, want allow — the fixture proves nothing unless "+
+			"the carried vouch is actually allowing the send", got.Verdict, got.ReasonCode)
+	}
+
+	// THE PRE-MERGE HANDLE, which is the only id this caller was ever given.
+	if err := consentStore.RevokeOverride(admin, consent.RevokeOverrideInput{
+		ContactID:  ids.From[ids.ContactKind](vouched),
+		OverrideID: recorded,
+		Reason:     "the buyer withdrew what they said on the call",
+	}); err != nil {
+		t.Fatalf("revoking by the pre-merge handle: %v", err)
+	}
+
+	after := previewMarketing(admin, t, consentGate, address)
+	if after.Verdict == commsauthz.VerdictAllow {
+		t.Errorf("verdict = allow (%s) after the vouch was revoked: the revoke took back the source "+
+			"row and left the survivor's carried copy standing, so mail still goes out on a vouch "+
+			"somebody took back", after.ReasonCode)
 	}
 }
