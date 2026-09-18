@@ -37,7 +37,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -84,9 +83,9 @@ type digestLines struct {
 // re-scope, in a transaction of its own. They are two statements against one
 // unchanged fact: which rows this seat may open now.
 func (w *notificationDigestWorker) readDigestLines(
-	seatCtx context.Context, seat ids.UserID, day time.Time,
+	seatCtx context.Context, seat ids.UserID, window notices.Window,
 ) (digestLines, error) {
-	held, err := w.notices.DigestBody(seatCtx, seat, day)
+	held, err := w.notices.DigestBody(seatCtx, seat, window)
 	if err != nil {
 		return digestLines{}, err
 	}

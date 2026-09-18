@@ -11,9 +11,14 @@ package notices
 // find it ("what did that automation tell me on Tuesday"), and a lane that
 // forgets the moment somebody clicks is a lane they learn not to clear.
 //
-// Both reads decline the same rows: a rep's own stage moves are not news to the
-// rep who made them, and the centre honours that filter rather than becoming
-// the place those notices reappear.
+// A rep's own stage moves are not news to the rep who made them, and the centre
+// honours that filter rather than becoming the place those notices reappear.
+//
+// A MUTED CLASS IS THE OTHER WAY ROUND, and the difference is the point. The
+// lane declines it and the badge does not count it — the reader asked not to be
+// interrupted — but the centre LISTS it, because a preference governs delivery
+// and never existence, and somewhere has to be the place a switched-off notice
+// is still findable. Going to look is not being interrupted.
 
 import (
 	"context"
@@ -46,8 +51,12 @@ type CentreItem struct {
 
 // CentrePage is one window of the centre, with the badge beside it.
 //
-// UnreadCount is the reader's WHOLE unread set and not this page's share of it:
+// UnreadCount is the reader's whole unread LANE and not this page's share of it:
 // a badge that fell as somebody scrolled would be counting the wrong thing.
+//
+// The lane and not the list, so it is the narrower of the two: a class the
+// reader switched off is listed below and not counted here, because the count
+// is the interruption they declined and the line is the record they did not.
 type CentrePage struct {
 	Items       []CentreItem
 	NextCursor  string
@@ -95,10 +104,14 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 		// nothing at all. Both statements run in one transaction, so the count
 		// and the window describe the same reader — a notice landing between
 		// them is the next open's business.
-		if err := tx.QueryRow(ctx, `
+		muted, err := mutedFor(ctx, tx, seat)
+		if err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, fmt.Sprintf(`
 			SELECT count(*) FROM notice
-			 WHERE recipient_user_id = $1 AND read_at IS NULL AND `+notTheReadersOwnStageMove,
-			seat).Scan(&page.UnreadCount); err != nil {
+			 WHERE recipient_user_id = $1 AND read_at IS NULL AND %s`, inTheReadersLane(2)),
+			seat, muted).Scan(&page.UnreadCount); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
@@ -127,13 +140,13 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 // how many of them the reader could SEE.
 //
 // The two numbers differ, and which one leaves this function is the whole point.
-// The statement settles everything, self-made stage moves included: those are
-// hidden from both reads, so leaving them unread would strand rows in the
-// partial unread index that no act of the reader's could ever clear. The ANSWER
-// counts the lines the centre would have shown them, because a figure a reader
-// is ever shown may not exceed what they saw — "3 notifications marked read"
-// over two visible lines is a lie to them. The ledger entry keeps the true
-// figure.
+// The statement settles everything — self-made stage moves and muted classes
+// included — because both are hidden from the badge, so leaving them unread
+// would strand rows in the partial unread index that no act of the reader's
+// could ever clear. The ANSWER counts the lines the reader's BADGE was
+// carrying, because a figure a reader is ever shown may not exceed the one it
+// replaces: "3 notifications marked read" over a badge that read two is a lie
+// to them. The ledger entry keeps the true figure.
 //
 // ONE ledger entry, and no announcement. A seat clearing a month of notices is
 // one act by one contact, and the per-notice alternative puts a hundred
@@ -157,21 +170,25 @@ func (s *Store) MarkAllRead(ctx context.Context) (int, error) {
 		// ever shown it. A second SELECT under the same predicate would be a
 		// second copy of the question, and at READ COMMITTED it could answer
 		// about a row this statement had just changed.
-		rows, txErr := tx.Query(ctx, `
+		muted, txErr := mutedFor(ctx, tx, seat)
+		if txErr != nil {
+			return txErr
+		}
+		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
 			UPDATE notice SET read_at = now()
 			 WHERE recipient_user_id = $1 AND read_at IS NULL
-			RETURNING `+notTheReadersOwnStageMove, seat)
+			RETURNING %s`, inTheReadersLane(2)), seat, muted)
 		if txErr != nil {
 			return txErr
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var readerWasShownIt bool
-			if err := rows.Scan(&readerWasShownIt); err != nil {
+			var theBadgeWasCountingIt bool
+			if err := rows.Scan(&theBadgeWasCountingIt); err != nil {
 				return err
 			}
 			settled++
-			if readerWasShownIt {
+			if theBadgeWasCountingIt {
 				shown++
 			}
 		}

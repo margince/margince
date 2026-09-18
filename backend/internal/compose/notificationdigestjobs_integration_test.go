@@ -42,13 +42,20 @@ import (
 const digestMailOrigin = "https://crm.example.test"
 
 // digestMorning is past the briefing hour in the fixture's own zone, which the
-// harness seeds as UTC. The date is deliberately in the past: the window opens
-// two local-day labels back, so a clock ahead of the database's would put every
-// notice the test writes outside it.
+// harness seeds as UTC. A FIXED day rather than one derived from the clock, so
+// a case reads the same window whatever hour the suite runs at.
 var digestMorning = time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
 
 // digestNight is the same local day, before the morning has started.
 var digestNight = time.Date(2026, 6, 4, 4, 0, 0, 0, time.UTC)
+
+// digestRecordedAt is when the cases below raise their notices: the same local
+// day, before its briefing hour, which is inside the window at both ends.
+var digestRecordedAt = time.Date(2026, 6, 4, 2, 0, 0, 0, time.UTC)
+
+// digestAfternoon is the same local day AFTER the morning has gone, which is
+// the one instant the window deliberately excludes.
+var digestAfternoon = time.Date(2026, 6, 4, 14, 0, 0, 0, time.UTC)
 
 // digestEnv is one workspace with the morning pass wired as compose wires it,
 // a relay that counts, and a clock the test moves.
@@ -149,21 +156,40 @@ func (d *digestEnv) raise(t *testing.T, subject string, target datasource.Entity
 		d.engineCtx(), d.Rep1, subject, "", target, dedupe, nil); err != nil {
 		t.Fatalf("raising the notice %q: %v", subject, err)
 	}
+	d.recordedAt(t, dedupe, digestRecordedAt)
 	return d.noticeKeyed(t, dedupe)
+}
+
+// recordedAt places a raised notice's clock, and every case here raises through
+// this or raiseOfKind so none of them depends on the wall clock.
+//
+// The row is written by its real producer and only its TIMESTAMP is moved:
+// created_at is the column's own default, so there is no clock to inject into
+// the write, and a notice left at the database's wall time would sit after the
+// fixture morning it is supposed to be part of.
+func (d *digestEnv) recordedAt(t *testing.T, dedupe string, at time.Time) {
+	t.Helper()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE notice SET created_at = $3 WHERE recipient_user_id = $1 AND dedupe_key = $2`,
+		d.Rep1, dedupe, at); err != nil {
+		t.Fatalf("placing the clock on the notice keyed %q: %v", dedupe, err)
+	}
 }
 
 // raiseOfKind writes a notice of another class through the store's own writer,
 // which is what the lead-SLA escalation and the approval fan-out reach for.
 func (d *digestEnv) raiseOfKind(t *testing.T, kind, subject string) {
 	t.Helper()
+	dedupe := "digest_suite:" + subject
 	if _, err := d.store.Create(d.engineCtx(), notices.NewNotice{
 		Recipient: ids.From[ids.UserKind](d.Rep1),
 		Kind:      kind,
 		Subject:   subject,
-		DedupeKey: "digest_suite:" + subject,
+		DedupeKey: dedupe,
 	}); err != nil {
 		t.Fatalf("raising the %s notice %q: %v", kind, subject, err)
 	}
+	d.recordedAt(t, dedupe, digestRecordedAt)
 }
 
 func (d *digestEnv) noticeKeyed(t *testing.T, dedupe string) ids.UUID {
@@ -302,6 +328,49 @@ func TestOneLocalMorningProducesExactlyOneDigest(t *testing.T) {
 	}
 }
 
+// THE MORNING IS A CEILING AND NOT A STARTING GUN, which is what makes the
+// hourly pass a daily batch rather than a slow immediate mail.
+//
+// A colleague holding nothing when the morning opened takes no claim then, so
+// every later tick of that day finds them a candidate again. Without a bound at
+// the morning instant, the first notice of their afternoon sends them a
+// one-line message calling itself their daily digest — and the batch the
+// settings screen offered them would never exist. It waits for the next
+// morning, where the rest of the day's notices join it.
+func TestANoticeRaisedAfterTheMorningWaitsForTheNextOne(t *testing.T) {
+	d := setupDigest(t)
+	d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
+	d.recordedAt(t, "digest_suite:A proposal you own was accepted", digestAfternoon)
+
+	// The morning tick: the only notice waiting was recorded after it, so there
+	// is nothing this morning may carry and no attempt is spent on saying so.
+	d.now = digestMorning
+	d.run(t)
+	if got := d.relay.count(); got != 0 {
+		t.Fatalf("a notice recorded after the morning was sent in it: %v", d.relay.bodies)
+	}
+	if claimed, _ := d.claimState(t, digestMorning); claimed {
+		t.Fatal("the morning was claimed for a colleague it had nothing to tell, so the day it belongs in cannot send it")
+	}
+
+	// A later tick of the SAME day must not turn into an immediate send either.
+	d.now = digestAfternoon.Add(time.Hour)
+	d.run(t)
+	if got := d.relay.count(); got != 0 {
+		t.Fatalf("an afternoon tick sent a one-line digest: %v", d.relay.bodies)
+	}
+
+	// The next morning carries it, which is the promise the ceiling keeps.
+	d.now = digestMorning.AddDate(0, 0, 1)
+	d.run(t)
+	if got := d.relay.count(); got != 1 {
+		t.Fatalf("the next morning sent %d message(s), want the one that was waiting", got)
+	}
+	if body := d.relay.bodies[0]; !strings.Contains(body, "A proposal you own was accepted") {
+		t.Errorf("the next morning's message does not carry the notice that was waiting:\n%s", body)
+	}
+}
+
 // THE WITHHOLDING GUARANTEE, and the reason this lane was written carefully.
 //
 // A notice's subject names the record it is about, and the notice keeps the
@@ -385,11 +454,16 @@ func TestANoticeReadOnScreenIsNotInThatMorningsDigest(t *testing.T) {
 }
 
 // Only the classes the reader put in the batch are in it. The others reach them
-// the way they asked — on screen, or as their own message — and a digest that
-// swept them up would deliver twice what one of them chose once.
+// the way they asked — on screen, as their own message, or nowhere at all — and
+// a digest that swept them up would deliver twice what one of them chose once,
+// or carry the very class another was switched off to stop.
+//
+// The three non-batched routes are all here on purpose: the muted one is the
+// case a sweep written against the notice table rather than the routing choice
+// would get wrong, because the row is there either way.
 func TestOnlyTheClassesTheReaderBatchedAreInTheDigest(t *testing.T) {
 	d := setupDigest(t)
-	d.route(t, "lead_sla", notices.DeliveryEmail)
+	d.route(t, "lead_sla", notices.DeliveryOff)
 	d.route(t, "capture", notices.DeliveryInApp)
 	d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
 	d.raiseOfKind(t, "lead_sla", "A lead has been waiting two days")

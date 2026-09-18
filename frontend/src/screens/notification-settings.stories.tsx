@@ -67,11 +67,17 @@ export const StandingDefaults: Story = {
 // Decisions the seat has made, beside classes still following the default. The
 // two are drawn the same on purpose — what the row shows is what happens today,
 // and a decided row is not a louder fact than an undecided one.
+//
+// Every pair here is one the server would actually answer with: `email` is the
+// approval class's alone, so the batch is what a lead-SLA row reaches a mailbox
+// by. A fixture holding a combination the product refuses would draw a control
+// sitting on a value it does not offer, which is a face no reader can ever get
+// to and the wrong thing to review a screen against.
 export const DecidedBesideDefaults: Story = {
   render: story([
     preference("approval_pending", "in_app", true),
     preference("automation", "off", true),
-    preference("lead_sla", "email", true),
+    preference("lead_sla", "digest", true),
     preference("capture", "in_app", false),
     preference("system", "in_app", false),
     preference("coach", "digest", true),

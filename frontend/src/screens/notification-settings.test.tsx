@@ -132,11 +132,45 @@ describe("NotificationSettingsCard", () => {
     );
     const listbox = screen.getByRole("listbox");
     expect(within(listbox).queryByRole("option", { name: "Off" })).toBeNull();
-    for (const offered of ["In the app", "Email", "Daily digest"]) {
+    for (const offered of ["In the app", "Daily digest"]) {
       expect(
         within(listbox).getByRole("option", { name: offered }),
       ).not.toBeNull();
     }
+  });
+
+  // THE SERVER REFUSES `email` FOR EVERY CLASS BUT APPROVALS, for the same
+  // reason and with the same 422: it is the only class a producer stages a
+  // message for, so the word would record a choice the product does not keep
+  // and the reader would stop watching the screen.
+  //
+  // `Daily digest` is still offered, which is the half that keeps this a
+  // statement about the ROUTE: every class can still reach a mailbox.
+  it("offers immediate email on approvals alone, and the batch everywhere", async () => {
+    vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+
+    await user.click(
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+    );
+    const automations = screen.getByRole("listbox");
+    expect(
+      within(automations).queryByRole("option", { name: "Email" }),
+    ).toBeNull();
+    expect(
+      within(automations).getByRole("option", { name: "Daily digest" }),
+    ).not.toBeNull();
+    await user.keyboard("{Escape}");
+
+    await user.click(
+      screen.getByRole("combobox", { name: /Approvals waiting on you/i }),
+    );
+    expect(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "Email",
+      }),
+    ).not.toBeNull();
   });
 
   // Every other class MAY be switched off, so the coach rule above is a

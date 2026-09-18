@@ -43,6 +43,10 @@ const (
 
 var deliveryChoices = []string{DeliveryOff, DeliveryInApp, DeliveryEmail, DeliveryDigest}
 
+// fieldDelivery names the transport in a refusal. Three refusals are about this
+// one field and a caller matches on the name, so they spell it once.
+const fieldDelivery = "delivery"
+
 // The classes a seat decides about.
 //
 // ClassApprovalPending is DEFINED as KindApprovalPending rather than repeating
@@ -292,8 +296,21 @@ func checkPreference(class, delivery string) error {
 	}
 	if !slices.Contains(deliveryChoices, delivery) {
 		return &values.ParseError{
-			Field: "delivery", Code: "unknown",
+			Field: fieldDelivery, Code: "unknown",
 			Message: "delivery is off, in_app, email or digest",
+		}
+	}
+	if delivery == DeliveryEmail && class != ClassApprovalPending {
+		// Only the approval class has a sending leg: its notice stages a
+		// message in the transaction that writes it, and no other producer
+		// stages one at all. Accepting the word for a class nothing mails
+		// would record a choice the product silently does not keep — the
+		// reader would wait for mail that was never going to come, and the
+		// screen would show them "Email" as though it had.
+		return &values.ParseError{
+			Field: fieldDelivery, Code: "value_not_allowed",
+			Message: "only an approval waiting on you is mailed as it lands; " +
+				"choose the daily digest to have this class reach you by mail",
 		}
 	}
 	if class == classCoach && delivery == DeliveryOff {
@@ -302,7 +319,7 @@ func checkPreference(class, delivery string) error {
 		// words reach them; dropping them silently would leave the lead who
 		// wrote them believing they had been read.
 		return &values.ParseError{
-			Field: "delivery", Code: "value_not_allowed",
+			Field: fieldDelivery, Code: "value_not_allowed",
 			Message: "a colleague's coaching can be routed but not switched off",
 		}
 	}
@@ -331,6 +348,45 @@ func chosenBy(ctx context.Context, tx pgx.Tx, human ids.UUID) (map[string]string
 		chosen[class] = delivery
 	}
 	return chosen, rows.Err()
+}
+
+// mutedFor reads which kinds this seat has asked not to be interrupted about.
+//
+// The lane readers all narrow by it, so they take it here rather than each
+// deriving the set from a preference read of their own.
+func mutedFor(ctx context.Context, tx pgx.Tx, human ids.UUID) ([]string, error) {
+	chosen, err := chosenBy(ctx, tx, human)
+	if err != nil {
+		return nil, err
+	}
+	return mutedKinds(chosen), nil
+}
+
+// mutedKinds lists the kinds that arrive under a class this seat switched off.
+//
+// The inversion runs over classByKind, which places every kind a SYSTEM flow
+// raises. The kinds it does not hold are the coaching ones, which ClassFor
+// places from the contract's own vocabulary instead — and coach is the one
+// class checkPreference refuses `off` for, so a kind this inversion cannot see
+// is by construction a kind nobody can mute.
+//
+// TestAClassOutsideTheKindMapCannotBeMuted holds that pairing, because it is
+// the assumption that would fail silently: the day a mutable class gained a
+// kind placed outside the map, this would go on answering and that class would
+// quietly keep filling the lane the reader switched off.
+//
+// Sorted, so the argument this becomes is the same list in the same order on
+// every call — a map's range order is not, and an unstable argument turns one
+// statement into many as far as the query plan cache is concerned.
+func mutedKinds(chosen map[string]string) []string {
+	muted := []string{}
+	for kind, class := range classByKind {
+		if chosen[class] == DeliveryOff {
+			muted = append(muted, kind)
+		}
+	}
+	slices.Sort(muted)
+	return muted
 }
 
 // effective merges what a seat chose over the classes the product offers.

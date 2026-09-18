@@ -69,7 +69,10 @@ func TestNotificationPreferenceAnswersTheWholeSetAndLeavesAColleaguesAlone(t *te
 func TestNotificationPreferenceIsWrittenInTheWriteShapeAndOnlyWhenItMoves(t *testing.T) {
 	e := setupNotices(t)
 	seat := e.asUser(e.recipient)
-	if _, err := e.store.SaveNotificationPreference(seat, classLeadSLA, DeliveryEmail); err != nil {
+	// OFF and not email: the immediate word is the approval class's alone, and
+	// what this case is about is the write shape rather than which transport a
+	// class admits.
+	if _, err := e.store.SaveNotificationPreference(seat, classLeadSLA, DeliveryOff); err != nil {
 		t.Fatalf("saving a choice: %v", err)
 	}
 
@@ -99,7 +102,7 @@ func TestNotificationPreferenceIsWrittenInTheWriteShapeAndOnlyWhenItMoves(t *tes
 
 	// The same choice saved again is not a change. A settings screen that saves
 	// on every render would otherwise fill the ledger with changes nobody made.
-	if _, err := e.store.SaveNotificationPreference(seat, classLeadSLA, DeliveryEmail); err != nil {
+	if _, err := e.store.SaveNotificationPreference(seat, classLeadSLA, DeliveryOff); err != nil {
 		t.Fatalf("saving the same choice again: %v", err)
 	}
 	if audits, announcements = preferenceWrites(t, e); audits != 1 || announcements != 1 {
@@ -118,8 +121,8 @@ func TestNotificationPreferenceIsWrittenInTheWriteShapeAndOnlyWhenItMoves(t *tes
 		e.recipient, classLeadSLA).Scan(&before, &after); err != nil {
 		t.Fatalf("reading the ledger entry: %v", err)
 	}
-	if before != DeliveryEmail || after != DeliveryDigest {
-		t.Fatalf("the ledger records %q → %q, want %q → %q", before, after, DeliveryEmail, DeliveryDigest)
+	if before != DeliveryOff || after != DeliveryDigest {
+		t.Fatalf("the ledger records %q → %q, want %q → %q", before, after, DeliveryOff, DeliveryDigest)
 	}
 }
 

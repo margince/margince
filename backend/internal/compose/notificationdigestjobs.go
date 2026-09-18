@@ -13,6 +13,13 @@ package compose
 // same property makes a missed morning self-healing — a worker down until nine
 // sends the digest on its next tick rather than skipping the day.
 //
+// WHAT A LATER TICK MAY CARRY is bounded by the window rather than by the tick:
+// notices.Window closes at the instant the local morning began, so the nine
+// o'clock tick sends exactly what the five o'clock one would have. Without that
+// ceiling the hourly pass quietly becomes a rolling send — a colleague who held
+// nothing at five gets a one-line "daily digest" at three in the afternoon —
+// and that is not the batch the settings screen offered them.
+//
 // It is SEAT MAIL, on the terms the brief digest and the immediate notice mail
 // are: a colleague being told what reached their own queue, by the route they
 // chose for it. There is no consent question about telling a colleague what
@@ -154,7 +161,7 @@ func (w *notificationDigestWorker) digestWorkspace(ctx context.Context, wsID ids
 	if !pass.due {
 		return nil
 	}
-	candidates, err := w.notices.DigestCandidates(sysCtx, pass.day)
+	candidates, err := w.notices.DigestCandidates(sysCtx, pass.window)
 	if err != nil {
 		return err
 	}
@@ -172,7 +179,7 @@ func (w *notificationDigestWorker) digestWorkspace(ctx context.Context, wsID ids
 			continue
 		}
 		served++
-		if err := w.digestFor(sysCtx, wsID, seat, address, pass.day); err != nil {
+		if err := w.digestFor(sysCtx, wsID, seat, address, pass.window); err != nil {
 			failures = append(failures, fmt.Errorf("morning digest for user %s: %w", seat, err))
 		}
 	}
@@ -190,8 +197,10 @@ type digestPass struct {
 	// due is false when this tick is not the workspace's morning — an hour
 	// before the briefing hour. Nothing follows.
 	due bool
-	// day is the installation's local date, which every claim is filed under.
-	day time.Time
+	// window is the local day every claim is filed under, and the instant that
+	// day's morning began, which is as late as a notice may be and still be in
+	// this message.
+	window notices.Window
 	// roster maps a colleague who has a morning to where a message reaches
 	// them. Absence from it is what skips a seat.
 	roster map[ids.UUID]string
@@ -220,7 +229,14 @@ func (w *notificationDigestWorker) morningFor(
 		if local.Hour() < briefingHour {
 			return nil
 		}
-		pass.due, pass.day = true, day
+		// The ceiling is read in the installation's own zone and not by
+		// subtracting hours from the tick: briefingHour is a LOCAL hour, and a
+		// tick that crossed a daylight-saving boundary is a different number of
+		// hours from that morning than the one before it was.
+		morning := time.Date(local.Year(), local.Month(), local.Day(),
+			briefingHour, 0, 0, 0, local.Location())
+		pass.due = true
+		pass.window = notices.Window{Day: day, Morning: morning.UTC()}
 		pass.roster, err = seatsWithAMorning(ctx, tx)
 		return err
 	})
@@ -238,9 +254,9 @@ func (w *notificationDigestWorker) morningFor(
 // allowed to fail and lose the message; nothing after it is allowed to produce a
 // second one.
 func (w *notificationDigestWorker) digestFor(
-	ctx context.Context, wsID ids.UUID, seat ids.UserID, address string, day time.Time,
+	ctx context.Context, wsID ids.UUID, seat ids.UserID, address string, window notices.Window,
 ) error {
-	wanted, err := w.notices.DigestStillDue(ctx, seat, day)
+	wanted, err := w.notices.DigestStillDue(ctx, seat, window)
 	if err != nil {
 		return err
 	}
@@ -250,7 +266,7 @@ func (w *notificationDigestWorker) digestFor(
 		// rather than failing to.
 		return nil
 	}
-	claimed, err := w.notices.ClaimDigestRun(ctx, seat, day)
+	claimed, err := w.notices.ClaimDigestRun(ctx, seat, window.Day)
 	if err != nil {
 		// RETURNED, not recorded: nothing was claimed, so a later tick is free to
 		// try again, and this is the one failure in the arc a retry can repair.
@@ -262,7 +278,7 @@ func (w *notificationDigestWorker) digestFor(
 		// both pass that read, and the primary key is what decides between them.
 		return nil
 	}
-	w.deliver(ctx, wsID, seat, address, day)
+	w.deliver(ctx, wsID, seat, address, window)
 	return nil
 }
 
@@ -274,7 +290,7 @@ func (w *notificationDigestWorker) digestFor(
 // the failure vanishing — the cause goes onto the claimed row, so a missing
 // morning is answerable.
 func (w *notificationDigestWorker) deliver(
-	sysCtx context.Context, wsID ids.UUID, seat ids.UserID, address string, day time.Time,
+	sysCtx context.Context, wsID ids.UUID, seat ids.UserID, address string, window notices.Window,
 ) {
 	// THE RECIPIENT'S OWN AUTHORITY, bound before a single word of content is
 	// read. Everything below this line runs as the colleague the message is
@@ -283,14 +299,14 @@ func (w *notificationDigestWorker) deliver(
 	if err != nil {
 		w.log.WarnContext(sysCtx, "the morning digest was not sent: the recipient's authority did not resolve",
 			"user", seat, "cause", err)
-		w.recordFailure(sysCtx, seat, day, err.Error())
+		w.recordFailure(sysCtx, seat, window.Day, err.Error())
 		return
 	}
-	lines, err := w.readDigestLines(seatCtx, seat, day)
+	lines, err := w.readDigestLines(seatCtx, seat, window)
 	if err != nil {
 		w.log.WarnContext(sysCtx, "the morning digest was not sent: its content could not be read",
 			"user", seat, "cause", err)
-		w.recordFailure(sysCtx, seat, day, err.Error())
+		w.recordFailure(sysCtx, seat, window.Day, err.Error())
 		return
 	}
 	if lines.total == 0 {
@@ -316,7 +332,7 @@ func (w *notificationDigestWorker) deliver(
 		// second attempt could not tell a refused message from a delivered one.
 		w.log.WarnContext(sysCtx, "the morning digest was attempted and did not go out",
 			"user", seat, "cause", err)
-		w.recordFailure(sysCtx, seat, day, err.Error())
+		w.recordFailure(sysCtx, seat, window.Day, err.Error())
 	}
 }
 

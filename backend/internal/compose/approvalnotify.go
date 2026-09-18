@@ -221,13 +221,16 @@ func (a *ApprovalNotify) announceToSeat(
 	if err != nil || !decidable {
 		return err
 	}
-	// CreateTx rather than Create, so the seat's own preference decides inside
-	// the same transaction the row would land in: a class this colleague
-	// switched off writes nothing at all — no row, no audit entry, no
-	// announcement — and answers the zero id this caller already ignores.
+	// CreateTx rather than Create, so the line and the message asking for it
+	// commit together: a job staged beside a notice that rolled back names a
+	// row the sender will never find, and a notice written without the job it
+	// should have staged is a decision nobody is told about by the route they
+	// chose. The seat's preference decides only the MESSAGE, in stageMail — the
+	// line itself is written whatever they chose, because their centre keeps it
+	// either way.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
 		noticeID, err := a.notices.CreateTx(ctx, tx, approvalNoticeFor(seat, approvalID, staged))
-		if err != nil || noticeID.IsZero() {
+		if err != nil {
 			return err
 		}
 		return a.stageMail(ctx, tx, wsID, seat, noticeID)

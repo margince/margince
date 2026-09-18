@@ -245,6 +245,7 @@ func TestASaveRefusesAChoiceTheVocabularyDoesNotHold(t *testing.T) {
 		{"a class nothing produces", "gossip", DeliveryInApp, "class", "unknown"},
 		{"a transport that does not exist", classAutomation, "carrier_pigeon", "delivery", "unknown"},
 		{"muting a colleague's coaching", classCoach, DeliveryOff, "delivery", "value_not_allowed"},
+		{"mailing a class with no sending leg", classAutomation, DeliveryEmail, "delivery", "value_not_allowed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -260,5 +261,62 @@ func TestASaveRefusesAChoiceTheVocabularyDoesNotHold(t *testing.T) {
 				t.Fatalf("the refusal carries code %q, want %q", parse.Code, tc.code)
 			}
 		})
+	}
+}
+
+// IMMEDIATE MAIL IS THE APPROVAL CLASS'S ALONE, because it is the only class a
+// producer stages a message for. Taking the word anywhere else would record a
+// choice the product does not keep: the reader would stop watching the screen
+// and wait for mail nothing was ever going to send.
+//
+// The refusal narrows the ROUTE and not the possibility, which the second half
+// holds: every class still reaches a mailbox through the daily batch.
+func TestOnlyTheApprovalClassTakesImmediateMail(t *testing.T) {
+	t.Parallel()
+	for _, class := range noticeClasses {
+		err := checkPreference(class, DeliveryEmail)
+		if class == ClassApprovalPending {
+			if err != nil {
+				t.Errorf("the one class with a sending leg refuses email: %v", err)
+			}
+			continue
+		}
+		var parse *values.ParseError
+		if !errors.As(err, &parse) || parse.Code != "value_not_allowed" {
+			t.Errorf("%q accepts email and nothing mails it, so the reader waits for a message that never comes: %v", class, err)
+		}
+	}
+	for _, class := range noticeClasses {
+		if err := checkPreference(class, DeliveryDigest); err != nil {
+			t.Errorf("%q cannot be batched, so it reaches a mailbox by no route at all: %v", class, err)
+		}
+	}
+}
+
+// THE MUTING INVERSION HAS A BLIND SPOT, AND THIS IS WHAT KEEPS IT HARMLESS.
+//
+// mutedKinds reads classByKind, which places every kind a system flow raises.
+// The coaching kinds are absent from it — ClassFor places those off the
+// contract's own vocabulary — so no coaching kind can ever be named as muted.
+// That is only safe while coach is a class nobody may switch off.
+//
+// The day it stopped being true nothing else would fail: the lane would quietly
+// go on carrying a class its reader had switched off, and no assertion anywhere
+// would be looking. Derived from the two maps rather than naming coach, so a
+// sixth class placed the same way is covered the day it appears.
+func TestAClassOutsideTheKindMapCannotBeMuted(t *testing.T) {
+	t.Parallel()
+	placed := map[string]bool{}
+	for _, class := range classByKind {
+		placed[class] = true
+	}
+	for _, class := range noticeClasses {
+		if placed[class] {
+			continue
+		}
+		if err := checkPreference(class, DeliveryOff); err == nil {
+			t.Errorf("%q may be switched off and no kind places into it, so mutedKinds can never "+
+				"name it and the reader's lane would go on carrying the class they muted", class)
+		}
 	}
 }

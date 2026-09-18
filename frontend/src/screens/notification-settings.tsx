@@ -35,17 +35,28 @@ const CHOICES = ["off", "in_app", "email", "digest"] as const;
 /**
  * What this class may be set to.
  *
- * `coach` is the one class that may not be switched off — the server answers
- * 422 — so the option is not offered. Showing a choice that cannot be made is
- * worse than omitting it: the reader picks it, is refused, and learns nothing
- * about why.
+ * Two classes narrow the four, and both mirror a refusal the server answers 422
+ * for. Showing a choice that cannot be made is worse than omitting it: the
+ * reader picks it, is refused, and learns nothing about why.
+ *
+ * `coach` may not be switched off — a colleague's words are not the product's
+ * housekeeping to drop.
+ *
+ * Only `approval_pending` may be set to `email`. It is the one class with a
+ * sending leg: its notice stages a message in the transaction that writes it,
+ * and no other producer stages one at all. Offering the word elsewhere would
+ * promise mail that was never going to arrive, which is worse than not offering
+ * it — the reader stops watching the screen. `digest` reaches every class, so
+ * mail is still on the table for all six.
  */
 function choicesFor(
   notificationClass: NotificationClass,
 ): readonly NotificationDelivery[] {
-  return notificationClass === "coach"
-    ? CHOICES.filter((choice) => choice !== "off")
-    : CHOICES;
+  return CHOICES.filter(
+    (choice) =>
+      !(choice === "off" && notificationClass === "coach") &&
+      !(choice === "email" && notificationClass !== "approval_pending"),
+  );
 }
 
 /**

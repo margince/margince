@@ -303,16 +303,15 @@ func TestAPreferenceChangedBeforeTheSendIsASkipAndNotAFailure(t *testing.T) {
 // reason every interpolated value goes through OneLine.
 func TestTheNotificationMailCarriesNoLineTheNoticeForged(t *testing.T) {
 	e := setupNoticeMail(t)
-	seatCtx := e.e.As(e.e.AdminUser, nil, integration.AdminPerms)
-	if _, err := notices.NewStore(e.db).SaveNotificationPreference(
-		seatCtx, "automation", notices.DeliveryEmail); err != nil {
-		t.Fatalf("routing the class to email: %v", err)
-	}
-	// Through the store's own writer under the system principal, the way an
-	// automation's notify leg records one.
+	// The approval class, on its standing default, because it is the only class
+	// with a sending leg — the others are refused the word and so could never
+	// reach this renderer at all.
+	//
+	// Through the store's own writer under the system principal, the way the
+	// fan-out's own leg records one.
 	notice, err := notices.NewStore(e.db).Create(e.proposerCtx(ids.Nil), notices.NewNotice{
 		Recipient: ids.From[ids.UserKind](e.e.AdminUser),
-		Kind:      "automation",
+		Kind:      notices.KindApprovalPending,
 		Subject:   "Quota reached\nFrom: finance@margince.test",
 		Body:      "the first line\nSubject: something else entirely",
 		DedupeKey: "forged:" + e.e.AdminUser.String(),

@@ -7,9 +7,8 @@ package notices
 
 // The notification centre against a real database: the reader's whole history
 // rather than the unread lane, paged by a token they cannot forge, settled in
-// one act — and a class the seat switched off never reaching the table at all,
-// which is the only place suppression can be proved, because a notice the
-// filter merely hides is still a row somebody can read.
+// one act — and a class the seat switched off recorded like any other, listed
+// in the centre and absent from the two surfaces that interrupt somebody.
 
 import (
 	"context"
@@ -227,41 +226,38 @@ func TestNotificationCentreSettlesEverythingOnceAndOnlyForItsReader(t *testing.T
 	}
 }
 
-// A class this seat switched off is not written at all. Filtering it on the
-// read would leave the row in the table for every other reader of it — the
-// digest sweep, an export, a support query — and the seat's decision would hold
-// only where somebody remembered it.
-func TestNotificationCentreNeverRecordsAClassTheSeatSwitchedOff(t *testing.T) {
+// A CLASS THIS SEAT SWITCHED OFF IS RECORDED AND NOT DELIVERED, which is the
+// whole of what a preference governs.
+//
+// Dropping the row instead would be the product deciding that switching a lane
+// off means never being told — and the line is still a thing that changed what
+// this reader believes about their data, which is the one kind of notice the
+// product raises at all. So the centre lists it, and the two surfaces that
+// interrupt somebody — the Worklist's lane and the badge over it — do not
+// count it.
+func TestAMutedClassIsListedInTheCentreAndReachesNoLane(t *testing.T) {
 	e := setupNotices(t)
 	if _, err := e.store.SaveNotificationPreference(
 		e.asUser(e.recipient), classAutomation, DeliveryOff); err != nil {
 		t.Fatalf("switching a class off: %v", err)
 	}
 
-	suppressed, err := e.store.Create(e.engineCtx(), NewNotice{
+	muted, err := e.store.Create(e.engineCtx(), NewNotice{
 		Recipient: e.recipient, Kind: "automation", Subject: "A deal you own changed stage",
 	})
 	if err != nil {
-		t.Fatalf("Create of a suppressed notice: %v", err)
+		t.Fatalf("Create of a muted notice: %v", err)
 	}
-	if !suppressed.IsZero() {
-		t.Errorf("a suppressed notice answered id %s, want the zero id — a caller holding an id for a row nobody wrote", suppressed)
+	if muted.IsZero() {
+		t.Fatal("a muted class was discarded — a preference decides delivery, never whether the line exists")
 	}
+	// A class the seat did NOT switch off, so every difference below is the
+	// preference and not the lane failing to carry anything at all.
+	heard := e.seedNotice(t, e.recipient, "A lead's first response is overdue")
 
-	// A class the seat did NOT switch off still lands, so suppression is the
-	// seat's decision and not an outage.
-	landed, err := e.store.Create(e.engineCtx(), NewNotice{
-		Recipient: e.recipient, Kind: "lead_sla", Subject: "A lead's first response is overdue",
-	})
-	if err != nil {
-		t.Fatalf("Create of a delivered notice: %v", err)
-	}
-	if landed.IsZero() {
-		t.Fatal("a class the seat never switched off was suppressed")
-	}
-
-	// Nothing at all: no row, no ledger entry, no announcement. Each is a
-	// separate way a suppressed notice reaches somebody.
+	// The row, its ledger entry and its announcement all stand: a muted notice
+	// is an ordinary write, and anything less would leave the centre showing a
+	// line the audit spine cannot account for.
 	var rows, audits, events int
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT (SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND kind = 'automation'),
@@ -272,18 +268,75 @@ func TestNotificationCentreNeverRecordsAClassTheSeatSwitchedOff(t *testing.T) {
 		         WHERE envelope->>'type' = 'notice.created'
 		           AND envelope->'payload'->>'kind' = 'automation')`,
 		e.recipient).Scan(&rows, &audits, &events); err != nil {
-		t.Fatalf("counting what the suppressed notice left behind: %v", err)
+		t.Fatalf("counting what the muted notice left behind: %v", err)
 	}
-	if rows != 0 || audits != 0 || events != 0 {
-		t.Errorf("a suppressed notice left %d rows, %d ledger entries and %d announcements, want none of each", rows, audits, events)
+	if rows != 1 || audits != 1 || events != 1 {
+		t.Errorf("a muted notice left %d rows, %d ledger entries and %d announcements, want one of each",
+			rows, audits, events)
 	}
 
+	// The centre is where it stays findable, newest first beside the rest.
 	page, err := e.store.ListFor(e.asUser(e.recipient), 10, "")
 	if err != nil {
 		t.Fatalf("ListFor: %v", err)
 	}
-	if got := itemIDs(page); !slices.Equal(got, []ids.UUID{landed}) {
-		t.Errorf("the centre holds %v, want only the notice that was delivered (%s)", got, landed)
+	if got := itemIDs(page); !slices.Contains(got, muted) {
+		t.Errorf("the centre holds %v, and the muted notice (%s) is not among them", got, muted)
+	}
+	// The badge counts the lane and not the list, so it is the narrower of the
+	// two: one interruption standing, over two unread lines on the page.
+	if page.UnreadCount != 1 {
+		t.Errorf("the badge counts %d, want only the 1 notice this reader did not mute", page.UnreadCount)
+	}
+
+	// The Worklist's lane is the other surface that interrupts, and it declines
+	// the muted line for the same reason the badge does.
+	lane, err := e.store.UnreadFor(e.asUser(e.recipient), 10)
+	if err != nil {
+		t.Fatalf("UnreadFor: %v", err)
+	}
+	if len(lane) != 1 || lane[0].ID != heard {
+		t.Errorf("the lane holds %+v, want only the notice this reader did not mute (%s)", lane, heard)
+	}
+}
+
+// Settling the centre clears the muted lines too, and says it cleared only what
+// the reader could see.
+//
+// Leaving them unread would strand rows in the partial unread index that no act
+// of the reader's could reach: they are hidden from the badge, so nothing they
+// can press would ever settle them. The FIGURE is the other half — it may not
+// exceed the badge it replaces, or a reader watching "1" is told three things
+// were answered.
+func TestSettlingTheCentreClearsMutedLinesAndCountsOnlyTheBadge(t *testing.T) {
+	e := setupNotices(t)
+	if _, err := e.store.SaveNotificationPreference(
+		e.asUser(e.recipient), classAutomation, DeliveryOff); err != nil {
+		t.Fatalf("switching a class off: %v", err)
+	}
+	if _, err := e.store.Create(e.engineCtx(), NewNotice{
+		Recipient: e.recipient, Kind: "automation", Subject: "A deal you own changed stage",
+	}); err != nil {
+		t.Fatalf("raising the muted notice: %v", err)
+	}
+	e.seedNotice(t, e.recipient, "A lead's first response is overdue")
+
+	shown, err := e.store.MarkAllRead(e.asUser(e.recipient))
+	if err != nil {
+		t.Fatalf("settling the centre: %v", err)
+	}
+	if shown != 1 {
+		t.Errorf("the settle reports %d notices, want the 1 the badge was carrying", shown)
+	}
+
+	var stillUnread int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND read_at IS NULL`,
+		e.recipient).Scan(&stillUnread); err != nil {
+		t.Fatalf("counting what the settle left unread: %v", err)
+	}
+	if stillUnread != 0 {
+		t.Errorf("%d notice(s) are still unread after the settle — a muted line nothing shows is one nobody can clear", stillUnread)
 	}
 }
 

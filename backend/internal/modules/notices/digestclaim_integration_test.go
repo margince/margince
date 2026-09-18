@@ -15,6 +15,7 @@ package notices
 // principal guard on the content read is real rather than a comment.
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -23,12 +24,30 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// digestDay is the local day a morning is filed under, in LocalDayAt's own
-// convention: the installation's date carried at UTC midnight.
-var digestDay = time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
+// digestWindow is the morning these cases read against: a local day in
+// LocalDayAt's own convention — the installation's date carried at UTC midnight
+// — and the instant that day's briefing hour arrived, which is as late as a
+// notice may be recorded and still be in the message.
+//
+// A FIXED DAY rather than one derived from the clock, so a case reads the same
+// window whatever hour the suite runs at.
+var digestWindow = Window{
+	Day:     time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC),
+	Morning: time.Date(2026, 6, 4, 5, 0, 0, 0, time.UTC),
+}
+
+// digestRecordedAt is when the cases below raised their notices: the same local
+// day, before its morning, which is inside the window at both ends.
+var digestRecordedAt = time.Date(2026, 6, 4, 2, 0, 0, 0, time.UTC)
 
 // raiseAutomation records one notice the way the automation engine's notify
-// action does.
+// action does, and places its clock inside the window the cases read.
+//
+// The row is written by the real writer and only its TIMESTAMP is moved.
+// created_at is the column's own default, so there is no clock to inject; a
+// case that left it at the database's wall time would be reading a fixed window
+// the row falls outside of, and deriving the window from time.Now() instead
+// would make every case here pass or fail by the hour it ran at.
 func (e *noticeEnv) raiseAutomation(t *testing.T, recipient ids.UserID, subject string) ids.UUID {
 	t.Helper()
 	id, err := e.store.Create(e.engineCtx(), NewNotice{
@@ -40,13 +59,17 @@ func (e *noticeEnv) raiseAutomation(t *testing.T, recipient ids.UserID, subject 
 	if err != nil {
 		t.Fatalf("raising %q: %v", subject, err)
 	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE notice SET created_at = $2 WHERE id = $1`, id, digestRecordedAt); err != nil {
+		t.Fatalf("placing the clock on %q: %v", subject, err)
+	}
 	return id
 }
 
 func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 	e := setupNotices(t)
 
-	claimed, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestDay)
+	claimed, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day)
 	if err != nil {
 		t.Fatalf("claiming the morning: %v", err)
 	}
@@ -56,7 +79,7 @@ func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 
 	// A second tick of the same local day finds it spent. This is the whole of
 	// what stands between an hourly pass and twenty-four messages.
-	again, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestDay)
+	again, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day)
 	if err != nil {
 		t.Fatalf("the second tick failed rather than declining: %v", err)
 	}
@@ -66,10 +89,10 @@ func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 
 	// Recording a failure does NOT hand the morning back: the attempt is spent
 	// either way, and a releasable claim is the retry loop this design refuses.
-	if err := e.store.DigestFailed(e.engineCtx(), e.recipient, digestDay, "relay refused"); err != nil {
+	if err := e.store.DigestFailed(e.engineCtx(), e.recipient, digestWindow.Day, "relay refused"); err != nil {
 		t.Fatalf("recording the cause: %v", err)
 	}
-	afterFailure, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestDay)
+	afterFailure, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day)
 	if err != nil {
 		t.Fatalf("claiming after a recorded failure: %v", err)
 	}
@@ -78,7 +101,7 @@ func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 	}
 
 	// The next local day is a new morning and gets its own.
-	tomorrow, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestDay.AddDate(0, 0, 1))
+	tomorrow, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day.AddDate(0, 0, 1))
 	if err != nil {
 		t.Fatalf("claiming the next morning: %v", err)
 	}
@@ -93,7 +116,7 @@ func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 func TestADigestFailureWithoutAClaimIsRefused(t *testing.T) {
 	e := setupNotices(t)
 
-	err := e.store.DigestFailed(e.engineCtx(), e.recipient, digestDay, "relay refused")
+	err := e.store.DigestFailed(e.engineCtx(), e.recipient, digestWindow.Day, "relay refused")
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("recording a cause against an unclaimed morning answered %v, want the absent sentinel", err)
 	}
@@ -112,16 +135,16 @@ func TestAMorningDigestIsOnlyReadableByItsOwnRecipient(t *testing.T) {
 	}
 	e.raiseAutomation(t, e.recipient, "A proposal you own was accepted")
 
-	if _, err := e.store.DigestBody(e.asUser(e.other), e.recipient, digestDay); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.store.DigestBody(e.asUser(e.other), e.recipient, digestWindow); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a colleague read somebody else's digest and got %v", err)
 	}
 	// The engine's own system principal is refused too: there is no human behind
 	// it, so there is no scope for the re-scoping to run against.
-	if _, err := e.store.DigestBody(e.engineCtx(), e.recipient, digestDay); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.store.DigestBody(e.engineCtx(), e.recipient, digestWindow); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the system principal read a colleague's digest and got %v", err)
 	}
 
-	held, err := e.store.DigestBody(e.asUser(e.recipient), e.recipient, digestDay)
+	held, err := e.store.DigestBody(e.asUser(e.recipient), e.recipient, digestWindow)
 	if err != nil {
 		t.Fatalf("the recipient reading their own digest: %v", err)
 	}
@@ -142,7 +165,7 @@ func TestOnlySeatsWhoBatchedAClassAreDigestCandidates(t *testing.T) {
 	e.raiseAutomation(t, e.recipient, "A proposal you own was accepted")
 	e.raiseAutomation(t, e.other, "A renewal you own is due next week")
 
-	due, err := e.store.DigestCandidates(e.engineCtx(), digestDay)
+	due, err := e.store.DigestCandidates(e.engineCtx(), digestWindow)
 	if err != nil {
 		t.Fatalf("listing the seats due a digest: %v", err)
 	}
@@ -152,10 +175,10 @@ func TestOnlySeatsWhoBatchedAClassAreDigestCandidates(t *testing.T) {
 
 	// Once the day is claimed, the seat leaves the list: the anti-join is what
 	// keeps the hourly tick from re-reading a morning already sent.
-	if _, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestDay); err != nil {
+	if _, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day); err != nil {
 		t.Fatalf("claiming the morning: %v", err)
 	}
-	after, err := e.store.DigestCandidates(e.engineCtx(), digestDay)
+	after, err := e.store.DigestCandidates(e.engineCtx(), digestWindow)
 	if err != nil {
 		t.Fatalf("listing the seats due a digest after the claim: %v", err)
 	}

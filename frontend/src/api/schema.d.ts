@@ -14887,6 +14887,12 @@ export interface paths {
          *     COLLEAGUE's words placed in this seat's queue rather than the product's own
          *     housekeeping: dropping them silently would leave the lead who wrote them believing they
          *     had been read.
+         *
+         *     `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
+         *     is the one class a producer stages a message for; the others would record a word the
+         *     product does not keep, and a reader who chose it would stop watching the screen while
+         *     waiting for mail that was never going to arrive. `digest` is how every other class
+         *     reaches a mailbox.
          */
         put: operations["saveNotificationPreference"];
         post?: never;
@@ -18771,9 +18777,20 @@ export interface components {
          */
         NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system";
         /**
-         * @description Where a class of notification reaches its reader. `in_app` is the notification centre and
-         *     the Worklist's lane alone; `email` sends a message as each one lands; `digest` holds them
-         *     for one rolled-up send; `off` records the notice without reaching out about it.
+         * @description Where a class of notification reaches its reader.
+         *
+         *     `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
+         *     sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
+         *     the only class with a sending leg, and taking the word for any other would record a
+         *     choice the product does not keep; the others answer `422 value_not_allowed` and reach a
+         *     mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+         *     following morning, and is accepted for every class.
+         *
+         *     `off` records the notice and stops there: no lane, no badge, no message. It does NOT
+         *     discard it — the centre lists it like any other, because a preference governs DELIVERY
+         *     and never existence, and a class switched off must not silently drop something that
+         *     changed what the reader believes about their data. Going to look is not being
+         *     interrupted.
          * @enum {string}
          */
         NotificationDelivery: "off" | "in_app" | "email" | "digest";
@@ -18838,7 +18855,11 @@ export interface components {
         };
         /** @description One window of the calling contact's notification centre. */
         NotificationPage: {
-            /** @description Newest first, read and unread. Empty is the honest answer for a seat nothing has told anything. */
+            /**
+             * @description Newest first, read and unread, including the classes this reader set to `off` —
+             *     those reach no lane and no badge, and this is where they remain findable. Empty is
+             *     the honest answer for a seat nothing has told anything.
+             */
             items: components["schemas"]["NotificationItem"][];
             /**
              * @description Send this back as `cursor` to continue past the last line of this page.
@@ -18849,13 +18870,16 @@ export interface components {
              */
             next_cursor?: string;
             /**
-             * @description How many unsettled notices this centre holds for the reader — all of them and not
-             *     this page's share, because a badge that fell as somebody scrolled would be counting
-             *     the wrong thing.
+             * @description How many unsettled notices are waiting on the reader — all of them and not this
+             *     page's share, because a badge that fell as somebody scrolled would be counting the
+             *     wrong thing.
              *
-             *     It counts what the centre SHOWS, so the reader's own stage moves are outside it the
-             *     same way they are outside `items`. A badge numbering lines the panel then does not
-             *     list is a badge nobody can clear.
+             *     IT COUNTS THE LANE AND NOT THE LIST, so it is the narrower of the two. The reader's
+             *     own stage moves are outside it, as they are outside `items`. A class they set to
+             *     `off` is outside it too and still listed in `items`: the count is the interruption
+             *     they declined, and the line is the record they did not. So `unread_count` can be
+             *     lower than the unsettled lines on the page, and never higher — a badge numbering
+             *     rows the panel does not list is a badge nobody can clear.
              */
             unread_count: number;
         };

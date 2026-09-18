@@ -40,30 +40,58 @@ import (
 )
 
 // digestWindowSQL is how much of a seat's queue one morning considers: still
-// unread, and recorded no earlier than the bound the caller binds at boundAt.
+// unread, and recorded inside the span the caller binds at fromAt and untilAt.
 //
-// THE PLACEHOLDER IS READ OFF THE ARGUMENT LIST, not written into the text.
+// THE PLACEHOLDERS ARE READ OFF THE ARGUMENT LIST, not written into the text.
 // Two statements compose this fragment and they do not carry the same other
 // parameters, so a fragment naming a fixed $N is correct only for as long as
-// both of them happen to bind the bound in that position — and the day one
-// grows a parameter ahead of it, the window silently starts comparing
+// both of them happen to bind the bounds in those positions — and the day one
+// grows a parameter ahead of them, the window silently starts comparing
 // created_at against whatever that new argument is.
 //
 // The self-made stage moves come out through notTheReadersOwnStageMove, which
 // every reader of this table composes, so a morning does not tell a rep about
 // the stage changes they made themselves.
 //
-// NO UPPER BOUND, which is what makes the promise ONE A DAY rather than one
-// each morning. The pass ticks hourly from the local morning and the claim is
-// per (recipient, day): a colleague holding nothing when the morning opened
-// takes no claim then, so their first unread of the afternoon makes them a
-// candidate on the next tick and their batch leaves that day. Nothing
-// downstream says otherwise — the subject names no time of day for this reason.
-func digestWindowSQL(boundAt int) string {
+// THE CEILING IS WHAT MAKES THIS A MORNING BATCH. The pass ticks hourly from
+// the local morning, so without it a colleague who held nothing when the
+// morning opened takes no claim then, and their first unread of the afternoon
+// sends them a one-line "digest" on the next tick — a delayed immediate mail
+// wearing a batch's name, which is not the daily digest the settings screen
+// offered them. Bound at the instant that local morning began, an afternoon
+// notice waits for tomorrow's message instead, and everything that was waiting
+// arrives together.
+//
+// It costs the lane nothing in self-healing: a worker down until nine still
+// finds every notice from before five, because the bound is the MORNING and
+// not the tick.
+func digestWindowSQL(fromAt, untilAt int) string {
 	return fmt.Sprintf(`notice.read_at IS NULL
 	   AND notice.created_at >= $%d
-	   AND `, boundAt) + notTheReadersOwnStageMove
+	   AND notice.created_at < $%d
+	   AND `, fromAt, untilAt) + notTheReadersOwnStageMove
 }
+
+// Window is the span one message considers, and the local day it is filed
+// under.
+//
+// The two travel together because every caller needs both and they are read
+// from one answer: the pass resolves the installation's local day and the
+// instant its briefing hour arrived in a single look at the clock, and three
+// signatures each taking two bare times are three a caller can fill in the
+// wrong order.
+type Window struct {
+	// Day is the installation's local date, carried at UTC midnight, which the
+	// per-recipient claim is filed under.
+	Day time.Time
+	// Morning is the instant that day's briefing hour arrived, and the window's
+	// ceiling. A notice recorded after it belongs to the next morning.
+	Morning time.Time
+}
+
+// from is where this window opens — see digestReachDays for why it is two
+// local-day labels back and not one.
+func (w Window) from() time.Time { return w.Day.AddDate(0, 0, -digestReachDays) }
 
 // digestReachDays is how far back a morning's window opens, counted in the
 // local-day labels LocalDayAt produces.
@@ -78,6 +106,9 @@ func digestWindowSQL(boundAt int) string {
 // setting can name. The cost is that a notice still unread a day later is
 // quoted again the following morning, which is the safe direction for a message
 // whose whole job is to say what is still waiting on somebody.
+// It is the FLOOR and Window.Morning is the ceiling; the two together are what
+// a reader is promised — one message each morning, carrying everything of
+// theirs that was still waiting when that morning opened.
 const digestReachDays = 2
 
 // digestRunField names the claim in an audit image, so the word a reader greps
@@ -100,11 +131,11 @@ const digestRunField = "digest_run"
 // The statement and its arguments are built together, each placeholder written
 // from the position the value actually took — which is why this is a function
 // and not the constant it used to be.
-func digestCandidateQuery(day time.Time, only *ids.UUID) (string, []any) {
+func digestCandidateQuery(w Window, only *ids.UUID) (string, []any) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	claimedFor := arg(day)
-	window := digestWindowSQL(arg(digestReach(day)))
+	claimedFor := arg(w.Day)
+	window := digestWindowSQL(arg(w.from()), arg(w.Morning))
 	seat := arg(only)
 	return fmt.Sprintf(`
 	SELECT notice.recipient_user_id, notice.kind
@@ -134,10 +165,10 @@ type waitingSeat struct {
 // narrows this list against identity's own roster, because that is a question
 // about a table this module does not own. What a digest may QUOTE is a third
 // question, asked under the recipient's own principal, in DigestBody.
-func (s *Store) DigestCandidates(ctx context.Context, day time.Time) ([]ids.UserID, error) {
+func (s *Store) DigestCandidates(ctx context.Context, w Window) ([]ids.UserID, error) {
 	var due []ids.UserID
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		waiting, txErr := waitingSeats(ctx, tx, day, nil)
+		waiting, txErr := waitingSeats(ctx, tx, w, nil)
 		if txErr != nil {
 			return txErr
 		}
@@ -167,10 +198,10 @@ func (s *Store) DigestCandidates(ctx context.Context, day time.Time) ([]ids.User
 // colleague's one attempt for the day on a class they had just moved back to
 // their screen, so the morning they changed their mind on could never be sent
 // and nothing would say why.
-func (s *Store) DigestStillDue(ctx context.Context, user ids.UserID, day time.Time) (bool, error) {
+func (s *Store) DigestStillDue(ctx context.Context, user ids.UserID, w Window) (bool, error) {
 	var due bool
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		waiting, txErr := waitingSeats(ctx, tx, day, &user)
+		waiting, txErr := waitingSeats(ctx, tx, w, &user)
 		if txErr != nil || len(waiting) == 0 {
 			return txErr
 		}
@@ -258,7 +289,7 @@ func (s *Store) DigestFailed(ctx context.Context, user ids.UserID, day time.Time
 // record it points at is re-asked by the sending lane, against the recipient's
 // scope, at the moment the message is rendered — the stored reference is a fact
 // about the day the notice was written, never a permission.
-func (s *Store) DigestBody(ctx context.Context, user ids.UserID, day time.Time) ([]Notice, error) {
+func (s *Store) DigestBody(ctx context.Context, user ids.UserID, w Window) ([]Notice, error) {
 	seat, err := actingSeat(ctx, "reading your morning digest")
 	if err != nil {
 		return nil, err
@@ -270,7 +301,7 @@ func (s *Store) DigestBody(ctx context.Context, user ids.UserID, day time.Time) 
 	}
 	var batched []Notice
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		held, txErr := unreadInWindow(ctx, tx, user, day)
+		held, txErr := unreadInWindow(ctx, tx, user, w)
 		if txErr != nil {
 			return txErr
 		}
@@ -287,12 +318,12 @@ func (s *Store) DigestBody(ctx context.Context, user ids.UserID, day time.Time) 
 // One statement for both, because they are one question asked at two moments —
 // the sweep and the re-ask before the claim — and a second spelling is how the
 // two would come to disagree about who is owed a morning.
-func waitingSeats(ctx context.Context, tx pgx.Tx, day time.Time, only *ids.UserID) ([]waitingSeat, error) {
+func waitingSeats(ctx context.Context, tx pgx.Tx, w Window, only *ids.UserID) ([]waitingSeat, error) {
 	var seat *ids.UUID
 	if only != nil {
 		seat = &only.UUID
 	}
-	query, args := digestCandidateQuery(day, seat)
+	query, args := digestCandidateQuery(w, seat)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("listing the recipients with notices waiting: %w", err)
@@ -321,11 +352,11 @@ func waitingSeats(ctx context.Context, tx pgx.Tx, day time.Time, only *ids.UserI
 // and a LIMIT here would make the message's own tail count a lie: it quotes a
 // handful and says how many more are waiting, and "how many more" has to be all
 // of them.
-func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, day time.Time) ([]Notice, error) {
+func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) ([]Notice, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	recipient := arg(user)
-	window := digestWindowSQL(arg(digestReach(day)))
+	window := digestWindowSQL(arg(w.from()), arg(w.Morning))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT notice.id, notice.kind, notice.subject, notice.body,
 		       notice.target_type, notice.target_id, notice.created_at, notice.origin
@@ -427,7 +458,3 @@ func (b *batchedClasses) anyOf(ctx context.Context, tx pgx.Tx, kinds []string) (
 	}
 	return false, nil
 }
-
-// digestReach is where this morning's window opens — see digestReachDays for
-// why it is two labels back and not one.
-func digestReach(day time.Time) time.Time { return day.AddDate(0, 0, -digestReachDays) }

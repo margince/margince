@@ -106,9 +106,8 @@ type NewNotice struct {
 // notice that already exists would put the same line on the same Worklist
 // twice by another route.
 //
-// It is CreateTx in a transaction of its own, so the recipient's preference
-// decides here too: a class this seat switched off writes nothing and answers
-// the zero id, and CreateTx states that contract in full.
+// It is CreateTx in a transaction of its own, for the producers whose notice is
+// the whole of what their change writes.
 func (s *Store) Create(ctx context.Context, in NewNotice) (ids.UUID, error) {
 	var id ids.UUID
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -128,30 +127,23 @@ func (s *Store) Create(ctx context.Context, in NewNotice) (ids.UUID, error) {
 // while theirs rolls back, which tells a reader about something that never
 // happened.
 //
-// SUPPRESSION IS HERE AND NOT ON THE READ. A seat who switched a class off has
-// decided the product may not raise it, and a row written anyway is still read
-// by everything else that reads the table — the digest sweep, an export, a
-// support query — so the decision would hold only where somebody remembered it.
-// Nothing is written: no row, no ledger entry, no announcement. The answer is
-// the zero id, which every caller already ignores.
+// A PREFERENCE NARROWS DELIVERY AND NEVER EXISTENCE, which is why no preference
+// is read here. The row is written whatever the recipient chose, and the
+// centre lists it: switching a class off is a decision about being
+// INTERRUPTED, and a write that skipped the row would silently discard
+// something that changed what the reader believes about their data — the one
+// outcome the preference model was ruled out of. What `off` actually removes is
+// the Worklist's lane, the unread badge and any message, each of which narrows
+// where it is decided: inTheReadersLane for the two reads, and the sending legs'
+// own delivery check for the mail.
 //
-// An unplaced kind is a plain error rather than a delivery under a default,
-// because it is a programming defect: a producer spelling a kind ClassFor does
-// not place would otherwise arrive under a setting nobody was ever shown.
+// An unplaced kind is a plain error rather than a notice recorded under no
+// class at all, because it is a programming defect: a producer spelling a kind
+// ClassFor does not place would otherwise land a line in a centre whose
+// settings page has no row governing it, and no reader could ever route it.
 func (s *Store) CreateTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID, error) {
-	class, err := ClassFor(in.Kind)
-	if err != nil {
+	if _, err := ClassFor(in.Kind); err != nil {
 		return ids.Nil, err
-	}
-	delivery, err := DeliveryFor(ctx, tx, in.Recipient, class)
-	if err != nil {
-		return ids.Nil, err
-	}
-	if delivery == DeliveryOff {
-		// Unreachable for a colleague's coaching, which cannot be switched off
-		// — SaveNotificationPreference refuses it — and guarded here anyway,
-		// because the thing holding that is a rule in another file.
-		return ids.Nil, nil
 	}
 	// No evidence: a system flow's authority is the engine's own, which the
 	// audit row's actor already states.
@@ -162,9 +154,9 @@ func (s *Store) CreateTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID
 // insertNotice is the write in a transaction of its own — the coaching path,
 // whose notice is the whole of what its request changes.
 //
-// It carries no preference check, unlike CreateTx: a colleague's words are not
-// the product's own housekeeping to suppress, and coaching is a class a seat
-// may route but not switch off.
+// It carries no kind check, unlike CreateTx: the coaching kinds are the
+// contract's own closed vocabulary, and the handler above has already refused
+// anything outside it before a store call is made at all.
 func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[string]any) (Notice, error) {
 	var written Notice
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -307,6 +299,27 @@ const notTheReadersOwnStageMove = `NOT coalesce(
 	AND lower(origin->>'actor_id') IN
 	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
 
+// inTheReadersLane is what the product may put in front of a reader without
+// being asked: not a stage move they made themselves, and not a class they
+// switched off.
+//
+// ONE FRAGMENT because every lane reader composes both halves — the Worklist's
+// unread query, the notification centre's badge, and the figure the bulk settle
+// answers with. A reader that composed one and forgot the other would either
+// interrupt a colleague who asked not to be, or report a number about rows they
+// were never shown.
+//
+// It narrows the LANE and not the table. The centre's own list composes
+// notTheReadersOwnStageMove alone, because a muted notice is still the reader's
+// to find — that is the whole difference between governing delivery and
+// governing existence.
+//
+// The muted kinds arrive as one text[] argument rather than a rendered list, so
+// nothing off a preference row is ever formatted into a statement.
+func inTheReadersLane(mutedAt int) string {
+	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d)", mutedAt)
+}
+
 // UnreadFor answers the CALLING contact's own unread notices, newest first,
 // bounded. The contact comes from the bound principal and is not a parameter
 // — another contact's notices cannot be expressed — and a caller with no
@@ -319,13 +332,21 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	}
 	var unread []Notice
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, txErr := tx.Query(ctx, `
+		muted, txErr := mutedFor(ctx, tx, seat)
+		if txErr != nil {
+			return txErr
+		}
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		recipient, page := arg(seat), arg(limit)
+		lane := inTheReadersLane(arg(muted))
+		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
 			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
 			  FROM notice
-			 WHERE recipient_user_id = $1 AND read_at IS NULL
-			   AND `+notTheReadersOwnStageMove+`
+			 WHERE recipient_user_id = $%d AND read_at IS NULL
+			   AND %s
 			 ORDER BY created_at DESC, id DESC
-			 LIMIT $2`, seat, limit)
+			 LIMIT $%d`, recipient, lane, page), args...)
 		if txErr != nil {
 			return txErr
 		}
