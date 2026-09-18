@@ -154,7 +154,27 @@ func TestABasisSurvivesAStopThatDoesNotReachTheSend(t *testing.T) {
 // bindsEveryCategory lets decideOne answer without resolving the record, which
 // is only sound when the kind stops every category. A restatement is how the
 // two drift, so the implication is asserted rather than trusted.
+//
+// AT EVERY PURPOSE PAIRING, not only at the unscoped one. The early exit reads
+// stopKinds, which drops the purpose scoping, so it cannot tell a narrow row
+// from a broad one — sound only while no absolute kind consults a purpose.
+// Today none does: suppressionBinds compares purposes in the objection arm
+// alone, and objection is one of the scoped kinds the early exit declines. The
+// day a second kind starts carrying a purpose, the shortcut would deny a send
+// the rule would have let through, and nothing else in this package would
+// notice. So the pairings are asked here rather than argued in a comment.
 func TestTheEarlyExitAgreesWithTheRule(t *testing.T) {
+	rowPurpose, sendPurpose := ids.NewV7(), ids.NewV7()
+	purposePairings := []struct {
+		name      string
+		row, send *ids.UUID
+	}{
+		{"neither names a purpose", nil, nil},
+		{"a narrow row against a send that resolved none", &rowPurpose, nil},
+		{"a broad row against a send that resolved one", nil, &sendPurpose},
+		{"a narrow row against its own purpose", &rowPurpose, &rowPurpose},
+		{"a narrow row against a different purpose", &rowPurpose, &sendPurpose},
+	}
 	for _, kind := range []string{
 		commsauthz.ReasonObjection, commsauthz.ReasonRestricted,
 		commsauthz.ReasonHardBounce, "a_code_nobody_added_here",
@@ -163,9 +183,12 @@ func TestTheEarlyExitAgreesWithTheRule(t *testing.T) {
 			continue
 		}
 		for _, c := range commsauthz.Categories() {
-			if !suppressionBinds(kind, c, nil, nil) {
-				t.Errorf("%s skips resolution but does not bind %s: a message in that category "+
-					"is refused without the engine ever working out what it is", kind, c)
+			for _, pair := range purposePairings {
+				if !suppressionBinds(kind, c, pair.row, pair.send) {
+					t.Errorf("%s skips resolution but does not bind %s with %s: a message in "+
+						"that category is refused without the engine ever working out what it is",
+						kind, c, pair.name)
+				}
 			}
 		}
 	}

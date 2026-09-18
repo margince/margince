@@ -117,7 +117,10 @@ type liveStop struct {
 // bindsEveryCategory answers on the kind alone: no kind that ever carries a
 // narrow purpose (today, only marketing_objection) is among the ones it calls
 // absolute, so a purpose comparison could never change its answer — this
-// conversion is safe rather than lossy for that caller's question.
+// conversion is safe rather than lossy for that caller's question. Held by
+// TestTheEarlyExitAgreesWithTheRule, which asks the implication at every
+// purpose pairing, so a second kind learning to carry one fails there rather
+// than quietly denying a send the rule would allow.
 func stopKinds(stops []liveStop) []string {
 	kinds := make([]string, len(stops))
 	for i, s := range stops {

@@ -829,9 +829,14 @@ func TestAWithdrawalRefNamingNobodyIsRefused(t *testing.T) {
 //
 // A withdrawal link minted for a bare address has no per-purpose state behind
 // it, so OneClickUnsubscribe routes to the stop rather than to the withdrawal.
-// The body is an EMPTY list: a stop is one row rather than a set of purposes,
-// and there are no names to count — the page says the recipient is
-// unsubscribed either way.
+//
+// ONE ENTRY, not an empty list. A stop is one row rather than a set of
+// purposes, so there are no NAMES to carry — but an empty list is this
+// endpoint's own word for "nothing moved", which is how a contact's replayed
+// press reads. Answering it for a press that had just written the row said the
+// recipient was already unsubscribed when they had only now become so. The
+// body carries the anonymous placeholder instead, and the replay below is what
+// pins the two apart: same door, same token, one answer each way.
 func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 	e := setupChannelConsent(t)
 	address := "one-click-" + e.ws.String() + "@example.test"
@@ -842,8 +847,15 @@ func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 
 	answered := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
 
-	if len(answered) != 0 {
-		t.Errorf("the press answered %v, want [] — a stop names no purposes", answered)
+	if len(answered) != 1 {
+		t.Errorf("the press answered %v, want one entry — it wrote the stop, and an empty "+
+			"list is this endpoint's word for nothing moved", answered)
+	}
+	for _, key := range answered {
+		if key != withdrawalStoppedPlaceholder {
+			t.Errorf("the press answered %q, which tells its holder something about the "+
+				"recipient's state that a withdrawal credential may not read", key)
+		}
 	}
 	var live int
 	if err := e.owner.QueryRow(context.Background(), `
@@ -853,6 +865,12 @@ func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 	}
 	if live != 1 {
 		t.Errorf("the press left %d live stop(s) for %s, want 1 — it answered 200 either way", live, address)
+	}
+
+	// The mailbox provider's retry. It moved nothing, and the body says so.
+	replayed := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
+	if len(replayed) != 0 {
+		t.Errorf("the replay answered %v, want [] — the stop was already standing", replayed)
 	}
 }
 
