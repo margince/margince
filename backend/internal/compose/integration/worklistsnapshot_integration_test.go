@@ -69,12 +69,16 @@ func TestTheWorklistFamilyAssemblesInOneTransaction(t *testing.T) {
 	// with no brief_run it returns ErrNotFound before reaching any of that, so
 	// every assertion below would pass over a lane that never ran — and the
 	// write-under-read this whole change has to get right would be untested.
-	// Seeded through GET /v1/brief, the product's own writer, rather than an
-	// INSERT here that could drift from what the night actually assembles.
+	// Seeded through POST /v1/brief — the route the night's own worker reaches
+	// (briefjobs.go), rather than an INSERT here that could drift from what it
+	// actually assembles. GET only reads, and 404s when no run exists.
+	// 201 assembled one, 200 found the night's already there. Either leaves a
+	// run for the brief lane to read, which is the whole requirement here.
 	var brief map[string]any
-	if status := e.Call(t, "GET", "/v1/brief", nil, nil, &brief); status != http.StatusOK {
-		t.Fatalf("GET /v1/brief → %d, want 200 — without a run the brief lane "+
-			"short-circuits and this test measures a page that never assembled", status)
+	if status := e.Call(t, "POST", "/v1/brief", nil, nil, &brief); status != http.StatusCreated && status != http.StatusOK {
+		t.Fatalf("POST /v1/brief → %d, want 201 or 200 — without a run the brief "+
+			"lane short-circuits on ErrNotFound and this test measures a page "+
+			"that never assembled the lane it exists to measure", status)
 	}
 
 	// The reference reading, taken from the same pool in the same run: a route
