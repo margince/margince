@@ -197,8 +197,8 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 	if !result.AIGenerated {
 		t.Fatalf("AIGenerated = false, want true (two candidates ground)")
 	}
-	if result.AIDisclosure == nil || *result.AIDisclosure != draftfloor.AIDisclosure(textlang.English) {
-		t.Fatalf("AIDisclosure = %v, want the Art.50 disclosure", result.AIDisclosure)
+	if result.AIProvenanceNotice == nil || *result.AIProvenanceNotice != draftfloor.AIProvenanceNotice(textlang.English) {
+		t.Fatalf("AIProvenanceNotice = %v, want the AI provenance notice", result.AIProvenanceNotice)
 	}
 	if result.Diff == nil || result.Diff.Added == nil || len(*result.Diff.Added) != 2 {
 		t.Fatalf("Diff.Added = %+v, want 2 staged lines", result.Diff)
@@ -259,8 +259,8 @@ func TestDraftOfferLinesDropsUngroundedCandidateAsHonestEmpty(t *testing.T) {
 	if result.AIGenerated {
 		t.Fatalf("AIGenerated = true, want false (the only candidate is ungrounded)")
 	}
-	if result.AIDisclosure != nil {
-		t.Fatalf("AIDisclosure = %v, want nil on an honest empty draft", *result.AIDisclosure)
+	if result.AIProvenanceNotice != nil {
+		t.Fatalf("AIProvenanceNotice = %v, want nil on an honest empty draft", *result.AIProvenanceNotice)
 	}
 	if result.Diff != nil {
 		t.Fatalf("Diff = %+v, want nil on an honest empty draft", result.Diff)

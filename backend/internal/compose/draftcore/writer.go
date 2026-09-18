@@ -14,7 +14,7 @@ package draftcore
 // Two implementations of one capability are two answers to one question, and
 // these two were already deciding independently what the fence looks like, how
 // a fenced answer is unwrapped, what a starved MAX_TOKENS reply does, and which
-// drafts carry the Art. 50 disclosure.
+// drafts carry the AI provenance notice.
 //
 // What stays PER SURFACE is what a draft is grounded in, and that is real: the
 // prompt, the response schema, the deterministic floor, and which uncited

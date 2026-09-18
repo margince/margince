@@ -12997,7 +12997,7 @@ export interface paths {
          * @description Copies the sent offer's header + lines into revision N+1 as a new `draft`, marks the prior revision
          *     `superseded` and emits `offer.superseded` + `offer.created`. A sent offer is never
          *     mutated in place. When an AI draft applies (regenerate-from-signal), the response Offer
-         *     also carries the Art. 50 disclosure (`ai_generated`/`ai_disclosure`) and the
+         *     also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
          *     `diff_from_previous` line-item summary versus the prior revision; a mechanical
          *     regenerate (no AI context available) still works and returns `ai_generated=false`. The
          *     produced draft still cannot leave without the send gate, which is human-only too.
@@ -13189,7 +13189,7 @@ export interface paths {
          * The proposed warm-intro path for a warm signal (B-E08.4) — an actionable move, not a notification.
          * @description Names the route-in contact (the strongest live relationship at the resolved
          *     company), the relationship we have, and a concrete suggested next move with a
-         *     drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
+         *     drafted message carrying the AI provenance notice and evidence back to the
          *     warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
          *     send rides the governed send tool (POST /activities/{id}/send-email); the warm
          *     room proposes, the rep sends.
@@ -25393,9 +25393,9 @@ export interface components {
             to?: string[];
             /** Format: uuid */
             in_reply_to_activity_id?: string | null;
-            /** @description Art. 50 AI-assisted disclosure: true when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false. */
+            /** @description True when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false. */
             readonly ai_generated: boolean;
-            /** @description The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true. */
+            /** @description The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send. */
             readonly ai_disclosure?: string | null;
             /** @description The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it. */
             readonly voice_profile_version?: number | null;
@@ -25453,9 +25453,9 @@ export interface components {
              */
             reasoning: components["schemas"]["AccountDraftReason"][];
             generated_by: components["schemas"]["WrittenBy"];
-            /** @description Art. 50 AI-assisted disclosure: true when a model produced this draft. Stamped on the drafting call, never persisted. */
+            /** @description True when a model produced this draft. Stamped on the drafting call, never persisted. */
             readonly ai_generated: boolean;
-            /** @description The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true. */
+            /** @description The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send. */
             readonly ai_disclosure?: string | null;
             /** @description The Voice DNA profile version that styled this draft; null when no ready profile shaped it. */
             readonly voice_profile_version?: number | null;
@@ -27209,9 +27209,9 @@ export interface components {
                  */
                 kind: "draft_to_contact" | "intro_request";
                 draft_subject: string;
-                /** @description Renders the Art. 50 AI-assisted disclosure (features/07 §11 gate 9). */
+                /** @description Ends with the AI provenance notice, so a rep who sends this body unchanged sends the notice with it. */
                 draft_body: string;
-                /** @description The machine-readable Art. 50 disclosure line the draft carries. */
+                /** @description The provenance notice, repeated here as its own field; unlike the composer drafts this one is also rendered into draft_body above. */
                 ai_disclosure: string;
             };
             /** @description Provenance back to the warm signal (evidence-or-omit). */
@@ -32938,11 +32938,11 @@ export interface components {
             /** Format: date-time */
             readonly accepted_at?: string | null;
             /**
-             * @description Art. 50 AI-assisted disclosure (features/07 §11 gate 9). true only on the response of the regenerate call that produced this draft revision; false on every other read — disclosure is stamped on the drafting call itself, not persisted across future reads.
+             * @description True only on the response of the regenerate call that produced this draft revision; false on every other read — provenance is stamped on the drafting call itself, not persisted across future reads.
              * @default false
              */
             readonly ai_generated: boolean;
-            /** @description The machine-readable Art. 50 disclosure line (features/07 §11 gate 9); non-null iff ai_generated=true. */
+            /** @description The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send. */
             readonly ai_disclosure?: string | null;
             /** @description Populated only on a regenerate response — added/removed/changed line items vs the immediately prior revision, so the human sees exactly what the AI proposed. Null on every other read; transient, never persisted. */
             readonly diff_from_previous?: {

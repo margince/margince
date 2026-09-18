@@ -238,17 +238,17 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 	}
 
 	added, removed, changed := diffOfferLines(linesOf(before), linesOf(after))
-	disclosure := draftfloor.AIDisclosure(textlang.Lang(identity.BaseLanguageForPrompt(ctx, d.pool)))
+	disclosure := draftfloor.AIProvenanceNotice(textlang.Lang(identity.BaseLanguageForPrompt(ctx, d.pool)))
 	diff := buildOfferDiff(added, removed, changed)
 	after.AiGenerated = boolPtr(true)
 	after.AiDisclosure = &disclosure
 	after.DiffFromPrevious = diff
 
 	return DraftResult{
-		Offer:        after,
-		AIGenerated:  true,
-		AIDisclosure: &disclosure,
-		Diff:         diff,
+		Offer:              after,
+		AIGenerated:        true,
+		AIProvenanceNotice: &disclosure,
+		Diff:               diff,
 	}, nil
 }
 

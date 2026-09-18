@@ -30,8 +30,10 @@ type DraftProvenance = Pick<
 >;
 
 // The card that says a MACHINE wrote the words below, and what it wrote them
-// from: to a reader the Art. 50 disclosure and the draft's reasoning are one
-// statement — not your colleague's message, and here is what it stands on.
+// from: to the rep reviewing it the provenance notice and the draft's reasoning
+// are one statement — not your colleague's message, and here is what it stands
+// on. This band is shown to the sender and not to the recipient: the notice is
+// carried beside the draft, never inside the body that goes out.
 //
 // `Panel tone="ai"` draws it, in the colour every other machine-authored
 // surface wears, its title at h3 under the drawer's own h2. Loudest thing in
@@ -45,7 +47,8 @@ type DraftProvenance = Pick<
 // provisional label reports what that profile is today. Neither implies a
 // weaker draft — nothing gates drafting on maturity. Both hang off the SERVED
 // version, because reporting a maturity over a draft no voice touched would
-// overstate this surface's own provenance, which Art. 50 does not permit.
+// overstate this surface's own provenance to whoever is deciding whether to
+// send it.
 export function DraftBand({
   provenance,
   maturity,

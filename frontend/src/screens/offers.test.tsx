@@ -419,7 +419,7 @@ function stubOfferWithRegenerate(
 }
 
 describe("AI disclosure/diff banner (OP-11)", () => {
-  it("renders the Art. 50 disclosure and diff summary when ai_generated is true", async () => {
+  it("renders the AI provenance notice and diff summary when ai_generated is true", async () => {
     stubOffer({
       ...baseOffer,
       status: "sent",

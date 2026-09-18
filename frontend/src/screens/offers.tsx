@@ -1030,7 +1030,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 }
 
 // Regenerate a new draft revision from a sent offer (OP-11). The 201 response
-// is the ONLY place the Art. 50 disclosure and diff summary ever appear (every
+// is the ONLY place the AI provenance notice and diff summary ever appear (every
 // later read of that offer returns them null), so the cache for the NEW draft's
 // id is seeded from this response — before navigating — and OfferScreen's own
 // query for that id skips its refetch-on-mount for this reason (see its
@@ -1085,7 +1085,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
-// The Art. 50 disclosure + diff-from-previous summary (OP-11). Both fields
+// The AI provenance notice + diff-from-previous summary (OP-11). Both fields
 // are transient — populated only on the regenerate response that produced
 // this draft — but the offer object here may be a stale/refetched read
 // (ai_generated back to false), so the banner degrades to nothing rather

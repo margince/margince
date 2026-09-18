@@ -291,11 +291,12 @@ func noteRelationship(wording noteWording, facts noteFacts) string {
 // it under their own name, and "a contact wrote this" is a different decision
 // from "a model proposed this".
 //
-// ai_generated and ai_disclosure are the Art. 50 pair, and they are not
-// optional dressing: this note is read by a customer, so a model-written one
-// must say so. The contract's own rule is that the disclosure is non-null
-// exactly when ai_generated is true, which is why both are set together here
-// rather than by two callers who might disagree.
+// ai_generated and ai_disclosure are the provenance pair, and they are not
+// optional dressing: this note goes out under the sender's own name, so the
+// sender must be told a model proposed the words. The contract's own rule
+// is that the notice is non-null exactly when ai_generated is true, which is
+// why both are set together here rather than by two callers who might
+// disagree.
 func wireIntroNote(
 	note introNote, by crmcontracts.WrittenBy, facts noteFacts,
 ) crmcontracts.CompanyEmailDraft {
@@ -310,7 +311,7 @@ func wireIntroNote(
 		AiGenerated: &aiWritten,
 		Reasoning:   noteReasons(facts),
 	}
-	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, noteLang(facts.lang))
+	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, noteLang(facts.lang))
 	return out
 }
 

@@ -1846,8 +1846,8 @@ export function ComposeModal({
 
   // The drafted words, brought back under the reader's eyes.
   //
-  // A draft does not only fill the body — it raises the disclosure band above
-  // it, and that band (the Art. 50 sentence, what the draft was based on, the
+  // A draft does not only fill the body — it raises the provenance band above
+  // it, and that band (the provenance notice, what the draft was based on, the
   // voice version) is several times the height of the bar the rep pressed. The
   // head below it grows too, because the same answer fills To and the subject.
   // So the press that asks for words pushes those words down past the fold, and
