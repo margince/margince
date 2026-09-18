@@ -16521,6 +16521,69 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /users/former:
+    post:
+      tags: [Identity]
+      operationId: createFormerMember
+      summary: Record a colleague who has already left. Admin-only, human-only.
+      description: |
+        Creates a DEACTIVATED seat for somebody who worked here before this installation
+        existed, so imported history can name them as its author and the interface can
+        resolve that name.
+
+        It is not an invitation and not a deactivated invitation. No set-password token is
+        minted, no mail is sent, and there is no way in: `password_hash` is null and the
+        status is `deactivated`, which is the one status that may never sign in. Nor does it
+        consume a licence — the seat count excludes deactivated seats, which is what makes
+        recording thirty-six departed colleagues a bookkeeping act rather than a purchase.
+
+        `archived_at` stays null on purpose. An archived seat stops resolving in the roster
+        reads that put a name on a timeline row, and a former member exists precisely so
+        their name still appears on the work they did.
+
+        Admin-only (`role: admin`); an agent may never provision a human. A duplicate email
+        answers 409 `email_taken` — if that member is merely deactivated they are already
+        what this route would create, and if they are active this is the wrong route.
+
+        Emits no event: the closed V1 catalog carries `user.invited`, which announces an
+        invitation a subscriber is expected to deliver, and nothing was invited here.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FormerMemberRequest' }
+      responses:
+        '201':
+          description: The former member's seat.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >-
+            Refused: `permission_denied` — the caller is not an admin, or is an agent.
+            No seat-limit refusal is possible here, because a deactivated seat is not
+            metered.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404':
+          description: >-
+            `unknown_role` — this company defines no role with the requested key. The
+            enum is documentation rather than binding validation, so a mistyped key
+            reaches the server.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >-
+            `email_taken` — a seat with this address already exists. A former member is
+            recorded once; if they came back, reactivate the seat rather than adding a
+            second one.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /users/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -37334,6 +37397,38 @@ components:
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
 
+    FormerMemberRequest:
+      type: object
+      description: >-
+        A colleague who already left, recorded so imported history can name them. No
+        password and no invitation: this creates a seat that cannot be signed into.
+      required: [email, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+          description: >-
+            Their work address as the source system spelled it. It is the identity the
+            seat is keyed on, so a second record for the same address is refused.
+        display_name: { type: string, minLength: 1, maxLength: 255 }
+        role:
+          type: string
+          enum: [admin, management, manager, rep, read_only, ops]
+          default: rep
+          description: >-
+            Defaults to `rep`. A deactivated seat exercises no authority whatever its role,
+            so this records what they were rather than granting anything — but the caller
+            may still not name a role they could not assign themselves.
+        left_at:
+          type: [string, 'null']
+          format: date-time
+          description: When they left, when the source system knows it. Recorded on the audit row.
+        source:
+          type: [string, 'null']
+          maxLength: 200
+          description: >-
+            Where this record came from, for an operator reading the audit trail later
+            ("hubspot-mirror-2026-09-17").
     InviteUserRequest:
       type: object
       description: Admin-supplied details for a new member. No password — the invite issues a set-password token.

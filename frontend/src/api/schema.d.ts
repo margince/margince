@@ -11476,6 +11476,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/former": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a colleague who has already left. Admin-only, human-only.
+         * @description Creates a DEACTIVATED seat for somebody who worked here before this installation
+         *     existed, so imported history can name them as its author and the interface can
+         *     resolve that name.
+         *
+         *     It is not an invitation and not a deactivated invitation. No set-password token is
+         *     minted, no mail is sent, and there is no way in: `password_hash` is null and the
+         *     status is `deactivated`, which is the one status that may never sign in. Nor does it
+         *     consume a licence — the seat count excludes deactivated seats, which is what makes
+         *     recording thirty-six departed colleagues a bookkeeping act rather than a purchase.
+         *
+         *     `archived_at` stays null on purpose. An archived seat stops resolving in the roster
+         *     reads that put a name on a timeline row, and a former member exists precisely so
+         *     their name still appears on the work they did.
+         *
+         *     Admin-only (`role: admin`); an agent may never provision a human. A duplicate email
+         *     answers 409 `email_taken` — if that member is merely deactivated they are already
+         *     what this route would create, and if they are active this is the wrong route.
+         *
+         *     Emits no event: the closed V1 catalog carries `user.invited`, which announces an
+         *     invitation a subscriber is expected to deliver, and nothing was invited here.
+         */
+        post: operations["createFormerMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/role": {
         parameters: {
             query?: never;
@@ -27678,6 +27717,28 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into. */
+        FormerMemberRequest: {
+            /**
+             * Format: email
+             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+             */
+            email: string;
+            display_name: string;
+            /**
+             * @description Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+             * @default rep
+             * @enum {string}
+             */
+            role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
+            /**
+             * Format: date-time
+             * @description When they left, when the source system knows it. Recorded on the audit row.
+             */
+            left_at?: string | null;
+            /** @description Where this record came from, for an operator reading the audit trail later ("hubspot-mirror-2026-09-17"). */
+            source?: string | null;
         };
         /** @description Admin-supplied details for a new member. No password — the invite issues a set-password token. */
         InviteUserRequest: {
@@ -53532,6 +53593,58 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createFormerMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormerMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description The former member's seat. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: `permission_denied` — the caller is not an admin, or is an agent. No seat-limit refusal is possible here, because a deactivated seat is not metered. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `unknown_role` — this company defines no role with the requested key. The enum is documentation rather than binding validation, so a mistyped key reaches the server. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `email_taken` — a seat with this address already exists. A former member is recorded once; if they came back, reactivate the seat rather than adding a second one. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     changeUserRole: {

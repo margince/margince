@@ -2423,6 +2423,10 @@ func (stubs) PreviewAccess(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "PreviewAccess")
 }
 
+func (stubs) CreateFormerMember(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateFormerMember")
+}
+
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
 }

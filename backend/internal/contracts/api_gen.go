@@ -8797,6 +8797,36 @@ func (e ForecastSufficiencyBasis) Valid() bool {
 	}
 }
 
+// Defines values for FormerMemberRequestRole.
+const (
+	FormerMemberRequestRoleAdmin      FormerMemberRequestRole = "admin"
+	FormerMemberRequestRoleManagement FormerMemberRequestRole = "management"
+	FormerMemberRequestRoleManager    FormerMemberRequestRole = "manager"
+	FormerMemberRequestRoleOps        FormerMemberRequestRole = "ops"
+	FormerMemberRequestRoleReadOnly   FormerMemberRequestRole = "read_only"
+	FormerMemberRequestRoleRep        FormerMemberRequestRole = "rep"
+)
+
+// Valid indicates whether the value is a known member of the FormerMemberRequestRole enum.
+func (e FormerMemberRequestRole) Valid() bool {
+	switch e {
+	case FormerMemberRequestRoleAdmin:
+		return true
+	case FormerMemberRequestRoleManagement:
+		return true
+	case FormerMemberRequestRoleManager:
+		return true
+	case FormerMemberRequestRoleOps:
+		return true
+	case FormerMemberRequestRoleReadOnly:
+		return true
+	case FormerMemberRequestRoleRep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -29521,6 +29551,26 @@ type ForecastSufficiencyAbsent string
 // ForecastSufficiencyBasis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
 type ForecastSufficiencyBasis string
 
+// FormerMemberRequest A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into.
+type FormerMemberRequest struct {
+	DisplayName string `json:"display_name"`
+
+	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+	Email openapi_types.Email `json:"email"`
+
+	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
+	LeftAt *time.Time `json:"left_at,omitempty"`
+
+	// Role Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+	Role *FormerMemberRequestRole `json:"role,omitempty"`
+
+	// Source Where this record came from, for an operator reading the audit trail later ("hubspot-mirror-2026-09-17").
+	Source *string `json:"source,omitempty"`
+}
+
+// FormerMemberRequestRole Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+type FormerMemberRequestRole string
+
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
 	EffectiveDate openapi_types.Date `json:"effective_date"`
@@ -46674,6 +46724,9 @@ type UpdateTeamJSONRequestBody = UpdateTeamRequest
 // InviteUserJSONRequestBody defines body for InviteUser for application/json ContentType.
 type InviteUserJSONRequestBody = InviteUserRequest
 
+// CreateFormerMemberJSONRequestBody defines body for CreateFormerMember for application/json ContentType.
+type CreateFormerMemberJSONRequestBody = FormerMemberRequest
+
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
 
@@ -58232,6 +58285,9 @@ type ServerInterface interface {
 	// What a seat with this role and these teams will see and may do.
 	// (GET /users/access-preview)
 	PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams)
+	// Record a colleague who has already left. Admin-only, human-only.
+	// (POST /users/former)
+	CreateFormerMember(w http.ResponseWriter, r *http.Request)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -62009,6 +62065,12 @@ func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 // What a seat with this role and these teams will see and may do.
 // (GET /users/access-preview)
 func (_ Unimplemented) PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a colleague who has already left. Admin-only, human-only.
+// (POST /users/former)
+func (_ Unimplemented) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87836,6 +87898,28 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// CreateFormerMember operation middleware
+func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateFormerMember(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
 
@@ -92245,6 +92329,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/access-preview", wrapper.PreviewAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/former", wrapper.CreateFormerMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)
