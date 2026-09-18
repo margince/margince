@@ -86,6 +86,18 @@ func NewTechnicalEnricher(
 	return &TechnicalEnricher{dns: dns, certs: certs, cache: cache, now: now}
 }
 
+// enricherLanes is what this engine answers for, in the order Read asks.
+//
+// It exists because a deployment with no enricher still has to record an
+// outcome per lane (jobs_techenrich.go), and that list must be the SAME list —
+// a lane missing there would leave the ledger silent about a source the
+// configured deployment reads. TestReadAnswersForExactlyTheDeclaredLanes holds
+// the two together.
+//
+// The homepage lane is not among them: the site read writes it, for the reason
+// Read states.
+var enricherLanes = []contacts.TechnicalLane{contacts.LaneDNS, contacts.LaneCertLog}
+
 // laneOutcome is what one lane did, for the attempt ledger and the log.
 type laneOutcome struct {
 	Lane contacts.TechnicalLane

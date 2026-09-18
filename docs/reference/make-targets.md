@@ -69,7 +69,7 @@ root script gates (each is a small script; all merge-blocking, and `check-backen
 
 | Target | What it does |
 |---|---|
-| `check-image-pins` | Every workflow `uses:` and container `image:` is pinned to an immutable ref |
+| `check-image-pins` | Every workflow `uses:`, container `image:` and Dockerfile base `FROM` is pinned to an immutable ref |
 | `check-host-ports` | Every host port published by `docker-compose.dev.yml` is below the ephemeral floor (32768), so `db-up` cannot lose a bind to a transient client port |
 | `make-target-parity` | Every backend target `make help` advertises resolves from the repo root, as the help text promises. The root delegation list is hand-maintained, so a new backend target can be advertised and unreachable at once — and a CI step that calls it then fails at `No rule to make target` without ever running what it was gating |
 | `contract-breaking-check` | oasdiff severity gate on `api/crm.yaml` vs `origin/main` (breaking change fails; additive passes) |

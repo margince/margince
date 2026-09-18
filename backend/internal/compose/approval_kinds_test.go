@@ -71,7 +71,7 @@ func (stubComms) DraftEmail(context.Context, ids.UUID, string) (string, string, 
 	return "", "", nil
 }
 
-func (stubComms) DraftAccountEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
+func (stubComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
 	return "", "", nil
 }
 
@@ -79,7 +79,7 @@ func (stubComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs) (age
 	return agents.SendEmailResult{}, nil
 }
 
-func (stubComms) SendAccountEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
+func (stubComms) SendCompanyEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
 	return agents.SendEmailResult{}, nil
 }
 

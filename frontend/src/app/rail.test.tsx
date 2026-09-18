@@ -12,12 +12,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { displayVersion, narrowVersion } from "./release";
+import { en } from "../i18n/en";
 import { navigate, type Route } from "./router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
+  navGroupNames,
   newClient,
   render,
   renderWith,
@@ -136,6 +137,13 @@ function mountShellStyles(): HTMLStyleElement {
   return style;
 }
 
+// The head's stage marker: the house Badge on the attribution row, carrying no
+// class of its own. Named once here so the shape of that row is stated in one
+// place, and the word is READ from the catalog rather than typed out — a
+// literal here would go on passing after the marker started saying something
+// else. Temporary, with app/betabadge.tsx.
+const MARKER = ".ws-company .badge";
+
 // A row that is not in the rail at all is not the same thing as a hidden one,
 // and must not read as one: the head keeps its elements and the level takes
 // their space.
@@ -169,22 +177,19 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
 
   it("groups the items under Records / Work / Intelligence when expanded", () => {
     render(<WorkspaceRail route={{ screen: "home" }} />);
-    const headings = screen
-      .getAllByRole("heading", { level: 2 })
-      .map((heading) => heading.textContent);
-    expect(headings).toEqual(["Records", "Work", "Intelligence"]);
+    expect(navGroupNames()).toEqual(["Records", "Work", "Intelligence"]);
   });
 
-  // Collapsed, a group heading has no word to show — 56px carries a glyph and
-  // not a label — so it is not drawn, and the break between two groups is what
-  // says where one ends. It stays in the DOCUMENT either way: the outline a
-  // screen reader walks does not depend on how wide the reader left the panel.
+  // Collapsed, a group label has no word to show — 56px carries a glyph and not
+  // a label — so it is not drawn, and the break between two groups is what says
+  // where one ends. It stays in the DOCUMENT either way: what a screen reader
+  // walks does not depend on how wide the reader left the panel.
   //
   // Asserted as a COMPARISON of the two states rather than as one absolute, for
   // the reason the brand head's own pair gives: two independent expectations
-  // would both pass against a heading that had quietly stopped being drawn in
+  // would both pass against a label that had quietly stopped being drawn in
   // either state.
-  it("draws the group headings expanded and not collapsed", () => {
+  it("draws the group labels expanded and not collapsed", () => {
     shellStyles = mountShellStyles();
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
     const collapsed = render(
@@ -196,7 +201,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     for (const rail of [expanded, collapsed]) {
       expect(
         [...rail.container.querySelectorAll(".navheading")].map(
-          (heading) => heading.textContent,
+          (label) => label.textContent,
         ),
       ).toEqual(["Records", "Work", "Intelligence"]);
     }
@@ -326,39 +331,35 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   });
 
   // The half that is easy to break: the marker has to survive the collapse. At
-  // 56px the rail drops every label it has, so a build badge that rode the
+  // 56px the rail drops every label it has, so a stage badge that rode the
   // wordmark would be gone exactly where the product is hardest to identify —
   // and it is the one thing here a reader may need to read back to us.
   //
-  // Read from `release.ts` rather than typed out: the badge and the version are
-  // one answer, and a literal here would go on passing after a release changed
-  // it. The narrow form is the same string with one word abbreviated, so the two
-  // cannot drift into naming different builds.
-  it("stamps the build at both rail widths, one glyph narrower collapsed", () => {
+  // ONE WORD at both widths, asserted as one expectation of both renders rather
+  // than as two: the word is short enough for the 56px column, so a second,
+  // narrow spelling is exactly what must not creep back in — two strings for
+  // one marker can drift into naming two different stages.
+  it("stamps the stage at both rail widths, in the same word", () => {
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(expanded.container.querySelector(".ws-alpha")?.textContent).toBe(
-      displayVersion(),
+    expect(expanded.container.querySelector(MARKER)?.textContent).toBe(
+      en["shell.beta"],
     );
     cleanup();
 
     const collapsed = render(
       <WorkspaceRail route={{ screen: "home" }} collapsed />,
     );
-    expect(collapsed.container.querySelector(".ws-alpha")?.textContent).toBe(
-      narrowVersion(),
+    expect(collapsed.container.querySelector(MARKER)?.textContent).toBe(
+      en["shell.beta"],
     );
-    // The abbreviation is what the 56px column buys, said once here so a
-    // `narrowVersion` that stopped abbreviating fails rather than passing
-    // against itself.
-    expect(narrowVersion()).not.toBe(displayVersion());
   });
 
   // The badge is not inside the link. A fact about the build sitting in an
   // anchor is a fact a press carries the reader away from, and the head's one
   // target is the mark.
-  it("keeps the build badge out of the brand's link", () => {
+  it("keeps the stage badge out of the brand's link", () => {
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
-    const badge = container.querySelector(".ws-alpha");
+    const badge = container.querySelector(MARKER);
     expect(badge).toBeTruthy();
     expect(badge?.closest("a")).toBeNull();
     // And the marker the foot used to carry is gone with it.
@@ -460,7 +461,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     // The destinations are GONE, not pushed below a second list: 56px cannot
-    // carry two levels and 224px carrying both is a list of twenty places to go.
+    // carry two levels and 256px carrying both is a list of twenty places to go.
     expect(screen.queryByRole("link", { name: "Deals" })).toBeNull();
     expect(levelLabels()).toEqual(["Account", "Privacy & retention"]);
     expect(
@@ -475,22 +476,23 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(current[0].getAttribute("aria-label")).toBe("Account");
   });
 
-  // A level draws no name of its own: it is named by the heading over its first
-  // group, so a level's groups stand at the same heading level the
-  // destinations' do and the outline never gains a rung with the depth. The one
-  // navigation landmark names the navigation; the headings inside it name the
-  // groups, and nothing between them names the panel twice.
-  it("gives a level's groups the destinations' own heading level", () => {
+  // A level draws no name of its own: it is named by the label over its first
+  // group, and a level reached by drilling in names its groups exactly the way
+  // the destinations do. The one navigation landmark names the navigation and
+  // the GROUPS inside it name themselves — asserted through the role and the
+  // accessible name, which is what a reader actually meets, and paired with the
+  // outline staying empty: a group that quietly became a heading again would
+  // put the whole panel back in a screen reader's heading list, and the name
+  // assertion alone would still pass while it did.
+  it("names a level's groups the way the destinations' are named", () => {
     render(
       <WorkspaceRail
         route={{ screen: "settings", id: "account" }}
         section={fixtureSection("account")}
       />,
     );
-    expect(
-      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["You", "Governance"]);
-    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+    expect(navGroupNames()).toEqual(["You", "Governance"]);
+    expect(screen.queryAllByRole("heading")).toHaveLength(0);
   });
 
   // A section belongs to ONE screen. Without this the fixture's entries would
@@ -644,7 +646,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["company"], TWO_MARKS);
-    const parts = [".company-logo", ".ws-company-text", ".ws-alpha"];
+    const parts = [".company-logo", ".ws-company-text", MARKER];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
@@ -783,7 +785,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       "an installation's monogram",
       { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
     ],
-  ])("stamps the build on the head with %s", (_name, company) => {
+  ])("stamps the stage on the head with %s", (_name, company) => {
     const client = newClient();
     if (company) {
       client.setQueryData(["company"], company);
@@ -792,10 +794,8 @@ describe("Rail levels (a section's entries as the second level)", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelectorAll(".ws-alpha")).toHaveLength(1);
-    expect(container.querySelector(".ws-alpha")?.textContent).toBe(
-      displayVersion(),
-    );
+    expect(container.querySelectorAll(MARKER)).toHaveLength(1);
+    expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
   });
 
   it("draws the square icon when the panel is collapsed", () => {
@@ -850,9 +850,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     expect(levelLabels()).toEqual(["Data model"]);
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
-    expect(
-      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy & retention"]);
   });
 
   it("renders a third level from the data, addressed under the entry that opens it", () => {
@@ -867,9 +865,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(
       screen.getByRole("link", { name: "Data model" }).getAttribute("href"),
     ).toBe("#/settings/deep/deeper");
-    expect(
-      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy & retention"]);
   });
 
   // One step at a time, and the step is an ADDRESS: below the section's own

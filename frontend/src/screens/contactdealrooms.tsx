@@ -77,7 +77,7 @@ export function ContactDealRooms({
     return null;
   }
   return (
-    <Panel title={t("contactdealrooms.title")} sub={t("contactdealrooms.sub")}>
+    <Panel title={t("contactdealrooms.title")}>
       <QueryStates
         query={rooms}
         pendingLines={2}
@@ -110,7 +110,6 @@ function RoomRow({
       </div>
       <div className="card-actions">
         <Button
-          small
           variant="ghost"
           onClick={() =>
             navigate({ screen: "deals", id: room.deal_id, id2: "room" })
@@ -120,7 +119,7 @@ function RoomRow({
           {t("contactdealrooms.open")}
         </Button>
         {mayManage ? (
-          <Button small variant="ghost" onClick={() => setConfirming(true)}>
+          <Button variant="ghost" onClick={() => setConfirming(true)}>
             <UserX aria-hidden />
             {t("access.revoke")}
           </Button>
@@ -197,7 +196,7 @@ function RevokeSeat({
       <p>
         {email} <RoomStateBadge state={room.state} />
       </p>
-      <p className="t-caption">{t("access.revokeBody")}</p>
+      <p>{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

@@ -68,6 +68,7 @@ async function fetchContactsPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }
@@ -218,7 +219,7 @@ export function ContactsScreen() {
                   <span className="t-caption"> · {contact.title}</span>
                 )}
                 {contact.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
+                  <Badge tone="warning">{t("record.archived")}</Badge>
                 )}
               </span>
             ),

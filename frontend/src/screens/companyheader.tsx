@@ -388,16 +388,16 @@ export function CompanyActionBadges({
           record. Drawn here as well it was the same badge in two places on one
           screen, and a reader who found both had to satisfy themselves the two
           agreed. */}
-      {company.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
+      {company.archived_at && (
+        <Badge tone="warning">{t("record.archived")}</Badge>
+      )}
       {/* The trigger is unconditional because the menu always holds something
           to say: an archived account's verbs are refused rather than dropped,
           and the sentence refusing them travels with them. Only a panel with
           no items at all would be worth hiding. */}
       <OverflowMenu label={t("record.moreActions")}>
         {refusedReason && !archivedReasonId && (
-          <p id={ownReasonId} className="t-caption">
-            {refusedReason}
-          </p>
+          <p id={ownReasonId}>{refusedReason}</p>
         )}
 
         <MergeAction
@@ -435,11 +435,7 @@ export function CompanyActionBadges({
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
             timeline. */}
-        <Button
-          small
-          data-testid="company-full-history"
-          onClick={onOpenHistory}
-        >
+        <Button data-testid="company-full-history" onClick={onOpenHistory}>
           {t("record.fullHistory")}
         </Button>
         {/* The way in to the partner programme for an account that has none.
@@ -449,7 +445,7 @@ export function CompanyActionBadges({
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
         {!(company.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+          <Button reasonId={refusedByState} onClick={onSetUpPartner}>
             {t("company.partnerSetUp")}
           </Button>
         )}

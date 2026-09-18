@@ -176,8 +176,7 @@ func (s *TimeScanner) ScanWorkspace(ctx context.Context, wsID ids.UUID) error {
 	// systemActor, the same id HandleEvent acts under: both entries reach the
 	// same runOne and write the same rows, and the selectors that recognise
 	// those rows key on this id.
-	wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx := principal.SystemActing(ctx, systemActor)
 
 	instances, err := s.engine.liveInstances(wsCtx)
 	if err != nil {
@@ -226,7 +225,7 @@ func scanInstanceCandidates(
 		return err
 	}
 	cutoff := now.AddDate(0, 0, -days)
-	candidates, err := scan.LastTouchBefore(ctx, cutoff, clockScanBatchLimit)
+	candidates, err := scan.LastTouchBefore(ctx, cutoff, clockScanBatchLimit, h.Spec().Name)
 	if err != nil {
 		return fmt.Errorf("scanning stale entities: %w", err)
 	}

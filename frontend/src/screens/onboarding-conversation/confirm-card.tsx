@@ -9,7 +9,15 @@ import {
 import type { ChangeEvent } from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { Avatar, Badge, Button, Disclosure } from "../../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Checkbox,
+  Disclosure,
+  Field,
+} from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import {
   ConfidenceMeter,
   type Evidence,
@@ -39,6 +47,7 @@ import {
   reviewGroups,
   rowFor,
   STATE_RANK,
+  STATE_WORD,
 } from "./company-review-state";
 import {
   FINDING_EXPAND_EVENT,
@@ -93,17 +102,6 @@ const GROUP_LABELS: Readonly<Record<ReviewGroupKey, MessageKey>> = {
   offer: "ob.s1.offerLabel",
   customer: "ob.s1.customerLabel",
   sales: "ob.s1.salesLabel",
-};
-
-const STATE_WORD: Readonly<Record<RowState, MessageKey>> = {
-  required: "ob.conv.triage.stateRequired",
-  empty: "ob.conv.triage.stateEmpty",
-  typed: "ob.conv.triage.stateTyped",
-  stored: "ob.conv.triage.stateStored",
-  quoted: "ob.conv.triage.stateQuoted",
-  high: "confidence.high",
-  med: "confidence.med",
-  low: "confidence.low",
 };
 
 function isBand(state: RowState): state is "high" | "med" | "low" {
@@ -266,7 +264,6 @@ function FieldRow({
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const controlId = `confirm-missing-${row.field}`;
   const onChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => setField(row.field, event.target.value);
@@ -354,34 +351,43 @@ function FieldRow({
       data-state={row.state}
       className="ob-triage-row ob-triage-row-open ob-conv-confirm-missing-row"
     >
-      <div className="ob-triage-row-head">
-        <label className="t-label" htmlFor={controlId}>
-          {row.label}
-          <em className="t-caption">{t(STATE_WORD[row.state])}</em>
-        </label>
-        <button
-          type="button"
-          className="ob-conv-field-expand"
-          aria-expanded
-          onClick={() => setExpanded(false)}
-        >
-          {t("ob.conv.review.showLess")}
-        </button>
-      </div>
-      {/* Above the control, not below it: the reader learns why the box is
-          empty BEFORE deciding what to type in it. */}
-      {row.omissionReasonKey !== null && (
-        <OmissionNotice
-          label={row.label}
-          reasonKey={row.omissionReasonKey}
-          t={t}
-        />
-      )}
-      {row.multiline ? (
-        <textarea id={controlId} value={row.value} onChange={onChange} />
-      ) : (
-        <input id={controlId} value={row.value} onChange={onChange} />
-      )}
+      <Field
+        label={
+          <>
+            {row.label}
+            <em className="t-caption">{t(STATE_WORD[row.state])}</em>
+          </>
+        }
+        labelEnd={
+          <button
+            type="button"
+            className="ob-conv-field-expand"
+            aria-expanded
+            onClick={() => setExpanded(false)}
+          >
+            {t("ob.conv.review.showLess")}
+          </button>
+        }
+      >
+        {(control) => (
+          <>
+            {/* Above the control, not below it: the reader learns why the box
+                is empty BEFORE deciding what to type in it. */}
+            {row.omissionReasonKey !== null && (
+              <OmissionNotice
+                label={row.label}
+                reasonKey={row.omissionReasonKey}
+                t={t}
+              />
+            )}
+            {row.multiline ? (
+              <textarea {...control} value={row.value} onChange={onChange} />
+            ) : (
+              <input {...control} value={row.value} onChange={onChange} />
+            )}
+          </>
+        )}
+      </Field>
       {/* Only the evidence pair below the control: the label's state word
           already says "typed by you", so the human tag would say it twice.
           The quote and the meter are separate claims — a value the human
@@ -590,7 +596,7 @@ function NavOutstandingList({
         <li key={row.field}>
           <button
             type="button"
-            className="ob-triage-nav-item t-caption"
+            className="ob-triage-nav-item"
             data-blocking={isBlocking ? "true" : undefined}
             onClick={() => jumpToFindings([row.field])}
           >
@@ -817,7 +823,9 @@ function CompanyIdentityCard({
           this whole surface is about the only anonymous one. */}
       <Avatar name={name} size="md" />
       <div className="ob-company-card-body">
-        <h3 className="t-h3">{name}</h3>
+        <Heading size="medium" className="t-h3">
+          {name}
+        </Heading>
         {facts.length > 0 && (
           <dl className="ob-company-card-facts">
             {facts.map((fact) => {
@@ -897,7 +905,7 @@ function ContactsGroupSection({
   return (
     <section id={groupDomId(CONTACTS_KEY)} className="ob-triage-group">
       <div className="ob-triage-group-head">
-        <h3>{t("ob.conv.triage.contactsLabel")}</h3>
+        <Heading size="medium">{t("ob.conv.triage.contactsLabel")}</Heading>
         {contacts.length > 0 && (
           <span className="t-caption">
             {t("ob.conv.triage.contactsCount", {
@@ -969,12 +977,11 @@ function factsByType(facts: readonly SiteFact[]): readonly Readonly<{
 function FactRow({
   fact,
   selection,
-  t,
 }: Readonly<{
   fact: SiteFact;
   selection: FactSelection;
-  t: ReturnType<typeof useT>;
 }>) {
+  const t = useT();
   const { locale } = useLocale();
   const selected = selection.isSelected(fact);
   const evidence: Evidence = {
@@ -983,16 +990,16 @@ function FactRow({
   };
   return (
     <li className="ob-triage-fact">
-      <button
-        type="button"
+      {/* Which findings are kept is a SET, so this is the product's one tick; its
+          label is hidden because the value already stands beside it in the row. */}
+      <Checkbox
         className="ob-triage-fact-toggle"
-        aria-pressed={selected}
+        checked={selected}
         aria-label={t("ob.facts.rowSave", { fact: fact.value })}
         disabled={saveDisabled(selection, selected)}
-        onClick={() => selection.toggle(fact)}
-      >
-        {selected ? <Check aria-hidden /> : <Circle aria-hidden />}
-      </button>
+        onChange={() => selection.toggle(fact)}
+        label=""
+      />
       <span className="ob-triage-fact-value">{fact.value}</span>
       <span className="ob-triage-fact-meta">
         <span className="ob-triage-score t-caption">
@@ -1043,12 +1050,7 @@ function FactTypeGroup({
     >
       <ul className="ob-triage-fact-rows">
         {facts.map((fact) => (
-          <FactRow
-            key={fact.value_key}
-            fact={fact}
-            selection={selection}
-            t={t}
-          />
+          <FactRow key={fact.value_key} fact={fact} selection={selection} />
         ))}
       </ul>
     </Disclosure>
@@ -1079,7 +1081,7 @@ function FactsGroupSection({
   return (
     <section id={groupDomId(FACTS_KEY)} className="ob-triage-group">
       <div className="ob-triage-group-head">
-        <h3>{t("ob.conv.triage.factsLabel")}</h3>
+        <Heading size="medium">{t("ob.conv.triage.factsLabel")}</Heading>
         <span className="t-caption">
           {t("ob.factsSelected", {
             selected: formatNumber(selection.selectedCount, locale),
@@ -1128,7 +1130,7 @@ function FieldGroupSection({
   return (
     <section id={groupDomId(group.key)} className="ob-triage-group">
       <div className="ob-triage-group-head">
-        <h3>{t(group.labelKey)}</h3>
+        <Heading size="medium">{t(group.labelKey)}</Heading>
         <span className="t-caption">
           {formatNumber(filled, locale)}/
           {formatNumber(group.order.length, locale)}
@@ -1253,10 +1255,9 @@ function ReviewContinueBar({
   const { locale } = useLocale();
   const keyFor = usePluralKey();
   const statusId = "ob-triage-continue-status";
-  // Required fields first: it is the more actionable of the two blockers
-  // (a value to type, right here) and the one this surface can always
-  // explain by name elsewhere on the board; the open question is the
-  // narrower, rarer case.
+  // Required fields first: it is the more actionable of the two blockers (a
+  // value to type, right here) and the one this surface can always explain by
+  // name elsewhere on the board; the open question is the narrower, rarer case.
   const statusKey =
     remaining > 0
       ? keyFor("ob.conv.review.requiredRemaining", remaining)
@@ -1425,7 +1426,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
     <section className="ob-conv-confirm ob-triage">
       <header>
         <Sparkles aria-hidden />
-        <h2>{t("ob.conv.review.title")}</h2>
+        <Heading size="large">{t("ob.conv.review.title")}</Heading>
       </header>
       <CompanyIdentityCard draft={props.draft} t={t} />
       <div className="ob-triage-body">

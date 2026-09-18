@@ -104,14 +104,14 @@ export const ReplyCase: Story = {
         action={
           <>
             <span className="today-verb">
-              <Button small variant="ai">
-                <Send size={15} aria-hidden="true" />
+              <Button variant="ai">
+                <Send aria-hidden="true" />
                 Draft
               </Button>
             </span>
             <span className="today-verb">
-              <Button small variant="ghost">
-                <FileText size={15} aria-hidden="true" />
+              <Button variant="ghost">
+                <FileText aria-hidden="true" />
                 Log activity
               </Button>
             </span>

@@ -99,7 +99,7 @@ export function DraftBand({
               })}
             </p>
             {maturity === "provisional" && (
-              <p className="t-caption">
+              <p>
                 <Badge>{t("compose.provisional")}</Badge>{" "}
                 {t("compose.provisionalHint")}
               </p>
@@ -168,7 +168,6 @@ export function RewriteRow({
       {REWRITES.map((rewrite) => (
         <Button
           key={rewrite.key}
-          small
           variant="aiQuiet"
           disabled={disabled}
           onClick={() => onRewrite(t(rewrite.instruction))}

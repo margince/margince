@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--control-h);
+  min-height: var(--controlHeight);
   padding: var(--space-3) var(--space-4);
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-sm);
@@ -52,8 +52,6 @@
 }
 
 .fdz-label {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   /* Inert to the pointer — this text only, never the input stretched beside
    * it, which is the whole control. `dragleave` fires on the move from one
    * element to a sibling, so a cursor crossing this text would otherwise
@@ -61,17 +59,10 @@
   pointer-events: none;
 }
 
-/* A chosen file is the answer to the question the zone asked, so it stops
- * reading as placeholder prose and takes the content colour. */
-.fdz-label.chosen {
-  color: var(--textContent);
-}
-
 /* A dropzone nobody may drop into. It carries a hover and a dragover state and
    had nothing for the state where neither is possible, so a disabled zone still
    lit up under the pointer and still read as an invitation. */
 .fdz:has(:disabled) {
-  color: var(--textTertiary);
   background: var(--bgCard);
 }
 /* The cursor has to go on the INPUT, not the zone. The input is absolutely

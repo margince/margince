@@ -53,7 +53,7 @@ export const WithExceptions: Story = {
   render: () => (
     <EvidenceReceipt
       title="Data and evidence checked"
-      state={{ label: "Needs review", tone: "warn" }}
+      state={{ label: "Needs review", tone: "warning" }}
       counts={counts}
     />
   ),

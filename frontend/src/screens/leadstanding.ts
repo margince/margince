@@ -51,15 +51,15 @@ export function firstResponseClock(
 // here, not a silently-unlabelled row.
 export function terminalBadge(
   lead: Pick<Lead, "status" | "merged_into_id">,
-): { label: MessageKey; tone: "warn" } | null {
+): { label: MessageKey; tone: "warning" } | null {
   if (lead.merged_into_id) {
-    return { label: "lead.merged", tone: "warn" };
+    return { label: "lead.merged", tone: "warning" };
   }
   switch (lead.status) {
     case "disqualified":
-      return { label: "lead.disqualified", tone: "warn" };
+      return { label: "lead.disqualified", tone: "warning" };
     case "promoted":
-      return { label: "record.archived", tone: "warn" };
+      return { label: "record.archived", tone: "warning" };
     case "new":
     case "contacted":
     case "engaged":
@@ -191,7 +191,7 @@ function slaTone(state: Lead["sla_state"]): StandingTone {
     case "breached":
       return "danger";
     case "at_risk":
-      return "warn";
+      return "warning";
     default:
       return "accent";
   }

@@ -28,6 +28,24 @@ import (
 // derives them has no store in hand; tests pin it.
 var leadSLAClock = time.Now
 
+// slaNowKey carries the instant ONE list read judges SLA state against.
+type slaNowKey struct{}
+
+// withPinnedSLANow fixes the SLA instant for everything built from ctx, so the
+// page and the count beside it ask the same question of the same clock.
+func withPinnedSLANow(ctx context.Context, now time.Time) context.Context {
+	return context.WithValue(ctx, slaNowKey{}, now)
+}
+
+// slaNow is the pinned instant, or the live clock for a caller that pinned
+// none — a single-statement read has nothing to agree with.
+func slaNow(ctx context.Context) time.Time {
+	if pinned, ok := ctx.Value(slaNowKey{}).(time.Time); ok {
+		return pinned
+	}
+	return leadSLAClock().UTC()
+}
+
 // leadSLAFields derives the wire's sla_deadline_at and sla_state from the
 // stored clock start, first response and closure (formulas §18.1) under the
 // installation's policy. A closed or answered lead owes nothing and reads
@@ -91,14 +109,18 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 // Held by: TestTheOwesAReplyPredicateHasOneSpelling (leadowespelling_test.go)
 const leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL"
 
-func slaStateClause(policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaState, arg func(any) int) string {
+func slaStateClause(ctx context.Context, policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaState, arg func(any) int) string {
 	if !policy.enabled {
 		return "FALSE"
 	}
 	deadline := "COALESCE(routed_at, created_at) + $%d * interval '1 minute'"
 	open := leadOwesAReplySQL + " AND "
 	minutes := policy.targetMinutes()
-	now := leadSLAClock().UTC()
+	// The instant pinned on ctx, not a fresh reading: a list page and the total
+	// beside it build this clause twice, and a lead crossing its deadline
+	// between the two readings would be counted in one and not the other — a
+	// total that disagrees with the page it labels, with no write to explain it.
+	now := slaNow(ctx)
 	switch crmcontracts.LeadSlaState(state) {
 	case crmcontracts.LeadSlaStateLeadSlaStateBreached:
 		return storekit.SQLf(open+deadline+" < $%d", arg(minutes), arg(now))

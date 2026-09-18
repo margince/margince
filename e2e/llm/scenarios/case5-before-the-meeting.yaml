@@ -39,7 +39,7 @@ must_call:
   - search_records
 may_call:
   - prep_for_meeting
-  - account_coverage
+  - company_coverage
   - catch_me_up_on
   - query_workspace
   - read_record

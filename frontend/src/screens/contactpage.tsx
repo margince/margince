@@ -13,6 +13,7 @@ import { useUrlParams } from "../app/urlstate";
 import { useFoldedViewport } from "../app/viewport";
 import { Badge, Modal } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
+import { Heading } from "../design-system/heading";
 import { IdentityLine } from "../design-system/identityline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -616,9 +617,9 @@ export function ContactPageV2({
           placement="right"
         >
           <div className="pe-drawer-title">
-            <h2 id={detailsTitle}>
+            <Heading size="large" id={detailsTitle}>
               {t("contact.overview.detailsPermissions")}
-            </h2>
+            </Heading>
           </div>
           {contactDetails}
         </Modal>

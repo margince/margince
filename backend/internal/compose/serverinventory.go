@@ -120,6 +120,7 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	claimHandlers
 	importHandlers
+	attributionHandlers
 	channelHandlers
 	traceHandlers
 	pipelineTraceHandlers
@@ -137,6 +138,7 @@ type Server struct {
 	dataResetHandlers
 	jobHealthHandlers
 	captureHealthHandlers
+	extensionIngestHealthHandlers
 	// The composed-extension inventory (handlers_extensions.go). Stateless — it
 	// reads the package's own boot-written accessors — so it is embedded as the
 	// zero value rather than assembled in serverassembly.go.
@@ -216,22 +218,26 @@ type Server struct {
 	appViews *apps.Provider
 
 	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
-	// admits — derived by WithMCPResource from the configured
-	// --public-base-url, never from a request header a caller controls.
+	// admits and its 401 challenge points at — derived by WithMCPResource
+	// from the configured --public-base-url, never from a request header a
+	// caller controls.
 	mcpAllowedOrigin string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
-	// deployment's --metrics-token. Empty — the default — serves the
-	// exposition to whatever reaches the port, which is what a scraper that
-	// cannot present a credential needs; a deployment whose network boundary
-	// does not contain that port sets one, because unlike /healthz and /readyz
-	// this endpoint discloses per-workspace job-runtime telemetry (queue
-	// depth, which connectors are configured). A token set here is checked over
-	// plain HTTP — this process terminates no TLS — so it authenticates a
-	// scraper across a trusted hop, the one the session cookie already takes,
-	// and is not a credential to carry over an untrusted network. See
-	// gateMetrics in routes.go.
+	// deployment's --metrics-token. Empty — the default — configures no
+	// credential, and with metricsOpen unset the exposition then refuses every
+	// scrape: unlike /healthz and /readyz this endpoint discloses the route
+	// catalogue and per-workspace job-runtime telemetry (queue depth, which
+	// connectors are configured). A token set here is checked over plain HTTP
+	// — this process terminates no TLS — so it authenticates a scraper across a
+	// trusted hop, the one the session cookie already takes, and is not a
+	// credential to carry over an untrusted network. See gateMetrics in
+	// routes.go.
 	metricsToken string
+	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
+	// explicit --metrics-access=open for a deployment whose network boundary
+	// already contains the port.
+	metricsOpen bool
 
 	// httpMetrics accumulates the HTTP request families /metrics serves. A
 	// POINTER, and that is load-bearing: contractAPI and operationalMux each
@@ -401,12 +407,12 @@ type Server struct {
 	retrievalEmbedder search.Embedder
 	// companyBriefSvc writes both of the company view's grounded-prose surfaces:
 	// the standing account brief and the prepared "Ask Margince" questions.
-	// WithAccountBrief rebinds its model lane at boot, so the api role writes
+	// WithCompanyBrief rebinds its model lane at boot, so the api role writes
 	// with a model and every other role serves the same deterministic floor.
 	// (WithBrief is a different option — the Morning Brief's L2 ranker.)
 	companyBriefSvc *companybrief.Service
 	// company360Svc is the composite read the brief is assembled from, held so
-	// WithAccountBrief can rebuild the brief service over the SAME gated
+	// WithCompanyBrief can rebuild the brief service over the SAME gated
 	// read rather than a second one that might drift from it.
 	company360Svc *company360.Service
 	// contactsStore is shared by the 360 and the account brief: the brief reads

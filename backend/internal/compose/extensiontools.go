@@ -465,5 +465,13 @@ func (t extensionTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	// still finished with its Runtime, and a panic recovered upstream must
 	// not leave a live one behind.
 	defer rt.release()
-	return t.handle(ctx, rt, in)
+	out, err := t.handle(ctx, rt, in)
+	// The same classification the mounted route applies, for the same reason
+	// and on the other transport. A unit's four published sentinels are the
+	// extension surface's own, so nothing in the core taxonomy recognised them
+	// here: an agent that mistyped an argument was told the tool "failed for an
+	// internal reason" and to RETRY — which re-issues the same rejected call
+	// until a scheduled run's step budget is gone. One invariant spelled on two
+	// sides of a wire is one item, so both sides read it from unitRefusal.
+	return out, unitRefusal(err)
 }

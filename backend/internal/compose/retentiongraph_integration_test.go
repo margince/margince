@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) {
@@ -104,7 +105,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	// exactly as the worker wires it" stays true when a seam is added rather
 	// than becoming a claim this file has to be edited to keep.
 	svc := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(retentionPassProvenance(e.Admin())); err != nil {
+	if err := svc.EvaluateInstallation(principal.SystemActing(e.Admin(), "system")); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 

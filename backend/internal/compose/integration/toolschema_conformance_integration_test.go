@@ -222,7 +222,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"read_project_360", `{"project_id":"` + project.String() + `"}`},
 		{"at_risk_relationships", `{}`},
 		{"who_knows", `{"contact_id":"` + contact.String() + `"}`},
-		{"account_coverage", `{"deal_id":"` + deal.String() + `"}`},
+		{"company_coverage", `{"deal_id":"` + deal.String() + `"}`},
 		{"intro_path_to", `{"company_id":"` + company.String() + `"}`},
 		{"qualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		// The passthrough shapes, whose declared schema is a GUARANTEED SUBSET
@@ -353,7 +353,7 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
 	"book_meeting":         "needs a live calendar provider",
 	"send_email":           "needs an outbound mail provider",
-	"send_account_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
+	"send_company_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
 	"send_message":         "needs an outbound channel provider",
 	"draft_email":          "needs a drafting model path",
 	"draft_follow_ups_for": "needs a drafting model path",

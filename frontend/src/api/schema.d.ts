@@ -85,7 +85,9 @@ export interface paths {
         /**
          * Authenticate with email + password and open a session.
          * @description Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
-         *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
+         *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`), plus a
+         *     `crm_device` cookie (same attributes, 90-day `Max-Age`) whose proof lets this browser
+         *     sign in to the same account while a failed-login lock someone else tripped is in force. Accepts
          *     email + password only — no tenant selector (ADR-0061). Failures are neutral (no
          *     account enumeration), rate-limited, and verified at full cost either way. The MFA and
          *     SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
@@ -290,6 +292,30 @@ export interface paths {
          *     The contacts it counts are owner-private and invisible to an administrator by design (the importing user only, not even Admin) — which is exactly why a count is worth serving: nobody could otherwise tell that a backlog exists. Human session only (x-agent-access: human-only).
          */
         get: operations["getCaptureHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/extension-ingest-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which composed units are handing the core records it cannot express.
+         * @description Admin-only. Reports, per composed unit, how many records the core's ingress grammar refused over the reporting window and which check refused them.
+         *
+         *     A unit moves its cursor past a record the core cannot express — stopping on one malformed message parks the whole connection — so the drop leaves the unit's own logs and nothing else. Without this an installation reading only the CRM cannot tell a provider format change from a feed with nothing on it: every record refused presents exactly like a healthy quiet feed.
+         *
+         *     COUNTS AND A CLASS ONLY. Never the refused record, and never the core's own sentence about it: that sentence quotes the record back — a participant's account id, a provider name — and the extension tier deliberately holds no third-party content and no retention apparatus for any. The class is the core's closed vocabulary and is the granularity an operator acts on. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getExtensionIngestHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2378,7 +2404,7 @@ export interface paths {
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to
          *     send under their own name.
          */
-        post: operations["draftAccountEmail"];
+        post: operations["draftCompanyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2727,6 +2753,47 @@ export interface paths {
          *     elsewhere; this endpoint only reads what the last sync brought back.
          */
         get: operations["getCompanyFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/capture-triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Which mail domains were triaged into this company, and what each concluded.
+         * @description The company-keyed door onto the capture pipeline's one domain-subject stage
+         *     (`company_triage`). The other two doors — `readActivityPipelineTrace` and
+         *     `readCaptureTracePipeline` — are message-keyed, and this stage does not fit either: its
+         *     subject is a DOMAIN, and a domain is triaged once for every message that ever arrives
+         *     from it. A per-message rung would answer "done" for the message that prompted the triage
+         *     and for the hundredth one after it alike, which reads as that message having been the
+         *     cause. So the message ladder names where the answer lives (`answered_on_the_company`)
+         *     and this is the answer.
+         *
+         *
+         *     One entry per domain the ledger resolved into this company, each carrying a rung in the
+         *     same vocabulary the message ladder uses — status, reason class, reason text — so a
+         *     client renders both from one catalog. A company nobody triaged into (typed in by hand,
+         *     or imported) answers an empty list: that is not a gap, and the surface says so rather
+         *     than reporting one.
+         *
+         *
+         *     Gated by the COMPANY's own row scope: a company outside the caller's scope is
+         *     existence-hidden exactly as `getCompany` hides it, never answered with an empty list.
+         */
+        get: operations["getCompanyCaptureTriage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4457,7 +4524,7 @@ export interface paths {
          *
          *     Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
          *     directly on the passport holder's own authority (ADR-0055). Under a tier floor on
-         *     `send_account_email` it stages instead, and what is staged is a CREATE — this send
+         *     `send_company_email` it stages instead, and what is staged is a CREATE — this send
          *     answers no message, so there is no anchor to name and no version to pin — released
          *     by a human holding `activity.create`, the grant `send_email` already asks of its
          *     approver. Whichever door
@@ -4465,7 +4532,7 @@ export interface paths {
          *     sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
          *     see is refused before a human is asked about it at all.
          */
-        post: operations["sendAccountEmail"];
+        post: operations["sendCompanyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11147,6 +11214,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/attribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record who authored imported records in the system they came from.
+         * @description Writes `source_author_id` / `source_author_name` onto records that already
+         *     exist here, from a source system that knows who wrote them. It creates
+         *     nothing: every row is named by the id it already has, and a row this
+         *     installation does not hold is reported as `skipped`, never conjured.
+         *
+         *     WHY THIS IS A ROUTE AND NOT A MIGRATION. The answer lives outside the
+         *     database — in a mirror of the system the records came from — so the
+         *     mapping has to be carried in by something that can read both. It arrives
+         *     in batches, over a network, across tens of thousands of records, which
+         *     means it will be interrupted and it will be re-run.
+         *
+         *     BOTH OF THOSE ARE CHEAP, and they are answered by two different things.
+         *     `source_revision` is a counter the caller stamps per record and only
+         *     ever increases; a row whose stored revision is greater than or equal to
+         *     the one offered is answered `unchanged` and nothing is written, so a
+         *     delayed retry of an old batch cannot overwrite a correction that landed
+         *     after it. Whether the answer DIFFERS from the one already on the record
+         *     is a separate question, and it is settled against the record's own
+         *     columns under its row lock — a clean re-run reports `unchanged` rather
+         *     than rewriting identical values and restamping the activity.
+         *
+         *     `captured_by` IS NOT TOUCHED and cannot be: it is stamped from the
+         *     authenticated principal and answers who recorded the row HERE. This
+         *     route answers the different question of who wrote it THERE. On an
+         *     imported record those are different colleagues, and the audit row this
+         *     writes names the caller — the repair is the caller's act, performed on
+         *     behalf of nobody.
+         *
+         *     NO IDEMPOTENCY KEY, deliberately. A replayed key pays back a recorded
+         *     response without re-running the write, and that is the wrong safety
+         *     here: `source_revision` already makes a retry a no-op per record, on the
+         *     record's own terms rather than on whether the caller reused a header. A
+         *     batch resent after a partial failure SHOULD re-execute — that is how a
+         *     resumed run finishes the records the first attempt never reached.
+         */
+        post: operations["repairSourceAttribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/attribution/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-derive the interaction graph after a run of attribution repairs.
+         * @description The who-knows-whom graph is folded from participant rows, and a repair
+         *     that corrected thousands of them leaves the graph describing the old
+         *     answer. This re-derives it in one pass.
+         *
+         *     SEPARATE FROM THE WRITE, deliberately. Re-folding per batch would repeat
+         *     the same whole-table work for every five hundred records; and a repair
+         *     that succeeded followed by a rebuild that failed is a state an operator
+         *     must be able to see and re-run, not one hidden inside a write that
+         *     already committed. Calling it twice costs time and changes nothing.
+         */
+        post: operations["rebuildAttributionGraph"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -15208,8 +15356,15 @@ export interface paths {
          *     neither starts nor reads a migration run.
          *
          *     Mapping a source column to a field the object does not have is refused
-         *     here rather than at row 40,000: the mapping is validated against the
-         *     object's live field catalog, custom fields included.
+         *     here rather than at row 40,000: the mapping is validated against the set
+         *     of targets `uploadImportSource` reported for this object.
+         *
+         *     Custom fields are NOT in that set. An import lands its rows through the
+         *     stores' caller-opened transaction seams, which refuse custom fields by
+         *     design — reading the catalog is the second connection those seams exist
+         *     to avoid — so a `cf_` target would be accepted, reported as written, and
+         *     dropped. It is refused here instead, and it arrives when the seam can
+         *     carry it.
          */
         post: operations["createImportRun"];
         delete?: never;
@@ -16274,6 +16429,19 @@ export interface components {
              */
             renewal_due: boolean;
         };
+        /** @description Which mail domains were triaged into one company, and what each concluded. The company-keyed door onto the pipeline's one domain-subject stage — see `getCompanyCaptureTriage` for why that stage is not on the per-message ladder. */
+        CompanyCaptureTriage: {
+            /** Format: uuid */
+            company_id: string;
+            /** @description One entry per domain the ledger resolved into this company, ordered by domain so two reads of an unchanged company render identically. Empty for a company nobody triaged into, which is an answer rather than a gap. */
+            domains: components["schemas"]["CompanyTriagedDomain"][];
+        };
+        CompanyTriagedDomain: {
+            /** @description The mail domain, lower-cased as the ledger stores it. */
+            domain: string;
+            /** @description The triage answer in the ladder's own vocabulary, so a client renders this and the per-message rungs from one catalog rather than two that drift. */
+            rung: components["schemas"]["PipelineStageRung"];
+        };
         /** @description One message's journey through the ingress pipeline, as a member reads it. Assembled from two sources: rows capture stored, and live state the pipeline's own modules already keep. Nothing here is a copy of a durable record — a copy would be a second source that can disagree with the first. */
         PipelineTrace: {
             /**
@@ -16986,6 +17154,104 @@ export interface components {
             deletes_at?: string;
         };
         /**
+         * @description One batch of author attributions. Every row names a record that already
+         *     exists here; nothing is created.
+         */
+        SourceAttributionRequest: {
+            /**
+             * @description Names this RUN, for an operator reading the ledger months later
+             *     ("hubspot-mirror-2026-09-17"). Not an id and not a foreign key: the
+             *     repair keeps its history in `audit_log` with everything else.
+             *
+             *     A LABEL, NOT A SENTENCE. Letters, digits, dot, underscore, colon
+             *     and hyphen carry a date and a source system; the pattern keeps the
+             *     column tidy and keeps a paragraph out of it.
+             *
+             *     It does NOT make the label safe, and nothing here pretends
+             *     otherwise: `alice-smith` satisfies the pattern and names a human.
+             *     The label is free text an operator types, so it is cleared on any
+             *     record whose content the Art. 17 erasure destroys, exactly as the
+             *     author's name and its digest are. What survives an erasure is the
+             *     ledger row and its revision, which is what stops a later run
+             *     re-attributing the erased record.
+             */
+            batch_ref: string;
+            /** @description Bounded at five hundred because each row is its own transaction and a batch is the unit an interrupted run resumes at. A larger batch buys nothing and takes longer to redo. */
+            rows: components["schemas"]["SourceAttributionRow"][];
+        };
+        SourceAttributionRow: {
+            /**
+             * @description Activities only, for now. The record tables carry the same column pair, but each lives behind its own module with its own write conventions and its own erasure obligations — so they arrive as their own change rather than as four more arms of this one. The enum is where that boundary is stated, so a caller sending a contact is refused rather than silently skipped.
+             * @enum {string}
+             */
+            object_type: "activity";
+            /**
+             * Format: uuid
+             * @description The record's id in THIS installation, not in the system it came from.
+             */
+            object_id: string;
+            /**
+             * Format: int64
+             * @description A counter the caller raises whenever it changes its mind about a record. A row whose stored revision is greater than or equal to this answers `unchanged` and is not written, so a delayed retry of an old batch cannot overwrite a correction that landed after it.
+             */
+            source_revision: number;
+            /**
+             * Format: uuid
+             * @description The member who wrote it, when the author holds a seat here.
+             */
+            source_author_id?: string | null;
+            /** @description The author's name as the source system spelled it, for somebody who never held a seat here. At least one of this and `source_author_id` must be given; sending neither is how a caller would silently clear an attribution, so it is refused. */
+            source_author_name?: string | null;
+        };
+        SourceAttributionResult: {
+            /** @description Records whose attribution this call wrote. */
+            applied: number;
+            /** @description Records already carrying this answer, or a newer one. */
+            unchanged: number;
+            /** @description Records not written; each carries its reason below. */
+            skipped: number;
+            /** @description One entry per row sent, in the order they were sent. */
+            rows: components["schemas"]["SourceAttributionRowResult"][];
+        };
+        SourceAttributionRowResult: {
+            object_type: string;
+            /** Format: uuid */
+            object_id: string;
+            /** @enum {string} */
+            outcome: "applied" | "unchanged" | "skipped";
+            /** @description Why a row was skipped, in words an operator can act on — the record is not here, it is archived, it came from no source system, or the author names a seat this installation does not have. Null on the other two outcomes. */
+            reason?: string | null;
+        };
+        /** @description Deliberately empty of counts. The edge table belongs to the search module and the composition layer does not read it, so a number here would be a second reader of somebody else's table, kept in step by hand, answering a question nobody asked. The status says the fold ran. */
+        AttributionRebuildResult: Record<string, never>;
+        /**
+         * @description Who wrote a record in the system it was imported from, when that is not
+         *     whoever recorded it here.
+         *
+         *     TWO WAYS TO NAME ONE AUTHOR, and a reader must handle both. An author who
+         *     holds a seat in this installation is named by `user_id`, so the display
+         *     name follows them when they change it and still resolves after they
+         *     leave — the read joins the member directory without a liveness filter,
+         *     because who wrote something in August is a fact about August. An author
+         *     who never worked here has no seat to point at, so the source system's own
+         *     spelling of their name is all there is, and `user_id` is null.
+         *
+         *     `display_name` is therefore always present and is what a surface renders;
+         *     `user_id` is the extra fact that makes them clickable when they are one
+         *     of us.
+         */
+        SourceAuthor: {
+            /**
+             * Format: uuid
+             * @description The member this author is, when they hold a seat here. Null for an author who never did.
+             */
+            user_id?: string | null;
+            /** @description What to show. The member's current display name when `user_id` is set, else the name the source system carried. */
+            display_name: string;
+            /** @description Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded. */
+            via?: string | null;
+        };
+        /**
          * @description One retained email, reduced to what a row shows without opening it. Present on an
          *     activity only when `kind=email`; every other kind carries none, and a reader that
          *     branches on this field is asking the one question that decides the canonical row.
@@ -17089,8 +17355,13 @@ export interface components {
         };
         /**
          * @description What a reader is allowed to know about who else reads this message, in one word the
-         *     badge can print. `team` never means the whole workspace: the linked record's own scope
-         *     still decides who may discover the row at all.
+         *     badge can print.
+         *
+         *     `workspace` means what it says: a seat with no standing of any kind — no team, no
+         *     ownership, nothing shared with it — can still find this message, so everyone who reads
+         *     mail here reads this one. `team` is the narrower answer, where the linked record's own
+         *     scope decides who may discover the row at all. The two used to be one word, and the
+         *     badge printed `team` over a sentence saying everyone in the company could read it.
          *
          *     `withheld` is the only value that says the content is not this caller's, and it never
          *     travels with a reason: why a message is private describes what it is about.
@@ -17101,7 +17372,7 @@ export interface components {
          *     would branch on and never reach.
          * @enum {string}
          */
-        EmailAccessStatus: "team" | "participants" | "selected" | "withheld";
+        EmailAccessStatus: "workspace" | "team" | "participants" | "selected" | "withheld";
         /** @description One address on a message, resolved to a contact or a seat when it is one. */
         EmailParty: {
             address: string;
@@ -18094,7 +18365,15 @@ export interface components {
             suggested_mapping: {
                 [key: string]: string;
             };
-            /** @description Every field this object can receive, custom fields included — the closed set a mapping may name. */
+            /**
+             * @description The closed set a mapping may name — every field this object can receive THROUGH AN
+             *     IMPORT, which is not every field it has.
+             *
+             *     Custom fields are absent on purpose. An import writes through the stores'
+             *     caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+             *     target would be accepted, reported as written, and dropped. Naming one is refused by
+             *     `createImportRun` rather than silently ignored.
+             */
             targets: string[];
         };
         CreateImportRunRequest: {
@@ -18419,6 +18698,8 @@ export interface components {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
             has_more: boolean;
+            /** @description How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. */
+            total?: number;
         };
         /** @description Provenance carried on every captured/user-entered domain row (data-model §1.6). */
         Provenance: {
@@ -21288,7 +21569,7 @@ export interface components {
             questions: components["schemas"]["MeetingPlanQuestion"][];
             scenarios: components["schemas"]["MeetingPlanScenario"][];
             /** @description The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it. */
-            account_arc: components["schemas"]["MeetingPlanArcMoment"][];
+            company_arc: components["schemas"]["MeetingPlanArcMoment"][];
             advance: components["schemas"]["MeetingPlanAdvance"];
             /** @description What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked. */
             unknowns: components["schemas"]["MeetingPlanUnknown"][];
@@ -24543,6 +24824,12 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /**
+             * @description Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+             *     WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
+             *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
+             */
+            readonly author?: components["schemas"]["SourceAuthor"] | null;
             raw?: {
                 [key: string]: unknown;
             } | null;
@@ -24729,6 +25016,12 @@ export interface components {
             remind_at?: string | null;
             /** Format: uuid */
             assignee_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+             *     Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+             */
+            host_user_id?: string;
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
@@ -25141,7 +25434,7 @@ export interface components {
          *     needs to see what the draft is standing on, and `generated_by`, because the
          *     deterministic floor is a real outcome here rather than an error.
          */
-        AccountEmailDraft: {
+        CompanyEmailDraft: {
             subject: string;
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
@@ -25667,7 +25960,7 @@ export interface components {
          * @description One account-started send. It is SendEmailRequest plus the `links` an anchor would
          *     otherwise have supplied — the records this new conversation belongs to.
          */
-        SendAccountEmailRequest: {
+        SendCompanyEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
             body: string;
@@ -28480,6 +28773,47 @@ export interface components {
             exhausted: number;
             oldest_pending_age_seconds?: number | null;
         };
+        /**
+         * @description Which composed units are handing the core records it cannot express, for an
+         *     administrator asking whether a connector is broken or merely quiet.
+         *
+         *     COUNTS AND A CLASS ONLY — never the refused record and never the core's sentence
+         *     about it, which quotes the record back. A unit with nothing refused in the window
+         *     is absent rather than listed at zero: this page answers "what is wrong", and a roll
+         *     of healthy units is the thing a reader has to scan past to find it.
+         */
+        ExtensionIngestHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description How many days back the counts reach, ending today (UTC). */
+            window_days: number;
+            /** @description One row per composed unit with anything refused in the window. */
+            units: components["schemas"]["ExtensionUnitIngestHealth"][];
+        };
+        ExtensionUnitIngestHealth: {
+            /** @description The composed unit's name. */
+            unit: string;
+            /** @description Records the core refused from this unit over the whole window. */
+            refused: number;
+            /** Format: date-time */
+            last_refused_at?: string;
+            /** @description The same total broken out by the check that refused, largest first. */
+            refusals: components["schemas"]["ExtensionIngestRefusal"][];
+        };
+        ExtensionIngestRefusal: {
+            /**
+             * @description Which check refused the record — the core's closed vocabulary
+             *     (`extension.RecordRefusal`), one per check the ingress grammar runs. It is what
+             *     names the mapping to fix: "every record fails its participants" is a different
+             *     bug from "every record fails its key".
+             * @enum {string}
+             */
+            refusal: "key" | "activity" | "addresses" | "counterparty" | "participants" | "size";
+            /** @description Records this check refused in the window. */
+            refused: number;
+            /** Format: date-time */
+            last_refused_at?: string;
+        };
         JobHealth: {
             /** Format: date-time */
             generated_at: string;
@@ -31149,11 +31483,35 @@ export interface components {
          *     wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
          */
         CaptureConsent: {
-            /** Format: uuid */
-            purpose_id: string;
+            /**
+             * Format: uuid
+             * @description The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+             *     — the booking doors are, to the `transactional` lane — and the server resolves that
+             *     lane's own id for this installation.
+             *
+             *     Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+             *     per-installation uuids minted at seed time and there is no anonymous read of them, so
+             *     an anonymous form that names one is naming a value it was never given. Sending an id
+             *     is for a caller that read the catalog; it is still admitted only if it IS the lane the
+             *     surface is confined to.
+             */
+            purpose_id?: string;
             /** @description Version id of the consent wording shown to the subject. */
             policy_version: string;
-            /** @description The exact wording shown, stored with the consent event for demonstrability. */
+            /**
+             * @description The exact wording shown, stored with the consent event for demonstrability.
+             *
+             *     Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+             *     that cannot say what the subject read — before a contact row exists, because the
+             *     door is anonymous and a refusal further in would grow the contact table one rejected
+             *     request at a time. Omitting it is a 422 naming this field. It is not marked required
+             *     here because tightening a shipped request field is the breaking change the contract
+             *     gate refuses; the obligation lives in the doors, and it is stated here so a caller
+             *     reading the schema is not surprised by it.
+             *
+             *     Unlike `purpose_id`, this is something only the surface knows: the server cannot
+             *     resolve what a page put in front of somebody.
+             */
             wording?: string | null;
             /**
              * @description An affirmative marketing tick the subject made on the same form. It does NOT record a
@@ -36448,10 +36806,10 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Authenticated; session cookie set. */
+            /** @description Authenticated; session and device cookies set. */
             200: {
                 headers: {
-                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ */
+                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ — and crm_device=<proof>; Max-Age=7776000; HttpOnly; Secure; SameSite=Strict; Path=/ */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
@@ -36792,6 +37150,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptureHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getExtensionIngestHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the core has refused from this installation's units. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionIngestHealth"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37671,7 +38059,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -37893,7 +38281,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39156,7 +39544,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39607,7 +39995,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    draftAccountEmail: {
+    draftCompanyEmail: {
         parameters: {
             query?: never;
             header?: never;
@@ -39647,7 +40035,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -40060,6 +40448,41 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getCompanyCaptureTriage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domains triaged into this company (empty array when none were). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyCaptureTriage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description This deployment composed no domain triage, so there is no company check to read. An empty list would say the domains were never triaged, which a composition gap cannot support. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listCompanyFacts: {
@@ -43223,7 +43646,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    sendAccountEmail: {
+    sendCompanyEmail: {
         parameters: {
             query?: never;
             header?: {
@@ -43260,7 +43683,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SendAccountEmailRequest"];
+                "application/json": components["schemas"]["SendCompanyEmailRequest"];
             };
         };
         responses: {
@@ -43642,7 +44065,7 @@ export interface operations {
                     /**
                      * @description Entities to associate the resulting meeting activity with. At least one is
                      *     required: a meeting belonging to no record appears on no timeline and is one
-                     *     nobody will find again, which is the same reason `SendAccountEmailRequest`
+                     *     nobody will find again, which is the same reason `SendCompanyEmailRequest`
                      *     carries the bound. Each one is row-scope probed and written as its own row,
                      *     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
                      *     before it stages.
@@ -45331,7 +45754,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -52739,6 +53162,55 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    repairSourceAttribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceAttributionRequest"];
+            };
+        };
+        responses: {
+            /** @description What happened to each named record, in the order they were sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceAttributionResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rebuildAttributionGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The graph was re-derived. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributionRebuildResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     claimRecord: {

@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -53,7 +54,7 @@ export function RecordRolesCard() {
       title={t("recordRoles.title")}
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("recordRoles.addOpen")}
           </Button>
         )
@@ -88,7 +89,7 @@ export function RecordRolesCard() {
             }
           />
         </SettingList>
-        {!canEdit && <p className="t-caption">{t("recordRoles.readOnly")}</p>}
+        {!canEdit && <p>{t("recordRoles.readOnly")}</p>}
         {failure?.error && (
           <Callout
             tone="danger"
@@ -184,9 +185,13 @@ function AddRecordRoleDialog({
   );
   return (
     <Modal open onClose={onClose} labelledBy="record-role-add-title">
-      <h2 className="t-h3 modal-title" id="record-role-add-title">
+      <Heading
+        size="large"
+        className="t-h3 modal-title"
+        id="record-role-add-title"
+      >
         {t("recordRoles.addTitle")}
-      </h2>
+      </Heading>
       <Field label={t("recordRoles.addLabel")} hint={t("recordRoles.addHint")}>
         {(control) => (
           <TextInput
@@ -197,7 +202,7 @@ function AddRecordRoleDialog({
         )}
       </Field>
       <fieldset className="field-multiselect" disabled={pending}>
-        <legend className="t-label">{t("recordRoles.recordTypes")}</legend>
+        <legend className="t-name">{t("recordRoles.recordTypes")}</legend>
         {(["company", "deal", "project"] as const).map((kind) => (
           <Checkbox
             key={kind}
@@ -214,7 +219,7 @@ function AddRecordRoleDialog({
         ))}
       </fieldset>
       <fieldset className="field-multiselect" disabled={pending}>
-        <legend className="t-label">{t("recordRoles.assigneeKinds")}</legend>
+        <legend className="t-name">{t("recordRoles.assigneeKinds")}</legend>
         {(["user", "team"] as const).map((kind) => (
           <Checkbox
             key={kind}

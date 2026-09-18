@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { useCanWrite } from "../../app/capability";
 import { useInstallationSettings } from "../../app/uploadlimit";
 import { Field, TextInput } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { problemFieldErrorsOf, problemMessageOf, QueryGate } from "../common";
@@ -131,7 +132,9 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
           <QueryGate query={settings} pendingLabel={t("ob.conv.basis.title")}>
             {(current) => (
               <section className="ob-basis-section">
-                <h3>{t("ob.conv.basis.reportingTitle")}</h3>
+                <Heading size="medium">
+                  {t("ob.conv.basis.reportingTitle")}
+                </Heading>
                 <Field
                   label={t("installationSettings.baseCurrency")}
                   hint={currencyNote(current, t)}

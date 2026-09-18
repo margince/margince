@@ -393,3 +393,48 @@ func TestPublicBookingRateLimited(t *testing.T) {
 		t.Fatalf("21st burst booking → %d, want 429", last)
 	}
 }
+
+// The anonymous page names no purpose, and the door answers with its own.
+//
+// This is the shape the published page actually posts, and the reason it is a
+// scenario of its own rather than a variant above: every other case here reads
+// the installation's real purpose id from `GET /v1/consent-purposes` first,
+// which is an admin read. A page served to a stranger cannot make it, there is
+// no anonymous read of the catalog, and purpose ids are per-installation uuids
+// minted at seed time — so a page that names one is naming a value nobody gave
+// it. Supplying the id on the booker's behalf is a test standing in for
+// production, and it passed while no installation's booking page worked at all.
+//
+// What is asserted is not just the 201: the grant must land on the
+// TRANSACTIONAL purpose. A door that resolved to whichever purpose came first
+// would answer 201 too, having written a stranger a grant under a marketing
+// lane they never saw.
+func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	base := "/v1/public/booking/" + bookingSlug(t, e)
+	monday := nextMonday()
+
+	booking := AnyMap{
+		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
+		"subject": "Intro call",
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"consent": AnyMap{
+			"policy_version": "pp-2026-01",
+			"wording":        "You agree we may contact you about this meeting.",
+		},
+	}
+	if status := publicCall(t, e, "POST", base, booking, nil, nil); status != http.StatusCreated {
+		t.Fatalf("a booking naming no purpose → %d, want 201 — the published page cannot name one", status)
+	}
+
+	var key, state string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT p.key, c.state
+		FROM contact_consent c JOIN consent_purpose p ON p.id = c.purpose_id`).Scan(&key, &state); err != nil {
+		t.Fatalf("reading the grant the booking recorded: %v", err)
+	}
+	if key != "transactional" || state != "granted" {
+		t.Fatalf("the booking granted %q=%q, want transactional=granted", key, state)
+	}
+}

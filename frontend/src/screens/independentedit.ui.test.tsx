@@ -146,7 +146,12 @@ it("saves Customer tier when a background logo update changed the company versio
   await user.click(
     await screen.findByRole("option", { name: "Growth Client" }),
   );
-  await waitFor(() => expect(patches).toHaveLength(2));
+  // Two round-trips, not one: the first PATCH is refused as version skew, the
+  // screen refetches the record and retries on the version it came back with.
+  // waitFor's one-second default is a machine-speed assumption about that
+  // chain, and it is the assumption that fails on a loaded CI runner while the
+  // behaviour under test is perfectly correct.
+  await waitFor(() => expect(patches).toHaveLength(2), { timeout: 5000 });
   expect(patches).toEqual([
     { body: { cf_customer_tier: "Growth Client" }, version: "1" },
     { body: { cf_customer_tier: "Growth Client" }, version: "2" },

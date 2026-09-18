@@ -19,7 +19,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/nextstep"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // withheld reports whether any of these sections was kept from this reader.
@@ -54,13 +56,17 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedCommercial) {
 		return crmcontracts.ContactMoment{}, false
 	}
-	if page.Commercial == nil || page.Commercial.Deal == nil {
-		return crmcontracts.ContactMoment{}, false
-	}
-	if page.NextMeeting != nil {
-		return crmcontracts.ContactMoment{}, false
-	}
-	if page.NextSteps != nil && len(page.NextSteps.Data) > 0 {
+	// kernel/nextstep is the one predicate, asked here and by the deal card's
+	// own rules. The two surfaces gather different facts on purpose — this page
+	// counts work THIS CONTACT reaches, the deal card counts work linked to the
+	// deal — and share the verdict those facts imply. Before they shared it,
+	// the two pages told a reader opposite things about the same deal on the
+	// same morning.
+	if !nextstep.Missing(nextstep.Facts{
+		DealOpen:       page.Commercial != nil && page.Commercial.Deal != nil,
+		MeetingBooked:  page.NextMeeting != nil,
+		OpenHumanTasks: humanFiledTasks(page),
+	}) {
 		return crmcontracts.ContactMoment{}, false
 	}
 	deal := *page.Commercial.Deal
@@ -96,6 +102,32 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 			Destination: dealRecord(deal.DealId),
 		}},
 	}, true
+}
+
+// humanFiledTasks counts the open work on this page that a colleague filed.
+//
+// The product's own reminders are excluded because the question above is
+// whether anybody agreed a next step, and the product agreeing with itself is
+// not an answer. It is the same exclusion owedPromises makes one file over,
+// through the same principal.SystemMintedID, and for the same reason.
+//
+// Reading the page is sound HERE because nextStepsSection orders colleague-filed
+// work first (byUrgencyHumanFirst): if such a task exists at all, it is on the
+// page this reads, whatever else is open. Under plain urgency it would not be,
+// and a contact buried under check-in reminders would be reported as having no
+// next step while their one real promise sat on page two.
+func humanFiledTasks(page *crmcontracts.Contact360) int {
+	if page.NextSteps == nil {
+		return 0
+	}
+	count := 0
+	for _, task := range page.NextSteps.Data {
+		if task.CapturedBy != nil && principal.SystemMintedID(*task.CapturedBy) {
+			continue
+		}
+		count++
+	}
+	return count
 }
 
 // thinRelationshipMoment: nothing has been captured and nobody here knows them.

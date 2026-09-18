@@ -42,14 +42,14 @@ func TestFetchAcceptsAWellFormedDocument(t *testing.T) {
 	base, asked := serving(t, func(w http.ResponseWriter, _ *http.Request) {
 		writeHTML(t, w, cleanDocument)
 	})
-	got, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI)
+	got, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI)
 	if err != nil {
 		t.Fatalf("fetching a well-formed document: %v", err)
 	}
 	if got != cleanDocument {
 		t.Error("the fetcher answered something other than the served body")
 	}
-	if want := []string{"/mcp-apps/account-brief.html"}; len(*asked) != 1 || (*asked)[0] != want[0] {
+	if want := []string{"/mcp-apps/company-brief.html"}; len(*asked) != 1 || (*asked)[0] != want[0] {
 		t.Errorf("the fetcher asked for %v, want %v", *asked, want)
 	}
 }
@@ -64,9 +64,9 @@ func TestFetchRefusesARedirect(t *testing.T) {
 		writeHTML(t, w, cleanDocument)
 	})
 	base, _ := serving(t, func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, elsewhere.String()+"/mcp-apps/account-brief.html", http.StatusFound)
+		http.Redirect(w, r, elsewhere.String()+"/mcp-apps/company-brief.html", http.StatusFound)
 	})
-	body, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI)
+	body, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI)
 	if err == nil {
 		t.Fatalf("the fetcher followed a redirect off the configured origin and answered %d bytes", len(body))
 	}
@@ -83,7 +83,7 @@ func TestFetchRefusesAnOversizeBody(t *testing.T) {
 		// oversize body is the assertion succeeding, not a fault to report.
 		_, _ = io.WriteString(w, cleanDocument+strings.Repeat("<!-- pad -->", 200_000))
 	})
-	if _, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI); err == nil {
+	if _, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI); err == nil {
 		t.Fatal("the fetcher accepted a body past its cap")
 	}
 }
@@ -94,7 +94,7 @@ func TestFetchAcceptsABodyExactlyAtTheCap(t *testing.T) {
 	base, _ := serving(t, func(w http.ResponseWriter, _ *http.Request) {
 		writeHTML(t, w, strings.Repeat("x", maxDocumentBytes))
 	})
-	got, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI)
+	got, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI)
 	if err != nil {
 		t.Fatalf("a document exactly at the cap was refused: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestFetchRefusesANon200(t *testing.T) {
 			w.Header().Set("Content-Type", "text/html")
 			w.WriteHeader(status)
 		})
-		_, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI)
+		_, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI)
 		if err == nil {
 			t.Errorf("the fetcher accepted HTTP %d as a view", status)
 			continue
@@ -135,7 +135,7 @@ func TestFetchRefusesTheWrongContentType(t *testing.T) {
 				t.Errorf("writing the test body: %v", err)
 			}
 		})
-		if _, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI); err == nil {
+		if _, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI); err == nil {
 			t.Errorf("the fetcher accepted a document served as %q", contentType)
 		}
 	}
@@ -152,7 +152,7 @@ func TestFetchAcceptsTheAppProfileAndAParameterisedHTML(t *testing.T) {
 				t.Errorf("writing the test body: %v", err)
 			}
 		})
-		if _, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI); err != nil {
+		if _, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI); err != nil {
 			t.Errorf("the fetcher refused a document served as %q: %v", contentType, err)
 		}
 	}
@@ -167,7 +167,7 @@ func TestFetchRefusesAPlainHTTPOriginThatIsNotLocal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsing: %v", err)
 	}
-	if _, err := NewFetcher(base).Fetch(t.Context(), AccountBriefURI); err == nil {
+	if _, err := NewFetcher(base).Fetch(t.Context(), CompanyBriefURI); err == nil {
 		t.Fatal("the fetcher accepted a public cleartext origin")
 	}
 }
@@ -228,7 +228,7 @@ func TestAFetcherWithNoOriginRefusesRatherThanAskingARelativeURL(t *testing.T) {
 	// The connector-disabled shape. Nothing should construct a fetcher then, but
 	// a nil origin that quietly produced a relative request would retry forever
 	// against nothing.
-	if _, err := NewFetcher(nil).Fetch(t.Context(), AccountBriefURI); err == nil {
+	if _, err := NewFetcher(nil).Fetch(t.Context(), CompanyBriefURI); err == nil {
 		t.Fatal("a fetcher with no configured origin answered a document")
 	}
 }

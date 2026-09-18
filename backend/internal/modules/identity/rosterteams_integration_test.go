@@ -45,7 +45,7 @@ func TestRosterCarriesTeamsForAnAdminAndForNobodyElse(t *testing.T) {
 	if err := e.svc.RedeemPasswordReset(principal.WithCorrelationID(principal.WithWorkspaceID(ctx, e.ws.UUID), ids.NewV7()), rawToken, "a rep password!"); err != nil {
 		t.Fatalf("redeeming the invite token: %v", err)
 	}
-	rep, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), "rep@acme.test", "a rep password!")
+	rep, _, err := e.svc.Login(principal.WithWorkspaceID(ctx, e.ws.UUID), "rep@acme.test", "a rep password!", noDevice)
 	if err != nil {
 		t.Fatalf("rep login: %v", err)
 	}

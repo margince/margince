@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -713,3 +714,100 @@ func (e *ingressEnv) countAsWorkspace(t *testing.T, sql string, args ...any) int
 // WRITE, which is what the demotion test measures. A test reading the principal
 // back would be reading this package's own construction.
 var _ = principal.PrincipalConnector
+
+// A record the grammar refuses leaves a trace the CORE can see.
+//
+// The unit moves its cursor past it and counts it in its own logs, which is
+// what it can do with what it has — and is exactly why the drop was invisible
+// to the installation: a provider format change that made every record
+// unrepresentable presented as a quiet feed. Two ingests rather than one,
+// because the row is a COUNT and a writer that overwrote instead of
+// accumulating would report a broken connector as having dropped one record.
+func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
+	e := setupIngress(t)
+	rt := e.ingestingRuntime()
+	ctx := context.Background()
+
+	// Unkeyed: the core cannot make an unkeyed capture idempotent, so the
+	// grammar refuses it. The class is the KEY check's.
+	refused := aProviderRecord("", "member@buyer.test")
+
+	for range 2 {
+		result, err := rt.Ingest(ctx, extension.UserID(e.member.String()), refused)
+		if err != nil {
+			t.Fatalf("Ingest: %v — a record the grammar refuses is a disposition, not a failure", err)
+		}
+		if result.Disposition != extension.DispositionUnrepresentable {
+			t.Fatalf("disposition = %q, want unrepresentable", result.Disposition)
+		}
+		if result.Refusal != extension.RefusalKey {
+			t.Errorf("refusal = %q, want %q — the class is what the core records and what a unit groups by",
+				result.Refusal, extension.RefusalKey)
+		}
+		if result.Ref != (extension.Ref{}) {
+			t.Errorf("ref = %+v, want none — nothing was written", result.Ref)
+		}
+		// The complaint travels, so a unit logs the same sentence it used to
+		// read off the error rather than losing why the record was refused.
+		if result.Reason == "" {
+			t.Error("the refusal says nothing about what was wrong with the record")
+		}
+	}
+	if got := e.countAsWorkspace(t,
+		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 0 {
+		t.Errorf("activity rows = %d, want none — a record the grammar refuses never reaches capture", got)
+	}
+
+	var unit, class string
+	var refusedCount int64
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT unit, refusal, refused FROM extension_ingest_refusal`).
+			Scan(&unit, &class, &refusedCount)
+	})
+	if unit != ingressUnit || class != string(extension.RefusalKey) {
+		t.Errorf("breadcrumb names %q/%q, want %q/%q", unit, class, ingressUnit, extension.RefusalKey)
+	}
+	if refusedCount != 2 {
+		t.Errorf("refused = %d, want 2 — the row accumulates, so a connector refusing everything reads "+
+			"as refusing everything rather than as having dropped one record", refusedCount)
+	}
+}
+
+// And what it does NOT keep. The core's complaint quotes the record back — a
+// participant's account id, a provider name — so a table holding it would give
+// the extension tier a retention and erasure question about third-party content
+// that the tier was deliberately built without.
+func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
+	e := setupIngress(t)
+	rt := e.ingestingRuntime()
+	ctx := context.Background()
+
+	// A participant naming an account on a record with no channel provider:
+	// the one refusal whose sentence quotes a provider-supplied identifier.
+	const leaked = "acct-90210-should-not-be-stored"
+	refused := aProviderRecord("ws-9:9001", "member@buyer.test")
+	refused.Activity.ChannelProvider = ""
+	refused.Participants = []extension.Participant{{Account: leaked, Role: "to"}}
+
+	result, err := rt.Ingest(ctx, extension.UserID(e.member.String()), refused)
+	if err != nil {
+		t.Fatalf("Ingest: %v", err)
+	}
+	if result.Refusal != extension.RefusalParticipants {
+		t.Fatalf("refusal = %q, want %q", result.Refusal, extension.RefusalParticipants)
+	}
+	// The unit holds the record, so the sentence is the unit's to read.
+	if !strings.Contains(result.Reason, leaked) {
+		t.Errorf("the unit was not told which account was refused: %q", result.Reason)
+	}
+
+	var stored string
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT unit || ' ' || refusal FROM extension_ingest_refusal`).Scan(&stored)
+	})
+	if strings.Contains(stored, leaked) {
+		t.Errorf("the breadcrumb stored a provider-supplied identifier: %q", stored)
+	}
+}

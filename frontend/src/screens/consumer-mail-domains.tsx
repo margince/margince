@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -176,7 +177,7 @@ function BaselineRow() {
               onChange={(e) => setQ(e.target.value)}
             />
             {needle !== "" && result && result.matched === 0 && (
-              <p className="t-caption">{t("consumerMail.baselineNone")}</p>
+              <p>{t("consumerMail.baselineNone")}</p>
             )}
             {needle !== "" && result && result.matched > 0 && (
               <>
@@ -185,9 +186,7 @@ function BaselineRow() {
                   data-testid="consumer-mail-baseline-list"
                 >
                   {result.data.map((domain) => (
-                    <li key={domain} className="t-caption">
-                      {domain}
-                    </li>
+                    <li key={domain}>{domain}</li>
                   ))}
                 </ul>
                 {result.matched > result.data.length && (
@@ -246,7 +245,6 @@ export function ConsumerMailDomainsCard() {
       // which is the one that knows WHICH of the two grants is missing.
       titleAction={
         <Button
-          small
           reasonId={canAdd ? undefined : denialId}
           onClick={() => setAdding(true)}
         >
@@ -290,13 +288,12 @@ export function ConsumerMailDomainsCard() {
                           control={
                             <Button
                               variant="ghost"
-                              small
                               aria-label={t("consumerMail.remove")}
                               disabled={remove.isPending}
                               reasonId={canManage ? undefined : denialId}
                               onClick={() => remove.mutate(entry.id)}
                             >
-                              <Trash2 aria-hidden size={16} />
+                              <Trash2 aria-hidden />
                             </Button>
                           }
                         />
@@ -315,11 +312,7 @@ export function ConsumerMailDomainsCard() {
             <BaselineRow />
           </Disclosure>
         </SettingList>
-        {denial && (
-          <p className="t-caption" id={denialId}>
-            {denial}
-          </p>
-        )}
+        {denial && <p id={denialId}>{denial}</p>}
         {remove.isError && (
           <Callout
             tone="danger"
@@ -360,9 +353,9 @@ function AddConsumerMailDialog({
   const typed = domain.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("consumerMail.addTitle")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(e) => {
@@ -403,11 +396,7 @@ function AddConsumerMailDialog({
             />
           )}
         </Field>
-        {!canManage && (
-          <p className="t-caption" id={carveOutDenialId}>
-            {t("consumerMail.addOnly")}
-          </p>
-        )}
+        {!canManage && <p id={carveOutDenialId}>{t("consumerMail.addOnly")}</p>}
         {add.isError && (
           <Callout
             tone="danger"
@@ -418,11 +407,10 @@ function AddConsumerMailDialog({
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || typed === ""}

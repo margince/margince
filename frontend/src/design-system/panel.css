@@ -15,10 +15,11 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * ONE height, and it is fixed: --panel-head-h, whatever the head carries. A
- * title alone, a title over a description, a title beside a badge or a button
- * all draw the same band, so a reader scanning a page of panels reads a column
- * of titles at one interval instead of a ragged one. A floor is what this used
+ * ONE height, and it is fixed: --panel-head-h, whatever the head carries. The
+ * head is a title and, optionally, the verbs that act on it — never a
+ * description — so a title alone and a title beside a badge or a button draw
+ * the same band, and a reader scanning a page of panels reads a column of
+ * titles at one interval instead of a ragged one. A floor is what this used
  * to be, and a floor is an invitation: a description raised the band here, two
  * screens then re-spaced it there, and the same card stood at three heights.
  * What does not fit on one band is not header content — a toolbar row or a
@@ -47,80 +48,33 @@
 /* The zone's title in the display face: the one word a reader finds a zone
  * by, so it is set as a heading rather than as a label on a card.
  *
- * ONE size, and this is the only rule in the product that states it. A title is
- * what a reader scans a column of panels for, so a pane that set its own read
- * as a different kind of card — and four sizes were in the tree, from body up
- * to a section rung. `--fs-panel-title` is the house's answer: a tone below and
- * a screen sheet anywhere in the tree may recolour this title and may not
- * resize it, which `panel.test.tsx` sweeps for. */
-.panel-head .panel-title {
-  font-family: var(--f-display);
-  font-size: var(--fs-panel-title);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
-  /* The band's own leading, tighter than the body scale: a single line
-     inherits its half-leading as air above and below, and at the reading
-     scale the title and the description together sat low in the 56px the
-     band gives them. Declared here rather than left to inherit, so the pair
-     is centred by the same number on every page whatever text scale the
-     surrounding screen sets. */
-  line-height: 1.25;
-}
-
-/* The title and its description are one stacked item, and that item absorbs the
- * row's free space — so whatever comes after it (a badge, a button, two of
- * them) sits at the far end rather than crowding the title.
+ * It absorbs the row's free space, so whatever comes after it (a badge, a
+ * button, two of them) sits at the far end rather than crowding it. The push is
+ * anchored on the title rather than on the row's last child: `:last-child` can
+ * only move ONE node, so a pair of actions splits with one of them still
+ * crowding the title.
  *
- * The push is anchored on the title block rather than on the row's last child.
- * `:last-child` can only move ONE node, so a pair of actions splits with one of
- * them still crowding the title, and it identifies an action by NOT being an
- * `h2` — a test that stops being true the moment the title carries a
- * description of its own. */
-.panel-head-text {
-  display: flex;
-  flex-direction: column;
-  /* No gap: the two lines' own leading is already the interval between them,
-     and inside a fixed band a gap on top of it is what pushes the pair past the
-     band's edges. The stack measures 35px of the 56 the band gives it. */
-  gap: 0;
+ * It ends in an ellipsis rather than in a second row: the band's height is
+ * fixed, so a title long enough to wrap would otherwise be clipped mid-letter
+ * with nothing to say it had been. A record named by a legal entity is the case
+ * — the ellipsis is what tells a reader the name goes on, and the full string is
+ * still the element's text for a screen reader and for the pointer. */
+.panel-head .panel-title {
+  font-family: var(--fontFamilyHeading);
+  color: var(--textPrimary);
   min-width: 0;
   margin-right: auto;
-}
-
-/* The description reads UNDER the title, not beside it at the same volume: the
- * title is what a reader scans a page of panels for, and the line under it is
- * what they read once they have found the one they want. It is meta type for
- * that reason and not only for room, though room is why the pair fits: 16px of
- * title over 12px of meta clears the band with air to spare. */
-.panel-head-sub {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-  /* The title's leading, so the two lines of the head are one block set on
-     one interval rather than two lines each spaced by its own rung. */
-  line-height: 1.25;
-}
-
-/* Both lines of the head end in an ellipsis rather than in a second row: the
- * band's height is fixed, so a title long enough to wrap would otherwise be
- * clipped mid-letter with nothing to say it had been. A record named by a
- * legal entity is the case — the ellipsis is what tells a reader the name goes
- * on, and the full string is still the element's text for a screen reader and
- * for the pointer. */
-.panel-head .panel-title,
-.panel-head-sub {
-  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Only the title block gives way. A badge, a button or a count is sized by its
- * own words, and a shrunken one reads as a different control — or loses its
- * label to the ellipsis above. `:where()` carries no specificity, so a caller
- * whose action genuinely can give way (a wrapping action strip) says so with an
+/* Only the title gives way. A badge, a button or a count is sized by its own
+ * words, and a shrunken one reads as a different control — or loses its label
+ * to the ellipsis above. `:where()` carries no specificity, so a caller whose
+ * action genuinely can give way (a wrapping action strip) says so with an
  * ordinary class of its own and wins without depending on sheet order. */
-.panel-head > :where(:not(.panel-head-text)) {
+.panel-head > :where(:not(.panel-title)) {
   flex-shrink: 0;
 }
 
@@ -308,8 +262,6 @@
   flex-wrap: wrap;
   padding: var(--space-3) var(--padPanel);
   border-top: 1px solid var(--borderSubtle);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* Verbs under the content they change: spaced off it so they read as an action
@@ -343,63 +295,109 @@
  * it, and the title carries it in ink alone.
  *
  * A TONE ONLY TINTS. The band's height, its padding and its alignment belong to
- * `.panel-head` above, and the title's size to `--fs-panel-title` — a lead that
- * changed size when its finding turned bad, or an indigo panel whose title
- * stood smaller than the one beside it, would read as a different card rather
- * than as the same card in a different mood. Each of these families did set its
- * own title size once, a rung DOWN, which is how a page could show the ask and
- * the report at two sizes and neither of them chosen. What is left for a tone
- * is the ground, the hairline's colour and the title's colour; the icon
- * alignment below is the tone's own, because only a toned head leads its title
- * with a mark. */
+ * `.panel-head` above. What is left for a tone is the ground, the hairline's
+ * colour and the title's colour; the icon alignment below is the tone's own,
+ * because only a toned head leads its title with a mark.
+ *
+ * ONE ANATOMY, and each tone names three tokens into it rather than restating
+ * the four rules. Seven copies of the same block is seven places for a hairline
+ * to drift from a band, which is what the first two tones had already started
+ * doing. `PANEL_TONES` in panel.tsx is the list; a tone added there with no
+ * `--panelTone*` triple here draws an untinted panel, and panel.test.tsx walks
+ * the list to catch it. */
+.panel-accent,
+.panel-info,
+.panel-success,
+.panel-warning,
+.panel-danger,
+.panel-discovery {
+  border-color: var(--panelToneEdge);
+}
 .panel-accent > .panel-head,
-.panel-warn > .panel-head {
+.panel-info > .panel-head,
+.panel-success > .panel-head,
+.panel-warning > .panel-head,
+.panel-danger > .panel-head,
+.panel-discovery > .panel-head {
   gap: var(--space-2);
+  background: var(--panelToneBand);
+  border-bottom: 1px solid var(--panelToneEdge);
 }
 .panel-accent > .panel-head .panel-title,
-.panel-warn > .panel-head .panel-title {
+.panel-info > .panel-head .panel-title,
+.panel-success > .panel-head .panel-title,
+.panel-warning > .panel-head .panel-title,
+.panel-danger > .panel-head .panel-title,
+.panel-discovery > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  color: var(--panelToneInk);
+}
+.panel-accent > .panel-foot,
+.panel-info > .panel-foot,
+.panel-success > .panel-foot,
+.panel-warning > .panel-foot,
+.panel-danger > .panel-foot,
+.panel-discovery > .panel-foot {
+  border-top-color: var(--panelToneEdge);
 }
 
-/* tone="accent": the ordinary ask. */
+/* tone="accent": the ordinary ask. The one lead with no FINDING behind it — the
+ * brand asking for a move rather than the account reporting one. */
 .panel-accent {
-  border-color: var(--accentMed);
-}
-.panel-accent > .panel-head {
-  background: var(--accentLight);
-  border-bottom: 1px solid var(--accentMed);
-}
-.panel-accent > .panel-head .panel-title {
-  color: var(--accentText);
-}
-.panel-accent > .panel-foot {
-  border-top-color: var(--accentMed);
+  --panelToneEdge: var(--accentMed);
+  --panelToneBand: var(--accentLight);
+  --panelToneInk: var(--accentText);
 }
 
-/* tone="warn": the lead whose FINDING is the bad news. The warn family's own
- * three tokens, the same pairing `Callout` draws — a title in `--warn` over
- * `--warnBg` — so the two surfaces that say "this is the bad news" say it in
- * one colour rather than each picking its own amber. */
-.panel-warn {
-  border-color: var(--warnBorder);
+/* The five states, each on its own family's three tokens — the same pairing
+ * `Callout` and `Badge` draw, so the surfaces that say "this is the bad news"
+ * or "this went well" say it in one colour rather than each picking its own.
+ *
+ * tone="info": the neutral report, and the lead whose work is still running. */
+.panel-info {
+  --panelToneEdge: var(--infoBorder);
+  --panelToneBand: var(--infoBg);
+  --panelToneInk: var(--infoText);
 }
-.panel-warn > .panel-head {
-  background: var(--warnBg);
-  border-bottom: 1px solid var(--warnBorder);
+
+/* tone="success": the lead whose FINDING is that the thing landed. */
+.panel-success {
+  --panelToneEdge: var(--successBorder);
+  --panelToneBand: var(--successBg);
+  --panelToneInk: var(--successText);
 }
-.panel-warn > .panel-head .panel-title {
-  color: var(--warnText);
+
+/* tone="warning": the lead whose FINDING is the bad news that can still be
+ * stopped — a relationship gone quiet, a promise going late. */
+.panel-warning {
+  --panelToneEdge: var(--warningBorder);
+  --panelToneBand: var(--warningBg);
+  --panelToneInk: var(--warningText);
 }
-.panel-warn > .panel-foot {
-  border-top-color: var(--warnBorder);
+
+/* tone="danger": the finding that cannot be stopped — the write that failed,
+ * the record that cannot be brought back. */
+.panel-danger {
+  --panelToneEdge: var(--dangerBorder);
+  --panelToneBand: var(--dangerBg);
+  --panelToneInk: var(--dangerText);
+}
+
+/* tone="discovery": a capability this reader has not met. The one lead that
+ * reports no verdict on the account — it says how long a thing has been here,
+ * not how it is going. */
+.panel-discovery {
+  --panelToneEdge: var(--discoveryBorder);
+  --panelToneBand: var(--discoveryBg);
+  --panelToneInk: var(--discoveryText);
 }
 
 /* tone="ai": the panel a MACHINE wrote or read. Indigo is the product's one
  * mark of machine authorship (tokens.css --ai), so this is a claim about who
  * produced the panel rather than about how the account is doing — which is why
- * it sits beside "accent" and "warn" rather than replacing either. A reader
+ * it sits beside "accent" and "warning" rather than replacing either. A reader
  * seeing indigo anywhere knows the same thing: Margince did this. */
 .panel-ai > .panel-head {
   gap: var(--space-2);

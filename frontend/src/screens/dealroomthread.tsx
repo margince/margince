@@ -73,7 +73,7 @@ function CommentRow({
   const buyer = comment.author.side === "buyer";
   return (
     <li>
-      <Avatar name={comment.author.name} size="xs" />
+      <Avatar name={comment.author.name} />
       <div className="thread-comment">
         <span className="t-caption thread-author">
           <span className="thread-author-name">{comment.author.name}</span>
@@ -119,7 +119,7 @@ function ThreadRow({
       {thread.required_change || resolved ? (
         <div className="thread-head">
           {thread.required_change ? (
-            <Badge tone="warn">{t("threads.requiredChange")}</Badge>
+            <Badge tone="warning">{t("threads.requiredChange")}</Badge>
           ) : null}
           {resolved ? (
             <Badge tone="success">{t("threads.resolved")}</Badge>
@@ -145,7 +145,6 @@ function ThreadRow({
           </Field>
           <div className="card-actions">
             <Button
-              small
               disabled={reply.trim() === ""}
               pending={pending === "reply"}
               onClick={() => {
@@ -159,7 +158,6 @@ function ThreadRow({
             </Button>
             {verbs.resolve ? (
               <Button
-                small
                 variant="ghost"
                 pending={pending === "resolve"}
                 onClick={() => {
@@ -176,7 +174,7 @@ function ThreadRow({
           </div>
         </div>
       ) : null}
-      {error ? <p className="t-caption t-danger">{error}</p> : null}
+      {error ? <p className="t-danger">{error}</p> : null}
     </div>
   );
 }
@@ -220,7 +218,7 @@ export function ThreadComposer({
     return (
       <>
         {collapsible ? null : (
-          <p className="t-caption t-danger" id={REFUSAL_ID}>
+          <p className="t-danger" id={REFUSAL_ID}>
             {verbs.refusal}
           </p>
         )}
@@ -230,7 +228,7 @@ export function ThreadComposer({
               under each of them says it as many times as there are files.
               Naming it once and pointing each control at it says it once and
               still reaches a screen reader from every one of them. */}
-          <Button small variant="ghost" reasonId={REFUSAL_ID}>
+          <Button variant="ghost" reasonId={REFUSAL_ID}>
             <MessageSquare aria-hidden />
             {label}
           </Button>
@@ -242,7 +240,7 @@ export function ThreadComposer({
   if (!openForm) {
     return (
       <div className="card-actions">
-        <Button small variant="ghost" onClick={() => setOpenForm(true)}>
+        <Button variant="ghost" onClick={() => setOpenForm(true)}>
           <MessageSquare aria-hidden />
           {label}
         </Button>
@@ -290,7 +288,6 @@ export function ThreadComposer({
       ) : null}
       <div className="card-actions">
         <Button
-          small
           disabled={body.trim() === ""}
           pending={pending}
           onClick={submit}
@@ -298,12 +295,12 @@ export function ThreadComposer({
           {t("threads.open")}
         </Button>
         {collapsible ? (
-          <Button small variant="ghost" onClick={() => setOpenForm(false)}>
+          <Button variant="ghost" onClick={() => setOpenForm(false)}>
             {t("threads.cancel")}
           </Button>
         ) : null}
       </div>
-      {error ? <p className="t-caption t-danger">{error}</p> : null}
+      {error ? <p className="t-danger">{error}</p> : null}
     </div>
   );
 }

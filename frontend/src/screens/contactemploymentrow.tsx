@@ -129,19 +129,16 @@ export function EmploymentRow({
       {canEdit && (
         <span className="pe-employment-actions">
           <OverflowMenu label={t("record.moreActions")}>
-            <Button small onClick={onEdit}>
-              {t("employment.edit")}
-            </Button>
+            <Button onClick={onEdit}>{t("employment.edit")}</Button>
             {stillHeld(employment) && (
               <Button
-                small
                 disabled={ending}
                 onClick={() => actions.end.mutate(employment)}
               >
                 {t("contact.rail.markEnded")}
               </Button>
             )}
-            <Button small variant="danger" onClick={onRemove}>
+            <Button variant="danger" onClick={onRemove}>
               {t("rel.remove")}
             </Button>
           </OverflowMenu>

@@ -157,7 +157,6 @@ export function Modal({
           <IconAction
             label={t("common.close")}
             icon={<X aria-hidden="true" />}
-            small
             reason={closeReason}
             onClick={onClose}
           />

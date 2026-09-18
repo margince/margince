@@ -2,7 +2,7 @@ import { Check, Lightbulb } from "lucide-react";
 import type { ChangeEvent, ReactNode, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { Button, Disclosure } from "../../design-system/atoms";
+import { Button, Disclosure, Radio } from "../../design-system/atoms";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { formatNumber } from "../../format/format";
@@ -261,10 +261,10 @@ export function VoiceCollectScene({
               {t("ob.conv.voice.dropSub")}
             </p>
             <div className="ob-voice-drop-acts">
-              <Button small onClick={() => fileRef.current?.click()}>
+              <Button onClick={() => fileRef.current?.click()}>
                 {t("ob.conv.voice.browse")}
               </Button>
-              <Button small variant="ghost" onClick={() => setPasteOpen(true)}>
+              <Button variant="ghost" onClick={() => setPasteOpen(true)}>
                 {t("ob.conv.voice.pasteInstead")}
               </Button>
             </div>
@@ -285,7 +285,6 @@ export function VoiceCollectScene({
                 />
                 <div className="ob-voice-drop-acts">
                   <Button
-                    small
                     variant="primary"
                     disabled={pasteText.trim() === ""}
                     onClick={() => {
@@ -297,7 +296,6 @@ export function VoiceCollectScene({
                     {t("ob.conv.voice.pasteAdd")}
                   </Button>
                   <Button
-                    small
                     variant="ghost"
                     onClick={() => {
                       setPasteText("");
@@ -413,27 +411,22 @@ export function VoiceSpeakerScene({
               : undefined;
             const checked = picked === option.value;
             return (
-              <label
+              <Radio
                 key={option.value}
                 className={`ob-voice-speaker${checked ? " is-picked" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name={group}
-                  value={option.value}
-                  checked={checked}
-                  onChange={() => setPicked(option.value)}
-                />
-                <span className="ob-voice-speaker-disc" aria-hidden>
-                  {checked && <Check />}
-                </span>
-                <span className="ob-voice-speaker-body">
-                  <b>{label}</b>
-                  {detail !== undefined && (
-                    <small className="t-caption">{detail}</small>
-                  )}
-                </span>
-              </label>
+                name={group}
+                value={option.value}
+                checked={checked}
+                onChange={() => setPicked(option.value)}
+                label={
+                  <span className="ob-voice-speaker-body">
+                    <b>{label}</b>
+                    {detail !== undefined && (
+                      <small className="t-caption">{detail}</small>
+                    )}
+                  </span>
+                }
+              />
             );
           })}
         </div>
@@ -623,7 +616,6 @@ function VoiceSampleCard({
         </p>
         {drafts.length > 1 && (
           <Button
-            small
             variant="ghost"
             onClick={() => setIndex((prev) => (prev + 1) % drafts.length)}
           >

@@ -148,7 +148,7 @@ export function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
   const recordZone = useRecordZone();
   const on = (date: string) => formatDate(date, locale, recordZone);
   if (!contract.starts_on && !contract.ends_on) {
-    return <span className="t-caption">{t("contracts.noTerm")}</span>;
+    return <span>{t("contracts.noTerm")}</span>;
   }
   return (
     <span className="rec-term-dates">

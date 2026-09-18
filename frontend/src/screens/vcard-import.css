@@ -25,13 +25,9 @@
   border-bottom: 0;
 }
 
-.vcard-import-name {
-  font-weight: 500;
-}
-
 /* The one outcome that asks something of the reader. A card that merely
    resembles somebody was written nowhere, and nothing else on this list needs
    them to act. */
-.vcard-import-warn {
-  color: var(--warnText);
+.vcard-import-warning {
+  color: var(--warningText);
 }

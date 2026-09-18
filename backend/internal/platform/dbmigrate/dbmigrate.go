@@ -291,50 +291,6 @@ func NamespaceFor(unit string) (string, error) {
 	return ns, nil
 }
 
-func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (string, error) {
-	// Digits are admitted because an extension namespace carries them
-	// (`ext_foo_1`); the set stays exactly what an unquoted SQL identifier
-	// holds, since the namespace is interpolated into the statement below and
-	// cannot be a parameter.
-	for i, r := range namespace {
-		digit := r >= '0' && r <= '9'
-		if (r < 'a' || r > 'z') && r != '_' && !digit {
-			return "", fmt.Errorf("pgmigrate: namespace %q: want lower-case letters, digits and underscores", namespace)
-		}
-		if digit && i == 0 {
-			return "", fmt.Errorf("pgmigrate: namespace %q: an identifier cannot start with a digit", namespace)
-		}
-	}
-	if namespace == "" {
-		return "", fmt.Errorf("pgmigrate: empty namespace: it keys the tracking table")
-	}
-	table := "schema_migrations_" + namespace
-	_, err := conn.Exec(ctx, fmt.Sprintf(
-		`CREATE TABLE IF NOT EXISTS %s (
-			version        text PRIMARY KEY,
-			name           text NOT NULL,
-			applied_at     timestamptz NOT NULL DEFAULT now(),
-			content_digest text
-		)`, table))
-	if err != nil {
-		return "", fmt.Errorf("pgmigrate: creating %s: %w", table, err)
-	}
-	// The tracking tables are created by this function and never by a
-	// migration, so a database that already has one predates the column and
-	// CREATE TABLE IF NOT EXISTS will not add it. This does.
-	//
-	// NULLABLE, and it stays that way: a row written before the digest existed
-	// records a version whose content nobody can now recover, and back-filling
-	// it here would stamp a fingerprint over content this binary never applied
-	// — which is precisely the divergence the column exists to expose. A NULL
-	// means "unverifiable", and every reader must treat it as such.
-	if _, err := conn.Exec(ctx, fmt.Sprintf(
-		`ALTER TABLE %s ADD COLUMN IF NOT EXISTS content_digest text`, table)); err != nil {
-		return "", fmt.Errorf("pgmigrate: adding %s.content_digest: %w", table, err)
-	}
-	return table, nil
-}
-
 // appliedVersions returns version → the NAME it was applied under.
 //
 // The name is read, not just the version, because the ledger is the only place

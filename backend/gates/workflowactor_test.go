@@ -125,6 +125,19 @@ func systemActorBindings(t *testing.T, dir string) []actorBinding {
 			t.Fatalf("parsing %s: %v", where, parseErr)
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
+			// TWO spellings, because the module uses one and the tree still
+			// admits the other. principal.SystemActing(ctx, name) binds the
+			// system principal and the correlation id together and carries the
+			// name as its second argument; a Principal literal spells the same
+			// thing out, which a pass acting on a named human's behalf still
+			// has to. A census reading only one of them reports fewer bindings
+			// than the module has, which is what the floor above catches.
+			if call, isCall := node.(*ast.CallExpr); isCall {
+				if name, bound := systemActingName(call); bound {
+					found = append(found, actorBinding{where: where, id: name})
+				}
+				return true
+			}
 			lit, isLit := node.(*ast.CompositeLit)
 			if !isLit {
 				return true
@@ -194,4 +207,27 @@ func namedConst(t *testing.T, file, name string) string {
 			"can no longer find one of them, so it is judging nothing", file, name)
 	}
 	return value
+}
+
+// systemActingName reads the actor id a principal.SystemActing call names.
+func systemActingName(call *ast.CallExpr) (string, bool) {
+	selector, isSelector := call.Fun.(*ast.SelectorExpr)
+	if !isSelector || selector.Sel.Name != "SystemActing" || len(call.Args) != 2 {
+		return "", false
+	}
+	pkg, isIdent := selector.X.(*ast.Ident)
+	if !isIdent || pkg.Name != "principal" {
+		return "", false
+	}
+	switch name := call.Args[1].(type) {
+	case *ast.Ident:
+		return name.Name, true
+	case *ast.BasicLit:
+		// Decoded and re-quoted, the way principalFields above spells a literal
+		// id: quoted is how a written-out actor stays distinguishable from a
+		// constant of the same name in a finding.
+		text, decoded := gatekit.LiteralText(name)
+		return strconv.Quote(text), decoded
+	}
+	return "", false
 }

@@ -23,7 +23,7 @@ type MeetingPlanResult struct {
 	LikelyAsks []MeetingPlanAskPart   `json:"likely_asks,omitempty"`
 	Questions  []MeetingPlanAskLine   `json:"questions,omitempty"`
 	Scenarios  []MeetingPlanBranch    `json:"scenarios,omitempty"`
-	Arc        []MeetingPlanMoment    `json:"account_arc,omitempty"`
+	Arc        []MeetingPlanMoment    `json:"company_arc,omitempty"`
 	Advance    MeetingPlanAdvancePart `json:"advance"`
 	Unknowns   []MeetingPlanGap       `json:"unknowns,omitempty"`
 	// Coaching is present only when the reading principal is a lead looking at

@@ -3,7 +3,7 @@
 // The server sends them in ADR-0097 D5's reading order and this file does not
 // re-sort that order for its own sake — it gives three of them a shape their
 // job earns and leaves the rest as panels. The goal leads because burying the
-// ask is the canonical prep failure. The risks take the warn tint because a
+// ask is the canonical prep failure. The risks take the warning tint because a
 // watch-out a reader scrolls past is a watch-out they walk in without. The
 // company background collapses because it is the one section that is context
 // rather than preparation.
@@ -65,7 +65,7 @@ export function GlanceLine({
     return null;
   }
   return (
-    <section className="mb-glance">
+    <section>
       <SentenceList
         sentences={header.sentences}
         onOpenRecord={onOpenRecord}
@@ -124,7 +124,7 @@ export function GoalPanel({
 //
 // The tint follows the WRITER first, exactly as the lead's does. Indigo means
 // "Margince wrote this" everywhere in the product, and it is claimed for every
-// panel of a model-written brief rather than for one of them, so a warn tint
+// panel of a model-written brief rather than for one of them, so a warning tint
 // here would be the one section of that brief not saying who wrote it. A
 // composition has no such claim to make, and there the tint is free to carry
 // the finding.
@@ -151,7 +151,7 @@ export function RisksPanel({
     <Panel
       title={t("contact.meeting.risks")}
       titleLevel={3}
-      tone={brief.generated_by === "model" ? "ai" : "warn"}
+      tone={brief.generated_by === "model" ? "ai" : "warning"}
     >
       <PanelBody>
         <SentenceList

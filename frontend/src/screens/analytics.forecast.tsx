@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
+  Field,
   SegmentedControl,
   StatCard,
   TextInput,
@@ -146,7 +147,11 @@ function ForecastAnswer({
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
-        <Callout tone="warn" kind="standing" title={t("forecast.partialTitle")}>
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("forecast.partialTitle")}
+        >
           {t("forecast.partial", {
             priced: formatNumber(readings.priced_count, locale),
             eligible: formatNumber(readings.eligible_count, locale),
@@ -267,7 +272,7 @@ function ForecastCallEditor({
   if (!open) {
     return (
       <div className="card-actions">
-        <Button small onClick={() => setOpen(true)}>
+        <Button onClick={() => setOpen(true)}>
           {t("forecast.updateCall")}
         </Button>
       </div>
@@ -281,11 +286,8 @@ function ForecastCallEditor({
       // act on rather than in the band that names it.
       actions={
         <>
-          <Button small onClick={() => setOpen(false)}>
-            {t("forecast.cancel")}
-          </Button>
+          <Button onClick={() => setOpen(false)}>{t("forecast.cancel")}</Button>
           <Button
-            small
             variant="primary"
             disabled={save.isPending}
             onClick={() => save.mutate({ amountMinor, note })}
@@ -300,22 +302,26 @@ function ForecastCallEditor({
             The head band holds one line, and the half it would cut is the
             half that says no deal moves. */}
         <p className="t-sub">{t("forecast.callExplains")}</p>
-        <label className="field">
-          <span>{t("forecast.expectedTotal")}</span>
-          <MoneyInput
-            valueMinor={amountMinor}
-            currency={readings.base_currency}
-            onChangeMinor={(next) => setAmountMinor(next ?? 0)}
-          />
-        </label>
-        <label className="field">
-          <span>{t("forecast.supportingNote")}</span>
-          <TextInput
-            type="text"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </label>
+        <Field label={t("forecast.expectedTotal")}>
+          {(control) => (
+            <MoneyInput
+              {...control}
+              valueMinor={amountMinor}
+              currency={readings.base_currency}
+              onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+            />
+          )}
+        </Field>
+        <Field label={t("forecast.supportingNote")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="text"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          )}
+        </Field>
       </PanelBody>
     </Panel>
   );

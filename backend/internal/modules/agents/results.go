@@ -256,7 +256,7 @@ type DraftEmailResult struct {
 	// that does not exist. The package's own optional-id idiom is a pointer
 	// for exactly this reason.
 	InReplyToActivityID *ids.UUID `json:"in_reply_to_activity_id,omitempty"`
-	// Links is the same echo for a first message: send_account_email takes
+	// Links is the same echo for a first message: send_company_email takes
 	// them, and a caller re-deriving them can file a conversation under the
 	// wrong record. Empty on a reply, which inherits its filing.
 	Links []RecordLink `json:"links,omitempty"`

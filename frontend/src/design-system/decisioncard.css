@@ -26,7 +26,7 @@
  * The deadline, as a band down the card's leading edge. Three steps rather than
  * a gradient: a reader has to be able to name which one they are looking at, and
  * "somewhere between amber and red" is not a reading. The escalation is in the
- * COLOUR and not in the opacity: a faded warn band beside a solid danger one is
+ * COLOUR and not in the opacity: a faded warning band beside a solid danger one is
  * a weaker statement for no reason a reader could name.
  *
  * An INSET SHADOW rather than a border, and the reason is `.staging-card`: its
@@ -37,7 +37,7 @@
  * deadline starts to matter.
  */
 .dcard[data-urgency="soon"] {
-  box-shadow: inset 3px 0 0 0 var(--warn);
+  box-shadow: inset 3px 0 0 0 var(--warning);
 }
 
 /* Urgent takes the outline as well as the band. Not the GROUND: the staged card
@@ -61,10 +61,13 @@
   background: var(--bgCard);
 }
 
+/* The window closed without a decision. The same reading VERDICT_TONE gives
+   `expired` in decisioncard.tsx, so the sentence and the badge that reports it
+   agree — it was body ink, which is the one thing on this card that says
+   nothing at all. */
 .dcard-lapsed {
   margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
+  color: var(--warningText);
 }
 
 /* The chips line. Wraps, because a provenance tag, a kind label and a countdown
@@ -125,9 +128,6 @@
      mail, and the deck card clips to its own radius — so an unbroken token
      would be cut off rather than wrapped, with no scrollbar to reach it. */
   overflow-wrap: anywhere;
-  color: var(--textContent);
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
 }
 
 /* The clamp. A card that grows with its content stops being a card: one long
@@ -148,9 +148,6 @@
    it explains or the reader has to work the question out from the answer. */
 .dcard-lead {
   margin-bottom: var(--space-3);
-  color: var(--textContent);
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
 }
 
 .dcard-diff {
@@ -166,7 +163,6 @@
    value is still a business fact someone is being asked to agree to, and the
    code face would dress it as machine output. */
 .dcard-fact {
-  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 
@@ -245,17 +241,6 @@
   border-bottom: 1px solid var(--aiMed);
 }
 
-/* The headline at the same size and weight the contact record's moment card sets
-   it — 20px at 650, one notch above `.t-h2` — because both cards exist to be
-   landed on and read rather than scanned past. Stated here rather than shared:
-   the two live in different tiers (a design-system primitive and a screen), and
-   a token for "the moment headline" would be a third place to look. */
-.dcard[data-layout="deck"] .approval-headline {
-  font-size: var(--fs-h2);
-  font-weight: 650;
-  line-height: var(--lh-snug);
-}
-
 /*
  * The proposal's own MEASURE. A deck card is as wide as the work column, and on
  * a desktop that is 1200px of drafted email on one line — a length nobody reads
@@ -317,10 +302,6 @@
    row was already that shape, and re-spelling the number here would move all of
    them for no reason anybody could name. */
 
-.dcard[data-layout="row"] .approval-headline {
-  font-size: var(--fs-h3);
-}
-
 .dcard[data-layout="row"] .dcard-draft-body[data-clamped] {
   -webkit-line-clamp: 3;
   line-clamp: 3;
@@ -373,7 +354,6 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: var(--fs-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -392,7 +372,6 @@
    decides nothing, so it is not competing with the verbs at the end. */
 .dcard-detail {
   flex: none;
-  font-size: var(--fs-meta);
 }
 
 /* The verbs end the line. `ActionRow` owns the gap between them and the push

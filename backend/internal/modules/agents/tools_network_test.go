@@ -25,7 +25,7 @@ func TestNetworkToolsAreReadTierAndNeedOnlyReadScope(t *testing.T) {
 	// They name contacts and change nothing. A tool that reported a warm intro
 	// under a write tier would ask a human to approve a question.
 	for _, spec := range []mcp.ToolSpec{
-		whoKnowsTool{}.Spec(), accountCoverageTool{}.Spec(),
+		whoKnowsTool{}.Spec(), companyCoverageTool{}.Spec(),
 		introPathTool{}.Spec(), atRiskTool{}.Spec(),
 	} {
 		if spec.Tier != mcp.TierAutoExecute {
@@ -42,7 +42,7 @@ func TestAnAbsentSeamRegistersNoTool(t *testing.T) {
 	// wired without the reader must not advertise a tool that always errors.
 	r := NewRegistry(nil, nil)
 	RegisterNetworkTools(r, nil, nil, nil, nil)
-	for _, name := range []string{"who_knows", "account_coverage", "intro_path_to", "at_risk_relationships"} {
+	for _, name := range []string{"who_knows", "company_coverage", "intro_path_to", "at_risk_relationships"} {
 		if _, found := r.Spec(name); found {
 			t.Errorf("%s registered with no seam behind it", name)
 		}
@@ -227,7 +227,7 @@ func TestCoverageForwardsTheFindingsWithTheirEvidence(t *testing.T) {
 	// A risk kind without its ids is a red dot nobody can act on.
 	deal := ids.NewV7()
 	contact := ids.NewV7()
-	tool := accountCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
+	tool := companyCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
 		return DealCoverageAnswer{
 			DealID: deal,
 			Risks: []CoverageRisk{{
@@ -259,7 +259,7 @@ func TestCoverageForwardsTheFindingsWithTheirEvidence(t *testing.T) {
 // the shape a model most readily reports as good news. The warning is what
 // stops "I could not check" being rendered as "nothing is wrong".
 func TestAWithheldCoverageAnswerWarnsRatherThanReadingAsClean(t *testing.T) {
-	tool := accountCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
+	tool := companyCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
 		return DealCoverageAnswer{
 			SectionsOmitted: []string{"stakeholders", "our_side", "risks"},
 		}, nil
@@ -267,10 +267,10 @@ func TestAWithheldCoverageAnswerWarnsRatherThanReadingAsClean(t *testing.T) {
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	r.Register(tool)
 
-	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "account_coverage",
+	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "company_coverage",
 		json.RawMessage(`{"deal_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
-		t.Fatalf("account_coverage: %v", err)
+		t.Fatalf("company_coverage: %v", err)
 	}
 	warning, warned := warningNamed(sealedEnvelope(t, out), warningSectionWithheld)
 	if !warned {
@@ -283,16 +283,16 @@ func TestAWithheldCoverageAnswerWarnsRatherThanReadingAsClean(t *testing.T) {
 
 // And an ordinary answer raises nothing, or the warning stops meaning anything.
 func TestAnOrdinaryCoverageAnswerClaimsNothingWasWithheld(t *testing.T) {
-	tool := accountCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
+	tool := companyCoverageTool{read: func(context.Context, ids.UUID) (DealCoverageAnswer, error) {
 		return DealCoverageAnswer{Risks: []CoverageRisk{{Kind: "going_cold", Summary: "quiet"}}}, nil
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	r.Register(tool)
 
-	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "account_coverage",
+	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "company_coverage",
 		json.RawMessage(`{"deal_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
-		t.Fatalf("account_coverage: %v", err)
+		t.Fatalf("company_coverage: %v", err)
 	}
 	if _, warned := warningNamed(sealedEnvelope(t, out), warningSectionWithheld); warned {
 		t.Error("a complete coverage answer claims a section was withheld")

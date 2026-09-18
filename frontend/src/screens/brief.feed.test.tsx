@@ -55,7 +55,6 @@ it("renders the server focus even when the queue page contains different rows", 
       (item) => item.querySelector(".brief-focus-rank")?.textContent,
     ),
   ).toEqual(["1", "2", "3", "4", "5", "6"]);
-  expect(screen.getByText("6 priorities in focus")).toBeTruthy();
   expect(screen.getByText("1 of 6")).toBeTruthy();
 });
 

@@ -80,7 +80,7 @@ export function AddDocument({
   });
   const add = useAddDocument(room.id);
   if (refusal !== undefined) {
-    return <p className="t-caption">{refusal}</p>;
+    return <p>{refusal}</p>;
   }
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
@@ -119,7 +119,6 @@ export function AddDocument({
       </Field>
       <div className="card-actions">
         <Button
-          small
           disabled={attachmentId === ""}
           pending={add.isPending}
           onClick={() =>
@@ -136,7 +135,7 @@ export function AddDocument({
             deal's files and owns none — and the landed upload invalidates
             `deal-documents`, which is this list's own key, so the new file is
             in the picker when the dialog closes. */}
-        <Button small variant="ghost" onClick={() => setUploading(true)}>
+        <Button variant="ghost" onClick={() => setUploading(true)}>
           <Upload aria-hidden />
           {t("room.docs.upload")}
         </Button>
@@ -148,7 +147,7 @@ export function AddDocument({
       />
       <p className="t-caption">{t("room.editorial")}</p>
       {add.isError ? (
-        <p className="t-caption t-danger">{problemMessageOf(add.error, t)}</p>
+        <p className="t-danger">{problemMessageOf(add.error, t)}</p>
       ) : null}
     </>
   );

@@ -14,6 +14,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateAbbrev } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -126,9 +127,7 @@ export function LinkRequest() {
         {t("buyer.requestLink")}
       </Button>
       {request.isError ? (
-        <p className="t-caption t-danger">
-          {problemMessageOf(request.error, t)}
-        </p>
+        <p className="t-danger">{problemMessageOf(request.error, t)}</p>
       ) : null}
     </form>
   );
@@ -188,7 +187,9 @@ export function BuyerHero({
           </span>
         ) : null}
       </div>
-      <h1 className="t-display">{title}</h1>
+      <Heading size="xlarge" className="t-display">
+        {title}
+      </Heading>
       {welcome ? <p className="buyer-welcome">{welcome}</p> : null}
     </header>
   );

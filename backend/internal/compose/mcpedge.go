@@ -90,7 +90,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 	// operator can compare it against what their front end actually routes.
 	log.Info("mcp: consent screen redirect target", "location", identity.ConsentScreenPath)
 	return agents.NewHTTPHandler(s.toolRegistry, mcpAuthenticate(auth),
-		agents.ResourceMetadataChallenge, mcpServerName, mcpServerVersion, log,
+		agents.ResourceMetadataChallenge(s.mcpAllowedOrigin), mcpServerName, mcpServerVersion, log,
 		// The cross-module edge: composing the query vocabulary is the search
 		// module's job and publishing it is the transport's, and neither
 		// reaches for the other (ADR-0054 §3). It is wired here, once — and
@@ -348,20 +348,6 @@ func originAllowed(origin, allowedOrigin string) bool {
 	}
 	host := u.Hostname()
 	return host == "localhost" || net.ParseIP(host).IsLoopback()
-}
-
-// mcpOriginOf reduces the configured MCP resource URL to the scheme+host the
-// Origin guard compares against: an Origin header carries no path, so leaving
-// "/mcp" on the allowlisted value would make every browser request mismatch.
-// An unparseable value leaves the allowlist empty, which admits loopback and
-// absent Origins only — and the same malformed value already breaks the
-// discovery document that advertises it, so it fails visibly there.
-func mcpOriginOf(resource string) string {
-	u, err := url.Parse(resource)
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return ""
-	}
-	return u.Scheme + "://" + u.Host
 }
 
 // passportBucket keys the authenticated buckets on a digest of the presented

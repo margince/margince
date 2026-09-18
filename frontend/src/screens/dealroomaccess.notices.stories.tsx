@@ -9,7 +9,7 @@ import { StoryProviders } from "./story-utils";
 // press. Their own frames because the link itself is shown once and never
 // stored in clear, so neither state survives a reload — and because the second
 // one is not a failure: the link in the field beside it is valid either way,
-// and `warn` here would send a rep looking for a fault that does not exist.
+// and `warning` here would send a rep looking for a fault that does not exist.
 
 const meta: Meta<typeof IssuedNotice> = {
   title: "Records/Deal room/Access notices",

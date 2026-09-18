@@ -13,6 +13,7 @@ package connector
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -195,6 +196,27 @@ type NormalizedRecord struct {
 	CapturedBy string // "connector:<name>" — REQUIRED
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
 
+	// CrossDoorIdentity is what this record is known by to EVERY door, as
+	// distinct from the natural key, which is only what THIS provider called it.
+	// Empty when the provider states none, which is the common case.
+	//
+	// Mail needs no value here: its natural key already IS the shared identity
+	// (EmailSourceSystem plus the RFC Message-ID), because every transport
+	// agrees on it. A MEETING's natural key is the provider's own event id, so
+	// one meeting on two calendars carries two keys and needs this to resolve as
+	// one — the iCal UID plus the occurrence, since a recurring series shares a
+	// single UID across every meeting in it.
+	//
+	// A connector fills it only from a value the PROVIDER stated, and never
+	// synthesizes one: a made-up identity would collide two unrelated records,
+	// which is worse than the duplicate it set out to prevent.
+	//
+	// It carries the identity's PARTS rather than a finished key, because the
+	// spelling of the key belongs to the module that owns `activity_identity`
+	// and a connector may not import it. Capture composes the two through the
+	// seam compose injects, so one rule writes every key.
+	CrossDoorIdentity CrossDoorIdentity
+
 	// DeliveredTo is the address the RECEIVING infrastructure recorded this
 	// message as delivered to, and empty whenever no such claim could be
 	// trusted. It is how a forwarding alias is discoverable at all: an alias
@@ -325,6 +347,36 @@ func (r NormalizedRecord) WithProviderAttestedParticipants(attested bool) Normal
 // user_id from the list.
 func (r NormalizedRecord) ParticipantsAreProviderAttested() bool {
 	return r.participantsAreProviderAttested
+}
+
+// CrossDoorIdentity is what a record is known by to every door, in its parts.
+//
+// Only meetings carry one today: a calendar occurrence is a SERIES plus the
+// meeting within it, because a recurring event shares one iCal UID across all
+// fifty-two of its occurrences. Mail needs no value here — its natural key is
+// already the shared identity, since every transport agrees on the Message-ID.
+//
+// The parts travel unjoined, and that is deliberate: how the two compose into a
+// key is a rule owned by the module that owns `activity_identity`, and a
+// connector may not import it. Capture joins them through the seam compose
+// injects, so exactly one function writes every key and the two doors cannot
+// spell one meeting two ways.
+type CrossDoorIdentity struct {
+	// Series is the provider-stated identity of the recurring event, or of a
+	// one-off meeting. Empty means the provider stated none, and then the record
+	// carries no cross-door identity at all.
+	Series string
+	// Occurrence is which meeting within the series this is — the occurrence's
+	// own start, as an instant. Zero when unknown, which likewise yields no
+	// identity: a series without an occurrence names every meeting in it at once.
+	Occurrence time.Time
+}
+
+// Stated reports whether the provider actually gave both parts. A partial
+// identity is no identity: keying on the series alone would resolve every
+// occurrence of a weekly call to the first one.
+func (c CrossDoorIdentity) Stated() bool {
+	return strings.TrimSpace(c.Series) != "" && !c.Occurrence.IsZero()
 }
 
 // NaturalKey is the (source_system, source_id) idempotency key the DB

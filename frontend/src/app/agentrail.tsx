@@ -1,38 +1,36 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import {
   type CSSProperties,
   type MouseEvent,
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { usePrefersReducedMotion } from "../design-system/motion";
+import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import {
-  formatMoney,
-  formatNumber,
-  formatPercent,
-  INTL_LOCALE,
-} from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { usePendingApprovals } from "../screens/approvals.queries";
-import { useConnectors } from "../screens/connectors";
-import { useLicenseEntitlement } from "../screens/license";
 import { settingsHref } from "../screens/settingsrouting";
 import {
   type AgentEdgeRegister,
@@ -40,10 +38,21 @@ import {
   publishAgentEdge,
 } from "./agent-edge-signal";
 import { type AgentFault, useAgentFault } from "./agent-fault";
-import { LABELS, RUNNING } from "./agentrail-copy";
+import { RUNNING } from "./agentrail-copy";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
+import type {
+  AiActivityItem,
+  AiCall,
+  AiPosture,
+  LicensePosture,
+  Signals,
+  Spend,
+} from "./agentrail-reads";
+import { useAiSpend, useLastCall, useSignals } from "./agentrail-reads";
 import {
+  type RailWords,
+  railWords,
   restingReadings,
   restingTips,
   stillNews,
@@ -55,8 +64,6 @@ import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
 import { useAgentTierMap } from "./autonomy";
-import { useCan, useHoldsAdminRole } from "./capability";
-import { type CaptureProgress, liveCapture } from "./capture-progress";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
 import { routeHash } from "./router";
@@ -89,9 +96,6 @@ import "./agentrail.css";
 /** How many of the agent's last actions the panel recaps. */
 const RECAP_ROWS = 5;
 
-/** How much dimmer each row's mark is than the one above it. */
-const MARK_FADE = 0.16;
-
 /**
  * Where the whole trace lives, and where a model gets bound. Same page.
  *
@@ -104,289 +108,55 @@ const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
 /** Where a licence key is entered: the seats section of settings. */
 const LICENSE_SETTINGS_HREF = "#/settings/seats";
 
-/** What the installation can actually tell us, and what it cannot. */
-type Signals = Readonly<{
-  /** Approvals staged for this human; undefined until the read answers.
-   *  A true total — usePendingApprovals walks every page. */
-  waiting: number | undefined;
-  /** Sources the agent cannot reach, named as the reader knows them. */
-  offline: readonly string[];
-  /** Whether this deployment has a model bound at all. */
-  ai: AiPosture;
-  /** What the installation is entitled to; undefined when this seat may not
-   *  read it, which is not the same as an installation with no licence. */
-  license: LicensePosture | undefined;
-  /** The licence posture in the reader's words, for the line and the panel. */
-  licenseLine: string;
-  /**
-   * Mail being imported this moment, with the sentence that says so; null
-   * while no mailbox is importing. Read off the same connections list as
-   * `offline`, so the orb never reports a mailbox as both unreachable and
-   * mid-import from two answers.
-   */
-  capture: Readonly<{ progress: CaptureProgress; line: string }> | null;
-}>;
-
 /**
- * What the installation's entitlement adds up to, for a surface that reports
- * rather than enforces.
+ * The state in a word, under the agent's name.
  *
- * `none` and `refused` are the two a contact has to act on, and they are why the
- * Core carries this at all: an installation with no licence is not a healthy
- * agent with a footnote, it is a standing fault, and the rail used to state it
- * as a grey row at the very bottom that nobody read. `pressing` is the same
- * claim one step softer: over the seat cap, in grace, or renewal due.
+ * The Core's own vocabulary is five machine words, and the head used to print
+ * whichever one it was in — so a panel opened on a broken installation said
+ * "error" at a reader in the product's own voice. This is that vocabulary in
+ * the reader's language, TOTAL over the states the Core knows, so a sixth one
+ * cannot arrive unnamed.
  */
-type LicensePosture = "ok" | "pressing" | "refused" | "none";
+const STATE_WORD: Readonly<Record<MarginceCoreState, MessageKey>> = {
+  idle: "agent.state.idle",
+  ingest: "agent.state.ingest",
+  working: "agent.state.working",
+  warning: "agent.state.warning",
+  error: "agent.state.error",
+};
 
 /**
- * What the deployment has bound, as `/assistant/profile` reports it.
+ * What a recap row's mark says, which is how that occurrence WENT.
  *
- * `configured` says the bindings were CONSTRUCTED at boot — the contract is
- * explicit that it is not a health check, so nothing here may render as online,
- * running or healthy. The negative is the honest half and the one worth showing:
- * a deployment with no provider key has an agent that cannot think, and every
- * other thing this bar reports is beside the point until that is fixed.
+ * It used to carry the orb's CURRENT tone at a fading opacity, which drew a
+ * brief that failed at four in the morning in the green of a quiet afternoon.
+ * Position and the stamp at the row's end already say how old a row is, so the
+ * mark is free to say the one thing nothing else on the row does.
  */
-type AiPosture = "configured" | "unconfigured" | "development" | "unknown";
+const ROW_TONE: Readonly<
+  Record<AiActivityItem["state"], "info" | "success" | "warning" | "danger">
+> = {
+  queued: "info",
+  running: "info",
+  stalled: "warning",
+  done: "success",
+  degraded: "warning",
+  failed: "danger",
+};
 
 /**
- * The reads the bar's right half stands on, and the state they add up to.
- *
- * Order is severity, not convenience: a source the agent cannot reach outranks a
- * queue, because a queue built from half the evidence is the more dangerous of
- * the two to report calmly. Everything else rests at `idle` — proposals
- * WAITING is not a state of its own, it is the agent at rest with a number
- * beside it, and that number is the thing a contact acts on.
+ * When it happened, as a contact would say it. A wall-clock stamp answers "at
+ * what time", and the question a recap answers is "how long ago".
  */
-function useAiPosture(): AiPosture {
-  const profile = useQuery({
-    queryKey: ["assistant-profile"],
-    // Anonymous, cheap and effectively static for the life of the process: the
-    // same key the sign-in screen uses, so the two share one answer.
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/assistant/profile");
-      if (error) {
-        return null;
-      }
-      return data;
-    },
-  });
-  return profile.data?.state ?? "unknown";
-}
-
-function useSignals(): Signals {
-  const t = useT();
-  const { locale } = useLocale();
-  const approvals = usePendingApprovals();
-  const connectors = useConnectors();
-  const ai = useAiPosture();
-  const license = useLicensePosture();
-
-  const connections = connectors.data?.data ?? [];
-  const offline = connections
-    .filter((connection) => connection.status !== "connected")
-    .map((connection) => connection.account_label ?? connection.provider);
-  const capture = liveCapture(connections);
-
-  return {
-    // Absent `data` means the read has not answered, or was refused. A 0 here
-    // would be this surface inventing an all-clear.
-    waiting: approvals.data ? approvals.data.data.length : undefined,
-    offline,
-    ai,
-    license,
-    licenseLine:
-      license === "refused"
-        ? t("shell.license.refused")
-        : t("shell.license.none"),
-    capture:
-      capture === null
-        ? null
-        : { progress: capture, line: captureLine(capture, t, locale) },
-  };
-}
-
-/**
- * The one line an import puts under the orb: what is happening, and how far
- * along where a preview gave it a denominator. Without one the sentence stops
- * at the verb rather than inventing a share.
- */
-function captureLine(
-  capture: CaptureProgress,
-  t: (key: MessageKey) => string,
+function agoFor(
+  iso: string,
   locale: Locale,
+  now: number,
+  t: Translator,
 ): string {
-  const said = t("shell.capture.importing");
-  return capture.fraction === null
-    ? said
-    : `${said} · ${formatPercent(capture.fraction, locale)}`;
-}
-
-/**
- * The installation's entitlement, read the way the rail used to read it.
- *
- * Absent for a seat without `license:read`, silently: a read they may not make
- * is not a fact being withheld from them, it is a fact that is none of their
- * work, and an orb that went amber about it on every screen they opened would be
- * a permission boundary drawn as a fault.
- */
-function useLicensePosture(): LicensePosture | undefined {
-  const mayRead = useCan("license", "read");
-  const query = useLicenseEntitlement(mayRead);
-  const entitlement = query.data;
-  if (!mayRead || !entitlement) {
-    return undefined;
-  }
-  if (entitlement.state === "rejected") {
-    return "refused";
-  }
-  if (entitlement.state !== "valid") {
-    return "none";
-  }
-  return entitlement.over_limit ||
-    entitlement.license?.in_grace === true ||
-    entitlement.license?.renewal_due === true
-    ? "pressing"
-    : "ok";
-}
-
-/** One terminal attempt of the model-call trace, as `/ai/calls` reports it. */
-type AiCall = components["schemas"]["AiCallSummary"];
-
-/**
- * The model the agent last actually ran on — the SERVED one, not the configured
- * one, because a fallback ladder makes those two differ exactly when it matters.
- *
- * ONE row, because the runtime strip shows one model and nothing else here
- * reads the trace: the recap below is drawn from the AI-activity feed, which is
- * the projection that knows what each occurrence was ABOUT. Asking for five
- * would be four rows nothing renders.
- *
- * Operator-only, because `/ai/calls` sits behind `ai_diagnostics:read`. A seat
- * without it is told the runtime row is not readable rather than shown a model
- * nobody on that seat could verify.
- */
-function useLastCall(): Readonly<{
-  allowed: boolean;
-  calls: readonly AiCall[];
-}> {
-  // GET /ai/calls asks for ai_diagnostics:read (ai/callread.go).
-  const allowed = useCan("ai_diagnostics", "read");
-  const recent = useQuery({
-    queryKey: ["ai-calls", "agentrail-served-model"],
-    enabled: allowed,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls", {
-        params: { query: { limit: 1 } },
-      });
-      if (error) {
-        // Chrome must not take a page down over telemetry: an unreadable log is
-        // a state this surface draws, not an error it throws.
-        return [];
-      }
-      return data.data;
-    },
-  });
-  return { allowed, calls: recent.data ?? [] };
-}
-
-/**
- * What the agent has cost this month, as the server priced it.
- *
- * `cost_est_minor` is an ESTIMATE the server computes on read from its own rate
- * tables, in minor units of the budget's currency, and it is omitted for a call
- * nothing could be priced against. So the sum is over the lines that HAVE a
- * price, and a month where nothing was priced draws no figure at all rather than
- * a confident zero: the difference between "this cost nothing" and "nobody knows
- * what this cost" is the whole point of the row.
- *
- * Admin-only. The grant alone is not the predicate: `automation:update` is what
- * the server serves the figure on, and the ops seat holds it by default while an
- * operator-edited role may hold it too. What the agent costs is the
- * administrator's figure, not every seat's that may configure automation, so
- * the role narrows the grant here — and the grant still stands beside it,
- * because an admin whose role lost it would only be asking for a 403.
- */
-function useAiSpend(): Readonly<{
-  allowed: boolean;
-  minor: number | undefined;
-  currency: string;
-  /** One number per day of the month so far, oldest first. */
-  daily: readonly number[];
-}> {
-  const admin = useHoldsAdminRole();
-  // GET /ai/usage asks for ai_diagnostics:read (ai/usage.go).
-  const granted = useCan("ai_diagnostics", "read");
-  const allowed = admin && granted;
-  const usage = useQuery({
-    queryKey: ["ai-usage", "agentrail-month"],
-    enabled: allowed,
-    // The month's spend does not move between two page opens, and this read sits
-    // in the chrome, so a short staleness would put a request behind every
-    // navigation.
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ai/usage", {
-        params: { query: {} },
-      });
-      if (error) {
-        // Chrome must not take a page down over a reading: an unreadable figure
-        // is a state this surface draws, not an error it throws.
-        return null;
-      }
-      return data;
-    },
-  });
-  const days = usage.data?.days ?? [];
-  const priced = days
-    .flatMap((day) => day.tasks)
-    .filter((task) => task.cost_est_minor !== undefined);
-  return {
-    allowed,
-    minor:
-      priced.length === 0
-        ? undefined
-        : priced.reduce((total, task) => total + (task.cost_est_minor ?? 0), 0),
-    currency: usage.data?.budget.currency ?? "USD",
-    // A day with no priced call is a real zero here, unlike the total: the month
-    // HAS that day, and a gap in a series is a lie about its shape.
-    daily: days.map((day) =>
-      day.tasks.reduce((total, task) => total + (task.cost_est_minor ?? 0), 0),
-    ),
-  };
-}
-
-/**
- * What the runtime row prints, in the three cases it genuinely has: the model
- * the last call was SERVED by — not the configured one, because a fallback
- * ladder makes those differ exactly when it matters — or the reason there is
- * none.
- */
-function modelText(
-  read: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>,
-): string {
-  const latest = read.calls[0];
-  if (latest) {
-    return `${latest.provider}/${latest.served_model}`;
-  }
-  return read.allowed ? LABELS.noCallsYet : LABELS.unreadable;
-}
-
-/**
- * When it happened, as a contact would say it.
- *
- * A wall-clock stamp answers "at what time", and the question a recap answers is
- * "how long ago" — five rows of `19/08/2026, 10:00` make the reader do the
- * subtraction, five times, to learn that everything happened this morning.
- */
-function agoFor(iso: string, locale: Locale, now: number): string {
   const seconds = Math.round((now - Date.parse(iso)) / 1000);
   if (Number.isNaN(seconds)) {
-    return LABELS.justNow;
+    return t("agent.line.justNow");
   }
   const format = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "unit",
@@ -407,25 +177,68 @@ function agoFor(iso: string, locale: Locale, now: number): string {
 }
 
 /**
+ * What the model row prints: the model the last call was SERVED by — not the
+ * configured one, because a fallback ladder makes those differ exactly when it
+ * matters — or the reason there is none.
+ */
+function modelText(
+  read: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>,
+  t: Translator,
+): string {
+  const latest = read.calls[0];
+  if (latest) {
+    return `${latest.provider}/${latest.served_model}`;
+  }
+  return t(read.allowed ? "agent.fact.noCalls" : "agent.fact.hidden");
+}
+
+/**
+ * One titled part of the report: a labelled region with its own heading, so the
+ * panel is four named passages rather than one column of text. `action` rides
+ * the heading's line — a verb belonging to the section, at the far end of the
+ * title it belongs to.
+ */
+function PanelSection({
+  title,
+  action,
+  className,
+  children,
+}: Readonly<{
+  title: string;
+  action?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}>) {
+  const titleId = useId();
+  return (
+    <section
+      className={["arsect", className ?? ""].filter(Boolean).join(" ")}
+      aria-labelledby={titleId}
+    >
+      <div className="arsecthead">
+        <Heading size="xsmall" as="h3" className="arsectname" id={titleId}>
+          {title}
+        </Heading>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/**
  * The recap: what the agent has done lately, and the door to the whole trace.
  *
- * Five rows at most. The question a contact asks of a background agent is "what
- * have you been doing", and five answers it — a sixth turns the panel into a log
- * viewer, which already exists and is better at it.
+ * Five rows at most — a sixth turns the panel into a log viewer, which already
+ * exists and is better at it.
  *
  * It is drawn from the AI-activity feed rather than from the model-call trace,
- * and the difference is what a row can SAY. The trace knows the task and the
- * tokens; it is telemetry, and it deliberately carries no record — a call's
- * subject travels to the occurrence and never to `ai_call`. The occurrence is
- * the half that knows what the work was ABOUT, so a recap read from it names
- * the account that was read and links to it, where a recap read from the trace
- * could only ever say that something happened five times.
- *
- * That makes these rows the settled counterpart of the running section above,
- * in one vocabulary rather than two: the same `speak` table says "I'm reading
- * the Acme website" while it runs and "I've read the Acme website" once it is
- * done. A kind the table has no words for draws NOTHING, for the reason
- * `RunSection` gives — an invented sentence costs the rows that are real.
+ * and the difference is what a row can SAY. The trace is telemetry and carries
+ * no record — a call's subject travels to the occurrence and never to
+ * `ai_call` — so a recap read from it could only ever say that something
+ * happened five times. The occurrence knows what the work was ABOUT, which is
+ * how these rows name the account and link to it, in the same vocabulary the
+ * running section above speaks.
  */
 function Recap({
   settled,
@@ -451,20 +264,19 @@ function Recap({
     })
     .slice(0, RECAP_ROWS);
   if (said.length === 0) {
-    return <p className="aritem arempty">{LABELS.nothingToday}</p>;
+    return <p className="arempty t-caption">{t("agent.panel.nothingToday")}</p>;
   }
   return (
     <>
-      {said.map(({ item, line }, index) => (
+      {said.map(({ item, line }) => (
         <p className="aritem" key={item.id}>
-          {/* The mark fades down the list, so the newest thing the agent did is
-              the brightest thing in it. Position IS the age here: the rows are
-              newest first, and a reader takes the gradient before they read a
-              single timestamp. */}
+          {/* How that one went, in the state families: a failed run is the row
+              a reader is looking for, and it was the only thing on this list
+              that could not be told from the four beside it. */}
           <span
             className="armark"
             aria-hidden="true"
-            style={{ opacity: Math.max(0.3, 1 - index * MARK_FADE) }}
+            data-tone={ROW_TONE[item.state]}
           />
           <span className="arsaid">
             <RailLine line={line} />
@@ -472,8 +284,8 @@ function Recap({
           {/* A settled occurrence has a finish — the projection's own CHECK
               says so — and `started_at` is what is left if a server ever sends
               one that does not. */}
-          <span className="armuted">
-            {agoFor(item.finished_at ?? item.started_at, locale, now)}
+          <span className="armuted t-caption t-num">
+            {agoFor(item.finished_at ?? item.started_at, locale, now, t)}
           </span>
         </p>
       ))}
@@ -481,7 +293,19 @@ function Recap({
   );
 }
 
-function RuntimeRows({
+/**
+ * What the agent is standing on: the provider, the model it last ran on, how
+ * many tools it holds and which sources it cannot reach.
+ *
+ * A definition list, because every one of them is a term and its value. They
+ * were one wrapped line of `<b>`-and-word fragments, which is the shape of a
+ * sentence and read as one.
+ *
+ * The FAULTS lead, above the list and as badges: an unbound model and a refused
+ * licence decide whether anything under them means anything, and neither is a
+ * fact with a value — it is a repair, with somewhere to go.
+ */
+function RuntimeFacts({
   offline,
   model,
   ai,
@@ -496,70 +320,73 @@ function RuntimeRows({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const spend = useAiSpend();
   const tools = Object.values(useAgentTierMap()).length;
+  const licenceFault = license === "none" || license === "refused";
   return (
     <div className="armeta">
-      {/* The posture leads, because it decides whether anything below it means
-          anything: a model name from last week is not a model bound today. */}
-      {ai === "unconfigured" && <Badge tone="warn">{LABELS.noModel}</Badge>}
-      {ai === "development" && (
-        <span>
-          <b>{t("auth.coreDevelopment")}</b> {t("auth.coreModeDevelopment")}
-        </span>
+      {(ai === "unconfigured" || licenceFault) && (
+        <div className="arflags">
+          {ai === "unconfigured" && (
+            <Badge tone="warning">{t("agent.fact.noModel")}</Badge>
+          )}
+          {/* The badge names a fault the reader can repair only on the seats
+              page, so a link around it takes them there: the badge stays the
+              label nobody presses, and the anchor carries the press. */}
+          {licenceFault && (
+            <a className="arwarning" href={LICENSE_SETTINGS_HREF}>
+              <Badge tone="warning">{licenseLine}</Badge>
+            </a>
+          )}
+        </div>
       )}
-      <span>
-        {LABELS.model}{" "}
-        {model.calls.length > 0 ? (
-          <b>{modelText(model)}</b>
-        ) : (
-          <i>{modelText(model)}</i>
+      <dl className="arfacts">
+        {ai === "development" && (
+          <>
+            <dt>{t("auth.coreDevelopment")}</dt>
+            <dd>{t("auth.coreModeDevelopment")}</dd>
+          </>
         )}
-      </span>
-      {/* Absent when the seat may not read it, and absent again when nothing in
-          the month carried a price. A spend row is the one figure on this panel
-          somebody will quote at somebody else, so it is drawn only when the
-          server actually priced the calls behind it. */}
-      {spend.allowed && spend.minor !== undefined && (
-        <span>
-          {LABELS.spend}{" "}
-          <b>{formatMoney(spend.minor, spend.currency, locale)}</b>
-        </span>
-      )}
-      {tools > 0 && (
-        <span>
-          {LABELS.tools} <b>{formatNumber(tools, locale)}</b>
-        </span>
-      )}
-      {/* The badge names a fault the reader can repair only on the seats
-          page, so a link around it takes them there: the badge stays the
-          label nobody presses, and the anchor carries the press. */}
-      {(license === "none" || license === "refused") && (
-        <a className="arwarn" href={LICENSE_SETTINGS_HREF}>
-          <Badge tone="warn">{licenseLine}</Badge>
-        </a>
-      )}
-      {offline.map((source) => (
-        <span className="arconn down" key={source}>
-          <i aria-hidden="true" />
-          {`${source} ${LABELS.offline}`}
-        </span>
-      ))}
+        <dt>{t("agent.fact.model")}</dt>
+        {/* Italic where there is no model to name: the words are the reason
+            there is none, not a value. */}
+        <dd>
+          {model.calls.length > 0 ? (
+            modelText(model, t)
+          ) : (
+            <i>{modelText(model, t)}</i>
+          )}
+        </dd>
+        {tools > 0 && (
+          <>
+            <dt>{t("agent.fact.tools")}</dt>
+            <dd>{formatNumber(tools, locale)}</dd>
+          </>
+        )}
+        {offline.length > 0 && (
+          <>
+            <dt>{t("agent.fact.sources")}</dt>
+            <dd>
+              {offline.map((source) => (
+                <span className="arconn" key={source}>
+                  <i aria-hidden="true" />
+                  {`${source} ${t("agent.fact.offline")}`}
+                </span>
+              ))}
+            </dd>
+          </>
+        )}
+      </dl>
     </div>
   );
 }
-
-/** One AI occurrence, as the server reports it. */
-type AiActivityItem = components["schemas"]["AiActivityItem"];
 
 /**
  * One list of scheduled runs, in the reader's words, under its own heading.
  *
  * A kind or state the copy map has no line for draws NOTHING — not a fallback
- * sentence, not the message key. `speak` returning null is the map saying it
- * has never heard of this run, and a surface that answers that with an invented
- * sentence is a surface a reader cannot trust about the runs it DOES name. When
- * that empties the section, the section is absent too.
+ * sentence, not the message key. A surface that answers an unknown run with an
+ * invented sentence is one a reader cannot trust about the runs it DOES name.
+ * When that empties the section, the section is absent too.
  */
 function RunSection({
   heading,
@@ -576,8 +403,7 @@ function RunSection({
     return null;
   }
   return (
-    <div className="arsect">
-      <h2 className="t-eyebrow">{t(heading)}</h2>
+    <PanelSection title={t(heading)}>
       <ul className="arruns">
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
@@ -587,10 +413,75 @@ function RunSection({
           </li>
         ))}
       </ul>
-    </div>
+    </PanelSection>
   );
 }
 
+/**
+ * Who is reporting, how it is, and what it has cost.
+ *
+ * ONE title, and it is the agent's name: the one thing on this surface that
+ * does not change every few seconds is whose report it is. The live sentence
+ * stands under it as the STATUS rather than as the title — it is the caption of
+ * the state (a fault, a run in flight, a resting reading) and not an entry in
+ * the log below, so as a heading it would have renamed the region on every poll.
+ *
+ * The month's figure is meta beside the state and is said HERE and nowhere else
+ * on the panel: it is one fact, and a surface that prints it twice invites the
+ * reader to check whether the two agree.
+ */
+function PanelHead({
+  state,
+  name,
+  line,
+  spend,
+}: Readonly<{
+  state: MarginceCoreState;
+  name: string;
+  line: SpokenLine;
+  spend: Spend;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <header className="arphead">
+      {/* No orb here. The card in the rail already carries one, and a second
+          Core a few pixels away is the same object drawn at another size
+          against another ground: the two never quite agree, and a reader who
+          sees them disagree stops trusting either. The state's own word and
+          tone carry it instead. */}
+      <p className="arpstate t-caption">
+        <i aria-hidden="true" />
+        {t(STATE_WORD[state])}
+      </p>
+      {spend.allowed && spend.minor !== undefined && (
+        <p className="arpmoney t-caption t-num">
+          <b>{formatMoney(spend.minor, spend.currency, locale)}</b>{" "}
+          {t("agent.thisMonth")}
+        </p>
+      )}
+      <Heading size="medium" as="h2" className="arptitle">
+        {name}
+      </Heading>
+      <p className="arpsaying">
+        <RailLine line={line} />
+      </p>
+    </header>
+  );
+}
+
+/**
+ * The panel: ONE report, in the order a reader asks for it.
+ *
+ * The head says who is reporting and how it is. Under it four titled sections
+ * answer what is running, what needs the reader, what has been done and what it
+ * is all standing on — in that order, which is severity and then scope. The one
+ * control and the one promise close it, under everything that reports.
+ *
+ * Every part of it is ABSENT rather than empty when its read has nothing to
+ * say: this surface reports what was answered, and a section drawn empty claims
+ * an answer nobody got.
+ */
 function AgentPanel({
   state,
   line,
@@ -611,11 +502,7 @@ function AgentPanel({
   settled: readonly AiActivityItem[] | undefined;
   signals: Signals;
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
-  spend: Readonly<{
-    allowed: boolean;
-    minor: number | undefined;
-    currency: string;
-  }>;
+  spend: Spend;
   panel: RefObject<HTMLElement | null>;
   frame: PanelFrame;
 }>) {
@@ -625,7 +512,7 @@ function AgentPanel({
     <section
       className="arpanel"
       ref={panel}
-      aria-label={LABELS.panel}
+      aria-label={t("agent.panel.label")}
       style={{
         left: frame.left,
         right: frame.right,
@@ -634,29 +521,7 @@ function AgentPanel({
         maxHeight: frame.maxHeight,
       }}
     >
-      {/* The head restates what the card said, because the panel opens over the
-          page and away from it: a reader who came here for the detail should not
-          have to look back at the rail to remember what the detail is about. */}
-      {/* No orb here. The card in the rail already carries one, and a second
-          Core a few pixels away is the same object drawn at another size against
-          another ground: the two never quite agree, and a reader who sees them
-          disagree stops trusting either. The state's own word and tone carry it
-          instead. */}
-      <header className="arphead">
-        <span className="arpstate">
-          <i aria-hidden="true" />
-          {state}
-        </span>
-        <p className="arptitle">
-          <RailLine line={line} />
-        </p>
-        {spend.allowed && spend.minor !== undefined && (
-          <span className="arpmoney">
-            <b>{formatMoney(spend.minor, spend.currency, locale)}</b>
-            <i>{LABELS.thisMonth}</i>
-          </span>
-        )}
-      </header>
+      <PanelHead state={state} name={signals.name} line={line} spend={spend} />
 
       {/* Above the counts: a run happening this second outranks a queue that
           has been waiting since yesterday. Only live work is listed here — what
@@ -665,12 +530,6 @@ function AgentPanel({
           list is, rather than drawn empty. */}
       <RunSection heading={PANEL_HEADING.running} items={running} />
 
-      {/* The one count somebody opens this panel to act on, as a tile rather
-          than a row: a number in a list of rows reads as one more line of text.
-          The duplicate queue used to stand beside it and does not any more. It
-          is not the agent's work — it is a queue the product keeps, repaired on
-          the screen that owns it, and every place it appeared here was a second
-          telling of a number the worklist already carries. */}
       {/* THREE cases, not two, and the difference is the whole doctrine of this
           surface: a count nobody has read is not a count of zero.
 
@@ -684,63 +543,68 @@ function AgentPanel({
           A read that ANSWERED zero is different, and it earns the sentence:
           the agent looked, and there is nothing waiting. */}
       {signals.waiting !== undefined && (
-        <div className="arsect">
-          <h2 className="t-eyebrow">{LABELS.acrossWorkspace}</h2>
+        <PanelSection title={t("agent.panel.needsYou")}>
           {signals.waiting === 0 ? (
-            <p className="arnone t-sub">{LABELS.allClear}</p>
+            // A quiet line rather than a dashed plate. The plate said "a tile
+            // failed to load" to every reader who met it before they read the
+            // words in it, which is the opposite of what an all-clear is for.
+            //
+            // Its own sentence, not the resting line's: that line says "Nothing
+            // needs you" in the head of this very panel, and one surface saying
+            // the same four words twice reads as assembled rather than written.
+            <p className="arnone t-caption">
+              {t("agent.panel.nothingWaiting")}
+            </p>
           ) : (
             <div className="artiles">
-              {/* The tile leads with the number because that is what a reader
-                  scans for, and its NAME leads with the label because "10"
-                  spoken alone is not a sentence about anything. */}
+              {/* The tile leads with the number a reader scans for; its NAME
+                  leads with the label, because "10" alone names nothing. */}
               <a
-                className="arbox artile t-caption"
+                className="arbox artile"
                 href="#/worklist"
-                aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
+                aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
               >
                 <b>{formatNumber(signals.waiting, locale)}</b>
-                <span>{LABELS.approvals}</span>
+                <span>{t("agent.panel.decisions")}</span>
               </a>
             </div>
           )}
-        </div>
+        </PanelSection>
       )}
 
-      <div className="arsect">
-        <h2 className="t-eyebrow">
-          {LABELS.recap}
-          <a className="arplain" href={AI_SETTINGS_HREF}>
-            {LABELS.fullLog}
+      <PanelSection
+        title={t("agent.panel.recent")}
+        action={
+          // A verb, beside the title rather than inside it: worn as part of the
+          // heading it took the heading's weight and read as a second title.
+          <a className="link-button" href={AI_SETTINGS_HREF}>
+            {t("agent.panel.fullLog")}
           </a>
-        </h2>
+        }
+      >
         <Recap settled={settled} />
-      </div>
+      </PanelSection>
 
-      {/* What it is standing on, in one strip. Not a section of its own: it is
-          the small print of the panel, and small print that takes a heading and
-          four rows reads as more important than the counts above it. */}
-      <div className="arstrip">
-        {/* The bound comes FIRST, above the runtime rows, because it is the one
-            line here that is true whatever those rows managed to read: the model
-            can be unknown and the licence unreadable, and the agent still reaches
-            no further than this reader does. It is a promise rather than a
-            reading, which is also why it is not in the strip's rows — a row
-            reports what a call answered, and nothing answered this.
-            Held by AC-shell-8. */}
-        <p className="arclaim t-sub">{t("shell.agent.scope")}</p>
-        <RuntimeRows
+      <PanelSection title={t("agent.panel.runtime")} className="arstrip">
+        <RuntimeFacts
           offline={signals.offline}
           model={model}
           ai={signals.ai}
           license={signals.license}
           licenseLine={signals.licenseLine}
         />
-      </div>
+      </PanelSection>
 
-      {/* Last, and to the right: it is the only thing on this panel that
-          CHANGES anything, and a control above the report it is about would be
-          read as part of the report. */}
+      {/* The one thing on this panel that CHANGES anything, under everything
+          that reports: a control above the report it is about would be read as
+          part of the report. */}
       <EdgeLightSetting />
+
+      {/* Last, and the only line here no read produced: the agent reaches no
+          further than this reader does, whatever the rows above managed to
+          answer. A footnote because it is a standing promise rather than news.
+          Held by AC-shell-8. */}
+      <p className="arclaim t-caption">{t("shell.agent.scope")}</p>
     </section>
   );
 }
@@ -905,34 +769,17 @@ function usePanelFrame(
  * could never cause. What the TOOL is doing is still reported, in its own
  * quieter line under this one, and it no longer borrows the agent's voice.
  *
- * The subject stayed the agent when a second observer of it was added. Two
- * things watch the same work from different ends: the server's projection, which
- * knows what a run IS and is the only thing that may name it, and this tab's own
- * count of requests it is holding open to a route whose handler calls a model
- * and waits (`asking`, from api/model-inflight.ts). The projection arrives on a
- * poll, so between a contact pressing "Draft with AI" and the next read there was
- * a live model call nothing on screen reported: the orb sat at rest through the
- * whole of the work it exists to show. `asking` closes that window and claims
- * nothing else: it ranks BELOW every occurrence the feed carries, so it can
- * never outrank a run, and the moment the feed can name the work it does.
- *
- * The correction that ranking allows is real and is the design working, not a
- * defect to hide: `asking` answers `working` because a request in flight cannot
- * say which half of the lifecycle it is in, so a route whose task turns out to
- * be `ingest` (the enrich and cold-start lanes) shows `working` for the
- * moment before the feed arrives and settles into its own lane after. A guess
- * the owner of the fact overrules is the right shape for a bridge.
- *
- * A mailbox import is the third observer, and the one the feed cannot replace:
- * the feed carries capture as per-message classifications the router announces
- * once each call is over, so an import that runs for an hour reaches it as a
- * trickle of settled lines and never as work in flight. The run's own status
- * row (capture-progress.ts) is the server's projection of that work, read from
- * the connections list this section already holds, and it is `ingest` by
- * definition: mail arriving that the agent did not hold a moment ago. It ranks
- * below a named occurrence for the same reason `asking` does — the feed names
- * a run and this names a lane — and above `asking`, because it knows which
- * half of the lifecycle it is in.
+ * THREE observers watch the same work, and they rank. The server's projection
+ * knows what a run IS and is the only thing that may name it. This tab's own
+ * count of requests held open to a model route (`asking`, api/model-inflight.ts)
+ * closes the window between a contact pressing "Draft with AI" and the next
+ * poll, in which the orb used to sit at rest through the whole of the work it
+ * exists to show; it ranks below every occurrence the feed carries, and answers
+ * `working` because a request in flight cannot say which half of the lifecycle
+ * it is in. A mailbox import is the third, and the one the feed cannot replace:
+ * it reaches the feed as a trickle of settled classifications and never as work
+ * in flight, so the import's own status row (capture-progress.ts) reports it,
+ * as `ingest` by definition — above `asking`, because it knows its half.
  *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
@@ -985,18 +832,12 @@ function derive(
   // REFUSED only, and it stays amber rather than escalating, because escalating
   // would make the chrome a sales surface.
   //
-  // An installation that never had a licence is deliberately not a fault here.
-  // It used to be, and the result was that every demo and every fresh dev stack
-  // wore a permanent amber orb: the state stopped reading as "a fault that can
-  // wait" and started reading as "this is a default install", which is the way a
-  // signal that is always on stops being a signal at all. Asking and being told
-  // no is different, because there is a repair behind it.
-  //
-  // Nothing in the chrome says the licence is missing, and that is the trade
-  // rather than an oversight: the fact is a standing condition, so it is stated
-  // once where an operator goes looking for it — the licence card in settings
-  // names both absences and says what each one costs — instead of spending the
-  // chrome's only ambient warning channel on something that is permanently true.
+  // An installation that never had a licence is deliberately not a fault: every
+  // demo and every fresh dev stack is in that state, and an orb that is amber
+  // for all of them has stopped being a signal. Asked and refused is different,
+  // because there is a repair behind it. The missing licence is stated once
+  // where an operator goes looking for it, on the licence card in settings,
+  // rather than spending the chrome's only ambient warning on it.
   if (signals.license === "refused") {
     return { state: "warning", cause: null, register: "agent" };
   }
@@ -1011,14 +852,11 @@ function derive(
   if (live) {
     return { state: laneFor(live), cause: live, register: "agent" };
   }
-  // Mail being imported. No cause travels with it because it is not an
-  // occurrence the feed can name; the line under the orb is the import's own,
-  // from the signals (`barLine`), with its share where a preview gave it one.
-  // The margins take the import's register unless this tab has a call open
-  // underneath it: the orb keeps the import (the ask below cannot say which
-  // half of the lifecycle it is in, and this can), but a model call in flight
-  // is the agent's own work, and the margin lights for THAT in the register it
-  // always has.
+  // Mail being imported. No cause travels with it — it is not an occurrence the
+  // feed can name — so the line is the import's own, from the signals. The
+  // margins take the import's register unless this tab has a call open under
+  // it: a model call in flight is the agent's own work, and the margin lights
+  // for that.
   if (signals.capture !== null) {
     return {
       state: "ingest",
@@ -1028,12 +866,10 @@ function derive(
   }
   // This tab's own ask, which the feed has not caught up with yet. `working`
   // rather than a lane read from the kind, because the kind is exactly what is
-  // not known here: a request in flight says the agent is busy and says nothing
-  // about which half of its lifecycle it is in. `working` is the same answer
-  // laneFor gives an unnamed kind, and for the same reason: the honest half of
-  // what is known. No cause travels with it, so the line under the orb falls
-  // back to the generic word instead of borrowing a sentence about some other
-  // run, and the moment the feed carries the occurrence the branch above wins
+  // not known here: a request in flight says the agent is busy and nothing
+  // about which half of its lifecycle it is in. No cause travels with it, so
+  // the line falls back to the generic word rather than borrowing a sentence
+  // about some other run, and the moment the feed carries the occurrence
   // and names it.
   if (server.asking) {
     return { state: "working", cause: null, register: "agent" };
@@ -1066,10 +902,10 @@ function causeLine(
     return said;
   }
   if (cause.state === "failed") {
-    return plain(LABELS.runFailed);
+    return plain(t("agent.line.runFailed"));
   }
   return cause.state === "degraded" || cause.state === "stalled"
-    ? plain(LABELS.runStopped)
+    ? plain(t("agent.line.runStopped"))
     : null;
 }
 
@@ -1088,20 +924,23 @@ function barLine(
   signals: Signals,
   devLine: string,
   agentLine: SpokenLine | null,
+  said: RailWords,
 ): SpokenLine {
   if (state === "error" || state === "warning") {
-    return faultLine(state, signals, agentLine);
+    return faultLine(state, signals, agentLine, said.t);
   }
   if (state === "working") {
     // The named run outranks the generic word: "Working" is true of an overnight
     // brief and of a one-line summary, and only one of them is news.
-    return agentLine ?? plain(LABELS.working);
+    return agentLine ?? plain(said.t("agent.state.working"));
   }
   if (state === "ingest") {
-    return agentLine ?? plain(signals.capture?.line ?? LABELS.reading);
+    return (
+      agentLine ?? plain(signals.capture?.line ?? said.t("agent.state.ingest"))
+    );
   }
   if (signals.waiting !== undefined && signals.waiting > 0) {
-    return plain(`${signals.waiting} ${LABELS.waiting}`);
+    return plain(said.waiting(signals.waiting));
   }
   // A deployment on the development path is not disconnected — it answers — but
   // every answer it gives is invented, and a reader who does not know that is
@@ -1111,7 +950,7 @@ function barLine(
   if (signals.ai === "development") {
     return plain(devLine);
   }
-  return plain(LABELS.idle);
+  return plain(said.t("agent.state.idle"));
 }
 
 /**
@@ -1129,17 +968,20 @@ function faultLine(
   state: "error" | "warning",
   signals: Signals,
   agentLine: SpokenLine | null,
+  t: Translator,
 ): SpokenLine {
   if (state === "warning") {
     return agentLine ?? plain(signals.licenseLine);
   }
   if (signals.ai === "unconfigured") {
-    return plain(LABELS.noModel);
+    return plain(t("agent.fact.noModel"));
   }
   if (signals.offline.length > 0) {
-    return plain(`${LABELS.cannotReach} ${signals.offline.join(", ")}`);
+    return plain(
+      t("agent.line.cannotReach", { sources: signals.offline.join(", ") }),
+    );
   }
-  return agentLine ?? plain(LABELS.runFailed);
+  return agentLine ?? plain(t("agent.line.runFailed"));
 }
 
 /**
@@ -1166,17 +1008,13 @@ function importRing(
 /**
  * The block's one click, wherever on it a pointer lands.
  *
- * The words stand beside the button rather than inside it, because the record
- * a line names is a link and a link inside a button is a control inside a
- * control. So the toggle listens on the whole hit area: a click on the orb, on
- * the words or on the chevron opens the panel, and the button's own Enter and
- * Space arrive here as the same click. The one exception is the record link
- * itself — following it is the reader leaving for the record, not asking for
- * the panel.
+ * The words stand beside the button rather than inside it, because the record a
+ * line names is a link and a link inside a button is a control inside a control.
+ * So the toggle listens on the whole hit area, and the one exception is the
+ * record link itself — following it is the reader leaving for the record.
  *
- * Opening the panel is what acknowledges a broken run: it is the reader turning
- * to the agent's report, so it is the moment the fault stops needing to be
- * held. Until then the orb holds it, however many hours it takes them to look.
+ * Opening the panel is also what acknowledges a broken run: it is the reader
+ * turning to the agent's report. Until then the orb holds it.
  */
 function useHit(
   open: boolean,
@@ -1214,10 +1052,11 @@ function railHitLabel(
   open: boolean,
   spend: Readonly<{ allowed: boolean; minor?: number }>,
   money: string,
+  t: Translator,
 ): string {
-  const name = open ? LABELS.collapse : LABELS.expand;
+  const name = t(open ? "agent.rail.close" : "agent.rail.open");
   return spend.allowed && spend.minor !== undefined
-    ? `${name}. ${LABELS.spend}: ${money}`
+    ? `${name}. ${t("agent.rail.spend")}: ${money}`
     : name;
 }
 
@@ -1321,6 +1160,10 @@ export function AgentRail({
   const ticker = useAgentTicker();
   const spend = useAiSpend();
   const { locale } = useLocale();
+  // The rail's own words, bundled once per render: the queue's line is a COUNT
+  // and goes through the reader's plural rule rather than a pasted number.
+  const plural = usePlural();
+  const said: RailWords = railWords(t, plural, locale);
   const { fault, acknowledge } = useAgentFault(server.faults);
   const { state, cause, register } = derive(signals, server, fault);
   const hit = useHit(open, setOpen, acknowledge);
@@ -1356,7 +1199,7 @@ export function AgentRail({
     spend.minor === undefined
       ? ""
       : formatMoney(spend.minor, spend.currency, locale);
-  const hitLabel = railHitLabel(open, spend, money);
+  const hitLabel = railHitLabel(open, spend, money, t);
   // Above the early return with every other hook: a screen this section draws
   // nothing on is still a render it has to make the same calls in.
   //
@@ -1370,12 +1213,15 @@ export function AgentRail({
     return said === null ? [] : [said];
   });
   const resting = useRestingLine(
-    restingReadings({
-      waiting: signals.waiting,
-      developmentLine:
-        signals.ai === "development" ? t("auth.coreDevelopment") : null,
-      settled,
-    }),
+    restingReadings(
+      {
+        waiting: signals.waiting,
+        developmentLine:
+          signals.ai === "development" ? t("auth.coreDevelopment") : null,
+        settled,
+      },
+      said,
+    ),
     restingTips(route.screen, t),
   );
 
@@ -1400,7 +1246,7 @@ export function AgentRail({
   const line =
     state === "idle"
       ? resting
-      : barLine(state, signals, t("auth.coreDevelopment"), agentLine);
+      : barLine(state, signals, t("auth.coreDevelopment"), agentLine, said);
   // ONE line under the orb, whoever is talking. While this tab is fetching
   // something it can name, that sentence is the orb's line — "Reading Acme" is
   // the status a reader is waiting on at that moment — and the agent's own line
@@ -1417,7 +1263,7 @@ export function AgentRail({
     <section
       className="arblock"
       data-core-state={state}
-      aria-label={LABELS.region}
+      aria-label={t("agent.rail.region")}
       ref={block}
     >
       {/* Out of the rail and into the body: the rail clips what hangs beside it
@@ -1489,7 +1335,10 @@ export function AgentRail({
             on it: the chevron reports whether the panel is open, which is a fact
             about the block rather than about the spend, so a row that came and
             went with the money would take the disclosure with it. */}
-        <span className="arlast">
+        {/* The same reading as the panel's head, in the width a rail has:
+            small, secondary and tabular, with the figure in the primary ink.
+            The classes are the type; this file only places the row. */}
+        <span className="arlast t-caption t-num">
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
@@ -1497,14 +1346,14 @@ export function AgentRail({
               price. */}
           {spend.allowed && spend.minor !== undefined && (
             <span className="arspend">
-              {money}
+              <b>{money}</b>
               {/* The scope beside the figure, in the slot the stylesheet
                   reserved for it (`.arspend > .arscope`, "the money, and the
                   scope it was spent in, on one line"): a bare currency amount
                   names nothing. The expanded panel says "Cost this month";
                   this is the same fact in the space a rail has, from the same
                   string. */}
-              <span className="arscope">{LABELS.spendScope}</span>
+              <span className="arscope">{t("agent.thisMonth")}</span>
             </span>
           )}
           <ChevronRight

@@ -298,11 +298,7 @@ function MatchCount({
     );
   }
   if (count === undefined) {
-    return (
-      <span className="filters-count filters-count-unasked">
-        {t("filters.noFilterYet")}
-      </span>
-    );
+    return <span className="filters-count">{t("filters.noFilterYet")}</span>;
   }
   return (
     <span

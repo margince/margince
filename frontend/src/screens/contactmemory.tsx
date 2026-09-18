@@ -113,8 +113,7 @@ export function ContactMemory({
           variant="link"
           onClick={() => navigate(contactTabRoute(view.contact.id, "timeline"))}
         >
-          {t("contact.memory.showAll")}{" "}
-          <ChevronRight size={13} aria-hidden="true" />
+          {t("contact.memory.showAll")} <ChevronRight aria-hidden="true" />
         </Button>
       }
     >
@@ -260,7 +259,7 @@ type Row = {
   // active locale, since tone is chosen by the same word.
   status: string | null;
   statusLabel: string;
-  tone: "success" | "warn" | "accent" | undefined;
+  tone: "success" | "warning" | "accent" | undefined;
 };
 
 // The row's opener, or nothing.
@@ -457,12 +456,12 @@ function statusLabel(
 
 function toneFor(
   status: string | null,
-): "success" | "warn" | "accent" | undefined {
+): "success" | "warning" | "accent" | undefined {
   switch (status) {
     case "replied":
       return "success";
     case "unanswered":
-      return "warn";
+      return "warning";
     case "awaiting_them":
       return "accent";
     default:

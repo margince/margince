@@ -40,6 +40,12 @@ import (
 // record (datasource.RecordType) never names an activity, while a thing
 // hung OFF an object (datasource.EntityType) can.
 var enumBindings = map[string]struct{ pkgDir, typeName string }{
+	// Which check the ingress grammar refused a record on. The core writes the
+	// class and the column holds the vocabulary, so a class Go learned and the
+	// schema did not must fail the insert rather than land a value nothing can
+	// name. The published surface is where the type lives, because a unit reads
+	// the same class off its Result.
+	"extension_ingest_refusal.refusal": {"pkg/extension", "RecordRefusal"},
 	"lead.status":                      {"internal/modules/contacts", "LeadStatus"},
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},

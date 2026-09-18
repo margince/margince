@@ -542,6 +542,14 @@ fe-drift:
 ## `make fe-unit`.
 ##
 ## FE_SHARD=k/N runs slice k of N instead of the whole suite, and writes a BLOB
+## The shard run carries a SECOND reporter, `default`, and it is the only thing
+## that says which test failed. `blob` writes its report to a file and prints
+## nothing, and the upload step that would have carried that file is skipped
+## when the test step fails — so a red shard produced a log with no test name in
+## it anywhere, and the merge job that would have printed one never ran. Two
+## reporters cost a few hundred lines of passing output and are the difference
+## between a finding and a bisect.
+##
 ## report rather than an lcov: one slice's coverage is not a measurement of
 ## anything until every slice is added to it, so the shard runs hand their blobs
 ## to `fe-unit-merge` and the lcov and its gates live there. Unset — the local
@@ -553,7 +561,7 @@ fe-unit:
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=.vitest-reports/blob-$(subst /,-,$(FE_SHARD)).json) \
+		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=.vitest-reports/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
 		$(if $(FE_COVERAGE),--coverage.enabled)
 	$(if $(FE_SHARD),,$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info))
 
@@ -1071,13 +1079,18 @@ test-review-coverage:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
-## check-image-pins — every `uses:` in .github/workflows/ AND every container
-## `image:` (workflow service containers + docker-compose.dev.yml) is
-## pinned to an immutable ref (supply-chain: a floating vN/main tag or image
-## tag lets a compromised artifact ride into CI unreviewed). Lives at the root
-## because the workflows do; also a CI step, so a pin can't regress.
+## check-image-pins — every `uses:` in .github/workflows/, every container
+## `image:` (workflow service containers + docker-compose.dev.yml) AND every
+## Dockerfile base `FROM` is pinned to an immutable ref (supply-chain: a
+## floating vN/main tag or image tag lets a compromised artifact ride into CI
+## — or into a release image — unreviewed). Lives at the root because the
+## workflows and the Dockerfile do; also a CI step, so a pin can't regress.
 check-image-pins:
 	@./scripts/check-image-pins.sh
+## check-image-pins.test.sh runs beside it because the newest half of the gate
+## reads Dockerfiles, and a scan that stopped recognising a `FROM` line reports
+## the same "image pins OK" as a fully pinned tree.
+	@bash ./scripts/check-image-pins.test.sh
 
 ## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's

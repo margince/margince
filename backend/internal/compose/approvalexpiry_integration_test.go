@@ -34,10 +34,7 @@ import (
 // so it is the clock's id rather than a contact's.
 func expiryCtx(e *integration.Env) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: approvals.ExpiryActor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, approvals.ExpiryActor)
 }
 
 // stageThenAge stages one approval and backdates its window so it is due.

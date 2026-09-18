@@ -151,7 +151,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.has_message ? (
                 <ThreadSubject row={row} onOpen={setOpenEmail} />
               ) : (
-                <span className="t-caption">{t("heldThreads.noSubject")}</span>
+                <span>{t("heldThreads.noSubject")}</span>
               ),
           },
           {
@@ -166,7 +166,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.occurred_at ? (
                 formatDateTime(row.occurred_at, locale, zone)
               ) : (
-                <span className="t-caption">—</span>
+                <span>—</span>
               ),
           },
           {
@@ -174,7 +174,6 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             header: t("heldThreads.colActions"),
             render: (row) => (
               <Button
-                small
                 // A verdict outlives the message it was raised about, and the
                 // release endpoint works on the seat's MESSAGES on the thread —
                 // with none left it answers not-found. Offering the verb anyway
@@ -267,7 +266,7 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
   }
   return (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="event"
       title={t("heldThreads.backlogStalledTitle")}
     >
@@ -290,7 +289,10 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   if (row.pending) {
     return (
       <CellStack>
-        <Badge tone="warn">{t("heldThreads.pending")}</Badge>
+        {/* `info`: pending below the ceiling is ordinary latency — the same
+            reading the stalled-backlog callout above refuses to cry wolf
+            about — so amber told a reader to act on a queue that is moving. */}
+        <Badge tone="info">{t("heldThreads.pending")}</Badge>
         <span className="t-caption">
           {t("heldThreads.attempts", {
             count: formatNumber(row.attempts, locale),

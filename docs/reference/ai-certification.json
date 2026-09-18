@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 46,
-    "sites_best_current": 41,
+    "sites_best_current": 40,
     "sites_best_partial": 0,
-    "sites_best_stale": 4,
+    "sites_best_stale": 5,
     "sites_absent": 1,
     "scenarios": 168,
     "records": 76,
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 34,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 6,
       "runs": 444,
       "passed": 387,
       "reliability": 0.8716216216216216,
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 38,
-      "sites_current": 34,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 5,
       "runs": 435,
       "passed": 322,
       "reliability": 0.7402298850574712,
@@ -303,17 +303,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "not_supported",
-        "reliability": 0.8333333333333334,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_description_is_not_a_name",
@@ -443,9 +434,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 24,
+          "scenarios_measured": 0,
           "scenarios_total": 24,
           "runs": 72,
           "passed": 60,
@@ -458,7 +449,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
+          "stale_cause": {
+            "case_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
+            ],
+            "prompt_changed": [
+              "a_description_is_not_a_name",
+              "a_draft_precedes_a_send",
+              "a_goal_no_tool_can_serve_ends_the_turn",
+              "a_name_alone_is_still_a_search",
+              "a_promise_is_not_a_slipping_deal",
+              "a_stepless_deal_is_a_slipping_deal",
+              "a_structured_question_is_not_a_text_search",
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_total_is_still_a_report",
+              "a_warm_path_is_not_a_search",
+              "ambiguity_ends_the_turn",
+              "catchup_over_raw_reads",
+              "coverage_names_the_gap",
+              "enrichment_is_not_search",
+              "goal_already_answered_by_seed_context",
+              "goal_needs_a_tool_call",
+              "identity_is_checked_before_a_record_is_created",
+              "logging_what_happened_changes_nothing_else",
+              "meeting_prep_is_not_a_catchup",
+              "slipping_is_its_own_question",
+              "the_calendar_event_is_the_anchor",
+              "the_record_is_found_before_it_is_changed",
+              "the_stage_id_comes_from_the_pipeline",
+              "who_knows_needs_the_contact"
+            ],
+            "grader_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
+            ]
+          }
         },
         {
           "binding": {
@@ -489,9 +518,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 24,
+          "scenarios_measured": 0,
           "scenarios_total": 24,
           "runs": 72,
           "passed": 45,
@@ -504,7 +533,45 @@
             "invalid": 7,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
+          "stale_cause": {
+            "case_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
+            ],
+            "prompt_changed": [
+              "a_description_is_not_a_name",
+              "a_draft_precedes_a_send",
+              "a_goal_no_tool_can_serve_ends_the_turn",
+              "a_name_alone_is_still_a_search",
+              "a_promise_is_not_a_slipping_deal",
+              "a_stepless_deal_is_a_slipping_deal",
+              "a_structured_question_is_not_a_text_search",
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_total_is_still_a_report",
+              "a_warm_path_is_not_a_search",
+              "ambiguity_ends_the_turn",
+              "catchup_over_raw_reads",
+              "coverage_names_the_gap",
+              "enrichment_is_not_search",
+              "goal_already_answered_by_seed_context",
+              "goal_needs_a_tool_call",
+              "identity_is_checked_before_a_record_is_created",
+              "logging_what_happened_changes_nothing_else",
+              "meeting_prep_is_not_a_catchup",
+              "slipping_is_its_own_question",
+              "the_calendar_event_is_the_anchor",
+              "the_record_is_found_before_it_is_changed",
+              "the_stage_id_comes_from_the_pipeline",
+              "who_knows_needs_the_contact"
+            ],
+            "grader_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
+            ]
+          }
         }
       ]
     },

@@ -24,6 +24,7 @@ import {
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
@@ -173,7 +174,7 @@ export function ManualCompanySetup() {
   return (
     // One Panel, in the ONE lead tone, where a gradient with a decorative
     // circle and two bespoke boxes used to be. The heading is the panel's own
-    // title rather than a bare <h2>: preflight leaves an unclassed heading at
+    // title rather than a bare h2: preflight leaves an unclassed heading at
     // body size, so the page's lead sentence used to render as body text
     // inside a gradient.
     <div className="wrap narrow">
@@ -187,7 +188,6 @@ export function ManualCompanySetup() {
         }
         actions={
           <Button
-            small
             variant="primary"
             disabled={!requiredComplete(form) || save.isPending}
             onClick={() => save.mutate()}
@@ -198,7 +198,7 @@ export function ManualCompanySetup() {
       >
         <PanelBody className="form-stack">
           <Eyebrow>{t("settings.companyManualKicker")}</Eyebrow>
-          <p className="t-caption">{t("settings.companyManualSub")}</p>
+          <p>{t("settings.companyManualSub")}</p>
           {(["display_name", "offer_summary", "icp"] as const).map((field) => (
             <Field key={field} label={coldFieldLabel(field, t)}>
               {(control) =>
@@ -662,9 +662,7 @@ function CompanyFactsCard({
             PERMISSION, which is why it speaks at all — the rollout flag returns
             null instead, because a capability this installation does not have
             is not a fact about the reader. */}
-        {readOnly && (
-          <p className="t-caption">{t("settings.companyReadOnly")}</p>
-        )}
+        {readOnly && <p>{t("settings.companyReadOnly")}</p>}
         <QueryGate
           query={company}
           pendingLabel={t("settings.companySourceTitle")}
@@ -767,7 +765,6 @@ function CompanySourceCard({
             control={
               canEdit ? (
                 <Button
-                  small
                   variant="ghost"
                   aria-label={t("settings.companyEditField", {
                     field: t("settings.companyWebsite"),
@@ -795,7 +792,6 @@ function CompanySourceCard({
               description={t("settings.companyRefreshHint")}
               control={
                 <Button
-                  small
                   variant="primary"
                   reason={
                     website === ""
@@ -805,8 +801,7 @@ function CompanySourceCard({
                   pending={refreshing}
                   onClick={onRefresh}
                 >
-                  <RefreshCw aria-hidden size={16} />{" "}
-                  {t("settings.companyRefresh")}
+                  <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
                 </Button>
               }
             />
@@ -864,7 +859,6 @@ function CompanyFactRow({
       control={
         canEdit ? (
           <Button
-            small
             variant="ghost"
             // Named by the fact it changes, not "Edit": seventeen rows offering
             // seventeen identically-named buttons make a screen reader's user
@@ -949,9 +943,9 @@ function CompanyProfileDialog({
   }, []);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} size="wide">
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("settings.companyTitle")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -985,14 +979,13 @@ function CompanyProfileDialog({
           <WriteRefused titleKey="settings.companySaveFailed" message={error} />
         )}
         <div className="form-actions">
-          <Button small variant="ghost" type="button" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           {/* The three the server demands are the three the button waits for —
               the same condition the page's Save carried, now beside the fields
               that satisfy it. */}
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!pending && !requiredComplete(form)}
@@ -1099,7 +1092,7 @@ function RefreshReview(
         );
   return (
     // The review as a Panel: the state sentence is its title (it was a bare
-    // <h3>, which preflight draws at body size), the comparisons are full-bleed
+    // h3, which preflight draws at body size), the comparisons are full-bleed
     // rows, and the coverage figure sits in the footer band because it belongs
     // to the whole read rather than to any one row. It used to be 24px — larger
     // than the page's own h1 — for a number nobody acts on.
@@ -1128,7 +1121,6 @@ function RefreshReview(
               the refusal cannot then disagree. */}
           {props.canApply && (
             <Button
-              small
               variant="primary"
               disabled={!ready || props.confirming}
               reason={unresolved ? t("settings.companyResolveAll") : undefined}

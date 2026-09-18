@@ -230,7 +230,7 @@ export function VatMark({
     >
       <div className="vatmark-panel">
         {answer === null ? (
-          <p className="t-caption">{t("co.vat.never")}</p>
+          <p>{t("co.vat.never")}</p>
         ) : (
           <VatReceipt check={answer} locale={locale} zone={zone} />
         )}
@@ -240,7 +240,7 @@ export function VatMark({
             — so a mark that showed only a verdict could sit beside a number
             nobody ever consulted. */}
         {answer !== null && sameNumber(answer.vat_number, stated) === false && (
-          <p className="t-caption vatmark-stale">{t("co.vat.numberMoved")}</p>
+          <p>{t("co.vat.numberMoved")}</p>
         )}
       </div>
     </Popover>
@@ -306,7 +306,7 @@ function VatReceipt({
           {check.consultation_number ? (
             <code>{check.consultation_number}</code>
           ) : (
-            <span className="t-caption">{t("co.vat.noReceipt")}</span>
+            <span>{t("co.vat.noReceipt")}</span>
           )}
         </dd>
       </div>
@@ -466,7 +466,6 @@ function AskTheRegister({
           false about a request they made correctly. */}
       <Button
         variant="ghost"
-        small
         pending={ask.waiting}
         busyLabel={t("co.vat.askingBusy")}
         onClick={ask.press}
@@ -479,15 +478,9 @@ function AskTheRegister({
           Deliberately not the SAME sentence as that one — a reader who gets
           both would hear the fact twice, so the description is short ("Asking
           the register") and this carries what happens next. */}
-      {ask.waiting && (
-        <p className="t-caption" role="status">
-          {t("co.vat.asking")}
-        </p>
-      )}
+      {ask.waiting && <p role="status">{t("co.vat.asking")}</p>}
       {ask.error !== null && (
-        <p className="t-caption" role="status">
-          {problemMessageOf(ask.error, t)}
-        </p>
+        <p role="status">{problemMessageOf(ask.error, t)}</p>
       )}
     </div>
   );

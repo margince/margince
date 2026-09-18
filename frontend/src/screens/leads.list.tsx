@@ -83,6 +83,7 @@ async function fetchLeadsPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }
@@ -428,7 +429,7 @@ function LeadsWorkbench({
             sort: "next_task_due_at", // the deadline, not the title
 
             cell: (lead: Lead) => (
-              <span className="t-caption">
+              <span>
                 {lead.next_task_subject ?? t("lead.noNextTask")}
                 {lead.open_task_count
                   ? ` · ${t("lead.openTaskCount", {
@@ -449,9 +450,7 @@ function LeadsWorkbench({
             sort: "source", // the catalog's label, which is what the cell prints
 
             cell: (lead: Lead) => (
-              <span className="t-caption">
-                {sourceLabelFor(lead, sources.data?.data, t)}
-              </span>
+              <span>{sourceLabelFor(lead, sources.data?.data, t)}</span>
             ),
           },
           ownerColumn<Lead>(t),

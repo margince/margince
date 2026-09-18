@@ -37,6 +37,27 @@ import (
 // project report out of sight on the day it was first guarded.
 var dealAmountColumn = regexp.MustCompile(`(?i)\b(amount_minor_base|amount_minor)\b`)
 
+// WHAT THIS CENSUS CANNOT SEE, and why the thing it cannot see is covered
+// anyway.
+//
+// It reads STATEMENTS. A package that takes the figure as a Go VALUE is
+// invisible to it by construction — companybrief folding `deal.Amount` out of
+// a Company360, the slipping tool folding it out of a listed Deal, meetingbrief
+// reading it off a row it did not select. None of those names a column, and no
+// widening of this pattern would find them.
+//
+// They are covered by COMPOSITION rather than by luck, and the composition has
+// two halves. A contracts money field is only ever produced by SQL; every such
+// statement lives under `internal`, which is this census's Roots. So a value
+// that reaches a grounding package has already passed through a statement this
+// census subjected — and the masks it carries are the ones that were applied.
+//
+// The second half is a premise, so it is asserted rather than assumed:
+// TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt refuses a deal-amount
+// statement anywhere outside `internal`. Without it, a reader placed in cmd/,
+// pkg/ or an extension unit would not fail this census — it would be one this
+// census never reads, and it would go on answering PASS.
+
 var dealTableRead = gatekit.TableReadPattern("deal")
 
 // maskOwner is the module that OWNS the deal object and the mask.

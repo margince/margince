@@ -5,6 +5,7 @@ import { useEffect, useId, useRef } from "react";
 import { navigateReplacing } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { WorklistScreen } from "./worklist";
 import "./brief.css";
@@ -49,9 +50,9 @@ export function BriefQueue() {
           the band is spaced is the shared drawer's (atoms.css) — this head adds
           nothing, because a queue title is not a different kind of title. */}
       <div className="drawer-head">
-        <h2 id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2">
           {t("brief.queue.title")}
-        </h2>
+        </Heading>
       </div>
       <div
         className="drawer-body brief-queue-body"

@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import {
@@ -95,17 +96,15 @@ export function BackfillPanel({
   useDrawsImportRun(isLiveRun(status.data?.state));
 
   if (skipped) {
-    return (
-      <p className="t-caption backfill-skipped">{t("backfill.skippedNote")}</p>
-    );
+    return <p className="backfill-skipped">{t("backfill.skippedNote")}</p>;
   }
   if (status.isPending) {
-    return <p className="t-caption">{t("backfill.loading")}</p>;
+    return <p>{t("backfill.loading")}</p>;
   }
   if (status.isError) {
     // The status read failing must not block the wizard — the nightly sweep
     // still runs; the user just loses the live view here.
-    return <p className="t-caption">{t("backfill.statusUnavailable")}</p>;
+    return <p>{t("backfill.statusUnavailable")}</p>;
   }
 
   const run = status.data;
@@ -180,22 +179,20 @@ function BackfillSetup({
   if (unsupported) {
     return (
       <div className="backfill-setup">
-        <h3 className="backfill-h">
+        <Heading size="medium" className="backfill-h">
           <History aria-hidden /> {t("backfill.title")}
-        </h3>
-        <p className="t-caption backfill-unsupported">
-          {t("backfill.unsupportedNote")}
-        </p>
+        </Heading>
+        <p>{t("backfill.unsupportedNote")}</p>
       </div>
     );
   }
 
   return (
     <div className="backfill-setup">
-      <h3 className="backfill-h">
+      <Heading size="medium" className="backfill-h">
         <History aria-hidden /> {t("backfill.title")}
-      </h3>
-      <p className="t-caption">{t("backfill.intro")}</p>
+      </Heading>
+      <p>{t("backfill.intro")}</p>
       <ImportWindowPicker
         value={window}
         onChange={onWindowChange}
@@ -203,7 +200,7 @@ function BackfillSetup({
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
       {previewErrorMessage && (
-        <p className="t-caption backfill-error">{previewErrorMessage}</p>
+        <p className="backfill-error">{previewErrorMessage}</p>
       )}
       <EstimateCard
         preview={previewData}
@@ -213,7 +210,7 @@ function BackfillSetup({
         onStart={onStart}
       />
       {startErrorMessage && (
-        <p className="t-caption backfill-error">
+        <p className="backfill-error">
           {narrowing ? t("backfill.narrowingNote") : startErrorMessage}
         </p>
       )}
@@ -221,9 +218,7 @@ function BackfillSetup({
           carrying a class from a sheet this file never imported, so on Settings
           it rendered as the browser's own grey chrome. */}
       <div className="backfill-foot">
-        <Button small onClick={onSkip}>
-          {t("backfill.skip")}
-        </Button>
+        <Button onClick={onSkip}>{t("backfill.skip")}</Button>
       </div>
     </div>
   );
@@ -261,7 +256,7 @@ function EstimateCard({
   const costMinor = preview?.estimated_cost_minor;
   return (
     <div className="backfill-estimate">
-      {counting && <p className="t-caption">{t("backfill.previewLoading")}</p>}
+      {counting && <p>{t("backfill.previewLoading")}</p>}
       {/* THE WINDOW FIRST. What the mailbox owner consents to is a period of their own
           mailbox; the count describes that period and is not the thing being
           agreed to. It also degrades better — the scope sentence is true while

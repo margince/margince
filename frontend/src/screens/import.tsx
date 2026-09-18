@@ -12,6 +12,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -114,7 +115,7 @@ export function ImportCard() {
             label={t("import.startLabel")}
             description={t("import.sub")}
             control={
-              <Button small variant="ghost" onClick={() => setOpen(true)}>
+              <Button variant="ghost" onClick={() => setOpen(true)}>
                 {t("import.start")}
               </Button>
             }
@@ -129,9 +130,9 @@ export function ImportCard() {
           labelledBy={headingId}
           size="wide"
         >
-          <h2 id={headingId} className="t-h2 modal-title">
+          <Heading size="large" id={headingId} className="t-h2 modal-title">
             {t("import.title")}
-          </h2>
+          </Heading>
           <ImportWizard flow={flow} />
         </Modal>
       </PanelBody>
@@ -227,12 +228,11 @@ function ImportWizard({
         tabIndex={-1}
       />
       <Button
-        small
         variant="ghost"
         disabled={busy}
         onClick={() => fileInput.current?.click()}
       >
-        <Upload size={16} aria-hidden />
+        <Upload aria-hidden />
         <span>{profile ? t("import.chooseAnother") : t("import.choose")}</span>
       </Button>
 
@@ -344,9 +344,9 @@ function ImportOutcome({
 
   return (
     <div className="import__outcome">
-      <h3 className="import__outcomeTitle">
+      <Heading size="small" as="h3" className="import__outcomeTitle">
         {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
-      </h3>
+      </Heading>
       {/* What the approver is about to apply. The mapping step is off screen by
           now, so without this the word chosen there is invisible at exactly the
           moment somebody decides whether to commit. */}
@@ -378,7 +378,7 @@ function ImportOutcome({
           standing over a list it introduces is a heading in notice clothing —
           and the list is what the reader came here to read. */}
       {report.issues.length > 0 ? (
-        <Callout tone="warn" kind="outcome" title={t("import.issuesLead")}>
+        <Callout tone="warning" kind="outcome" title={t("import.issuesLead")}>
           <ul className="import__issues t-sub">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
@@ -404,7 +404,6 @@ function ImportOutcome({
 
       {!committed ? (
         <Button
-          small
           variant="primary"
           disabled={busy && !commitBusy}
           pending={commitBusy}
@@ -417,7 +416,6 @@ function ImportOutcome({
 
       {resumable ? (
         <Button
-          small
           variant="primary"
           disabled={busy && !commitBusy}
           pending={commitBusy}
@@ -445,7 +443,7 @@ function ImportOutcome({
       />
 
       {committed && !resumable ? (
-        <Button small variant="ghost" onClick={onRestart}>
+        <Button variant="ghost" onClick={onRestart}>
           {t("import.another")}
         </Button>
       ) : null}
@@ -487,7 +485,6 @@ function UndoSection({
 
       {undoable || undoInterrupted ? (
         <Button
-          small
           variant="ghost"
           disabled={busy && !undoBusy}
           pending={undoBusy}
@@ -654,7 +651,7 @@ function ImportMappingStep({
         </p>
       ) : (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           title={t("import.needsIdentifier", { field: identifying })}
         />
@@ -664,7 +661,6 @@ function ImportMappingStep({
           report never said would be filed. */}
       <ImportContextTag value={contextTagID} onChange={onContextTag} />
       <Button
-        small
         variant="primary"
         disabled={!identifiedBy || (busy && !pending)}
         pending={pending}

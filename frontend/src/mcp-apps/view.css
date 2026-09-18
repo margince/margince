@@ -22,6 +22,10 @@
  * the dark palette, which is the thing this file exists to stop. */
 
 @import "../design-system/tokens.css";
+/* The same heading rules the app draws from, so one heading is one heading
+   whichever document it is in. bridge.ts's heading() emits the class and the
+   data-size these rules key off. */
+@import "../design-system/heading.css";
 
 * {
   box-sizing: border-box;
@@ -34,27 +38,85 @@ body {
      so a transparent body would borrow whatever is behind it and disagree with
      the foreground colour set here. */
   background: var(--bgElevated);
-  color: var(--textContent);
-  /* system-ui, and NOT var(--f-body). That token resolves to a web font, and a
-     web font is a network request this document's empty origin allowlist can
-     never admit — it would silently fall back per host instead of per design. A
-     view can wear the product's colour and rhythm; it cannot wear its typeface. */
+  /* The size, leading and weight come from the product's own body token; the
+     family is overridden back to system-ui straight after it, because
+     `--fontBody` carries `--fontFamilyBody`, and that resolves to a web font —
+     a network request this document's empty origin allowlist can never admit,
+     so it would silently fall back per host instead of per design. A view can
+     wear the product's colour and rhythm; it cannot wear its typeface. */
+  font: var(--fontBody);
   font-family: system-ui, sans-serif;
-  font-size: var(--fs-body);
-  line-height: 1.5;
+  color: var(--textPrimary);
+}
+
+/* The one rule above is the whole type system of this document, so nothing may
+   arrive already styled: a user agent's own sizes and weights for headings,
+   controls and code would be a second author nobody can see. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+small,
+sub,
+sup,
+b,
+strong,
+th,
+td,
+legend,
+label,
+kbd,
+samp,
+code,
+pre,
+blockquote,
+figcaption,
+address,
+cite,
+dfn,
+em,
+i,
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+
+/* And the one weight the reset takes away that a table still needs: a COLUMN
+   head is medium, so it reads as a label over the values rather than as one
+   more row of them. `thead th` and not `th` — a row header in `tbody` is a
+   value's name and stays at body weight. Spelled here as well as in app.css
+   for the reason the reset above is: this document loads tokens.css and nothing
+   else, so it inherits no rule from the app's own sheet. */
+thead th {
+  font-weight: var(--fontWeightMedium);
+}
+
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: inherit;
 }
 
 h1 {
   margin: 0 0 var(--space-1);
-  font-size: var(--fs-lead);
-  font-weight: 600;
   color: var(--textPrimary);
 }
 
 .meta {
   margin: 0 0 var(--space-4);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .rows {
@@ -77,13 +139,10 @@ h1 {
 }
 
 .rank {
-  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-meta);
 }
 
 .name {
-  font-weight: 600;
   /* A record's own text, which is customer data of arbitrary length. It wraps
      rather than escaping its row. */
   overflow-wrap: anywhere;
@@ -93,46 +152,30 @@ h1 {
   margin-left: auto;
   color: var(--accentText);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
 }
 
 .factors {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .factor {
   font-variant-numeric: tabular-nums;
 }
 
-.state {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 /* The warmth bands are TEXT, so each has to clear 4.5:1 against --bgElevated in
-   both themes — and "none" is exactly the band a rep has to be able to read.
-   Hence the Text half of the status family and not the bright hue the same
-   names carry for shapes: --successText and --warnText are the readings the
-   design system holds at AA for small text, and --textMeta already was. Named
-   by token because check-ds-purity.sh greps comments too, and a hex here would
-   fail the gate this comment explains. */
+   both themes. Hence the Text half of the status family and not the bright hue
+   the same names carry for shapes: --successText and --warningText are the
+   readings the design system holds at AA for small text. Named by token because
+   check-ds-purity.sh greps comments too, and a hex here would fail the gate this
+   comment explains. */
 .band-high {
   color: var(--successText);
-  font-weight: 600;
 }
 
 .band-medium {
-  color: var(--warnText);
-  font-weight: 600;
-}
-
-.band-low,
-.band-none {
-  color: var(--textMeta);
+  color: var(--warningText);
 }
 
 /* A promise's state is TEXT, so it takes --dangerText, which the design system
@@ -140,18 +183,9 @@ h1 {
    bright --danger the same family gives a bar or a dot. The gap's rule below
    is a shape, which is why that one keeps the bright hue. Named by token
    because check-ds-purity.sh greps comments too, and a hex here would fail the
-   gate this note explains.
-
-   "overdue" is the one that has to carry weight: it is the only state on
-   these views that asks the reader to do something today. */
+   gate this note explains. */
 .state-overdue {
   color: var(--dangerText);
-  font-weight: 600;
-}
-
-.state-upcoming,
-.state-undated {
-  color: var(--textMeta);
 }
 
 /* A view that reports several kinds of thing at once needs them separated, or
@@ -163,10 +197,6 @@ h1 {
 .section-title {
   margin: 0 0 var(--space-2);
   color: var(--textPrimary);
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 
 /* One thing the records do not answer. It reads as a warning rather than as an
@@ -175,18 +205,14 @@ h1 {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  border-left: 2px solid var(--warn);
+  border-left: 2px solid var(--warning);
   padding: var(--space-1) var(--space-3);
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 /* The field a gap was read off. It is the evidence, so it is shown rather than
    summarized away — in the document's own face, because a field name is read,
    not run. */
 .source {
-  color: var(--textMeta);
-  font-size: var(--fs-eyebrow);
   white-space: nowrap;
 }
 
@@ -197,7 +223,6 @@ h1 {
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: var(--space-4);
-  color: var(--textMeta);
   text-align: center;
 }
 
@@ -221,8 +246,6 @@ h1 {
   padding: var(--space-3) var(--space-4);
   background: var(--accent);
   color: var(--textOnAccent);
-  font: inherit;
-  font-weight: 600;
   /* A touch target a thumb hits on a phone, which is where this gets run. */
   min-height: 44px;
   cursor: pointer;

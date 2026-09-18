@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { WriteRefused } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
@@ -168,8 +169,8 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
       {(props.review == null || props.mode !== "dossier") && (
         <div className="mw-review-heading">
           <span>{t("ob.ai.liveArtifact")}</span>
-          <h2>{t("ob.ai.companyKnowledge")}</h2>
-          <p className="t-caption">
+          <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
+          <p>
             {t(
               props.manual
                 ? "ob.ai.companyKnowledgeManualBody"
@@ -208,7 +209,6 @@ function RefusalNotice({
         actions={
           refusal.retry === null ? undefined : (
             <Button
-              small
               variant="ghost"
               pending={refusal.retry.busy}
               onClick={refusal.retry.run}
@@ -249,11 +249,7 @@ function ArtifactBody(props: CompanyActArtifactProps) {
   if (props.mode === "edit") {
     return (
       <>
-        <Button
-          small
-          variant="ghost"
-          onClick={() => props.onSwitchMode("dossier")}
-        >
+        <Button variant="ghost" onClick={() => props.onSwitchMode("dossier")}>
           {t("ob.conv.review.backToDossier")}
         </Button>
         <CompanyStep
@@ -303,11 +299,7 @@ function DossierBody(props: CompanyActArtifactProps) {
     return (
       <>
         <p className="ob-conv-artifact-empty">{t("ob.conv.artifact.empty")}</p>
-        <Button
-          small
-          variant="ghost"
-          onClick={() => props.onSwitchMode("edit")}
-        >
+        <Button variant="ghost" onClick={() => props.onSwitchMode("edit")}>
           {t("ob.conv.review.editDirectly")}
         </Button>
       </>
@@ -318,7 +310,7 @@ function DossierBody(props: CompanyActArtifactProps) {
       <div className="ob-state-loading" role="status">
         <span className="ob-spinner" /> {t("ob.restoring")}
       </div>
-      <Button small variant="ghost" onClick={() => props.onSwitchMode("edit")}>
+      <Button variant="ghost" onClick={() => props.onSwitchMode("edit")}>
         {t("ob.conv.review.editDirectly")}
       </Button>
     </>

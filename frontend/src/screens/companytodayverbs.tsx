@@ -47,7 +47,7 @@ function MomentVerb({
 }>) {
   return (
     <span className="today-verb">
-      <Button variant={primary ? "ai" : "ghost"} small onClick={onAct}>
+      <Button variant={primary ? "ai" : "ghost"} onClick={onAct}>
         {icon}
         {label}
       </Button>

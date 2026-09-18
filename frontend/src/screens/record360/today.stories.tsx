@@ -44,7 +44,7 @@ type Story = StoryObj<typeof TodayPanel>;
 // provenance and what it covered.
 const foot = (
   <>
-    <Badge tone="warn">1 overdue</Badge>
+    <Badge tone="warning">1 overdue</Badge>
     <span className="co-scan-foot">
       <Badge tone="ai">Margince</Badge>
       <span className="co-row-meta">Read 14 exchanges and 2 deals</span>
@@ -68,14 +68,10 @@ function Pane({ width = 720 }: Readonly<{ width?: number }>) {
             action={
               <>
                 <span className="today-verb">
-                  <Button small variant="ai">
-                    Draft it
-                  </Button>
+                  <Button variant="ai">Draft it</Button>
                 </span>
                 <span className="today-verb">
-                  <Button small variant="ghost">
-                    Open the thread
-                  </Button>
+                  <Button variant="ghost">Open the thread</Button>
                 </span>
               </>
             }
@@ -131,7 +127,6 @@ export const FoundMoveRefused: Story = {
             action={
               <span className="today-verb">
                 <Button
-                  small
                   variant="ai"
                   reason="Lena has no address on file to send this to."
                 >
@@ -159,9 +154,7 @@ export const FoundMoveOneVerb: Story = {
             why="Lena promised this breakdown in the 5 August session and it never went out."
             action={
               <span className="today-verb">
-                <Button small variant="ai">
-                  Draft it
-                </Button>
+                <Button variant="ai">Draft it</Button>
               </span>
             }
           />

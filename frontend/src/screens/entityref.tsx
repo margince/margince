@@ -407,17 +407,13 @@ function UnnamedRef({
 }: Readonly<{ id: string; reading: NameReading }>) {
   const t = useT();
   if (reading === "pending") {
-    return <span className="t-caption">{t("common.loading")}</span>;
+    return <span>{t("common.loading")}</span>;
   }
   if (reading === "failed") {
     // The id stays reachable through the title rather than printed as the
     // value: on the line it reads as what the read came back with, and the
     // read came back with nothing.
-    return (
-      <span className="t-caption" title={id}>
-        {t("ref.nameLoadFailed")}
-      </span>
-    );
+    return <span title={id}>{t("ref.nameLoadFailed")}</span>;
   }
   return <span title={id}>{id}</span>;
 }
@@ -651,7 +647,7 @@ export function OwnerName({
 }: Readonly<{ ownerId?: string | null; unowned: string }>) {
   const roster = useRosterWalk("user", Boolean(ownerId));
   if (!ownerId) {
-    return <span className="t-caption">{unowned}</span>;
+    return <span>{unowned}</span>;
   }
   const named = roster.data?.entries.find((entry) => entry.id === ownerId);
   if (named && "display_name" in named) {

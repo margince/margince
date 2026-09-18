@@ -175,7 +175,6 @@ export function TeamBoard({
                         <>
                           <Button
                             variant="ghost"
-                            small
                             onClick={() =>
                               row.id ? onOwner(row.id) : onUnassigned()
                             }

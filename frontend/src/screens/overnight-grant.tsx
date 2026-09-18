@@ -134,7 +134,7 @@ export function morningBriefGrant(
  * places and a rep who reads one and then the other must not be told two
  * different things.
  *
- * `warn` and `standing`, not a danger alert: a cleared box is the rep's own
+ * `warning` and `standing`, not a danger alert: a cleared box is the rep's own
  * answer and their authority to give, so nothing has gone wrong here — what the
  * notice reports is the cost of the answer, and announcing it on every mount
  * while the box stays clear reads their decision back to them as a fault.
@@ -144,7 +144,7 @@ function GrantCostNotice() {
   return (
     <Callout
       kind="standing"
-      tone="warn"
+      tone="warning"
       title={t("overnightGrant.dangerTitle")}
     >
       {t("overnightGrant.danger")}
@@ -307,7 +307,7 @@ function GrantNotices({
       {showRenewal && (
         <Callout
           kind="event"
-          tone="warn"
+          tone="warning"
           title={t("overnightGrant.renewTitle")}
         >
           {t("overnightGrant.renew")}
@@ -316,7 +316,7 @@ function GrantNotices({
       {showScopeRenewal && (
         <Callout
           kind="event"
-          tone="warn"
+          tone="warning"
           title={t("overnightGrant.renewScopeTitle")}
         >
           {t("overnightGrant.renewScope")}

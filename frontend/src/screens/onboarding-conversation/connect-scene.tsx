@@ -2,7 +2,8 @@ import { Check, Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Badge, Button, Disclosure } from "../../design-system/atoms";
+import { Badge, Button, Disclosure, Field } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { Row } from "../../design-system/stack";
 import { useT } from "../../i18n";
@@ -245,7 +246,7 @@ export function ConnectScene({
       <ConnectGuarantees />
 
       <div className="ob-connect-section-head">
-        <h3>{t("ob.conv.connect.mailboxTitle")}</h3>
+        <Heading size="medium">{t("ob.conv.connect.mailboxTitle")}</Heading>
         <p className="t-sub">{t("ob.conv.connect.mailboxHint")}</p>
       </div>
 
@@ -301,7 +302,7 @@ export function ConnectScene({
       <div className="ob-connect-section-head">
         {/* The default tone: LinkedIn never gates the act. */}
         <Row>
-          <h3>{t("ob.conv.connect.networkTitle")}</h3>
+          <Heading size="medium">{t("ob.conv.connect.networkTitle")}</Heading>
           <Badge>{t("ob.conv.connect.recommended")}</Badge>
         </Row>
         <p className="t-sub">{t("ob.conv.connect.networkHint")}</p>
@@ -460,7 +461,7 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (
     <div
-      className="readfail warn"
+      className="readfail warning"
       role="alert"
       style={{ maxWidth: 460, margin: "0 auto" }}
     >
@@ -471,7 +472,6 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
         <div className="rft">{t("ob.conv.connect.rosterFailedTitle")}</div>
         <p className="rfp">{t("ob.conv.connect.rosterFailedBody")}</p>
         <Button
-          small
           variant="ghost"
           onClick={onRetry}
           style={{ marginTop: "var(--space-3)" }}
@@ -697,11 +697,10 @@ function LinkedinCard({
           headline={t("ob.conv.linkedin.dialogHeadline")}
         >
           <LinkedinPanel
-            // No `setOpen(false)` here: a failed save has to stay on screen
-            // so `error` (below) is actually seen and retried, and a
-            // successful one already unmounts this dialog on its own —
-            // `status` flips to "saved" and the guard above stops rendering
-            // it.
+            // No `setOpen(false)` here: a failed save has to stay on screen so
+            // `error` (below) is actually seen and retried, and a successful
+            // one already unmounts this dialog on its own — `status` flips to
+            // "saved" and the guard above stops rendering it.
             onSave={onSave}
             onSkip={() => {
               onSkip();
@@ -736,17 +735,18 @@ function LinkedinPanel({
 
   return (
     <div className="ob-connect-linkedin-panel">
-      <label className="ob-conv-field" htmlFor="linkedin-profile">
-        {t("ob.conv.linkedin.profileLabel")}
-        <input
-          id="linkedin-profile"
-          type="url"
-          inputMode="url"
-          placeholder={t("ob.conv.linkedin.profilePlaceholder")}
-          value={profile}
-          onChange={(event) => setProfile(event.target.value)}
-        />
-      </label>
+      <Field label={t("ob.conv.linkedin.profileLabel")}>
+        {(control) => (
+          <input
+            {...control}
+            type="url"
+            inputMode="url"
+            placeholder={t("ob.conv.linkedin.profilePlaceholder")}
+            value={profile}
+            onChange={(event) => setProfile(event.target.value)}
+          />
+        )}
+      </Field>
       <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
       <div className="ob-connect-dialog-actions">
         <Button

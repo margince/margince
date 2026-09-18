@@ -83,8 +83,7 @@ func setupNotices(t *testing.T) *noticeEnv {
 // principal inside a correlation scope.
 func (e *noticeEnv) engineCtx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:automation"})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:automation")
 }
 
 func (e *noticeEnv) asUser(u ids.UserID) context.Context {

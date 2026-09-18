@@ -56,10 +56,10 @@ const STATE_LABEL: Readonly<Record<WeeklyPlanCommitment["state"], MessageKey>> =
  * a reader something is wrong when nothing is.
  */
 const STATE_TONE: Readonly<
-  Partial<Record<WeeklyPlanCommitment["state"], "success" | "warn">>
+  Partial<Record<WeeklyPlanCommitment["state"], "success" | "warning">>
 > = {
   done: "success",
-  missed: "warn",
+  missed: "warning",
 };
 
 /**
@@ -126,8 +126,6 @@ function hasFoot(
 
 export function PlanSection() {
   const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
@@ -218,17 +216,6 @@ export function PlanSection() {
     <section id="brief-plan">
       <Panel
         title={t("plan.title")}
-        sub={
-          plan.data
-            ? t("brief.plan.period", {
-                date: formatDate(
-                  middayInstant(plan.data.local_week_start, recordZone),
-                  locale,
-                  recordZone,
-                ),
-              })
-            : t("plan.sub")
-        }
         titleAction={
           editable && !adding ? (
             <Button onClick={() => setAdding(true)}>{t("plan.add")}</Button>
@@ -254,7 +241,7 @@ export function PlanSection() {
         >
           {readOnly && (
             <PanelBody>
-              <p className="t-caption plan-readonly">{t("plan.readOnly")}</p>
+              <p className="plan-readonly">{t("plan.readOnly")}</p>
             </PanelBody>
           )}
           {plan.isSuccess && plan.data === null && (
@@ -390,7 +377,7 @@ function CommitmentRow({
           />
         ) : null}
         <div className="plan-row-body">
-          <span className="plan-row-label">{commitment.label}</span>
+          <span>{commitment.label}</span>
           <span className="plan-row-meta">
             <Badge tone={STATE_TONE[commitment.state]}>
               {t(STATE_LABEL[commitment.state])}

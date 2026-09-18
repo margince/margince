@@ -148,7 +148,10 @@ describe("Top bar search (AC-shell-7)", () => {
     // Two caps, whichever platform the test host claims to be: the chord reads
     // "⌘ then K" on a Mac and "Ctrl then K" elsewhere, and the split is what
     // keeps those one source rather than two spellings.
-    const caps = [...(keys?.querySelectorAll("kbd") ?? [])].map(
+    // `kbd.kbd`: the caps in this strip ARE the design system's one key cap
+    // (`Kbd`), not a box the top bar draws for itself, so the selector fails if
+    // the strip goes back to spelling its own.
+    const caps = [...(keys?.querySelectorAll("kbd.kbd") ?? [])].map(
       (cap) => cap.textContent,
     );
     expect(caps).toHaveLength(2);

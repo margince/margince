@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -108,7 +107,7 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID id
 	if err != nil {
 		return err
 	}
-	page, err := sectionPage(rows, hasMore)
+	page, err := sectionPage(ctx, rows, hasMore)
 	if err != nil {
 		return err
 	}
@@ -121,12 +120,17 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID id
 
 // nextStepsSection is the open work filed against this contact: tasks not
 // yet done. A task with no due date still counts — it is owed either way.
+//
+// System-minted work stays IN the list: a check-in reminder is real open work
+// and a reader looking at their task list wants to see it. What it must not do
+// is decide the moment above the list — see byUrgencyHumanFirst for why the
+// order carries that difference rather than a second query.
 func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
 	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts,
-		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgency)
+		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgencyHumanFirst)
 	if err != nil {
 		return err
 	}
@@ -159,15 +163,46 @@ const (
 	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
 )
 
+// byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
+// the product minted for itself.
+//
+// The order is load-bearing, not cosmetic. The moment above the list asks "has
+// anybody agreed a next step with this contact", and it may only read the page
+// it was given — one capped page, sectionCap rows. Under plain urgency, a
+// contact with a page of check-in reminders due sooner than their one real
+// promise hides that promise on page two, and the moment reports a missing next
+// step that is not missing. An absence read off a capped page is sound only if
+// what it looks for sorts to the front, so the colleague-filed rows sort to the
+// front and the reminders keep their urgency order behind them.
+//
+// The predicate is activities.SystemMintedExpr — the same captured_by namespace
+// test principal.SystemMintedID spells in Go, so this order and the filter the
+// rung applies stay one answer.
+//
+// Held by: TestASystemMintedTaskDoesNotCountAsTheNextStep
+// (internal/compose/contact360/momentnextstep_test.go)
+//
+// A var rather than a const only because it is built from that shared
+// expression: spelling the namespace inline to keep it constant is exactly the
+// second copy the helper exists to prevent.
+var byUrgencyHumanFirst = sectionOrder(
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
+		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
+
 // sectionPage is the section's edge in the activities list's own cursor
-// vocabulary: the same (occurred_at, id) keyset GET /activities orders by, so
-// the record page continues from this page's last row rather than fetching
-// page one again and showing every row twice.
-func sectionPage(rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageInfo, error) {
+// vocabulary, so the record page continues from this page's last row rather
+// than fetching page one again and showing every row twice.
+//
+// Minted by the LIST rather than here. The token carries the order it was
+// minted under, and the list refuses one minted under another — which is right,
+// and which makes a hand-built token beside this section a page boundary that
+// works until the day the list's order is expressed differently. It was: the
+// timeline is a sort-aware keyset now, and this is the caller that would
+// otherwise have found out through a 422 in front of a reader.
+func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageInfo, error) {
 	info := crmcontracts.PageInfo{HasMore: hasMore}
 	if hasMore && len(rows) > 0 {
-		last := rows[len(rows)-1]
-		cursor, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		cursor, err := activities.TimelineCursor(ctx, rows[len(rows)-1])
 		if err != nil {
 			return crmcontracts.PageInfo{}, err
 		}
@@ -217,74 +252,23 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		       a.occurred_at, a.due_at, a.is_done, a.assignee_id, a.source, a.captured_by, a.created_at,
 		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
 		       a.source_system, a.version, (%s) AS content_available,
+		       %s,
 		       EXISTS (SELECT 1 FROM activity_link fl
 		                WHERE fl.activity_id = a.id AND fl.contact_id = $%d) AS filed_here
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		contentArm, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		contentArm, sourceAuthorColumns, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
 	defer rows.Close()
 	out := make([]crmcontracts.Activity, 0, sectionCap)
 	for rows.Next() {
-		var a crmcontracts.Activity
-		var id ids.UUID
-		var audience string
-		var version int64
-		var contentAvailable, bulkMailAttested, filedHere bool
-		var threadKey, audienceReason *string
-		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
-			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.AssigneeId, &a.Source, &a.CapturedBy,
-			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &audienceReason,
-			&a.SourceSystem, &version, &contentAvailable, &filedHere); err != nil {
+		a, err := scanTimelineRow(rows, contactID)
+		if err != nil {
 			return nil, false, err
-		}
-		a.Id = openapi_types.UUID(id)
-		aud := crmcontracts.ActivityAudience(audience)
-		a.Audience = &aud
-		a.Version = &version
-		// The thread key and the bulk attestation are what lets the record
-		// page fold this page into conversations the way the list's page
-		// folds; the key identifies the message at the provider, so it is
-		// withheld with the content, exactly as the list's scan withholds it.
-		a.BulkMailAttested = &bulkMailAttested
-		a.ThreadKey = threadKey
-		// Why the row is held travels with the row. The record page seeds its
-		// timeline from this read, so a reason dropped here is a reason the
-		// timeline never has — and the timeline is where an owner decides
-		// whether to share the thread.
-		a.AudienceReason = audienceReason
-		state := crmcontracts.ActivityContentStateAvailable
-		if !contentAvailable {
-			state = crmcontracts.ActivityContentStateWithheld
-			// The reason describes what the message is about, so it is
-			// withheld with the content: a colleague who may not read a held
-			// message does not learn why it is held either.
-			a.Subject, a.Body, a.ThreadKey, a.AudienceReason = nil, nil, nil, nil
-		}
-		a.ContentState = &state
-		// Composed from the shared helper rather than spelled again here. The
-		// contract says an email row carries a summary exactly when kind=email,
-		// and this hand-written twin of the projection is the one read that
-		// could make that false — a contact page whose mail rows came back
-		// summary-less would render every one of them degraded while the same
-		// rows off /activities rendered whole. Set AFTER the withholding above,
-		// so a withheld row's summary is the withheld one.
-		a.EmailSummary = activities.RowEmailSummary(a)
-		// Links say how the message is FILED, and a row can reach this page
-		// without being filed here: a contact who was CC'd or who attended is on
-		// the message through their participant row, while the filing belongs to
-		// whoever capture named as its counterparty. Asserting a link for those
-		// would describe a row activity_link does not hold — and a client acting
-		// on it, to unfile the message, would act on nothing.
-		if filedHere {
-			a.Links = &[]crmcontracts.ActivityLink{{
-				EntityType: crmcontracts.ActivityLinkEntityTypeContact,
-				EntityId:   openapi_types.UUID(contactID.UUID),
-			}}
 		}
 		out = append(out, a)
 	}

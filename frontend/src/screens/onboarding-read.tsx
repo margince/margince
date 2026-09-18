@@ -16,6 +16,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -116,8 +117,7 @@ function presenceState(
     props.read?.status === "partial" ||
     props.read?.status === "confirmed"
   ) {
-    // A finished run settles back to idle: there is no state of its own for
-    // "done".
+    // A finished run settles back to idle: there is no "done" state of its own.
     return "idle";
   }
   // Nothing running either way: a mode chosen and a mode not chosen are both a
@@ -414,8 +414,8 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
     <div className="mw-review">
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
-        <h2>{t("ob.ai.companyKnowledge")}</h2>
-        <p className="t-caption">
+        <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
+        <p>
           {t(
             props.mode === "manual"
               ? "ob.ai.companyKnowledgeManualBody"
@@ -544,9 +544,7 @@ export function ConversationEntries({
               {keyedSuggestedChanges(entry.reply.proposed_changes).map(
                 ({ change, key }) => (
                   <li key={`${entry.id}:${key}`}>
-                    <span className="t-caption">
-                      {coldFieldLabel(change.field, t)}
-                    </span>
+                    <span>{coldFieldLabel(change.field, t)}</span>
                     <strong>{change.value}</strong>
                     <small className="t-caption">{change.reason}</small>
                   </li>
@@ -554,7 +552,6 @@ export function ConversationEntries({
               )}
             </ul>
             <Button
-              small
               variant="primary"
               disabled={applied.has(entry.id)}
               onClick={() => {
@@ -648,7 +645,7 @@ function WebsiteStatusMessage({
   if (error) {
     return (
       <>
-        <h2>{t("ob.failTitle")}</h2>
+        <Heading size="large">{t("ob.failTitle")}</Heading>
         <p>{t("ob.coreFailedBody")}</p>
         <p className="mw-error-detail">{error}</p>
         <button type="button" className="ob-core-link" onClick={onManual}>
@@ -661,7 +658,7 @@ function WebsiteStatusMessage({
     if (mode === "manual") {
       return (
         <>
-          <h2>{t("ob.coreIntroTitle")}</h2>
+          <Heading size="large">{t("ob.coreIntroTitle")}</Heading>
           <p>{t("ob.coreIntroBody")}</p>
           <CoreJourney active={0} />
         </>
@@ -669,7 +666,7 @@ function WebsiteStatusMessage({
     }
     return (
       <>
-        <h2>{t("ob.coreWebsiteTitle")}</h2>
+        <Heading size="large">{t("ob.coreWebsiteTitle")}</Heading>
         <p>{t("ob.coreWebsiteBody")}</p>
         <CoreJourney active={0} />
       </>
@@ -677,7 +674,7 @@ function WebsiteStatusMessage({
   }
   return (
     <>
-      <h2>{presentation.title}</h2>
+      <Heading size="large">{presentation.title}</Heading>
       <p>{presentation.body}</p>
       <ReadActivity read={read} refreshing={refreshing} />
       {read.status === "deferred" && read.next_attempt_at && (
@@ -744,7 +741,7 @@ function WebsiteComposer(
   return (
     <div className="ob-core-dialog">
       <div className="ob-core-kicker">{t("ob.coreLegalKicker")}</div>
-      <h1>{t("ob.coreWebsiteTitle")}</h1>
+      <Heading size="xlarge">{t("ob.coreWebsiteTitle")}</Heading>
       <p>{t("ob.coreWebsiteBody")}</p>
       <CoreJourney active={0} />
       <div
@@ -899,8 +896,8 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
     <div className="core-findings">
       {legalEntities.length > 0 && (
         <section className="legal-preview">
-          <h2>{t("ob.legalFoundTitle")}</h2>
-          <p className="t-caption">{t("ob.legalFoundBody")}</p>
+          <Heading size="large">{t("ob.legalFoundTitle")}</Heading>
+          <p>{t("ob.legalFoundBody")}</p>
           <div className="legal-preview-grid">
             {legalEntities.map((entity) => (
               <Card
@@ -913,7 +910,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
                 </div>
                 <strong>{entity.name}</strong>
                 {entity.registered_address && (
-                  <span className="t-caption">{entity.registered_address}</span>
+                  <span>{entity.registered_address}</span>
                 )}
                 {entity.register_number && (
                   <small>{entity.register_number}</small>
@@ -925,8 +922,8 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       )}
       {read.profile_fields.length > 0 && (
         <>
-          <h2>{t("ob.coreFindingsTitle")}</h2>
-          <p className="t-caption">{t("ob.coreFindingsBody")}</p>
+          <Heading size="large">{t("ob.coreFindingsTitle")}</Heading>
+          <p>{t("ob.coreFindingsBody")}</p>
           <div className="finding-grid">
             {read.profile_fields.map((field) => (
               <Card
@@ -950,7 +947,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       )}
       {read.facts.length > 0 && (
         <section className="live-fact-preview">
-          <h2>{t("ob.factsTitle")}</h2>
+          <Heading size="large">{t("ob.factsTitle")}</Heading>
           <div className="finding-grid">
             {read.facts.slice(0, FACT_PREVIEW_LIMIT).map((fact) => (
               <Card
@@ -972,7 +969,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
         </section>
       )}
       {(skippedPages.length > 0 || read.warnings.length > 0) && (
-        <details className="read-coverage t-caption">
+        <details className="read-coverage">
           <summary>
             <Info aria-hidden /> {t("ob.coverageDetails")}
           </summary>

@@ -145,7 +145,7 @@ export const ContactsListMorePages: Story = {
   },
 };
 
-// A row whose archived_at is set: the warn badge next to the name
+// A row whose archived_at is set: the warning badge next to the name
 // (contacts.tsx's name column) renders off the row's own field, independent
 // of the includeArchived toggle's checked state. The checkbox itself starts
 // unchecked every render (useListQuery seeds includeArchived: false with no

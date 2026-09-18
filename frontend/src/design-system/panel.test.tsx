@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Panel, PanelBody, PanelRow } from "./panel";
+import { PANEL_TONES, Panel, PanelBody, PanelRow } from "./panel";
 
 afterEach(cleanup);
 
@@ -237,9 +237,9 @@ function unwrapAtRules(css: string): string {
   return css.replace(/@[a-zA-Z-]+[^{};]*[{;]/g, "");
 }
 
-// One declaration's value, read by NAME rather than matched in place: a
-// property spelled beside a colon inside a regex literal reads to the type
-// gate (type.test.ts) as a size this file declares.
+// One declaration's value, read by NAME rather than matched in place, so a
+// property named beside a colon inside a regex literal in this file is never
+// read as a declaration of it.
 function declaredValue(block: string, property: string): string | undefined {
   for (const declaration of block.split(";")) {
     const colon = declaration.indexOf(":");
@@ -275,7 +275,7 @@ function cssRules(css: string): readonly CssRule[] {
 // What a rule STYLES is the last compound of its selector: `.pe-memory
 // .panel-head` re-shapes the band, `.panel-head .panel-title` shapes the title
 // inside it, `.panel-head > .ext-unit-actions` an action beside it. Combinators
-// inside parentheses do not divide a compound, so `:has(.panel-head-sub)` stays
+// inside parentheses do not divide a compound, so `:has(.panel-title)` stays
 // part of the band it qualifies.
 function lastCompound(selector: string): string {
   let depth = 0;
@@ -289,8 +289,8 @@ function lastCompound(selector: string): string {
   return selector.slice(start);
 }
 
-// `.panel-head-text` and `.panel-head-sub` open with the same eleven characters
-// and are content, not the band.
+// A class whose name merely BEGINS with the band's — `.panel-head-count`, say —
+// is content inside it, not the band.
 function stylesTheBand(selector: string): boolean {
   return /^\.panel-head(?![\w-])/.test(lastCompound(selector));
 }
@@ -330,33 +330,6 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-function tokenPixels(name: string): number {
-  return Number.parseFloat(tokenValue(name));
-}
-
-// The gap the title stack takes, read off the rule rather than restated here:
-// a literal expectation would still pass the day somebody gives the stack a
-// rung back and pushes the two lines past the band.
-// The leading one head line is SET at, read off the sheet like the gap above:
-// the band's arithmetic has to be done on the number the sheet declares, and a
-// line left to inherit the body scale is a different number in the same place.
-function headLeading(selector: string): number {
-  const rule = cssRules(panelCss()).find(
-    (candidate) => candidate.selector === selector,
-  );
-  const declared = declaredValue(rule?.block ?? "", "line-height");
-  return Number.parseFloat(declared ?? tokenValue("--lh-normal"));
-}
-
-function titleStackGap(): number {
-  const stack = cssRules(panelCss()).find(
-    (rule) => rule.selector === ".panel-head-text",
-  );
-  const gap = declaredValue(stack?.block ?? "", "gap") ?? "0";
-  const token = /^var\((--[\w-]+)\)$/.exec(gap);
-  return token ? tokenPixels(token[1]) : Number.parseFloat(gap);
-}
-
 describe("the panel head is one band, fixed at the height every panel shares", () => {
   it("takes its height from the house token rather than a floor of its own", () => {
     const head = bandRules(panelCss()).find(
@@ -380,62 +353,42 @@ describe("the panel head is one band, fixed at the height every panel shares", (
     expect(declarations).toHaveLength(1);
   });
 
-  it("holds a description inside the band instead of growing for one", () => {
+  // The band's height is a constant, not a function of what the head holds. A
+  // `:has()` rule is how that stops being true without anyone editing the
+  // height: the band grows for one kind of content and a page of panels goes
+  // ragged.
+  it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
-    // jsdom lays nothing out, so the question the band has to answer — does a
-    // title over a description still fit — is arithmetic on the type scale.
-    // This fails if the meta rung grows, if the leading is retuned, or if the
-    // stack takes a gap back, which are the three ways the pair stops fitting.
-    const stack =
-      tokenPixels("--fs-panel-title") *
-        headLeading(".panel-head .panel-title") +
-      tokenPixels("--fs-meta") * headLeading(".panel-head-sub") +
-      titleStackGap();
-    expect(stack).toBeLessThanOrEqual(tokenPixels("--panel-head-h"));
   });
 
-  // The size is the house's, not the rule's: a title beside a badge reads at 16
-  // in this band, and every panel on every screen is that one title.
-  it("sets the title at the house's own size", () => {
-    const title = cssRules(panelCss()).find(
-      (rule) => rule.selector === ".panel-head .panel-title",
-    );
-    expect(declaredValue(title?.block ?? "", "font-size")).toBe(
-      "var(--fs-panel-title)",
-    );
-    expect(tokenValue("--fs-panel-title")).toBe("16px");
-  });
-
-  // One rule states it, so retuning the token moves every title. A second rule
-  // in this sheet is the tone panels' old habit: each dropped its own title a
-  // rung and a page then showed the ask and the report at two sizes.
-  it("states that size exactly once in the sheet", () => {
+  // One rule sets the title, so retuning it moves every title. A second rule in
+  // this sheet is the tone panels' old habit: each drew its own title and a
+  // page then showed the ask and the report in two faces.
+  it("sets the title exactly once in the sheet", () => {
     expect(titleTypeRules(panelCss()).map((rule) => rule.selector)).toEqual([
       ".panel-head .panel-title",
     ]);
   });
 
-  // Nothing in the band wraps to a second line, because a second line is a
-  // second height. The title and the description end in an ellipsis instead,
-  // and only they give way: a badge or a button squeezed by a long title reads
-  // as a different control.
-  it("truncates the two lines and lets nothing else give way", () => {
-    const rules = cssRules(panelCss());
-    for (const selector of [".panel-head .panel-title", ".panel-head-sub"]) {
-      const declared = rules
-        .filter((rule) => rule.selector === selector)
-        .map((rule) => rule.block)
-        .join(";");
-      expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
-      expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
-      expect(declaredValue(declared, "text-overflow"), selector).toBe(
-        "ellipsis",
-      );
-      expect(declaredValue(declared, "min-width"), selector).toBe("0");
-    }
+  // The title does not wrap, because a second line is a second height. It ends
+  // in an ellipsis instead, and it is the only thing that gives way: a badge or
+  // a button squeezed by a long title reads as a different control, or loses
+  // its label outright.
+  it("truncates the title and lets nothing else give way", () => {
+    const selector = ".panel-head .panel-title";
+    const declared = cssRules(panelCss())
+      .filter((rule) => rule.selector === selector)
+      .map((rule) => rule.block)
+      .join(";");
+    expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
+    expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
+    expect(declaredValue(declared, "text-overflow"), selector).toBe("ellipsis");
+    expect(declaredValue(declared, "min-width"), selector).toBe("0");
+    // The push that keeps an action at the far end rides on the title, so a
+    // pair of actions cannot split around it the way a `:last-child` push lets
+    // them.
+    expect(declaredValue(declared, "margin-right"), selector).toBe("auto");
 
-    const stack = /(?:^|\n)\.panel-head-text\s*\{([^}]*)\}/.exec(panelCss());
-    expect(stack?.[1]).toMatch(/min-width:\s*0/);
     // The band itself does not clip: a menu or a tooltip opened from a button
     // in the head has to be able to leave it.
     const head = bandRules(panelCss()).find(
@@ -450,10 +403,22 @@ describe("the panel head is one band, fixed at the height every panel shares", (
 // read as a different card rather than as the same card in a different mood,
 // which is what the ai head did while it hugged its own two lines.
 describe("a panel tone tints the head band and never reshapes it", () => {
+  // The vocabulary is walked from the component rather than listed again here:
+  // a tone spelled twice drifts, and the copy that goes stale is always the one
+  // in the test — it passes while the tone nobody added to it ships untinted.
+  const TONE_SELECTOR = new RegExp(`^\\.panel-(?:${PANEL_TONES.join("|")})\\b`);
   const toned = () =>
-    bandRules(panelCss()).filter((rule) =>
-      /^\.panel-(?:accent|warn|ai)\b/.test(rule.selector),
+    bandRules(panelCss()).filter((rule) => TONE_SELECTOR.test(rule.selector));
+
+  it("paints every tone the component offers", () => {
+    const declared = new Set(
+      cssRules(panelCss())
+        .flatMap((rule) => rule.selector.split(","))
+        .map((selector) => /^\s*\.panel-([\w-]+)\s*$/.exec(selector)?.[1])
+        .filter((tone): tone is string => tone !== undefined),
     );
+    expect([...PANEL_TONES].filter((tone) => !declared.has(tone))).toEqual([]);
+  });
 
   it("leaves the band's geometry to the band", () => {
     expect(toned().length).toBeGreaterThan(0);
@@ -507,11 +472,14 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     expect(own.map((rule) => rule.selector)).toContain(".panel-head");
   });
 
+  // No `.panel-head-*` class exists today — the head carries its title and its
+  // actions and nothing else — so the fixture names one a future head might
+  // add. That is the near miss: a detector reading it as the band would fail a
+  // sheet that never re-spaced anything.
   it("reads a rule about the head's CONTENT as content", () => {
     const inside = bandRules(`
       .ext-unit > .panel-head > .ext-unit-actions { flex: 0 1 auto; }
-      .panel-head-text { gap: 0; }
-      .panel-head-sub { font-size: var(--fs-meta); }
+      .panel-head-count { margin-inline-start: var(--space-2); }
     `);
     expect(inside).toEqual([]);
   });
@@ -522,8 +490,8 @@ describe("panel.css is the only sheet that shapes the head band", () => {
   // would fail a sheet that never touched a panel.
   it("reads a title rule as the title, wherever it hangs", () => {
     const css = `
-      .co-glance-cols .panel > .panel-head .panel-title { font-size: var(--fs-h2); }
-      .rmap-panel-title { font-size: var(--fs-h3); }
+      .co-glance-cols .panel > .panel-head .panel-title { font-family: var(--fontFamilyBody); }
+      .rmap-panel-title { font-family: var(--fontFamilyBody); }
       .pe-memory .panel-head .panel-title:hover { color: var(--accent); }
     `;
     expect(bandRules(css)).toEqual([]);

@@ -121,7 +121,7 @@ describe("Avatar", () => {
       expect(chipOf(container).split(" ")).toContain("avatar-sm");
     });
 
-    it.each(["xs", "sm", "md", "lg"] as const)("names the %s rung", (size) => {
+    it.each(["sm", "md", "lg", "xl"] as const)("names the %s rung", (size) => {
       const { container } = render(
         <Avatar name="Voltaq Systems" size={size} />,
       );

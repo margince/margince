@@ -25,6 +25,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -68,7 +69,13 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 		}
 	}
 
-	evidenced, err := e.extract.extract(ctx, rawURL, coldStartFieldValid)
+	// The company the extraction is filed against. This lane has one; the
+	// cold-start lane that shares the extractor does not, because it reads a
+	// URL before any company exists — which is why the subject is declared
+	// here rather than inside the extractor.
+	evidenced, err := e.extract.extract(
+		ai.WithSubject(ctx, ids.From[ids.CompanyKind](companyID).Ref(), ""),
+		rawURL, coldStartFieldValid)
 	if err != nil {
 		return crmcontracts.EnrichmentProposal{}, err
 	}

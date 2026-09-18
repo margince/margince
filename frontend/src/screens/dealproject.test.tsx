@@ -8,6 +8,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -44,6 +45,18 @@ function render(ui: ReactNode) {
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+/**
+ * The create form, scoped to the dialog it is in.
+ *
+ * The list behind it carries a column picker, and a column's tick is now a real
+ * labelled control — so "Value" and "via Partner" name a field in the form AND
+ * a column in that menu. The dialog is the boundary between the record being
+ * made and the list it will join.
+ */
+function inForm() {
+  return within(screen.getByRole("dialog"));
 }
 
 const stages = [
@@ -235,7 +248,7 @@ describe("the deal form's project picker", () => {
     await user.type(screen.getByLabelText("Deal name *"), "Phase two");
     await pickOption(
       user,
-      screen.getByLabelText("Company"),
+      inForm().getByLabelText("Company"),
       "Brandt Automotive",
     );
     // Only the chosen company's open projects are offered.
@@ -265,7 +278,7 @@ describe("the deal form's project picker", () => {
     await user.type(screen.getByLabelText("Deal name *"), "Phase two");
     await pickOption(
       user,
-      screen.getByLabelText("Company"),
+      inForm().getByLabelText("Company"),
       "Brandt Automotive",
     );
     await pickOption(user, screen.getByLabelText("Project"), "New project…");
@@ -315,7 +328,7 @@ describe("the deal form's project picker", () => {
     await user.click(await screen.findByTestId("new-record"));
     await pickOption(
       user,
-      screen.getByLabelText("Company"),
+      inForm().getByLabelText("Company"),
       "Brandt Automotive",
     );
     await user.click(screen.getByLabelText("Project"));
@@ -325,7 +338,7 @@ describe("the deal form's project picker", () => {
 
     // The reader changes their mind mid-form. The picker used to go empty here
     // and stay empty until the deal was saved and reopened.
-    await pickOption(user, screen.getByLabelText("Company"), "Other GmbH");
+    await pickOption(user, inForm().getByLabelText("Company"), "Other GmbH");
     await user.click(screen.getByLabelText("Project"));
     await waitFor(() =>
       expect(
@@ -357,7 +370,7 @@ describe("the deal form's project picker", () => {
 
     await pickOption(
       user,
-      screen.getByLabelText("Company"),
+      inForm().getByLabelText("Company"),
       "Brandt Automotive",
     );
     await pickOption(user, screen.getByLabelText("Project"), "CRM rollout");
@@ -365,7 +378,7 @@ describe("the deal form's project picker", () => {
       "CRM rollout",
     );
 
-    await pickOption(user, screen.getByLabelText("Company"), "Other GmbH");
+    await pickOption(user, inForm().getByLabelText("Company"), "Other GmbH");
     expect(screen.getByLabelText("Project").textContent).not.toContain(
       "CRM rollout",
     );

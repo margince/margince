@@ -54,11 +54,11 @@ const STATE_COPY: Readonly<Record<string, `ext${string}`>> = {
 };
 
 /** Which states read as settled, as caution, and as stopped. */
-const STATE_TONE: Readonly<Record<string, "success" | "warn" | "danger">> = {
-  pending: "warn",
+const STATE_TONE: Readonly<Record<string, "success" | "warning" | "danger">> = {
+  pending: "warning",
   ingested: "success",
   failed: "danger",
-  withdrawn: "warn",
+  withdrawn: "warning",
 };
 
 const OUTCOME_COPY: Readonly<Record<string, `ext${string}`>> = {
@@ -67,10 +67,10 @@ const OUTCOME_COPY: Readonly<Record<string, `ext${string}`>> = {
   unknown: "extOpenchannel.outcome.unknown",
 };
 
-const OUTCOME_TONE: Readonly<Record<string, "success" | "warn" | "danger">> = {
+const OUTCOME_TONE: Readonly<Record<string, "success" | "warning" | "danger">> = {
   sent: "success",
   refused: "danger",
-  unknown: "warn",
+  unknown: "warning",
 };
 
 /**
@@ -107,10 +107,8 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
   });
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.inbound.title")}
-        sub={t("extOpenchannel.inbound.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.inbound.title")} />
+      <p>{t("extOpenchannel.inbound.sub")}</p>
       {canRead ? (
         <QueryStates
           query={inbound}
@@ -197,10 +195,8 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
   );
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.outboundList.title")}
-        sub={t("extOpenchannel.outboundList.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.outboundList.title")} />
+      <p>{t("extOpenchannel.outboundList.sub")}</p>
       {canRead ? (
         <QueryStates
           query={outbound}

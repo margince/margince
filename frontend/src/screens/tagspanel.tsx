@@ -94,11 +94,7 @@ export function TagsPanel({
   const hidden = tags.length - visible.length;
 
   return (
-    <TagsFrame
-      title={t("tags.panelTitle")}
-      sub={tags.length > 0 ? t("tags.panelSub") : undefined}
-      bare={bare}
-    >
+    <TagsFrame title={t("tags.panelTitle")} bare={bare}>
       {/* In a card of its own the empty panel teaches what tags are for. As
           a row of the Details card the label already says "Tags" and the
           dashed pill under it is the whole invitation, so the lesson would
@@ -123,12 +119,12 @@ export function TagsPanel({
             />
           ))}
           {hidden > 0 && (
-            <Button small variant="ghost" onClick={() => setExpanded(true)}>
+            <Button variant="ghost" onClick={() => setExpanded(true)}>
               {t("tags.more", { count: formatNumber(hidden, locale) })}
             </Button>
           )}
           {expanded && tags.length > VISIBLE_TAGS && (
-            <Button small variant="ghost" onClick={() => setExpanded(false)}>
+            <Button variant="ghost" onClick={() => setExpanded(false)}>
               {t("tags.showLess")}
             </Button>
           )}
@@ -164,12 +160,10 @@ export function TagsPanel({
  */
 function TagsFrame({
   title,
-  sub,
   bare,
   children,
 }: Readonly<{
   title: string;
-  sub?: string;
   bare: boolean;
   children: ReactNode;
 }>) {
@@ -180,7 +174,7 @@ function TagsFrame({
     return <>{children}</>;
   }
   return (
-    <Panel title={title} sub={sub}>
+    <Panel title={title}>
       <PanelBody>{children}</PanelBody>
     </Panel>
   );
@@ -255,7 +249,7 @@ function TagOnRecord({
             aria-label={t("tags.removeTag", { name: tag.name })}
             onClick={() => setConfirming(true)}
           >
-            <X aria-hidden size={13} />
+            <X aria-hidden />
           </button>
           <ConfirmModal
             open={confirming}
@@ -295,7 +289,7 @@ function TagOnRecord({
 function AddTagButton({ onOpen }: Readonly<{ onOpen: () => void }>) {
   const t = useT();
   return (
-    <Button small variant="ghost" onClick={onOpen}>
+    <Button variant="ghost" onClick={onOpen}>
       <Plus aria-hidden /> {t("tags.add")}
     </Button>
   );

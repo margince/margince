@@ -9,8 +9,8 @@ package gates
 // recipient.
 //
 // /metrics is process-global: it binds no workspace and resolves no principal,
-// and it is unauthenticated unless a deployment sets a metrics token (an empty
-// token is the default, see compose.gateMetrics). A label carrying the address
+// and a scraper holding its one shared token — or anyone, where a deployment
+// opened it (see compose.gateMetrics) — reads every series. A label carrying the address
 // a decision judged would publish who this installation writes to, across
 // tenants, and would do so as a series a scraper keeps forever.
 //

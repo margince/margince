@@ -2,6 +2,15 @@
    title line, a meta line under it — because a reader moving from an account
    to the project it runs should meet the same row, not a cousin of it. */
 
+/* The page's own name on the first-run arm, where the table that normally
+   carries it is not drawn (screens/projects.tsx). The interval under it is the
+   one the shell's own page head keeps, so the two arms of this screen put the
+   plate and the table at the same distance from the title and a reader who
+   creates the first project sees nothing above it move. */
+.projects-title {
+  margin-bottom: var(--space-4);
+}
+
 /* The list's identity cell: the name, the key chip and the archived badge on
    the row's ONE line. It does not wrap — a cell that grows a second line pushes
    every row below it down and a page of rows stops being a grid, and the answer
@@ -29,24 +38,14 @@
   white-space: nowrap;
 }
 
-.project-subtitle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  color: var(--textMeta);
-}
-
 .project-coverage {
   margin: 0;
-  color: var(--textMeta);
 }
 
 .project-row {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -62,7 +61,6 @@
   border: none;
   padding: 0;
   text-align: left;
-  font: inherit;
   color: var(--textPrimary);
   cursor: pointer;
   text-decoration: none;
@@ -85,7 +83,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-meta);
 }
 .project-durations li {
   display: flex;

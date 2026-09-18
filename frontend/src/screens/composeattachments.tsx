@@ -23,6 +23,7 @@ import type { components } from "../api/schema";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { TokenList } from "../design-system/tokeninput";
 import { formatBytes, formatNumber } from "../format/format";
@@ -30,7 +31,7 @@ import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, RefusalLine, throwProblem } from "./common";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
 
@@ -140,7 +141,7 @@ export function AttachAction({
       className="richtext-btn"
       label={
         <>
-          <Paperclip size={14} aria-hidden="true" />
+          <Paperclip aria-hidden="true" />
           <span className="sr-only">{t("compose.attach")}</span>
         </>
       }
@@ -280,21 +281,20 @@ function AttachPicker({
   const files = library.data?.data ?? [];
   return (
     <div className="compose-files-picker">
-      <h3 className="t-eyebrow">{t("compose.filesOnRecord")}</h3>
+      <Heading size="medium" className="t-eyebrow">
+        {t("compose.filesOnRecord")}
+      </Heading>
       {library.isPending ? (
         <PendingBody label={t("compose.filesLoading")} lines={2} />
       ) : library.isError ? (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(library.error, t)}
-        </p>
+        <RefusalLine error={library.error} />
       ) : files.length === 0 ? (
-        <p className="t-caption">{t("compose.filesNone")}</p>
+        <p>{t("compose.filesNone")}</p>
       ) : (
         <ul className="compose-files-list">
           {files.map((file) => (
             <li key={file.id}>
               <Button
-                small
                 className="compose-files-row"
                 disabled={disabled || taken.has(file.id) || full}
                 onClick={() => add(file)}
@@ -317,15 +317,9 @@ function AttachPicker({
         onPick={(picked) => upload.mutate(picked)}
       />
       {upload.isPending && (
-        <p className="t-caption" aria-live="polite">
-          {t("compose.fileUploading")}
-        </p>
+        <p aria-live="polite">{t("compose.fileUploading")}</p>
       )}
-      {failed && (
-        <p className="t-caption" role="alert">
-          {failed}
-        </p>
-      )}
+      {failed && <p role="alert">{failed}</p>}
     </div>
   );
 }
@@ -415,7 +409,7 @@ export function CarriageNotice({
   }
   return (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="standing"
       title={t("compose.carriageTitle", { channel })}
     >

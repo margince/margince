@@ -38,6 +38,16 @@ const (
 	// `by_design` (a lie) and not stored or derived (false). It carries an issue
 	// ref so it is tracked rather than excused.
 	SourcePlanned Source = "planned"
+	// SourceAnsweredElsewhere means the stage RUNS and IS reported — on another
+	// surface, because its subject is not this ladder's.
+	//
+	// It is not SourceByDesign, which says the answer will never exist, and not
+	// SourcePlanned, which says it does not exist yet: this one exists and has
+	// a door. The distinction is the member's: told "not reported", they stop
+	// looking; told where it is answered, they go there. The registration's
+	// AbsentReason is what names the door, so a member reads a sentence rather
+	// than an absence.
+	SourceAnsweredElsewhere Source = "answered_elsewhere"
 	// SourceNotBuilt means the pipeline step itself does not exist.
 	SourceNotBuilt Source = "not_built"
 )
@@ -136,15 +146,22 @@ var registrations = []Registration{{
 		ReasonJudgedReal, ReasonJudgedNoise, ReasonJudgedRejected, ReasonJudgedSuppressed,
 	},
 }, {
-	// Runs, but not reported here yet. Its subject is a DOMAIN and this ladder
-	// is per-message, so whether the rung belongs here at all is the open half
-	// of the question — see the issue.
+	// Runs, and is reported — on the COMPANY, not here. Its subject is a domain,
+	// and a domain is triaged once for every message that ever arrives from it:
+	// a per-message rung would answer "done" for the message that prompted the
+	// triage and for the hundredth one that arrived after it alike, which reads
+	// as this message having been the cause. So the ladder names where the
+	// answer lives instead, and the answer itself is
+	// GET /companies/{id}/capture-triage.
 	Stage:        StageCompanyTriage,
 	Order:        90,
 	SubjectKind:  SubjectDomain,
-	Sources:      []Source{SourcePlanned},
-	AbsentReason: AbsentNotReportedYet,
-	Issue:        "#1434",
+	Sources:      []Source{SourceAnsweredElsewhere},
+	AbsentReason: AbsentAnsweredOnTheCompany,
+	Reasons: []Reason{
+		ReasonCompanyWarranted, ReasonNoSiteIdentified, ReasonTriageQueued,
+		ReasonTriageUnevidenced, ReasonTriageStale, ReasonTriageNearDupe,
+	},
 }, {
 	Stage:       StageAttentionLabel,
 	Order:       100,

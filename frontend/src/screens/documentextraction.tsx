@@ -211,12 +211,12 @@ export function DocumentExtractionPanel({
   });
 
   if (dismissed) {
-    return <p className="t-caption">{t("extraction.dismissed")}</p>;
+    return <p>{t("extraction.dismissed")}</p>;
   }
   if (accepted !== null) {
     return (
       <section className="real-card" aria-label={t("extraction.acceptedLabel")}>
-        <p className="t-caption">
+        <p>
           {plural("extraction.acceptedHeading", accepted, {
             count: formatNumber(accepted, locale),
           })}
@@ -225,7 +225,7 @@ export function DocumentExtractionPanel({
     );
   }
   if (query.isLoading) {
-    return <p className="t-caption">{t("extraction.loading")}</p>;
+    return <p>{t("extraction.loading")}</p>;
   }
   if (!extraction) {
     return (
@@ -288,7 +288,7 @@ function ReadOffer({
   const t = useT();
   return (
     <div className="staging-card">
-      <p className="t-caption">{t("extraction.neverRead")}</p>
+      <p>{t("extraction.neverRead")}</p>
       <Button
         onClick={onRead}
         pending={pending}
@@ -296,7 +296,7 @@ function ReadOffer({
       >
         {t("extraction.readIt")}
       </Button>
-      {failed && <p className="t-caption">{t("extraction.startFailed")}</p>}
+      {failed && <p>{t("extraction.startFailed")}</p>}
     </div>
   );
 }
@@ -334,12 +334,12 @@ function ExtractionBody({
     if (extraction.stalled) {
       return (
         <div className="staging-card">
-          <p className="t-caption">{t("extraction.stalled")}</p>
+          <p>{t("extraction.stalled")}</p>
           <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
         </div>
       );
     }
-    return <p className="t-caption">{t("extraction.reading")}</p>;
+    return <p>{t("extraction.reading")}</p>;
   }
   if (extraction.status === "failed") {
     // The reason is the product here. "It failed" tells a rep nothing they can
@@ -347,7 +347,7 @@ function ExtractionBody({
     // who to ask.
     return (
       <div className="staging-card">
-        <p className="t-caption">{t("extraction.failed")}</p>
+        <p>{t("extraction.failed")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -360,7 +360,7 @@ function ExtractionBody({
     // what keeps it from reading as a broken feature.
     return (
       <div className="staging-card">
-        <p className="t-caption">{t("extraction.groundedNothing")}</p>
+        <p>{t("extraction.groundedNothing")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -371,7 +371,7 @@ function ExtractionBody({
 
   return (
     <StagingCard>
-      <p className="t-caption">
+      <p>
         {plural("extraction.heading", extraction.fields.length, {
           count: formatNumber(extraction.fields.length, locale),
         })}
@@ -412,9 +412,7 @@ function ExtractionBody({
           </Button>
         </ActionRow>
       )}
-      {acceptFailed && (
-        <p className="t-caption">{t("extraction.acceptFailed")}</p>
-      )}
+      {acceptFailed && <p>{t("extraction.acceptFailed")}</p>}
     </StagingCard>
   );
 }
@@ -447,7 +445,7 @@ function GroundedField({
     : field.value;
   return (
     <li>
-      <span className="t-caption">{label ? t(label) : field.field}</span>
+      <span>{label ? t(label) : field.field}</span>
       {draft === undefined ? (
         <EvidenceMark
           value={shown}
@@ -503,7 +501,7 @@ function OmittedList({
       {omitted.map((field) => {
         const label = FIELD_LABELS[field.field];
         return (
-          <li key={field.field} className="t-caption">
+          <li key={field.field}>
             {label ? t(label) : field.field} —{" "}
             {t(OMITTED_REASONS[field.reason])}
           </li>

@@ -6,8 +6,8 @@ package surfe
 // The four calls the Adapter contract names, over Surfe's v2 asynchronous
 // bulk-enrichment API:
 //
-//	POST /v2/contacts/enrich      → an enrichment id (202)
-//	GET  /v2/contacts/enrich/{id} → IN_PROGRESS, or COMPLETED with the contacts
+//	POST /v2/people/enrich      → an enrichment id (202)
+//	GET  /v2/people/enrich/{id} → IN_PROGRESS, or COMPLETED with the people
 //	GET  /v1/credits            → the balance, which is also the credential check
 //
 // Every failure classifies into the port's closed Outcome vocabulary. The one
@@ -25,16 +25,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
-// The wire shapes, named as SURFE names them. The tags must match its
-// camelCase format exactly, or the request is rejected and the response
-// silently decodes to zero values — the vendor's keys are not ours to case.
+// The wire shapes, named as SURFE names them.
+//
+// EVERY string in this block and in the two paths below is the VENDOR'S, and
+// none of it is ours to rename. The tags must match its camelCase exactly or
+// the request is rejected and the response silently decodes to zero values;
+// the paths must match or it answers 404. A repo-wide rename ran over
+// `people` here once, and because the tests asserted the same literals it
+// rewrote, every test agreed with a shape the vendor does not serve while
+// every real run failed.
+//
+// What holds them now is testdata/vendor-wire.json — recorded from
+// Surfe's published reference, data rather than source, and so outside the
+// reach of anything that rewrites identifiers in this tree.
 //
 //nolint:tagliatelle // the vendor's wire format, not this repo's convention.
 type (
 	enrichRequest struct {
 		EnrichmentOptions enrichOptions `json:"enrichmentOptions"`
 		Include           includeFlags  `json:"include"`
-		Contacts          []wireContact `json:"contacts"`
+		People            []wireContact `json:"people"`
 	}
 	enrichOptions struct {
 		// AcceptedEmailType is how the frozen cascade reaches the vendor:
@@ -63,8 +73,8 @@ type (
 		EnrichmentID string `json:"enrichmentID"`
 	}
 	enrichResult struct {
-		Status   string       `json:"status"`
-		Contacts []wireResult `json:"contacts"`
+		Status string       `json:"status"`
+		People []wireResult `json:"people"`
 	}
 	wireResult struct {
 		Status        string       `json:"status"`
@@ -162,7 +172,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 			SkipMobileEnrichmentIfNoEmailFound: true,
 		},
 		Include: includeFor(req.Categories),
-		Contacts: []wireContact{{
+		People: []wireContact{{
 			FirstName:     req.Identifiers.FirstName,
 			LastName:      req.Identifiers.LastName,
 			LinkedInURL:   req.Identifiers.LinkedInURL,
@@ -172,7 +182,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 		}},
 	}
 	var accepted enrichAccepted
-	status, err := a.call(ctx, cred, http.MethodPost, "/v2/contacts/enrich", body, &accepted)
+	status, err := a.call(ctx, cred, http.MethodPost, "/v2/people/enrich", body, &accepted)
 	if err != nil {
 		// The request LEFT and its fate is unknown — a timeout, a dropped
 		// connection, an unreadable answer. That is an OUTCOME, not a
@@ -200,7 +210,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 // the platform park no payload between hand-off attempts.
 func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJobID string) (provider.PollStatus, error) {
 	var out enrichResult
-	status, err := a.call(ctx, cred, http.MethodGet, "/v2/contacts/enrich/"+providerJobID, nil, &out)
+	status, err := a.call(ctx, cred, http.MethodGet, "/v2/people/enrich/"+providerJobID, nil, &out)
 	if err != nil {
 		// A failed poll costs nothing and settles nothing, so it reads as
 		// PENDING rather than as an error: the sweep asks again on its next
@@ -221,10 +231,10 @@ func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJo
 	if out.Status != statusCompleted {
 		return provider.PollStatus{Outcome: provider.OutcomePending}, nil
 	}
-	if len(out.Contacts) == 0 {
+	if len(out.People) == 0 {
 		return provider.PollStatus{Outcome: provider.OutcomeNoMatch, SafeStatusCode: "no_match"}, nil
 	}
-	contact := out.Contacts[0]
+	contact := out.People[0]
 	claims, err := claimsFor(contact)
 	if err != nil {
 		// A result we cannot encode is NOT a no-match: the run completed and

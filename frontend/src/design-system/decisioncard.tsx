@@ -123,7 +123,7 @@ export function decisionLapsed(
 }
 
 /**
- * The countdown's tone, from the milliseconds left: warn under six hours,
+ * The countdown's tone, from the milliseconds left: warning under six hours,
  * danger under one, and nothing beyond — never inert grey text. The HOURS are
  * not spelled here either; `decisionUrgency` owns them, and the card the chip
  * sits on tints its own edge from the same reading. Two copies of the
@@ -132,16 +132,16 @@ export function decisionLapsed(
  */
 export function decisionUrgencyTone(
   msRemaining: number,
-): "danger" | "warn" | undefined {
+): "danger" | "warning" | undefined {
   return URGENCY_TONE[decisionUrgency(msRemaining)];
 }
 
 const URGENCY_TONE: Readonly<
-  Record<DecisionUrgency, "danger" | "warn" | undefined>
+  Record<DecisionUrgency, "danger" | "warning" | undefined>
 > = {
   lapsed: "danger",
   urgent: "danger",
-  soon: "warn",
+  soon: "warning",
   calm: undefined,
 };
 
@@ -149,11 +149,11 @@ const URGENCY_TONE: Readonly<
 export type DecisionVerdict = "approved" | "rejected" | "expired";
 
 const VERDICT_TONE: Readonly<
-  Record<DecisionVerdict, "success" | "danger" | "warn">
+  Record<DecisionVerdict, "success" | "danger" | "warning">
 > = {
   approved: "success",
   rejected: "danger",
-  expired: "warn",
+  expired: "warning",
 };
 
 // A wire status this tier has not learned yet reads as `expired`. Reachable —
@@ -535,7 +535,7 @@ function DecisionHead({
         </p>
       )}
       {named && approval.summary && (
-        <p className="t-caption approval-why">{approval.summary}</p>
+        <p className="approval-why">{approval.summary}</p>
       )}
     </>
   );
@@ -689,7 +689,7 @@ export function DecisionCard({
               {/* The sentence that says WHY, which the line gave up to stay
                   one line. It leads here for the same reason it led the card. */}
               {named && approval.summary && (
-                <p className="t-caption approval-why">{approval.summary}</p>
+                <p className="approval-why">{approval.summary}</p>
               )}
               {proposal}
             </Popover>
@@ -748,7 +748,7 @@ function DecisionVerbs({
     return null;
   }
   const primary = onAccept ? (
-    <Button variant="primary" small pending={pending} onClick={onAccept}>
+    <Button variant="primary" pending={pending} onClick={onAccept}>
       {labels.accept}
     </Button>
   ) : undefined;
@@ -761,7 +761,7 @@ function DecisionVerbs({
     return (
       <ActionRow className="dcard-verbs" primary={primary}>
         {onSkip && labels.skip && (
-          <Button small disabled={pending} onClick={onSkip}>
+          <Button disabled={pending} onClick={onSkip}>
             {labels.skip}
           </Button>
         )}
@@ -770,12 +770,12 @@ function DecisionVerbs({
         {(onReject || onEdit) && (
           <OverflowMenu label={compact.more}>
             {onReject && (
-              <Button small disabled={pending} onClick={onReject}>
+              <Button disabled={pending} onClick={onReject}>
                 {labels.reject}
               </Button>
             )}
             {onEdit && (
-              <Button small disabled={pending} onClick={onEdit}>
+              <Button disabled={pending} onClick={onEdit}>
                 {labels.edit}
               </Button>
             )}
@@ -788,7 +788,6 @@ function DecisionVerbs({
     <ActionRow className="dcard-verbs" primary={primary}>
       {onReject && (
         <IconAction
-          small
           label={labels.reject}
           icon={<Trash2 aria-hidden />}
           disabled={pending}
@@ -797,7 +796,6 @@ function DecisionVerbs({
       )}
       {onSkip && labels.skip && (
         <IconAction
-          small
           label={labels.skip}
           icon={<RotateCcwClock aria-hidden />}
           disabled={pending}
@@ -806,7 +804,6 @@ function DecisionVerbs({
       )}
       {onEdit && (
         <IconAction
-          small
           label={labels.edit}
           icon={<Pencil aria-hidden />}
           disabled={pending}

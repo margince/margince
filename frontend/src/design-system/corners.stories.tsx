@@ -94,16 +94,6 @@ const row: CSSProperties = {
   alignItems: "center",
   gap: "var(--space-4)",
 };
-const label: CSSProperties = {
-  fontSize: "var(--fs-eyebrow)",
-  letterSpacing: "var(--tracking-eyebrow)",
-  textTransform: "uppercase",
-  color: "var(--textMeta)",
-};
-const note: CSSProperties = {
-  fontSize: "var(--fs-sm)",
-  color: "var(--textMeta)",
-};
 const swatch = (radius: string, shape?: "round"): CSSProperties => ({
   width: "84px",
   height: "56px",
@@ -132,8 +122,8 @@ export const TheLadder: Story = {
             )}
           />
           <div>
-            <div style={{ fontWeight: "var(--fw-semibold)" }}>{rung.token}</div>
-            <div style={note}>
+            <div>{rung.token}</div>
+            <div>
               {rung.plain} · squircle {rung.smooth} · {rung.role}
             </div>
           </div>
@@ -156,7 +146,7 @@ export const TheLadder: Story = {
 export const RoundAgainstSquircle: Story = {
   render: () => (
     <div style={column}>
-      <span style={label}>--r-lg · round 20px, squircle 40px</span>
+      <span>--r-lg · round 20px, squircle 40px</span>
       <div style={row}>
         <div
           style={{
@@ -176,7 +166,7 @@ export const RoundAgainstSquircle: Story = {
           }}
         />
       </div>
-      <span style={note}>
+      <span>
         Left keeps `corner-shape: round`; right takes the house default.
       </span>
     </div>
@@ -192,7 +182,7 @@ export const RoundAgainstSquircle: Story = {
 export const RoundThingsOptOut: Story = {
   render: () => (
     <div style={column}>
-      <span style={label}>corner-shape: round · missing</span>
+      <span>corner-shape: round · missing</span>
       <div style={row}>
         <div
           style={{
@@ -213,7 +203,7 @@ export const RoundThingsOptOut: Story = {
         />
         <div style={{ ...swatch("50%"), width: "44px", height: "44px" }} />
       </div>
-      <span style={note}>
+      <span>
         Pill, pill without the opt-out, monogram, monogram without it.
       </span>
     </div>

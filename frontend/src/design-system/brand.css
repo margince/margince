@@ -56,17 +56,22 @@
    * Three of them are steps along the accent, which is the point: company,
    * offering and market are all things the site SAID, so they stay in the
    * brand family and read as one set. Signal is the exception — it means a
-   * buying signal the AI inferred rather than read, so it borrows the warn
+   * buying signal the AI inferred rather than read, so it borrows the warning
    * hue, the tree's established "look at this yourself" tone.
    */
   --catCompany: color-mix(in oklab, var(--accent) 58%, var(--overlayLight));
   --catOffering: color-mix(in oklab, var(--accent) 88%, var(--overlayDark));
-  --catMarket: color-mix(in oklab, var(--accent) 38%, var(--textMeta));
-  --catSignal: color-mix(in oklab, var(--warn) 86%, var(--overlayLight));
+  --catMarket: color-mix(in oklab, var(--accent) 38%, var(--textPrimary));
+  --catSignal: color-mix(in oklab, var(--warning) 86%, var(--overlayLight));
 
-  /* The warn family's page-level wash. --warnBg is a fill strong enough to
-   * carry a badge; a card that spans the panel needs a tint an order quieter,
-   * or "a human is needed here" shouts over the content it is asking about.
-   */
-  --warnSurface: color-mix(in srgb, var(--warn) 4%, var(--bgElevated));
+  /* The warning family's page-level WASH, and it is a token of its own rather
+   * than a second --warningSurface. It was spelled as one, at 4% against the
+   * canon 16%, and this sheet loads after tokens.css — so the quiet page tint
+   * silently became every warning badge's tint too, four times fainter than the
+   * value tokens.test.ts measures for contrast. A second declaration of a canon
+   * token is not a variant; it is the canon, moved. --warningBg is the fill
+   * strong enough to carry a badge; a card that spans the panel needs a tint an
+   * order quieter, or "a human is needed here" shouts over the content it is
+   * asking about. */
+  --warningWash: color-mix(in srgb, var(--warning) 4%, var(--bgElevated));
 }

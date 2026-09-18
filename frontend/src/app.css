@@ -9,22 +9,111 @@
    component's own `animation` has to be seen before it. */
 @import "./design-system/enter.css";
 
-/* The document is not a scroller here. `.app` is exactly one viewport tall and
-   every screen scrolls inside its own pane, so a gesture that runs past the end
-   of a pane has nowhere to chain to — and a root that still answers it bounces
-   the entire app upward and shows a band of bare ground beneath it. Declared on
-   the root rather than on each pane because it is a fact about the SHELL: no
-   surface in this product scrolls the document, so none of them should be able
-   to make it move. Panes that must not chain say `contain` for themselves. */
+/* The root declares NO font, and that is the invariant: it stays at the
+   browser's own default, so `1rem` is 16px for the whole document and a reader
+   who changes that default moves everything. A `font` here would defeat it —
+   `rem` inside a value on the root resolves against the root's OWN font-size,
+   so `font: var(--fontBody)` would set the root to 14px and every descendant's
+   `1rem` with it. The product's type is declared once on `body` below and
+   inherited from there; the ink is declared here because it has no such
+   arithmetic and the root is where the document's one neutral is decided. */
 html {
+  color: var(--textPrimary);
+  /* The document is not a scroller here. `.app` is exactly one viewport tall and
+     every screen scrolls inside its own pane, so a gesture that runs past the end
+     of a pane has nowhere to chain to — and a root that still answers it bounces
+     the entire app upward and shows a band of bare ground beneath it. Declared on
+     the root rather than on each pane because it is a fact about the SHELL: no
+     surface in this product scrolls the document, so none of them should be able
+     to make it move. Panes that must not chain say `contain` for themselves. */
   overscroll-behavior: none;
 }
 
+/* The browser's own type scale is not a source of truth here. A user-agent
+   sheet (and the part of Tailwind's preflight that does not already say so)
+   gives a heading, a `<small>`, a `<th>` or a form control a size, a weight or
+   an ink of its own, which is a second author for text this product decides in
+   one place. Everything listed inherits instead. `font-style` is deliberately
+   absent: `em` and `i` still lean. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+small,
+sub,
+sup,
+b,
+strong,
+th,
+td,
+legend,
+label,
+kbd,
+samp,
+code,
+pre,
+blockquote,
+figcaption,
+address,
+cite,
+dfn,
+em,
+i,
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+
+/* And the one weight the reset takes away and a table still needs: a COLUMN
+   head is medium, the weight of text inside a component, so it reads beside the
+   icon-bearing dials above the grid rather than as one more row of values.
+   `thead th` and not `th` — a row header in `tbody` is a value's name and stays
+   at body weight. Declared here rather than per table, which is how eight
+   sheets came to answer one question; `mcp-apps/view.css` carries its own copy
+   beside its own reset, because a standalone view loads tokens.css alone. */
+thead th {
+  font-weight: var(--fontWeightMedium);
+}
+
+/* A sub- or superscript must not grow the line it sits in; the size still
+   inherits from the root above. */
+sub,
+sup {
+  line-height: 0;
+}
+
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: inherit;
+}
+
+/* The gap between two text blocks is the paragraph spacing of the text
+   around them; nothing else separates prose. Zero specificity so a role
+   rule may say otherwise. */
+:where(p, ul, ol, blockquote, pre) + :where(p, ul, ol, blockquote, pre) {
+  margin-block-start: var(--paragraphSpacing);
+}
+
+/* THE type declaration. Every element in the product inherits its font styling
+   from this one rule; a role-level type rule is layered ON TOP of it and never
+   beside it, so there is exactly one place the document's size, leading, weight
+   and face are decided. */
 body {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
-  color: var(--textContent);
+  font: var(--fontBody);
   background: var(--bgPage);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

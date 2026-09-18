@@ -28,9 +28,10 @@ function writeRefusal(writer: LeadWriter) {
   return writer.patch.error ?? writer.claim.error;
 }
 
-// The band under the header: what the lead has to say about itself as a whole
-// — a write it refused, the sentence that says it is closed, and the way back
-// out of a disqualification.
+// The band under the strip: what the lead has to say about itself as a whole —
+// a write it refused, the sentence that says it is closed, and the way back out
+// of a disqualification. Where the lead STANDS is not here: the ladder is at
+// the foot of the head, under the facts (RecordView's `standing`).
 //
 // RecordView draws the band's element and its two intervals for anything it is
 // handed, so this answers `undefined` rather than a fragment that renders
@@ -71,7 +72,7 @@ export function leadBand({
           this element by id, so a screen reader reaches it from each of them
           without the sentence being printed beside all six. */}
       {writer.readOnlyReason && (
-        <p id={reasonId} className="t-caption">
+        <p id={reasonId}>
           {/* Which closure, not merely THAT it is closed. Both terminal states
               archive the row, so keying this off archived_at alone told every
               promoted lead it had been disqualified — invisible until ADR-0119
@@ -131,9 +132,7 @@ function ReopenAction({ id }: Readonly<{ id: string }>) {
   };
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.reopen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("lead.reopen")}</Button>
       <ConfirmModal
         open={open}
         onClose={close}

@@ -15,8 +15,13 @@ package integration
 // a candidate on the second pass, so runOne is invoked AGAIN, and the
 // only thing suppressing a duplicate is the anchor-derived idempotency
 // key. A key built from ev.ID (a fresh uuid per pass) would add a second
-// reminder here; the anchor-derived key does not. A genuinely new human
-// touch then moves the anchor and re-arms exactly one more firing.
+// reminder here; the anchor-derived key does not.
+//
+// A genuinely new human touch then moves the anchor, minting a new key — and
+// the reminder STILL does not fire, because the first one is open and the draw
+// holds the record out. Asking again while the previous question is unanswered
+// is what put five tasks on one silence. Answering it releases the hold, and
+// the moved anchor earns exactly one more.
 //
 // The clock is pinned (NewTimeScannerWithClock) so "no activity for N
 // days" is evaluated against the seeded timestamps, never the wall clock;
@@ -37,7 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestTimeScannerFiresOnceThenTheOccurrenceKeySuppressesTheRefire(t *testing.T) {
+func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Gone Quiet Deal", pipeline, open, nil)
@@ -104,20 +109,50 @@ func TestTimeScannerFiresOnceThenTheOccurrenceKeySuppressesTheRefire(t *testing.
 
 	// A genuinely new human touch — still stale (8 days before now, past
 	// the 7-day threshold) but MORE RECENT than the first — moves the
-	// anchor. A moved anchor is a new occurrence key, so the trigger
-	// re-arms and fires exactly one more time.
+	// anchor, which mints a new occurrence key.
+	//
+	// The key alone is no longer enough to fire, and that is the fix: the
+	// FIRST reminder is still open, so the draw holds this deal out. Asking
+	// again while the previous question is unanswered is what produced five
+	// tasks for one silence, each anchor shift minting another.
 	secondTouch := scanNow.AddDate(0, 0, -8)
 	seedGenuineTouch(t, owner, e.WS, dealID, "call", secondTouch)
 
 	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
 		t.Fatalf("third scan (after a new genuine touch): %v", err)
 	}
+	if got := reminderTaskCount(t, e, dealID); got != 1 {
+		t.Fatalf("reminder tasks after the anchor moved while the first was open = %d, want still exactly 1 — an open reminder holds the record out of the draw", got)
+	}
+	if got := runCountForHandler(t, e, "no_activity_reminder"); got != 1 {
+		t.Fatalf("workflow_run rows while the first reminder was open = %d, want still exactly 1", got)
+	}
+
+	// Once the rep answers the question the record is drawn again, and the
+	// moved anchor is a new occurrence, so it earns exactly one more. Without
+	// this half, "held while open" would be indistinguishable from "never asked
+	// twice", and an account would go dark after its first reminder.
+	completeOpenTasksOnDeal(t, e, dealID)
+	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		t.Fatalf("fourth scan (after the reminder was answered): %v", err)
+	}
 	if got := reminderTaskCount(t, e, dealID); got != 2 {
-		t.Fatalf("reminder tasks after the anchor moved = %d, want exactly 2 — a new genuine engagement must re-arm the trigger", got)
+		t.Fatalf("reminder tasks after the answered reminder = %d, want exactly 2 — a moved anchor re-arms once the question is answered", got)
 	}
-	if got := runCountForHandler(t, e, "no_activity_reminder"); got != 2 {
-		t.Fatalf("workflow_run rows after the anchor moved = %d, want exactly 2", got)
-	}
+}
+
+// completeOpenTasksOnDeal answers every open task on the deal the way a rep
+// does. done_at rides along because activity_done_at requires it: is_done alone
+// is a constraint violation, not a completed task.
+//
+// Through WsExec so the write runs inside the workspace transaction every
+// tenant statement takes, the same path reminderTaskCount reads back on.
+func completeOpenTasksOnDeal(t *testing.T, e *Env, dealID ids.UUID) {
+	t.Helper()
+	e.WsExec(t, `
+		UPDATE activity SET is_done = true, done_at = now()
+		  WHERE kind = 'task' AND archived_at IS NULL AND is_done = false
+		    AND id IN (SELECT activity_id FROM activity_link WHERE deal_id = $1)`, dealID)
 }
 
 // seedGenuineTouch inserts one human-logged activity (source 'manual', the

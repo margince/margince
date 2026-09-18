@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
 import {
@@ -53,16 +54,27 @@ const meta: Meta<typeof ManualCompanyInterview> = {
 export default meta;
 type Story = StoryObj<typeof ManualCompanyInterview>;
 
+// The plate the board actually stands on. The workbench's artifact pane is the
+// ONLY place that renders this interview (onboarding-conversation/artifact.tsx),
+// and that pane is a light panel where the scene backdrop the bare dialog is
+// dressed for is dark glass — so a story without the wrapper shows a surface
+// nobody can reach and hides the one everybody sees.
+function ArtifactPane({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="mw-review ob-conv-artifact">{children}</div>;
+}
+
 function interview(values: CompanyForm) {
   return () => (
     <StoryProviders>
-      <ManualCompanyInterview
-        values={values}
-        setField={() => {}}
-        onPersist={() => {}}
-        onBackToChoice={() => {}}
-        onComplete={() => {}}
-      />
+      <ArtifactPane>
+        <ManualCompanyInterview
+          values={values}
+          setField={() => {}}
+          onPersist={() => {}}
+          onBackToChoice={() => {}}
+          onComplete={() => {}}
+        />
+      </ArtifactPane>
     </StoryProviders>
   );
 }
@@ -173,13 +185,15 @@ export const OptionalQuestion: Story = {
 export const German: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <ManualCompanyInterview
-        values={form(ANSWERS)}
-        setField={() => {}}
-        onPersist={() => {}}
-        onBackToChoice={() => {}}
-        onComplete={() => {}}
-      />
+      <ArtifactPane>
+        <ManualCompanyInterview
+          values={form(ANSWERS)}
+          setField={() => {}}
+          onPersist={() => {}}
+          onBackToChoice={() => {}}
+          onComplete={() => {}}
+        />
+      </ArtifactPane>
     </StoryProviders>
   ),
 };

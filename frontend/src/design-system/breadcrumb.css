@@ -27,8 +27,6 @@
   list-style: none;
   min-width: 0;
   min-height: 30px;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 .crumbs > ol > li {
   display: flex;
@@ -47,7 +45,6 @@
 }
 .crumbs-sep {
   flex: none;
-  color: var(--borderStrong);
 }
 
 .crumbs-link,
@@ -57,14 +54,6 @@
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
-}
-/* An ancestor names where you WERE, not where you are, so it is quieter than
-   the stop it leads away from. An unlinked ancestor reads the same: a level the
-   product names but does not serve is still an ancestor. */
-.crumbs-link,
-.crumbs-step {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 .crumbs-link {
   text-decoration: none;

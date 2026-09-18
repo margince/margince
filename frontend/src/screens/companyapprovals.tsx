@@ -2,6 +2,7 @@ import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
@@ -63,7 +64,7 @@ export function DecisionsChip({
   // outranked the verbs beside it in the header while doing less than any of
   // them: this opens a queue, it does not decide anything.
   return (
-    <Button small variant="ghost" onClick={onOpen}>
+    <Button variant="ghost" onClick={onOpen}>
       {t("co.decisions.open", { count: formatNumber(count, locale) })}
     </Button>
   );
@@ -94,9 +95,9 @@ export function CompanyApprovalsPanel({
   const extraInvalidateKeys = [["company360", companyId]];
   return (
     <Modal open onClose={onClose} labelledBy={titleId} size="wide">
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("co.decisions.title")}
-      </h2>
+      </Heading>
       {sink.decidedNote}
       {query.isPending && approvals.length === 0 && (
         <Skeleton width="100%" height={64} />

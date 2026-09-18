@@ -167,7 +167,7 @@ function Surface({
         columns={shownColumns}
         rowKey={(row) => row.id}
         unit="companies"
-        action={<Button small>New company</Button>}
+        action={<Button>New company</Button>}
         search={{ value: search, onChange: setSearch }}
         sort={{ value: sort, onChange: setSort }}
         chips={chips}
@@ -265,7 +265,7 @@ export const Failed: Story = {
       problem={
         <>
           <p>Couldn't load this view.</p>
-          <Button small>Retry</Button>
+          <Button>Retry</Button>
         </>
       }
     />
@@ -347,10 +347,8 @@ function SelectableSurface() {
             <span className="t-caption">
               {formatNumber(selected.size, locale)} selected
             </span>
-            <Button small>Assign owner</Button>
-            <Button small onClick={() => setSelected(new Set())}>
-              Clear
-            </Button>
+            <Button>Assign owner</Button>
+            <Button onClick={() => setSelected(new Set())}>Clear</Button>
           </>
         ),
       }}
@@ -389,12 +387,8 @@ export const InASettingsColumn: Story = {
             verbs: true,
             cell: () => (
               <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <Button small variant="ghost">
-                  Edit company
-                </Button>
-                <Button small variant="danger">
-                  Archive company
-                </Button>
+                <Button variant="ghost">Edit company</Button>
+                <Button variant="danger">Archive company</Button>
               </div>
             ),
           },
@@ -446,7 +440,7 @@ export const CellStrips: Story = {
               const warm = row.owner === "Lars";
               return (
                 <CellStrip>
-                  <Badge tone={warm ? "success" : "warn"}>
+                  <Badge tone={warm ? "success" : "warning"}>
                     {warm ? "Warm" : "Cooling"}
                   </Badge>
                   <span className="t-caption">
@@ -465,7 +459,7 @@ export const CellStrips: Story = {
             cell: (row: Company) => (
               <CellStrip>
                 <span>{row.owner === "Lars" ? "2 days" : "3 weeks"}</span>
-                {row.owner !== "Lars" && <Badge tone="warn">Stalled</Badge>}
+                {row.owner !== "Lars" && <Badge tone="warning">Stalled</Badge>}
               </CellStrip>
             ),
           },

@@ -295,10 +295,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyA
 // installation asking where its own company is, named so an audit row does not
 // have to invent a contact who was not involved.
 func geocodeJobActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:geocode",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:geocode")
 }
 
 // geocodeProvider names what answered, recorded on the row so a later change

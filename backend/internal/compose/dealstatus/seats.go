@@ -21,6 +21,47 @@ type Seat struct {
 	Role    string
 	Name    string
 	Engaged bool
+	// ContactID names the contact behind the seat. Zero when the reader may
+	// not read them, which is the same case that leaves Name empty.
+	ContactID ids.UUID
+	// Attachable says this reader may FILE WORK against the contact, which is
+	// a different grant from reading them: a share marked read-only lets
+	// somebody see a contact and not add to their record
+	// (auth.EnsureAttachTarget). A move that links a task to a contact the
+	// reader may not attach to is a button that fails after the click, so the
+	// link is withheld and the advice is offered without it.
+	Attachable bool
+}
+
+// bestSeat is who to approach, best answer first, in the same order the
+// opening move uses. Extracted so the two rungs share one idea of who matters
+// on a deal rather than growing two.
+//
+// Held by: TestTheMeetingRequestTakesTheBestAvailableRole and
+// TestTheFirstMoveTakesTheBestAvailableRole (move_test.go)
+//
+// A role this vocabulary cannot order is no answer rather than an arbitrary
+// one: picking a stranger and putting their name in an instruction is worse
+// than naming nobody.
+func bestSeat(seats []Seat) (Seat, bool) {
+	for _, role := range openingRoles {
+		if seat, ok := namedRole(seats, role); ok {
+			return seat, true
+		}
+	}
+	return Seat{}, false
+}
+
+// seatWords names a seat for a sentence: the contact where the reader may know
+// them, the role alone where they may not.
+//
+// The role is never dropped. "Annabelle Malherbe" tells a reader who; "the
+// champion" tells them why it is that one, and a card that has both says both.
+func seatWords(seat Seat) string {
+	if seat.Name == "" {
+		return "the " + roleWord(seat.Role)
+	}
+	return seat.Name + ", the " + roleWord(seat.Role)
 }
 
 // SeatReader answers who sits on a deal.

@@ -43,7 +43,7 @@ import (
 // field — so it defended the shape of the code that existed rather than the
 // obligation.
 // sendDoorFloor is the number of send doors the tree holds today: the three
-// activities handlers (SendEmail, SendAccountEmail, SendMessage), the two
+// activities handlers (SendEmail, SendCompanyEmail, SendMessage), the two
 // commsAdapter methods the tool surface reaches them by, and one test driver.
 //
 // WHAT IT DOES AND DOES NOT CATCH. It fails when the walk stops recognising a

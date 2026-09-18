@@ -95,10 +95,64 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 3. Log something on the deal, then win it. The note is filed under the
   // deal, not the project — the project timeline picks it up in step 5.
-  await page.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
-  await page.getByRole("button", { name: "Erfassen" }).click();
+  //
+  // Through the head's own verb: the deal page carries no standing log form,
+  // because a form open on every read asks for a note nobody came to write.
+  await page
+    .getByRole("button", { name: "Aktivität erfassen", exact: true })
+    .click();
+  // Inside the dialog, and exactly: the head's own verb is still on the page
+  // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.
+  const logDialog = page.getByRole("dialog");
+  await logDialog.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
+  // The write itself is the claim here — that the note is filed UNDER THE DEAL
+  // — so it is read off the request rather than off a rendering of it. Reading
+  // it back needs the chronology tab, and pressing that on the page the write
+  // just invalidated races the refetch that remounts the record; step 5 opens
+  // the tab from a fresh arrival, where there is no such race, and the project
+  // timeline there is what proves the note travelled.
+  const filed = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/activities") &&
+      response.ok(),
+  );
+  await logDialog
+    .getByRole("button", { name: "Erfassen", exact: true })
+    .click();
+  expect((await filed).request().postDataJSON().subject).toBe(
+    "Kickoff mit Brandt IT",
+  );
+  // The deal's chronology is its own tab now, not a block under the overview:
+  // what was said about the deal and what was changed on it are one order of
+  // events, read in one place. Every arrival at the deal opens on the overview,
+  // so each read of the chronology asks for the tab first.
   const timeline = page.getByRole("region", { name: "Verlauf" });
-  await expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible();
+  // The write lands, the dialog closes, and the reads it invalidated come back
+  // — and a record remounted by one of those refetches opens on its first tab
+  // again. So what the chronology is being read FOR is checked inside the
+  // retry, not after it: the tab standing open for one moment is not the same
+  // claim as the row being there to read, and a remount between the two puts
+  // the panel back behind the overview with the row still in the document.
+  const historyTab = () =>
+    page
+      .getByTestId("record-tabs")
+      .getByRole("button", { name: "Verlauf", exact: true });
+  const onDealHistory = async (read: () => Promise<unknown>) => {
+    await expect(logDialog).toBeHidden();
+    await expect(async () => {
+      // At rest before pressing: the strip is sticky, so a scrolled record
+      // pins it over the head and the press lands on whatever is pinned above
+      // the tab. The shell scrolls an inner container rather than the window.
+      await page.evaluate(() => {
+        for (const box of document.querySelectorAll(".scroll")) {
+          box.scrollTop = 0;
+        }
+      });
+      await historyTab().click();
+      await read();
+    }).toPass();
+  };
 
   await page
     .getByRole("group", { name: "Phase" })
@@ -143,7 +197,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // 5. The timeline accumulates what is filed under the project: relink the
   // deal's note to the project and it appears here with the coverage count.
   await page.goto("/#/deals/d-fleet");
-  await timeline.getByRole("button", { name: "Neu verknüpfen" }).click();
+  const relink = timeline.getByRole("button", { name: "Neu verknüpfen" });
+  await onDealHistory(() => expect(relink).toBeVisible({ timeout: 2000 }));
+  await relink.click();
   await dialog
     .getByRole("searchbox", {
       name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",

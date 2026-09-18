@@ -12,12 +12,9 @@
   background: none;
   border: 0;
   padding: 0;
-  font: inherit;
-  color: inherit;
   /* The mark is a BUTTON, and a button centres its own text — so a marked value
    * long enough to wrap centred itself while the plain value beside it followed
-   * the column it was in. `font: inherit` above already says this control is
-   * meant to read as the text it sits in; alignment is the rest of that claim. */
+   * the column it was in. */
   text-align: inherit;
   cursor: help;
   text-decoration: underline dotted var(--borderStrong);
@@ -67,11 +64,6 @@
   flex-wrap: wrap;
 }
 
-.evmark-confidence {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
 /* The quoted source text, set apart so it never reads as our own words. The
    rule is indigo because the quote is what the machine read, and a rule
    rather than a box because a box inside a popover is a card inside a card. */
@@ -79,14 +71,9 @@
   margin: 0;
   border-left: 2px solid var(--aiMed);
   padding-left: var(--space-2);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textContent);
 }
 
 .evmark-source,
 .evmark-at {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   overflow-wrap: anywhere;
 }

@@ -55,12 +55,10 @@ function SelectingList({ rows }: Readonly<{ rows: number }>) {
         and reads nothing.
       </p>
       <div className="card-actions">
-        <Button variant="primary" small onClick={() => setSelected(rows)}>
+        <Button variant="primary" onClick={() => setSelected(rows)}>
           Select all
         </Button>
-        <Button small onClick={() => setSelected(0)}>
-          Clear
-        </Button>
+        <Button onClick={() => setSelected(0)}>Clear</Button>
       </div>
     </PanelBody>
   );

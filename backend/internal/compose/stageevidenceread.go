@@ -102,7 +102,12 @@ func (r *StageEvidenceReader) Read(
 		}
 		return 0, err
 	}
-	claims, err := r.ask(actorCtx, criteria, facts.spans)
+	// The deal whose exit criteria are being read. The request quotes spans
+	// from that deal's own messages, so an erasure reaching a contact on it
+	// reaches these payloads through the deal it names. No label: this reading
+	// is queued from an activity and never loads the deal's name, and a second
+	// query for one would spend a round trip on a word the rail can do without.
+	claims, err := r.ask(ai.WithSubject(actorCtx, dealID.Ref(), ""), criteria, facts.spans)
 	if err != nil {
 		return 0, err
 	}
@@ -366,11 +371,7 @@ func (r *StageEvidenceReader) write(
 // pass is its own unit of work: the job that runs it is enqueued by a trigger
 // whose own trace ended when the activity was written.
 func stageEvidenceReadCtx(ctx context.Context) context.Context {
-	actorCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   stageEvidenceReadActor,
-	})
-	return principal.WithCorrelationID(actorCtx, ids.NewV7())
+	return principal.SystemActing(ctx, stageEvidenceReadActor)
 }
 
 // readActivityText answers the lines of an activity that its OWN sender wrote.

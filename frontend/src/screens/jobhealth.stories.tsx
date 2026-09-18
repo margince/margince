@@ -130,7 +130,7 @@ export const Withheld: Story = { render: story(HEALTHY, ["ops"]) };
 
 // Dead work in dark, which is the only story that has every tone on screen at
 // once: the danger Callout an operator must not scroll past, the danger `dead`
-// pill and the warn `retrying` one beside it, and — the pairing that actually
+// pill and the warning `retrying` one beside it, and — the pairing that actually
 // needs looking at — the two UNTONED pills for waiting and running. An untoned
 // Badge is filled with --bgCard flat (atoms.css), one step off the card ground it
 // sits on, so in dark a count of zero either still reads as a pill or stops

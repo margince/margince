@@ -41,7 +41,6 @@
 .richtext-hint {
   margin: 0;
   min-inline-size: 0;
-  color: var(--textMeta);
 }
 
 .richtext-bar {
@@ -53,18 +52,18 @@
 }
 
 /* Meta ink and no resting fill — the marks read as available rather than as
-   five filled controls competing with the message. The BOX stays at the 24px
-   floor WCAG 2.2 AA 2.5.8 asks for; only the glyph and the ink got quieter. */
+   five filled controls competing with the message. The BOX is the one control
+   height, which clears the target WCAG 2.2 AA 2.5.8 asks for with room; only
+   the glyph and the ink got quieter. */
 .richtext-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-inline-size: var(--space-6);
-  min-block-size: var(--space-6);
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textMeta);
   cursor: pointer;
   transition:
     border-color var(--dur-state) var(--ease-out),
@@ -106,11 +105,12 @@
  * surface underneath refused to follow. What that cut off was the end of the
  * message being written and the toolbar under it, with nothing left anywhere to
  * scroll to them. A height shrinks; that is the difference. */
+/* Type and ink are the reader's own, exactly as in the plain `.textarea` this
+ * replaces on the same forms, and the inset is the field's. */
 .richtext-input {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  color: var(--textPrimary);
-  padding: 9px 11px;
+  font: inherit;
+  color: inherit;
+  padding: var(--inputPaddingY) var(--inputPaddingX);
   outline: none;
   overflow-y: auto;
 }
@@ -122,7 +122,9 @@
 .richtext-input:empty::before,
 .richtext-input:has(> br:only-child)::before {
   content: attr(data-placeholder);
-  color: var(--textMuted);
+  /* The same tone every other placeholder in the product takes. Drawn as text
+     rather than by the engine, so nothing would have given it one. */
+  color: var(--textSecondary);
   pointer-events: none;
 }
 
@@ -161,7 +163,6 @@
   margin: 0 0 8px;
   padding-left: 10px;
   border-left: 2px solid var(--borderSubtle);
-  color: var(--textMeta);
 }
 
 /* Not now. `contentEditable` has no disabled state of its own, so the refusal is
@@ -170,7 +171,6 @@
    looked live would invite text the returning reference never saw. */
 .richtext.is-disabled .richtext-input,
 .richtext.is-disabled .richtext-foot {
-  color: var(--textTertiary);
   background: var(--bgCard);
   cursor: not-allowed;
 }

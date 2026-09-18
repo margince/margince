@@ -57,10 +57,7 @@ func runAuthzDisagreement(ctx context.Context, pool *pgxpool.Pool, args []string
 	// names a subject: no address, no consent state, only how two rules have
 	// compared.
 	ctx = principal.WithWorkspaceID(ctx, wsID)
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:authz_disagreement",
-	})
+	ctx = principal.SystemActing(ctx, "system:authz_disagreement")
 
 	store := consent.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID)))
 	report, err := store.DisagreementReport(ctx)

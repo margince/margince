@@ -220,7 +220,7 @@ func RegisterNetworkTools(r *Registry, whoKnows WhoKnowsLister, coverage Coverag
 		r.Register(whoKnowsTool{list: whoKnows})
 	}
 	if coverage != nil {
-		r.Register(accountCoverageTool{read: coverage})
+		r.Register(companyCoverageTool{read: coverage})
 	}
 	if intro != nil {
 		r.Register(introPathTool{list: intro})
@@ -293,14 +293,14 @@ func (t whoKnowsTool) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	return json.Marshal(WhoKnowsAnswer{ContactID: args.ContactID, Colleagues: colleagues})
 }
 
-// --- account_coverage (🟢 read) ---
+// --- company_coverage (🟢 read) ---
 
-type accountCoverageTool struct{ read CoverageReader }
+type companyCoverageTool struct{ read CoverageReader }
 
-func (t accountCoverageTool) Spec() mcp.ToolSpec {
+func (t companyCoverageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "account_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
-		Description:   accountCoverageCopy.render(),
+		Name: "company_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
+		Description:   companyCoverageCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getDealCoverage",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -310,7 +310,7 @@ func (t accountCoverageTool) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t accountCoverageTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+func (t companyCoverageTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		DealID ids.UUID `json:"deal_id"`
 	}
@@ -364,7 +364,7 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getCompanyGraph",
 		InputSchema: schema(`{"type":"object","properties":{
-			"company_id":{"type":"string","format":"uuid","description":"The account to find a warm route into"}},
+			"company_id":{"type":"string","format":"uuid","description":"The company to find a warm route into"}},
 			"required":["company_id"],"additionalProperties":false}`),
 		OutputSchema: schemaFor[IntroPathAnswer](),
 	}

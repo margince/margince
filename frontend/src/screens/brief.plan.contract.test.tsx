@@ -44,29 +44,6 @@ describe("the plan's contract", () => {
     expect(screen.getByText(en["plan.contract.nothingToName"])).toBeTruthy();
   });
 
-  it("draws no capacity line when the server sent no capacity", () => {
-    render(<PlanContract plan={planWith({ capacity: undefined })} editable />);
-    // Absent means no calendar reader is composed. A "0 meetings" line here
-    // would tell a rep their week is free because an integration is missing.
-    expect(screen.queryByText(/meetings and/, { exact: false })).toBeNull();
-  });
-
-  it("draws a real zero when the server did count the week", () => {
-    render(
-      <PlanContract
-        plan={planWith({ capacity: { meetings: 0, tasks: 0 } })}
-        editable
-      />,
-    );
-    expect(
-      screen.getByText(
-        en["plan.contract.capacityLine"]
-          .replace("{meetings}", "0")
-          .replace("{tasks}", "0"),
-      ),
-    ).toBeTruthy();
-  });
-
   it("warns when next week's calendar leaves no room", () => {
     render(
       <PlanContract

@@ -134,7 +134,7 @@ function RevenueStat({
       // The reading is bad news whenever there is any of it: money drifting is
       // the thing this strip exists to surface, and a rep who sees it in the
       // page's ordinary tone reads it as a status rather than as work.
-      tone={minor > 0 ? "warn" : undefined}
+      tone={minor > 0 ? "warning" : undefined}
       onOpen={onOpen}
     />
   );

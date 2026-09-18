@@ -7,6 +7,7 @@ import type { ComponentProps } from "react";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { Button, Card } from "./atoms";
+import { Heading } from "./heading";
 import {
   MarginceWorkbench,
   type WorkbenchRuntimeLabels,
@@ -142,7 +143,7 @@ function Artifact() {
   return (
     <div className="wrap">
       <Card as="div">
-        <h2>Northwind Traders GmbH</h2>
+        <Heading size="large">Northwind Traders GmbH</Heading>
         <p>
           Wholesale food distribution for independent grocers across
           German-speaking Europe.
@@ -200,8 +201,8 @@ export const Rail: Story = {
       identity: "alex@northwind.test",
     },
     contactAction: (
-      <Button small iconOnly aria-label="Switch theme">
-        <SunMoon size={15} aria-hidden />
+      <Button iconOnly aria-label="Switch theme">
+        <SunMoon aria-hidden />
       </Button>
     ),
   },
@@ -223,8 +224,8 @@ export const RailWithoutContact: Story = {
     footerLabel: "Tokens this setup",
     stepLabel: "Step 2 of 5 · Confirm",
     contactAction: (
-      <Button small iconOnly aria-label="Switch theme">
-        <SunMoon size={15} aria-hidden />
+      <Button iconOnly aria-label="Switch theme">
+        <SunMoon aria-hidden />
       </Button>
     ),
   },

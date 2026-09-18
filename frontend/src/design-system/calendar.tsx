@@ -85,20 +85,18 @@ export function Calendar({
       <div className="calendar-head">
         <span className="calendar-month t-body">{heading}</span>
         <Button
-          small
           iconOnly
           aria-label={t("calendar.previousMonth")}
           onClick={() => onMonthChange(shiftMonth(month, -1))}
         >
-          <ChevronLeft aria-hidden="true" size={16} />
+          <ChevronLeft aria-hidden="true" />
         </Button>
         <Button
-          small
           iconOnly
           aria-label={t("calendar.nextMonth")}
           onClick={() => onMonthChange(shiftMonth(month, 1))}
         >
-          <ChevronRight aria-hidden="true" size={16} />
+          <ChevronRight aria-hidden="true" />
         </Button>
       </div>
       <div className="calendar-grid">
@@ -106,11 +104,7 @@ export function Calendar({
           // The weekday initials are a legend, not days: they carry no date
           // and announce as nothing, so the row under them reads as seven
           // dates rather than as fourteen things.
-          <span
-            key={`weekday-${day.getDay()}`}
-            className="calendar-weekday t-caption"
-            aria-hidden="true"
-          >
+          <span key={`weekday-${day.getDay()}`} aria-hidden="true">
             {weekdayInitial(day, locale)}
           </span>
         ))}
@@ -147,7 +141,7 @@ function CalendarDay({
 }>) {
   const classes = [
     "calendar-day",
-    inMonth ? "" : "calendar-day-outside",
+    inMonth ? "" : "",
     isToday ? "calendar-day-today" : "",
   ]
     .filter(Boolean)

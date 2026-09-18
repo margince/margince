@@ -11,7 +11,7 @@
 // off a tool that already answers, which is what every `render_*` name on this
 // surface is.
 
-import { count, el, money, onResult } from "../bridge";
+import { count, el, heading, money, onResult } from "../bridge";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -96,7 +96,7 @@ export function render(
     return;
   }
   const deals = known(answer);
-  root.appendChild(el("h1", undefined, "Pipeline review"));
+  root.appendChild(heading("xlarge", "Pipeline review"));
   root.appendChild(
     el(
       "p",

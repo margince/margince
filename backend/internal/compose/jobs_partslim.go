@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -92,10 +91,7 @@ type capturePartSlimWorker struct {
 // failure would be a refused write inside a background pass, which is the
 // hardest kind to notice.
 func partSlimJobActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "capture_part_slim_worker",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "capture_part_slim_worker")
 }
 
 // Work drains one batch.

@@ -21,7 +21,7 @@ import { usePasswordReveal } from "../design-system/passwordreveal";
 import { providerBrandName } from "../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AuthExperience, type AuthPhase } from "./auth-core";
+import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
 import {
   FederatedOnlyCard,
   type OidcProviders,
@@ -63,15 +63,14 @@ export type AuthNotice =
 const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
 // isOidcFailureMarker is a PURE read — no mutation — so it is safe under
-// React's StrictMode (development only), which double-invokes a useState
-// lazy initializer to surface impure ones. An earlier version decided the
-// answer AND cleared the address in one impure step: the first invocation
-// cleared it and answered true, the second then saw the already-cleared
-// hash and answered false — and false is the call whose result actually
-// became the committed state, silently dropping the notice on every
-// dev-mode render. Splitting the read from the clear (below) removes the
-// impurity instead of working around it, so no double-invoke count changes
-// the answer.
+// React's StrictMode (development only), which double-invokes a useState lazy
+// initializer to surface impure ones. An earlier version decided the answer AND
+// cleared the address in one impure step: the first invocation cleared it and
+// answered true, the second then saw the already-cleared hash and answered
+// false — and false is the call whose result actually became the committed
+// state, silently dropping the notice on every dev-mode render. Splitting the
+// read from the clear (below) removes the impurity instead of working around
+// it, so no double-invoke count changes the answer.
 function isOidcFailureMarker(): boolean {
   return globalThis.location?.hash === OIDC_FAILURE_HASH;
 }
@@ -150,11 +149,10 @@ export function AuthScreen({
     const token = takeHashCredential(RESET_ROUTE);
     return token ? { kind: "reset", token } : { kind: "login" };
   });
-  // Read once, same instant as the reset token above: both are one-shot
-  // markers this screen's own mount is responsible for taking out of the
-  // address before anything else reads it. The read itself is pure — see
-  // isOidcFailureMarker's comment for why — the clear happens in the effect
-  // below.
+  // Read once, same instant as the reset token above: both are one-shot markers
+  // this screen's own mount is responsible for taking out of the address before
+  // anything else reads it. The read itself is pure — see isOidcFailureMarker's
+  // comment for why — the clear happens in the effect below.
   const [oidcFailed] = useState(isOidcFailureMarker);
   useEffect(() => {
     if (oidcFailed) {
@@ -219,12 +217,11 @@ export function AuthScreen({
   const passwordOffered = capabilities.data?.password !== false;
 
   const servedOidcProviders = capabilities.data?.oidc_providers ?? [];
-  // True only when previewedOidcProviders (below) actually invented the
-  // list this render draws — never merely because the preview build flag
-  // is set. An installation that genuinely serves OIDC providers keeps
-  // working buttons even under a preview build: the switch exists to
-  // stand in for a server with none configured, not to blanket-disable a
-  // real one.
+  // True only when previewedOidcProviders (below) actually invented the list
+  // this render draws — never merely because the preview build flag is set. An
+  // installation that genuinely serves OIDC providers keeps working buttons
+  // even under a preview build: the switch exists to stand in for a server with
+  // none configured, not to blanket-disable a real one.
   const oidcProvidersSynthesized =
     servedOidcProviders.length === 0 && uiPreviewOidcEnabled();
   // The server's answer, passed through the ONE ui-preview override site. Off
@@ -335,14 +332,14 @@ export function AvailabilityScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
-        <h1>
+        <AuthCardTitle>
           {t(
             kind === "connection"
               ? "auth.connectionTitle"
               : "auth.unavailableTitle",
           )}
-        </h1>
-        <p className="card-sub">
+        </AuthCardTitle>
+        <p>
           {t(
             kind === "connection"
               ? "auth.connectionBody"
@@ -536,14 +533,14 @@ function LoginForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      {/* The page says its name once. The greeting above IS this page's
-          heading, so the form's own title and sub-line would repeat it in a
+      {/* The page says its name once. The greeting beside this form IS the
+          page's h1, so the form's own title and sub-line would repeat it in a
           larger voice than the sentence they follow. Both stay in the
           accessibility tree, where a form still wants its name, and leave the
-          composition. The other views keep theirs: nothing above a password
-          reset form says what it is. */}
-      <h1 className="sr-only">{t("auth.loginTitle")}</h1>
-      <p className="card-sub sr-only">{t("auth.loginSub")}</p>
+          composition. The other views keep theirs visible: nothing above a
+          password reset form says what it is. */}
+      <AuthCardTitle className="sr-only">{t("auth.loginTitle")}</AuthCardTitle>
+      <p className="sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
         disabled={login.isPending}
@@ -679,8 +676,8 @@ function ForgotForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <h1>{t("auth.forgotTitle")}</h1>
-      <p className="card-sub">{t("auth.forgotSub")}</p>
+      <AuthCardTitle>{t("auth.forgotTitle")}</AuthCardTitle>
+      <p>{t("auth.forgotSub")}</p>
       <div className="auth-fields">
         {/* Same icon as the sign-in card's email field. Without it the text
             starts 22px further left than on the screen the user just came from,
@@ -828,8 +825,8 @@ function ResetForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <h1>{t("auth.resetTitle")}</h1>
-      <p className="card-sub">{t("auth.resetSub")}</p>
+      <AuthCardTitle>{t("auth.resetTitle")}</AuthCardTitle>
+      <p>{t("auth.resetSub")}</p>
       <div className="auth-fields">
         <Field
           label={t("auth.newPassword")}
@@ -906,8 +903,8 @@ function Notice({
 }>) {
   return (
     <section className="auth-card">
-      <h1>{title}</h1>
-      <p className="card-sub">{body}</p>
+      <AuthCardTitle>{title}</AuthCardTitle>
+      <p>{body}</p>
       <div className="auth-actions">
         <Button variant="primary" onClick={onAction}>
           {action}

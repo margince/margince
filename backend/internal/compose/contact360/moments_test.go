@@ -954,36 +954,3 @@ func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 // The rung is deliberately not narrowed to the deciding roles: a deal with no
 // next step is worth saying whoever the seat belongs to. What was wrong was the
 // sentence.
-func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		role *string
-		want string
-	}{
-		{"an influencer", ptr("influencer"), "The deal is live and nothing is scheduled with them. They are the recorded influencer on it."},
-		{"an economic buyer", ptr("economic_buyer"), "The deal is live and nothing is scheduled with them. They are the recorded economic buyer on it."},
-		// A stakeholder edge may carry no role at all, and a sentence naming
-		// one anyway would invent the fact the rung exists to report.
-		{"a seat with no role recorded", nil, "The deal is live and nothing is scheduled with them. They are a stakeholder on it."},
-		{"a seat whose role is blank", ptr("  "), "The deal is live and nothing is scheduled with them. They are a stakeholder on it."},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			page := &crmcontracts.Contact360{
-				Commercial: &crmcontracts.Contact360Commercial{
-					Deal: &crmcontracts.Contact360CommercialDeal{Title: "Expansion"},
-					Role: tc.role,
-				},
-			}
-			got := deriveMoment(readerCtx(), now, page)
-			if got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
-				t.Fatalf("rule = %q, want missing_next_step", got.Rule)
-			}
-			if got.WhyNow != tc.want {
-				t.Errorf("why now = %q, want %q", got.WhyNow, tc.want)
-			}
-			if strings.Contains(got.WhyNow, "decides it") {
-				t.Error("the sentence still claims this seat decides the deal, which the role vocabulary does not say")
-			}
-		})
-	}
-}

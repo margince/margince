@@ -127,7 +127,7 @@ export function CompanyProfileForm({
           title={<span id={reasonId}>{reason}</span>}
         />
       )}
-      <Panel title={t("co.narrative.title")} sub={t("co.narrative.sub")}>
+      <Panel title={t("co.narrative.title")}>
         <PanelBody>
           <FieldGrid>
             {NARRATIVE_FIELDS.map((field) => (

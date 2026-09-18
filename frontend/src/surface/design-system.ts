@@ -60,7 +60,7 @@ export {
 // alternative to publishing this is a warning that reads as body copy.
 //
 // The tones are claims rather than decoration — see the component's own note —
-// and that is exactly why this is publishable: a unit picking `warn` is saying
+// and that is exactly why this is publishable: a unit picking `warning` is saying
 // the same thing core says with it.
 export { Callout, type CalloutTone } from "../design-system/callout";
 // ChoiceList, because a unit offering an either/or has otherwise to hide it in a

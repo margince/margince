@@ -167,7 +167,7 @@ function UnansweredLine({
     <p className="pdigest-open staging-card">
       <span className="pdigest-label">{row.label}</span>
       <span className="pdigest-blank">{t("ob.digest.notWritten")}</span>
-      <Button variant="ghost" small onClick={() => onSettle(row.field)}>
+      <Button variant="ghost" onClick={() => onSettle(row.field)}>
         {t("ob.digest.settle")}
       </Button>
     </p>

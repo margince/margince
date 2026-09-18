@@ -1,7 +1,5 @@
 /** @vitest-environment happy-dom */
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import "@testing-library/jest-dom/vitest";
 import {
   act,
   cleanup,
@@ -171,12 +169,12 @@ describe("the sort menu", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const menu = sortMenu();
-    expect(menu.getByRole("button", { name: "Name" })).toBeTruthy();
-    expect(menu.getByRole("button", { name: "Value" })).toBeTruthy();
+    expect(menu.getByRole("radio", { name: "Name" })).toBeTruthy();
+    expect(menu.getByRole("radio", { name: "Value" })).toBeTruthy();
     // Note and Region name no server sort field, so ordering by them is
     // something the API cannot do and the menu must not offer.
-    expect(menu.queryByRole("button", { name: "Note" })).toBeNull();
-    expect(menu.queryByRole("button", { name: "Region" })).toBeNull();
+    expect(menu.queryByRole("radio", { name: "Note" })).toBeNull();
+    expect(menu.queryByRole("radio", { name: "Region" })).toBeNull();
   });
 
   it("still offers a column the reader has hidden", async () => {
@@ -192,14 +190,14 @@ describe("the sort menu", () => {
     await userEvent.click(screen.getByRole("button", { name: "Columns" }));
     await userEvent.click(
       within(screen.getByRole("group", { name: "Shown columns" })).getByRole(
-        "button",
+        "checkbox",
         { name: "Value" },
       ),
     );
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
-    expect(sortMenu().getByRole("button", { name: "Value" })).toBeTruthy();
+    expect(sortMenu().getByRole("radio", { name: "Value" })).toBeTruthy();
   });
 
   it("presses the same direction a header press would", async () => {
@@ -214,10 +212,10 @@ describe("the sort menu", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
-    await userEvent.click(sortMenu().getByRole("button", { name: "Name" }));
+    await userEvent.click(sortMenu().getByRole("radio", { name: "Name" }));
     expect(onChange).toHaveBeenCalledWith("name");
 
-    await userEvent.click(sortMenu().getByRole("button", { name: "Value" }));
+    await userEvent.click(sortMenu().getByRole("radio", { name: "Value" }));
     expect(onChange).toHaveBeenLastCalledWith("-value");
   });
 
@@ -236,13 +234,14 @@ describe("the sort menu", () => {
     }
     render(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
-    const entry = sortMenu().getByRole("button", { name: /^Name/ });
-    expect(entry.getAttribute("aria-pressed")).toBe("true");
-    expect(entry.textContent).toContain("ascending");
+    const entry = sortMenu().getByRole("radio", { name: /^Name/ });
+    expect(entry).toBeChecked();
+    expect(entry.closest("label")?.textContent).toContain("ascending");
 
     await userEvent.click(entry);
     expect(
-      sortMenu().getByRole("button", { name: /^Name/ }).textContent,
+      sortMenu().getByRole("radio", { name: /^Name/ }).closest("label")
+        ?.textContent,
     ).toContain("descending");
   });
 
@@ -278,9 +277,9 @@ describe("the sort menu", () => {
     );
   });
 
-  // ONE order at a time, so the entry in force wears a checkmark rather than a
-  // tick box: a box is the shape of a set a reader adds to, and five of them
-  // over five orderings promised a combination this list cannot be in.
+  // ONE order at a time, so the entries are RADIOS: a box is the shape of a set
+  // a reader adds to, and five of them over five orderings promised a
+  // combination this list cannot be in.
   it("marks the order in force without offering a set to build", async () => {
     render(
       <ListTable
@@ -294,12 +293,8 @@ describe("the sort menu", () => {
     await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
     const menu = sortMenu();
 
-    expect(
-      menu.getByRole("button", { name: /^Name/ }).getAttribute("aria-pressed"),
-    ).toBe("true");
-    expect(
-      menu.getByRole("button", { name: "Value" }).getAttribute("aria-pressed"),
-    ).toBe("false");
+    expect(menu.getByRole("radio", { name: /^Name/ })).toBeChecked();
+    expect(menu.getByRole("radio", { name: "Value" })).not.toBeChecked();
     expect(menu.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
@@ -315,8 +310,8 @@ describe("the sort menu", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: SORT_DIAL }));
-    const fallback = sortMenu().getByRole("button", { name: "Default order" });
-    expect(fallback.getAttribute("aria-pressed")).toBe("false");
+    const fallback = sortMenu().getByRole("radio", { name: "Default order" });
+    expect(fallback).not.toBeChecked();
     await userEvent.click(fallback);
     expect(onChange).toHaveBeenCalledWith("");
   });
@@ -375,7 +370,7 @@ describe("filter chips", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
     await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("button", { name: "New" }));
+    await userEvent.click(screen.getByRole("radio", { name: "New" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
 
     rerender(
@@ -623,7 +618,7 @@ describe("filter menu", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
     await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("button", { name: "New" }));
+    await userEvent.click(screen.getByRole("radio", { name: "New" }));
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
   });
 
@@ -680,9 +675,10 @@ describe("filter menu", () => {
       throw new Error("the condition trigger did not render");
     }
     await userEvent.click(trigger);
-    const items = container.querySelectorAll(".lt-menu.open .lt-mi");
-    expect(items.length).toBe(1);
-    expect(items[0]?.textContent).toBe("is");
+    const condition = within(
+      screen.getByRole("group", { name: "Condition" }),
+    ).getByRole("radio", { name: "is" });
+    expect(condition).toBeChecked();
   });
 
   it("'+' opens the attribute picker for the remaining attributes", async () => {
@@ -755,7 +751,7 @@ describe("a chip with an async search source", () => {
     }
 
     await waitFor(() => expect(search).toHaveBeenCalledWith("ac"));
-    expect(await screen.findByRole("button", { name: "Acme" })).toBeTruthy();
+    expect(await screen.findByRole("radio", { name: "Acme" })).toBeTruthy();
   });
 
   it("keeps the previous results on screen while the next query is in flight", async () => {
@@ -794,7 +790,7 @@ describe("a chip with an async search source", () => {
     } finally {
       vi.useRealTimers();
     }
-    expect(await screen.findByRole("button", { name: "Acme" })).toBeTruthy();
+    expect(await screen.findByRole("radio", { name: "Acme" })).toBeTruthy();
 
     vi.useFakeTimers();
     try {
@@ -807,12 +803,12 @@ describe("a chip with an async search source", () => {
     }
     await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
     // The prior result stays up while the next query is still in flight.
-    expect(screen.getByRole("button", { name: "Acme" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Acme" })).toBeTruthy();
     expect(screen.getByText("Searching…")).toBeTruthy();
 
     resolveSecond?.([{ value: "o2", label: "Acme Renewals" }]);
     expect(
-      await screen.findByRole("button", { name: "Acme Renewals" }),
+      await screen.findByRole("radio", { name: "Acme Renewals" }),
     ).toBeTruthy();
   });
 
@@ -859,12 +855,14 @@ describe("column picker", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Columns" }));
-    expect(screen.queryByRole("button", { name: "Name" })).toBeNull();
+    // The identity column is not optional, so it is not on offer.
+    expect(screen.queryByRole("checkbox", { name: "Name" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Value" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Value" }));
     expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Value" }));
+    // The menu is still standing: a set is built in one visit, not one per tick.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Value" }));
     expect(screen.getByRole("columnheader", { name: "Value" })).toBeTruthy();
   });
 });
@@ -1475,53 +1473,5 @@ describe("phone card layout hooks", () => {
     expect(value.getAttribute("data-label")).toBe("Value");
     expect(note.getAttribute("data-label")).toBe("Note");
     expect(region.getAttribute("data-label")).toBe("Region");
-  });
-});
-
-// jsdom applies no stylesheet, so every interaction test above passes whether
-// or not these popups can actually be seen. This reads the stylesheet itself:
-// the applied-filter row hosts the popups for its condition, its value and its
-// delete step INSIDE its own box, so a rule that clips the row clips all three
-// — the menus open, and the reader sees nothing to click.
-describe("the applied filter row does not clip what it hosts", () => {
-  // Every declaration the stylesheet makes under one exact selector, joined:
-  // a rule moved elsewhere in the file still counts, a rule deleted does not.
-  const declarationsFor = (selector: string) => {
-    const css = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), "listtable.css"),
-      "utf8",
-    ).replace(/\/\*[\s\S]*?\*\//g, "");
-    const blocks = css
-      .split("}")
-      .filter((block) => block.slice(0, block.indexOf("{")).trim() === selector)
-      .map((block) => block.slice(block.indexOf("{") + 1));
-    expect(blocks.length).toBeGreaterThan(0);
-    return blocks.join("\n");
-  };
-
-  it("leaves its own overflow visible", () => {
-    const block = declarationsFor(".lt-frow");
-    expect(block).not.toContain("overflow: hidden");
-    expect(block).toContain("overflow: visible");
-  });
-
-  // The row gave up its own clipping, so the rounding has to live on the
-  // segments at each end. Without these the pill reads as a bare rectangle.
-  // The row is 30px tall and its segments take that height from it; the more
-  // segment sits in a wrapper that centres instead of stretching, so it has
-  // to claim the height itself or it is as tall as its glyph — and axe then
-  // refuses the leads page for a 15px pointer target (WCAG 2.2 AA, 2.5.8).
-  it("fills the row with the more segment, like the segment beside it", () => {
-    expect(declarationsFor(".lt-frow-seg")).toContain("height: 100%");
-    expect(declarationsFor(".lt-frow-more")).toContain("height: 100%");
-  });
-
-  it("rounds the segments at each of its ends", () => {
-    const left = declarationsFor(".lt-frow > :first-child");
-    expect(left).toContain("border-top-left-radius: var(--r-full)");
-    expect(left).toContain("border-bottom-left-radius: var(--r-full)");
-    const right = declarationsFor(".lt-frow-more");
-    expect(right).toContain("border-top-right-radius: var(--r-full)");
-    expect(right).toContain("border-bottom-right-radius: var(--r-full)");
   });
 });

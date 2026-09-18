@@ -1,9 +1,13 @@
 import { ArrowRight, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { type Translator, usePlural, useT } from "../i18n";
+import { usePlural, useT } from "../i18n";
 import { ActionRow } from "./actionrow";
 import { Badge, Button } from "./atoms";
 import { IconAction } from "./iconaction";
+// StagedProposal draws its own provenance — an accepted value keeps the agent's
+// and an edited one becomes human-typed — so the names are imported here as
+// well as re-exported below: a re-export binds nothing in this file's scope.
+import { type Provenance, ProvenanceTag } from "./provenance";
 import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
 
@@ -267,103 +271,19 @@ export function ConfidenceMeter({
   );
 }
 
-// Provenance is an agent (`agent:capture`), a connector (`connector:gmail`), a
-// job the installation ran itself (`system:contact_auto_enrich`), a human, or a
-// buyer — the shapes captured_by can take, plus the honest last arm for a row
-// that records none of them. A reader has to be able to tell WHICH KIND of
-// thing produced a value, so each is its own arm: a scheduled sweep announced
-// as an AI agent misdescribes both.
+// Where a value came from lives in provenance.tsx beside this file: the trust
+// primitives are about a value's STATE — staged or real, how sure, on what
+// evidence — and provenance is about its ORIGIN, which four screens render
+// without staging anything at all.
 //
-// `buyer` is the contact on the other side of a Deal Room: outside the
-// company, holding no seat and named in no member directory. It is its own
-// arm rather than a `human` one because a reader cannot ask a buyer the way
-// they can ask a colleague, and it is not `unknown` because that arm means
-// nobody recorded a source — here the source IS recorded, and it is a contact.
-// Nothing to name today: a Deal Room participant resolves to no display name on
-// the read path, so the tag says the kind, the way `agent` and `system` do.
-//
-// `human` carries whether that human is the reader. "Typed by you" over a
-// colleague's entry is a false statement about who to ask, and it was also
-// what an unattributed row said: the two cases a reader most needs kept apart
-// both read as their own handiwork.
-//
-// `agent` and `system` name the actor only when the wire named it. Neither is
-// required, because the id behind an agent may be a passport uuid and there are
-// no record lookups here to resolve it: an unnamed tag says the kind and stops,
-// which is more than an identifier tells a reader and all of it is true.
-export type Provenance =
-  | { kind: "agent"; agent?: string }
-  | { kind: "connector"; connector: string }
-  | { kind: "system"; job?: string }
-  | { kind: "human"; self: boolean; userId?: string }
-  | { kind: "buyer" }
-  | { kind: "unknown" };
-
-export function ProvenanceTag({
-  provenance,
-  // How a named human renders. The design system has no record lookups, so a
-  // caller that can resolve a user id to a name supplies the element; without
-  // one the tag says a contact entered it without claiming which one.
-  renderUser,
-}: Readonly<{
-  provenance: Provenance;
-  renderUser?: (userId: string) => ReactNode;
-}>) {
-  const t = useT();
-  // Indigo is the claim that a model wrote it, so only the agent arm wears it.
-  // A connector copies what a mailbox already held and a system job runs a
-  // rule nobody inferred: drawn in the AI tone, either would tell a reader a
-  // model decided something. Every other arm is the neutral badge, told apart
-  // by its words.
-  return (
-    <Badge tone={provenance.kind === "agent" ? "ai" : "default"}>
-      {provenanceLabel(provenance, t, renderUser)}
-    </Badge>
-  );
-}
-
-/**
- * The provenance as words alone, for a meta line that names where a value came
- * from beside other plain words (a fact row's source). The tag above is the
- * same words on a badge, for a value that stands on its own.
- */
-export function provenanceLabel(
-  provenance: Provenance,
-  t: Translator,
-  renderUser: ((userId: string) => ReactNode) | undefined,
-): ReactNode {
-  switch (provenance.kind) {
-    case "agent":
-      return provenance.agent
-        ? t("trust.agentTag", { agent: provenance.agent })
-        : t("trust.agentUnnamed");
-    case "system":
-      return provenance.job
-        ? t("trust.systemTag", { job: provenance.job })
-        : t("trust.systemUnnamed");
-    case "connector":
-      return t("trust.connectorTag", { connector: provenance.connector });
-    case "buyer":
-      return t("trust.typedByBuyer");
-    case "unknown":
-      return t("trust.sourceUnknown");
-    case "human": {
-      if (provenance.self) {
-        return t("trust.typedByYou");
-      }
-      const named = provenance.userId
-        ? renderUser?.(provenance.userId)
-        : undefined;
-      return named ? (
-        <>
-          {t("trust.typedByPrefix")} {named}
-        </>
-      ) : (
-        t("trust.typedByHuman")
-      );
-    }
-  }
-}
+// Re-exported here because that is where every caller already imports it from,
+// and moving a file is not a reason to touch eight screens.
+export {
+  type Provenance,
+  ProvenanceTag,
+  provenanceLabel,
+  type SourceAuthor,
+} from "./provenance";
 
 // The universal triad, with ONE of the three a call to action. Accept keeps its
 // word and its fill on the trailing edge; Dismiss and Edit sit on the leading
@@ -386,19 +306,17 @@ export function ApprovalGate({
     <ActionRow
       className="approval-gate"
       primary={
-        <Button variant="primary" small onClick={onAccept}>
+        <Button variant="primary" onClick={onAccept}>
           {t("trust.accept")}
         </Button>
       }
     >
       <IconAction
-        small
         label={t("trust.dismiss")}
         icon={<Trash2 aria-hidden />}
         onClick={onDismiss}
       />
       <IconAction
-        small
         label={t("trust.edit")}
         icon={<Pencil aria-hidden />}
         onClick={onEdit}
@@ -455,7 +373,7 @@ export function StagedProposal({
   if (state.phase === "resolved") {
     const { resolution } = state;
     if (resolution.outcome === "dismissed") {
-      return <p className="t-caption">{t("trust.dismissed")}</p>;
+      return <p>{t("trust.dismissed")}</p>;
     }
     // Accepted keeps agent provenance; an edit makes the value human-typed.
     // Either way the original evidence stays attached (§4.4).
@@ -466,7 +384,7 @@ export function StagedProposal({
     return (
       <section className="real-card" aria-label={t("trust.resolvedValue")}>
         <ProvenanceTag provenance={provenance} />
-        <p style={{ marginTop: 8 }}>
+        <p style={{ marginTop: "var(--space-2)" }}>
           {proposal.description}: <strong>{resolution.value}</strong>
         </p>
         {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
@@ -476,11 +394,13 @@ export function StagedProposal({
 
   return (
     <StagingCard>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+      >
         <ProvenanceTag provenance={{ kind: "agent", agent: proposal.agent }} />
         <ConfidenceMeter level={proposal.confidence} />
       </div>
-      <p style={{ marginTop: 8 }}>
+      <p style={{ marginTop: "var(--space-2)" }}>
         {proposal.description}:{" "}
         <span className="staged-value">{proposal.value}</span>
       </p>
@@ -507,7 +427,7 @@ export function StagedProposal({
               setState({ phase: "editing", draft: event.target.value })
             }
           />
-          <Button type="submit" variant="primary" small>
+          <Button type="submit" variant="primary">
             {t("trust.save")}
           </Button>
         </form>
@@ -545,7 +465,7 @@ export function FieldDiff({
           label={t("history.oldValue")}
         />
       )}
-      <ArrowRight className="field-diff-arrow" aria-hidden size={14} />
+      <ArrowRight aria-hidden size={14} />
       {newValue === null ? (
         <span className="field-diff-empty">{t("history.cleared")}</span>
       ) : (

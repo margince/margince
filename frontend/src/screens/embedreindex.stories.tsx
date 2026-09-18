@@ -75,8 +75,8 @@ const renderNeedsReindex = () => {
 export const NeedsReindex: Story = { render: renderNeedsReindex };
 
 // The same card in dark. The status Badge is the whole state machine in one
-// chip — warn for "needed", accent for "re-embedding", success for idle — and
-// nothing else on the card distinguishes them, so a warn that stops reading as a
+// chip — warning for "needed", accent for "re-embedding", success for idle — and
+// nothing else on the card distinguishes them, so a warning that stops reading as a
 // warning turns a pending reindex into a report that everything is fine.
 export const NeedsReindexDark: Story = {
   globals: { theme: "dark" },
