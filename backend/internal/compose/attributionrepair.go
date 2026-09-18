@@ -32,9 +32,13 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -43,6 +47,12 @@ import (
 type attributionHandlers struct {
 	db         *database.DB
 	activities *activities.Store
+	// The record stores, one per module that owns a table this repair reaches.
+	// contacts owns three of the five record types (contact, company, lead), so
+	// it takes the object name as an argument where the other two do not.
+	contacts *contacts.Store
+	deals    *deals.Store
+	projects *projects.Store
 }
 
 // RepairSourceAttribution writes one batch of author attributions.
@@ -81,13 +91,10 @@ func (h attributionHandlers) RepairSourceAttribution(w http.ResponseWriter, r *h
 		httperr.Write(w, r, httperr.Validation("rows", "empty", "Send at least one record to attribute."))
 		return
 	}
-	// The contract says at most five hundred and names one object type; neither
-	// is enforced by the generated wrapper, which validates no enum and no
-	// maxItems. Unchecked, the type is worse than cosmetic: every row is
-	// written to the ACTIVITY table regardless, while the ledger is keyed on
-	// whatever the caller sent — so two rows naming one id under two types edit
-	// the same activity and record their revisions in different places, and the
-	// gate that is supposed to refuse a stale answer stops seeing it.
+	// The contract bounds the batch at five hundred and the generated wrapper
+	// enforces no maxItems, so this is where that bound binds. The object-type
+	// enum is checked a few lines down, in attributionRowsRefused, against the
+	// same map the dispatch reads.
 	if len(req.Rows) > attributionBatchMax {
 		httperr.Write(w, r, httperr.Validation("rows", "too_many",
 			fmt.Sprintf("Send at most %d records in one batch.", attributionBatchMax)))
@@ -131,7 +138,7 @@ func (h attributionHandlers) RepairSourceAttribution(w http.ResponseWriter, r *h
 		}
 		out.Rows = append(out.Rows, result)
 		switch outcome {
-		case string(activities.SourceAuthorApplied):
+		case string(storekit.SourceAuthorApplied):
 			out.Applied++
 		case outcomeUnchanged:
 			out.Unchanged++
@@ -158,15 +165,19 @@ func (h attributionHandlers) RepairSourceAttribution(w http.ResponseWriter, r *h
 // no pattern and no maxLength.
 func attributionRowsRefused(rows []crmcontracts.SourceAttributionRow) error {
 	for i, row := range rows {
-		// Unchecked, the type is worse than cosmetic: every row is written to
-		// the ACTIVITY table regardless, while the ledger is keyed on whatever
-		// the caller sent — so two rows naming one id under two types edit the
-		// same activity and record their revisions in different places, and the
-		// gate that is supposed to refuse a stale answer stops seeing it.
-		if row.ObjectType != crmcontracts.SourceAttributionRowObjectTypeActivity {
+		// Unchecked, the type is worse than cosmetic: it selects which TABLE the
+		// row is written to, and the ledger is keyed on whatever the caller
+		// sent — so a type nothing dispatches on would record a revision under a
+		// key no write ever reaches, and the gate that is supposed to refuse a
+		// stale answer would stop seeing it.
+		//
+		// Checked against the dispatch itself rather than against a list beside
+		// it: a type accepted here and unhandled there is exactly the divergence
+		// a second list produces.
+		if _, ok := attributableObjects[row.ObjectType]; !ok {
 			return httperr.Validation(
 				fmt.Sprintf("rows[%d].object_type", i), "unsupported",
-				"Only activities carry a source author today.")
+				"A source author can be recorded on an activity, contact, company, deal, lead or project.")
 		}
 		// Unchecked, an over-long name reaches the column as a database error
 		// mid-batch: the rows before it are committed, the rows after it never
@@ -233,7 +244,20 @@ func (h attributionHandlers) attributeOne(
 	// back whether the record was already attributed. The object grant is
 	// checked here so the whole transaction, bookkeeping included, sits behind
 	// it; the store checks it again for its own callers.
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+	//
+	// The RECORD'S OWN object, read from the same map the dispatch reads. A
+	// single administrative grant here would let a caller holding `deal:update`
+	// alone reach a contact's byline, and a grant hard-coded to `activity`
+	// would let them reach all five record types on an activity's authority.
+	object, ok := attributableObjects[row.ObjectType]
+	if !ok {
+		// Unreachable through the route — attributionRowsRefused answered this
+		// before any row was written — but a missing entry must refuse rather
+		// than fall through to an empty object name, which auth.Require would
+		// read as a grant nobody holds and every row would 403 with no reason.
+		return "", "", fmt.Errorf("compose: %q has no RBAC object", row.ObjectType)
+	}
+	if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
 		return "", "", err
 	}
 	err = database.WithWorkspaceTx(ctx, h.db.Pool(), func(tx pgx.Tx) error {
@@ -277,17 +301,17 @@ func (h attributionHandlers) attributeOne(
 		// Both failures come from deciding outside the activity's own lock. So
 		// the store decides, under that lock and behind the visibility check it
 		// makes, and answers `unchanged` as a third outcome.
-		in := activities.SourceAuthorInput{AuthorName: row.SourceAuthorName}
+		in := storekit.SourceAuthorInput{AuthorName: row.SourceAuthorName}
 		if row.SourceAuthorId != nil {
 			id := ids.UUID(*row.SourceAuthorId)
 			in.AuthorID = &id
 		}
-		got, why, err := h.activities.SetSourceAuthorTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(row.ObjectId)), in)
+		got, why, err := h.attributeRecord(ctx, tx, row, in)
 		if err != nil {
 			return err
 		}
 		outcome, reason = string(got), why
-		if got == activities.SourceAuthorSkipped {
+		if got == storekit.SourceAuthorSkipped {
 			// Nothing was written, so nothing is recorded. The reason is the
 			// caller's to act on — fix the mapping, or accept that the record is
 			// gone — and a ledger row would tell the next run there is nothing

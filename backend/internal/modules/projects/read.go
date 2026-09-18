@@ -253,9 +253,13 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	return where
 }
 
-const projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
+// A var rather than a const: the seat-name subselect is built by a function.
+var projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
 	description, started_at, target_end_date, ended_at, last_activity_at,
-	source, captured_by, version, created_at, updated_at, archived_at`
+	source, captured_by,
+	source_system, source_author_id, source_author_name,
+	` + sourceAuthorSeatNameSQL("project") + `,
+	version, created_at, updated_at, archived_at`
 
 // readProject resolves one project row; active names the custom-field
 // columns to carry alongside the core ones — nil for internal decision
@@ -281,11 +285,15 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var phase string
 	var startedAt, targetEnd, endedAt *time.Time
 	var version int64
+	var sourceSystem, authorName, authorSeatName *string
+	var authorID *ids.UUID
 
 	dests := []any{
 		&id, &p.Name, &p.Key, &companyID, &ownerID, &phase, &p.ClosedReason,
 		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt,
-		&p.Source, &p.CapturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&p.Source, &p.CapturedBy,
+		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -311,5 +319,6 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.EndedAt = &openapi_types.Date{Time: *endedAt}
 	}
 	p.Version = &version
+	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	return p, nil
 }

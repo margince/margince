@@ -149,7 +149,17 @@ var activityProjection = []activityColumn{
 // NO liveness filter, deliberately. Who wrote something in August is a fact
 // about August: a colleague who has since left was still its author, and
 // readEmailParties already refuses the same filter for the same reason.
-const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u WHERE u.id = a.source_author_id)`
+//
+// ALIASED, and the alias is load-bearing even though no activity reader needs
+// it today. An unaliased subselect takes its output name from the column inside
+// it, so this arrives as `display_name`; a select list that also draws a column
+// of that name then has two of them, and `ORDER BY "display_name"` fails with
+// SQLSTATE 42702. The record stores' copies of this helper shipped unaliased
+// and took the accounts list down for exactly that reason. No activity
+// projection draws a `display_name` today — this is aliased so the next one
+// does not rediscover it.
+const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u ` +
+	`WHERE u.id = a.source_author_id) AS source_author_seat_name`
 
 // SourceAuthorOf builds the record's `author` from the column pair and the
 // seat name the projection resolved, or answers nil when the row has no author.
