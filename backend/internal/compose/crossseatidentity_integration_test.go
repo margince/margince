@@ -194,6 +194,37 @@ func TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames(t *testing.T) {
 	}
 }
 
+// A WITHDRAWN connection proves nothing, though its label survives.
+//
+// Disconnecting sets status='disconnected' and clears the credential, but
+// leaves the row unarchived with account_label intact
+// (registry_connections.go:386-391). Without the status test a seat who
+// connected a mailbox once, then revoked it — or had it revoked for them —
+// would go on attributing a colleague's imports forever.
+func TestAWithdrawnConnectionDoesNotAttribute(t *testing.T) {
+	e := integration.Setup(t)
+	const messageID = "withdrawn@counterparty.example"
+
+	connectAs(t, e, e.Rep1, "gmail", ownerAddr)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_connection SET status = 'disconnected', auth = NULL
+			 WHERE user_id = $1 AND provider = 'gmail'`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("withdrawing the connection: %v", err)
+	}
+
+	importThrough(t, e, e.Rep2, importedFromAnotherCRM(
+		messageID, "Angebot", "hubspot stripped this"))
+	captureWithTakeOver(t, e, e.Rep1,
+		theSameMessage(messageID, "pat@counterparty.example", ownerAddr))
+
+	if got := activitiesDescribing(t, e, messageID); got != 2 {
+		t.Fatalf("a withdrawn connection attributed an import: %d activities, want 2", got)
+	}
+}
+
 // A DECLARED address does not attribute. Only a third party's word does.
 //
 // `source='user'` is a seat typing an address in about themselves. seatItself

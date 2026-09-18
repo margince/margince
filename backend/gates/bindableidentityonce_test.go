@@ -23,9 +23,10 @@ package gates
 //
 // What this gate CANNOT see: whether a caller obeys the answer. A door that
 // calls ResolveBindableIdentity and then binds anyway passes here. The
-// integration tests in compose/importthencapture_integration_test.go are what
-// cover that, and the cross-seat cases there are mutation-checked against the
-// removal of the arm each one covers.
+// integration tests are what cover that, in two files: the same-seat cases in
+// compose/importthencapture_integration_test.go and the cross-seat ones in
+// compose/crossseatidentity_integration_test.go. Both are mutation-checked
+// against the removal of the arm each case covers.
 
 import (
 	"go/ast"

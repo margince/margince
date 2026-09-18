@@ -95,7 +95,7 @@ func SeatProvedAddressTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address 
 	rows, err := tx.Query(ctx, `
 		SELECT account_label FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND provider = ANY($2)`,
+		   AND status = 'connected' AND provider = ANY($2)`,
 		seat, providerAttestedLabels)
 	if err != nil {
 		return false, fmt.Errorf("capture: reading whether a seat proved %s: %w", address, err)
@@ -133,7 +133,7 @@ func SeatsProvingAddressTx(ctx context.Context, tx pgx.Tx, address string) (int,
 	rows, err := tx.Query(ctx, `
 		SELECT user_id, account_label FROM capture_connection
 		 WHERE coalesce(account_label, '') <> '' AND archived_at IS NULL
-		   AND provider = ANY($1)`,
+		   AND status = 'connected' AND provider = ANY($1)`,
 		providerAttestedLabels)
 	if err != nil {
 		return 0, fmt.Errorf("capture: counting who proved %s: %w", address, err)
