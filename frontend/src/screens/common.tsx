@@ -9,7 +9,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import type { Provenance } from "../design-system/trust";
+import type { Provenance, SourceAuthor } from "../design-system/trust";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./common.css";
@@ -433,6 +433,11 @@ export function QueryGate<Data>({
 export function provenanceOf(
   capturedBy: string | undefined,
   viewerUserId?: string,
+  // Who wrote it in the system it was imported FROM, when the row carries one.
+  // An import runs as a single administrator, so captured_by names that one
+  // seat on every row it wrote — true, and useless as a statement about
+  // authorship. The author is the field that knows, and the tag prefers it.
+  author?: SourceAuthor | null,
 ): Provenance {
   if (!capturedBy) {
     return { kind: "unknown" };
@@ -446,6 +451,7 @@ export function provenanceOf(
       kind: "human",
       self: Boolean(viewerUserId) && userId === viewerUserId,
       userId,
+      author: author ?? undefined,
     };
   }
   if (source === "buyer") {

@@ -234,6 +234,8 @@ export const de = {
   "trust.typedByHuman": "Von einer Person eingetragen",
   "trust.typedByBuyer": "Von einem Käufer eingetragen",
   "trust.typedByPrefix": "Eingetragen von",
+  "trust.loggedInByVia": "In {via} erfasst von {name}",
+  "trust.loggedInBy": "Erfasst von {name}",
   "trust.sourceUnknown": "Herkunft nicht erfasst",
   "trust.agentTag": "Automatisiert durch {agent}",
   "trust.agentUnnamed": "Automatisiert durch einen Agenten",
