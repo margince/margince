@@ -371,6 +371,7 @@ export const de = {
   "history.field.reply_verdict": "Antwortbewertung",
   "history.field.reply_verdict_by": "Antwortbewertung von",
   "history.field.research_claims_accepted": "Übernommene Rechercheangaben",
+  "history.field.scope": "Umfang",
   "history.field.stopped": "Gestoppt",
   "history.field.stops_carried": "Übernommene Sperren",
   "history.field.submission_decision": "Entscheidung zur Einreichung",
