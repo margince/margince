@@ -309,6 +309,69 @@ You don't have to remember these — a fitness test fails your PR if you break o
 
 ---
 
+## 8. The read counterpart — one snapshot for a composed read
+
+`WithWorkspaceTx` gives a write its unit of work. A READ composed from many
+statements has the mirror problem, and until recently it had no answer: every
+store opened its own transaction, so a page assembled from twenty lanes cost
+twenty transactions and answered from twenty instants.
+
+`WithWorkspaceSnapshot` is that answer. It opens ONE read-only `REPEATABLE READ`
+transaction, binds it to the context, and every `WithWorkspaceTx` reached
+beneath it **joins** that transaction instead of opening its own:
+
+```go
+err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+    // every store called with this ctx reads from one snapshot
+    return assemble(ctx)
+})
+```
+
+Two things it buys, and the second is the bigger one:
+
+- **Cost.** The worklist's ~40 dependency calls each paid `BEGIN` + `SELECT` +
+  `COMMIT` — ~120 round trips in series, which was most of the 400 ms p95 that
+  surface answered in.
+- **Agreement.** Lanes reading in separate snapshots could contradict each other
+  inside a single answer: a deal that closed between lane 3 and lane 11 appeared
+  in one and not the other, and nothing on the response said so.
+
+**These reads are not pure, and the snapshot is deliberately not `READ ONLY`.**
+The brief lane resurfaces expired snoozes and records the open as it reads.
+Under a read-only snapshot each such write would have to open its own
+transaction — which it can only do *while the snapshot is still held*, so every
+request would occupy two pooled connections at once. At `MaxConns` 16 that many
+concurrent readers wait on each other for a seventeenth, and one transaction per
+request was the whole point. Joined, those writes get the page's own fate:
+committed with the assembled day or not at all, which is the better reading of
+them anyway — a brief whose page never rendered was not opened.
+
+**`Detached` is for a call whose failure must not take the page with it.** A
+joined statement that errors leaves the shared transaction aborted, so a caller
+that swallows its own error and carries on poisons every lane after it: the
+swallow says "survivable" and the page dies two lanes later somewhere else.
+`attention`'s walk freeze is the worked example — it is best-effort by design,
+so it owns its transaction. It costs a second connection, so it had better stay
+rare.
+
+**Both openers join.** `WithWorkspaceTx` (pool-based) and `DB.transact` (the
+handle-based seam nearly every module store actually uses) each consult the
+ambient snapshot. A join spelled in only one of them leaves most lanes opening
+their own transactions *and* holding a second connection per request — the
+failure this section exists to describe. `DB.transact` additionally skips its
+statement budget when joining: `BoundStatement` is `SET LOCAL`, so a per-handle
+ceiling would silently re-time every later lane in somebody else's snapshot.
+
+**Consumers do not need to know.** Nothing about a store changes: it calls
+`WithWorkspaceTx` or `db.Tx` as it always did. That is why this reached a
+32k-line package without touching any of the 36 reader interfaces it composes.
+
+Held by `worklistsnapshot_integration_test.go`, which measures a composed page
+against a trivial route in the same run and fails when the count starts scaling
+with lanes again.
+
+---
+
 ## Rules of thumb
 
 - **Never `INSERT` into `audit_log` or `event_outbox` directly** — always `storekit.Audit` / `Emit`,
@@ -333,6 +396,7 @@ You don't have to remember these — a fitness test fails your PR if you break o
 | | |
 |---|---|
 | Write shape (`Audit`, `AuditWithEvidence`, `Emit`, `Patch`) | `internal/platform/database/storekit/{storekit,patch}.go` |
+| Composed-read snapshot (`WithWorkspaceSnapshot`, `Detached`) | `internal/platform/database/database.go` |
 | Envelope + catalog (types, streams, versions, groups) | `internal/shared/kernel/events/{envelope,catalog}.go` |
 | The relay | `internal/platform/events/relay.go` |
 | Consumer subscriber + dedupe | `internal/platform/events/{subscriber,dedupe}.go` |
