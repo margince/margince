@@ -194,6 +194,147 @@ func TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames(t *testing.T) {
 	}
 }
 
+// holdUnderTheStatutoryFloor places the message under a retention obligation,
+// the whole shape production writes it.
+//
+// The evidence row first, because activity_refuse_restricted_mutation refuses a
+// hold with nothing recording what qualified it. archived_at with it, because
+// the activity_restricted_is_archived CHECK makes held-but-live a state the
+// table cannot hold — which is why both production writers (privacy.PinToFloor
+// and the erasure's restrict arm) archive as they hold.
+//
+// Seeded rather than driven through PinToFloor because that path wants a
+// controller principal and a stated reason, and what this test varies is whether
+// the take-over respects the hold — not how the hold was decided.
+func holdUnderTheStatutoryFloor(t *testing.T, e *integration.Env, activity ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_retention_evidence
+			       (activity_id, basis, qualified_at, decided_by_name, reason)
+			VALUES ($1, 'controller_pin', now(), 'Datenschutz', 'supplier correspondence')`,
+			activity); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			UPDATE activity
+			   SET restricted_at = now(), archived_at = now(),
+			       restricted_reason = 'commercial_correspondence',
+			       restricted_until = now() + interval '10 years',
+			       retention_class = 'commercial_correspondence', retention_class_at = now()
+			 WHERE id = $1`, activity)
+		return err
+	}); err != nil {
+		t.Fatalf("placing the message under a statutory hold: %v", err)
+	}
+}
+
+// A message under a STATUTORY HOLD is not taken over, and the sync advances
+// past it.
+//
+// A hold outranks every authority an ordinary path can establish, including the
+// cross-seat proof this file is about: the arriving seat's connection evidence
+// says whose mailbox holds the message, and says nothing about whether the
+// obligation still allows the row to be written. Without the hold this is
+// exactly TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames, which binds
+// and rewrites — so the hold is the only thing between the two outcomes.
+//
+// WHICH REFUSAL STOPS IT, measured rather than assumed, because a reader will
+// otherwise look for a `restricted_at IS NULL` in the take-over and not find
+// one. Four refusals stand behind this, and the FIRST is the one that fires:
+//
+//  1. ResolveBindableIdentity answers not-found. identityHolderIsLive reads
+//     archived_at, a held row is archived, so capture never calls the take-over
+//     at all — it files the mailbox's own copy instead.
+//  2. TakeOverAssertedActivityTx's LockRow(LiveOnly) answers ErrNotFound, which
+//     capture's skipInvisibleIncumbent already handles, if a hold lands between
+//     that resolve and the write.
+//  3. The activity_restricted_is_archived CHECK makes held-but-live a state the
+//     table cannot hold, which is WHY the two above work on archived_at alone.
+//  4. activity_refuse_restricted_mutation raises on any UPDATE leaving
+//     restricted_at set.
+//
+// So this is a regression net over a defence-in-depth stack rather than the
+// guard for one clause, and no SINGLE-clause revert turns it red: each of the
+// four alone still refuses. The mutation it does catch was verified by hand —
+// making identityHolderIsLive answer true unconditionally AND relaxing the
+// take-over's LockRow to IncludeArchived turns it red, on the trigger. That
+// pair is the realistic regression: a change that widens what the resolve may
+// bind to, with the liveness filter that currently covers holds relaxed to
+// match.
+func TestAMessageUnderAStatutoryHoldIsNotTakenOver(t *testing.T) {
+	e := integration.Setup(t)
+	const messageID = "held-import@counterparty.example"
+	const heldSubject = "Angebot fuer 10 Plaetze"
+	const heldBody = "the correspondence the obligation holds"
+
+	// The cross-seat arm armed: the rep has proven the mailbox, and the admin's
+	// import names their address. Without the hold this is exactly
+	// TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames, which binds.
+	connectAs(t, e, e.Rep1, "gmail", ownerAddr)
+	importThrough(t, e, e.Rep2, importedFromAnotherCRM(messageID, heldSubject, heldBody))
+	held := scalar[ids.UUID](t, e, `
+		SELECT activity_id FROM activity_identity
+		 WHERE identity_kind = 'mail' AND identity_key = $1`, messageID)
+	holdUnderTheStatutoryFloor(t, e, held)
+	// The version AFTER the hold is written, because placing the hold is itself
+	// an UPDATE and bumps it. What this pins is that nothing touched the row
+	// between the hold and the end of the test.
+	heldVersion := scalar[int](t, e, `SELECT version FROM activity WHERE id = $1`, held)
+
+	// The rep's mailbox syncs the message. captureWithTakeOver fails the test on
+	// any error, and that is an assertion in its own right: a capture that
+	// aborted — on the trigger's check_violation, or on any refusal capture does
+	// not read as "nothing to take over" — would stall this mailbox on this
+	// message on every later pass, because the watermark never advances past a
+	// message that errors.
+	captureWithTakeOver(t, e, e.Rep1,
+		theSameMessage(messageID, "pat@counterparty.example", ownerAddr))
+
+	// The held row is exactly as the obligation left it.
+	subject := scalar[string](t, e, `SELECT subject FROM activity WHERE id = $1`, held)
+	if subject != heldSubject {
+		t.Fatalf("the held row's subject is %q — a take-over rewrote a row under a statutory hold", subject)
+	}
+	body := scalar[string](t, e, `SELECT body FROM activity WHERE id = $1`, held)
+	if body != heldBody {
+		t.Fatalf("the held row's body is %q — a take-over rewrote a row under a statutory hold", body)
+	}
+	capturedBy := scalar[string](t, e, `SELECT captured_by FROM activity WHERE id = $1`, held)
+	if capturedBy != "human:"+e.Rep2.String() {
+		t.Fatalf("the held row is stamped %q — a take-over restamped a row under a statutory hold", capturedBy)
+	}
+	// NOTHING wrote to the row at all, which the three columns above cannot
+	// show on their own: trg_activity_updated bumps version on every UPDATE of
+	// this table, so an unchanged version means no statement reached it. Without
+	// this the test would pass against a take-over that wrote the row and
+	// happened to write the same values back.
+	version := scalar[int](t, e, `SELECT version FROM activity WHERE id = $1`, held)
+	if version != heldVersion {
+		t.Fatalf("the held row's version moved from %d to %d — something wrote to a row under a statutory hold",
+			heldVersion, version)
+	}
+	// And the hold itself is intact: still held, still archived.
+	stillHeld := scalar[bool](t, e, `
+		SELECT restricted_at IS NOT NULL AND archived_at IS NOT NULL
+		  FROM activity WHERE id = $1`, held)
+	if !stillHeld {
+		t.Fatal("the hold was lifted by a capture — a sync must never release a statutory obligation")
+	}
+	// The rep still gets their mail. Refusing the take-over must not suppress
+	// the message in the mailbox that holds it: the hold is on the imported row,
+	// and the rep's own copy is a different row the obligation never named.
+	// Without this the test would pass just as well against a capture that
+	// dropped the message entirely.
+	own := scalar[int](t, e, `
+		SELECT count(*) FROM activity
+		 WHERE archived_at IS NULL AND source_system = 'email' AND source_id = $1
+		   AND captured_by = $2`, messageID, "connector:gmail:"+e.Rep1.String())
+	if own != 1 {
+		t.Fatalf("the rep's own copy landed %d times, want 1 — refusing the take-over suppressed their mail", own)
+	}
+}
+
 // A WITHDRAWN connection proves nothing, though its label survives.
 //
 // Disconnecting sets status='disconnected' and clears the credential, but
