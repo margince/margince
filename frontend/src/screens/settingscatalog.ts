@@ -268,6 +268,18 @@ export const SETTINGS_PAGES = [
     // Passports, connected agents and the autonomy choice are all this reader's.
     changes: always,
   },
+  // SELF, and the only scope it could be: both endpoints behind this page read
+  // and write the CALLING seat's rows, so there is nothing on it an admin sets
+  // for somebody else and no grant that could withhold it.
+  {
+    id: "notifications",
+    group: "me",
+    scope: "self",
+    requires: always,
+    // Every row is this reader's own choice about their own mail and their own
+    // notification centre, so acting on it needs no grant.
+    changes: always,
+  },
   // MIXED, not self: most of its cards are the reader's own, and ConnectorsCard
   // carries the workspace's Telegram bot beside them. A page-level "Only you"
   // over that panel would tell a reader a shared connection is private to them.

@@ -4543,6 +4543,44 @@ export const vi = {
     "Những nghĩa vụ này nêu tên liên hệ và cách chúng ta có được họ, nên chỉ hiển thị trong hộp thư quyền riêng tư.",
   "notice.dueAt": "Đến hạn {date}",
   "notice.overdue": "Quá hạn",
+  "notifications.bell": "Thông báo",
+  "notifications.bellWaiting": "Thông báo, {count} đang chờ",
+  "notifications.centre": "Thông báo",
+  "notifications.markAllRead": "Đánh dấu tất cả đã đọc",
+  "notifications.markRead": "Đánh dấu đã đọc",
+  "notifications.markAllFailed": "Chưa đánh dấu được thông báo nào là đã đọc",
+  "notifications.markReadFailed": "Chưa đánh dấu được thông báo đó là đã đọc",
+  "notifications.new": "Mới",
+  "notifications.byAgent": "Do tác nhân tạo",
+  "notifications.empty":
+    "Chưa có gì gửi đến. Những điều sản phẩm cần cho bạn biết sẽ xuất hiện ở đây.",
+  "notifications.title": "Mỗi loại đến với bạn bằng cách nào",
+  "notifications.sub":
+    "Mọi thông báo đều được giữ trong trung tâm thông báo của bạn, bất kể bạn chọn gì ở đây. Lựa chọn này quyết định điều gì xảy ra thêm khi một thông báo đến.",
+  "notifications.saveFailed": "Lựa chọn đó chưa được lưu",
+  "notifications.saveFailedFor": "Chưa lưu được “{setting}”",
+  "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
+  "notifications.class.approval_pending.help":
+    "Đồng nghiệp cần quyết định của bạn để công việc của họ tiếp tục được.",
+  "notifications.class.automation.label": "Tự động hoá đã chạy",
+  "notifications.class.automation.help":
+    "Một quy tắc của tổ chức này đã chạy, hoặc đã không chạy được.",
+  "notifications.class.lead_sla.label": "Lead đã quá hạn",
+  "notifications.class.lead_sla.help":
+    "Một lead chưa ai trả lời trong khoảng thời gian nhóm bạn đã thống nhất.",
+  "notifications.class.capture.label": "Thu thập thư",
+  "notifications.class.capture.help":
+    "Sự cố khi đọc một hộp thư của bạn, hoặc một khối tồn đọng đã ngừng chuyển động.",
+  "notifications.class.system.label": "Thông báo hệ thống",
+  "notifications.class.system.help":
+    "Bảo trì, một giới hạn đã đạt tới, và mọi điều khác mà bản cài đặt phải cho bạn biết.",
+  "notifications.class.coach.label": "Lời nhắc của đồng nghiệp",
+  "notifications.class.coach.help":
+    "Đồng nghiệp trong nhóm bạn chỉ ra một deal, một câu trả lời hoặc một khối tồn đọng của bạn. Những lời nhắc này luôn đến được với bạn theo cách nào đó, nên không thể tắt.",
+  "notifications.delivery.off": "Tắt",
+  "notifications.delivery.in_app": "Trong ứng dụng",
+  "notifications.delivery.email": "Qua email",
+  "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
   "privacynotice.title": "Chúng tôi lưu giữ thông tin gì về quý vị",
   "privacynotice.intro":
     "Chúng tôi thông báo điều này vì pháp luật yêu cầu. Quý vị không cần trả lời hay làm gì cả.",
@@ -6747,6 +6785,8 @@ export const vi = {
     "T\u1eeb ng\u1eef b\u1ea3n nh\u00e1p d\u00f9ng khi vi\u1ebft thay b\u1ea1n.",
   "settings.page.agents.sub":
     "T\u00e1c nh\u00e2n \u0111\u01b0\u1ee3c l\u00e0m g\u00ec khi kh\u00f4ng c\u00f3 b\u1ea1n, v\u00e0 client n\u00e0o gi\u1eef th\u00f4ng tin \u0111\u0103ng nh\u1eadp c\u1ee7a b\u1ea1n.",
+  "settings.page.notifications.sub":
+    "Nh\u1eefng lo\u1ea1i th\u00f4ng b\u00e1o n\u00e0o \u0111\u1ebfn v\u1edbi b\u1ea1n, v\u00e0 b\u1eb1ng c\u00e1ch n\u00e0o.",
   "settings.page.connections.sub":
     "H\u1ed9p th\u01b0 v\u00e0 \u0111\u1ecba ch\u1ec9 m\u00e0 gh\u1ebf n\u00e0y \u0111\u1ecdc.",
   "settings.page.capture-activity.sub":
@@ -6851,6 +6891,7 @@ export const vi = {
   "settings.tab.account": "Tài khoản",
   "settings.tab.voice": "Giọng viết",
   "settings.tab.agents": "Tác nhân",
+  "settings.tab.notifications": "Thông báo",
   "settings.tab.connections": "Kết nối",
   "settings.tab.general": "Chung",
   "settings.tab.users": "Người dùng & nhóm",

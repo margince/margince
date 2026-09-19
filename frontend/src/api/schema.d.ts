@@ -14271,7 +14271,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The notification centre — every notice addressed to the acting contact, newest first.
+         * @description The acting human's own notifications, newest first, read and unread; another seat's are
+         *     not an error, they are absent.
+         *
+         *     As against the Worklist's notices lane, which is the ATTENTION half: what is still
+         *     waiting, capped, and gone the moment somebody settles it. A reader who has answered a
+         *     notice can still need to find it — what that automation told them on Tuesday — and a
+         *     lane that forgets the instant they click is a lane they learn not to clear. This is
+         *     where it stays.
+         *
+         *     A rep's own stage moves are absent here exactly as they are from the lane: a move
+         *     somebody made themselves is not news to them, and the centre is not the place those
+         *     reappear.
+         *
+         *     Human-only. An agent carrying its grantor's authority does not read what the product
+         *     told its grantor.
+         */
+        get: operations["listNotices"];
         put?: never;
         /**
          * Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -14307,6 +14325,38 @@ export interface paths {
         put?: never;
         /** Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane. */
         post: operations["markNoticeRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notices/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Settle the acting contact's whole notification centre in one act.
+         * @description One tap for a reader who has fallen behind: every unread notice they hold is marked
+         *     read, and their centre comes back clear.
+         *
+         *     Always the CALLER's own — there is no id by which one contact clears another's, and an
+         *     agent carrying its grantor's authority does not answer its grantor's notices for them.
+         *
+         *     Idempotent, like settling one notice twice: a second tap on a centre already clear moves
+         *     no row and records no ledger entry for a change nobody made.
+         *
+         *     ONE ledger entry, and no per-notice announcement. A seat clearing a month of notices is
+         *     one act by one contact, and a `notice.read` event per row would put a hundred messages on
+         *     the bus for a single tap. A subscriber tracking read state therefore re-reads the lane
+         *     after this rather than hearing about each line.
+         */
+        post: operations["markAllNoticesRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14831,6 +14881,53 @@ export interface paths {
          *     saves on every render does not fill the ledger with changes nobody made.
          */
         put: operations["saveMyBriefDelivery"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How you have asked to be reached, one entry per class of notification.
+         * @description Always the CALLER's own. An admin does not read a colleague's notification settings
+         *     through this API any more than they read their display language.
+         *
+         *     One entry per class the product sends — all of them, every time, in the order a settings
+         *     screen reads them — each carrying the delivery in EFFECT. Choosing per CLASS rather than
+         *     per kind is the whole shape: a reader who muted "an automation fired" has not muted
+         *     "somebody is waiting on your approval", and a kind this build learns to raise arrives
+         *     under the class it belongs to rather than under a setting nobody was ever shown.
+         */
+        get: operations["listNotificationPreferences"];
+        /**
+         * Choose where one class of notification reaches you.
+         * @description One class per call; the server answers the whole set so a stale render of one row cannot
+         *     overwrite another.
+         *
+         *     Always the caller's own — there is no id by which one member decides another's, and an
+         *     agent carrying its grantor's authority does not decide how often the product may
+         *     interrupt its grantor.
+         *
+         *     A save that moves nothing writes nothing and publishes nothing, so a settings page that
+         *     saves on every render does not fill the ledger with changes nobody made. The
+         *     announcement carries the NAME of the class and never the choice: what somebody decided
+         *     about their own interruptions is theirs, and a fan-out carrying the value would tell
+         *     every subscription owner who had switched their mail off.
+         *
+         *     `coach` may be routed but not switched `off`, which is a `422`. A coaching notice is a
+         *     COLLEAGUE's words placed in this seat's queue rather than the product's own
+         *     housekeeping: dropping them silently would leave the lead who wrote them believing they
+         *     had been read.
+         */
+        put: operations["saveNotificationPreference"];
         post?: never;
         delete?: never;
         options?: never;
@@ -18704,6 +18801,103 @@ export interface components {
             body?: string;
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description A class of notification a seat decides delivery about. Closed, and deliberately coarser
+         *     than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+         *     is waiting on your approval", so the choice is made per class and every kind the product
+         *     raises is placed in one of them.
+         * @enum {string}
+         */
+        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system";
+        /**
+         * @description Where a class of notification reaches its reader. `in_app` is the notification centre and
+         *     the Worklist's lane alone; `email` sends a message as each one lands; `digest` holds them
+         *     for one rolled-up send; `off` records the notice without reaching out about it.
+         * @enum {string}
+         */
+        NotificationDelivery: "off" | "in_app" | "email" | "digest";
+        /** @description One class's setting for the calling seat, as it stands. */
+        NotificationPreference: {
+            class: components["schemas"]["NotificationClass"];
+            delivery: components["schemas"]["NotificationDelivery"];
+            /**
+             * @description Whether the seat DECIDED this, or is following the installation's default. False
+             *     follows, and moves if that default moves; true is a choice that stays. Rendering the
+             *     two the same would silently re-decide for everybody on the day a default changed.
+             */
+            chosen: boolean;
+        };
+        /**
+         * @description The calling seat's whole set — one entry per class the product sends, always all of them,
+         *     so a screen rendering one row per class never has to take the others from its own memory.
+         */
+        NotificationPreferenceList: {
+            items: components["schemas"]["NotificationPreference"][];
+        };
+        /**
+         * @description One line of the notification centre: a durable notice addressed to the caller, and
+         *     whether they have already answered it.
+         */
+        NotificationItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description What the notice is about. A plain string and NOT `NoticeKind`: that vocabulary is the
+             *     coaching one, and the kinds a system flow raises — an automation firing, a lead going
+             *     past its SLA, a capture backlog stalling — are deliberately absent from it. Read
+             *     `subject` for the headline and `target` for where to go; a client that switches on
+             *     this breaks the day a flow raises one more.
+             */
+            kind: string;
+            /** @description The headline the recipient reads, derived from the kind rather than supplied. */
+            subject: string;
+            /** @description The notice's own words beneath the headline. Absent when it had none. */
+            body?: string;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When the reader settled it. ABSENT means unread. The instant rather than a flag,
+             *     because the centre renders history: "you read this on Tuesday" is what tells a reader
+             *     they are looking at something they already dealt with, and a flag cannot say when.
+             */
+            read_at?: string;
+            /**
+             * @description The record the notice is about, when it is about one. Both halves or neither — a type
+             *     with no id names a KIND of thing and cannot be opened. Absent is the common case: a
+             *     capture backlog and a colleague's word are about no single record.
+             */
+            target?: {
+                /** @description The record's class, as its own endpoint spells it. */
+                type: string;
+                /** Format: uuid */
+                id: string;
+            };
+            origin?: components["schemas"]["NoticeOrigin"];
+        };
+        /** @description One window of the calling contact's notification centre. */
+        NotificationPage: {
+            /** @description Newest first, read and unread. Empty is the honest answer for a seat nothing has told anything. */
+            items: components["schemas"]["NotificationItem"][];
+            /**
+             * @description Send this back as `cursor` to continue past the last line of this page.
+             *
+             *     ABSENT MEANS THERE IS NOTHING FURTHER BACK. It is deliberately not minted on a final
+             *     page: a cursor there invites one more request that can only answer empty, and a
+             *     client walking until the cursor disappears would never stop.
+             */
+            next_cursor?: string;
+            /**
+             * @description How many unsettled notices this centre holds for the reader — all of them and not
+             *     this page's share, because a badge that fell as somebody scrolled would be counting
+             *     the wrong thing.
+             *
+             *     It counts what the centre SHOWS, so the reader's own stage moves are outside it the
+             *     same way they are outside `items`. A badge numbering lines the panel then does not
+             *     list is a badge nobody can clear.
+             */
+            unread_count: number;
         };
         /** @description RFC 7807 problem+json with a stable machine `code` and structured `details`. */
         Problem: {
@@ -58063,6 +58257,48 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listNotices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description How many lines to answer with. Fifty is both the ceiling and the default, because
+                 *     this is a panel somebody opens rather than a record list somebody exports — the
+                 *     shared list cap of 200 sizes the wrong thing here.
+                 */
+                limit?: number;
+                /**
+                 * @description Where to continue, from a prior response's root-level `next_cursor`. Omitted starts
+                 *     at the newest, which is what a reader opening the panel wants.
+                 *
+                 *     NOT the shared keyset cursor the CRUD lists use, which is why this endpoint
+                 *     declares its own: there is no `sort` to fingerprint, the order is always newest
+                 *     first, and the token carries only the last line's `(created_at, id)`. Keyset and
+                 *     never an offset — notices arrive while somebody is reading, and an offset page
+                 *     would show them a line twice for every one that landed above it. A token this
+                 *     endpoint did not mint returns `422 code: malformed_cursor`.
+                 */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One window of the caller's notifications, with the centre's whole unread count beside it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     raiseNotice: {
         parameters: {
             query?: never;
@@ -58142,6 +58378,26 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    markAllNoticesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settled. Clearing an already-clear centre is the same success — the goal state holds. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     markBriefItemDismissed: {
@@ -58770,6 +59026,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BriefDelivery"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's whole set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferenceList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    saveNotificationPreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    class: components["schemas"]["NotificationClass"];
+                    delivery: components["schemas"]["NotificationDelivery"];
+                };
+            };
+        };
+        responses: {
+            /** @description The caller's whole set, as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferenceList"];
                 };
             };
             401: components["responses"]["Unauthorized"];

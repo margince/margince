@@ -327,6 +327,8 @@ var tableOwners = map[string]string{
 	// automation (the deterministic trigger-and-action catalog)
 	"workflow_run":            "internal/modules/automation",
 	"notice":                  "internal/modules/notices",
+	"notification_digest_run": "internal/modules/notices",
+	"notification_preference": "internal/modules/notices",
 	"intro_request":           "internal/modules/introductions",
 	"automation_effect_claim": "internal/modules/automation",
 	"automation":              "internal/modules/automation",

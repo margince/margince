@@ -50,6 +50,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   ],
   voice: ["writing", "tone", "style", "drafts"],
   agents: ["passport", "token", "api", "mcp", "credentials", "automation"],
+  notifications: ["notifications", "alerts", "digest", "email"],
   connections: ["mailbox", "imap", "gmail", "outlook", "email", "linkedin"],
   "capture-activity": ["mail", "email", "held", "judgement", "why"],
   company: [

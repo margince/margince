@@ -105,6 +105,7 @@ components:
         - activity.disposition_recorded
         - relationship_nudge.decided
         - notice.read
+        - notification.preference_changed
         - intro_request.created
         - intro_request.decided
         - intro_request.completed
@@ -2428,6 +2429,28 @@ components:
         notice_id:
           type: string
           format: uuid
+      additionalProperties: false
+
+    PublicEventNotificationPreferenceChanged:
+      type: object
+      x-event-type: notification.preference_changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for notification.preference_changed — one seat decided how a
+        class of notification reaches them (notices/preference.go's
+        SaveNotificationPreference). The entity is that seat. The CLASS is on
+        the wire and the choice is not: what somebody decided about their own
+        interruptions is theirs, and a fan-out carrying the value would tell
+        every subscription owner who had switched their mail off.
+      required:
+        - class
+      properties:
+        class:
+          type: string
+          description: >-
+            Which class of notification was decided about (automation,
+            approval_pending, coach).
       additionalProperties: false
 
     PublicEventCommsDeliveryBounced:

@@ -10264,6 +10264,60 @@ func (e NoticeKind) Valid() bool {
 	}
 }
 
+// Defines values for NotificationClass.
+const (
+	NotificationClassApprovalPending NotificationClass = "approval_pending"
+	NotificationClassAutomation      NotificationClass = "automation"
+	NotificationClassCapture         NotificationClass = "capture"
+	NotificationClassCoach           NotificationClass = "coach"
+	NotificationClassLeadSla         NotificationClass = "lead_sla"
+	NotificationClassSystem          NotificationClass = "system"
+)
+
+// Valid indicates whether the value is a known member of the NotificationClass enum.
+func (e NotificationClass) Valid() bool {
+	switch e {
+	case NotificationClassApprovalPending:
+		return true
+	case NotificationClassAutomation:
+		return true
+	case NotificationClassCapture:
+		return true
+	case NotificationClassCoach:
+		return true
+	case NotificationClassLeadSla:
+		return true
+	case NotificationClassSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NotificationDelivery.
+const (
+	NotificationDeliveryDigest NotificationDelivery = "digest"
+	NotificationDeliveryEmail  NotificationDelivery = "email"
+	NotificationDeliveryInApp  NotificationDelivery = "in_app"
+	NotificationDeliveryOff    NotificationDelivery = "off"
+)
+
+// Valid indicates whether the value is a known member of the NotificationDelivery enum.
+func (e NotificationDelivery) Valid() bool {
+	switch e {
+	case NotificationDeliveryDigest:
+		return true
+	case NotificationDeliveryEmail:
+		return true
+	case NotificationDeliveryInApp:
+		return true
+	case NotificationDeliveryOff:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferStatus.
 const (
 	OfferStatusAccepted   OfferStatus = "accepted"
@@ -32485,6 +32539,101 @@ type NoticeOrigin struct {
 	} `json:"stage_change,omitempty"`
 }
 
+// NotificationClass A class of notification a seat decides delivery about. Closed, and deliberately coarser
+// than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+// is waiting on your approval", so the choice is made per class and every kind the product
+// raises is placed in one of them.
+type NotificationClass string
+
+// NotificationDelivery Where a class of notification reaches its reader. `in_app` is the notification centre and
+// the Worklist's lane alone; `email` sends a message as each one lands; `digest` holds them
+// for one rolled-up send; `off` records the notice without reaching out about it.
+type NotificationDelivery string
+
+// NotificationItem One line of the notification centre: a durable notice addressed to the caller, and
+// whether they have already answered it.
+type NotificationItem struct {
+	// Body The notice's own words beneath the headline. Absent when it had none.
+	Body      *string            `json:"body,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Kind What the notice is about. A plain string and NOT `NoticeKind`: that vocabulary is the
+	// coaching one, and the kinds a system flow raises — an automation firing, a lead going
+	// past its SLA, a capture backlog stalling — are deliberately absent from it. Read
+	// `subject` for the headline and `target` for where to go; a client that switches on
+	// this breaks the day a flow raises one more.
+	Kind string `json:"kind"`
+
+	// Origin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
+	Origin *NoticeOrigin `json:"origin,omitempty"`
+
+	// ReadAt When the reader settled it. ABSENT means unread. The instant rather than a flag,
+	// because the centre renders history: "you read this on Tuesday" is what tells a reader
+	// they are looking at something they already dealt with, and a flag cannot say when.
+	ReadAt *time.Time `json:"read_at,omitempty"`
+
+	// Subject The headline the recipient reads, derived from the kind rather than supplied.
+	Subject string `json:"subject"`
+
+	// Target The record the notice is about, when it is about one. Both halves or neither — a type
+	// with no id names a KIND of thing and cannot be opened. Absent is the common case: a
+	// capture backlog and a colleague's word are about no single record.
+	Target *struct {
+		Id openapi_types.UUID `json:"id"`
+
+		// Type The record's class, as its own endpoint spells it.
+		Type string `json:"type"`
+	} `json:"target,omitempty"`
+}
+
+// NotificationPage One window of the calling contact's notification centre.
+type NotificationPage struct {
+	// Items Newest first, read and unread. Empty is the honest answer for a seat nothing has told anything.
+	Items []NotificationItem `json:"items"`
+
+	// NextCursor Send this back as `cursor` to continue past the last line of this page.
+	//
+	// ABSENT MEANS THERE IS NOTHING FURTHER BACK. It is deliberately not minted on a final
+	// page: a cursor there invites one more request that can only answer empty, and a
+	// client walking until the cursor disappears would never stop.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
+	// UnreadCount How many unsettled notices this centre holds for the reader — all of them and not
+	// this page's share, because a badge that fell as somebody scrolled would be counting
+	// the wrong thing.
+	//
+	// It counts what the centre SHOWS, so the reader's own stage moves are outside it the
+	// same way they are outside `items`. A badge numbering lines the panel then does not
+	// list is a badge nobody can clear.
+	UnreadCount int `json:"unread_count"`
+}
+
+// NotificationPreference One class's setting for the calling seat, as it stands.
+type NotificationPreference struct {
+	// Chosen Whether the seat DECIDED this, or is following the installation's default. False
+	// follows, and moves if that default moves; true is a choice that stays. Rendering the
+	// two the same would silently re-decide for everybody on the day a default changed.
+	Chosen bool `json:"chosen"`
+
+	// Class A class of notification a seat decides delivery about. Closed, and deliberately coarser
+	// than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+	// is waiting on your approval", so the choice is made per class and every kind the product
+	// raises is placed in one of them.
+	Class NotificationClass `json:"class"`
+
+	// Delivery Where a class of notification reaches its reader. `in_app` is the notification centre and
+	// the Worklist's lane alone; `email` sends a message as each one lands; `digest` holds them
+	// for one rolled-up send; `off` records the notice without reaching out about it.
+	Delivery NotificationDelivery `json:"delivery"`
+}
+
+// NotificationPreferenceList The calling seat's whole set — one entry per class the product sends, always all of them,
+// so a screen rendering one row per class never has to take the others from its own memory.
+type NotificationPreferenceList struct {
+	Items []NotificationPreference `json:"items"`
+}
+
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
@@ -43997,6 +44146,39 @@ type GetMyLinkedInReachParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
+type SaveNotificationPreferenceJSONBody struct {
+	// Class A class of notification a seat decides delivery about. Closed, and deliberately coarser
+	// than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+	// is waiting on your approval", so the choice is made per class and every kind the product
+	// raises is placed in one of them.
+	Class NotificationClass `json:"class"`
+
+	// Delivery Where a class of notification reaches its reader. `in_app` is the notification centre and
+	// the Worklist's lane alone; `email` sends a message as each one lands; `digest` holds them
+	// for one rolled-up send; `off` records the notice without reaching out about it.
+	Delivery NotificationDelivery `json:"delivery"`
+}
+
+// ListNoticesParams defines parameters for ListNotices.
+type ListNoticesParams struct {
+	// Limit How many lines to answer with. Fifty is both the ceiling and the default, because
+	// this is a panel somebody opens rather than a record list somebody exports — the
+	// shared list cap of 200 sizes the wrong thing here.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Where to continue, from a prior response's root-level `next_cursor`. Omitted starts
+	// at the newest, which is what a reader opening the panel wants.
+	//
+	// NOT the shared keyset cursor the CRUD lists use, which is why this endpoint
+	// declares its own: there is no `sort` to fingerprint, the order is always newest
+	// first, and the token carries only the last line's `(created_at, id)`. Keyset and
+	// never an offset — notices arrive while somebody is reading, and an offset page
+	// would show them a line twice for every one that landed above it. A token this
+	// endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // GetConsentRequestParams defines parameters for GetConsentRequest.
 type GetConsentRequestParams struct {
 	ClientId string `form:"client_id" json:"client_id"`
@@ -46550,6 +46732,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// SaveNotificationPreferenceJSONRequestBody defines body for SaveNotificationPreference for application/json ContentType.
+type SaveNotificationPreferenceJSONRequestBody SaveNotificationPreferenceJSONBody
 
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
 type SaveMyWorkingHoursJSONRequestBody = WorkingHours
@@ -57911,15 +58096,27 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// How you have asked to be reached, one entry per class of notification.
+	// (GET /me/notification-preferences)
+	ListNotificationPreferences(w http.ResponseWriter, r *http.Request)
+	// Choose where one class of notification reaches you.
+	// (PUT /me/notification-preferences)
+	SaveNotificationPreference(w http.ResponseWriter, r *http.Request)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
 	// Choose the hours and days you are bookable.
 	// (PUT /me/working-hours)
 	SaveMyWorkingHours(w http.ResponseWriter, r *http.Request)
+	// The notification centre — every notice addressed to the acting contact, newest first.
+	// (GET /notices)
+	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
 	// (POST /notices)
 	RaiseNotice(w http.ResponseWriter, r *http.Request)
+	// Settle the acting contact's whole notification centre in one act.
+	// (POST /notices/read-all)
+	MarkAllNoticesRead(w http.ResponseWriter, r *http.Request)
 	// Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
 	// (POST /notices/{id}/read)
 	MarkNoticeRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -61208,6 +61405,18 @@ func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// How you have asked to be reached, one entry per class of notification.
+// (GET /me/notification-preferences)
+func (_ Unimplemented) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose where one class of notification reaches you.
+// (PUT /me/notification-preferences)
+func (_ Unimplemented) SaveNotificationPreference(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // When you are bookable.
 // (GET /me/working-hours)
 func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
@@ -61220,9 +61429,21 @@ func (_ Unimplemented) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The notification centre — every notice addressed to the acting contact, newest first.
+// (GET /notices)
+func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
 // (POST /notices)
 func (_ Unimplemented) RaiseNotice(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Settle the acting contact's whole notification centre in one act.
+// (POST /notices/read-all)
+func (_ Unimplemented) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -80513,6 +80734,46 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListNotificationPreferences operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationPreferences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveNotificationPreference operation middleware
+func (siw *ServerInterfaceWrapper) SaveNotificationPreference(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveNotificationPreference(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 
@@ -80553,6 +80814,60 @@ func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ListNotices operation middleware
+func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNoticesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotices(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RaiseNotice operation middleware
 func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 
@@ -80566,6 +80881,28 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RaiseNotice(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkAllNoticesRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkAllNoticesRead(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91957,13 +92294,25 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/notification-preferences", wrapper.ListNotificationPreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/notification-preferences", wrapper.SaveNotificationPreference)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/working-hours", wrapper.SaveMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/notices", wrapper.ListNotices)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices", wrapper.RaiseNotice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/notices/read-all", wrapper.MarkAllNoticesRead)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/notices/{id}/read", wrapper.MarkNoticeRead)

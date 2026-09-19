@@ -6,8 +6,8 @@ import {
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../api/client";
 import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { ENTITY, isEntityKind } from "../app/entity";
-import { navigate, type Route } from "../app/router";
+import { recordRoute } from "../app/entity";
+import { navigate } from "../app/router";
 import { Button, Card } from "../design-system/atoms";
 import {
   DecisionCard,
@@ -141,24 +141,6 @@ function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
   };
-}
-
-// The record page an approved change can be put back on, or undefined when
-// there is none.
-//
-// isEntityKind is the same question the breadcrumb asks before it links, and it
-// narrows the wire's free-form string to the five kinds with a record page. The
-// history panel serves one more — `activity` — which has no page to route to,
-// so a target of that kind is honestly not offered rather than linked into
-// nothing.
-export function recordRoute(
-  entityType: string | null | undefined,
-  entityID: string | null | undefined,
-): Route | undefined {
-  if (!entityID || !entityType || !isEntityKind(entityType)) {
-    return undefined;
-  }
-  return ENTITY[entityType].route(entityID);
 }
 
 export function ApprovalRow({

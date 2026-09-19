@@ -126,7 +126,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
 	}
-	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, logger, stdout)
+	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, lanes.inserter, logger, stdout)
 	// Said out loud for the reason the api says it: each role reads its own
 	// --config, so an unarmed worker beside an armed api is a purge whose cache
 	// flush never reaches this process.
@@ -318,6 +318,13 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	if err != nil {
 		return err
 	}
+	// Carried BEFORE the model guard below, and that placement is the point: the
+	// approval-notify lane stages its mail through this same insert-only client,
+	// and it runs on every worker — including one with no model configured,
+	// where this function returns two lines down. Resolved past the guard, a
+	// brainless worker would announce every decision on screen and mail none of
+	// them, which reads exactly like an installation with no relay.
+	lanes.inserter = sendInserter
 	send := sendPath(cfg, compose.NewDeliveryStager(pool, sendInserter))
 	if modelPath.AgentLoop == nil {
 		return nil
@@ -350,7 +357,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 // startProjectionLanes starts the lanes that maintain derived read models: the
 // retrieval embeddings a declared embed lane feeds, and the two deterministic
 // projections that need no model at all.
-func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) {
+func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, background *sync.WaitGroup, inserter *jobs.Runner, logger *slog.Logger, stdout io.Writer) {
 	if modelPath.Embedder != nil {
 		gen := search.NewEmbedGen(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
 		_, _ = fmt.Fprintln(stdout, "worker maintaining retrieval embeddings")
@@ -385,6 +392,18 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	cohort := compose.NewCohortPromoteGen(pool, contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
+
+	// Telling the seats that could decide a staged approval that it is waiting
+	// on them. Deterministic like the projections above, so it runs on every
+	// worker: an installation whose lane is not running has an inbox that reads
+	// empty, which is indistinguishable from nobody being asked for anything.
+	//
+	// The inserter is how a seat who asked for that class by mail gets one: the
+	// job is staged in the same transaction as the notice, so a message is never
+	// staged about a line that was never written.
+	notify := compose.NewApprovalNotify(pool, compose.InstallationDB(pool), inserter)
+	_, _ = fmt.Fprintln(stdout, "worker telling seats when a decision is waiting on them")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:approval-notify", notify.HandleEvent, logger, 0) })
 
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
 

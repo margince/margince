@@ -239,6 +239,13 @@ type JobRunnerConfig struct {
 	// weekly uses — an operator configures outbound mail once. A zero value
 	// mails nothing, and the brief is on Home either way.
 	BriefMail BriefMailConfig
+	// NotificationMail is the immediate notice's outbound channel, on that same
+	// relay again. No kind is gated on it, and that is deliberate: the job is
+	// staged by the approval-notify consumer, which cannot see whether this
+	// role has a relay — so a gated worker would leave those rows queued behind
+	// a job nobody works. A nil Mailer makes a picked-up job a no-op that spends
+	// no claim, and the decision is on the reader's Worklist either way.
+	NotificationMail NotificationMailConfig
 	// StageEvidenceBrain is the lane a queued criteria reading runs on. NIL
 	// registers nothing: no human is waiting on the row, so an installation
 	// without a model keeps the deterministic evidence and reads no prose.
@@ -407,6 +414,8 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addGmailCaptureJobs(reg, pool, cfg, log)
 	addGraphWatchJobs(reg, cfg, log)
 	addAuthzDisagreementWorker(reg, pool, log)
+	addNotificationMailJobs(reg, pool, cfg, log)
+	addNotificationDigestJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
 		// The passes that register themselves: each helper wires its own
@@ -461,6 +470,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
+		periodicFor(cfg, NotificationDigestArgs{}),
 		periodicFor(cfg, WeeklyReviewGenerateArgs{}),
 		periodicFor(cfg, GmailSyncArgs{}),
 		periodicFor(cfg, GmailWatchArgs{}),

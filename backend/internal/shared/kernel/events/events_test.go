@@ -158,6 +158,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// password_link_issued does: this stream also carries the recording, and
 		// "lifted" alone would not say which of the two happened.
 		"suppression_lifted": true,
+		// A seat decided how one class of notification reaches them. The verb
+		// carries its object for the reason password_link_issued does: this
+		// stream also carries the notices themselves, so "changed" alone would
+		// leave a consumer unable to tell a notice moving from the routing that
+		// decides where the next one goes.
+		"preference_changed": true,
 	}
 
 	for _, typ := range Types() {
@@ -288,11 +294,16 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// verdict rides there, including the `expired` one the sweep writes
 		// when nobody answers a card.
 		"cg:stage-progression-outcome": {"gw:events:crm:approval"},
+		// Telling the seats that could decide a staged proposal that it is
+		// waiting on them. The same stream as the ledger above and a group of
+		// its own: that one counts what has already happened to a card, this
+		// one is the only thing that puts the card in front of anybody.
+		"cg:approval-notify": {"gw:events:crm:approval"},
 	}
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, and the stage-progression outcome ledger", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, and the approval-pending fan-out", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

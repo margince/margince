@@ -66,6 +66,19 @@ var directMailHolders = gatekit.Waive(map[string]string{
 	"internal/compose/briefmailjobs.go": "the operator's own daily brief, addressed to a seat, for the " +
 		"reason the weekly digest carries: internal reporting is not correspondence with a subject",
 
+	"internal/compose/notificationmailjobs.go": "the one notice that leaves the product, addressed to " +
+		"a seat in this installation: a colleague being told that a decision is waiting on them, by the " +
+		"route they chose for that class. Seat mail on the brief digest's terms — there is no consent " +
+		"question about telling a colleague what their own queue holds, and routing it through " +
+		"comms_outbound would file an internal nudge on a customer's timeline",
+
+	"internal/compose/notificationdigestjobs.go": "the once-a-day batch of the same queue, addressed to " +
+		"a seat in this installation: a colleague being told what reached their own worklist, by the route " +
+		"they chose for those classes. Seat mail on the brief digest's terms, and it carries the additional " +
+		"guarantee the others do not need — every record the message names is re-scoped under the " +
+		"recipient's own authority at render time, so the batch can say nothing they could not open for " +
+		"themselves. Routing it through comms_outbound would file an internal summary on a customer's timeline",
+
 	"internal/modules/identity/handlers_users.go": "a set-password invite to a colleague an admin has " +
 		"just given a seat: the same act as the reset below, at the other end of an account's life, and " +
 		"a new member has no account through which any other route could reach them",
@@ -133,6 +146,8 @@ var admissibleDirectMailPurposes = map[directMailPurpose]bool{
 var directMailPurposes = map[string]directMailPurpose{
 	"internal/compose/weeklymailjobs.go":          purposeOperatorDigest,
 	"internal/compose/briefmailjobs.go":           purposeOperatorDigest,
+	"internal/compose/notificationmailjobs.go":    purposeOperatorDigest,
+	"internal/compose/notificationdigestjobs.go":  purposeOperatorDigest,
 	"internal/modules/identity/handlers_users.go": purposeSeatCredential,
 	"internal/modules/identity/reset.go":          purposeSeatCredential,
 	"internal/modules/dealrooms/invitemail.go":    purposeBuyerRoomCredential,

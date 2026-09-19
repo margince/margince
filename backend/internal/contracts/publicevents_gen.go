@@ -507,6 +507,7 @@ const (
 	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
 	NoticeCreated                         SubscribableEventType = "notice.created"
 	NoticeRead                            SubscribableEventType = "notice.read"
+	NotificationPreferenceChanged         SubscribableEventType = "notification.preference_changed"
 	OfferAccepted                         SubscribableEventType = "offer.accepted"
 	OfferCreated                          SubscribableEventType = "offer.created"
 	OfferRejected                         SubscribableEventType = "offer.rejected"
@@ -704,6 +705,8 @@ func (e SubscribableEventType) Valid() bool {
 	case NoticeCreated:
 		return true
 	case NoticeRead:
+		return true
+	case NotificationPreferenceChanged:
 		return true
 	case OfferAccepted:
 		return true
@@ -1745,6 +1748,12 @@ type PublicEventNoticeRead struct {
 	NoticeId openapi_types.UUID `json:"notice_id"`
 }
 
+// PublicEventNotificationPreferenceChanged Payload for notification.preference_changed — one seat decided how a class of notification reaches them (notices/preference.go's SaveNotificationPreference). The entity is that seat. The CLASS is on the wire and the choice is not: what somebody decided about their own interruptions is theirs, and a fan-out carrying the value would tell every subscription owner who had switched their mail off.
+type PublicEventNotificationPreferenceChanged struct {
+	// Class Which class of notification was decided about (automation, approval_pending, coach).
+	Class string `json:"class"`
+}
+
 // PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
 type PublicEventOfferAccepted struct {
 	// DealId The deal this offer belongs to.
@@ -2657,6 +2666,12 @@ func (PublicEventNoticeRead) EventType() string { return "notice.read" }
 
 func (PublicEventNoticeRead) EntityType() string { return "user" }
 
+func (PublicEventNotificationPreferenceChanged) EventType() string {
+	return "notification.preference_changed"
+}
+
+func (PublicEventNotificationPreferenceChanged) EntityType() string { return "user" }
+
 func (PublicEventOfferAccepted) EventType() string { return "offer.accepted" }
 
 func (PublicEventOfferAccepted) EntityType() string { return "offer" }
@@ -2903,6 +2918,7 @@ var PublicEventVersions = map[string]int{
 	"linkedin_network.imported":                 1,
 	"notice.created":                            1,
 	"notice.read":                               1,
+	"notification.preference_changed":           1,
 	"offer.accepted":                            1,
 	"offer.created":                             1,
 	"offer.rejected":                            1,

@@ -37,6 +37,8 @@ func buildCatalog() map[Language]Copy {
 	inviteLines(line)
 	weeklyLines(line)
 	morningLines(line)
+	notificationLines(line)
+	digestLines(line)
 	confirmLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
@@ -251,6 +253,78 @@ func morningLines(line writeLine) {
 		"Open your day:",
 		"Öffne deinen Tag:",
 		"Mở ngày của bạn:")
+}
+
+// notificationLines is the one notice mailed the moment it is raised: an
+// approval waiting on the colleague who can answer it.
+//
+// It names the READER's part rather than the product's. "An approval is
+// waiting for your decision" is the sentence the Worklist card already makes,
+// and the message exists to carry that sentence out of a tab nobody has open —
+// so a wording about the notification itself would describe the envelope
+// instead of what is in it.
+//
+// The German is INFORMAL, like the reset, invite and brief copy above and
+// unlike the confirm sections below: this message goes to a colleague who works
+// here, and a product that says "du" every morning and "Sie" when a decision is
+// waiting is two voices in one mailbox.
+func notificationLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.NotificationSubject },
+		"Waiting on you: ",
+		"Wartet auf dich: ",
+		"Đang chờ bạn: ")
+	line(func(c *Copy) *string { return &c.NotificationIntro },
+		"An approval is waiting for your decision.",
+		"Eine Freigabe wartet auf deine Entscheidung.",
+		"Một phê duyệt đang chờ bạn quyết định.")
+	line(func(c *Copy) *string { return &c.NotificationOpen },
+		"Open your worklist",
+		"Arbeitsliste öffnen",
+		"Mở danh sách công việc")
+}
+
+// digestLines is the once-a-day batch: what is waiting on a colleague's
+// worklist that they have not opened yet.
+//
+// It names the QUEUE and not the product's own machinery. "Here is what is
+// still waiting on your worklist" is a sentence about the reader's work; "your
+// notification digest is ready" describes the envelope, which is the wording
+// every product reaches for and nobody reads twice.
+//
+// The German is INFORMAL, like the brief and the immediate notice above and
+// unlike the confirm sections below: this goes to a colleague who works here,
+// and a product that says "du" every morning and "Sie" in the daily summary of
+// the same morning is two voices in one mailbox.
+func digestLines(line writeLine) {
+	// NO TIME OF DAY in the subject, and the lane is why. The pass runs hourly
+	// from the local morning and the claim is per (recipient, day), so what it
+	// promises is one message a day — not one that leaves in the morning. A
+	// colleague holding nothing when the morning opened takes no claim then, so
+	// their first unread of the afternoon sends their batch on the next tick.
+	// "This morning" is true of most sends and false of those, and a subject
+	// line is the one part of a message a reader checks against the clock.
+	line(func(c *Copy) *string { return &c.DigestSubject },
+		"What is waiting on your worklist",
+		"Das wartet auf deiner Arbeitsliste",
+		"Những việc đang chờ trong danh sách công việc của bạn")
+	// STILL WAITING, not "since yesterday", and the window is why. The pass
+	// reaches back two local-day labels and skips nothing a reader has left
+	// unread, so a notice nobody has opened is quoted again tomorrow — a
+	// sentence naming a boundary would be false on the second morning and
+	// falser on the third. What is true every morning is that these are
+	// waiting.
+	line(func(c *Copy) *string { return &c.DigestIntro },
+		"Here is what is still waiting on your worklist.",
+		"Das wartet noch auf deiner Arbeitsliste.",
+		"Đây là những gì vẫn đang chờ trong danh sách công việc của bạn.")
+	line(func(c *Copy) *string { return &c.DigestAndMore },
+		"…and %d more",
+		"…und %d weitere",
+		"…và %d mục khác")
+	line(func(c *Copy) *string { return &c.DigestOpen },
+		"Open your worklist:",
+		"Arbeitsliste öffnen:",
+		"Mở danh sách công việc:")
 }
 
 // confirmLines is the copy for messages addressed to a contact the installation

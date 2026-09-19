@@ -7,6 +7,7 @@ import { AccountMenu } from "./account";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { entryLabel, NAV, type NavSection } from "./nav";
+import { NotificationBell } from "./notificationbell";
 import {
   OFF_RAIL_TITLE_KEYS,
   resolveTitle,
@@ -19,7 +20,7 @@ import "./topbar.css";
 
 // The top bar: the one strip that is true of the whole session rather than of
 // the page under it — where you are (the trail), how you reach anything (the
-// search), which system of record is answering, and who you are signed in as.
+// search), what is waiting for you (the bell), and who you are signed in as.
 //
 // It stands on the sidebar's own ground with a rule under it, so the chrome
 // reads as one L-shaped frame around the content rather than as two panels that
@@ -179,6 +180,11 @@ export function TopBar({
       </div>
       <TopBarSearch onOpenSearch={onOpenSearch} />
       <div className="topbar-trail">
+        {/* Before the account chip, which is the strip's last word: the bell is
+            something waiting FOR the reader, and the chip is who the reader is.
+            Reading right to left, identity is the anchor and everything that
+            wants their attention stacks up before it. */}
+        <NotificationBell />
         <AccountMenu />
       </div>
     </header>

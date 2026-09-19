@@ -43,3 +43,17 @@ const (
 	BriefMorningFragment = "/#/home"
 	BriefWeeklyFragment  = "/#/home?view=weekly"
 )
+
+// WorklistFragment is where a decision waiting on a colleague is answered.
+//
+// A SCREEN of its own rather than a view of the Brief, which is why it is not
+// spelled Brief*: the Worklist is a top-level address in the frontend's own
+// SCREENS list, and the two mailed-link gates read different halves of the
+// frontend for that reason.
+//
+// Held by backend/gates/mailbrieflink_test.go's screen arm, which reads the
+// router's SCREENS list: the app resolves an unknown screen by falling back to
+// Home, so a rename there without one here would land every reader on a page
+// that says nothing about the decision they were told was waiting, and nothing
+// on either side would fail.
+const WorklistFragment = "/#/worklist"

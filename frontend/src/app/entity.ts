@@ -46,6 +46,31 @@ export const ENTITY: Record<EntityKind, EntityDescriptor> = {
   },
 };
 
+/**
+ * The record page a typed reference names, or undefined when there is none.
+ *
+ * Every surface that carries a `{type, id}` off the wire — an approval's undo
+ * target, a worklist row's subject, a notification's target — asks the same two
+ * questions before it offers a link, so they ask them HERE rather than each
+ * spelling `isEntityKind` and then `ENTITY[...].route` for itself. It lives
+ * beside the registry it is built from: kept in a screen file, it was reachable
+ * only by whoever already knew which screen, and a new record kind would have
+ * arrived in one copy of the rule and not the others.
+ *
+ * A kind with no page — `activity`, an audit row's governance object — resolves
+ * to nothing on purpose. Naming such a target on a row is honest; linking it
+ * into a page that does not exist is not.
+ */
+export function recordRoute(
+  entityType: string | null | undefined,
+  entityID: string | null | undefined,
+): Route | undefined {
+  if (!entityID || !entityType || !isEntityKind(entityType)) {
+    return undefined;
+  }
+  return ENTITY[entityType].route(entityID);
+}
+
 // The reverse of ENTITY[kind].route: which record kind a screen's `id` segment
 // names, so the breadcrumb can show "Anna Weber" instead of an opaque id. It is
 // DERIVED from the routes rather than restated, because a hand-written copy goes

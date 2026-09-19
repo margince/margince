@@ -1008,6 +1008,86 @@ kinds:
       because its owner has gone or lost the grants is not a fault to retry at
       all — it is a proposal waiting for a contact, which is where it stays.
 
+  # Enqueued by the approval-notify consumer, in the same transaction as the
+  # notice it is about — so a notice that rolls back stages no message, and a
+  # message is never staged about a line nobody can see.
+  notification_email:
+    role: worker
+    go_type: SendNotificationEmailArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        ONE branch, and it is a mis-wired ROLE rather than a failed send: a
+        worker composed with no operator relay says so at Warn, claims nothing,
+        and returns nil. No durable retry stands behind that, and none is
+        wanted — each role reads its own config, so returning a failure would
+        have an installation that deliberately runs no operator mail discard a
+        row per decision, and would leave a relay-less replica bouncing rows
+        rather than sending them. What makes the green row honest is that the
+        thing the product promises still happened: the notice is on the
+        recipient's Worklist, which is where every notice is, and this message
+        is only a nudge toward it. The log is how an operator tells one
+        unconfigured worker from a quiet week.
+
+        It waives THAT branch and no other. The failures above the claim are
+        returned and River retries them, and the ones below it are recorded
+        rather than logged away — a refusal writes its cause into
+        notice.email_error beside a claim that is never released. That is where
+        the durability lives, and it is deliberate: SMTP returns no receipt, so
+        a retried attempt could not tell a refused message from a delivered one
+        and would risk telling a colleague twice that the same decision is
+        waiting. The green River row means 'this notice's one attempt is
+        concluded'; the row says how it went.
+    args:
+      Workspace: id
+      NoticeID: id
+    reason: >-
+      One SMTP exchange for one colleague, bounded at forty-five seconds by the
+      sender's own budget — so the two-minute wall clock is the job's ceiling
+      over a claim, an address read and that exchange, not a window anything is
+      meant to use.
+
+      The DEFAULT queue rather than comms_send. That pool was split out for a
+      rep's outbound message once it started carrying files: a three-minute
+      upload budget, and a reason that turns on a contact waiting for a message
+      they pressed a button for. This is neither — it is short, it carries
+      nothing, and putting it there would queue a buyer's attachment behind a
+      fan-out of internal nudges.
+
+      No declared attempt cap, because opts_owner is caller and the enqueue
+      site owns the ladder (notificationMailJobAttempts): publishing a number
+      nothing applies is the declared-vs-actual drift this contract removes.
+
+  notification_digest:
+    role: worker
+    fleet: true
+    go_type: NotificationDigestArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, not daily, for the reason brief_generate ticks hourly: the morning
+      it aims at is the installation's local one, an hourly tick crosses that
+      hour in every zone the setting can name, and the per-(recipient, day) row
+      in notification_digest_run is what keeps twenty-four ticks from producing
+      twenty-four messages. The same property backfills a morning the worker was
+      down for, rather than skipping the day.
+
+      Ten minutes, like the other fleet-wide morning pass: the wall clock covers
+      every workspace and every due seat in each, while one colleague's SMTP
+      exchange is bounded separately at forty-five seconds by the sender's own
+      budget, so an unreachable relay cannot spend a team's whole tick on the
+      first seat in it.
+
+      No fault block, because nothing here is swallowed. A seat whose send fails
+      records its cause on the claim row and the pass carries on; the pass itself
+      returns every workspace's failures joined, and River retries the tick — at
+      which point the claims already taken make the retry a no-op for everyone
+      who was already served.
+
   # One job, not a dispatcher and a child (ADR-0103 §1). The delete it runs was
   # already table-wide once agent_task lost its tenant column, so the fan-out
   # was N identical passes over the same rows.
