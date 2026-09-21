@@ -36,7 +36,20 @@ export function normalize(value: string): string {
     .toLowerCase()
     .replace(/\s+/g, "")
     .replace(/(^|[^0-9])0\./g, "$1.")
-    .replace(/(\.[0-9]*?)0+([^0-9]|$)/g, "$1$2");
+    .replace(/\.[0-9]+/g, withoutTrailingZeros);
+}
+
+// The zeros come off one at a time rather than through `(\.[0-9]*?)0+`, where
+// the lazy run and the greedy one compete for the same digits — which is what
+// made that pattern cost the square of the decimal's length. The decimal point
+// stays: `1.0` normalizes to `1.`, and it is the two sides agreeing that
+// matters here, not which of them is prettier.
+function withoutTrailingZeros(decimals: string): string {
+  let end = decimals.length;
+  while (end > 1 && decimals.charAt(end - 1) === "0") {
+    end -= 1;
+  }
+  return decimals.slice(0, end);
 }
 
 /** Every custom property one block declares, by name. */
@@ -55,9 +68,10 @@ export function parseBlock(
     throw new Error(`tokens.css has no ${selector} block`);
   }
   const props: Record<string, string> = {};
-  for (const [, name, value] of match[1].matchAll(
-    /(--[\w-]+)\s*:\s*([^;]+);/g,
-  )) {
+  // `:` rather than `:\s*`: a value's leading space is matched by `[^;]+`
+  // either way, and two quantifiers competing for it is what cost this pattern
+  // the square of the value's length. `trim()` below is what takes it off.
+  for (const [, name, value] of match[1].matchAll(/(--[\w-]+)\s*:([^;]+);/g)) {
     props[name] = value.trim();
   }
   return props;
