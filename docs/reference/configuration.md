@@ -567,9 +567,9 @@ the process exits.
 in `ai_call_payload`, and for a reading of a meeting transcript that request **is** the transcript —
 the largest copy of somebody's words this product holds.
 
-The `ai_call_payload` / `content` row in `retention_policy` is what bounds that, and it is an
-**admin-editable default**, not a cap this product enforces. Bootstrap seeds it at 365 days; each
-installation decides its own. Three things settle the number:
+The `ai_call_payload` / `content` row in `retention_policy` is what bounds that. Bootstrap seeds it
+at 365 days and `enabled`, so the retention engine erases past it from the first sweep; the number is
+an **admin-editable default**, and each installation decides its own. Three things settle it:
 
 - **What it bounds.** How long a captured transcript, contract or draft stays on disk after the work
   is done.

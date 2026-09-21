@@ -18,11 +18,13 @@ import (
 // workspace-bootstrap transaction, same C5 atomicity as the purpose
 // catalog.
 //
-// Every row here is a DEFAULT an admin may edit, not a cap this product
-// enforces — embedCallRetention one file over is the fixed kind, and says so.
-// So changing a number here moves it only for installations bootstrapped
-// afterwards, and an operator reading their own retention page is the one who
-// decides.
+// Every row here is a DEFAULT an admin may edit, not a number this product
+// fixes — embedCallRetention one file over is the fixed kind, and says so.
+// Each lands `enabled`, so the retention engine acts on whatever number
+// stands from the first sweep: what an admin edits is the window, never
+// whether there is one. Changing a number HERE moves it only for
+// installations bootstrapped afterwards, and an operator reading their own
+// retention page is the one who decides for theirs.
 //
 // `ai_call_payload` / `content` is the one worth reading twice. With payload
 // capture on (`ai.capture_payloads`, opt-in) it is how long the model's whole
