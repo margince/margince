@@ -6895,6 +6895,15 @@ export interface paths {
          *     saves the company form: that 404 IS the "this installation has not described itself yet" signal,
          *     and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
          *     customer records.
+         *
+         *
+         *     ADMIN ONLY, and the read as much as the write beside it. The installation's identity is
+         *     administered — the same answer user administration, privacy and the audit log give — rather
+         *     than a record owned by a role in the customer-record vocabulary. It used to ride the
+         *     `company` object, which governs customer accounts, so every role holding that object could
+         *     edit the installation's own name. Whether this installation has described itself YET is a
+         *     different question and is not administered: the growth fit and the onboarding conversation
+         *     both resolve it, for any seat.
          */
         get: operations["getAnchorCompany"];
         /**
@@ -6908,6 +6917,10 @@ export interface paths {
          *     Unlike the cold-start accept path this never resolves a target by domain: the workspace names its
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
          *     a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
+         *
+         *
+         *     ADMIN ONLY — see the read above for why the installation's identity is administered rather
+         *     than gated on the object that governs customer accounts.
          */
         put: operations["putAnchorCompany"];
         post?: never;
@@ -48605,6 +48618,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description No company saved yet — onboarding has not been completed. */
             404: {
                 headers: {
