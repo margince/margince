@@ -80,14 +80,30 @@ wins and the other session closes its own, pointing at the winner.
 [docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md) has stale
 claims, releasing one, and why two half-fixes both stay red.
 
+**An issue is claimed before it is worked.** A comment saying you started is a
+signal the issue list does not show; an assignee and a label are. Check with
+`gh issue view <n> --json assignees,labels,closedByPullRequestsReferences`:
+another assignee, `status: in progress`, or an open pull request that closes it
+means taken — so do not work it. Tell whoever asked who holds it, suggest they
+take questions or urgency to that colleague, and name a free issue nearby
+instead. Insisting after that is their call; the takeover comment goes on the
+issue before the reassignment, because nothing here expires on its own. Claim
+yours with
+`gh issue edit <n> --add-assignee @me --add-label "status: in progress"`, then
+re-read it and stand down if an assignee appeared meanwhile. Claim the
+sub-issue you work, never its parent tracker; release what you leave unfinished
+— label off, assignment off, a comment saying where you stopped.
+[docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-issue.md) has the rest.
+
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) routes an
 exploitable weakness to a private advisory. The test: if you can write the
 reproduction, it belongs in an advisory, not here.
 
 Every issue you do open carries exactly one `priority:` and exactly one `area:`,
-plus `status:` when it is not now's work. Unlabelled means nobody has looked at
-it yet, so filing without labels tells the next reader something false. The full
-taxonomy: [docs/reference/issue-labels.md](docs/reference/issue-labels.md).
+plus `status:` when it is not now's work or is already somebody's. Unlabelled
+means nobody has looked at it yet, so filing without labels tells the next
+reader something false. The full taxonomy:
+[docs/reference/issue-labels.md](docs/reference/issue-labels.md).
 
 ## Build and test
 

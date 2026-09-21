@@ -1,9 +1,9 @@
 # Issue labels
 
 Every issue in this repository carries **exactly one `priority:` and exactly one
-`area:`**, plus a `status:` when it is not now's work and whatever provenance
-labels apply. This page is the full taxonomy; the binding short form is in
-`AGENTS.md`.
+`area:`**, plus a `status:` when it is not now's work or is already somebody's,
+and whatever provenance labels apply. This page is the full taxonomy; the
+binding short form is in `AGENTS.md`.
 
 The label set itself lives in [`.github/labels.yml`](../../.github/labels.yml),
 which is the source rather than another copy: `scripts/sync-labels.sh`
@@ -53,10 +53,17 @@ misleads about.
 
 ## Status
 
-**Status**, when it applies — these mark an issue nobody should pick up yet,
-whether because it cannot be worked or because it is deliberately not now's
-work. Leaving one off puts that issue in somebody's queue:
+**Status**, when it applies — these mark an issue nobody *else* should pick up:
+it cannot be worked, it is deliberately not now's work, or somebody already has
+it. Leaving one off puts that issue in somebody's queue:
 
+- `status: in progress` — somebody is working on it right now. It goes on
+  together with the assignee when the work starts and comes off when the work
+  stops, and both signals are set on purpose: the assignee is what a reader sees
+  in the issue list, the label is what a search can exclude, and a comment
+  saying "I am on this" is neither. Checking before you start, claiming, taking
+  one over and releasing it:
+  [../how-to/work-on-an-issue.md](../how-to/work-on-an-issue.md).
 - `status: needs-decision` — unactionable until a human rules, whether the ruling
   is technical or a product call. Say what the options are and which you
   recommend: an issue that only asks "what should we do?" gives the decider
@@ -71,8 +78,9 @@ work. Leaving one off puts that issue in somebody's queue:
 
 ## Claim
 
-The one axis that goes on a **pull request** rather than an issue, and the one
-that says who is working rather than what the work is.
+The one axis that goes on a **pull request** rather than an issue. It says who
+is working, which `status: in progress` says too — what separates them is what
+wears it, and a red `main` has no issue to label.
 
 - `claim: main-red` — a session is already fixing this red on `main`. It rides a
   DRAFT pull request whose body lists the failing lanes and tests it covers, and
@@ -83,8 +91,8 @@ that says who is working rather than what the work is.
   a stale claim may be taken over, is
   [../how-to/claim-a-red-main.md](../how-to/claim-a-red-main.md).
 
-  Not a `status:` label: those mark an issue nobody should pick up, and this
-  marks work somebody already has.
+  Not a `status:` label: a status rides the issue, and the thing being claimed
+  here is a break on `main` that no issue names.
 
 ## Provenance
 

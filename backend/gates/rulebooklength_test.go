@@ -75,7 +75,12 @@ var ceilings = map[string]int{
 	// otherwise pays back as prose nobody asked for — and the bar has to be in
 	// the rulebook, because a session writing the comment is the one that never
 	// opened the page.
-	"AGENTS.md": 351,
+	//
+	// +16 for the issue claim. Same running SAVING as the red-`main` rule and the
+	// same reason it cannot live only in `docs/`: a session that has not read the
+	// rule has no reason to open the page, and by the time it would, it has
+	// written the diff a colleague is already writing.
+	"AGENTS.md": 367,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve

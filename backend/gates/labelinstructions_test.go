@@ -7,26 +7,33 @@
 
 package gates
 
-// Every `claim:` label the prose tells a session to search for is one
-// `.github/labels.yml` declares.
+// Every label the docs put in front of a session is one `.github/labels.yml`
+// declares.
 //
 // THIS ONE FAILS OPEN, which is why it is worth a gate. The rulebook tells a
-// session to run `gh pr list --label "claim: main-red"` before it starts fixing
-// a red `main`. Rename the label in the source and leave the prose behind — or
-// the reverse — and that command still exits 0. It returns an empty list, which
-// reads exactly like "nobody is fixing this", so every session concludes it is
-// the first and they all diagnose the same failure at once. The mechanism does
-// not break loudly; it silently becomes the race it was built to remove.
+// session to run `gh pr list --label "claim: main-red"` before it fixes a red
+// `main`, and `gh issue view` before it starts an issue somebody may already
+// hold. Rename a label in the source and leave the prose behind — or the
+// reverse — and those commands still exit 0. They return an empty list, which
+// reads exactly like "nobody is on this", so every session concludes it is the
+// first and they all do the same work at once. The mechanism does not break
+// loudly; it silently becomes the race it was built to remove.
 //
-// The corpus is derived rather than listed: any tracked Markdown file naming a
-// `claim:` label is a subject. So a third page that starts telling sessions to
-// search for one is covered the day it is written, without this file learning
-// its name — and a page naming a label that does not exist fails here rather
-// than at 3am in somebody's session.
+// The corpus is derived rather than listed: any tracked Markdown file handing a
+// label to `gh`, as a flag or as a search term, is a subject. So a page that
+// starts telling sessions to look for a new label is covered the day it is
+// written, without this file learning the name.
 //
-// The second case is the other direction, and it is the one a rename gets
-// right by accident: the rulebook must go on carrying the instruction at all. A
-// claim label nothing tells anyone to look for is a lock nobody takes.
+// A QUOTED ARGUMENT, and not every mention. A label named in a sentence is read
+// by a human, who notices a name that no longer exists; a label inside a command
+// is pasted unread. `claim:` is the exception and is matched in prose too,
+// because those four letters name nothing else in this tree — where `status:`
+// also heads a JSON field, and `status: shipped` on a docs page is a response
+// body rather than an instruction.
+//
+// The last test is the other direction, and it is the one a rename gets right
+// by accident: a claim label nothing tells anyone to look for is a lock nobody
+// takes.
 
 import (
 	"os"
@@ -40,6 +47,12 @@ import (
 // claimSpan matches a claim label as prose writes one — inside a fenced span,
 // so a sentence merely discussing claims is not read as naming a label.
 var claimSpan = regexp.MustCompile("`(claim: [a-z][a-z-]*)`")
+
+// labelArgument matches a label a doc hands to `gh`: the argument of a label
+// flag, or a `label:` term inside a search string. The quotes are what make it
+// an instruction rather than prose, and the capture starts at a letter, so the
+// `"area: <x>"` placeholder a page uses to teach the flag is not read as a name.
+var labelArgument = regexp.MustCompile(`(?:--(?:add-|remove-)?label[ =]|\blabel:)"([a-z][a-z-]*: [a-z][a-z -]*[a-z])"`)
 
 // rulebookPath is the one file that must carry the instruction, because it is
 // the file every session reads before it does anything.
@@ -56,24 +69,23 @@ var rulebookPath = filepath.Join(repoRoot, "AGENTS.md")
 // one, and `(?s)` lets the span wrap a line, which prose of this width does.
 var lookupCommand = regexp.MustCompile("(?s)`(gh pr list[^`]*--label \"(claim: [a-z][a-z-]*)\"[^`]*)`")
 
-func TestEveryClaimLabelTheProseNamesIsDeclared(t *testing.T) {
+func TestEveryLabelTheDocsNameIsDeclared(t *testing.T) {
 	t.Parallel()
 
 	declared := declaredLabels(t)
-	named := claimLabelsNamedInProse(t)
+	named := labelsTheDocsName(t)
 
 	if len(named) == 0 {
-		t.Fatal("no page names a `claim:` label, so this gate measures nothing — " +
+		t.Fatal("no page names a label this gate could read, so it measures nothing — " +
 			"either the claim mechanism was removed and this file should go with it, " +
-			"or the prose stopped spelling the label in a fenced span and the search " +
-			"instruction no longer says what to search for")
+			"or the pages stopped spelling their labels in a form a session can run")
 	}
 	for label, pages := range named {
 		if !slices.Contains(declared, label) {
-			t.Errorf("%s tells a session to look for %q, which .github/labels.yml does not declare.\n"+
-				"\tThe search still exits 0 and returns nothing, which reads as "+
-				"'nobody is fixing this' — so every session starts diagnosing the same "+
-				"failure. Add the label to the source, or fix the spelling here.",
+			t.Errorf("%s tells a session to use %q, which .github/labels.yml does not declare.\n"+
+				"\tThe command still exits 0 and returns nothing, which reads as "+
+				"'nobody is on this' — so every session starts the same work. "+
+				"Add the label to the source, or fix the spelling here.",
 				strings.Join(pages, ", "), label)
 		}
 	}
@@ -103,10 +115,9 @@ func TestTheRulebookStillTellsSessionsToRunTheClaimLookup(t *testing.T) {
 }
 
 // TestEveryDeclaredClaimLabelIsOneSomethingTellsSessionsToLookFor is the other
-// direction, and the one this file's own docstring promised before it held it:
-// a label declared and searched for by nobody is a lock nobody takes. The
-// source is the corpus, so a second claim label added tomorrow is covered
-// without this file learning its name.
+// direction: a label declared and searched for by nobody is a lock nobody
+// takes. The source is the corpus, so a second claim label added tomorrow is
+// covered without this file learning its name.
 func TestEveryDeclaredClaimLabelIsOneSomethingTellsSessionsToLookFor(t *testing.T) {
 	t.Parallel()
 
@@ -120,7 +131,7 @@ func TestEveryDeclaredClaimLabelIsOneSomethingTellsSessionsToLookFor(t *testing.
 		t.Fatal("the source declares no `claim:` label, so this gate measures nothing — " +
 			"if the mechanism was retired, this file should have gone with it")
 	}
-	named := claimLabelsNamedInProse(t)
+	named := labelsTheDocsName(t)
 	for _, label := range claims {
 		if len(named[label]) == 0 {
 			t.Errorf("%q is declared and no tracked page tells a session to look for it.\n"+
@@ -132,13 +143,13 @@ func TestEveryDeclaredClaimLabelIsOneSomethingTellsSessionsToLookFor(t *testing.
 	}
 }
 
-// claimLabelsNamedInProse maps each `claim:` label the tree's Markdown names to
-// the pages naming it. Both directions read it: one asks whether every name is
-// declared, the other whether every declaration is named.
+// labelsTheDocsName maps each label the tree's Markdown puts in front of a
+// session to the pages naming it. Both directions read it: one asks whether
+// every name is declared, the other whether every declaration is named.
 //
-// Held by: TestEveryClaimLabelTheProseNamesIsDeclared,
+// Held by: TestEveryLabelTheDocsNameIsDeclared,
 // TestEveryDeclaredClaimLabelIsOneSomethingTellsSessionsToLookFor
-func claimLabelsNamedInProse(t *testing.T) map[string][]string {
+func labelsTheDocsName(t *testing.T) map[string][]string {
 	t.Helper()
 	named := map[string][]string{}
 	for _, file := range trackedFiles(t) {
@@ -149,9 +160,11 @@ func claimLabelsNamedInProse(t *testing.T) map[string][]string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", file.path, err)
 		}
-		for _, match := range claimSpan.FindAllStringSubmatch(string(body), -1) {
-			if !slices.Contains(named[match[1]], file.path) {
-				named[match[1]] = append(named[match[1]], file.path)
+		for _, pattern := range []*regexp.Regexp{claimSpan, labelArgument} {
+			for _, match := range pattern.FindAllStringSubmatch(string(body), -1) {
+				if !slices.Contains(named[match[1]], file.path) {
+					named[match[1]] = append(named[match[1]], file.path)
+				}
 			}
 		}
 	}
