@@ -25,7 +25,7 @@ import {
   formatNumber,
   MONEY_ABSENT,
 } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   openAnalyticsSection,
@@ -182,10 +182,8 @@ function rowCount(row: ReportRow, key: string): number {
 }
 
 // The footnote for a money figure a currency the rate sheet cannot price left
-// short. Null when every counted deal was priced, which is the common case and
-// not worth a caption nobody needs to read. The TABLE's spelling; a stat card
-// states the same gap through `analytics.forecastPriced`, in the fragment shape
-// its detail line is written in.
+// short. Null when every counted deal was priced. The TABLE's spelling; a stat
+// card states the same gap through `analytics.forecastPriced`, as a fragment.
 function pricedFootnote(
   pricedDeals: number,
   total: number,
@@ -203,8 +201,8 @@ function pricedFootnote(
 
 // What a reading says when the row it needs is not there. THREE facts, not one:
 // a read in flight resolves by waiting, a failed one never will, and a lens
-// that answered with nothing has already told the truth — one word over all
-// three said "nothing to read yet" over a request that had failed.
+// that answered with nothing has told the truth. One word over all three said
+// "nothing to read yet" over a request that had failed.
 function absentReading(
   query: Readonly<{ isLoading: boolean; isError: boolean }>,
 ): MessageKey {
@@ -351,28 +349,29 @@ export function ForecastTile({
   locale: Locale;
 }>) {
   const t = useT();
-  const counted = dealCount == null ? null : formatNumber(dealCount, locale);
+  const plural = usePlural();
+  // "1 deals" is a sentence no call site should be able to spell.
+  const deals = (count: number) =>
+    plural("analytics.forecastDeals", count, {
+      count: formatNumber(count, locale),
+    });
   if (amountMinor == null || !currency) {
-    // A word, never a glyph: with no money the deals the category HOLDS are the
-    // reading and the missing amount is its caption, and with no count either
-    // nothing was measured at all.
+    // A word, never a glyph: with no money the deals the category HOLDS are
+    // the reading, and with no count either nothing was measured at all.
     return (
       <StatCard
+        narrow="row"
         label={label}
         value={
-          counted === null
-            ? t("analytics.forecastNoFigure")
-            : t("analytics.forecastDeals", { count: counted })
+          dealCount == null ? t("analytics.forecastNoFigure") : deals(dealCount)
         }
-        detail={counted === null ? undefined : t("analytics.forecastNoAmount")}
+        detail={dealCount == null ? undefined : t("analytics.forecastNoAmount")}
       />
     );
   }
   // The line under the figure: what it was weighted to, and how many deals it
-  // covers. Each fragment stands without the other, so a caller with one figure
-  // to give is not made to invent the other — and they are FRAGMENTS rather
-  // than "Label: value" pairs, because a caption is read as one sentence about
-  // the figure above it and a colon turns it into a smaller table of its own.
+  // covers — FRAGMENTS, never "Label: value" pairs, because a caption is read
+  // as one sentence about the figure and a colon makes it a small table.
   const parts: string[] = [];
   if (weightedMinor != null) {
     parts.push(
@@ -381,20 +380,21 @@ export function ForecastTile({
       }),
     );
   }
-  if (counted !== null && dealCount != null) {
-    // The gap is stated only where there IS one: "8 of 8 priced" invites a
-    // reader to look for a shortfall the category does not have.
+  if (dealCount != null) {
+    // The gap is stated only where there IS one: "8 of 8 priced" sends a reader
+    // looking for a shortfall the category does not have.
     parts.push(
       pricedDeals != null && pricedDeals < dealCount
         ? t("analytics.forecastPriced", {
             priced: formatNumber(pricedDeals, locale),
-            count: counted,
+            count: formatNumber(dealCount, locale),
           })
-        : t("analytics.forecastDeals", { count: counted }),
+        : deals(dealCount),
     );
   }
   return (
     <StatCard
+      narrow="row"
       label={label}
       value={formatMoneyCompact(amountMinor, currency, locale)}
       detail={parts.join(" · ") || undefined}
@@ -1321,8 +1321,8 @@ function MyOutcomesView({
     : noRow;
   const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
   // The currency names what the figure is IN, so a read with none to name drops
-  // the parenthetical rather than drawing an empty one — and then has no figure
-  // to draw either, because money without a currency is not money.
+  // the parenthetical — and has no figure to draw either, because money
+  // without a currency is not money.
   const valueLabel = baseCurrency
     ? t("analytics.baseValue", { currency: baseCurrency })
     : t("analytics.baseValueUnnamed");
@@ -1343,15 +1343,16 @@ function MyOutcomesView({
         <PanelBody>
           <StatStrip>
             {/* Both readings are one row of the pipeline report, and the
-                pipeline section is what draws that report — so the door is
-                that section rather than a deal list this view never
-                queried. */}
+                pipeline section draws that report — so the door is that
+                section rather than a deal list this view never queried. */}
             <StatCard
+              narrow="row"
               label={t("analytics.count")}
               value={pipelineCount}
               onOpen={() => openAnalyticsSection("pipeline")}
             />
             <StatCard
+              narrow="row"
               label={valueLabel}
               value={pipelineRow ? openMoney : noRow}
               // WHY there is no figure, where a row came back and no currency
@@ -1378,6 +1379,7 @@ function MyOutcomesView({
             {MEETING_STATUSES.map((status) => (
               <StatCard
                 key={status.key}
+                narrow="row"
                 label={t(status.labelKey)}
                 value={formatNumber(
                   meetingsByStatus.get(status.key) ?? 0,

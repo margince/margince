@@ -98,6 +98,37 @@ export const AWayInAndAGap: Story = {
 };
 
 /**
+ * The band at a phone's width, where every slot is one full-width ROW: label
+ * and basis leading, figure on the trailing edge, one hairline between and no
+ * boxes at all. Two-up, a ten-character value ellipsized in the middle of
+ * itself — "No champion" came out "No champ…".
+ */
+export const Phone: Story = {
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  tags: ["uat-phone"],
+  render: story(
+    coverage({
+      summary: {
+        contacts_total: 26,
+        waiting: 4,
+        answered: 6,
+        no_reply: 5,
+        untried: 11,
+        lapsed: 0,
+      },
+      best_way_in: {
+        contact_id: "p-1",
+        full_name: "Dietmar Rietsch",
+        title: "Managing Director",
+        engagement: "answered",
+        last_inbound_at: "2026-08-28T09:00:00Z",
+      },
+      committee: { seats: [], gaps: ["champion"], unlisted_seats: 0 },
+    }),
+  ),
+};
+
+/**
  * Coverage read against the ROSTER, with both gaps under it. A bare "6" says
  * nothing about an account until the reader knows whether it holds seven
  * contacts or seventy, and the two gaps are different work: nobody has

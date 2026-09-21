@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoneyCompact } from "../format/format";
+import { en } from "../i18n/en";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
@@ -42,6 +43,11 @@ async function openOutcomes() {
     .click(await screen.findByRole("button", { name: "My outcomes" }));
 }
 
+// The catalog's own words with the count filled in as the renderer fills it: a
+// literal here would go on passing while the catalog said something else.
+const deals = (count: string) =>
+  en["analytics.forecastDeals_other"].replace("{count}", count);
+
 describe("a forecast tile with no money to state", () => {
   it("answers with the deals it holds rather than with a glyph", () => {
     render(
@@ -56,8 +62,25 @@ describe("a forecast tile with no money to state", () => {
 
     // The category HAS deals; what it has no figure for is their value, and
     // that is the caption's job rather than the reading's.
-    expect(screen.getByText("3 deals")).toBeTruthy();
-    expect(screen.getByText("No amount")).toBeTruthy();
+    expect(screen.getByText(deals("3"))).toBeTruthy();
+    expect(screen.getByText(en["analytics.forecastNoAmount"])).toBeTruthy();
+  });
+
+  // One deal is not "1 deals". The count picks the arm and the reader's own
+  // plural rule decides which, so no call site can spell it wrong.
+  it("counts a single deal in the singular", () => {
+    render(
+      <ForecastTile
+        label="Commit"
+        amountMinor={null}
+        dealCount={1}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(screen.getByText(en["analytics.forecastDeals_one"])).toBeTruthy();
+    expect(screen.queryByText(deals("1"))).toBeNull();
   });
 
   it("says no deals when the report returned no row at all", () => {
@@ -72,8 +95,8 @@ describe("a forecast tile with no money to state", () => {
     );
 
     // Nothing was measured, so there is nothing to be zero of.
-    expect(screen.getByText("No deals")).toBeTruthy();
-    expect(screen.queryByText("No amount")).toBeNull();
+    expect(screen.getByText(en["analytics.forecastNoFigure"])).toBeTruthy();
+    expect(screen.queryByText(en["analytics.forecastNoAmount"])).toBeNull();
   });
 
   it("counts the deals plainly where the money covers all of them", () => {
@@ -91,7 +114,7 @@ describe("a forecast tile with no money to state", () => {
 
     const detail = screen.getByText(/weighted/);
     expect(detail.textContent).toBe(
-      `${formatMoneyCompact(125_000, "EUR", "en")} weighted · 4 deals`,
+      `${formatMoneyCompact(125_000, "EUR", "en")} weighted · ${deals("4")}`,
     );
   });
 });
@@ -106,8 +129,10 @@ describe("the seat's own readings when the report answers with nothing", () => {
     );
     await openOutcomes();
 
-    expect(await screen.findAllByText("Loading")).toHaveLength(2);
-    expect(screen.queryByText("None")).toBeNull();
+    expect(
+      await screen.findAllByText(en["analytics.readingLoading"]),
+    ).toHaveLength(2);
+    expect(screen.queryByText(en["analytics.readingNone"])).toBeNull();
   });
 
   it("says a read failed rather than that there is nothing", async () => {
@@ -120,7 +145,9 @@ describe("the seat's own readings when the report answers with nothing", () => {
     // Waiting will not fix this one, and a card that said "None" would send a
     // rep looking for deals that are there.
     await waitFor(() =>
-      expect(screen.getAllByText("Unavailable")).toHaveLength(2),
+      expect(
+        screen.getAllByText(en["analytics.readingUnavailable"]),
+      ).toHaveLength(2),
     );
   });
 
@@ -131,8 +158,10 @@ describe("the seat's own readings when the report answers with nothing", () => {
     );
     await openOutcomes();
 
-    expect(await screen.findAllByText("None")).toHaveLength(2);
-    expect(screen.queryByText("Unavailable")).toBeNull();
+    expect(
+      await screen.findAllByText(en["analytics.readingNone"]),
+    ).toHaveLength(2);
+    expect(screen.queryByText(en["analytics.readingUnavailable"])).toBeNull();
   });
 
   it("names the missing currency rather than drawing a dash for the value", async () => {
@@ -149,8 +178,10 @@ describe("the seat's own readings when the report answers with nothing", () => {
     );
     await openOutcomes();
 
-    expect(await screen.findByText("Deal value")).toBeTruthy();
-    expect(screen.getByText("No amount")).toBeTruthy();
-    expect(screen.getByText("Currency not set")).toBeTruthy();
+    expect(
+      await screen.findByText(en["analytics.baseValueUnnamed"]),
+    ).toBeTruthy();
+    expect(screen.getByText(en["analytics.noBaseCurrency"])).toBeTruthy();
+    expect(screen.getByText(en["analytics.noBaseCurrencyWhy"])).toBeTruthy();
   });
 });

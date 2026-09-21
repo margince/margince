@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatMoneyCompact } from "../format/format";
 import { en } from "../i18n/en";
 import { TeamWeeklyPanel, TeamWeeklySection } from "./brief.teamweekly";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
@@ -204,8 +205,13 @@ describe("the scorecard says what the wins were worth", () => {
 
     // The review's OWN currency, not the installation's current setting: base
     // currency is operator-mutable, and re-reading it would re-label a closed
-    // week with a currency its numbers were never in.
-    expect(await screen.findByText(/25.000,00\s*€|€25,000\.00/)).toBeTruthy();
+    // week with a currency its numbers were never in. Compact, like every other
+    // figure on this plate — the slot is a row and a full amount clips there.
+    expect(
+      await screen.findByText(
+        new RegExp(formatMoneyCompact(2_500_000, "EUR", "en")),
+      ),
+    ).toBeTruthy();
     // The lost count survives the money arriving: it is a different fact, not a
     // delta the value replaces.
     expect(screen.getAllByText(/1 lost|1 verloren/)[0]).toBeTruthy();

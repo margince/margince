@@ -10,7 +10,9 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 
 type CommissionEntry = components["schemas"]["CommissionEntry"];
 
@@ -351,9 +353,22 @@ describe("the outstanding figure", () => {
     render(<PartnerCommissions companyId="o-1" />);
     const strip = await screen.findByTestId("commission-outstanding");
 
-    // A slot's width is not an amount's: the figure is compact here, and the
-    // ledger below carries it to the cent.
-    expect(strip.textContent).toContain("€200");
+    // To the cent. This is money somebody is OWED, so it keeps every digit —
+    // the compact form carries no fraction below ten thousand, and forty cents
+    // outstanding would read "€0".
+    expect(strip.textContent).toContain(formatMoney(20000, "EUR", "en"));
+  });
+
+  // The defect the compact form caused: a balance under €100 lost its cents,
+  // and forty cents owed read "€0" — a partner told they are owed nothing.
+  it("keeps the cents on a balance the compact form would round to zero", async () => {
+    stubCommissions([{ ...accrued, amount_minor: 40 }]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const strip = await screen.findByTestId("commission-outstanding");
+
+    expect(strip.textContent).toContain(formatMoney(40, "EUR", "en"));
+    expect(strip.textContent).not.toContain("€0 ");
   });
 
   it("says what the total is made of rather than where paying happens", async () => {
@@ -368,10 +383,12 @@ describe("the outstanding figure", () => {
     // The detail counts the entries behind the figure. Where the money
     // actually leaves is true of the whole ledger, so it is said once above it
     // and not on every currency's slot.
-    expect(strip.textContent).toContain("2 entries");
+    expect(strip.textContent).toContain(
+      en["commission.outstandingDetail_other"].replace("{count}", "2"),
+    );
     expect(strip.textContent).not.toContain("finance system");
     expect(
-      screen.getByText(/Paying happens in your finance system/),
+      screen.getByText(en["commission.decide.settledElsewhere"]),
     ).toBeTruthy();
   });
 });

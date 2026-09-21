@@ -223,3 +223,16 @@ export const Filtered: Story = {
     await user.click(await canvas.findByRole("button", { name: /^internal/i }));
   },
 };
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+// The funnel is five BUTTON slots, so the fold is also a press-target question:
+// a folded row is space-3 above and below a 1.75rem figure, which clears the
+// 44px a coarse pointer needs without the tile keeping its box.
+export const FunnelPhone: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

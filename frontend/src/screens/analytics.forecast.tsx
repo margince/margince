@@ -16,17 +16,14 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
 import {
   formatDateAbbrev,
+  formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
-  formatSignedMoney,
 } from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
-import {
-  LandingCard,
-  SufficiencyCard,
-  slotMoney,
-} from "./analytics.forecast.landing";
+import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
 import {
@@ -119,6 +116,44 @@ export function ForecastView({
   );
 }
 
+// How far the call sits from the evidence, in the sentence that direction
+// needs.
+//
+// THREE sentences and an UNSIGNED magnitude, because a difference cannot be
+// said in one. A signed figure in a sentence ending "over evidence" printed a
+// call twenty thousand SHORT of its evidence as "-€20,000.00 over evidence",
+// which is the wrong direction stated twice and then contradicted by a minus
+// sign. Equal is its own arm rather than a zero: "±€0 over evidence" is a
+// difference nobody has.
+function callDetail(
+  call: NonNullable<Readings["current_call"]>,
+  readings: Readings,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string {
+  // The day the call was authored, cut in the zone the period itself was cut
+  // in: a reporting figure and the date beside it must not be bucketed on two
+  // different calendars.
+  const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
+  const difference = call.amount_minor - readings.evidence_minor;
+  if (difference === 0) {
+    return t("forecast.currentCallDetailEven", { date });
+  }
+  const gap = formatMoneyOrWord(
+    Math.abs(difference),
+    readings.base_currency,
+    locale,
+    t("format.notForecast"),
+    formatMoneyCompact,
+  );
+  return t(
+    difference > 0
+      ? "forecast.currentCallDetailOver"
+      : "forecast.currentCallDetailUnder",
+    { date, gap },
+  );
+}
+
 // The answer, in one sentence and then in three readings.
 function ForecastAnswer({
   readings,
@@ -132,14 +167,18 @@ function ForecastAnswer({
   // slot is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
     formatMoneyOrAbsent(minor ?? null, currency, locale);
+  // Compact, and a WORD where the pair cannot be said as money at all: a slot
+  // is about a hundred points wide, and one compared across a row must not
+  // answer with a glyph. The landing cards at the end of this strip answer the
+  // same way, so the row reads as one comparison.
   const slot = (minor: number | null | undefined) =>
-    slotMoney(minor, currency, locale, t);
-  // A DIFFERENCE, so it carries its sign, and the same absent-currency answer
-  // the slots give: an unrenderable figure is a word here too.
-  const gap = (minor: number) =>
-    currency
-      ? formatSignedMoney(minor, currency, locale)
-      : t("format.notForecast");
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
   const call = readings.current_call;
 
   return (
@@ -181,39 +220,27 @@ function ForecastAnswer({
         </Callout>
       )}
 
+      {/* EVERY slot declares the narrow shape, the landing pair included: the
+          fold is the strip's, so a card that did not declare it would keep its
+          box while the rows beside it lost theirs. */}
       <StatStrip>
         <StatCard
+          narrow="row"
           label={t("forecast.currentCall")}
           // No call is a reading, not a missing figure: the sentence above
           // already says the book is running on evidence alone, and a slot in a
           // row compared across must not answer that with a glyph.
           value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
-          detail={
-            call
-              ? t("forecast.currentCallDetail", {
-                  // The day the call was authored, cut in the zone the period
-                  // itself was cut in: a reporting figure and the date beside
-                  // it must not be bucketed on two different calendars.
-                  date: formatDateAbbrev(
-                    call.created_at,
-                    locale,
-                    readings.timezone,
-                  ),
-                  // SIGNED, because a call can sit under the evidence as
-                  // easily as over it and there is one sentence for both. An
-                  // unsigned difference here would print a call €20k short of
-                  // its evidence as €20k over it.
-                  gap: gap(call.amount_minor - readings.evidence_minor),
-                })
-              : undefined
-          }
+          detail={call ? callDetail(call, readings, locale, t) : undefined}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.evidence")}
           value={slot(readings.evidence_minor)}
           detail={t("forecast.evidenceDetail")}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.alreadyWon")}
           value={slot(readings.won_minor)}
           detail={t("forecast.alreadyWonDetail")}

@@ -114,11 +114,34 @@ export const Unavailable: Story = {
   render: strip(project360({ rollups: undefined })),
 };
 
-/** At 390px the plate folds: the last slot takes the rest of its row, so a
- *  count that does not divide the columns leaves no orphan beside empty cells. */
+/** At 390px the plate folds to one full-width ROW per reading — label leading,
+ *  figure on the trailing edge, a hairline between and no boxes. Two-up, the
+ *  German "Gewonnene Deals" clipped its label and "143.600 €" its figure. */
 export const Phone: Story = {
   tags: ["uat-phone"],
   render: strip(project360()),
+};
+
+/** The German plate at 390px, where the fold was found: two-up, "Gewonnene
+ *  Deals" clipped its label and the figure beside it ellipsized. Folded, the
+ *  label runs complete and the figure sits on the trailing edge. */
+export const PhoneGerman: Story = {
+  tags: ["uat-phone"],
+  render: () => (
+    <StoryProviders locale="de">
+      <RollupsStrip
+        view={project360({
+          rollups: {
+            open_deal_value: { amount_minor: 14_360_000, currency: "EUR" },
+            won_deal_value: { amount_minor: 9_140_000, currency: "EUR" },
+            open_commitments: 12,
+            last_activity_at: "2026-07-01T09:00:00Z",
+            activity_count: 482,
+          },
+        })}
+      />
+    </StoryProviders>
+  ),
 };
 
 /**

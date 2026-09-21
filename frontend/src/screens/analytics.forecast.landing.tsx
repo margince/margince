@@ -2,7 +2,8 @@ import type { components } from "../api/schema";
 import { EmptyState, StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { formatMoneyCompact, formatNumber } from "../format/format";
-import { type Locale, type Translator, useT } from "../i18n";
+import { formatMoneyOrWord } from "../format/moneyword";
+import { type Locale, useT } from "../i18n";
 
 type Readings = components["schemas"]["ForecastReadings"];
 type Landing = NonNullable<Readings["landing"]>;
@@ -15,33 +16,6 @@ type Sufficiency = NonNullable<Readings["sufficiency"]>;
 // a percent of coverage is precision nobody acts on.
 const BASIS_POINTS_PER_PERCENT = 100;
 
-/**
- * A money reading for a forecast SLOT: compact, and a WORD where there is no
- * figure to compact.
- *
- * Compact because a slot of a strip is about a hundred points wide and a full
- * amount clips there — "€201,099.0" is a different number rather than a smaller
- * rendering of the right one. A word rather than the em dash `formatMoneyOrAbsent`
- * returns, because every stat card spells its emptiness: a glyph where a figure
- * belongs reads as a slot that failed to draw.
- *
- * Exported because the strip around these cards (analytics.forecast.tsx) draws
- * its own three slots from the same readings, and two slots of ONE row
- * formatting money two ways is the comparison the row exists to make coming
- * apart.
- */
-export function slotMoney(
-  minor: number | null | undefined,
-  currency: string | null | undefined,
-  locale: Locale,
-  t: Translator,
-): string {
-  if (minor == null || !currency) {
-    return t("format.notForecast");
-  }
-  return formatMoneyCompact(minor, currency, locale);
-}
-
 // Where the period lands, and the two halves that make it.
 //
 // Drawn as a sentence and not only a figure, because the sum is the part a
@@ -53,7 +27,17 @@ export function LandingCard({
   locale,
 }: Readonly<{ landing: Landing; currency: string; locale: Locale }>) {
   const t = useT();
-  const money = (minor: number) => slotMoney(minor, currency, locale, t);
+  // Compact, because a slot of a strip is about a hundred points wide and a
+  // full amount clips there — and a WORD where the pair cannot be said as money
+  // at all, because a slot compared across a row must not answer with a glyph.
+  const money = (minor: number) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
 
   // A call REPLACES the projection rather than adding to what is won, so the
   // two cases get different sentences. One sentence with a swapped number
@@ -75,6 +59,10 @@ export function LandingCard({
   return (
     <>
       <StatCard
+        // The strip these two sit at the end of folds to rows on a phone, and
+        // the fold is the ROW's: a slot that did not declare it would keep its
+        // box while its neighbours lost theirs.
+        narrow="row"
         label={t("forecast.landing")}
         value={money(landing.amount_minor)}
         detail={detail}
@@ -133,32 +121,38 @@ export function SufficiencyCard({
     return null;
   }
 
-  const money = (minor: number) => slotMoney(minor, currency, locale, t);
+  // Compact, because a slot of a strip is about a hundred points wide and a
+  // full amount clips there — and a WORD where the pair cannot be said as money
+  // at all, because a slot compared across a row must not answer with a glyph.
+  const money = (minor: number) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
   const percent = Math.round(coverage / BASIS_POINTS_PER_PERCENT);
 
   return (
     <StatCard
+      narrow="row"
       label={t("forecast.pipelineNeeded")}
       value={money(needed)}
-      // TWO lines, not one joined sentence: the share and the two figures it
-      // was drawn from are separate facts, and the need itself is already the
-      // value above — repeating it in its own detail said one number twice.
+      // TWO lines and no more: the share, then the two figures it was drawn
+      // from. The need itself is already the value above, and WHICH measure the
+      // reference came from is the card's receipt — a fragment of it here cost
+      // the line a third row, which the clamp then took away in German.
       detail={
         <>
           <span>
             {t("forecast.coverage", { percent: formatNumber(percent, locale) })}
           </span>
           <span>
-            {[
-              t("forecast.pipelineNeededDetail", {
-                open: money(current),
-                landing: money(reference),
-              }),
-              // The measure the reference came from, as the fragment that
-              // qualifies it. The whole sentence behind it is the card's
-              // receipt, below.
-              t(`forecast.pipelineBasis.${sufficiency.basis}`),
-            ].join(" · ")}
+            {t("forecast.pipelineNeededDetail", {
+              open: money(current),
+              landing: money(reference),
+            })}
           </span>
         </>
       }

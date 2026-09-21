@@ -115,3 +115,13 @@ export const AllSettled: Story = {
 };
 
 export const NothingEarned: Story = { render: () => <Panel entries={[]} /> };
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+export const OwedInTwoCurrenciesPhone: Story = {
+  ...OwedInTwoCurrencies,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

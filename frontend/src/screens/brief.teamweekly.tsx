@@ -16,7 +16,7 @@ import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
-  formatMoney,
+  formatMoneyCompact,
   formatNumber,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -240,7 +240,12 @@ function wonValue(
   if (pipeline === undefined) {
     return undefined;
   }
-  return formatMoney(pipeline.won_minor, pipeline.currency, locale);
+  // Compact, like every other figure on this plate: it is an AGGREGATE of deal
+  // value riding a `narrow="row"` slot, where a full amount clips — and a
+  // clipped number is a different number rather than a shorter rendering of the
+  // right one. A balance somebody is owed would keep its digits; this is not
+  // one.
+  return formatMoneyCompact(pipeline.won_minor, pipeline.currency, locale);
 }
 
 function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {

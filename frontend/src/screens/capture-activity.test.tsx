@@ -19,6 +19,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { CaptureActivityTab } from "./capture-activity";
 
 // What this surface must never do is state a fact it does not have. Every test
@@ -402,7 +403,9 @@ describe("capture activity", () => {
     const funnel = within(await screen.findByTestId("capture-activity-funnel"));
     // The tile carries the bucket's short NAME; the full sentence still feeds
     // the filter line and the row chip, where it is read one at a time.
-    expect(funnel.getByText("Awaiting verdict")).toBeInTheDocument();
+    expect(
+      funnel.getByText(en["captureActivity.funnel.deferred"]),
+    ).toBeInTheDocument();
     expect(funnel.queryByText(/sent for a verdict/i)).not.toBeInTheDocument();
   });
 
@@ -612,7 +615,9 @@ describe("capture activity", () => {
     // time — the filter line above, the chip on the row — carries the whole
     // claim. The tile must not have taken the sentence's place.
     const funnel = within(screen.getByTestId("capture-activity-funnel"));
-    expect(funnel.getByText("No contact")).toBeInTheDocument();
+    expect(
+      funnel.getByText(en["captureActivity.funnel.suppressed"]),
+    ).toBeInTheDocument();
     expect(funnel.queryByText(/no contact created/i)).not.toBeInTheDocument();
   });
 

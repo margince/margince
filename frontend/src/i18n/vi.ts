@@ -3896,7 +3896,8 @@ export const vi = {
   "analytics.noBaseCurrency": "Không có số tiền",
   "analytics.noBaseCurrencyWhy": "Chưa đặt đơn vị tiền tệ",
   "analytics.forecastNoFigure": "Chưa đo được",
-  "analytics.forecastDeals": "{count} deal",
+  "analytics.forecastDeals_one": "1 deal",
+  "analytics.forecastDeals_other": "{count} deal",
   "analytics.forecastNoAmount": "Không có số tiền",
   "analytics.forecastWeighted": "{amount} có trọng số",
   "analytics.forecastPriced": "{priced}/{count} đã định giá",
@@ -3993,7 +3994,9 @@ export const vi = {
     "{priced} trên {eligible} deal có số tiền. Số còn lại là pipeline thật nhưng không đóng góp vào các tổng ở trên.",
   "forecast.currentCall": "Cam kết hiện tại",
   "forecast.currentCallNone": "Chưa có dự báo",
-  "forecast.currentCallDetail": "Chốt ngày {date} · {gap} trên bằng chứng",
+  "forecast.currentCallDetailOver": "Chốt ngày {date} · {gap} trên bằng chứng",
+  "forecast.currentCallDetailUnder": "Chốt ngày {date} · {gap} dưới bằng chứng",
+  "forecast.currentCallDetailEven": "Chốt ngày {date} · khớp với bằng chứng",
   "forecast.evidence": "Có bằng chứng hỗ trợ",
   "forecast.evidenceDetail": "Ngày chốt đã xác nhận",
   "forecast.alreadyWon": "Đã thắng",
@@ -7789,9 +7792,6 @@ export const vi = {
     "Đánh giá thấp hơn số tiền đã thắng. Nó được hiển thị đúng như đã ghi, không chỉnh sửa.",
   "forecast.pipelineNeeded": "Pipeline cần có",
   "forecast.pipelineNeededDetail": "{open} đang mở · để đạt {landing}",
-  "forecast.pipelineBasis.manager_call": "Đo theo đánh giá cho kỳ này.",
-  "forecast.pipelineBasis.historical_median":
-    "Đo theo trung vị của bốn kỳ tương đương gần nhất.",
   "forecast.pipelineBasisWhy.manager_call": "Đo theo đánh giá cho kỳ này.",
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của bốn kỳ tương đương gần nhất.",
@@ -7902,6 +7902,7 @@ export const vi = {
   "aiSettings.providers.lastCall": "lần gọi cuối {elapsed}",
   "aiSettings.providers.lastCallOnly": "Lần gọi cuối cùng {elapsed}",
   "aiSettings.providers.neverCalled": "Chưa từng gọi",
+  "aiSettings.providers.traceFailed": "Không xem được nhật ký gọi",
   "elapsed.justNow": "vừa xong",
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
@@ -9811,7 +9812,7 @@ export const vi = {
   "aiRates.unpriced": "Chưa có giá",
   "aiRates.unpricedDetail":
     "Mô hình vẫn phục vụ được. Các lệnh gọi sẽ báo là chưa có giá, nên không xuất hiện trong mức dùng và chi phí cho tới khi ai đó thêm đơn giá ở Cài đặt → AI.",
-  "aiRates.unpricedDetail2": "Thiếu trong mức dùng và chi phí",
+  "aiRates.unpricedConsequence": "Thiếu trong mức dùng và chi phí",
   "aiRates.unpricedBasis":
     "Thêm đơn giá ở Cài đặt → AI thì các lệnh gọi này sẽ bắt đầu báo chi phí.",
   "aiRates.priced": "Giá áp dụng từ {date}",

@@ -96,6 +96,12 @@ export function RelayPanel({
  * move is the requester's — usually the reader's own — and "you" made the one
  * line on this panel that addresses somebody, on a surface whose whole job is
  * to state facts about a relationship.
+ *
+ * `undefined` is "nobody can be named yet", which is NOT the neutral colleague
+ * noun. A name that is merely unread arrives a moment later, and standing a
+ * colleague in for it made the slot say one person owed the move and then
+ * replace them with another — a handoff that changed hands on screen while
+ * nothing had happened.
  */
 export function ownerOf(
   ask: IntroRequest,
@@ -103,17 +109,13 @@ export function ownerOf(
   // The reader's own display name, for the ask whose requester the payload
   // leaves unnamed. Absent while the session is still being read.
   reader?: string,
-): string {
+): string | undefined {
   switch (ask.status) {
     case "requested":
       return ask.introducer_display_name ?? t("contact.intro.ownerColleague");
     case "accepted":
     case "name_drop_approved":
-      return (
-        ask.requester_display_name ??
-        reader ??
-        t("contact.intro.ownerColleague")
-      );
+      return ask.requester_display_name ?? reader;
     default:
       return t("contact.intro.ownerNobody");
   }

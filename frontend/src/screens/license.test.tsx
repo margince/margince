@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { LicenseCard } from "./license";
 
 // Settings → License: what the license grants and how much of it is used.
@@ -92,6 +93,15 @@ function render(node: ReactNode) {
 
 const checkedAt = "2026-08-14T09:00:00Z";
 
+// The catalog's own words with the figures filled in as the card fills them: a
+// literal here would go on passing while the catalog said something else.
+const ofGranted = (used: string, granted: string) =>
+  en["license.seats.ofGranted"]
+    .replace("{used}", used)
+    .replace("{granted}", granted);
+const left = (count: string) =>
+  en["license.seats.left"].replace("{count}", count);
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -114,8 +124,8 @@ describe("LicenseCard", () => {
     // ONE reading, and the words carry it: the bar is hidden from a screen
     // reader precisely because the value and its detail already say the share
     // in full, so a reader who hears the card hears both figures.
-    const card = await waitFor(() => screen.getByText("9 of 10"));
-    expect(screen.getByText("1 left")).toBeTruthy();
+    const card = await waitFor(() => screen.getByText(ofGranted("9", "10")));
+    expect(screen.getByText(left("1"))).toBeTruthy();
     expect(
       card.closest(".stat-card")?.querySelector(".stat-card-meter"),
     ).not.toBeNull();
@@ -135,11 +145,12 @@ describe("LicenseCard", () => {
     );
     render(<LicenseCard />);
 
-    await waitFor(() => screen.getByText("4 of 10"));
+    await waitFor(() => screen.getByText(ofGranted("4", "10")));
     // The two figures and the bar under them were three spellings of one fact.
     // What a reader cannot get from the value is what is still FREE, so that is
     // what the line under it says.
-    expect(screen.getByText("6 left")).toBeTruthy();
+    expect(screen.getByText(left("6"))).toBeTruthy();
+    // The two retired slots, gone from the catalog as well as from the card.
     expect(screen.queryByText("Seats granted")).toBeNull();
     expect(screen.queryByText("Seats in use")).toBeNull();
   });
@@ -169,7 +180,7 @@ describe("LicenseCard", () => {
     // One row holds the label, the rule and the reading — the whole
     // comparison, which is what makes it one reading.
     expect(row.textContent).toContain("Seats");
-    const reading = screen.getByText("9 of 10");
+    const reading = screen.getByText(ofGranted("9", "10"));
     expect(row.contains(reading)).toBe(true);
     expect(
       rule.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -296,8 +307,10 @@ describe("LicenseCard", () => {
     expect(alert.textContent).toMatch(/no new member can be invited/i);
     // The reading still states both figures, and its detail says which side of
     // the grant the count is on rather than leaving a reader to subtract.
-    expect(screen.getByText("11 of 10")).toBeTruthy();
-    expect(screen.getByText("1 over the grant")).toBeTruthy();
+    expect(screen.getByText(ofGranted("11", "10"))).toBeTruthy();
+    expect(
+      screen.getByText(en["license.seats.over"].replace("{count}", "1")),
+    ).toBeTruthy();
   });
 });
 

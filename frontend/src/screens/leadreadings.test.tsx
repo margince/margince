@@ -123,8 +123,10 @@ describe("what each reading says when the lead is not simply open", () => {
   it("keeps the ladder word as the reading and the ending under it", async () => {
     withReadings(<LeadReadings lead={{ ...lead, status: "promoted" }} />);
 
-    const status = (await screen.findByText("Qualified")).closest(".stat-card");
-    expect(status?.textContent).toContain("Archived");
+    const status = (await screen.findByText(en["lead.statusPromoted"])).closest(
+      ".stat-card",
+    );
+    expect(status?.textContent).toContain(en["lead.readings.archived"]);
   });
 
   // A merge leaves `status` where it stood, so the ending is the only thing
@@ -132,16 +134,31 @@ describe("what each reading says when the lead is not simply open", () => {
   it("says a merged lead went somewhere, without claiming where", async () => {
     withReadings(<LeadReadings lead={{ ...lead, merged_into_id: "l-2" }} />);
 
-    const status = (await screen.findByText("Merged")).closest(".stat-card");
-    expect(status?.textContent).toContain("Into another lead");
+    const status = (
+      await screen.findByText(en["lead.readings.merged"])
+    ).closest(".stat-card");
+    expect(status?.textContent).toContain(en["lead.readings.mergedInto"]);
   });
 
   it("says a lead has no company, in a reading's words and not a form's", async () => {
     withReadings(<LeadReadings lead={lead} />);
 
-    const company = (await screen.findByText("Company")).closest(".stat-card");
-    expect(company?.textContent).toContain("None");
-    expect(company?.textContent).not.toContain("Not set");
+    const company = (
+      await screen.findByText(en["lead.readings.company"])
+    ).closest(".stat-card");
+    expect(company?.textContent).toContain(en["lead.readings.noCompany"]);
+  });
+
+  // A StatCard value is a non-empty string by contract, so a name the server
+  // sent as whitespace is a name it does not have. Letting it through draws a
+  // slot that reads as a reading which failed to load.
+  it("reads a blank company name as no company", async () => {
+    withReadings(<LeadReadings lead={{ ...lead, company_name: "   " }} />);
+
+    const company = (
+      await screen.findByText(en["lead.readings.company"])
+    ).closest(".stat-card");
+    expect(company?.textContent).toContain(en["lead.readings.noCompany"]);
   });
 
   it("writes the override as a line of its own, not as the header's badge", async () => {
@@ -151,8 +168,10 @@ describe("what each reading says when the lead is not simply open", () => {
       />,
     );
 
-    expect(await screen.findByText("Set by hand")).toBeTruthy();
-    expect(screen.queryByText("overridden")).toBeNull();
+    expect(
+      await screen.findByText(en["lead.readings.scoreManual"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["lead.overriddenBadge"])).toBeNull();
   });
 
   // "On time" is a verdict on a response nobody has sent. What is true is
@@ -168,11 +187,11 @@ describe("what each reading says when the lead is not simply open", () => {
       />,
     );
 
-    const response = (await screen.findByText("First response")).closest(
-      ".stat-card",
-    );
-    expect(response?.textContent).toContain("Owed");
+    const response = (
+      await screen.findByText(en["lead.readings.firstResponse"])
+    ).closest(".stat-card");
+    expect(response?.textContent).toContain(en["lead.readings.owed"]);
     expect(response?.textContent).toMatch(/Due /);
-    expect(screen.queryByText("On time")).toBeNull();
+    expect(screen.queryByText(en["lead.sla.withinTarget"])).toBeNull();
   });
 });

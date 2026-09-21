@@ -487,3 +487,21 @@ export const ForecastSlots: Story = {
     </StoryProviders>
   ),
 };
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+export const ForecastSlotsPhone: Story = {
+  ...ForecastSlots,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// The seat's own two readings at 390px, where the door in each row's foot has
+// to stay a thumb target of its own.
+export const MyOutcomesPhone: Story = {
+  ...MyOutcomes,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

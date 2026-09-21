@@ -212,13 +212,14 @@ it("says nothing is read yet while the trace is still arriving", async () => {
   expect(screen.getByText("unread")).toBeTruthy();
 });
 
-// A failed read knows no more than an unfinished one, and neither is evidence
-// about the installation. The card that OWNS the trace draws the failure and
-// its retry; this reading simply stays silent.
-it("says nothing is read yet when the trace read failed", async () => {
+// A failed read is its own answer, for the reason "never" is: only one of the
+// two resolves by waiting, and a caller that could not tell them apart would
+// draw a reading that goes quiet on a broken read.
+it("says the trace read failed rather than that it is still arriving", async () => {
   mountProbe(async () => new Response("", { status: 500 }));
 
-  await waitFor(() => expect(screen.getByText("unread")).toBeTruthy());
+  await waitFor(() => expect(screen.getByText("failed")).toBeTruthy());
+  expect(screen.queryByText("unread")).toBeNull();
 });
 
 it("says never called only when the trace answered and held no row", async () => {

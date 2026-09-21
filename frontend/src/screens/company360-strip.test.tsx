@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { StateStrip } from "./company360";
 import type { CompanyTab } from "./companytab";
 
@@ -95,7 +96,7 @@ function renderStrip(
 
 async function readings() {
   const region = await screen.findByRole("region", {
-    name: "Where this account stands",
+    name: en["co.strip.title"],
   });
   // The row IS the region: the shared strip carries the name and the test id
   // on one element, so its children are the doors.
@@ -157,40 +158,91 @@ describe("the company readings row is the shared strip, not a copy of it", () =>
     const asProspect = await readings();
     // The stage itself under the word, so "Not invoiced" on a prospect and
     // "Not invoiced" on a customer we have never billed stay apart.
-    expect(within(asProspect.plate).getByText("Prospect")).toBeTruthy();
-    expect(within(asProspect.plate).getByText("Not invoiced")).toBeTruthy();
+    expect(
+      within(asProspect.plate).getByText(en["company.lifecycle.prospect"]),
+    ).toBeTruthy();
+    expect(
+      within(asProspect.plate).getByText(en["co.strip.fin.neverInvoiced"]),
+    ).toBeTruthy();
 
     cleanup();
     renderStrip(view({ state_strip: customer }));
     const asCustomer = await readings();
     expect(
-      await within(asCustomer.plate).findByText("Accounting not connected"),
+      await within(asCustomer.plate).findByText(
+        en["co.strip.fin.noConnection"],
+      ),
     ).toBeTruthy();
-    expect(within(asCustomer.plate).queryByText("Prospect")).toBeNull();
+    expect(
+      within(asCustomer.plate).queryByText(en["company.lifecycle.prospect"]),
+    ).toBeNull();
   });
 
   // The twelve-month window is a fact about invoices, not about the stage the
   // account stands in today. A former customer billed for three years reading
   // "Not invoiced" was the lifecycle answering a question about money.
+  const former: StateStripSection = {
+    ...prospect,
+    account: {
+      lifecycle: "former_customer",
+      relationship_types: ["customer"],
+    },
+  };
+
   it("reads a former customer's money the way a current one's is read", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(view({ state_strip: former }));
+    const { plate } = await readings();
+
+    expect(
+      await within(plate).findByText(en["co.strip.fin.noConnection"]),
+    ).toBeTruthy();
+    expect(
+      within(plate).queryByText(en["company.lifecycle.former_customer"]),
+    ).toBeNull();
+  });
+
+  // …and the stage under the word is READ rather than assumed. A live source
+  // with nothing billed says which account this is, and the account that has
+  // stopped buying is not a customer.
+  it("names the account's own stage where a live source billed nothing", async () => {
+    stubFinance({ company_id: "o-1", state: "connected" });
+    renderStrip(view({ state_strip: former }));
+    const { plate } = await readings();
+
+    expect(
+      await within(plate).findByText(en["co.strip.fin.neverInvoiced"]),
+    ).toBeTruthy();
+    expect(
+      within(plate).getByText(en["company.lifecycle.former_customer"]),
+    ).toBeTruthy();
+    expect(plate.textContent).not.toContain(en["co.strip.fin.unmapped"]);
+  });
+
+  // Decision 13: every stat card draws money compactly. A full amount does not
+  // fit a slot at phone width, and the figure ellipsized there.
+  it("draws the open-deals figure compactly, never at full length", async () => {
     stubFinance(NO_CONNECTION);
     renderStrip(
       view({
         state_strip: {
           ...prospect,
-          account: {
-            lifecycle: "former_customer",
-            relationship_types: ["customer"],
+          commercial: {
+            ...prospect.commercial,
+            open_count: 1,
+            stalled_count: 0,
+            priced_count: 1,
+            converted_count: 0,
+            open_pipeline_minor_base: 14_360_000,
+            base_currency: "EUR",
           },
         },
       }),
     );
     const { plate } = await readings();
 
-    expect(
-      await within(plate).findByText("Accounting not connected"),
-    ).toBeTruthy();
-    expect(within(plate).queryByText("Former customer")).toBeNull();
+    expect(within(plate).getByText(/143(\.6)?K/i)).toBeTruthy();
+    expect(plate.textContent).not.toContain("143,600.00");
   });
 });
 
@@ -228,9 +280,11 @@ describe("a slot with no reading says which absence it is", () => {
 
     // Four different absences and four different words: no open deal, no
     // relationship rated, no word exchanged, nothing on the calendar.
-    expect(within(plate).getAllByText("None").length).toBe(2);
-    expect(within(plate).getByText("Not assessed")).toBeTruthy();
-    expect(within(plate).getByText("None scheduled")).toBeTruthy();
+    expect(within(plate).getAllByText(en["co.strip.noOpenDeals"]).length).toBe(
+      2,
+    );
+    expect(within(plate).getByText(en["co.strip.notAssessed"])).toBeTruthy();
+    expect(within(plate).getByText(en["co.strip.next.none"])).toBeTruthy();
     // And no verdict borrowed from nowhere: the account's standing is the
     // 360's word under this row, never a sixth door here.
     expect(plate.textContent).not.toMatch(/At risk|Good|Strong|Health/);
@@ -259,12 +313,16 @@ describe("a slot with no reading says which absence it is", () => {
     // correspondence. The last touch and the calendar do not read from those
     // grants at all and give their own ordinary answers, as does the money on
     // a non-customer.
-    expect(within(plate).getAllByText("Restricted").length).toBe(2);
-    expect(within(plate).getByText("Prospect")).toBeTruthy();
-    expect(within(plate).getByText("None")).toBeTruthy();
-    expect(within(plate).getByText("None scheduled")).toBeTruthy();
+    expect(within(plate).getAllByText(en["reading.restricted"]).length).toBe(2);
+    expect(
+      within(plate).getByText(en["company.lifecycle.prospect"]),
+    ).toBeTruthy();
+    expect(
+      within(plate).getByText(en["co.strip.lastTouch.never"]),
+    ).toBeTruthy();
+    expect(within(plate).getByText(en["co.strip.next.none"])).toBeTruthy();
     expect(plate.textContent).not.toMatch(/No exchange|Unanswered/i);
-    expect(within(plate).queryByText("Not assessed")).toBeNull();
+    expect(within(plate).queryByText(en["co.strip.notAssessed"])).toBeNull();
   });
 });
 
@@ -278,8 +336,13 @@ describe("silence on the relationship slot names which silence it is", () => {
     commercial: null,
   };
 
+  const noReply = (days: number) =>
+    en["co.strip.unansweredDetail"].replace("{days}", String(days));
+
   function relationship(plate: HTMLElement): HTMLElement {
-    const card = within(plate).getByText("Relationship").closest(".stat-card");
+    const card = within(plate)
+      .getByText(en["co.strip.health"])
+      .closest(".stat-card");
     if (!(card instanceof HTMLElement)) {
       throw new Error("the relationship reading has no card");
     }
@@ -293,8 +356,11 @@ describe("silence on the relationship slot names which silence it is", () => {
     );
     const card = relationship((await readings()).plate);
 
-    expect(within(card).getByText("No exchange")).toBeTruthy();
+    const value = within(card).getByText(en["co.strip.noInboundEver"]);
     expect(card.querySelector(".stat-card-detail")).toBeNull();
+    // Untouched is not bad news. A row that lit up for every account nobody
+    // has approached would say the same thing about the ones being ignored.
+    expect(value.className).not.toMatch(/stat-card-warning/);
   });
 
   // The days run from the last outbound to the view's own `as_of`, never from
@@ -310,8 +376,32 @@ describe("silence on the relationship slot names which silence it is", () => {
     );
     const card = relationship((await readings()).plate);
 
-    expect(within(card).getByText("Unanswered")).toBeTruthy();
-    expect(within(card).getByText("No reply · 10 d")).toBeTruthy();
+    expect(within(card).getByText(en["co.strip.unanswered"]).className).toMatch(
+      /stat-card-warning/,
+    );
+    expect(within(card).getByText(noReply(10))).toBeTruthy();
+  });
+
+  // A letter posted TODAY is not yet unanswered news. The word stands — they
+  // have not replied to it — but there is no span to state and nothing to warn
+  // about, and clock skew between a timestamp and the read instant would
+  // otherwise print a negative one.
+  it("states no span and no warning for a letter sent today", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: { days_since_last_inbound: null },
+        // After the read's own `as_of`, which is the skew the clamp is for.
+        last_outbound_at: "2026-08-18T17:00:00Z",
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    const value = within(card).getByText(en["co.strip.unanswered"]);
+    expect(value.className).not.toMatch(/stat-card-warning/);
+    expect(card.querySelector(".stat-card-detail")).toBeNull();
+    expect(card.textContent).not.toMatch(/-?\d+\s*d/);
   });
 
   // A quiet relationship says how long nothing has come back, in the same
@@ -328,8 +418,10 @@ describe("silence on the relationship slot names which silence it is", () => {
     );
     const card = relationship((await readings()).plate);
 
-    expect(within(card).getByText("Quiet")).toBeTruthy();
-    expect(within(card).getByText("No reply · 45 d")).toBeTruthy();
+    expect(
+      within(card).getByText(en["co.strip.healthQuiet"]).className,
+    ).toMatch(/stat-card-warning/);
+    expect(within(card).getByText(noReply(45))).toBeTruthy();
     expect(card.textContent).not.toMatch(/inbound/i);
   });
 
@@ -345,8 +437,12 @@ describe("silence on the relationship slot names which silence it is", () => {
     );
     const card = relationship((await readings()).plate);
 
-    expect(within(card).getByText("One-sided")).toBeTruthy();
-    expect(within(card).getByText("20% inbound")).toBeTruthy();
+    expect(within(card).getByText(en["co.strip.healthOneSided"])).toBeTruthy();
+    expect(
+      within(card).getByText(
+        en["co.strip.replyShare"].replace("{percent}", "20"),
+      ),
+    ).toBeTruthy();
   });
 });
 
@@ -355,8 +451,26 @@ describe("silence on the relationship slot names which silence it is", () => {
 // five of them apart for a screen reader is the DESCRIPTION, which is the
 // reading's own label. Folded into the name it read "Open Open deals".
 function door(label: string): HTMLElement {
-  return screen.getByRole("button", { name: "Open", description: label });
+  return screen.getByRole("button", {
+    name: en["stat.open"],
+    description: label,
+  });
 }
+
+// The fold is the PLATE's: `.stat-strip:has(.stat-card-narrow-row)` restyles
+// the whole row, so a strip where only some cards declared it would draw a
+// bordered box among a column of borderless rows. The count is what holds
+// that, rather than a spot check on one slot.
+describe("every slot on the row declares the narrow shape", () => {
+  it("leaves no card behind when the row folds", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(view({ state_strip: customer }));
+    const { plate } = await readings();
+
+    expect(plate.childElementCount).toBe(5);
+    expect(plate.querySelectorAll(".stat-card-narrow-row").length).toBe(5);
+  });
+});
 
 describe("a reading offers the tab it is a reading of", () => {
   it("sends the reader to deals, finance and history from their own doors", async () => {
@@ -365,7 +479,7 @@ describe("a reading offers the tab it is a reading of", () => {
     renderStrip(view({ state_strip: customer }), (tab) => opened.push(tab));
     await readings();
 
-    for (const label of ["Open deals", "Revenue · 12 mo"]) {
+    for (const label of [en["co.strip.pipeline"], en["co.strip.netInvoiced"]]) {
       await userEvent.click(door(label));
     }
     // THREE readings open the same page, and each is read off it: the
@@ -374,7 +488,11 @@ describe("a reading offers the tab it is a reading of", () => {
     // which made it the strip's only route to tasks — and made it a card
     // that said one thing and did another. Tasks is reached from the tab
     // strip; a meeting card is not the place to hide the door to it.
-    for (const label of ["Relationship", "Last contact", "Next meeting"]) {
+    for (const label of [
+      en["co.strip.health"],
+      en["co.strip.lastTouch"],
+      en["co.strip.nextMeeting"],
+    ]) {
       await userEvent.click(door(label));
     }
 

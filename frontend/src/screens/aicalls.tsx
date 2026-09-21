@@ -159,20 +159,22 @@ function useCallTrace(task: string, enabled: boolean) {
  * When the runtime last reached a model — and, where there is no instant to
  * give, WHICH silence this is.
  *
- * `never` is a claim about the installation: nothing has ever called a model.
- * `withheld` and `unread` are claims about the read — one reader may not make
- * it, the other has not answered yet — and neither is evidence about the
- * installation at all. One `null` over all three let a caller say "Never
- * called" over a trace that was still arriving, which is the defect this type
- * exists to make unspellable.
+ * `never` is a claim about the INSTALLATION: nothing has ever called a model.
+ * The other three are claims about the READ — this reader may not make it, it
+ * has not answered yet, it failed — and none of them is evidence about the
+ * installation at all. One `null` over all four let a caller say "Never called"
+ * over a trace that was still arriving, which is the defect this type exists to
+ * make unspellable.
  *
- * `unread` covers a read in flight AND one that failed, because nothing is
- * known in either case and no surface tells them apart; the card that OWNS the
- * trace draws the failure and its retry.
+ * `failed` is its own arm rather than folded into `unread` for the reason
+ * `never` is its own: only one of the two resolves by waiting, and a reading
+ * that goes silent on a broken read tells a reader nothing is wrong. Every
+ * caller draws it; none may assume another surface will.
  */
 export type LastCall =
   | { state: "withheld" }
   | { state: "unread" }
+  | { state: "failed" }
   | { state: "never" }
   | { state: "at"; epochMs: number };
 
@@ -203,6 +205,9 @@ export function useLastCallAt(): LastCall {
   // go on showing a seat the runtime activity it may no longer see.
   if (!canSee) {
     return { state: "withheld" };
+  }
+  if (query.isError) {
+    return { state: "failed" };
   }
   if (query.data === undefined) {
     return { state: "unread" };

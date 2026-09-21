@@ -1588,23 +1588,54 @@ test.describe("§3.8: 390px mobile", () => {
       // — true of where the fix goes, and no reason for the screen to stop
       // measuring a control a rep presses on it.
       //
+      // TWO censuses, not one list, and each reports what it FOUND before it
+      // reports what was too small. A selector that matches nothing returns an
+      // empty list of offenders — the same value a clean screen returns — so a
+      // renamed class would leave this sweep measuring half the page and still
+      // green. Counting first is what makes a region going missing a red.
+      //
+      // Both spellings of the strip are named: this route draws the Brief's
+      // readings today and the worklist's own strip is the same component in
+      // the same place, so whichever is present is the one a rep presses.
+      //
       // Visible controls only: the page carries collapsed panels whose buttons
       // lay out at zero height, and those are not targets a thumb can miss.
-      const small = await page.evaluate(() => {
-        const controls = document.querySelectorAll(
-          ".brief-readings button, .brief-readings a.btn, " +
-            ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button",
-        );
-        return Array.from(controls)
-          .filter((element) => element.getBoundingClientRect().height > 0)
-          .map((element) => ({
-            height: element.getBoundingClientRect().height,
-            label: (element.textContent ?? "").trim(),
-          }))
-          .filter(({ height }) => height < 44)
-          .map(({ height, label }) => `${label}: ${Math.round(height)}px`);
+      const targets = await page.evaluate(() => {
+        const census = (scopes: readonly string[]) => {
+          const found = scopes.flatMap((scope) =>
+            Array.from(
+              document.querySelectorAll(
+                `${scope} button, ${scope} a.btn, ${scope} .link-button`,
+              ),
+            ),
+          );
+          // One control can answer to two of those selectors (a `.link-button`
+          // that is a `<button>`), and a census that counted it twice would
+          // report a page busier than it is.
+          const visible = Array.from(new Set(found)).filter(
+            (element) => element.getBoundingClientRect().height > 0,
+          );
+          return {
+            counted: visible.length,
+            small: visible
+              .map((element) => ({
+                height: element.getBoundingClientRect().height,
+                label: (element.textContent ?? "").trim(),
+              }))
+              .filter(({ height }) => height < 44)
+              .map(({ height, label }) => `${label}: ${Math.round(height)}px`),
+          };
+        };
+        return {
+          readings: census([".brief-readings", ".worklist-readings"]),
+          queue: census([".worklist-list"]),
+        };
       });
-      expect(small).toEqual([]);
+
+      expect(targets.readings.counted).toBeGreaterThan(0);
+      expect(targets.readings.small).toEqual([]);
+      expect(targets.queue.counted).toBeGreaterThan(0);
+      expect(targets.queue.small).toEqual([]);
     });
   });
 

@@ -6,12 +6,7 @@ import { Badge, DataTable, EmptyState, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
-import {
-  formatMoney,
-  formatMoneyCompact,
-  formatNumber,
-  INTL_LOCALE,
-} from "../format/format";
+import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
@@ -182,8 +177,16 @@ function OutstandingStrip({
         {outstanding.map(({ currency, amountMinor, entryCount }) => (
           <StatCard
             key={currency}
+            // A partner owed in two currencies is two slots, and on a phone
+            // they read as rows rather than as two clipped boxes.
+            narrow="row"
             label={t("commission.outstanding")}
-            value={formatMoneyCompact(amountMinor, currency, locale)}
+            // In FULL, never compact. This is money somebody is OWED: the
+            // compact form carries no fraction below ten thousand, so forty
+            // cents outstanding would read "€0" — a partner told they are owed
+            // nothing. The aggregates of deal value elsewhere abbreviate for
+            // width; a balance does not.
+            value={formatMoney(amountMinor, currency, locale)}
             // What the figure is made of. Where paying happens is true of the
             // whole panel rather than of this one currency's total, so it is
             // said once above the readings instead of on each of them.

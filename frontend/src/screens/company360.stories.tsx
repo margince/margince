@@ -582,6 +582,9 @@ export const StateStripUnanswered: Story = {
 // only the inbound side, so the two used to collapse into one sentence — and
 // the second of them, the account that is being ignored, is the one a rep acts
 // on. The outbound date is what tells them apart and what dates the reading.
+// The two silences, drawn one after the other: the first carries NO tone,
+// because an account nobody has approached is a fact about how far it has been
+// worked rather than bad news, and the second does.
 export const StateStripNoExchange: Story = {
   render: () => (
     <Strip
@@ -637,6 +640,44 @@ export const StateStripOneSided: Story = {
         ...populated,
         health: { days_since_last_inbound: 3, reply_balance: 0.18 },
       }}
+    />
+  ),
+};
+
+// The row at phone width, where every slot is one full-width ROW: label and
+// basis leading, figure on the trailing edge, one hairline between and no
+// boxes at all. Two-up here, a ten-character value ellipsized in the middle of
+// itself — "No exch…" — and the money made it worse, which is where decision
+// 13 came from. The figure is compact everywhere now and the fold does the
+// rest.
+export const StateStripPhone: Story = {
+  tags: ["uat-phone"],
+  render: () => <Strip view={populated} finance={connectedFinance} />,
+};
+
+// A former customer whose accounting IS connected and has billed nothing in
+// the window. The stage under the word is read rather than assumed — this slot
+// used to say "Customer" on an account that had stopped buying.
+export const StateStripFormerCustomerNothingBilled: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: {
+          account: {
+            lifecycle: "former_customer",
+            relationship_types: ["customer"],
+          },
+          commercial: {
+            open_count: 0,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
+          },
+        },
+      }}
+      finance={{ company_id: "o-1", state: "connected" }}
     />
   ),
 };

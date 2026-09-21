@@ -134,6 +134,9 @@ export const OverTheGrantDark: Story = {
 // it.
 export const OverTheGrantNarrow: Story = {
   globals: { viewport: { value: "phone" } },
+  // The TAG is what drives the browser to 390px; the global alone only moves
+  // the manager, so this story had been captured at 1024px (fe-uat.mjs).
+  tags: ["uat-phone"],
   render: story({
     state: "valid",
     seats_used: 11,

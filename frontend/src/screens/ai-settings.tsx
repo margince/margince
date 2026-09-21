@@ -4,6 +4,7 @@ import { StatCard } from "../design-system/atoms";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useProviderKeys } from "./ai-provider-keys";
 import { useRouting } from "./ai-routing";
 import { type LastCall, useLastCallAt } from "./aicalls";
@@ -204,6 +205,23 @@ export function ProvidersStat() {
   );
 }
 
+// What each silence from the call trace is worth saying, and which says
+// nothing. A table rather than a ladder: one arm of `LastCall` is one row, so a
+// state added to that union and not to this one is a hole a reader can see
+// rather than a branch that quietly falls through.
+const TRACE_SILENCE: Record<
+  Exclude<LastCall["state"], "at">,
+  MessageKey | null
+> = {
+  // Not this reader's to see, which is a fact about them and no evidence about
+  // the installation — the card simply does not speak for it.
+  withheld: null,
+  // Still arriving, and it resolves by waiting.
+  unread: null,
+  failed: "aiSettings.providers.traceFailed",
+  never: "aiSettings.providers.neverCalled",
+};
+
 // What qualifies the key count: the bindings that would fail closed, and when a
 // vendor was last reached.
 //
@@ -231,20 +249,22 @@ function providersDetail(
       })
     : null;
   if (lastCall.state !== "at") {
-    // ONLY the answered "never" says so. A trace still arriving, or one this
-    // reader may not see, is a fact about the READ and no evidence at all that
-    // nothing was ever called — and it used to fall through to a detail line
-    // with nothing in it. Its own line rather than a tail, because it is a
-    // sentence and not a timestamp.
-    const never =
-      lastCall.state === "never" ? t("aiSettings.providers.neverCalled") : null;
-    if (!broken && !never) {
+    // Its own line rather than a tail, because each of these is a sentence and
+    // not a timestamp. ONLY the answered "never" claims the installation has
+    // made no call; a trace still arriving or one this reader may not see is a
+    // fact about the READ, and both used to fall through to a detail line with
+    // nothing in it. A BROKEN read says so rather than going quiet — waiting
+    // will not fix it, and silence there reads as a runtime with nothing to
+    // report.
+    const silence = TRACE_SILENCE[lastCall.state];
+    const said = silence ? t(silence) : null;
+    if (!broken && !said) {
       return undefined;
     }
     return (
       <>
         {broken && <span className="ai-settings-missing">{broken}</span>}
-        {never && <span>{never}</span>}
+        {said && <span>{said}</span>}
       </>
     );
   }

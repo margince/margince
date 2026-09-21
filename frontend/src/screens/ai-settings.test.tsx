@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ProvidersStat, SpendStat } from "./ai-settings";
 
 // Settings → AI, as one page: two readings above a strip that chooses between
@@ -111,7 +112,7 @@ function backendFor(
   allow: GrantSpec,
   fail: { usage?: boolean; keys?: boolean } = {},
   routing: unknown = ROUTING,
-  reads: { usage?: unknown; calls?: unknown[] } = {},
+  reads: { usage?: unknown; calls?: unknown[]; callsFail?: boolean } = {},
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
@@ -138,6 +139,9 @@ function backendFor(
       return jsonResponse({ rungs: [] });
     }
     if (req.url.includes("/ai/calls")) {
+      if (reads.callsFail) {
+        return jsonResponse({ title: "upstream" }, 500);
+      }
       return jsonResponse({
         data: reads.calls ?? [],
         page: { next_cursor: null, has_more: false },
@@ -211,7 +215,7 @@ describe("the AI readings", () => {
     // Tokens are the budget the runtime actually enforces, so they ARE the
     // figure and the unit is in the label; the money is the estimate priced on
     // read and rides the line under it.
-    expect(screen.getByText("Tokens · this month")).toBeTruthy();
+    expect(screen.getByText(en["aiSettings.spend.label"])).toBeTruthy();
     expect(await screen.findByText("214k of 1m")).toBeTruthy();
     expect(screen.getByText(/US\$4\.12 spent/)).toBeTruthy();
     // One vendor keyed OUT OF the vendors this installation knows about, and
@@ -273,7 +277,7 @@ describe("the AI readings", () => {
     render(<SpendStat />);
 
     expect(await screen.findByText("214k of 1m")).toBeTruthy();
-    expect(screen.getByText("Not priced")).toBeTruthy();
+    expect(screen.getByText(en["aiSettings.spend.notPriced"])).toBeTruthy();
     expect(screen.queryByText(/spent/)).toBeNull();
   });
 
@@ -283,7 +287,9 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR));
     render(<ProvidersStat />);
 
-    expect(await screen.findByText("Never called")).toBeTruthy();
+    expect(
+      await screen.findByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeTruthy();
   });
 
   // The two halves qualify the SAME reading, so they share one line — and the
@@ -300,7 +306,9 @@ describe("the AI readings", () => {
     const missing = await screen.findByText("1 bound, no key");
     const line = missing.parentElement;
     expect(line?.textContent).toMatch(/1 bound, no key · last call/);
-    expect(screen.queryByText("Never called")).toBeNull();
+    expect(
+      screen.queryByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeNull();
   });
 
   // "Never called" is a claim about the INSTALLATION, and a reader who may not
@@ -312,7 +320,27 @@ describe("the AI readings", () => {
     render(<ProvidersStat />);
 
     expect(await screen.findByText("1 of 2")).toBeTruthy();
-    expect(screen.queryByText("Never called")).toBeNull();
+    expect(
+      screen.queryByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeNull();
     expect(screen.queryByText(/last call/i)).toBeNull();
+  });
+
+  // A BROKEN trace read is not a quiet one. Waiting will not fix it, so the
+  // line says so rather than leaving a reader to read silence as "nothing to
+  // report" — the same distinction the two readings above it already make.
+  it("says the call trace could not be read rather than going quiet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, {}, ROUTING, { callsFail: true }),
+    );
+    render(<ProvidersStat />);
+
+    expect(
+      await screen.findByText(en["aiSettings.providers.traceFailed"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeNull();
   });
 });

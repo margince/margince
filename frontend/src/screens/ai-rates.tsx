@@ -133,6 +133,7 @@ function LaneSlot({
   if (asked !== undefined) {
     return (
       <StatCard
+        narrow="row"
         label={label}
         value={asked}
         // `source` rather than a tone: this is not a worse price, it is a price
@@ -165,13 +166,14 @@ function LaneSlot({
   if (rate === undefined || price === undefined) {
     return (
       <StatCard
+        narrow="row"
         label={label}
         value={t("aiRates.unpriced")}
         tone="warning"
         detail={
           <>
             <span>{`${modelId} · ${t("aiRates.unpricedDetail")}`}</span>
-            <span>{t("aiRates.unpricedDetail2")}</span>
+            <span>{t("aiRates.unpricedConsequence")}</span>
           </>
         }
         // Where the missing rate is entered. The consequence is on the card;
@@ -183,6 +185,7 @@ function LaneSlot({
   }
   return (
     <StatCard
+      narrow="row"
       label={label}
       value={price}
       detail={

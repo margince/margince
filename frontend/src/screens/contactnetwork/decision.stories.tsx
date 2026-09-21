@@ -174,8 +174,9 @@ export const AskExpired: Story = {
   }),
 };
 
-/** At 390px the plate folds to full-width rows, where the two-line detail on
- *  the first slot has the least room. */
+/** At 390px the plate folds to one full-width ROW per reading, where the
+ *  two-line detail on the first slot has the least room. Two-up, the value
+ *  ellipsized at about ten characters. */
 export const Phone: Story = {
   tags: ["uat-phone"],
   render: strip({

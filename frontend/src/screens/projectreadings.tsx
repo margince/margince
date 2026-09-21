@@ -7,12 +7,8 @@ import { reveal } from "../app/reveal";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import {
-  formatDateAbbrev,
-  formatMoneyOrAbsent,
-  formatNumber,
-  MONEY_ABSENT,
-} from "../format/format";
+import { formatDateAbbrev, formatMoney, formatNumber } from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type Project360, stateOf } from "./projectsections";
@@ -32,22 +28,22 @@ export const PROJECT_COMMITMENTS_ANCHOR = "project-commitments";
 export const PROJECT_ACTIVITY_ANCHOR = "project-activity";
 
 // A money rollup as a READING: the figure where the deals carry one, and what
-// their absence means where they do not. `formatMoneyOrAbsent` owns whether the
-// pair can be said as money at all and its sentinel is that answer; the word
-// for the absence belongs to the slot, because "no deal open" and "none won
-// yet" are different facts about a project and a dash states neither.
+// their absence means where they do not. The word belongs to the slot, because
+// "no deal open" and "none won yet" are different facts about a project and a
+// dash states neither.
 function dealValue(
   value: components["schemas"]["Money"],
   absent: MessageKey,
   t: Translator,
   locale: Locale,
 ): string {
-  const figure = formatMoneyOrAbsent(
+  return formatMoneyOrWord(
     value.amount_minor,
     value.currency,
     locale,
+    t(absent),
+    formatMoney,
   );
-  return figure === MONEY_ABSENT ? t(absent) : figure;
 }
 
 /**
@@ -77,9 +73,15 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
       </SurfaceState>
     );
   }
+  // Every slot declares the NARROW shape, and every slot on the row must:
+  // below the strip's two-up width a `row` slot folds to one full-width line
+  // (statstrip.css). The fold is the PLATE's — `.stat-strip:has(...)` — so a
+  // row where only some cards carry it draws a bordered box among a column of
+  // borderless ones.
   return (
     <StatStrip testId="project-rollups">
       <StatCard
+        narrow="row"
         label={t("project.rollups.openValue")}
         value={dealValue(
           rollups.open_deal_value,
@@ -90,6 +92,7 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
         onOpen={reveal(PROJECT_DEALS_ANCHOR)}
       />
       <StatCard
+        narrow="row"
         label={t("project.rollups.wonValue")}
         value={dealValue(
           rollups.won_deal_value,
@@ -100,6 +103,7 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
         onOpen={reveal(PROJECT_DEALS_ANCHOR)}
       />
       <StatCard
+        narrow="row"
         label={t("project.rollups.openCommitments")}
         value={formatNumber(rollups.open_commitments, locale)}
         onOpen={reveal(PROJECT_COMMITMENTS_ANCHOR)}
@@ -109,6 +113,7 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
           opened the same anchor, and neither said what the other could not —
           so the count is the reading and the date qualifies it. */}
       <StatCard
+        narrow="row"
         label={t("project.rollups.activityCount")}
         value={
           rollups.activity_count > 0

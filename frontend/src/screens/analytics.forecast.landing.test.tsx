@@ -107,7 +107,7 @@ describe("the projected landing", () => {
 });
 
 describe("whether the open deals support the reference", () => {
-  it("names the basis as a fragment and keeps the sentence in the receipt", async () => {
+  it("keeps the basis in the receipt and out of the two-line detail", async () => {
     const user = userEvent.setup();
     draw(
       <SufficiencyCard
@@ -117,13 +117,10 @@ describe("whether the open deals support the reference", () => {
       />,
     );
 
-    // The detail holds two lines and both are already spoken for, so the
-    // measure rides the second one as a fragment and the sentence a reader can
-    // DISAGREE with folds into the card's own receipt.
-    expect(screen.getByText(/per the 4-period median$/)).toBeTruthy();
-    expect(
-      screen.queryByText(/median of the last four comparable periods/i),
-    ).toBeNull();
+    // The detail holds two lines and both are spoken for, so the measure lives
+    // ONLY in the receipt: as a fragment on the second line it cost that line a
+    // third row, which the clamp then took away in German.
+    expect(screen.queryByText(/4-period median/)).toBeNull();
 
     await user.click(await screen.findByRole("button", { name: "Evidence" }));
 
@@ -145,8 +142,7 @@ describe("whether the open deals support the reference", () => {
     // Compact, because a slot is not as wide as an amount.
     expect(screen.getByText("€2,400")).toBeTruthy();
     const detail = screen.getByText(/open ·/);
-    expect(detail.textContent).toContain("€1,200");
-    expect(detail.textContent).toContain("€1,000");
+    expect(detail.textContent).toBe("€1,200 open · to reach €1,000");
     expect(detail.textContent).not.toContain("€2,400");
   });
 

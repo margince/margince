@@ -155,3 +155,15 @@ export const NobodyHasCalled: Story = {
     );
   },
 };
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+// Five slots — the three readings plus the landing pair — so this is the widest
+// strip in the set and the one the fold matters most for.
+export const EveryDealPricedPhone: Story = {
+  ...EveryDealPriced,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

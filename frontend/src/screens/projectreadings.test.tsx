@@ -4,6 +4,7 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { en } from "../i18n/en";
 import { RollupsStrip } from "./projectreadings";
 import { project360 } from "./projects.fixtures";
 import { StoryProviders } from "./story-utils";
@@ -24,8 +25,13 @@ function plate(view: ReturnType<typeof project360>): HTMLElement {
   return screen.getByTestId("project-rollups");
 }
 
+const filed = (count: number) =>
+  en["project.rollups.activityFiled"].replace("{count}", String(count));
+
 function activity(strip: HTMLElement): HTMLElement {
-  const card = within(strip).getByText("Activity").closest(".stat-card");
+  const card = within(strip)
+    .getByText(en["project.rollups.activityCount"])
+    .closest(".stat-card");
   if (!(card instanceof HTMLElement)) {
     throw new Error("the activity reading has no card");
   }
@@ -38,11 +44,25 @@ describe("the activity feed is one reading, not two", () => {
 
     expect(strip.childElementCount).toBe(4);
     const card = activity(strip);
-    expect(within(card).getByText("142 filed")).toBeTruthy();
-    expect(card.textContent).toMatch(/Last · /);
-    // The two readings that were merged away left no second slot behind.
-    expect(within(strip).queryByText("Last activity")).toBeNull();
-    expect(within(strip).queryByText("Activities")).toBeNull();
+    expect(within(card).getByText(filed(142))).toBeTruthy();
+    // The date is the locale's, so the fragment the key contributes is what
+    // this pins — the reading is "a date, under the count", not which date.
+    expect(card.textContent).toContain(
+      en["project.rollups.activityLast"].split("{date}")[0],
+    );
+    // The two readings that were merged away left no second slot behind: the
+    // count of slots above is what holds that, and the date now has nowhere
+    // to be except under this card's own count.
+    expect(within(strip).getAllByText(/filed/).length).toBe(1);
+  });
+
+  // The fold is the PLATE's — `.stat-strip:has(.stat-card-narrow-row)` restyles
+  // the whole row — so a strip where only some cards declared it would draw a
+  // bordered box among a column of borderless rows.
+  it("declares the narrow shape on every slot, not some", () => {
+    const strip = plate(project360());
+
+    expect(strip.querySelectorAll(".stat-card-narrow-row").length).toBe(4);
   });
 
   // Zero is a READING here, and "None" is the word the whole product uses for
@@ -61,7 +81,7 @@ describe("the activity feed is one reading, not two", () => {
     );
     const card = activity(strip);
 
-    expect(within(card).getByText("None")).toBeTruthy();
+    expect(within(card).getByText(en["project.rollups.never"])).toBeTruthy();
     expect(card.querySelector(".stat-card-detail")).toBeNull();
   });
 
@@ -82,7 +102,7 @@ describe("the activity feed is one reading, not two", () => {
     );
     const card = activity(strip);
 
-    expect(within(card).getByText("7 filed")).toBeTruthy();
+    expect(within(card).getByText(filed(7))).toBeTruthy();
     expect(card.querySelector(".stat-card-detail")).toBeNull();
   });
 
@@ -102,8 +122,10 @@ describe("the activity feed is one reading, not two", () => {
       }),
     );
 
-    expect(within(strip).getByText("None yet")).toBeTruthy();
-    expect(within(strip).getAllByText("None").length).toBe(2);
+    expect(within(strip).getByText(en["project.rollups.noneWon"])).toBeTruthy();
+    expect(
+      within(strip).getAllByText(en["project.rollups.noneOpen"]).length,
+    ).toBe(2);
     expect(within(strip).getByText("0")).toBeTruthy();
   });
 });

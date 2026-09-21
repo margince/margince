@@ -58,17 +58,26 @@ export function DecisionStrip({
   const { locale } = useLocale();
   const own = useOwnRoute();
   const reader = useMe().data?.user.display_name;
+  // A name the server sent as whitespace is a name it does not have. A
+  // StatCard value is a non-empty string by contract, and a blank one draws a
+  // slot that reads as a reading which failed to load.
+  const via = legacyVia?.trim() || undefined;
   const lead = routes[0];
   const mine = routes.some(own);
   const indirect = routes.filter((r) => r.through_display_name).length;
+  // Every slot declares the NARROW shape, and every slot on the row must:
+  // below the strip's two-up width a `row` slot folds to one full-width line
+  // (statstrip.css), and the fold is the plate's — a strip where only some
+  // cards carry it draws a bordered box among a column of borderless rows.
   return (
     <StatStrip>
       <StatCard
+        narrow="row"
         label={t("contact.intro.stripWho")}
         value={
           lead
             ? formatNumber(routes.length, locale)
-            : (legacyVia ?? t("contact.intro.stripNoRoutes"))
+            : (via ?? t("contact.intro.stripNoRoutes"))
         }
         detail={
           lead ? (
@@ -84,7 +93,7 @@ export function DecisionStrip({
                   own line, because the count above already includes it. */}
               {mine ? <span>{t("contact.intro.stripWhoOwn")}</span> : null}
             </>
-          ) : legacyVia ? (
+          ) : via ? (
             t("contact.intro.stripDirect")
           ) : (
             t("contact.intro.stripNoPath")
@@ -93,6 +102,7 @@ export function DecisionStrip({
       />
       <ChangeCard change={change} withheld={changeWithheld} locale={locale} />
       <StatCard
+        narrow="row"
         label={t("contact.intro.stripHandoff")}
         value={
           open
@@ -125,6 +135,7 @@ function ChangeCard({
   const t = useT();
   return (
     <StatCard
+      narrow="row"
       label={t("contact.intro.stripWhyNow")}
       value={t(
         withheld
@@ -139,29 +150,37 @@ function ChangeCard({
 }
 
 // What the change rests on: the span for a reply or a silence, the two bands
-// for a move. A band move carries no span and a span move carries no bands,
-// so neither branch can print the other's placeholder empty.
+// for a move. Undefined where the field that branch needs did not arrive — the
+// verdict is still true, and a receipt standing on a substituted value is
+// worse than none: "After 0 d quiet" and "no contact → no contact" both read
+// as figures the server sent.
 function changeDetail(
   change: RelationshipChange,
   locale: Locale,
   t: Translate,
-): string {
-  const days = formatNumber(change.days ?? 0, locale);
-  if (change.kind === "replied_after_gap") {
-    return t("contact.intro.change.repliedSub", { days });
+): string | undefined {
+  if (change.kind === "warmed" || change.kind === "cooled") {
+    return change.from_bucket && change.to_bucket
+      ? t("contact.intro.change.buckets", {
+          from: t(`contact.band.${change.from_bucket}`),
+          to: t(`contact.band.${change.to_bucket}`),
+        })
+      : undefined;
   }
-  if (change.kind === "went_quiet") {
-    return t("contact.intro.change.quietSub", { days });
+  if (change.days == null) {
+    return undefined;
   }
-  return t("contact.intro.change.buckets", {
-    from: t(`contact.band.${change.from_bucket ?? "none"}`),
-    to: t(`contact.band.${change.to_bucket ?? "none"}`),
-  });
+  const days = formatNumber(change.days, locale);
+  return change.kind === "replied_after_gap"
+    ? t("contact.intro.change.repliedSub", { days })
+    : t("contact.intro.change.quietSub", { days });
 }
 
 // Who owes the next move, or what the answer was. A settled ask owes nobody
 // anything, so naming an owner there would point at a colleague who has
 // already done their part — the two that carry their own word say it instead.
+// An owner nobody can name YET is named by nobody: `ownerOf` answers undefined
+// while the session is still being read.
 function handoffDetail(
   open: IntroRequest,
   reader: string | undefined,
@@ -173,9 +192,11 @@ function handoffDetail(
   if (open.status === "expired") {
     return t("contact.intro.handoffExpiredSub");
   }
-  return OWED.has(open.status)
-    ? t("contact.intro.handoffOwner", { name: ownerOf(open, t, reader) })
-    : undefined;
+  if (!OWED.has(open.status)) {
+    return undefined;
+  }
+  const name = ownerOf(open, t, reader);
+  return name ? t("contact.intro.handoffOwner", { name }) : undefined;
 }
 
 // The statuses somebody still owes a move on.

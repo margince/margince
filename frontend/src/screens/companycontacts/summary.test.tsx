@@ -166,6 +166,30 @@ test("reads coverage against the roster, and names both gaps", async () => {
   ).not.toBeNull();
 });
 
+// The fold is the PLATE's — `.stat-strip:has(.stat-card-narrow-row)` restyles
+// the whole row — so a strip where only some cards declared it would draw a
+// bordered box among a column of borderless rows.
+test("every slot on the band declares the narrow shape", async () => {
+  stub({
+    best_way_in: {
+      contact_id: "p-1",
+      full_name: "Dietmar Rietsch",
+      engagement: "answered",
+    },
+  });
+  render(
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
+  );
+
+  const band = await screen.findByTestId("coverage-band");
+  expect(band.childElementCount).toBe(3);
+  expect(band.querySelectorAll(".stat-card-narrow-row").length).toBe(3);
+});
+
 test("names the missing critical role", async () => {
   stub({
     committee: {

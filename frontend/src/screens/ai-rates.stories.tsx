@@ -151,3 +151,13 @@ export const UnpricedReceipt: Story = {
     await userEvent.click(receipts[0]);
   },
 };
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+export const BothPricedPhone: Story = {
+  ...BothPriced,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

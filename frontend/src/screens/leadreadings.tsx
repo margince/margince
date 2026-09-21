@@ -76,7 +76,10 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
         label={t("lead.readings.company")}
         // A lead with no company HAS none, which is a fact about the lead.
         // "Not set" is a form's word for an empty input, and this is a reading.
-        value={lead.company_name ?? t("lead.readings.noCompany")}
+        // A name the server sent as whitespace is no name: a StatCard value is
+        // a non-empty string by contract, and a blank one draws a slot that
+        // reads as a reading which failed to load.
+        value={lead.company_name?.trim() || t("lead.readings.noCompany")}
       />
     </ReadingsGrid>
   );
@@ -109,17 +112,14 @@ export function scoreReasonLabel(
  * address already.
  */
 function StatusCard({ lead, t }: Readonly<{ lead: Lead; t: Translator }>) {
-  const ladder = leadStatusLabel(lead.status);
   return (
     <StatCard
       label={t("lead.status")}
-      value={
+      value={t(
         lead.merged_into_id
-          ? t("lead.readings.merged")
-          : ladder
-            ? t(ladder)
-            : lead.status
-      }
+          ? "lead.readings.merged"
+          : leadStatusLabel(lead.status),
+      )}
       detail={terminalDetail(lead, t)}
       onOpen={() =>
         navigate({ screen: "leads" }, new Map([["status", lead.status]]))

@@ -299,7 +299,7 @@ export const ReadingsCapped: Story = {
 // edge, one hairline between, and no boxes at all. Two-up it was five 190px
 // cards and 600px of readings before a reader reached the day's own work. The
 // shape belongs to `StatStrip` and keys off the slots declaring
-// `narrow="row"`, so no other strip in the product folds this way —
+// `narrow="row"`, which the record strips now declare too —
 // `Design System/StatStrip` has both side by side.
 export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
