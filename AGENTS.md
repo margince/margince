@@ -80,14 +80,30 @@ wins and the other session closes its own, pointing at the winner.
 [docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md) has stale
 claims, releasing one, and why two half-fixes both stay red.
 
+**An issue is claimed before it is worked.** A comment saying so is a signal the
+issue list does not show; an assignee and a label are. Check
+`gh issue view <n> --json assignees,labels,closedByPullRequestsReferences`
+against `gh api user -q .login`: an assignee who is not you, a
+`status: in progress` you do not hold, or an open closing pull request you did
+not write means taken. Nothing pointing elsewhere means it is yours: resume it.
+Taken: refuse, tell whoever asked who holds it, that questions and urgency go to
+that holder, and which free issue nearby to take instead; if they insist, that
+is their call — takeover comment first, then reassign. No claim expires. Claim
+yours: `gh issue edit <n> --add-assignee @me --add-label "status: in progress"`,
+then re-read and stand down if somebody else appeared. Claim the sub-issue,
+never its tracker; releasing is assignee off, the label off once nobody else
+holds it, and a comment saying where you stopped.
+[docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-issue.md) has the rest.
+
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) routes an
 exploitable weakness to a private advisory. The test: if you can write the
 reproduction, it belongs in an advisory, not here.
 
 Every issue you do open carries exactly one `priority:` and exactly one `area:`,
-plus `status:` when it is not now's work. Unlabelled means nobody has looked at
-it yet, so filing without labels tells the next reader something false. The full
-taxonomy: [docs/reference/issue-labels.md](docs/reference/issue-labels.md).
+plus `status:` when it is not now's work or is already somebody's. Unlabelled
+means nobody has looked at it yet, so filing without labels tells the next
+reader something false. The full taxonomy:
+[docs/reference/issue-labels.md](docs/reference/issue-labels.md).
 
 ## Build and test
 
