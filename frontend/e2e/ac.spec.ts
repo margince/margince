@@ -1551,7 +1551,7 @@ test.describe("§3.8: 390px mobile", () => {
     //
     // So this measures the row itself — every row, not the first — and the
     // targets a rep presses.
-    test("S-E11.2: the day's queue is workable with a thumb at 390px", async ({
+    test("the day's queue is workable with a thumb at 390px", async ({
       page,
     }) => {
       await page.goto("/#/worklist");
