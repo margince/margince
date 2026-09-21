@@ -43,6 +43,32 @@ The engine answers the second. It resolves a **category** from what the send act
   `communication_suppression` records the other stops: an Art. 21 objection, a statutory
   restriction, a subject's request to stop, a hard bounce. Neither expires on its own, and no
   rollout mode softens either.
+- **A rep may vouch for a send the engine refused for lack of evidence, and that vouch is not
+  consent.** `communication_override` (`consent.Allow`) records a standing, per-category statement
+  that a machine-level refusal may be overruled for one contact — the category the engine resolved
+  the send to, and only that category; a vouch for `marketing` says nothing about
+  `customer_service`. It flips nothing absolute: `Decision.CanBeOverruledByCategory` only asks the
+  question for a non-absolute machine reading that RESOLVED A CATEGORY, so the nine
+  `absoluteDenials` below and any subject-decided refusal are unreachable through this door
+  regardless of who is vouching — a subject stop still wins. An `unknown_purpose` refusal is
+  unreachable too, for a different reason: it is non-absolute, but the request named a purpose key
+  the engine does not know, so it resolved no category and a per-category vouch has nothing to
+  answer. Resending with a recognised purpose is the remedy there, not a vouch. The reason is required — unlike a suppression, which may relay a bare phone call, an
+  override is the rep's own judgement call and the record must say why. It is revocable
+  (`consent.RevokeOverride`) only by a caller whose authority level `CanRevoke` the level it was
+  recorded at — `CanOverrule` plus one square, because admin is the top human authority and an
+  admin-recorded vouch would otherwise have no seat able to take it back; `lift.go` keeps the
+  stricter `CanOverrule` for a stop, where erring toward not-sending is the safe direction. It
+  survives a merge onto the
+  surviving contact (`consent.CarryOverridesTx`) with its original `decided_by_level` and reason
+  intact, so a merge cannot launder a vouch down to a lower authority. Revoking one therefore
+  reaches every copy a merge made of it, on the id the caller was actually given — the pre-merge
+  one — and announces each copy lifted on the stream that heard it recorded, because a vouch left
+  standing under an id its author never saw goes on allowing the send. Art. 17 erasure and the retention
+  sweep DELETE it outright, with the rest of the contact's consent record — a standing "write to
+  them anyway" must not outlive the contact it was about — while Art. 15 subject access EXPORTS it
+  (`privacy.AssembleSAR`'s `communication_overrides`), because somebody asking what is held about
+  them is owed the record that a human decided to write to them, and why.
 - **A restriction is not total, and that is deliberate.** Three categories still reach a restricted
   subject through a registered template — `security_notice`, `privacy_notice` and
   `optout_confirmation` — because a contact is not better off for being unable to hear that their
@@ -58,7 +84,8 @@ The engine answers the second. It resolves a **category** from what the send act
   enforced, so flipping one category buys less than it looks. Nine reason codes are absolute
   (`absoluteDenials` in `commsauthz`) and deny in every mode whatever the setting says: the four
   above, an unconfirmed double opt-in, a recipient that resolves to no single subject, a consent
-  withdrawal, and a jurisdiction's advertising frequency cap.
+  withdrawal, a jurisdiction's advertising frequency cap, and a request whose claimed category
+  contradicts what the record resolves it to.
 
 Marketing consent still works the way it always did, and the round trip is what proves it: a
 double-opt-in purpose needs a confirmed `consent_event`, completed **only by the data subject**, by
@@ -331,6 +358,7 @@ have with a supervisory authority, and destruction is irreversible.
 | The authorization engine | `internal/modules/consent/authorize*.go` (`AuthorizeStagingTx`, `AuthorizeTransmit`) |
 | The shared vocabulary | `internal/shared/ports/commsauthz/` (category, basis, phase, verdict, mode) |
 | Per-recipient decisions | `communication_decision`, `communication_basis`, `communication_suppression` |
+| Standing rep overrides | `internal/modules/consent/override.go` and `internal/modules/consent/overridecarry.go` (`Allow`, `RevokeOverride`, `CarryOverridesTx`, `communication_override`), with `internal/modules/consent/overridechain.go` holding the walk a revoke takes across the copies a merge made and the lock that keeps a merge from outrunning it; the merge reaches the carry through `internal/modules/contacts/overridecarry.go`, which owns the port and not the table |
 | Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `contact_consent`, `consent_event`) |
 | Art. 17 erasure | `internal/modules/privacy/eraser.go` (`NewEraser`, `EraseContact`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |

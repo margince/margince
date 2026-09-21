@@ -117,3 +117,26 @@ func (c Category) ServesTheSubject() bool {
 		return false
 	}
 }
+
+// KnownForOverride reports whether c is a category a rep's standing override
+// (consent.Allow) may name: a resolvable category that is NOT one that serves
+// the subject.
+//
+// The ServesTheSubject five — security_notice, privacy_notice,
+// optout_confirmation, consent_confirmation, record_confirmation — are excluded
+// because an override there could never do anything. They are duty-discharge
+// messages that pass even a hard suppression and are never refused for lack of
+// evidence, so a machine refusal never resolves to one; an override naming one
+// would be a dead row that liveOverride can never match. Narrowing here blocks
+// no lawful vouch — it refuses only rows that could never apply — and it reads
+// the ServesTheSubject invariant rather than a second hand-typed set, so it
+// moves automatically the day that set changes.
+//
+// The door narrows; the STORAGE does not. The migration's CHECK on
+// communication_override.category
+// (backend/migrations/core/1789956766_a_rep_may_vouch_for_a_send.up.sql) still
+// admits all fourteen Categories() values, held by
+// TestOverrideCategoryVocabularyAgreesWithItsCheckConstraint: a row already
+// written carries its original category forward, so the column must accept the
+// whole vocabulary even though this door will not write every member of it.
+func (c Category) KnownForOverride() bool { return c.Valid() && !c.ServesTheSubject() }

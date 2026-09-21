@@ -205,6 +205,17 @@ own, and no rollout mode softens either. A restriction is not total, though — 
 template, because a contact is not better off for being unable to hear that their account was
 breached. A hard bounce stops even those.
 
+A rep can also record the opposite of a stop: `communication_override` is a standing, per-category
+statement that a machine-level refusal for lack of evidence may be overruled for one contact. It
+reaches only a non-absolute machine reading — a subject-decided refusal still wins — and, because a
+vouch names ONE category, only a reading that RESOLVED one: an `unknown_purpose` refusal is
+non-absolute and still unreachable, because the request named a key the engine does not know and so
+resolved no category for a vouch to have named. Resending with a recognised purpose is the remedy
+there. It is revocable only by a caller whose authority may revoke the level it was recorded at:
+above it, or an admin taking back another admin's, which is the one square a stop's stricter rule
+refuses. See
+[privacy-and-consent.md](privacy-and-consent.md) for the full model.
+
 ### The three destinations one message offers
 
 A tokenized send derives **three** links from one token, and they are not interchangeable — collapsing
@@ -246,7 +257,7 @@ The engine must distinguish an **answer** (park — a human can act on it) from 
 the question could not be asked): getting that backwards silently kills legitimate mail. Every
 category ships **enforcing**; `consent.authorization_modes` can move one to `observe` or `warn`, an
 operator's rollback lever rather than the shipped posture. It buys less than it looks: the older
-purpose-key gate decides only where **no** recipient's category is enforced, and eight reason codes
+purpose-key gate decides only where **no** recipient's category is enforced, and nine reason codes
 deny in every mode whatever the setting says.
 
 ### Confirm-first for agents; a human's own action is its own approval

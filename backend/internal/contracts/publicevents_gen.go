@@ -449,6 +449,8 @@ const (
 	CompanyMerged                         SubscribableEventType = "company.merged"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
+	ConsentOverrideLifted                 SubscribableEventType = "consent.override_lifted"
+	ConsentOverrideRecorded               SubscribableEventType = "consent.override_recorded"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
 	ConsentSuppressionLifted              SubscribableEventType = "consent.suppression_lifted"
 	ContactArchived                       SubscribableEventType = "contact.archived"
@@ -588,6 +590,10 @@ func (e SubscribableEventType) Valid() bool {
 	case CompanyUpdated:
 		return true
 	case ConsentChanged:
+		return true
+	case ConsentOverrideLifted:
+		return true
+	case ConsentOverrideRecorded:
 		return true
 	case ConsentSuppressed:
 		return true
@@ -1076,6 +1082,36 @@ type PublicEventConsentChanged struct {
 
 	// PurposeId The consent purpose this state change applies to.
 	PurposeId openapi_types.UUID `json:"purpose_id"`
+}
+
+// PublicEventConsentOverrideLifted Payload for consent.override_lifted — somebody with the authority to do so took back ONE standing override (consent/override.go's RevokeOverride).
+// That is not the same as "the refusal now applies again for every category" — a contact can carry more than one override, one per category, and revoking one says nothing about the others. A consumer wanting the categories still vouched for reads the contact's live overrides rather than inferring them from this event.
+// ONE PER ROW TAKEN BACK, and the entity says which. A merge COPIES a vouch onto the survivor under a new id and announces the copy with its own consent.override_recorded on the survivor's stream; revoking the original takes back every copy, and each gets its own lifted event on the stream that heard it recorded. A consumer is told about the id it is holding rather than about one it was never given.
+// It carries BOTH levels: the one the override was recorded at and the one that revoked it, the same pairing consent.suppression_lifted carries and for the same reason — an auditor needs to see that the second was allowed to take back the first without joining a row that no longer says so. Allowed, not outranked: a vouch is the one decision an admin may take back from a peer admin, because admin is the top human authority and nothing higher exists to reach an admin-recorded override.
+// It never carries the category the override covered or the reason either party gave. The category is what `override_id` lets a reader look up on the still-standing audit trail; the reason belongs to the seats who wrote it, and an event reaches readers neither explanation was given to.
+type PublicEventConsentOverrideLifted struct {
+	// OverrideId Which override was revoked. Without it a consumer holding several overrides for one contact cannot tell which one this event describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
+
+	// RecordedAtLevel The authority the override was originally recorded at (user | admin). Paired with revoked_by_level so an auditor can see the second was allowed to take back the first without joining a row that no longer says so.
+	RecordedAtLevel string `json:"recorded_at_level"`
+
+	// RevokedByLevel The authority that revoked it (user | admin).
+	RevokedByLevel string `json:"revoked_by_level"`
+}
+
+// PublicEventConsentOverrideRecorded Payload for consent.override_recorded — a rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). Its own event rather than a consent.changed: an override is not consent and not a lawful basis, it outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row.
+// The subject is a contact and only a contact: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification.
+// It names WHAT category was vouched for and at WHICH authority, never the reason the rep gave: that explanation belongs to the audit trail a rep reviewing the contact reads, not to every subscriber the event reaches.
+type PublicEventConsentOverrideRecorded struct {
+	// Category Which category of send this vouch covers. The engine resolves every send to exactly one category, and the override applies to that one only.
+	Category string `json:"category"`
+
+	// DecidedByLevel Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name.
+	DecidedByLevel string `json:"decided_by_level"`
+
+	// OverrideId Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a contact can hold several live vouches at once — one per category, and after a merge more than one for a single category — so a consumer with no id cannot say which of them any later consent.override_lifted describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
 }
 
 // PublicEventConsentSuppressed Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop.
@@ -2417,6 +2453,14 @@ func (PublicEventConsentChanged) EventType() string { return "consent.changed" }
 
 func (PublicEventConsentChanged) EntityType() string { return "dynamic" }
 
+func (PublicEventConsentOverrideLifted) EventType() string { return "consent.override_lifted" }
+
+func (PublicEventConsentOverrideLifted) EntityType() string { return "contact" }
+
+func (PublicEventConsentOverrideRecorded) EventType() string { return "consent.override_recorded" }
+
+func (PublicEventConsentOverrideRecorded) EntityType() string { return "contact" }
+
 func (PublicEventConsentSuppressed) EventType() string { return "consent.suppressed" }
 
 func (PublicEventConsentSuppressed) EntityType() string { return "contact" }
@@ -2845,6 +2889,8 @@ var PublicEventVersions = map[string]int{
 	"company.merged":                            1,
 	"company.updated":                           1,
 	"consent.changed":                           1,
+	"consent.override_lifted":                   1,
+	"consent.override_recorded":                 1,
 	"consent.suppressed":                        1,
 	"consent.suppression_lifted":                1,
 	"contact.archived":                          1,

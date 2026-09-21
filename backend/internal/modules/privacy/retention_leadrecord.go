@@ -113,5 +113,12 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 		 WHERE subject_kind = 'lead' AND subject_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's decisions: %w", err)
 	}
+	// An override has no address to carry it forward onto, unlike the
+	// suppression above: it is deleted outright, the same verb the Art. 17
+	// lead-twin sweep uses against it.
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM communication_override WHERE lead_id = $1`, id); err != nil {
+		return fmt.Errorf("clear the lead's overrides: %w", err)
+	}
 	return nil
 }

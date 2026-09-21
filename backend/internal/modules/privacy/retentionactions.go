@@ -3,8 +3,9 @@
 
 package privacy
 
-// What the engine can DO to one over-age record: the executor table, the two
-// questions the authoring surface asks of it, and the dispatch.
+// What the engine can DO to one over-age record: the executor table and the
+// dispatch. The two questions the authoring surface asks of the table live in
+// retentionauthorable.go, which reads the same map this file declares.
 //
 // Split from retention.go because the table is two things at once — the dispatch
 // AND the authorable set — and both the nightly pass and the write path consult
@@ -74,26 +75,6 @@ func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID
 
 func (*RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	return anonymizeContactRecord(ctx, tx, id)
-}
-
-// SupportsRetentionAction reports whether the engine can perform this action on
-// this object type. The authoring surface refuses a pair it answers false for.
-func SupportsRetentionAction(objectType, action string) bool {
-	_, ok := retentionActions[objectType+"/"+action]
-	return ok
-}
-
-// ActionsForScope is every action a given scope may be authored with, sorted, so
-// a refusal can name the alternatives instead of leaving the caller to guess at
-// a set the contract's two independent enums do not express.
-func ActionsForScope(objectType string) []string {
-	out := make([]string, 0, 3)
-	for _, action := range []string{actionArchive, actionAnonymize, actionErase} {
-		if SupportsRetentionAction(objectType, action) {
-			out = append(out, action)
-		}
-	}
-	return out
 }
 
 // apply runs ONE action on ONE record in one audited transaction.
@@ -495,6 +476,14 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	}
 	// Whatever the detach could not reach — a row whose address is not among
 	// the subject's — names a contact who is going, so it goes with them.
-	_, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE contact_id = $1`, id)
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE contact_id = $1`, id); err != nil {
+		return err
+	}
+	// An override has NO address column to detach onto, unlike the suppression
+	// above — it exists to vouch for THIS contact, and a subject who returns
+	// arrives as a new record with nobody yet vouching for them. So it cannot
+	// be carried forward the way an objection can: it is deleted outright,
+	// same verb the eraser's contact-keyed delete uses.
+	_, err := tx.Exec(ctx, `DELETE FROM communication_override WHERE contact_id = $1`, id)
 	return err
 }

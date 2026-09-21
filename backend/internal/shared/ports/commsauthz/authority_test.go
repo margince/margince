@@ -33,6 +33,46 @@ func TestWhoMayOverruleWhom(t *testing.T) {
 	}
 }
 
+// TestWhoMayRevokeWhom is CanOverrule's table with one square flipped: an admin
+// may TAKE BACK another admin's decision, because admin is the top human
+// authority and issue #4275's table makes an admin decision "overruled by
+// admin". Every other square is CanOverrule's own answer, LevelSubject included:
+// nothing revokes the subject.
+func TestWhoMayRevokeWhom(t *testing.T) {
+	t.Parallel()
+
+	levels := []AuthorityLevel{LevelMachine, LevelUser, LevelAdmin, LevelSubject}
+	// want[caller][decided]: may the caller revoke a decision at that level?
+	want := map[AuthorityLevel]map[AuthorityLevel]bool{
+		LevelMachine: {LevelMachine: false, LevelUser: false, LevelAdmin: false, LevelSubject: false},
+		LevelUser:    {LevelMachine: true, LevelUser: false, LevelAdmin: false, LevelSubject: false},
+		LevelAdmin:   {LevelMachine: true, LevelUser: true, LevelAdmin: true, LevelSubject: false},
+		LevelSubject: {LevelMachine: true, LevelUser: true, LevelAdmin: true, LevelSubject: false},
+	}
+
+	for _, caller := range levels {
+		for _, decided := range levels {
+			got := caller.CanRevoke(decided)
+			if got != want[caller][decided] {
+				t.Errorf("%s revoking %s = %v, want %v", caller, decided, got, want[caller][decided])
+			}
+		}
+	}
+}
+
+// TestNobodyRevokesTheSubject is the one square CanRevoke keeps closed against
+// every seat including admin: a subject-recorded decision is the top of the
+// ladder and CanRevoke's admin-revokes-admin case does not reach it.
+func TestNobodyRevokesTheSubject(t *testing.T) {
+	t.Parallel()
+
+	for _, caller := range []AuthorityLevel{LevelMachine, LevelUser, LevelAdmin, LevelSubject} {
+		if caller.CanRevoke(LevelSubject) {
+			t.Errorf("%s may revoke the subject; nothing may", caller)
+		}
+	}
+}
+
 // TestNobodyOverrulesTheSubject is the row of the matrix above that carries a
 // legal obligation rather than a product preference, so it is asserted on its
 // own where a reader deleting it has to notice what they are deleting.

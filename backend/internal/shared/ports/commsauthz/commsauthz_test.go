@@ -118,6 +118,36 @@ func TestOnlySubjectServingCategoriesPassASuppression(t *testing.T) {
 	}
 }
 
+// TestKnownForOverrideIsTheResolvableSetMinusSubjectServing pins the override
+// door's vocabulary to a derived set rather than a hand-typed one: exactly the
+// valid categories that do NOT serve the subject. A ServesTheSubject category
+// is a dead override target — never refused for lack of evidence, so no machine
+// refusal ever resolves to one — and the door refuses it rather than writing a
+// row that could never apply. Asserting the whole set (not a sample) means the
+// day ServesTheSubject moves, this door's membership moves with it.
+func TestKnownForOverrideIsTheResolvableSetMinusSubjectServing(t *testing.T) {
+	for _, c := range Categories() {
+		want := c.Valid() && !c.ServesTheSubject()
+		if got := c.KnownForOverride(); got != want {
+			t.Errorf("%s.KnownForOverride() = %v, want %v (Valid && !ServesTheSubject)", c, got, want)
+		}
+	}
+	// A non-category string is not an override target, whatever else is true.
+	if Category("not-a-category").KnownForOverride() {
+		t.Error("a string outside the vocabulary reports as an override target")
+	}
+	// Spot-check the two sides so a future refactor that made the derivation
+	// vacuously true still has a concrete expectation to fail.
+	if CategorySecurityNotice.KnownForOverride() {
+		t.Error("security_notice serves the subject; a vouch naming it is a dead row")
+	}
+	for _, outbound := range []Category{CategoryMarketing, CategoryCustomerService} {
+		if !outbound.KnownForOverride() {
+			t.Errorf("%s is a resolvable non-subject-serving category; a rep may vouch for it", outbound)
+		}
+	}
+}
+
 // There is no generic operational category. That absence IS the fix: naming a
 // message "transactional" was how anything could call itself exempt.
 func TestNoGenericTransactionalCategoryExists(t *testing.T) {
