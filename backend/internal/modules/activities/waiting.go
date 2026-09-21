@@ -5,20 +5,16 @@ package activities
 
 // Who is waiting for a reply.
 //
-// The deal page already answers this for ONE deal, by walking that deal's
-// timeline newest-first and stopping at the first outbound. This is the same
-// question asked of the whole workspace at once, and it cannot be the same walk:
-// a per-deal scan cannot find the contact with no deal, and it cannot be run
-// once per record on a page that must render in one read.
+// The deal page answers this for ONE deal by walking its timeline newest-first.
+// This asks the whole workspace at once and cannot be the same walk: a per-deal
+// scan cannot find the contact with no deal, nor run once per record on a page
+// that must render in one read. A test feeds both the same timeline and requires
+// the same answer.
 //
-// So it is a query, and the two spellings are held together by a test that
-// feeds both the same timeline and requires the same answer.
-//
-// WHY THIS IS ITS OWN READ rather than a filter over the at-risk deals: a fresh
-// inbound makes a deal LESS quiet, so the deal drops out of the quiet-deal
-// candidate set exactly when somebody starts waiting on it. Deriving "waiting"
-// from "quiet" would therefore lose the newest and most urgent cases, which are
-// the ones a rep most needs.
+// ITS OWN READ rather than a filter over at-risk deals: a fresh inbound makes a
+// deal LESS quiet, so it leaves the quiet-deal candidate set exactly when
+// somebody starts waiting on it. Deriving "waiting" from "quiet" would lose the
+// newest and most urgent cases.
 
 import (
 	"context"
@@ -104,19 +100,15 @@ type WaitingReply struct {
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
-	// PRECEDENCE, first owner found: deal, lead, contact, company. It is the
-	// order of how specific the claim is — a thread on a deal is that deal
-	// owner's to answer whatever else it touches, and a contact outranks their
-	// company because the company owner is answerable for the account rather
-	// than for every conversation inside it.
+	// PRECEDENCE, first owner found: deal, lead, contact, company — the order of
+	// how specific the claim is. A contact outranks their company because the
+	// company owner answers for the account, not for every conversation in it.
 	//
-	// A separate question from the record ids above, which the caller picks a
-	// DISPLAY record from by link priority. The two are allowed to differ: those
-	// answer "what is this about", this one answers "who owes the reply".
+	// A separate question from the record ids above, which answer "what is this
+	// about" while this answers "who owes the reply"; the two may differ.
 	//
 	// Resolved through the SAME visibility-gated links, so an owner appears only
-	// where the reader may see the record naming them. Read off an ungated join
-	// it would publish who owns a record the reader cannot open.
+	// where the reader may see the record naming them.
 	OwnerID ids.UUID
 }
 
@@ -132,21 +124,17 @@ const WaitingScanCap = 200
 
 // waitingHorizonDays is how far back a wait can reach and still be work.
 //
-// Past this, an unanswered message is history rather than an obligation: the
-// conversation it belonged to has ended one way or another, and nobody is
-// sitting at the other end of it. The horizon is coarse on purpose — the bands
-// that separate an urgent wait from a stale one are the caller's, and they
-// judge what survives this.
+// Past this, an unanswered message is history rather than an obligation. Coarse
+// on purpose: the bands separating an urgent wait from a stale one are the
+// caller's.
 //
-// A thread with an open deal on it is exempt. That is the one case where a long
-// silence still costs money, and the caller says the same thing in its own
-// staleness rule; a horizon that outranked it would leave that rule with
-// nothing to act on.
+// A thread with an open deal is exempt — the one case where a long silence still
+// costs money, and a horizon outranking it would leave the caller's own
+// staleness rule nothing to act on.
 //
-// Applied BEFORE the cap for the same reason the machine rule is, and the
-// reason is worth restating because it is the whole shape of this query: a
-// filter after LIMIT lets two hundred rows nobody wants fill the scan and push
-// a real customer past it, and the page then says nobody is waiting.
+// Applied BEFORE the cap, which is the whole shape of this query: a filter after
+// LIMIT lets two hundred rows nobody wants fill the scan and push a real
+// customer past it, and the page then says nobody is waiting.
 const waitingHorizonDays = 90
 
 // What "still live" means, per record type, as one spelling each.
@@ -180,34 +168,21 @@ func liveRecord(predicate, alias string) string {
 	return fmt.Sprintf(predicate, alias)
 }
 
-// Two of the holes are RELAXATIONS, and both default to off.
+// Two of the holes are RELAXATIONS, both defaulting to off. %[12]s and %[13]s
+// widen the not_sales judgement and the sales-link requirement by OR-ing a
+// caller-supplied predicate in front of each clause rather than removing it.
+// Every ordinary caller passes `neverRelaxed`, so the clause is unreachable and
+// Postgres plans it away.
 //
-// %[12]s and %[13]s widen the not_sales judgement and the sales-link
-// requirement respectively, each by OR-ing a caller-supplied predicate in front
-// of the clause rather than by removing it. Every ordinary caller passes
-// `neverRelaxed`, so the statement they run is the statement that was always
-// here — the clause is unreachable and Postgres plans it away.
+// They exist for the hidden-backlog guardrail, which asks what each hiding rule
+// keeps off the queue — a question only the query owning the OTHER rules can
+// answer. A second statement restating the anti-joins and the live-record
+// predicates would be a second answer to "is this contact waiting".
 //
-// They exist for the hidden-backlog guardrail (hiddenbacklog.go), which asks
-// what each hiding rule is keeping off the queue. That question can only be
-// answered by the query that owns the OTHER rules: a second statement restating
-// the anti-joins, the machine-sender exclusion and the live-record predicates
-// would be a second answer to "is this contact waiting", and the two would
-// disagree the first time either was edited. Widening one clause of the real
-// query is the version that cannot drift.
-//
-// waitingRepliesSQL is Sprintf'd directly at ALL call sites — WaitingReplies
-// below (entityClause scopeUnbounded, the workspace-wide Worklist read), the
-// entity-scoped list filter (waitingReplyExistsClause) and the guardrail —
-// rather than through a wrapper. A long positional argument list is already the
-// shape the constant settled on for its own eligibility rules; a wrapper over
-// that many arguments would just be the same Sprintf call once removed, with a
-// second place to keep its parameter order in sync with the %[N] indices
-// below. What must not fork between the call sites is the SQL TEXT — the
-// anti-joins, the tie break, the future-dated guard, the horizon, the
-// live-record predicates — and sharing the one constant holds that; a test
-// feeding both callers the same timeline and requiring the same answer holds
-// the rest.
+// Sprintf'd directly at ALL call sites rather than through a wrapper, which over
+// this many positional arguments would be the same call once removed with a
+// second parameter order to keep in sync. What must not fork is the SQL TEXT,
+// and sharing one constant holds that.
 
 // WaitingReplies answers who is waiting on this reader for a reply.
 //
@@ -360,19 +335,14 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 // from — the set a message's sender is tested against to tell a colleague from
 // a customer.
 //
-// A seam rather than a query here because the domains are capture's to define:
-// it owns workspace_email_domain and the rule for which entries count as
-// vouched-for, and a module may not read a sibling's tables. What this returns
-// is DATA the queue tests against in SQL, not a Go predicate, because the test
-// has to run before the scan cap — a predicate applied to the rows that came
-// back would let two hundred colleague threads fill the scan and push a real
-// customer past it, which is the failure every other rule in waitingsql.go is
-// ordered to avoid.
+// A seam rather than a query because the domains are capture's to define, and a
+// module may not read a sibling's tables. It returns DATA the queue tests in
+// SQL, not a Go predicate: the test has to run before the scan cap, or two
+// hundred colleague threads fill the scan and push a real customer past it.
 //
-// The domains are read inside the CALLER's transaction, so the strict read and
-// every relaxed read beside it see one snapshot. A seam that opened its own
-// would let the set change between two counts that are meant to differ by
-// exactly one rule.
+// Read inside the CALLER's transaction, so the strict read and every relaxed
+// read beside it see one snapshot — otherwise the set could change between two
+// counts meant to differ by exactly one rule.
 type OwnDomains interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
 	// ReaderAddresses is the reader's OWN addresses, for telling a message
