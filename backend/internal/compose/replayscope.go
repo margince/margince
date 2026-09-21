@@ -281,6 +281,19 @@ var replayableOperations = map[string]replayTarget{
 		object:  objectRetentionPolicy,
 		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
 	},
+	// The two legal-hold decisions. Same shape as the pair above and for the
+	// same reasons: 204 with no body, so a replay re-serves the same empty
+	// answer, and the decision was gated on the retention authority when it
+	// first ran. The RECORD's own write gate ran too — each owning module takes
+	// the delete grant on its table — but that is not what a replay re-checks.
+	"POST /v1/retention/legal-holds/{entityType}/{recordId}/place": {
+		object:  objectRetentionPolicy,
+		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
+	},
+	"POST /v1/retention/legal-holds/{entityType}/{recordId}/lift": {
+		object:  objectRetentionPolicy,
+		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
+	},
 	"POST /v1/pipelines":       {object: objectPipeline, rowNote: "pipeline has no owner and is governed by object grants only (auth.EnsureVisible's own note)"},
 	"PATCH /v1/pipelines/{id}": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
 	"POST /v1/stages":          {object: objectPipeline, rowNote: noOwnerStage},

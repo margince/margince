@@ -38,6 +38,9 @@ type Handlers struct {
 	// compose wires it, and a page then reads as unevaluated rather than as
 	// undoable.
 	undoability UndoabilityReader
+	// holds places and lifts a litigation hold. Nil until compose wires the
+	// seam, and the routes refuse rather than half-serving without it.
+	holds LegalHoldWriter
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the

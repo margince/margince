@@ -113,7 +113,8 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	  ORDER BY abs(CASE WHEN jsonb_typeof(factor.value->'points') = 'number'
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
-	  LIMIT 1)`
+	  LIMIT 1),
+	legal_hold`
 
 // readLead resolves one lead row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads whose
@@ -165,7 +166,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason,
+		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {

@@ -15682,6 +15682,99 @@ paths:
         '409':
           description: The record is already restricted. Pinning is not a way to extend a window already running.
         '422': { $ref: '#/components/responses/ValidationError' }
+  /retention/legal-holds:
+    get:
+      tags: [Compliance]
+      operationId: listLegalHolds
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # What a litigation or investigation hold is currently preserving. The
+      # read side of the hold has always existed — every retention selector
+      # carries `NOT legal_hold` and the Art. 17 cascade refuses a held record
+      # — and this is the controller's view of which records that is.
+      #
+      # Why, when and by whom are NOT here: the write commits an audit row in
+      # the same transaction, so the reason is recorded verbatim against the
+      # actor and the moment. A second copy on the record would be a second
+      # answer to one question.
+      summary: List the records a legal hold is preserving.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of held records.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/HeldRecord' }
+                  page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /retention/legal-holds/{entityType}/{recordId}/place:
+    parameters:
+      - { name: entityType, in: path, required: true, schema: { $ref: '#/components/schemas/HeldEntityType' } }
+      - { name: recordId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: placeLegalHold
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # A hold overrides the storage-limitation ladder for records litigation
+      # or an investigation may need, so it is the controller's judgement and
+      # never an agent's. The reason is mandatory for the reason the retention
+      # override's is: it is what makes the hold a decision rather than a
+      # toggle, and it is audited verbatim.
+      summary: Place a legal hold on a record. Requires a stated reason; audited.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionOverrideRequest' }
+      responses:
+        '204': { description: The record is held. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: The record is already held. Placing is not a way to restate a hold already running. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /retention/legal-holds/{entityType}/{recordId}/lift:
+    parameters:
+      - { name: entityType, in: path, required: true, schema: { $ref: '#/components/schemas/HeldEntityType' } }
+      - { name: recordId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: liftLegalHold
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # Lifting returns the record to the ordinary ladder: a retention sweep
+      # may then act on it, and a suspended erasure request may be asked again.
+      # It does not itself delete anything.
+      summary: Lift a legal hold. Requires a stated reason; audited.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionOverrideRequest' }
+      responses:
+        '204': { description: The hold is lifted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: The record is not held. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /retention-policies:
     get:
       tags: [Compliance]
@@ -27451,6 +27544,14 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped: a chip strip shows a few and
         # says "+N", so a row does not need every word to draw one. Archived
         # tags are omitted — a retired word is not drawn on a list.
@@ -27866,6 +27967,14 @@ components:
       description: A company. Mirrors the `company` table.
       required: [id, display_name, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped: a chip strip shows a few and
         # says "+N", so a row does not need every word to draw one. Archived
         # tags are omitted — a retired word is not drawn on a list.
@@ -32593,6 +32702,14 @@ components:
       description: A deal. Mirrors the `deal` table.
       required: [id, name, pipeline_id, stage_id, status, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped: a chip strip shows a few and
         # says "+N", so a row does not need every word to draw one. Archived
         # tags are omitted — a retired word is not drawn on a list.
@@ -33237,6 +33354,14 @@ components:
       description: A project — the body of work a client relationship is made of. Mirrors the `project` table.
       required: [id, name, phase, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         id: { type: string, format: uuid }
         name: { type: string }
         key:
@@ -36062,6 +36187,14 @@ components:
       description: A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
@@ -39657,7 +39790,7 @@ components:
           # `close` freezes content while access continues, and `pause`/`resume`
           # suspend reads without touching a single credential. `hold`/`release`
           # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete]
+          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         before:
@@ -42089,6 +42222,25 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 2000 }
+    HeldEntityType:
+      type: string
+      # The five records that carry a hold. Not the whole record vocabulary:
+      # an activity is held TRANSITIVELY, through whichever of these it is
+      # filed under, because a hold on a subject must cover the evidence and
+      # holding the evidence separately would let the two disagree.
+      enum: [contact, company, deal, lead, project]
+    HeldRecord:
+      type: object
+      # What a hold is preserving, named well enough to recognise and no more.
+      # The reason, the actor and the moment are in the audit row the write
+      # committed; this answers only "what is held".
+      required: [entity_type, record_id, label]
+      properties:
+        entity_type: { $ref: '#/components/schemas/HeldEntityType' }
+        record_id: { type: string, format: uuid }
+        label:
+          type: string
+          description: The record's own name, so a controller can recognise it without a second read.
     RestrictedRecord:
       type: object
       # ADR-0114. What a statutory obligation is holding, stated without

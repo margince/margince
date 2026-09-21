@@ -269,12 +269,17 @@ func ParseStatedReason(reason string) (StatedReason, error) {
 	stated := strings.TrimSpace(reason)
 	if stated == "" || len([]rune(stated)) > maxOverrideReason {
 		return StatedReason{}, httperr.Validation("reason", "required", fmt.Sprintf(
-			"a release or a pin records a controller's decision, so it must state why in 1–%d characters",
-			maxOverrideReason,
+			"an override of the retention ladder records a controller's decision, so it must state "+
+				"why in 1–%d characters", maxOverrideReason,
 		))
 	}
 	return StatedReason{text: stated}, nil
 }
+
+// String hands the stated reason to a caller outside this package. The field
+// stays unexported so a reason can only arrive through ParseStatedReason —
+// which is what makes "a reason was stated" a type rather than a convention.
+func (s StatedReason) String() string { return s.text }
 
 // admitRestrictionDecision is the gate both operations share: a human session
 // (an agent never decides what the installation keeps, even carrying an

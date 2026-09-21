@@ -1939,11 +1939,13 @@ const (
 	AuditLogEntryActionImport             AuditLogEntryAction = "import"
 	AuditLogEntryActionImportUndo         AuditLogEntryAction = "import_undo"
 	AuditLogEntryActionInvite             AuditLogEntryAction = "invite"
+	AuditLogEntryActionLiftLegalHold      AuditLogEntryAction = "lift_legal_hold"
 	AuditLogEntryActionMerge              AuditLogEntryAction = "merge"
 	AuditLogEntryActionPasswordLinkIssued AuditLogEntryAction = "password_link_issued"
 	AuditLogEntryActionPause              AuditLogEntryAction = "pause"
 	AuditLogEntryActionPay                AuditLogEntryAction = "pay"
 	AuditLogEntryActionPin                AuditLogEntryAction = "pin"
+	AuditLogEntryActionPlaceLegalHold     AuditLogEntryAction = "place_legal_hold"
 	AuditLogEntryActionPromote            AuditLogEntryAction = "promote"
 	AuditLogEntryActionPublish            AuditLogEntryAction = "publish"
 	AuditLogEntryActionRecordShare        AuditLogEntryAction = "record_share"
@@ -2015,6 +2017,8 @@ func (e AuditLogEntryAction) Valid() bool {
 		return true
 	case AuditLogEntryActionInvite:
 		return true
+	case AuditLogEntryActionLiftLegalHold:
+		return true
 	case AuditLogEntryActionMerge:
 		return true
 	case AuditLogEntryActionPasswordLinkIssued:
@@ -2024,6 +2028,8 @@ func (e AuditLogEntryAction) Valid() bool {
 	case AuditLogEntryActionPay:
 		return true
 	case AuditLogEntryActionPin:
+		return true
+	case AuditLogEntryActionPlaceLegalHold:
 		return true
 	case AuditLogEntryActionPromote:
 		return true
@@ -8893,6 +8899,33 @@ func (e HealthDimensionRating) Valid() bool {
 	case HealthDimensionRatingGood:
 		return true
 	case HealthDimensionRatingStrong:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HeldEntityType.
+const (
+	HeldEntityTypeCompany HeldEntityType = "company"
+	HeldEntityTypeContact HeldEntityType = "contact"
+	HeldEntityTypeDeal    HeldEntityType = "deal"
+	HeldEntityTypeLead    HeldEntityType = "lead"
+	HeldEntityTypeProject HeldEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the HeldEntityType enum.
+func (e HeldEntityType) Valid() bool {
+	switch e {
+	case HeldEntityTypeCompany:
+		return true
+	case HeldEntityTypeContact:
+		return true
+	case HeldEntityTypeDeal:
+		return true
+	case HeldEntityTypeLead:
+		return true
+	case HeldEntityTypeProject:
 		return true
 	default:
 		return false
@@ -22631,7 +22664,10 @@ type Company struct {
 	// LastActivityAt When something last happened with this account — the newest `occurred_at` of a WORKSPACE-AUDIENCE activity linked to it, maintained on the activity write exactly as `deal.last_activity_at` is (formulas-and-rules §8; a read accelerator, never a second truth — a rebuild must reproduce it). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
-	LegalName      *string    `json:"legal_name,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool   `json:"legal_hold,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
 
 	// Lifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
@@ -25418,6 +25454,9 @@ type Contact struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LastName       *string    `json:"last_name,omitempty"`
 
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
+
 	// MergedIntoId Set when this row was merged away.
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -27709,6 +27748,9 @@ type Deal struct {
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
+
 	// LostReason Required when status=lost.
 	LostReason *string `json:"lost_reason,omitempty"`
 
@@ -29688,6 +29730,18 @@ type HealthDimension struct {
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
 
+// HeldEntityType defines model for HeldEntityType.
+type HeldEntityType string
+
+// HeldRecord defines model for HeldRecord.
+type HeldRecord struct {
+	EntityType HeldEntityType `json:"entity_type"`
+
+	// Label The record's own name, so a controller can recognise it without a second read.
+	Label    string             `json:"label"`
+	RecordId openapi_types.UUID `json:"record_id"`
+}
+
 // HeldThread One thread your mailbox is withholding, and what is known about why.
 type HeldThread struct {
 	// ActivityId The message that opened this thread, where this caller may read it — what a
@@ -31003,6 +31057,9 @@ type Lead struct {
 
 	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
@@ -33451,6 +33508,9 @@ type Project struct {
 
 	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
 
 	// MaskedFields The fields of THIS row the caller may not read (a field mask). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
 	MaskedFields *[]string           `json:"masked_fields,omitempty"`
@@ -45052,6 +45112,60 @@ type ExplainReportParams struct {
 	Agg *[]string `form:"agg,omitempty" json:"agg,omitempty"`
 }
 
+// ListLegalHoldsParams defines parameters for ListLegalHolds.
+type ListLegalHoldsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// LiftLegalHoldParams defines parameters for LiftLegalHold.
+type LiftLegalHoldParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// PlaceLegalHoldParams defines parameters for PlaceLegalHold.
+type PlaceLegalHoldParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListRestrictedActivitiesParams defines parameters for ListRestrictedActivities.
 type ListRestrictedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -46698,6 +46812,12 @@ type CreateRetentionPolicyJSONRequestBody = CreateRetentionPolicyRequest
 // UpdateRetentionPolicyJSONRequestBody defines body for UpdateRetentionPolicy for application/json ContentType.
 type UpdateRetentionPolicyJSONRequestBody = UpdateRetentionPolicyRequest
 
+// LiftLegalHoldJSONRequestBody defines body for LiftLegalHold for application/json ContentType.
+type LiftLegalHoldJSONRequestBody = RetentionOverrideRequest
+
+// PlaceLegalHoldJSONRequestBody defines body for PlaceLegalHold for application/json ContentType.
+type PlaceLegalHoldJSONRequestBody = RetentionOverrideRequest
+
 // PinActivityToFloorJSONRequestBody defines body for PinActivityToFloor for application/json ContentType.
 type PinActivityToFloorJSONRequestBody = RetentionOverrideRequest
 
@@ -47229,6 +47349,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["legal_name"]; found {
 		err = json.Unmarshal(raw, &a.LegalName)
 		if err != nil {
@@ -47495,6 +47623,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -47780,6 +47915,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["merged_into_id"]; found {
 		err = json.Unmarshal(raw, &a.MergedIntoId)
 		if err != nil {
@@ -48006,6 +48149,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -50704,6 +50854,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_email")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["lost_reason"]; found {
 		err = json.Unmarshal(raw, &a.LostReason)
 		if err != nil {
@@ -51036,6 +51194,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_email"], err = json.Marshal(a.LastEmail)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -52248,6 +52413,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -52588,6 +52761,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -53709,6 +53889,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
 	if raw, found := object["masked_fields"]; found {
 		err = json.Unmarshal(raw, &a.MaskedFields)
 		if err != nil {
@@ -53891,6 +54079,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
 		}
 	}
 
@@ -58247,6 +58442,15 @@ type ServerInterface interface {
 	// Edit a retention policy (admin/ops).
 	// (PATCH /retention-policies/{id})
 	UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id)
+	// List the records a legal hold is preserving.
+	// (GET /retention/legal-holds)
+	ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams)
+	// Lift a legal hold. Requires a stated reason; audited.
+	// (POST /retention/legal-holds/{entityType}/{recordId}/lift)
+	LiftLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params LiftLegalHoldParams)
+	// Place a legal hold on a record. Requires a stated reason; audited.
+	// (POST /retention/legal-holds/{entityType}/{recordId}/place)
+	PlaceLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params PlaceLegalHoldParams)
 	// List the records a statutory retention obligation is holding, and why.
 	// (GET /retention/restrictions)
 	ListRestrictedActivities(w http.ResponseWriter, r *http.Request, params ListRestrictedActivitiesParams)
@@ -61874,6 +62078,24 @@ func (_ Unimplemented) DeleteRetentionPolicy(w http.ResponseWriter, r *http.Requ
 // Edit a retention policy (admin/ops).
 // (PATCH /retention-policies/{id})
 func (_ Unimplemented) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the records a legal hold is preserving.
+// (GET /retention/legal-holds)
+func (_ Unimplemented) ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Lift a legal hold. Requires a stated reason; audited.
+// (POST /retention/legal-holds/{entityType}/{recordId}/lift)
+func (_ Unimplemented) LiftLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params LiftLegalHoldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Place a legal hold on a record. Requires a stated reason; audited.
+// (POST /retention/legal-holds/{entityType}/{recordId}/place)
+func (_ Unimplemented) PlaceLegalHold(w http.ResponseWriter, r *http.Request, entityType HeldEntityType, recordId openapi_types.UUID, params PlaceLegalHoldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -85518,6 +85740,188 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListLegalHolds operation middleware
+func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLegalHoldsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegalHolds(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftLegalHold operation middleware
+func (siw *ServerInterfaceWrapper) LiftLegalHold(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entityType" -------------
+	var entityType HeldEntityType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entityType", chi.URLParam(r, "entityType"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entityType", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "recordId" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "recordId", chi.URLParam(r, "recordId"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recordId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LiftLegalHoldParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftLegalHold(w, r, entityType, recordId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PlaceLegalHold operation middleware
+func (siw *ServerInterfaceWrapper) PlaceLegalHold(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entityType" -------------
+	var entityType HeldEntityType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entityType", chi.URLParam(r, "entityType"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entityType", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "recordId" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "recordId", chi.URLParam(r, "recordId"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recordId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PlaceLegalHoldParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PlaceLegalHold(w, r, entityType, recordId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRestrictedActivities operation middleware
 func (siw *ServerInterfaceWrapper) ListRestrictedActivities(w http.ResponseWriter, r *http.Request) {
 
@@ -92093,6 +92497,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/retention-policies/{id}", wrapper.UpdateRetentionPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/retention/legal-holds", wrapper.ListLegalHolds)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/legal-holds/{entityType}/{recordId}/lift", wrapper.LiftLegalHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/legal-holds/{entityType}/{recordId}/place", wrapper.PlaceLegalHold)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/retention/restrictions", wrapper.ListRestrictedActivities)
