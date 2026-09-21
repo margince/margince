@@ -1,0 +1,714 @@
+[
+  {
+    "in": "",
+    "want": ""
+  },
+  {
+    "in": "plain",
+    "want": "plain"
+  },
+  {
+    "in": "\tvalue",
+    "want": "value"
+  },
+  {
+    "in": "value\t",
+    "want": "value"
+  },
+  {
+    "in": "\tvalue\t",
+    "want": "value"
+  },
+  {
+    "in": "\t\tvalue\t\t",
+    "want": "value"
+  },
+  {
+    "in": "a\tb",
+    "want": "a\tb"
+  },
+  {
+    "in": "\t",
+    "want": ""
+  },
+  {
+    "in": "\nvalue",
+    "want": "value"
+  },
+  {
+    "in": "value\n",
+    "want": "value"
+  },
+  {
+    "in": "\nvalue\n",
+    "want": "value"
+  },
+  {
+    "in": "\n\nvalue\n\n",
+    "want": "value"
+  },
+  {
+    "in": "a\nb",
+    "want": "a\nb"
+  },
+  {
+    "in": "\n",
+    "want": ""
+  },
+  {
+    "in": "\u000bvalue",
+    "want": "value"
+  },
+  {
+    "in": "value\u000b",
+    "want": "value"
+  },
+  {
+    "in": "\u000bvalue\u000b",
+    "want": "value"
+  },
+  {
+    "in": "\u000b\u000bvalue\u000b\u000b",
+    "want": "value"
+  },
+  {
+    "in": "a\u000bb",
+    "want": "a\u000bb"
+  },
+  {
+    "in": "\u000b",
+    "want": ""
+  },
+  {
+    "in": "\fvalue",
+    "want": "value"
+  },
+  {
+    "in": "value\f",
+    "want": "value"
+  },
+  {
+    "in": "\fvalue\f",
+    "want": "value"
+  },
+  {
+    "in": "\f\fvalue\f\f",
+    "want": "value"
+  },
+  {
+    "in": "a\fb",
+    "want": "a\fb"
+  },
+  {
+    "in": "\f",
+    "want": ""
+  },
+  {
+    "in": "\rvalue",
+    "want": "value"
+  },
+  {
+    "in": "value\r",
+    "want": "value"
+  },
+  {
+    "in": "\rvalue\r",
+    "want": "value"
+  },
+  {
+    "in": "\r\rvalue\r\r",
+    "want": "value"
+  },
+  {
+    "in": "a\rb",
+    "want": "a\rb"
+  },
+  {
+    "in": "\r",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "ab",
+    "want": "ab"
+  },
+  {
+    "in": "",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": "\u2028value",
+    "want": "value"
+  },
+  {
+    "in": "value\u2028",
+    "want": "value"
+  },
+  {
+    "in": "\u2028value\u2028",
+    "want": "value"
+  },
+  {
+    "in": "\u2028\u2028value\u2028\u2028",
+    "want": "value"
+  },
+  {
+    "in": "a\u2028b",
+    "want": "a\u2028b"
+  },
+  {
+    "in": "\u2028",
+    "want": ""
+  },
+  {
+    "in": "\u2029value",
+    "want": "value"
+  },
+  {
+    "in": "value\u2029",
+    "want": "value"
+  },
+  {
+    "in": "\u2029value\u2029",
+    "want": "value"
+  },
+  {
+    "in": "\u2029\u2029value\u2029\u2029",
+    "want": "value"
+  },
+  {
+    "in": "a\u2029b",
+    "want": "a\u2029b"
+  },
+  {
+    "in": "\u2029",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": "　value",
+    "want": "value"
+  },
+  {
+    "in": "value　",
+    "want": "value"
+  },
+  {
+    "in": "　value　",
+    "want": "value"
+  },
+  {
+    "in": "　　value　　",
+    "want": "value"
+  },
+  {
+    "in": "a　b",
+    "want": "a　b"
+  },
+  {
+    "in": "　",
+    "want": ""
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "value",
+    "want": "value"
+  },
+  {
+    "in": "ab",
+    "want": "ab"
+  },
+  {
+    "in": "",
+    "want": ""
+  },
+  {
+    "in": " value",
+    "want": "value"
+  },
+  {
+    "in": "value ",
+    "want": "value"
+  },
+  {
+    "in": " value ",
+    "want": "value"
+  },
+  {
+    "in": "  value  ",
+    "want": "value"
+  },
+  {
+    "in": "a b",
+    "want": "a b"
+  },
+  {
+    "in": " ",
+    "want": ""
+  },
+  {
+    "in": "﻿value",
+    "want": "﻿value"
+  },
+  {
+    "in": "value﻿",
+    "want": "value﻿"
+  },
+  {
+    "in": "﻿value﻿",
+    "want": "﻿value﻿"
+  },
+  {
+    "in": "﻿﻿value﻿﻿",
+    "want": "﻿﻿value﻿﻿"
+  },
+  {
+    "in": "a﻿b",
+    "want": "a﻿b"
+  },
+  {
+    "in": "﻿",
+    "want": "﻿"
+  },
+  {
+    "in": "᠎value",
+    "want": "᠎value"
+  },
+  {
+    "in": "value᠎",
+    "want": "value᠎"
+  },
+  {
+    "in": "᠎value᠎",
+    "want": "᠎value᠎"
+  },
+  {
+    "in": "᠎᠎value᠎᠎",
+    "want": "᠎᠎value᠎᠎"
+  },
+  {
+    "in": "a᠎b",
+    "want": "a᠎b"
+  },
+  {
+    "in": "᠎",
+    "want": "᠎"
+  },
+  {
+    "in": " 😀 ",
+    "want": "😀"
+  },
+  {
+    "in": "😀",
+    "want": "😀"
+  }
+]
