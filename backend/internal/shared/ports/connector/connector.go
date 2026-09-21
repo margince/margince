@@ -247,10 +247,11 @@ type NormalizedRecord struct {
 	// the binding.
 	participantsAreProviderAttested bool
 
-	// EVERY address this record names, including the connected owner's own. The
-	// internal-vs-external decision is taken over it, which is why it overlaps
-	// Counterparty and Participants rather than complementing them: those are the
-	// derived ENDS, and a message is internal only when every party to it is.
+	// Addresses is EVERY address this record names, including the connected
+	// owner's own. The internal-vs-external decision is taken over it, which is
+	// why it overlaps Counterparty and Participants rather than complementing
+	// them: those are the derived ENDS, and a message is internal only when
+	// every party to it is.
 	//
 	// None means "I cannot enumerate the parties", not "there are none" — an
 	// unenumerable message is never treated as internal, so it is captured.
