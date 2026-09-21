@@ -7,7 +7,5 @@
    screen around it happened to set. That name is gone from the tree and
    `typeclass-coverage.test.ts` fails the next one. */
 .readings-floor {
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
   margin: var(--space-2) 0 0;
 }

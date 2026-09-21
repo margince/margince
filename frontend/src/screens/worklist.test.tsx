@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,7 +14,7 @@ import {
   type WorklistItem,
 } from "./worklist.testkit";
 
-// The ranked queue, and the ways it can mislead the person reading it.
+// The ranked queue, and the ways it can mislead the reader reading it.
 //
 // Every case here is one promise the page makes: that the order is readable,
 // that a figure describes the rows beneath it, that nothing is drawn to report
@@ -30,13 +30,13 @@ afterEach(() => {
 describe("what the ranked queue tells a reader", () => {
   it("draws no panel to report a zero", async () => {
     stub(day());
-    const { container } = renderWorklist();
+    renderWorklist();
 
     await screen.findByText("Nothing is waiting on you.");
-
-    // Topology, not headings: a panel drawn to say "none" is the thing the
-    // concept asks us to remove, whatever words it carries.
-    expect(container.querySelectorAll(".panel")).toHaveLength(0);
+    // Asked of the QUEUE: the sections below it are panels in their own right
+    // and stand whatever the day holds. worklist.today holds the other half,
+    // that a clear day draws no list either.
+    expect(screen.queryByRole("heading", { name: "Today" })).toBeNull();
   });
 
   // The queue is TODAY's: the server takes open tasks due before the
@@ -130,7 +130,7 @@ describe("what the ranked queue tells a reader", () => {
           row({
             title: "Call Anna Weber about the renewal",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-000000000003",
               label: "Anna Weber",
             },
@@ -152,7 +152,7 @@ describe("what the ranked queue tells a reader", () => {
           row({
             title: "Send the proposal",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-000000000009",
               label: "Anna Weber",
             },
@@ -292,16 +292,12 @@ describe("what the ranked queue tells a reader", () => {
     // The concept's sharpest example: a €160,100 deal reduced to "no contact
     // for 83 days". The money was on the wire the whole time.
     expect(await screen.findByText(/160,100/)).toBeTruthy();
-    const reply = screen.getByRole("link", { name: "Open to reply" });
-    // The verb says where it GOES, because that is what pressing it does: the
-    // composer lives on the record behind its own button, and a label promising
-    // a draft would overstate the click.
-    expect(reply.getAttribute("href")).toBe(
-      "#/deals/01a05500-0000-7000-8000-00000000bbbb",
-    );
+    expect(
+      screen.getByRole("button", { name: en["worklist.verb.draft_reply"] }),
+    ).toBeTruthy();
   });
 
-  it("sends a privacy request to the screen it is worked on", async () => {
+  it("sends a privacy request to the case it names", async () => {
     stub(
       day({
         queue: [
@@ -317,15 +313,15 @@ describe("what the ranked queue tells a reader", () => {
     );
     renderWorklist();
 
-    // The row names no record — a request is worked on the privacy screen and
-    // nowhere else — so without this it is a legal clock a reader is told
-    // about and cannot follow.
+    // The row names no record, so without an address it is a legal clock a
+    // reader cannot follow. It names the CASE and not the queue: the queue
+    // pages twenty at a time, so the page alone left an officer with no sign
+    // of which row they were sent to read.
     const request = await screen.findByRole("link", {
       name: "An open privacy request",
     });
-    // Flat, since the addresses lost their group segment: a page's address no
-    // longer depends on which group it sits in.
-    expect(request.getAttribute("href")).toBe("#/settings/privacy");
+    const dsr = "01a05500-0000-7000-8000-00000000dddd";
+    expect(request.getAttribute("href")).toBe(`#/settings/privacy?case=${dsr}`);
   });
 
   it("says what happens if the reader does nothing", async () => {
@@ -541,7 +537,7 @@ describe("what the ranked queue tells a reader", () => {
             category: "customer_waiting",
             consequence: "buyer_waits",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-000000000001",
             },
             actions: ["open"],
@@ -593,7 +589,7 @@ describe("what the ranked queue tells a reader", () => {
         created_at: "2026-08-31T08:00:00Z",
       },
     );
-    const { container } = renderWorklist();
+    renderWorklist();
 
     await screen.findByText(/Send the follow-up/);
     // A queue that can rank a decision and not answer it sends the reader to a
@@ -605,15 +601,15 @@ describe("what the ranked queue tells a reader", () => {
     // ceiling and pushed the page's first action off a phone screen. So the row
     // offers the verb and the drawer holds the card, and this asserts both
     // halves — a row that opened nothing would pass on the button alone.
-    await waitFor(() => {
-      expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
-    });
+    await screen.findByRole("button", { name: "Decide" });
     // Not answerable until the reader asks: the queue draws no Accept.
-    expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve email" })).toBeNull();
     await userEvent.click(
       await screen.findByRole("button", { name: "Decide" }),
     );
-    expect(await screen.findByRole("button", { name: "Accept" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Approve email" }),
+    ).toBeTruthy();
   });
 
   it("names the source it could not read rather than counting it", async () => {
@@ -624,9 +620,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     renderWorklist();
 
-    expect(
-      await screen.findByText(/mailbox connection needs attention/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Mailbox connections/i)).toBeTruthy();
   });
 
   it("writes the day's figures in the reader's own notation", async () => {
@@ -811,7 +805,7 @@ describe("an introduction ask on the queue", () => {
             detail: "Dana reopened the retrofit conversation.",
             actions: ["decide"],
             subject: {
-              type: "person",
+              type: "contact",
               id: "018f3a1b-0000-7000-8000-000000000010",
               label: "Dana Buyer",
             },
@@ -844,7 +838,7 @@ describe("an introduction ask on the queue", () => {
             title: "Send the retrofit quote",
             actions: ["decide"],
             subject: {
-              type: "person",
+              type: "contact",
               id: "018f3a1b-0000-7000-8000-000000000011",
               label: "Someone Else",
             },
@@ -967,7 +961,7 @@ describe("the address opens a queue", () => {
   });
 
   // The scope word is not an owner. Passing it as one would ask the server for
-  // a person whose id is the string "unassigned", which is a 403 or a 404 where
+  // a contact whose id is the string "unassigned", which is a 403 or a 404 where
   // the reader asked a perfectly ordinary question.
   it("asks for the unowned pile when the segment is the scope word", async () => {
     stub(day({ scope: "unassigned", scope_options: ["mine", "team"] }));
@@ -1000,19 +994,22 @@ describe("the address opens a queue", () => {
 // click does not do… the label moves back when it lands". This is the assertion
 // that the two halves stay together — mutate either and one of these fails.
 describe("the draft_reply verb says what the click does", () => {
-  function replyRow(subjectType: string, id: string): WorklistItem {
+  function replyRow(
+    subjectType: NonNullable<WorklistItem["subject"]>["type"],
+    id: string,
+  ): WorklistItem {
     return row({
       id: `m-${id}`,
-      source: "waiting_customer",
+      source: "customer_waiting",
       category: "customer_waiting",
       title: "Aster Handel",
       subject: { type: subjectType, id },
       move: { action: "draft_reply", activity_id: "a-1" },
-    } as unknown as Partial<WorklistItem>);
+    });
   }
 
   it("names the ACT where the address opens the composer", async () => {
-    stub(day({ queue: [replyRow("person", "p-1")] }));
+    stub(day({ queue: [replyRow("contact", "p-1")] }));
     renderWorklist();
 
     const link = await screen.findByRole("link", {
@@ -1025,10 +1022,11 @@ describe("the draft_reply verb says what the click does", () => {
     stub(day({ queue: [replyRow("deal", "d-1")] }));
     renderWorklist();
 
-    const link = await screen.findByRole("link", {
-      name: en["worklist.verb.draft_reply"],
-    });
-    expect(link.getAttribute("href")).not.toContain("compose=");
+    expect(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.draft_reply"],
+      }),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("link", {
         name: en["worklist.verb.draft_reply_now"],

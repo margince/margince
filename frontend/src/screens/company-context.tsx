@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  CircleAlert,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -25,12 +19,12 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import {
   EvidenceMark,
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
@@ -45,7 +39,9 @@ import {
   type QueryLike,
   throwProblem,
   useMe,
+  WriteRefused,
 } from "./common";
+import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
 import "./company-context.css";
 
@@ -172,13 +168,13 @@ export function ManualCompanySetup() {
     },
     onSuccess: (profile) => {
       queryClient.setQueryData(["company"], profile);
-      navigate({ screen: "brief" });
+      navigate({ screen: "home" });
     },
   });
   return (
     // One Panel, in the ONE lead tone, where a gradient with a decorative
     // circle and two bespoke boxes used to be. The heading is the panel's own
-    // title rather than a bare <h2>: preflight leaves an unclassed heading at
+    // title rather than a bare h2: preflight leaves an unclassed heading at
     // body size, so the page's lead sentence used to render as body text
     // inside a gradient.
     <div className="wrap narrow">
@@ -192,7 +188,6 @@ export function ManualCompanySetup() {
         }
         actions={
           <Button
-            small
             variant="primary"
             disabled={!requiredComplete(form) || save.isPending}
             onClick={() => save.mutate()}
@@ -203,7 +198,7 @@ export function ManualCompanySetup() {
       >
         <PanelBody className="form-stack">
           <Eyebrow>{t("settings.companyManualKicker")}</Eyebrow>
-          <p className="t-caption">{t("settings.companyManualSub")}</p>
+          <p>{t("settings.companyManualSub")}</p>
           {(["display_name", "offer_summary", "icp"] as const).map((field) => (
             <Field key={field} label={coldFieldLabel(field, t)}>
               {(control) =>
@@ -229,9 +224,10 @@ export function ManualCompanySetup() {
             </Field>
           ))}
           {save.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(save.error, t)}
-            </Callout>
+            <WriteRefused
+              titleKey="settings.companySaveFailed"
+              error={save.error}
+            />
           )}
         </PanelBody>
       </Panel>
@@ -304,7 +300,7 @@ export function CompanyContextCard() {
   // client asking for either verb alone would hide the editor from a principal
   // the server would have admitted.
   const me = useMe();
-  const canEdit = useCanUpsert("organization");
+  const canEdit = useCanUpsert("company");
   const company = useQuery({
     queryKey: ["company"],
     queryFn: async (): Promise<CompanyProfile> => {
@@ -608,7 +604,7 @@ export function CompanyContextCard() {
  * floating under each. Now every fact a reader can change is a ROW — named on
  * the left, what it currently says on the right, and the editing behind one
  * verb, because ONE PUT writes all of them. Where the site read a value rather
- * than a person typing it, the value carries the design system's own provenance
+ * than a contact typing it, the value carries the design system's own provenance
  * mark instead of a chip of its own.
  */
 function CompanyFactsCard({
@@ -666,9 +662,7 @@ function CompanyFactsCard({
             PERMISSION, which is why it speaks at all — the rollout flag returns
             null instead, because a capability this installation does not have
             is not a fact about the reader. */}
-        {readOnly && (
-          <p className="t-caption">{t("settings.companyReadOnly")}</p>
-        )}
+        {readOnly && <p>{t("settings.companyReadOnly")}</p>}
         <QueryGate
           query={company}
           pendingLabel={t("settings.companySourceTitle")}
@@ -720,9 +714,7 @@ function CompanyFactsCard({
                     refused. */}
                 {saved && (
                   <div className="settings-panel-commit">
-                    <Callout tone="success" live="status">
-                      {t("settings.companySaved")}
-                    </Callout>
+                    <SavedNotice />
                   </div>
                 )}
               </>
@@ -773,7 +765,6 @@ function CompanySourceCard({
             control={
               canEdit ? (
                 <Button
-                  small
                   variant="ghost"
                   aria-label={t("settings.companyEditField", {
                     field: t("settings.companyWebsite"),
@@ -801,7 +792,6 @@ function CompanySourceCard({
               description={t("settings.companyRefreshHint")}
               control={
                 <Button
-                  small
                   variant="primary"
                   reason={
                     website === ""
@@ -811,8 +801,7 @@ function CompanySourceCard({
                   pending={refreshing}
                   onClick={onRefresh}
                 >
-                  <RefreshCw aria-hidden size={16} />{" "}
-                  {t("settings.companyRefresh")}
+                  <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
                 </Button>
               }
             />
@@ -820,9 +809,10 @@ function CompanySourceCard({
         </SettingList>
         {failure !== null && (
           <div className="settings-panel-commit">
-            <Callout tone="danger" live="alert">
-              {failure}
-            </Callout>
+            <WriteRefused
+              titleKey="settings.companyRefreshFailed"
+              message={failure}
+            />
           </div>
         )}
       </PanelBody>
@@ -869,7 +859,6 @@ function CompanyFactRow({
       control={
         canEdit ? (
           <Button
-            small
             variant="ghost"
             // Named by the fact it changes, not "Edit": seventeen rows offering
             // seventeen identically-named buttons make a screen reader's user
@@ -886,10 +875,10 @@ function CompanyFactRow({
 }
 
 /**
- * Where a value came from, when a person did not type it.
+ * Where a value came from, when a contact did not type it.
  *
  * A human-entered value gets no mark, which is the record page's rule and the
- * reason the mark means anything: this profile is mostly typed by people, and
+ * reason the mark means anything: this profile is mostly typed by contacts, and
  * underlining all of it would say only "this is a value". What the mark carries
  * is deliberately not a date — the surrounding surface is a settings page with
  * no record zone of its own, and a timestamp rendered in some other zone is
@@ -954,9 +943,9 @@ function CompanyProfileDialog({
   }, []);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} size="wide">
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("settings.companyTitle")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -987,19 +976,16 @@ function CompanyProfileDialog({
           </div>
         ))}
         {error !== null && (
-          <Callout tone="danger" live="alert">
-            {error}
-          </Callout>
+          <WriteRefused titleKey="settings.companySaveFailed" message={error} />
         )}
         <div className="form-actions">
-          <Button small variant="ghost" type="button" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           {/* The three the server demands are the three the button waits for —
               the same condition the page's Save carried, now beside the fields
               that satisfy it. */}
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!pending && !requiredComplete(form)}
@@ -1106,7 +1092,7 @@ function RefreshReview(
         );
   return (
     // The review as a Panel: the state sentence is its title (it was a bare
-    // <h3>, which preflight draws at body size), the comparisons are full-bleed
+    // h3, which preflight draws at body size), the comparisons are full-bleed
     // rows, and the coverage figure sits in the footer band because it belongs
     // to the whole read rather than to any one row. It used to be 24px — larger
     // than the page's own h1 — for a number nobody acts on.
@@ -1124,21 +1110,20 @@ function RefreshReview(
       }
       actions={
         <>
-          {unresolved && (
-            <Callout tone="warn" icon={CircleAlert}>
-              {t("settings.companyResolveAll")}
-            </Callout>
-          )}
           {props.error && (
-            <Callout tone="danger" live="alert">
-              {props.error}
-            </Callout>
+            <WriteRefused
+              titleKey="settings.companyApplyFailed"
+              message={props.error}
+            />
           )}
+          {/* An unresolved conflict refuses the verb, so it is the verb's own
+              `reason` rather than a second notice beside it: the sentence and
+              the refusal cannot then disagree. */}
           {props.canApply && (
             <Button
-              small
               variant="primary"
-              disabled={!ready || unresolved || props.confirming}
+              disabled={!ready || props.confirming}
+              reason={unresolved ? t("settings.companyResolveAll") : undefined}
               onClick={props.onConfirm}
             >
               {t("settings.companyApplyRefresh")} <ArrowRight aria-hidden />
@@ -1152,11 +1137,7 @@ function RefreshReview(
           phone, for the same reason the profile panel's eyebrow sits here. */}
       <PanelBody className="form-stack">
         <Eyebrow>{t("settings.companyRefreshReview")}</Eyebrow>
-        {props.read.warnings.map((warning) => (
-          <Callout tone="warn" icon={CircleAlert} key={warning}>
-            {warning}
-          </Callout>
-        ))}
+        <ReadWarnings warnings={props.read.warnings} />
       </PanelBody>
       {props.read.comparisons.map((item) => (
         <ComparisonRow

@@ -15,6 +15,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,9 +119,19 @@ func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
 	// Promoting one of rep1's leads frees capacity; the next lead goes
 	// to rep1 — the cap counts OPEN leads, so closed work hands the
 	// rotation back.
+	// The whole promotion, not the status alone: it writes the contact the lead
+	// became and the archive instant in one statement, and the table now says
+	// so. A row carrying the status without them is one no promotion produces.
+	promoted := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE lead SET status = 'promoted', promoted_at = now()
-		 WHERE id IN (SELECT id FROM lead WHERE owner_id = $1 LIMIT 1)`, e.Rep1); err != nil {
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, 'Promoted Lead', 'manual', 'human:x')`, promoted); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE lead SET status = 'promoted', promoted_at = now(), archived_at = now(),
+		        promoted_contact_id = $2
+		 WHERE id IN (SELECT id FROM lead WHERE owner_id = $1 LIMIT 1)`, e.Rep1, promoted); err != nil {
 		t.Fatal(err)
 	}
 	if _, owner := e.routeNewLead(t, "manual"); owner == nil || *owner != e.Rep1 {
@@ -182,5 +193,47 @@ func TestLeadRoutingLeavesHumanAssignmentsAlone(t *testing.T) {
 	})
 	if err != nil || runs != 1 {
 		t.Fatalf("run claim count = %d (%v), want 1", runs, err)
+	}
+}
+
+// An unroutable lead is a SKIP that says why, not a clean run that says
+// nothing.
+//
+// The reason was thrown away: Apply answered an empty result, the engine
+// recorded a successful firing, and a manager who found the lead still sitting
+// in the unassigned queue had the audit trail and nothing else to read. The
+// run row now carries the sentence.
+func TestAnUnroutableLeadRecordsWhyOnItsRun(t *testing.T) {
+	e := setupRouting(t)
+	enableLeadRouting(t, e.SearchEnv, map[string]any{
+		"owners":        []string{e.Rep1.String()},
+		"cap_per_owner": 1,
+	})
+
+	// The first lead takes the only seat's only slot.
+	if _, owner := e.routeNewLead(t, "manual"); owner == nil {
+		t.Fatal("the first lead did not route, so the second proves nothing")
+	}
+	leadID, owner := e.routeNewLead(t, "manual")
+	if owner != nil {
+		t.Fatalf("a lead routed to %v with the pool at capacity", owner)
+	}
+
+	var status string
+	var detail *string
+	// Keyed on the run's own idempotency key, which carries the LEAD and then
+	// the workspace: the engine was handed a synthetic envelope that never
+	// passed through the outbox, so a join to it finds nothing.
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT status, detail::text FROM workflow_run
+		 WHERE handler = 'assign_lead_owner' AND idempotency_key LIKE $1`,
+		"assign_lead_owner:"+leadID.String()+"@%").Scan(&status, &detail); err != nil {
+		t.Fatalf("reading the routing run for the unroutable lead: %v", err)
+	}
+	if status != "skipped" {
+		t.Errorf("an unroutable lead's run is %q, want skipped — it neither applied nor failed", status)
+	}
+	if detail == nil || !strings.Contains(*detail, "capacity") {
+		t.Errorf("the run's detail is %v, want the capacity reason a manager reads", detail)
 	}
 }

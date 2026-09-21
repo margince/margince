@@ -15,7 +15,8 @@ import {
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Card } from "../design-system/atoms";
+import { Badge, Button, Card } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -95,7 +96,7 @@ function presenceState(
       // Every status this screen counts as failure, not just the one named
       // `failed`: an abandoned read is a read that did not finish either, and
       // it fell through to the resting fallback below, where the orb said the
-      // surface was waiting on a person when it was actually broken.
+      // surface was waiting on a contact when it was actually broken.
       (props.read !== null &&
         props.read !== undefined &&
         failedStatuses.has(props.read.status)))
@@ -116,12 +117,11 @@ function presenceState(
     props.read?.status === "partial" ||
     props.read?.status === "confirmed"
   ) {
-    // A finished run settles back to idle: there is no state of its own for
-    // "done".
+    // A finished run settles back to idle: there is no "done" state of its own.
     return "idle";
   }
   // Nothing running either way: a mode chosen and a mode not chosen are both a
-  // surface waiting on a person, which is the same thing for the orb.
+  // surface waiting on a contact, which is the same thing for the orb.
   return "idle";
 }
 
@@ -399,7 +399,7 @@ function WebsiteWorkbench(
             >
               <Send aria-hidden />
             </Button>
-            <small>{t("ob.ai.reviewBoundary")}</small>
+            <small className="t-caption">{t("ob.ai.reviewBoundary")}</small>
           </div>
         )}
       </MarginceWorkbench>
@@ -414,7 +414,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
     <div className="mw-review">
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
-        <h2>{t("ob.ai.companyKnowledge")}</h2>
+        <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
         <p>
           {t(
             props.mode === "manual"
@@ -426,7 +426,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
       {props.read && <ReadEvidence read={props.read} />}
       {props.reviewContent}
       <div className="mw-confirm-company">
-        <p>{t("ob.ai.confirmBoundary")}</p>
+        <p className="t-caption">{t("ob.ai.confirmBoundary")}</p>
         <Button
           variant="primary"
           disabled={props.confirmDisabled || props.confirmPending}
@@ -535,7 +535,7 @@ export function ConversationEntries({
           </div>
         )}
         {entry.reply.proposed_changes.length > 0 && (
-          <div className="mw-proposal">
+          <div className="mw-proposal staging-card">
             <div>
               <Sparkles aria-hidden />
               <strong>{t("ob.ai.suggestedChanges")}</strong>
@@ -546,13 +546,12 @@ export function ConversationEntries({
                   <li key={`${entry.id}:${key}`}>
                     <span>{coldFieldLabel(change.field, t)}</span>
                     <strong>{change.value}</strong>
-                    <small>{change.reason}</small>
+                    <small className="t-caption">{change.reason}</small>
                   </li>
                 ),
               )}
             </ul>
             <Button
-              small
               variant="primary"
               disabled={applied.has(entry.id)}
               onClick={() => {
@@ -646,7 +645,7 @@ function WebsiteStatusMessage({
   if (error) {
     return (
       <>
-        <h2>{t("ob.failTitle")}</h2>
+        <Heading size="large">{t("ob.failTitle")}</Heading>
         <p>{t("ob.coreFailedBody")}</p>
         <p className="mw-error-detail">{error}</p>
         <button type="button" className="ob-core-link" onClick={onManual}>
@@ -659,7 +658,7 @@ function WebsiteStatusMessage({
     if (mode === "manual") {
       return (
         <>
-          <h2>{t("ob.coreIntroTitle")}</h2>
+          <Heading size="large">{t("ob.coreIntroTitle")}</Heading>
           <p>{t("ob.coreIntroBody")}</p>
           <CoreJourney active={0} />
         </>
@@ -667,7 +666,7 @@ function WebsiteStatusMessage({
     }
     return (
       <>
-        <h2>{t("ob.coreWebsiteTitle")}</h2>
+        <Heading size="large">{t("ob.coreWebsiteTitle")}</Heading>
         <p>{t("ob.coreWebsiteBody")}</p>
         <CoreJourney active={0} />
       </>
@@ -675,11 +674,11 @@ function WebsiteStatusMessage({
   }
   return (
     <>
-      <h2>{presentation.title}</h2>
+      <Heading size="large">{presentation.title}</Heading>
       <p>{presentation.body}</p>
       <ReadActivity read={read} refreshing={refreshing} />
       {read.status === "deferred" && read.next_attempt_at && (
-        <p className="mw-resume">
+        <p>
           {t("deepread.resumesAt", {
             when: formatDateTime(read.next_attempt_at, locale, viewerZone()),
           })}
@@ -719,17 +718,17 @@ function ReadActivity({
         </p>
       )}
       <div>
-        <span>
+        <Badge>
           <b>{formatNumber(read.pages_read ?? 0, locale)}</b>{" "}
           {t("ob.pagesRead")}
-        </span>
-        <span>
+        </Badge>
+        <Badge>
           <b>{formatNumber(legalCount, locale)}</b> {t("ob.legalEntitiesFound")}
-        </span>
-        <span>
+        </Badge>
+        <Badge>
           <b>{formatNumber(findingCount, locale)}</b>{" "}
           {plural("ob.ai.finding", findingCount)}
-        </span>
+        </Badge>
       </div>
     </div>
   );
@@ -742,7 +741,7 @@ function WebsiteComposer(
   return (
     <div className="ob-core-dialog">
       <div className="ob-core-kicker">{t("ob.coreLegalKicker")}</div>
-      <h1>{t("ob.coreWebsiteTitle")}</h1>
+      <Heading size="xlarge">{t("ob.coreWebsiteTitle")}</Heading>
       <p>{t("ob.coreWebsiteBody")}</p>
       <CoreJourney active={0} />
       <div
@@ -897,7 +896,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
     <div className="core-findings">
       {legalEntities.length > 0 && (
         <section className="legal-preview">
-          <h2>{t("ob.legalFoundTitle")}</h2>
+          <Heading size="large">{t("ob.legalFoundTitle")}</Heading>
           <p>{t("ob.legalFoundBody")}</p>
           <div className="legal-preview-grid">
             {legalEntities.map((entity) => (
@@ -923,7 +922,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       )}
       {read.profile_fields.length > 0 && (
         <>
-          <h2>{t("ob.coreFindingsTitle")}</h2>
+          <Heading size="large">{t("ob.coreFindingsTitle")}</Heading>
           <p>{t("ob.coreFindingsBody")}</p>
           <div className="finding-grid">
             {read.profile_fields.map((field) => (
@@ -948,7 +947,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       )}
       {read.facts.length > 0 && (
         <section className="live-fact-preview">
-          <h2>{t("ob.factsTitle")}</h2>
+          <Heading size="large">{t("ob.factsTitle")}</Heading>
           <div className="finding-grid">
             {read.facts.slice(0, FACT_PREVIEW_LIMIT).map((fact) => (
               <Card

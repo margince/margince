@@ -1,316 +1,346 @@
-/** @vitest-environment jsdom */
-import { cleanup, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+/** @vitest-environment happy-dom */
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
-import { render } from "./brief.testkit";
-import type { Worklist, WorklistItem } from "./worklist.queries";
-
-// The morning as ONE feed.
-//
-// These are not about how a row looks — WorklistRow owns that and the Worklist
-// screen tests it. They are about the page not becoming a second opinion: the
-// order is the server's, the cut is a prefix, the section badge is a label, and
-// nothing here re-sorts, re-ranks or regroups.
+import { readingsDay, taskRow, waitingEmailRow } from "./brief.fixtures";
+import { render, stubApi } from "./brief.testkit";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-function item(over: Partial<WorklistItem> = {}): WorklistItem {
-  return {
-    id: "i1",
-    source: "waiting_customer",
-    category: "customer_waiting",
-    title: "Aster Handel",
-    because: [],
-    actions: ["open"],
-    dispositions: [],
-    overdue: false,
-    ...over,
-  } as unknown as WorklistItem;
+/** The row in hand, drawn whole on the panel's left. */
+function inHand(container: HTMLElement) {
+  const lead = container.querySelector(".brief-triage-lead");
+  if (!(lead instanceof HTMLElement)) throw new Error("no row is in hand");
+  return within(lead);
 }
 
-function day(queue: WorklistItem[]): Worklist {
-  return {
-    as_of: "2026-06-10T06:00:00Z",
-    scope: "mine",
-    scope_options: ["mine"],
-    queue,
-    counts: [],
-    reach: [],
-    sources_unavailable: [],
-    summary: { total: queue.length, urgent: 0 },
-  } as unknown as Worklist;
-}
-
-function titles(container: HTMLElement): string[] {
-  return [...container.querySelectorAll(".worklist-row-title")].map(
-    (node) => node.textContent ?? "",
+it("renders the server focus even when the queue page contains different rows", () => {
+  stubApi({});
+  const rows = Array.from({ length: 9 }, (_, index) =>
+    taskRow(`task-${index}`, `Call buyer ${index}`),
   );
-}
+  const { container } = render(
+    <BriefFeed
+      day={{
+        ...readingsDay({}, [rows[8]]),
+        focus: { items: rows.slice(0, 6), total: 9, urgent_remaining: 0 },
+      }}
+      state="ready"
+    />,
+  );
+  // The day's first row is in hand, drawn whole; the queue beside it names
+  // every focus row in the server's order, with its rank in the reader's own
+  // numerals.
+  expect(
+    [...container.querySelectorAll(".worklist-row-title")].map(
+      (row) => row.textContent,
+    ),
+  ).toEqual([rows[0].title]);
+  expect(
+    container.querySelector(".brief-focus-item-inhand .brief-focus-rank")
+      ?.textContent,
+  ).toBe("1");
+  expect(
+    [...container.querySelectorAll(".brief-focus-item-title")].map(
+      (item) => item.textContent,
+    ),
+  ).toEqual(rows.slice(0, 6).map((row) => row.title));
+  expect(
+    [...container.querySelectorAll(".brief-focus-list > li")].map(
+      (item) => item.querySelector(".brief-focus-rank")?.textContent,
+    ),
+  ).toEqual(["1", "2", "3", "4", "5", "6"]);
+  expect(screen.getByText("1 of 6")).toBeTruthy();
+});
 
-describe("the morning feed", () => {
-  // THE claim of the whole surface. The server's tie-breaks need a
-  // base-currency conversion and a materiality threshold the browser does not
-  // hold, so a client that re-sorted would be answering a question it cannot.
-  it("draws the rows in wire order and re-sorts nothing", () => {
+it("puts a queued row in hand when it is pressed, and says where it stands", async () => {
+  stubApi({});
+  const user = userEvent.setup();
+  const rows = Array.from({ length: 3 }, (_, index) =>
+    taskRow(`task-${index}`, `Call buyer ${index}`),
+  );
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, rows)} state="ready" />,
+  );
+  await user.click(screen.getByRole("button", { name: /Call buyer 2/ }));
+  expect(
+    [...container.querySelectorAll(".worklist-row-title")].map(
+      (row) => row.textContent,
+    ),
+  ).toEqual([rows[2].title]);
+  expect(
+    container.querySelector(".brief-focus-item-inhand .brief-focus-rank")
+      ?.textContent,
+  ).toBe("3");
+  expect(screen.getByText("3 of 3")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("button", { name: /Call buyer 2/ })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+});
+
+it("opens the full queue instead of growing focus when more pages exist", () => {
+  stubApi({});
+  render(
+    <BriefFeed
+      day={{
+        ...readingsDay({}, [taskRow("t", "Call the buyer")]),
+        next_cursor: "next",
+      }}
+      state="ready"
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: en["worklist.more"] }),
+  ).toBeNull();
+  expect(
+    screen
+      .getByRole("link", { name: en["brief.feed.fullWorklist"] })
+      .getAttribute("href"),
+  ).toBe("#/home?filter=all&queue=1");
+});
+
+it("warns about urgent work beyond the loaded page using server urgency facts", () => {
+  stubApi({});
+  const row = { ...taskRow("t", "Pinned task"), urgent: false };
+  render(
+    <BriefFeed
+      day={{
+        ...readingsDay({}, [row], [], { urgent: 3 }),
+        focus: { items: [row], total: 4, urgent_remaining: 3 },
+      }}
+      state="ready"
+    />,
+  );
+  expect(screen.getByText("3 more urgent items in the queue")).toBeTruthy();
+});
+
+it("shows dates and does not repeat the ranking comparator", () => {
+  stubApi({});
+  const row = {
+    ...taskRow("t", "Call the buyer"),
+    due_at: "2026-06-09T08:30:00Z",
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(screen.getByText(/due 09\/06\/2026/)).toBeTruthy();
+  expect(screen.queryByText("Why it is here")).toBeNull();
+  expect(screen.queryByText(/Above the next/)).toBeNull();
+});
+
+it("does not claim an empty agenda when a source failed", () => {
+  stubApi({});
+  const day = readingsDay({}, []);
+  day.sources_unavailable = [
+    { source: "task", reason: "failed", category: "tasks" },
+  ];
+  const { container } = render(<BriefFeed day={day} state="ready" />);
+  expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
+  // The sentence pays the pane's inset, and no empty grid stands under it: a
+  // list of nothing was only its own padding, a blank band under the caption.
+  expect(
+    screen.getByText(en["brief.feed.incomplete"]).closest(".panel-body"),
+  ).not.toBeNull();
+  expect(container.querySelector(".brief-feed-list")).toBeNull();
+});
+
+it("keeps approvals in the agenda and offers their review action", () => {
+  stubApi({});
+  const row = {
+    ...taskRow("a", "Approve the buyer email"),
+    source: "approval" as const,
+    category: "decisions" as const,
+    actions: ["decide" as const],
+  };
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  expect(inHand(container).getByText("Approve the buyer email")).toBeTruthy();
+  expect(
+    inHand(container).getByRole("button", { name: en["worklist.verb.decide"] }),
+  ).toBeTruthy();
+});
+
+it.each([false, true])(
+  "Focus omits personal pin controls (previously pinned: %s)",
+  (pinned) => {
+    stubApi({});
+    const row: ReturnType<typeof taskRow> = {
+      ...taskRow("task", "Call the buyer"),
+      because: pinned ? [{ kind: "pinned" }] : [],
+      above_next: pinned ? { comparator: "pin" } : undefined,
+    };
     const { container } = render(
-      <BriefFeed
-        day={day([
-          item({ id: "a", title: "Zeta last-alphabetically" }),
-          item({ id: "b", title: "Alpha first-alphabetically" }),
-          item({ id: "c", title: "Mid" }),
-        ])}
-        state="ready"
-      />,
+      <BriefFeed day={readingsDay({}, [row])} state="ready" />,
     );
-
-    const drawn = titles(container);
-    expect(drawn[0]).toContain("Zeta last-alphabetically");
-    expect(drawn[1]).toContain("Alpha first-alphabetically");
-    expect(drawn[2]).toContain("Mid");
-  });
-
-  // THE case the section label exists to survive. Sections alternate down the
-  // page — respond, move, respond again — because the ranking put them there,
-  // and a client that grouped by section would reorder the page into three
-  // blocks and disagree with the order the server chose.
-  it("keeps the server order even when the section labels alternate", () => {
-    const { container } = render(
-      <BriefFeed
-        day={day([
-          item({ id: "a", title: "First", brief_section: "respond_now" }),
-          item({ id: "b", title: "Second", brief_section: "move_revenue" }),
-          item({ id: "c", title: "Third", brief_section: "respond_now" }),
-          item({ id: "d", title: "Fourth", brief_section: "move_revenue" }),
-        ])}
-        state="ready"
-      />,
-    );
-
-    const drawn = titles(container);
-    expect(drawn[0]).toContain("First");
-    expect(drawn[1]).toContain("Second");
-    expect(drawn[2]).toContain("Third");
-    expect(drawn[3]).toContain("Fourth");
-  });
-
-  // A run-length label, not a grouping: the second row of a section says
-  // nothing again.
-  it("draws a section label once per run rather than once per row", () => {
-    render(
-      <BriefFeed
-        day={day([
-          item({ id: "a", brief_section: "move_revenue" }),
-          item({ id: "b", brief_section: "move_revenue" }),
-          item({ id: "c", brief_section: "respond_now" }),
-        ])}
-        state="ready"
-      />,
-    );
-
     expect(
-      screen.getAllByText(en["brief.feed.section.move_revenue"]),
-    ).toHaveLength(1);
+      screen.queryByRole("button", {
+        name: en["worklist.verb.pin"],
+      }),
+    ).toBeNull();
     expect(
-      screen.getAllByText(en["brief.feed.section.respond_now"]),
-    ).toHaveLength(1);
+      screen.queryByRole("button", {
+        name: en["worklist.verb.unpin"],
+      }),
+    ).toBeNull();
+    expect(inHand(container).getByText("Call the buyer")).toBeTruthy();
+    expect(screen.queryByText(/you pinned/i)).toBeNull();
+  },
+);
+
+it("ends the row in hand's one line with the agent's move, every option beside it", () => {
+  stubApi({});
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [waitingEmailRow()])}
+      state="ready"
+      onContext={() => {}}
+    />,
+  );
+  const lead = inHand(container);
+  const line = [
+    ...(container
+      .querySelector(".worklist-row-acts")
+      ?.querySelectorAll("button, a") ?? []),
+  ];
+  // The put-downs lead from the far edge, in the open; the way in follows;
+  // the move the product worked out closes the line, in the agent's chrome.
+  expect(line.at(0)?.closest(".worklist-row-putdowns")).not.toBeNull();
+  expect(
+    lead
+      .getByRole("button", { name: en["worklist.disposition.verb.not_mine"] })
+      .closest(".worklist-row-putdowns"),
+  ).not.toBeNull();
+  expect(
+    lead
+      .getByRole("button", { name: en["brief.focus.context"] })
+      .closest(".worklist-row-putdowns"),
+  ).toBeNull();
+  const draft = lead.getByRole("link", {
+    name: en["worklist.verb.draft_reply_now"],
   });
+  expect(draft.className).toContain("btn-ai");
+  expect(line.at(-1)).toBe(draft);
+  // The verb that only reaches the record is withheld: the record is named
+  // and linked over the row.
+  expect(
+    lead.queryByRole("link", { name: en["worklist.verb.open"] }),
+  ).toBeNull();
+});
 
-  // And a section that comes BACK after another one draws its label again —
-  // the reader has arrived at it a second time, and a label suppressed by
-  // "have I drawn this before" would leave the second run unlabelled.
-  it("labels a section again when the order returns to it", () => {
-    render(
-      <BriefFeed
-        day={day([
-          item({ id: "a", brief_section: "respond_now" }),
-          item({ id: "b", brief_section: "move_revenue" }),
-          item({ id: "c", brief_section: "respond_now" }),
-        ])}
-        state="ready"
-      />,
-    );
+it("names whose row is in hand, and how the silence runs both ways", () => {
+  stubApi({});
+  const row = waitingEmailRow();
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  // Both moments off the row itself, no second read: the drawer draws the
+  // same pair on every row, and a fetch per row is what this field ends.
+  const about = container.querySelector(".brief-triage-about");
+  expect(about?.textContent).toContain(en["worklist.pane.lastInbound"]);
+  expect(about?.textContent).toContain(en["worklist.pane.lastOutbound"]);
+  expect(about?.textContent).toContain("03/09/2026");
+  expect(about?.textContent).toContain("28/08/2026");
+  expect(
+    screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
+  ).toBe("#/contacts/contact-sonya");
+});
 
-    expect(
-      screen.getAllByText(en["brief.feed.section.respond_now"]),
-    ).toHaveLength(2);
+it("names the sender of a thread filed under a deal", () => {
+  stubApi({});
+  const row = {
+    ...waitingEmailRow(),
+    subject: { type: "deal" as const, id: "deal-retrofit", label: "Retrofit" },
+    contact: { id: "contact-sonya", label: "Sonya Beck" },
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(
+    screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
+  ).toBe("#/contacts/contact-sonya");
+});
+
+it("claims no moments when the server withheld them", () => {
+  stubApi({});
+  const row = {
+    ...waitingEmailRow(),
+    contact: { id: "contact-sonya", label: "Sonya Beck" },
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(screen.getByRole("link", { name: "Sonya Beck" })).toBeTruthy();
+  expect(screen.queryByText(en["worklist.pane.lastInbound"])).toBeNull();
+  expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
+});
+
+// THE RANKED COLUMN NAMES ITS ROWS FROM THE CONTACT, not from a message.
+//
+// Read off `email_summary.counterparty`, the line named the sender of a
+// waiting message and left every other row anonymous — so a task the reader
+// owes somebody stood in the column with its reason and nobody's name, while
+// the same row in hand named them. The contact is the field every row carries.
+it("names a task's contact in the ranked column", () => {
+  stubApi({});
+  const owed = {
+    ...taskRow("owed", "Send the promised rollout comparison"),
+    contact: {
+      id: "contact-sonya",
+      label: "Sonya Beck",
+      touch: {
+        last_inbound_at: "2026-09-03T16:46:00Z",
+        last_outbound_at: "2026-08-28T09:12:00Z",
+      },
+    },
+  };
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [waitingEmailRow(), owed])}
+      onContext={() => undefined}
+      state="ready"
+      changed={undefined}
+      refreshFailed={false}
+      onRetry={() => undefined}
+    />,
+  );
+
+  // THE TASK'S OWN ROW in the column, not the card and not the waiting message
+  // above it: both of those named her before, and either would carry a
+  // page-wide query over a line that still said nothing.
+  const column = container.querySelector(".brief-triage-queue");
+  if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
+  const row = within(column).getByRole("button", {
+    name: /Send the promised rollout comparison/,
   });
+  expect(within(row).getByText(/Sonya Beck/)).toBeTruthy();
+});
 
-  // A row the server did not place carries no section, and the feed invents no
-  // heading for it: a label chosen here would put the row under a part of the
-  // morning nobody decided.
-  it("draws no heading for a row the server did not place", () => {
-    const { container } = render(
-      <BriefFeed day={day([item({ id: "a" })])} state="ready" />,
-    );
+// A WAITING ROW IS STILL NAMED BY ITS SUBJECT, from the row's own `title`.
+//
+// The server puts a waiting message's subject there (classify.go), so the
+// column reads it like every other row rather than off `email_summary` — which
+// is what kept the ranked list from drawing a part of a message outside the
+// canonical row. The claim used to live in a helper's docblock with nothing
+// holding it; this is what holds it.
+it("names a waiting row by its subject", () => {
+  stubApi({});
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [taskRow("t", "Call Weber"), waitingEmailRow()])}
+      onContext={() => undefined}
+      state="ready"
+      changed={undefined}
+      refreshFailed={false}
+      onRetry={() => undefined}
+    />,
+  );
 
-    expect(container.querySelector(".brief-feed-section")).toBeNull();
-    expect(titles(container)).toHaveLength(1);
-  });
-
-  // Eight is a morning somebody can finish. The ninth row is on the worklist.
-  it("draws at most eight cards", () => {
-    const { container } = render(
-      <BriefFeed
-        day={day(
-          Array.from({ length: 11 }, (_, at) =>
-            item({ id: `row-${at}`, title: `Row ${at}` }),
-          ),
-        )}
-        state="ready"
-      />,
-    );
-
-    // The BOUNDARY, both sides: the eighth row is drawn and the ninth is not.
-    // Asserting only the length restates the cap rather than locating it.
-    expect(container.querySelectorAll(".brief-feed-list > li")).toHaveLength(8);
-    expect(container.textContent).toContain("Row 7");
-    expect(container.textContent).not.toContain("Row 8");
-  });
-
-  // A page showing eight of eleven rows that did not say where the other three
-  // are has hidden them.
-  it("says how many rows it left out, and where they are", () => {
-    render(
-      <BriefFeed
-        day={day(
-          Array.from({ length: 11 }, (_, at) => item({ id: `row-${at}` })),
-        )}
-        state="ready"
-      />,
-    );
-
-    const link = screen.getByText(
-      en["brief.feed.rest"].replace("{count}", "3"),
-    );
-    expect(link.getAttribute("href")).toBe("#/worklist");
-  });
-
-  // The remainder counts what THIS surface is showing, not what the queue
-  // holds. A footer that counted the excluded approvals would send a reader to
-  // the worklist for rows this page deliberately did not draw.
-  //
-  // Carried across from the deleted "Do next" suite, which had this case and
-  // this reason. Without it a regression computing the remainder from
-  // `day.queue.length` rather than from the approval-filtered rows passes every
-  // other test in this file, because none of them mixes an approval into a
-  // queue long enough to have a remainder.
-  it("counts the remainder over what it shows, not over the whole queue", () => {
-    render(
-      <BriefFeed
-        day={day([
-          item({ id: "decision", source: "approval" }),
-          ...Array.from({ length: 9 }, (_, at) => item({ id: `row-${at}` })),
-        ])}
-        state="ready"
-      />,
-    );
-
-    // Nine drawable rows, eight shown: ONE remains, not the two a count over
-    // the whole ten-row queue would report.
-    expect(
-      screen.getByText(en["brief.feed.rest"].replace("{count}", "1")),
-    ).toBeTruthy();
-  });
-
-  it("says nothing about a remainder when it is showing everything", () => {
-    render(<BriefFeed day={day([item()])} state="ready" />);
-
-    expect(screen.queryByText(/more on the worklist/)).toBeNull();
-  });
-
-  // The decisions deck is a surface of its own further up the SAME page,
-  // holding the same approvals and posting to the same endpoint. A row here put
-  // one decision in front of a reader twice, each copy answerable — on a page
-  // whose whole claim is that it states an order once.
-  it("leaves the decisions the deck above already answers to the deck", () => {
-    const { container } = render(
-      <BriefFeed
-        day={day([
-          item({
-            id: "a",
-            source: "approval",
-            title: "Confirm the close date",
-          }),
-          item({ id: "b", title: "Aster is waiting" }),
-        ])}
-        state="ready"
-      />,
-    );
-
-    expect(container.textContent).not.toContain("Confirm the close date");
-    expect(container.textContent).toContain("Aster is waiting");
-  });
-
-  // Brief has no second column to open a row INTO. A rank button that answered
-  // nothing is a dead control.
-  it("draws the rank as a number, not as a control that opens nothing", () => {
-    const { container } = render(
-      <BriefFeed day={day([item()])} state="ready" />,
-    );
-
-    expect(container.querySelector(".worklist-rank")).toBeTruthy();
-    expect(container.querySelector(".worklist-rank-select")).toBeNull();
-  });
-
-  // A payload with no queue at all. The optional chain has to reach the FIELD:
-  // guarding only the payload threw and took the whole page with it. A page
-  // that draws nothing is a bad answer; a page that throws is not an answer.
-  it("draws nothing rather than throwing on an answer with no queue", () => {
-    const { container } = render(
-      <BriefFeed day={{} as unknown as Worklist} state="ready" />,
-    );
-
-    expect(container.querySelector(".brief-feed-list")).toBeNull();
-    expect(screen.getByText(en["brief.feed.clear"])).toBeTruthy();
-  });
-
-  // An empty queue and a failed read are different facts. Saying "nothing is
-  // waiting" over a read that never landed is the one thing this surface must
-  // not do — a rep would close the page believing their morning was clear.
-  it("tells a clear morning apart from a read that failed", () => {
-    const { rerender } = render(<BriefFeed day={day([])} state="ready" />);
-    expect(screen.getByText(en["brief.feed.clear"])).toBeTruthy();
-
-    rerender(<BriefFeed day={undefined} state="failed" />);
-    expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
-  });
-
-  // CARRIED ACROSS FROM "Do next", which this feed replaces. The surface draws
-  // a waiting message in full — sender, subject, preview, access badge — and
-  // without the drawer a reader is shown the message and then refused it.
-  // worklist.row.tsx offers the opener only when the caller passes onOpenEmail,
-  // so losing the mount loses the ability silently.
-  it("opens a message it drew in full, as Do next did before it", () => {
-    render(
-      <BriefFeed
-        day={day([
-          item({
-            id: "e1",
-            title: "Aster Handel",
-            email_summary: {
-              activity_id: "01a05500-0000-7000-8000-00000000ee01",
-              occurred_at: "2026-06-09T09:15:00Z",
-              version: 2,
-              subject: "Re: the renewal quote",
-              preview: "Can you hold the price until Friday?",
-              counterparty: "Dana Buyer",
-              direction: "inbound",
-              display_status: "team",
-              move: "needs_reply",
-              attachment_count: 0,
-            },
-          }),
-        ])}
-        state="ready"
-      />,
-    );
-
-    // A control, not a paragraph: the row says it opens a dialog.
-    const row = screen.getByRole("button", { name: /Re: the renewal quote/ });
-    expect(row.getAttribute("aria-haspopup")).toBe("dialog");
-  });
+  const column = container.querySelector(".brief-triage-queue");
+  if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
+  expect(
+    within(column).getByRole("button", { name: /Meet next Tues\?/ }),
+    "the column stopped naming a waiting row by the subject it is known by",
+  ).toBeTruthy();
 });

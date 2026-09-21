@@ -13,6 +13,7 @@ package attention
 
 import (
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -71,7 +72,7 @@ func TestTheHolderOfATaskReachesTheRow(t *testing.T) {
 		Subject:    "Send the retrofit quote",
 		DueAt:      &rankInstant,
 		AssigneeID: &holder,
-	}, rankInstant)
+	}, rankInstant, rankInstant.Add(time.Hour), time.UTC)
 
 	if item.AssigneeId == nil {
 		t.Fatal("the task's holder never reached the row")
@@ -82,13 +83,13 @@ func TestTheHolderOfATaskReachesTheRow(t *testing.T) {
 }
 
 // An unheld task carries no holder rather than a zero uuid. A zero id is a
-// value a client would try to resolve to a person, and it names nobody.
+// value a client would try to resolve to a contact, and it names nobody.
 func TestAnUnheldTaskCarriesNoHolderRatherThanAZeroOne(t *testing.T) {
 	item := taskItem(Task{
 		ID:      ids.NewV7(),
 		Subject: "Send the retrofit quote",
 		DueAt:   &rankInstant,
-	}, rankInstant)
+	}, rankInstant, rankInstant.Add(time.Hour), time.UTC)
 
 	if item.AssigneeId != nil {
 		t.Fatalf("an unheld task names %v as its holder", *item.AssigneeId)

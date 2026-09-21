@@ -5,7 +5,7 @@
 //
 // Not a Disclosure. A disclosure adds its content to the page, which is right
 // when the content is the next thing to read and wrong when it is an aside: on
-// a row of readings the reading a person opened grew and the three beside it
+// a row of readings the reading a contact opened grew and the three beside it
 // jumped down the page, so checking what one figure rests on moved the other
 // three out from under the eye that was comparing them. A popover leaves the
 // page where it was.
@@ -25,13 +25,8 @@ import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
 import { useHoverIntent } from "./hoverintent";
+import { usePortalPanelFocus } from "./portalfocus";
 import "./popover.css";
-
-// The first thing in a panel a reader can land on. The same set the dialog
-// trap uses (atoms.tsx), kept in the two places that need it rather than
-// exported from one — this is a CSS selector, not a shared rule about focus.
-const FOCUSABLE =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
  * Popover is one trigger and the aside behind it.
@@ -45,11 +40,33 @@ export function Popover({
   label,
   className,
   variant,
+  disabled,
   onHover,
   children,
 }: Readonly<{
   label: ReactNode;
   className?: string;
+  // Refuses to OPEN. For a trigger whose surroundings have stood down — the
+  // caret beside a verb whose write is in flight — where the panel behind it
+  // can answer nothing, so revealing it hands the reader a list of controls
+  // that all refuse the press and a keyboard reader a panel focus cannot enter.
+  //
+  // Three things it deliberately does NOT do.
+  //
+  // It never closes a panel already open. The panel may hold the very control
+  // that started the write, and that control is `pending` rather than
+  // `disabled` precisely so the reader keeps their place; taking the panel out
+  // from under them would drop the focus that state exists to protect.
+  //
+  // It never disables an OPEN trigger — the guard below reads `disabled &&
+  // !open` — because Escape and the click-outside both hand focus back to it,
+  // and `.focus()` on a natively disabled button is a silent no-op. A reader
+  // who was inside the panel would be left on `<body>`.
+  //
+  // And it is never `pending`. A trigger that only reveals starts no write, so
+  // an `aria-busy` on it would claim one; `Button`'s contract (atoms.tsx) draws
+  // the mark on the control that was pressed and disables the rest.
+  disabled?: boolean;
   // Also opens when the pointer SETTLES on the trigger, and closes when it
   // leaves. For an aside a reader takes in on the way past — the receipt under
   // a reading — where a click is a step they should not have to take. Off by
@@ -80,28 +97,34 @@ export function Popover({
   // at the margin with nothing under it.
   const at = useAnchoredToTrigger(open, trigger, panel, "start");
 
-  // Focus moves into the panel when it opens, IF there is anything in it to
-  // focus. A panel of controls a keyboard reader could see and not reach is
-  // the failure this prevents; a panel of prose has no stops at all and takes
-  // no focus, so the reader stays on the trigger they pressed.
-  useEffect(() => {
-    if (!open || openedBy === "hover") {
-      return;
-    }
-    // Never on a hover-opened panel: the pointer is somewhere else on the page
-    // and taking focus off what the reader was doing to put it in a panel they
-    // merely passed over is the page grabbing at them. A panel that ALSO opens
-    // on hover still hands focus over when a key or a click opened it: the
-    // control in it has to be reachable by the reader who asked for it.
-    panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-  }, [open, openedBy]);
+  // Focus, shared with the evidence mark's own portalled panel: into the panel
+  // when a press opened it, back to the trigger if the close dropped it, and
+  // Tab measured from where the trigger sits on the page rather than from where
+  // the portal puts the panel. Never on a hover-opened panel — the pointer is
+  // somewhere else and taking focus off what the reader was doing would be the
+  // page grabbing at them.
+  const panelFocus = usePortalPanelFocus({ open, openedBy, trigger, panel });
 
   const hover = useHoverIntent(
     () => {
+      // The refusal reaches the SETTLE, not the pair. `disabled` is a rule
+      // about opening, and the settled pointer is the second way in — the
+      // native attribute on the trigger is not the guard, because a disabled
+      // element still delivers pointer events in some browsers and the panel
+      // spreads this same pair on itself. Only the open path is guarded: the
+      // close one has to keep working, or a panel that was up when the caller
+      // refused the trigger could never be left by the pointer that opened it.
+      if (disabled === true) {
+        return;
+      }
       setOpenedBy("hover");
       setOpen(true);
     },
     () => setOpen(false),
+    // The open flag is this popover's own: a close that fires after a
+    // neighbour became the open one still has to land here, or the panel a
+    // reader just left stays on the page.
+    { ownsState: true },
   );
   const press = () => {
     setOpenedBy("press");
@@ -116,6 +139,7 @@ export function Popover({
       if (event.key !== "Escape") {
         return;
       }
+      event.preventDefault();
       setOpen(false);
       // Back to the button that opened it. Escape with the focus left in a
       // panel that has just been removed drops a keyboard reader at the top of
@@ -154,6 +178,7 @@ export function Popover({
           className={
             className ? `popover-trigger ${className}` : "popover-trigger"
           }
+          disabled={disabled === true && !open}
           aria-expanded={open}
           aria-controls={panelId}
           onClick={press}
@@ -169,6 +194,7 @@ export function Popover({
           className={
             className ? `popover-trigger ${className}` : "popover-trigger"
           }
+          disabled={disabled === true && !open}
           aria-expanded={open}
           aria-controls={panelId}
           onClick={press}
@@ -193,6 +219,7 @@ export function Popover({
             className="popover-panel"
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
+            {...panelFocus}
             style={{
               top: `${at.top}px`,
               left: `${at.left}px`,

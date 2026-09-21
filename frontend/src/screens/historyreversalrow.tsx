@@ -22,7 +22,7 @@ import { historyValue } from "./historyvalues";
 //
 // It turns on two facts and both change what is TRUE, not merely how it reads:
 // whether anything survived the reversal, and whether the two actors are one
-// person. "Sam's change, undone by Sam" describes two parties who happen to
+// contact. "Sam's change, undone by Sam" describes two parties who happen to
 // share a name, and a pair that says "undone" while a field still holds a new
 // value is the one outcome worse than showing both rows.
 function headlineKey(row: PairRow): MessageKey {
@@ -39,8 +39,8 @@ function headlineKey(row: PairRow): MessageKey {
 // The name a headline can put in front of a reader.
 //
 // A row whose actor no longer resolves to a seat carries no name, and the
-// headline is a SENTENCE about two people — so it takes the same phrase the
-// audit list already uses rather than leaving a gap where a person belongs or
+// headline is a SENTENCE about two contacts — so it takes the same phrase the
+// audit list already uses rather than leaving a gap where a contact belongs or
 // printing an id nobody can act on.
 export function actorName(
   name: string | null | undefined,
@@ -67,9 +67,7 @@ function SettledFace({
       <ul className="entry-fields">
         {entryFieldChanges(row.reversal).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name t-caption">
-              {historyFieldLabel(change.field, t)}
-            </span>
+            <span>{historyFieldLabel(change.field, t)}</span>
             <span>
               {historyValue(change.field, change.newValue, values) ??
                 t("history.cleared")}
@@ -77,9 +75,7 @@ function SettledFace({
           </li>
         ))}
       </ul>
-      <span className="reversal-net t-caption">
-        {t("history.reversal.net")}
-      </span>
+      <span className="t-caption">{t("history.reversal.net")}</span>
     </>
   );
 }
@@ -99,15 +95,11 @@ function ResidualFace({
   const values = { currency, locale, zone };
   return (
     <>
-      <span className="reversal-net t-caption">
-        {t("history.reversal.stillChanged")}
-      </span>
+      <span className="t-caption">{t("history.reversal.stillChanged")}</span>
       <ul className="entry-fields">
         {netChanges(row).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name t-caption">
-              {historyFieldLabel(change.field, t)}
-            </span>
+            <span>{historyFieldLabel(change.field, t)}</span>
             <HistoryFieldDiff
               field={change.field}
               oldValue={change.oldValue}
@@ -144,7 +136,7 @@ export function ReversalPairRow({
     undoer: actorName(row.reversal.actor_name, t),
   };
   return (
-    <li className="reversal-pair">
+    <li>
       <span className="tl-body">
         <span className="tl-title">{t(headlineKey(row), words)}</span>
         <span className="tl-meta">
@@ -161,7 +153,6 @@ export function ReversalPairRow({
             changes with opposite intents have no honest single label, so the
             verbs live on the rows they belong to, inside. */}
         <Button
-          small
           variant="ghost"
           className="reversal-toggle"
           aria-expanded={open}

@@ -109,6 +109,8 @@ func realDeliveryStager(t *testing.T, e *integration.Env) DeliveryMachinery {
 	return NewDeliveryStager(e.Pool, inserter)
 }
 
+const pricingReplySubject = "Re: Pricing question"
+
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	e := integration.Setup(t)
 	// The REAL delivery machinery, because this suite asserts that an
@@ -118,6 +120,9 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 		store:  activities.NewStore(e.DB()),
 		gate:   consent.NewGate(consent.NewStore(InstallationDB(e.Pool))),
 		stager: realDeliveryStager(t, e),
+		// This installation holds its own records, which the send guard asks
+		// before it composes anything (comms_soraut.go). An adapter with no
+		// seam refuses rather than passes, so a suite that sends says so.
 	}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
@@ -142,7 +147,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject != "Re: Pricing question" || body == "" {
+	if subject != pricingReplySubject || body == "" {
 		t.Fatalf("draft = %q / %q", subject, body)
 	}
 	assertModelAndFallbackDrafts(ctx, t, adapter, anchorID)
@@ -167,8 +172,13 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 		t.Fatalf("availability over the seam returned no slots: %+v", avail)
 	}
 
+	// The booking names a record, as the contract requires of both doors: a
+	// meeting attached to nothing lands on no timeline and is refused before
+	// the slot is looked at.
+	attendee := e.SeedContact(t, "Demo Attendee", &e.Rep1)
 	booked, err := adapter.BookMeeting(ctx, agents.BookMeetingArgs{
 		Start: avail.Slots[0].Start, End: avail.Slots[0].Start.Add(time.Hour), Subject: "Demo",
+		Links: []agents.RecordLink{{EntityType: "contact", EntityID: attendee}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -192,7 +202,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject != "Re: Your pricing question" || body != "The discount is confirmed for review." {
+	if subject != pricingReplySubject || body != "The discount is confirmed for review." {
 		t.Fatalf("model draft = %q / %q", subject, body)
 	}
 
@@ -205,19 +215,19 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatalf("fallback draft: %v", err)
 	}
-	if subject != "Re: Pricing question" || !strings.Contains(body, "confirm the discount") {
+	if subject != pricingReplySubject || !strings.Contains(body, "confirm the discount") {
 		t.Fatalf("fallback draft = %q / %q", subject, body)
 	}
 }
 
 func TestIntentToolsReturnTheAssembledPicture(t *testing.T) {
 	e := integration.Setup(t)
-	target := e.SeedPerson(t, "Briefing Target", &e.Rep1)
+	target := e.SeedContact(t, "Briefing Target", &e.Rep1)
 	retriever := search.NewRetriever(search.NewStore(e.DB()), nil)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	assembled, err := retriever.AssembleContext(ctx,
-		datasource.EntityRef{Type: datasource.EntityPerson, ID: target},
+		datasource.EntityRef{Type: datasource.EntityContact, ID: target},
 		retrieval.AssembleOptions{})
 	if err != nil {
 		t.Fatal(err)

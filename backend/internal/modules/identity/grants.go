@@ -28,7 +28,7 @@ import (
 )
 
 var shareableRecordTypes = map[string]bool{
-	"person": true, "organization": true, "deal": true, "lead": true, "project": true,
+	"contact": true, "company": true, "deal": true, "lead": true, "project": true,
 }
 
 const grantColumns = `id, record_type, record_id, subject_type, subject_id, access, granted_by, reason, expires_at, created_at`
@@ -58,64 +58,8 @@ type ListGrantsInput struct {
 	RecordID    *ids.UUID
 	SubjectType *string
 	SubjectID   *ids.UUID
-}
-
-func (s *Service) ListRecordGrants(ctx context.Context, in ListGrantsInput) ([]grantRow, error) {
-	var out []grantRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		where := "(expires_at IS NULL OR expires_at > now())"
-		if in.RecordType != nil {
-			where += storekit.SQLf(" AND record_type = $%d", arg(*in.RecordType))
-		}
-		if in.RecordID != nil {
-			where += storekit.SQLf(" AND record_id = $%d", arg(*in.RecordID))
-		}
-		if in.SubjectType != nil {
-			where += storekit.SQLf(" AND subject_type = $%d", arg(*in.SubjectType))
-		}
-		if in.SubjectID != nil {
-			where += storekit.SQLf(" AND subject_id = $%d", arg(*in.SubjectID))
-		}
-		rows, err := tx.Query(ctx,
-			"SELECT "+grantColumns+" FROM record_grant WHERE "+where+" ORDER BY created_at DESC", args...)
-		if err != nil {
-			return err
-		}
-		var candidates []grantRow
-		for rows.Next() {
-			g, err := scanGrant(rows)
-			if err != nil {
-				rows.Close()
-				return err
-			}
-			candidates = append(candidates, g)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		// The visibility probe runs AFTER the cursor is drained and closed,
-		// never inside the scan loop: it issues its own query on this same
-		// transaction, and pgx refuses a second query while rows are open
-		// ("conn busy"). The probe used to be a no-op for an unbounded
-		// caller, which hid the collision until a caller whose row scope
-		// renders a real clause came along.
-		for _, g := range candidates {
-			// A grant row names a row-scoped record: only grants whose
-			// target the caller could read are disclosed.
-			visible, err := auth.VisibleTo(ctx, tx, g.RecordType, g.RecordID)
-			if err != nil {
-				return err
-			}
-			if visible {
-				out = append(out, g)
-			}
-		}
-		return nil
-	})
-	return out, err
+	Cursor      *string
+	Limit       *int
 }
 
 type CreateGrantInput struct {
@@ -207,7 +151,7 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 		if !subjectExists {
 			return apperrors.ErrNotFound
 		}
-		// Two rules bind a grant and they judge different people.
+		// Two rules bind a grant and they judge different contacts.
 		//
 		// Scope-intersection (ADR-0039) judges the GRANTOR, at every access
 		// level. EnsureLinkTarget above is satisfied by the grant arm, so a
@@ -337,8 +281,24 @@ func grantImage(g grantRow) map[string]any {
 // AC states. The read seats inside it are still refused every write at
 // their own admission, so no authority leaks — the grant is just less
 // useful to them than to their colleagues.
+//
+// WHOEVER SHIPS A SEAT-CHANGE ENDPOINT OWES THE OTHER HALF. This guard runs at
+// grant creation and nowhere else, so a member downgraded to a read seat keeps
+// every write grant they were given while they held a full one. That is the
+// rule and the stored data disagreeing, and the fix belongs in the seat
+// write's own transaction: revoke the subject's write grants there, audited
+// like any other grant change, so the data matches the rule at every instant.
+// A downgrade quietly parking authority is how somebody gets it back on an
+// upgrade nobody re-examined.
+//
+// Until then it is inert rather than wrong: platform/auth's write-authority
+// predicate drops its record_grant arm for a read-seat principal, so the
+// standing grant confers nothing at the place authority is actually read. That
+// is the second guard, it holds whatever the row says, and it is not a reason
+// to skip the revocation — data that states the opposite of the rule is a
+// defect the next reader inherits.
 func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
-	if in.Access != string(crmcontracts.RecordGrantAccessWrite) || in.SubjectType == "team" {
+	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == "team" {
 		return nil
 	}
 	var seat string
@@ -360,14 +320,14 @@ func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantIn
 // asserting one does (ADR-0039's scope-intersection rule, EnsureCanGrant):
 // otherwise anyone the record was ever shared with — read-only — could delete a
 // colleague's `write` grant on it, which is not an escalation but is a way to
-// take work away from people who are doing it. The write probe is what stops
+// take work away from contacts who are doing it. The write probe is what stops
 // that, and it keeps the read half's 404 first, so a caller who cannot see the
 // record still learns nothing from the shape of the refusal.
 //
 // The one arm that is NOT about authority over the record is a subject
 // declining their own share. That was possible before this rule and stays
 // possible: the grant names them, taking it away costs nobody anything, and
-// nothing else in the product lets a person get out from under a share they did
+// nothing else in the product lets a contact get out from under a share they did
 // not ask for. A TEAM grant is not covered — its subject is the team, not the
 // member reading it — so removing one is the record's business.
 func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant grantRow) error {

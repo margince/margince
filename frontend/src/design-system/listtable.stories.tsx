@@ -2,9 +2,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { Button } from "./atoms";
+import { Badge, Button } from "./atoms";
 import type { ListChip } from "./listsurface";
-import { type ListColumn, ListTable } from "./listtable";
+import { CellStrip, type ListColumn, ListTable } from "./listtable";
 
 // The list surface every record screen renders into: header, controls, rows and
 // footer as one block. The query dials are CONTROLLED and server-backed in the
@@ -167,7 +167,7 @@ function Surface({
         columns={shownColumns}
         rowKey={(row) => row.id}
         unit="companies"
-        action={<Button small>New company</Button>}
+        action={<Button>New company</Button>}
         search={{ value: search, onChange: setSearch }}
         sort={{ value: sort, onChange: setSort }}
         chips={chips}
@@ -265,7 +265,7 @@ export const Failed: Story = {
       problem={
         <>
           <p>Couldn't load this view.</p>
-          <Button small>Retry</Button>
+          <Button>Retry</Button>
         </>
       }
     />
@@ -279,15 +279,12 @@ export const Empty: Story = {
   render: () => <Surface rows={[]} />,
 };
 
-// A caption says what a list IS when it needs saying, and a note says why a
-// dial is missing — over a read-only mirror the sort and filter dials are gone
-// because the source refuses them.
-export const CaptionAndNote: Story = {
+// A caption says what a list IS when it needs saying.
+export const Caption: Story = {
   render: () => (
     <Surface
       rows={companies(6)}
       caption="Companies the workspace has captured, newest first."
-      note="Sorting and filters read through the source system"
     />
   ),
 };
@@ -350,10 +347,8 @@ function SelectableSurface() {
             <span className="t-caption">
               {formatNumber(selected.size, locale)} selected
             </span>
-            <Button small>Assign owner</Button>
-            <Button small onClick={() => setSelected(new Set())}>
-              Clear
-            </Button>
+            <Button>Assign owner</Button>
+            <Button onClick={() => setSelected(new Set())}>Clear</Button>
           </>
         ),
       }}
@@ -392,13 +387,80 @@ export const InASettingsColumn: Story = {
             verbs: true,
             cell: () => (
               <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                <Button small variant="ghost">
-                  Edit company
-                </Button>
-                <Button small variant="danger">
-                  Archive company
-                </Button>
+                <Button variant="ghost">Edit company</Button>
+                <Button variant="danger">Archive company</Button>
               </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  ),
+};
+
+// Several pills in ONE cell, and what happens when they do not fit. The cells
+// are the ones `CellStrip` serves: a relationship column carrying three badges
+// at once, a score badge with the reason beside it, and a deal's age with its
+// stalled flag. None fits the share its column gets at this width, and none
+// takes a second line — a cell that wrapped would push every row below it down.
+// The reason ends in an ellipsis while its badge stays whole, and the three
+// badges each ellipsise their own label; nothing is cut mid-word at the column
+// edge. The reader's answer is to widen the column (drag a header's trailing
+// edge) and nobody else's row moves.
+export const CellStrips: Story = {
+  name: "Cell strips",
+  render: () => (
+    <div style={{ maxWidth: "720px" }}>
+      <Surface
+        rows={companies(4)}
+        columns={[
+          {
+            key: "name",
+            header: "Company",
+            fixed: true,
+            cell: (row: Company) => <strong>{row.name}</strong>,
+          },
+          {
+            key: "relationship",
+            header: "Relationship",
+            // Multi-valued: an account can be a partner AND a customer, and a
+            // column showing only the first would make the second look untrue.
+            cell: () => (
+              <CellStrip>
+                {["Customer", "Partner", "Supplier"].map((kind) => (
+                  <Badge key={kind}>{kind}</Badge>
+                ))}
+              </CellStrip>
+            ),
+          },
+          {
+            key: "score",
+            header: "Score",
+            cell: (row: Company) => {
+              const warm = row.owner === "Lars";
+              return (
+                <CellStrip>
+                  <Badge tone={warm ? "success" : "warning"}>
+                    {warm ? "Warm" : "Cooling"}
+                  </Badge>
+                  <span className="t-caption">
+                    {warm
+                      ? "Replied inside a day to the renewal proposal"
+                      : "No qualifying signal for three weeks"}
+                  </span>
+                </CellStrip>
+              );
+            },
+          },
+          {
+            key: "signal",
+            header: "Last signal",
+            numeric: true,
+            cell: (row: Company) => (
+              <CellStrip>
+                <span>{row.owner === "Lars" ? "2 days" : "3 weeks"}</span>
+                {row.owner !== "Lars" && <Badge tone="warning">Stalled</Badge>}
+              </CellStrip>
             ),
           },
         ]}

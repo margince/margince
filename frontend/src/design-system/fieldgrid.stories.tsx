@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Building2, Globe, Landmark, MapPin, User, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
 import { FieldGrid, FieldRow } from "./fieldgrid";
-import { InlineChoice, InlineText } from "./inlinechoice";
+import { InlineChoice } from "./inlinechoice";
+import { InlineText } from "./inlinetext";
 
 // FieldGrid is the grid around a value, not the value itself: a read-only row
 // takes a plain node, an editable row wraps InlineText or InlineChoice.
@@ -123,6 +124,23 @@ export const WithIcons: Story = {
         Tim Rasche
       </FieldRow>
       <FieldRow label="Reference">No glyph, and the column holds</FieldRow>
+    </FieldGrid>
+  ),
+};
+
+export const ExpandedGroup: Story = {
+  render: () => (
+    <FieldGrid>
+      <FieldRow label="Name">Brandt Automotive</FieldRow>
+      <FieldRow label="Address" stacked>
+        <InlineText
+          label="Street"
+          value="17 Fleet Road"
+          placeholder="Not set"
+          canEdit
+          onSave={async () => undefined}
+        />
+      </FieldRow>
     </FieldGrid>
   ),
 };

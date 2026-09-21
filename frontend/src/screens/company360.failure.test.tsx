@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -7,14 +7,14 @@ import type { components } from "../api/schema";
 import { AppErrorBoundary } from "../app/errorboundary";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { CompanyScreen } from "./organizations";
+import { CompanyScreen } from "./companies";
 
 // What the company record page does when its composite read FAILS.
 //
 // The 360 is one request behind most of the page, and the account row is
 // another: the header's name, the tab strip and the record's identity come from
-// `GET /organizations/{id}`, while the strip, the tab bodies and the rail come
-// from `GET /organizations/{id}/360`. So a failed 360 has an honest reading —
+// `GET /companies/{id}`, while the strip, the tab bodies and the rail come
+// from `GET /companies/{id}/360`. So a failed 360 has an honest reading —
 // the header stands, and each section says it could not be loaded — and the
 // page has no business throwing the whole tree away and taking the one fact
 // still knowable (which record you are on) with it.
@@ -24,9 +24,9 @@ import { CompanyScreen } from "./organizations";
 // not the product's behaviour; with it, the test asserts what a reader gets,
 // which is the thing that regressed.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
-const org: Organization = {
+const company: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
@@ -63,11 +63,11 @@ function stubWith360Status(status: number) {
       }
       if (pathname.endsWith("/v1/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
-      if (pathname.endsWith("/organizations/o-1")) {
-        return jsonResponse(org);
+      if (pathname.endsWith("/companies/o-1")) {
+        return jsonResponse(company);
       }
       return jsonResponse({ data: [], page: emptyPage });
     }),
@@ -118,7 +118,7 @@ describe("the company record page when its 360 read fails", () => {
 
   it("says the sections could not be loaded rather than that there is nothing", async () => {
     // The other half of degrading honestly. An empty state on a failed read is
-    // the worse reading of the two: "no people on this account" is a claim, and
+    // the worse reading of the two: "no contacts on this account" is a claim, and
     // this page has not earned it. `sectionState` draws `unavailable` for
     // exactly this case, so at least one section must be saying so.
     stubWith360Status(500);

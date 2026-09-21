@@ -105,11 +105,25 @@ func TestTheVocabularysReferenceEnumIsExactlyWhatTheEngineDeclares(t *testing.T)
 		"the contract advertises it and no id field points at it, so no field can ever report it")
 }
 
-// everyFilterableFieldType is the six custom-field types plus id, which only a
-// core field carries. Derived from fieldcatalog.Types() so a seventh custom type
-// joins these gates by existing rather than by somebody remembering them.
+// everyFilterableFieldType is the six custom-field types plus the two only a
+// CORE field carries. The custom half is derived from fieldcatalog.Types(), so a
+// seventh custom type joins these gates by existing rather than by somebody
+// remembering them.
+//
+// The core-only half is listed, because there is nowhere to derive it from: a
+// custom field cannot be an id or a domain — the catalogue offers neither — so
+// no catalogue read would ever report them. Listing them is what makes this
+// helper's set the same set the contract enum must carry, and adding a third
+// core-only type here is the deliberate act of widening a public enum.
+var coreOnlyFieldTypes = []storekit.FieldType{
+	// A reference to another record.
+	storekit.FieldID,
+	// A host column, whose operand is folded to the host the column stores.
+	storekit.FieldDomain,
+}
+
 func everyFilterableFieldType() []storekit.FieldType {
-	types := []storekit.FieldType{storekit.FieldID}
+	types := append([]storekit.FieldType{}, coreOnlyFieldTypes...)
 	for _, declared := range fieldcatalog.Types() {
 		types = append(types, storekit.FieldType(declared))
 	}

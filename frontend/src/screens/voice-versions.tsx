@@ -87,7 +87,7 @@ export function ActiveVoiceInsights({
 
 // The evaluator writes its reasons for an operator reading a log, and they
 // reached the owner verbatim: "median voice score 0.56 is below the 0.60 floor"
-// says nothing to the person being asked to decide. Each known shape is stated
+// says nothing to the colleague being asked to decide. Each known shape is stated
 // again in words about THEIR voice and what to do about it.
 //
 // An unrecognized reason is shown as it came rather than dropped: a reason
@@ -178,7 +178,7 @@ function CandidateBanner({
           n: identifierNumber(candidate.profile_version),
         })}
       </b>
-      <p className="t-caption">{t("voice.candidate.whatItIs")}</p>
+      <p>{t("voice.candidate.whatItIs")}</p>
       {/* The decision this card asks for cannot be taken without the thing it
           is about. It used to show a title, the evaluator's raw sentences and
           two buttons — so "Use this version" meant approving writing the
@@ -193,9 +193,7 @@ function CandidateBanner({
       </Disclosure>
       {candidate.review_reasons.length > 0 && (
         <>
-          <p className="t-caption vdna-label">
-            {t("voice.candidate.concernsLabel")}
-          </p>
+          <p className="vdna-label">{t("voice.candidate.concernsLabel")}</p>
           <ul className="vdna-reasons">
             {candidate.review_reasons.map((reason) => (
               <li key={reason}>{reviewReasonText(t, locale, reason)}</li>
@@ -204,23 +202,17 @@ function CandidateBanner({
         </>
       )}
       <p className="t-caption">{t("voice.candidate.applyHint")}</p>
-      {error && (
-        <p className="t-caption" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p role="alert">{error}</p>}
       {canEdit && (
         <div className="vdna-candidate-acts">
           <Button
             variant="primary"
-            small
             disabled={transition.isPending}
             onClick={() => transition.mutate("apply")}
           >
             {t("voice.candidate.apply")}
           </Button>
           <Button
-            small
             disabled={transition.isPending}
             onClick={() => transition.mutate("reject")}
           >
@@ -313,7 +305,6 @@ export function VoiceHistory({
               </ul>
               {page.next && (
                 <Button
-                  small
                   onClick={() => setVersionCursor(page.next ?? undefined)}
                 >
                   {t("voice.history.loadMore")}
@@ -370,7 +361,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
     <QueryGate query={deltas} pendingLabel={t("voice.history.label")}>
       {(page) =>
         allDeltas.length === 0 ? (
-          <p className="t-caption">{t("voice.history.deltasEmpty")}</p>
+          <p>{t("voice.history.deltasEmpty")}</p>
         ) : (
           <div>
             <ul className="vdna-list">
@@ -391,10 +382,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
                 ))}
             </ul>
             {page.next && (
-              <Button
-                small
-                onClick={() => setDeltaCursor(page.next ?? undefined)}
-              >
+              <Button onClick={() => setDeltaCursor(page.next ?? undefined)}>
                 {t("voice.history.loadMore")}
               </Button>
             )}
@@ -470,11 +458,7 @@ function VersionRow({
           <RotateCcw aria-hidden />
         </button>
       )}
-      {error && (
-        <span className="t-caption" role="alert">
-          {error}
-        </span>
-      )}
+      {error && <span role="alert">{error}</span>}
     </li>
   );
 }

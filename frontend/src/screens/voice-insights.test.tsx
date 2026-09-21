@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
@@ -120,7 +120,7 @@ describe("VoiceInsights", () => {
       screen.getByText(/Verdict first, then the operational why./),
     ).toBeTruthy();
     expect(screen.getByText(/We ship on Monday, no excuses./)).toBeTruthy();
-    expect(screen.getByText(/draft only/)).toBeTruthy();
+    expect(screen.getByText(/Draft only/)).toBeTruthy();
     expect(screen.getByText(/Add a call transcript./)).toBeTruthy();
     expect(screen.getByText(/v3/)).toBeTruthy();
   });

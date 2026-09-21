@@ -42,6 +42,12 @@ type recordingClaims struct {
 	failCtxLive   bool
 }
 
+// freshAttempt is the token a fresh claim answers with in these cases. Named
+// because every settlement below asserts on it: the point of the token is that
+// a settlement can name the WRONG attempt, so a case that did not say which one
+// it named would prove nothing about it.
+const freshAttempt = "01a08000-0000-7000-8000-00000000beef"
+
 func (c *recordingClaims) Claim(_ context.Context, tool, key, digest string) (Claim, error) {
 	c.claimed = append(c.claimed, tool+"/"+key+"/"+digest)
 	if c.claimErr != nil {
@@ -50,21 +56,24 @@ func (c *recordingClaims) Claim(_ context.Context, tool, key, digest string) (Cl
 	return c.verdict, nil
 }
 
-func (c *recordingClaims) Settle(ctx context.Context, tool, key string, result json.RawMessage, records int) error {
-	c.settled = append(c.settled, tool+"/"+key)
+func (c *recordingClaims) Settle(ctx context.Context, tool, key, attempt string, result json.RawMessage, records int) error {
+	// The attempt rides the recorded string, so every case below states which
+	// attempt a settlement named — the whole point of the token is that a
+	// settlement can name the wrong one.
+	c.settled = append(c.settled, tool+"/"+key+"@"+attempt)
 	c.stored, c.storedRecords = result, records
 	c.settleCtxLive = ctx.Err() == nil
 	return c.settleErr
 }
 
-func (c *recordingClaims) Fail(ctx context.Context, tool, key, reason string) error {
-	c.failed = append(c.failed, tool+"/"+key+": "+reason)
+func (c *recordingClaims) Fail(ctx context.Context, tool, key, attempt, reason string) error {
+	c.failed = append(c.failed, tool+"/"+key+"@"+attempt+": "+reason)
 	c.failCtxLive = ctx.Err() == nil
 	return c.failErr
 }
 
-func (c *recordingClaims) Release(_ context.Context, tool, key string) error {
-	c.released = append(c.released, tool+"/"+key)
+func (c *recordingClaims) Release(_ context.Context, tool, key, attempt string) error {
+	c.released = append(c.released, tool+"/"+key+"@"+attempt)
 	return c.releaseErr
 }
 
@@ -163,7 +172,7 @@ func (f *retryFixture) invoke(t *testing.T, args string) (json.RawMessage, error
 
 func TestAFreshClaimRunsTheToolAndRecordsItsResult(t *testing.T) {
 	f := newRetryFixture(t)
-	f.claims.verdict = Claim{State: ClaimFresh}
+	f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 
 	out, err := f.invoke(t, `{"idempotency_key":"k-1","note":"hi"}`)
 	if err != nil {
@@ -172,7 +181,7 @@ func TestAFreshClaimRunsTheToolAndRecordsItsResult(t *testing.T) {
 	if f.tool.runs != 1 {
 		t.Fatalf("the tool ran %d times, want 1", f.tool.runs)
 	}
-	if len(f.claims.settled) != 1 || f.claims.settled[0] != "send_email/k-1" {
+	if len(f.claims.settled) != 1 || f.claims.settled[0] != "send_email/k-1@"+freshAttempt {
 		t.Fatalf("settled = %v", f.claims.settled)
 	}
 	if len(f.claims.released) != 0 {
@@ -429,7 +438,7 @@ func TestAClaimStoreFailureRefusesTheCallRatherThanRunningItUnprotected(t *testi
 // happened", and giving the key back there is how one key creates two records.
 func TestAFailedRunKeepsItsKeyRatherThanInvitingASecondAttempt(t *testing.T) {
 	f := newRetryFixture(t)
-	f.claims.verdict = Claim{State: ClaimFresh}
+	f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 	f.tool.fail = fmt.Errorf("the provider refused the write: %w", apperrors.ErrConflict)
 
 	if _, err := f.invoke(t, `{"idempotency_key":"k-1"}`); err == nil {
@@ -446,7 +455,7 @@ func TestAFailedRunKeepsItsKeyRatherThanInvitingASecondAttempt(t *testing.T) {
 	}
 	// The recorded reason is the SENTINEL's words, not the refusal's own prose:
 	// it is stored for the window and handed to whoever presents the key next.
-	if got := f.claims.failed[0]; got != "send_email/k-1: it conflicted with another change" {
+	if got := f.claims.failed[0]; got != "send_email/k-1@"+freshAttempt+": it conflicted with another change" {
 		t.Fatalf("recorded %q — a stored reason must not carry the refusal's own text", got)
 	}
 }
@@ -479,7 +488,7 @@ func TestARetryOfAFailedRunIsToldToCheckBeforeUsingANewKey(t *testing.T) {
 func TestBookkeepingFailuresNeverChangeWhatTheCallerIsTold(t *testing.T) {
 	t.Run("settling fails after a successful call", func(t *testing.T) {
 		f := newRetryFixture(t)
-		f.claims.verdict = Claim{State: ClaimFresh}
+		f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 		f.claims.settleErr = errors.New("the update failed")
 		out, err := f.invoke(t, `{"idempotency_key":"k-1"}`)
 		if err != nil {
@@ -491,7 +500,7 @@ func TestBookkeepingFailuresNeverChangeWhatTheCallerIsTold(t *testing.T) {
 	})
 	t.Run("recording a failed run fails", func(t *testing.T) {
 		f := newRetryFixture(t)
-		f.claims.verdict = Claim{State: ClaimFresh}
+		f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 		f.tool.fail = errors.New("the provider refused the write")
 		f.claims.failErr = errors.New("the update failed")
 		_, err := f.invoke(t, `{"idempotency_key":"k-1"}`)
@@ -503,7 +512,7 @@ func TestBookkeepingFailuresNeverChangeWhatTheCallerIsTold(t *testing.T) {
 		f, approvals := approvedRetryFixture(t)
 		approvals.redeemErr = fmt.Errorf("not yours: %w", apperrors.ErrApprovalTokenInvalid)
 		f.claims.releaseErr = errors.New("the delete failed")
-		f.claims.verdict = Claim{State: ClaimFresh}
+		f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 		_, err := f.invoke(t, `{"idempotency_key":"k-1","approval_id":"`+ids.NewV7().String()+`"}`)
 		if !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
 			t.Fatalf("err = %v, want the redemption's own refusal", err)
@@ -627,7 +636,7 @@ func TestTheRetryOfAnApprovedCallReplaysInsteadOfRedeemingTwice(t *testing.T) {
 	approval := ids.NewV7()
 	call := `{"idempotency_key":"k-1","approval_id":"` + approval.String() + `"}`
 
-	f.claims.verdict = Claim{State: ClaimFresh}
+	f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 	first, err := f.invoke(t, call)
 	if err != nil {
 		t.Fatalf("the approved call: %v", err)
@@ -659,7 +668,7 @@ func TestTheRetryOfAnApprovedCallReplaysInsteadOfRedeemingTwice(t *testing.T) {
 func TestARefusedRedemptionGivesTheKeyBack(t *testing.T) {
 	f, approvals := approvedRetryFixture(t)
 	approvals.redeemErr = fmt.Errorf("that approval is not yours: %w", apperrors.ErrApprovalTokenInvalid)
-	f.claims.verdict = Claim{State: ClaimFresh}
+	f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 
 	_, err := f.invoke(t, `{"idempotency_key":"k-1","approval_id":"`+ids.NewV7().String()+`"}`)
 	if !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
@@ -696,7 +705,7 @@ func TestAStagedCallHoldsNoKey(t *testing.T) {
 func TestTheRunIsRecordedEvenWhenTheCallerIsGone(t *testing.T) {
 	t.Run("a completed run", func(t *testing.T) {
 		f := newRetryFixture(t)
-		f.claims.verdict = Claim{State: ClaimFresh}
+		f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 		ctx, cancel := context.WithCancel(f.ctx)
 		f.ctx = ctx
 		f.tool.onHandle = cancel // the client hangs up mid-call
@@ -713,7 +722,7 @@ func TestTheRunIsRecordedEvenWhenTheCallerIsGone(t *testing.T) {
 	})
 	t.Run("a failed run", func(t *testing.T) {
 		f := newRetryFixture(t)
-		f.claims.verdict = Claim{State: ClaimFresh}
+		f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 		ctx, cancel := context.WithCancel(f.ctx)
 		f.ctx = ctx
 		f.tool.onHandle = cancel
@@ -808,7 +817,7 @@ func TestAReplayCostsWhatTheCallCostAndNotWhatItCanName(t *testing.T) {
 	f := newRetryFixture(t)
 	same := ids.NewV7()
 	f.tool.records = []ids.UUID{same, same, ids.NewV7()} // one record served twice
-	f.claims.verdict = Claim{State: ClaimFresh}
+	f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
 
 	out, err := f.invoke(t, `{"idempotency_key":"k-1"}`)
 	if err != nil {

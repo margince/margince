@@ -235,18 +235,18 @@ func recordExtractedEvent(
 		return false, fmt.Errorf("cited message id: %w", err)
 	}
 	return signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-		Kind:           event.Kind,
-		OrganizationID: thread.OrganizationID,
-		Summary:        event.Summary,
-		Severity:       extractKinds[event.Kind],
-		Fingerprint:    signalFingerprint(event.Kind, thread.OrganizationID, cited),
+		Kind:        event.Kind,
+		CompanyID:   thread.CompanyID,
+		Summary:     event.Summary,
+		Severity:    extractKinds[event.Kind],
+		Fingerprint: signalFingerprint(event.Kind, thread.CompanyID, cited),
 		Evidence: []signals.DerivedEvidence{
 			{Snippet: event.Summary, ActivityID: cited},
 		},
 		// As shareable as the conversation it was read from, and no more.
 		// Everything this producer writes is drawn from what messages SAY, so a
 		// summary filed on a workspace-visible account would hand the whole
-		// workspace the contents of correspondence that answers to one person.
+		// workspace the contents of correspondence that answers to one contact.
 		PrivateTo: thread.PrivateTo,
 		Audit: map[string]any{
 			paramKind:               event.Kind,
@@ -270,7 +270,14 @@ var errRefusedReading = errors.New("signal extract: the model's reading was refu
 func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extractedEvent, error) {
 	req := extractRequest(thread, identity.BaseLanguageForPrompt(ctx, x.pool))
 	validate := extractShapeValid(thread)
-	resp, err := ai.Ask(ctx, x.brain, req, validate)
+	// A conversation is several messages and one account, so the call names the
+	// ACCOUNT: the ruling behind the citation column is that a call spanning
+	// records names its subject rather than every record it touched, and a list
+	// that is right half the time is a citation nobody can trust. What that
+	// costs is stated where the purge runs — a contact's erasure reaches this
+	// payload by its text, not by this citation.
+	resp, err := ai.Ask(ai.WithSubject(ctx, ids.From[ids.CompanyKind](thread.CompanyID).Ref(), ""),
+		x.brain, req, validate)
 	if err != nil {
 		// The validator ran inside CompleteStructured and its policy is spent:
 		// three attempts, the last escalated, still refused. Re-reading the

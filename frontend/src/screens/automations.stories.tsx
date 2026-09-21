@@ -244,7 +244,7 @@ export const AdminCard: Story = {
 };
 
 // The card in dark. The library's hairlines are `--borderSubtle` between rows
-// and the recipe line is mono `--textMeta` under a description — the two pairs
+// and the recipe line is `--textMeta` under a description — the two pairs
 // most likely to disappear into the card when the ground goes dark, and both are
 // what the entries' new rhythm is made of.
 export const AdminCardDark: Story = {

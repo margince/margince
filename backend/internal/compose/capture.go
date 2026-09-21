@@ -22,8 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -111,6 +112,14 @@ type CaptureConfig struct {
 	// drop a separately-assigned keeper, which is a failure with no error and
 	// no missing file to notice.
 	Blob blobstore.Store
+	// AllowTestMailbox is operations.allow_test_mailbox — a deployment-file
+	// kill switch (deployconfig.Operations), not a capture.* tuning knob, so
+	// it is NOT set by CaptureConfigFromDeploy below (which is scoped to
+	// deployconfig.Capture only). Each boot path (cmd/api/main.go,
+	// cmd/worker/main.go) sets it explicitly, right after calling
+	// CaptureConfigFromDeploy. The zero value is false: NewCaptureRegistry
+	// registers the test_mailbox connector only when this is true.
+	AllowTestMailbox bool
 }
 
 // logger is the configured logger, or the process default.
@@ -200,6 +209,16 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// so there is nothing to configure and nothing to gate on; the finance
 	// mirror's offline_demo provider is registered on the same terms.
 	r.Register(offlinedemo.New(offlineDemoDirectory{pool: pool}))
+	// The QC-only test_mailbox connector — unlike offline_demo, it is NOT
+	// registered unconditionally: it can both capture AND send, so a stray
+	// registration on a real deployment would let a fake send look real.
+	// Gated on the same deployment flag mailAppConfigured reads
+	// (s.captureConfig.AllowTestMailbox), so a production install with no
+	// such flag set has no test_mailbox connector to reach at all — not
+	// merely one absent from the UI.
+	if cfg.AllowTestMailbox {
+		r.Register(testmailbox.New(capture.NewTestMailboxLedger(db)))
+	}
 	// The derived channel vocabulary is NOT reconciled here. Constructing this
 	// registry is config-gated — a role builds it only when a keyvault root key
 	// is configured — and the registry write is not, so it runs as its own boot
@@ -213,7 +232,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 // registry above, and the site_lead accept effect (siteleadaccept.go),
 // which captures through the Sink directly without needing a registry.
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
-	ensurer := peopleEnsurer{
+	ensurer := contactsEnsurer{
 		store:  newCounterpartyStore(pool),
 		triage: newDomainTriageTrigger(pool, cfg.logger()),
 		log:    cfg.logger(),
@@ -226,8 +245,8 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		WithStager(mergeStager{svc: approvals.NewService(InstallationDB(pool))}).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
-		// its counterparty exists, through the people module's ONE dedupe
-		// chokepoint — composed here so capture never imports people. The
+		// its counterparty exists, through the contacts module's ONE dedupe
+		// chokepoint — composed here so capture never imports contacts. The
 		// free-mail (CAP-PARAM-5) and transactional/ESP (CAP-PARAM-6, ADR-0072)
 		// gates decide which senders derive no company / no counterparty.
 		WithEnsurer(ensurer,
@@ -255,11 +274,57 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// briefly readable before a later pass narrows it has already been
 		// readable.
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
-		// The attendee naming, from the module that owns `person`. Inside the
+		// The attendee naming, from the module that owns `contact`. Inside the
 		// capture transaction for a plainer reason than the audience above: the
 		// name it completes is read off the participant rows this same
 		// transaction has just written.
-		WithParticipantNamer(people.FillParticipantNamesTx).
+		WithParticipantNamer(contacts.FillParticipantNamesTx).
+		// Closing a meeting the calendar says is off — called off by its
+		// organizer, or declined by the seat whose calendar it is. From the
+		// module that owns `activity` and its status history, for the reason
+		// every seam above travels this way.
+		//
+		// Without it a cancelled meeting stays on the timeline as booked: the
+		// provider stops listing an event once it is off, so the pull that
+		// carries the cancellation is the only one that will ever mention it.
+		WithMeetingCloser(activities.CancelCapturedMeetingTx).
+		// Writing a connector's own reading of a message over a row an importer
+		// ASSERTED. From the module that owns `activity`, for the reason every
+		// seam above travels this way.
+		//
+		// Without it an imported row wins on content, which is the wrong way
+		// round twice over: an exporting CRM keeps its own stripped rendering,
+		// and a row planted under a guessed Message-ID would make the real
+		// message unreachable.
+		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
+		// The identity both ingestion doors agree on. Without it each door
+		// files under its own natural key, those keys never meet, and a
+		// customer who imports their history and THEN connects the mailbox
+		// that held it gets two rows for every message.
+		// ResolveBindableIdentity rather than ResolveIdentity: the resolve is what
+		// decides whether this mailbox joins a row somebody else's door filed, so
+		// the seat rule and the liveness rule belong inside it. Capture never
+		// learns the predicate, and nothing a request body can set crosses the
+		// seam.
+		WithMessageIdentity(
+			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence, because a
+			// provider's own event id differs per calendar: two colleagues on one
+			// meeting sync two ids for it, and without this it lands twice.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
+			// The cross-seat arm, injected HERE and only here: an import filed by
+			// one seat binds to the mailbox of the seat whose PROVEN address it
+			// names. The addresses come from the import and are forgeable, so they
+			// are only the lookup key; the answer comes from capture's own
+			// connection and delivery evidence, which an importer cannot write.
+			//
+			// capture answers it because capture owns those tables, activities
+			// asks it because activities owns the binding decision, and neither
+			// module may import the other — so the edge is this injection.
+			activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx),
+			activities.ClaimIdentity,
+		).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

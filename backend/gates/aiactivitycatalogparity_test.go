@@ -25,12 +25,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/margince/margince/backend/internal/compose/orgscan"
+	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The two carrier kinds that are not scheduled specs: a human asking for an
@@ -44,7 +44,9 @@ import (
 // none as its own.
 const (
 	documentReadingKind = activities.ExtractionAITask
-	websiteReadingKind  = people.SiteReadActivityKind
+	websiteReadingKind  = contacts.SiteReadActivityKind
+	transcriptReadKind  = activities.TranscriptAITask
+	voiceBuildKind      = ai.VoiceBuildAITask
 )
 
 func TestEveryKindSomethingProducesIsOneTheContractCanExpress(t *testing.T) {
@@ -102,7 +104,7 @@ func alignEnum(missing []string) string {
 // direction is a producer half-gated, and the half that is missing is whichever
 // one nobody thought about.
 func producedKinds() []string {
-	out := []string{documentReadingKind, websiteReadingKind, orgscan.ActivityKind}
+	out := []string{documentReadingKind, websiteReadingKind, transcriptReadKind, voiceBuildKind, companyscan.ActivityKind}
 	for _, spec := range runner.Catalog() {
 		out = append(out, spec.Name)
 	}
@@ -114,17 +116,43 @@ func producedKinds() []string {
 	return out
 }
 
+// namesRowsMayStillCarry reads the registry for tasks that used to announce
+// under their own name and no longer do.
+//
+// Derived from the registry rather than listed, because the registry is where
+// the retirement is decided: a task moved to SourceNoOccurrence is one whose
+// work is now reported under the unit it serves. Its name stays valid on the
+// wire for two reasons, and both outlive the change — the projection serves
+// rows written before it until the retention window closes over them, and the
+// enum is also what a caller may FILTER on, so narrowing it would refuse a
+// query that still has answers.
+//
+// This is the one direction of the parity that must NOT fail on such a name.
+// The other direction is untouched: nothing here lets a name be announced.
+func namesRowsMayStillCarry() []string {
+	var out []string
+	for task, source := range ai.RailOwners() {
+		if source == ai.SourceNoOccurrence {
+			out = append(out, task)
+		}
+	}
+	return out
+}
+
 // The reverse: a kind nothing can produce is copy three locales carry, a line
 // no reader will see, and a promise the server cannot keep.
 func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
 	t.Parallel()
 	produced := producedKinds()
+	retired := namesRowsMayStillCarry()
 	for _, kind := range crmYAMLNamedEnum(t, "AiActivityKind") {
-		if !slices.Contains(produced, kind) {
-			t.Errorf("the contract declares kind %q and nothing announces it — either an emitter was "+
-				"removed and the enum kept its name, or the name is aspirational. Drop it, or point this "+
-				"gate at what produces it", kind)
+		if slices.Contains(produced, kind) || slices.Contains(retired, kind) {
+			continue
 		}
+		t.Errorf("the contract declares kind %q and nothing announces it — either an emitter was "+
+			"removed and the enum kept its name, or the name is aspirational. Drop it, point this "+
+			"gate at what produces it, or retire the task in ai.railOwners so the name is one rows "+
+			"may still carry rather than one nothing ever wrote", kind)
 	}
 }
 

@@ -21,8 +21,8 @@
     "sales",
     "offer"
   ],
-  "score_p50": 100,
-  "score_min": 0,
+  "judge_score_p50": 100,
+  "judge_score_min": 0,
   "latency_p50": 1804,
   "latency_p95": 2954,
   "mean_tokens": 11614,
@@ -279,7 +279,7 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "who_knows_needs_the_person",
+      "scenario": "who_knows_needs_the_contact",
       "site": "loop",
       "verdict": "certified",
       "runs": 5,

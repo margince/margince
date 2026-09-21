@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer identifies Strategic Account as the surviving word and explicitly reports that it now carries the description 'an account with a named exec sponsor,' which matches the meaning the user asked for.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes.",
+  "answer": "I read both words out of the tag list and then read each one's usage, because the list itself does not carry a count.\n\nStrategic Account is on 41 accounts. Strategic Accts is on 3. So Strategic Accts is the one that goes, and its 3 records move onto Strategic Account.\n\nThe surviving word now has a description: an account with a named exec sponsor.\n\nOne thing to be clear about — the fold itself is staged, not finished. Nobody has released it yet, so nothing has moved on the records so far."
+}

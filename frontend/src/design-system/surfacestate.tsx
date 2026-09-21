@@ -23,12 +23,9 @@ import "./surfacestate.css";
  * one that knows. Rendering the other three as empty states a fact the page
  * does not have — the reader sees "no open deals" and stops looking.
  *
- * The §7 matrix adds four more, each of which would otherwise be drawn as one
+ * The §7 matrix adds three more, each of which would otherwise be drawn as one
  * of the above and lose what makes it different:
  *
- *   unsupported — this MODE cannot serve the section (an overlay-only
- *                 installation and a native composite section). Distinct from
- *                 unavailable: nothing is broken and retrying changes nothing.
  *   failed      — the read failed and can be retried. `onRetry` is what makes
  *                 it a different state from unavailable rather than a
  *                 differently-worded one.
@@ -44,10 +41,41 @@ export type SectionState =
   | "withheld"
   | "unavailable"
   | "loading"
-  | "unsupported"
   | "failed"
   | "stale"
   | "partial";
+
+/**
+ * What each state SAYS, in the five-state colour vocabulary — one list, read by
+ * the component and by the sheet's class names.
+ *
+ * Most of the nine report on the SURFACE rather than on the record, and those
+ * keep the italic voice and no colour: `empty` is a fact about the account,
+ * `withheld` is a permission boundary a reader must not mistake for a fault,
+ * and `ready` is content. The four that are a verdict take one:
+ *
+ *   loading  — work still in flight, which is what `info` is for.
+ *   failed   — the read did not land, and there is a retry beside it.
+ *   stale    — a figure that was true earlier: a caveat before the fact.
+ *   partial  — some of the rows, with the remainder named. A report, not a
+ *              fault; the surface answered, it just did not answer in full.
+ *
+ * `unavailable` is deliberately NOT danger. It is the section that is missing
+ * with nobody saying why, and a reader cannot act on it — colouring it as a
+ * failure would put a red line on every page a version skew touches.
+ */
+export const SECTION_STATE_TONES: Readonly<
+  Record<SectionState, "info" | "warning" | "danger" | null>
+> = {
+  ready: null,
+  empty: null,
+  withheld: null,
+  unavailable: null,
+  loading: "info",
+  failed: "danger",
+  stale: "warning",
+  partial: "info",
+};
 
 /**
  * Withholding is the shape of a payload that names the sections its reader may
@@ -100,10 +128,10 @@ export function omitted<Section extends string>(
 /**
  * What sectionState can actually answer.
  *
- * `failed`, `unsupported`, `stale` and `partial` are not derivable from a
- * withholding view and a row count — each needs something only the caller
- * knows: a retry, a mode limitation, an as-of, a remainder. So each is the
- * caller's to pass, and this function never returns one.
+ * `failed`, `stale` and `partial` are not derivable from a withholding view
+ * and a row count — each needs something only the caller knows: a retry, an
+ * as-of, a remainder. So each is the caller's to pass, and this function never
+ * returns one.
  *
  * Stated in the signature rather than left to `SectionState`, because a return
  * type wider than the behaviour pushes callers into handling states that cannot
@@ -152,9 +180,6 @@ export type SectionDetail = {
   // How many rows the caller is NOT seeing. A truncation nobody states reads
   // as the whole list.
   remaining?: number;
-  // Which mode limitation this is, in the caller's words. The generic
-  // sentence is the floor, not the target.
-  unsupportedReason?: string;
   // WHY this section was withheld and what it costs the reader, in the
   // caller's words. The generic "you cannot see this" is true of every
   // withheld section and tells a reader nothing about what is missing from
@@ -256,18 +281,13 @@ export function SurfaceState({
           lines={loadingLines}
         />
       )}
-      {state === "unsupported" && (
-        <p className="surfacestate-withheld">
-          {detail?.unsupportedReason ?? t("state.unsupported")}
-        </p>
-      )}
       {state === "failed" && (
         <div className="surfacestate-failed">
-          <p className="surfacestate-withheld">{t("state.failed")}</p>
+          <p className="surfacestate-withheld surfacestate-danger">
+            {t("state.failed")}
+          </p>
           {detail?.onRetry && (
-            <Button small onClick={detail.onRetry}>
-              {t("state.retry")}
-            </Button>
+            <Button onClick={detail.onRetry}>{t("state.retry")}</Button>
           )}
         </div>
       )}
@@ -286,7 +306,7 @@ export function SurfaceState({
       {state === "partial" && (
         <>
           {children}
-          <p className="surfacestate-empty">
+          <p className="surfacestate-empty surfacestate-info">
             {detail?.remaining
               ? t("state.partialCount", {
                   count: formatNumber(detail.remaining, locale),

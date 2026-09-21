@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
 
 // The shared confirm-dialog chrome: this used to live duplicated,
@@ -31,6 +32,7 @@ export function ConfirmModal({
   size,
   placement,
   returnFocusTo,
+  initialFocusTo,
   children,
 }: Readonly<{
   open: boolean;
@@ -84,6 +86,8 @@ export function ConfirmModal({
   // place focus should land instead, since the trigger will not be there to
   // take it back.
   returnFocusTo?: () => HTMLElement | null;
+  /** The writing field can take focus before supporting context controls. */
+  initialFocusTo?: () => HTMLElement | null;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -96,24 +100,26 @@ export function ConfirmModal({
       size={size}
       placement={placement}
       returnFocusTo={returnFocusTo}
+      initialFocusTo={initialFocusTo}
     >
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {tier && (
           <>
             <AutonomyDot tier={tier} />{" "}
           </>
         )}
         {title}
-      </h2>
+      </Heading>
       {children}
       {error && (
         // role="alert" (assertive live region) so a screen reader announces the
         // mutation failure when it appears — e.g. a rejected reset confirmation.
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--danger)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {error}
         </p>
       )}

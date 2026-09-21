@@ -29,15 +29,15 @@ export function entityTimelineKeys(
   return keys;
 }
 
-const ORGANIZATION_360_KEY = (id: string): QueryKey => ["organization360", id];
+const COMPANY_360_KEY = (id: string): QueryKey => ["company360", id];
 
 // The composite reads that carry a timeline's first page, by record kind —
 // spelled the way each page's own query spells its key.
 const TIMELINE_SEED_KEYS: Partial<
   Record<EntityKind, (entityId: string) => QueryKey>
 > = {
-  organization: (id) => ORGANIZATION_360_KEY(id),
-  person: (id) => ["person360", id],
+  company: (id) => COMPANY_360_KEY(id),
+  contact: (id) => ["contact360", id],
   project: (id) => ["project", id, "360"],
 };
 
@@ -60,11 +60,33 @@ const DERIVED_FROM_TIMELINE: Partial<
 
 const DEAL_STATUS_KEY = (id: string): QueryKey => ["deal-status", id];
 
+// A deal's outcome reviews hang off its CLOSING rather than off the deal, and
+// the panel reads them AGAINST the deal record: each review is captioned as
+// this closing's or an earlier one by comparing its closing_occurrence_id with
+// the deal's. Two reads answering one comparison have to move together, which
+// is why this key appears twice below — in dealRecordKeys, so a write that
+// moves the deal moves them both, and in isRecordRead, so the minute-long
+// cadence does. Left out of either, the deal advances to a closing somebody
+// else has already reviewed and the panel goes on saying nobody has.
+//
+// Exported because the reader spells its query key with it too
+// (outcomereview.queries.ts): one helper, so the writer cannot invalidate a key
+// the reader does not read under.
+export const dealOutcomeReviewsKey = (dealId: string): QueryKey => [
+  "deals",
+  dealId,
+  "outcome-reviews",
+];
+
 // Which cached reads a write to the DEAL RECORD itself invalidates — a stage
 // advance, an amount, a close date. Spelled once here so a new writer picks up
 // the derived reads by using the helper rather than by remembering them.
 export function dealRecordKeys(dealId: string): QueryKey[] {
-  return [["deal", dealId], ...derivedRecordKeys("deal", dealId)];
+  return [
+    ["deal", dealId],
+    dealOutcomeReviewsKey(dealId),
+    ...derivedRecordKeys("deal", dealId),
+  ];
 }
 
 // The reads written FROM a record, by the key its own page reads it under.
@@ -83,7 +105,7 @@ export function derivedRecordKeys(
 // every one of them is stale the moment a seat is added, re-roled or removed.
 // Keyed per deal by the reader (dealCoverageKey); named here as the prefix,
 // because a writer usually knows only that SOME deal's edges moved — a
-// stakeholder is seated from the person's page as readily as from the deal's.
+// stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey> = {
@@ -109,20 +131,18 @@ export function taskWriteKeys(
 // its project into delivery in the same server write, so besides the project
 // page and list, the company page — it embeds the account's projects with
 // their phase — is stale the moment the advance returns. A deal names no
-// contact of its own (the Deal schema carries organization_id and project_id
-// only), so there is no person page to reach from here. Derived beside the
+// contact of its own (the Deal schema carries company_id and project_id
+// only), so there is no contact page to reach from here. Derived beside the
 // timeline keys so the 360 keys keep one spelling.
 export function dealWinKeys(
-  deal:
-    | { project_id?: string | null; organization_id?: string | null }
-    | undefined,
+  deal: { project_id?: string | null; company_id?: string | null } | undefined,
 ): QueryKey[] {
   const keys: QueryKey[] = [["projects"]];
   if (deal?.project_id) {
     keys.push(["project", deal.project_id]);
   }
-  if (deal?.organization_id) {
-    keys.push(ORGANIZATION_360_KEY(deal.organization_id));
+  if (deal?.company_id) {
+    keys.push(COMPANY_360_KEY(deal.company_id));
   }
   return keys;
 }
@@ -171,12 +191,59 @@ function messageBearingShapes(): unknown[][] {
  * itself, which carries no message and does not need re-reading.
  */
 export function showsAMessage(query: { queryKey: QueryKey }): boolean {
-  const key = query.queryKey as unknown[];
-  return messageBearingShapes().some(
-    (shape) =>
-      key.length >= shape.length &&
-      shape.every((segment, at) => segment === SHAPE_ID || segment === key[at]),
+  return messageBearingShapes().some((shape) =>
+    matchesShape(query.queryKey as unknown[], shape, true),
   );
+}
+
+// One key against one shape, with the id position wild. `prefix` is what the
+// two callers differ on: an audience change reaches anything drawn FROM a
+// matching read, while a record's own read is that key and no longer one.
+function matchesShape(
+  key: readonly unknown[],
+  shape: readonly unknown[],
+  prefix: boolean,
+): boolean {
+  if (prefix ? key.length < shape.length : key.length !== shape.length) {
+    return false;
+  }
+  return shape.every(
+    (segment, at) => segment === SHAPE_ID || segment === key[at],
+  );
+}
+
+// ── The record's own read ───────────────────────────────────────────────────
+
+// The deal's record read. It is NOT in TIMELINE_SEED_KEYS because the deal's
+// seed is the status card; what carries the
+// deal's own fields is this.
+const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
+
+/**
+ * Whether a cached read IS a record — the one read that carries that record's
+ * own fields and, for the three composite kinds, its open work and the first
+ * page of its timeline.
+ *
+ * The data layer asks this to decide which reads are LIVE (FE-PARAM-5,
+ * app/queryclient.ts): a record on screen re-reads itself, and everything else
+ * is served from cache the way it always was.
+ *
+ * Composite records derive their shapes from TIMELINE_SEED_KEYS. The deal
+ * adds its field read, its facts-only status read — the latter cannot ask a
+ * model — and its outcome reviews. Matching exact shapes keeps unrelated
+ * cached reads out.
+ */
+export function isRecordRead(key: QueryKey): boolean {
+  const shapes = Object.values(TIMELINE_SEED_KEYS).map(
+    (seed) => seed(SHAPE_ID) as unknown[],
+  );
+  shapes.push(DEAL_RECORD_KEY(SHAPE_ID) as unknown[]);
+  shapes.push(DEAL_STATUS_KEY(SHAPE_ID) as unknown[]);
+  // Live because it is READ AGAINST a live one: the deal record re-reads itself
+  // every minute, and a reviews list that did not would leave the two halves of
+  // one comparison on different clocks.
+  shapes.push(dealOutcomeReviewsKey(SHAPE_ID) as unknown[]);
+  return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 
 // The canonical email read's key belongs to the component that reads under it,

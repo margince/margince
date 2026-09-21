@@ -13,8 +13,8 @@ import (
 )
 
 func TestTheDealProjectSeamRefusalKeepsSchemaNamesOffTheWire(t *testing.T) {
-	err := &DealProjectOrgMismatchError{}
-	for _, leak := range []string{dealProjectSameOrgConstraint, "uq_", "SQLSTATE"} {
+	err := &DealProjectCompanyMismatchError{}
+	for _, leak := range []string{dealProjectSameCompanyConstraint, "uq_", "SQLSTATE"} {
 		if strings.Contains(err.Error(), leak) {
 			t.Errorf("%T leaks %q to the caller: %q", err, leak, err.Error())
 		}

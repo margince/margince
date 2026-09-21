@@ -162,23 +162,23 @@ func (e ActivityAudience) Valid() bool {
 
 // Defines values for ActivityLinkEntityType.
 const (
-	ActivityLinkEntityTypeDeal         ActivityLinkEntityType = "deal"
-	ActivityLinkEntityTypeLead         ActivityLinkEntityType = "lead"
-	ActivityLinkEntityTypeOrganization ActivityLinkEntityType = "organization"
-	ActivityLinkEntityTypePerson       ActivityLinkEntityType = "person"
-	ActivityLinkEntityTypeProject      ActivityLinkEntityType = "project"
+	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
+	ActivityLinkEntityTypeContact ActivityLinkEntityType = "contact"
+	ActivityLinkEntityTypeDeal    ActivityLinkEntityType = "deal"
+	ActivityLinkEntityTypeLead    ActivityLinkEntityType = "lead"
+	ActivityLinkEntityTypeProject ActivityLinkEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkEntityType enum.
 func (e ActivityLinkEntityType) Valid() bool {
 	switch e {
+	case ActivityLinkEntityTypeCompany:
+		return true
+	case ActivityLinkEntityTypeContact:
+		return true
 	case ActivityLinkEntityTypeDeal:
 		return true
 	case ActivityLinkEntityTypeLead:
-		return true
-	case ActivityLinkEntityTypeOrganization:
-		return true
-	case ActivityLinkEntityTypePerson:
 		return true
 	case ActivityLinkEntityTypeProject:
 		return true
@@ -237,23 +237,23 @@ func (e CreateActivityRequestKind) Valid() bool {
 
 // Defines values for CreateActivityRequestLinksEntityType.
 const (
-	CreateActivityRequestLinksEntityTypeDeal         CreateActivityRequestLinksEntityType = "deal"
-	CreateActivityRequestLinksEntityTypeLead         CreateActivityRequestLinksEntityType = "lead"
-	CreateActivityRequestLinksEntityTypeOrganization CreateActivityRequestLinksEntityType = "organization"
-	CreateActivityRequestLinksEntityTypePerson       CreateActivityRequestLinksEntityType = "person"
-	CreateActivityRequestLinksEntityTypeProject      CreateActivityRequestLinksEntityType = "project"
+	CreateActivityRequestLinksEntityTypeCompany CreateActivityRequestLinksEntityType = "company"
+	CreateActivityRequestLinksEntityTypeContact CreateActivityRequestLinksEntityType = "contact"
+	CreateActivityRequestLinksEntityTypeDeal    CreateActivityRequestLinksEntityType = "deal"
+	CreateActivityRequestLinksEntityTypeLead    CreateActivityRequestLinksEntityType = "lead"
+	CreateActivityRequestLinksEntityTypeProject CreateActivityRequestLinksEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the CreateActivityRequestLinksEntityType enum.
 func (e CreateActivityRequestLinksEntityType) Valid() bool {
 	switch e {
+	case CreateActivityRequestLinksEntityTypeCompany:
+		return true
+	case CreateActivityRequestLinksEntityTypeContact:
+		return true
 	case CreateActivityRequestLinksEntityTypeDeal:
 		return true
 	case CreateActivityRequestLinksEntityTypeLead:
-		return true
-	case CreateActivityRequestLinksEntityTypeOrganization:
-		return true
-	case CreateActivityRequestLinksEntityTypePerson:
 		return true
 	case CreateActivityRequestLinksEntityTypeProject:
 		return true
@@ -292,6 +292,7 @@ const (
 	EmailAccessStatusSelected     EmailAccessStatus = "selected"
 	EmailAccessStatusTeam         EmailAccessStatus = "team"
 	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
+	EmailAccessStatusWorkspace    EmailAccessStatus = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the EmailAccessStatus enum.
@@ -304,6 +305,32 @@ func (e EmailAccessStatus) Valid() bool {
 	case EmailAccessStatusTeam:
 		return true
 	case EmailAccessStatusWithheld:
+		return true
+	case EmailAccessStatusWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailDeliveryState.
+const (
+	Bounced EmailDeliveryState = "bounced"
+	Parked  EmailDeliveryState = "parked"
+	Pending EmailDeliveryState = "pending"
+	Sent    EmailDeliveryState = "sent"
+)
+
+// Valid indicates whether the value is a known member of the EmailDeliveryState enum.
+func (e EmailDeliveryState) Valid() bool {
+	switch e {
+	case Bounced:
+		return true
+	case Parked:
+		return true
+	case Pending:
+		return true
+	case Sent:
 		return true
 	default:
 		return false
@@ -357,7 +384,7 @@ func (e EmailSummaryMove) Valid() bool {
 // disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
-// when `kind=message` (ADR-0107/A158).
+// when `kind=message` (ADR-0107).
 type Activity struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -369,7 +396,12 @@ type Activity struct {
 
 	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
-	Body           *string `json:"body,omitempty"`
+
+	// Author Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
+	Author *SourceAuthor `json:"author,omitempty"`
+	Body   *string       `json:"body,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
@@ -402,7 +434,7 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
-	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
 
@@ -411,11 +443,11 @@ type Activity struct {
 	Kind   ActivityKind `json:"kind"`
 
 	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
-	// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (person + deal).
+	// Links One activity may link to >1 entity (contact + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
@@ -426,6 +458,9 @@ type Activity struct {
 	// RemindAt Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
+
+	// SourceActivityId The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id — idempotency key part.
 	SourceId *string `json:"source_id,omitempty"`
@@ -441,8 +476,7 @@ type Activity struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -459,7 +493,7 @@ type ActivityDirection string
 type ActivityKind string
 
 // ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
-// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
 
@@ -493,21 +527,49 @@ type CreateActivityRequest struct {
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	Kind            CreateActivityRequestKind       `json:"kind"`
-	Links           *[]struct {
+
+	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+	HostUserId *string `json:"host_user_id,omitempty"`
+
+	// IcalInstance Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
+	IcalInstance *string `json:"ical_instance,omitempty"`
+
+	// IcalUid The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting.
+	IcalUid *string                   `json:"ical_uid,omitempty"`
+	Kind    CreateActivityRequestKind `json:"kind"`
+	Links   *[]struct {
 		EntityId   string                               `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
-	Raw           *map[string]interface{}             `json:"raw,omitempty"`
+
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	Participants *struct {
+		Cc   *[]string `json:"cc,omitempty"`
+		From *string   `json:"from,omitempty"`
+		To   *[]string `json:"to,omitempty"`
+	} `json:"participants,omitempty"`
+
+	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
+	Raw *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only.
-	RemindAt     *time.Time `json:"remind_at,omitempty"`
-	Source       string     `json:"source"`
-	SourceId     *string    `json:"source_id,omitempty"`
-	SourceSystem *string    `json:"source_system,omitempty"`
-	Subject      *string    `json:"subject,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *string `json:"request_activity_id,omitempty"`
+
+	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
+	RfcMessageId *string `json:"rfc_message_id,omitempty"`
+	Source       string  `json:"source"`
+	SourceId     *string `json:"source_id,omitempty"`
+	SourceSystem *string `json:"source_system,omitempty"`
+	Subject      *string `json:"subject,omitempty"`
+
+	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
+	ThreadKey *string `json:"thread_key,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -523,8 +585,13 @@ type CreateActivityRequestLinksEntityType string
 type CreateActivityRequestMeetingStatus string
 
 // EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
-// badge can print. `team` never means the whole workspace: the linked record's own scope
-// still decides who may discover the row at all.
+// badge can print.
+//
+// `workspace` means what it says: a seat with no standing of any kind — no team, no
+// ownership, nothing shared with it — can still find this message, so everyone who reads
+// mail here reads this one. `team` is the narrower answer, where the linked record's own
+// scope decides who may discover the row at all. The two used to be one word, and the
+// badge printed `team` over a sentence saying everyone in the company could read it.
 //
 // `withheld` is the only value that says the content is not this caller's, and it never
 // travels with a reason: why a message is private describes what it is about.
@@ -534,6 +601,55 @@ type CreateActivityRequestMeetingStatus string
 // contribution editor that can act on them; a value no server can emit is one a client
 // would branch on and never reach.
 type EmailAccessStatus string
+
+// EmailDelivery Whether an outbound message actually left, and why not when it did not.
+//
+// The timeline carried DIRECTION alone, which reads as a delivery state and is not one:
+// a message parked because the channel refused its files, because the recipient blocked
+// the bot, or because the credential was rejected rendered exactly like one the provider
+// confirmed. The rep was told their message went.
+type EmailDelivery struct {
+	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
+	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
+
+	// Files What the message was staged with, as it was at that moment. Empty when it carried
+	// nothing.
+	//
+	// NOT the live attachment list. Archiving or superseding a document later changes
+	// what the library holds and must change nothing about what the timeline says went
+	// out with a message that already left.
+	Files *[]EmailDeliveryFile `json:"files,omitempty"`
+
+	// Reason Why it did not arrive, in the words it was recorded with — written for a human
+	// because a rep is the one who has to act on it. Null unless the state is `parked`
+	// or `bounced`.
+	Reason *string `json:"reason,omitempty"`
+
+	// State What became of the message. `pending` is staged and not yet attempted — a real
+	// state a reader may see, and not the same as parked.
+	//
+	// `bounced` is the one state the delivery row does not spell as a status: a bounce
+	// is a later fact about a send the provider DID accept, so the row keeps `sent` and
+	// records the return beside it. A reader shown `sent` for a message that came back
+	// is told the one thing that row can never say.
+	State EmailDeliveryState `json:"state"`
+}
+
+// EmailDeliveryState What became of the message. `pending` is staged and not yet attempted — a real
+// state a reader may see, and not the same as parked.
+//
+// `bounced` is the one state the delivery row does not spell as a status: a bounce
+// is a later fact about a send the provider DID accept, so the row keeps `sent` and
+// records the return beside it. A reader shown `sent` for a message that came back
+// is told the one thing that row can never say.
+type EmailDeliveryState string
+
+// EmailDeliveryFile One file a message was staged with, frozen at staging.
+type EmailDeliveryFile struct {
+	ByteSize    *int64  `json:"byte_size,omitempty"`
+	ContentType *string `json:"content_type,omitempty"`
+	Filename    string  `json:"filename"`
+}
 
 // EmailSummary One retained email, reduced to what a row shows without opening it. Present on an
 // activity only when `kind=email`; every other kind carries none, and a reader that
@@ -552,12 +668,23 @@ type EmailSummary struct {
 	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
 	// the exchange had more. Null when no participant resolves to a name this caller may
 	// see — the row then says the direction alone rather than inventing a stranger.
-	Counterparty *string                `json:"counterparty,omitempty"`
-	Direction    *EmailSummaryDirection `json:"direction,omitempty"`
+	Counterparty *string `json:"counterparty,omitempty"`
+
+	// Delivery What happened to an outbound message, when this row is one and a delivery was
+	// staged for it. Absent on an inbound message, and on an outbound one logged
+	// rather than sent — neither has a delivery to report, which is a different
+	// thing from one that has not left yet.
+	Delivery  *EmailDelivery         `json:"delivery,omitempty"`
+	Direction *EmailSummaryDirection `json:"direction,omitempty"`
 
 	// DisplayStatus What a reader is allowed to know about who else reads this message, in one word the
-	// badge can print. `team` never means the whole workspace: the linked record's own scope
-	// still decides who may discover the row at all.
+	// badge can print.
+	//
+	// `workspace` means what it says: a seat with no standing of any kind — no team, no
+	// ownership, nothing shared with it — can still find this message, so everyone who reads
+	// mail here reads this one. `team` is the narrower answer, where the linked record's own
+	// scope decides who may discover the row at all. The two used to be one word, and the
+	// badge printed `team` over a sentence saying everyone in the company could read it.
 	//
 	// `withheld` is the only value that says the content is not this caller's, and it never
 	// travels with a reason: why a message is private describes what it is about.
@@ -577,6 +704,9 @@ type EmailSummary struct {
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
 
+	// RequestHasReminder An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+	RequestHasReminder *bool `json:"request_has_reminder,omitempty"`
+
 	// Subject Null when the message has none, and when the content is withheld.
 	Subject *string `json:"subject,omitempty"`
 
@@ -593,7 +723,7 @@ type EmailSummaryDirection string
 type EmailSummaryMove string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation
-// (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+// (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
 // any extension unit present under `extensions/` — so an enum here would assert that
 // the legal set is identical in every installation, which is false. The contract
@@ -603,6 +733,30 @@ type ProviderRef = string
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
 // send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-// not only overlay mode.
+// (ErrVersionSkew) so the client re-reads before retrying.
 type RowVersion = int64
+
+// SourceAuthor Who wrote a record in the system it was imported from, when that is not
+// whoever recorded it here.
+//
+// TWO WAYS TO NAME ONE AUTHOR, and a reader must handle both. An author who
+// holds a seat in this installation is named by `user_id`, so the display
+// name follows them when they change it and still resolves after they
+// leave — the read joins the member directory without a liveness filter,
+// because who wrote something in August is a fact about August. An author
+// who never worked here has no seat to point at, so the source system's own
+// spelling of their name is all there is, and `user_id` is null.
+//
+// `display_name` is therefore always present and is what a surface renders;
+// `user_id` is the extra fact that makes them clickable when they are one
+// of us.
+type SourceAuthor struct {
+	// DisplayName What to show. The member's current display name when `user_id` is set, else the name the source system carried.
+	DisplayName string `json:"display_name"`
+
+	// UserId The member this author is, when they hold a seat here. Null for an author who never did.
+	UserId *string `json:"user_id,omitempty"`
+
+	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	Via *string `json:"via,omitempty"`
+}

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import {
   buildColumns,
@@ -22,8 +23,8 @@ import {
 
 // How a deal's company reads, on the three surfaces that show one.
 //
-// Two facts drive every case here. The wire sends `organization_id` /
-// `partner_org_id` as NULL when the reader may not read that company, and
+// Two facts drive every case here. The wire sends `company_id` /
+// `partner_company_id` as NULL when the reader may not read that company, and
 // names the field in `masked_fields` — so a null is a refusal, and a surface
 // that draws nothing over it states the opposite of what the wire said. And
 // the companies this screen can NAME are not a fixed first page: the picker
@@ -34,7 +35,11 @@ import {
 
 type Stage = components["schemas"]["Stage"];
 type Deal = components["schemas"]["Deal"];
-type OrgRow = { id: string; display_name: string; logo_url?: string | null };
+type CompanyRow = {
+  id: string;
+  display_name: string;
+  logo_url?: string | null;
+};
 
 const MASK = "Masked value";
 
@@ -82,7 +87,9 @@ const render = (ui: ReactNode) => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <RecordShell>{ui}</RecordShell>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };
@@ -99,25 +106,23 @@ function byIdCalls(fetchMock: { mock: { calls: unknown[][] } }): string[] {
   return fetchMock.mock.calls.flatMap((call) => {
     const first = call[0];
     const url = String(first instanceof Request ? first.url : first);
-    const match = /\/organizations\/([^/?]+)/.exec(url);
+    const match = /\/companies\/([^/?]+)/.exec(url);
     return match?.[1] ? [match[1]] : [];
   });
 }
 
 function stubBackend(opts: {
   deals: Deal[];
-  page?: OrgRow[];
-  byId?: Record<string, OrgRow>;
+  page?: CompanyRow[];
+  byId?: Record<string, CompanyRow>;
   // Ids whose per-id read is REFUSED rather than answered or reported gone.
   refuse?: readonly string[];
-  // Resolves before the organizations page answers, so a test can look at what
+  // Resolves before the companies page answers, so a test can look at what
   // the board asked for while that read was still out.
   pageGate?: Promise<void>;
   single?: Deal;
   // The project a deal names, as its own per-id read answers it.
   project?: { id: string; name: string };
-  // Puts the screen on the overlay mirror, which forces the flat table.
-  overlay?: boolean;
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -139,7 +144,7 @@ function stubBackend(opts: {
         rows: [],
       });
     }
-    const byId = /\/organizations\/([^/?]+)/.exec(url);
+    const byId = /\/companies\/([^/?]+)/.exec(url);
     if (byId) {
       if (opts.refuse?.includes(byId[1] ?? "")) {
         return jsonResponse(
@@ -147,12 +152,12 @@ function stubBackend(opts: {
           403,
         );
       }
-      const org = opts.byId?.[byId[1]];
-      return org
-        ? jsonResponse(org)
+      const company = opts.byId?.[byId[1]];
+      return company
+        ? jsonResponse(company)
         : jsonResponse({ code: "not_found", title: "not found" }, 404);
     }
-    if (url.includes("/organizations")) {
+    if (url.includes("/companies")) {
       if (opts.pageGate) {
         await opts.pageGate;
       }
@@ -180,7 +185,6 @@ function stubBackend(opts: {
         authorization: meFixture({
           allow: { deal: ["read", "create", "update"], project: ["read"] },
         }).authorization,
-        ...(opts.overlay ? { system_of_record: { mode: "overlay" } } : {}),
       });
     }
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
@@ -195,8 +199,11 @@ function stubBackend(opts: {
 
 /** The board card naming `name` — the whole card is one button. */
 async function boardCard(name: string): Promise<HTMLElement> {
-  const card = (await screen.findByText(name)).closest("a");
-  if (!card) {
+  // The card is the element AROUND both its links — the deal's and the
+  // company's. Reaching for the nearest anchor lands on the deal name itself,
+  // which contains neither the company slot nor the flags.
+  const card = (await screen.findByText(name)).closest(".deal-card");
+  if (!(card instanceof HTMLElement)) {
     throw new Error(`no board card around "${name}"`);
   }
   return card;
@@ -236,36 +243,36 @@ describe("a board card's company", () => {
   it("marks a company as withheld rather than drawing no company", () => {
     const columns = buildColumns(
       stages,
-      [deal({ organization_id: null, masked_fields: ["organization_id"] })],
+      [deal({ company_id: null, masked_fields: ["company_id"] })],
       new Map(),
       named,
     );
-    expect(columns[0].deals[0].orgWithheld).toBe(true);
-    expect(columns[0].deals[0].org).toBe("");
+    expect(columns[0].deals[0].companyWithheld).toBe(true);
+    expect(columns[0].deals[0].company).toBe("");
   });
 
   it("names a company it has a mark for, and carries the mark", () => {
     const columns = buildColumns(
       stages,
-      [deal({ organization_id: "o1" })],
+      [deal({ company_id: "o1" })],
       new Map(),
       named,
     );
-    expect(columns[0].deals[0].org).toBe("Acme Corp");
-    expect(columns[0].deals[0].orgLogoUrl).toBe("/acme.png");
-    expect(columns[0].deals[0].orgWithheld).toBeFalsy();
+    expect(columns[0].deals[0].company).toBe("Acme Corp");
+    expect(columns[0].deals[0].companyLogoUrl).toBe("/acme.png");
+    expect(columns[0].deals[0].companyWithheld).toBeFalsy();
   });
 
   // The one reading a blank company row is allowed to have.
   it("draws nothing for a deal that names no company at all", () => {
     const columns = buildColumns(
       stages,
-      [deal({ organization_id: null })],
+      [deal({ company_id: null })],
       new Map(),
       named,
     );
-    expect(columns[0].deals[0].org).toBe("");
-    expect(columns[0].deals[0].orgWithheld).toBeFalsy();
+    expect(columns[0].deals[0].company).toBe("");
+    expect(columns[0].deals[0].companyWithheld).toBeFalsy();
   });
 
   // A masked field with a resolvable id would be the wire contradicting
@@ -273,12 +280,12 @@ describe("a board card's company", () => {
   it("keeps the withheld reading even where a mark is resolvable", () => {
     const columns = buildColumns(
       stages,
-      [deal({ organization_id: "o1", masked_fields: ["organization_id"] })],
+      [deal({ company_id: "o1", masked_fields: ["company_id"] })],
       new Map(),
       named,
     );
-    expect(columns[0].deals[0].orgWithheld).toBe(true);
-    expect(columns[0].deals[0].org).toBe("");
+    expect(columns[0].deals[0].companyWithheld).toBe(true);
+    expect(columns[0].deals[0].company).toBe("");
   });
 
   // The reading the board used to lose. A read that FAILED is not a deal with
@@ -292,13 +299,13 @@ describe("a board card's company", () => {
     };
     const columns = buildColumns(
       stages,
-      [deal({ organization_id: "o9" })],
+      [deal({ company_id: "o9" })],
       new Map(),
       unreadable,
     );
-    expect(columns[0].deals[0].orgUnreadable).toBe(true);
-    expect(columns[0].deals[0].org).toBe("");
-    expect(columns[0].deals[0].orgWithheld).toBeFalsy();
+    expect(columns[0].deals[0].companyUnreadable).toBe(true);
+    expect(columns[0].deals[0].company).toBe("");
+    expect(columns[0].deals[0].companyWithheld).toBeFalsy();
   });
 
   // Withheld and unreadable say opposite things about the reader — the answer
@@ -311,12 +318,12 @@ describe("a board card's company", () => {
     };
     const columns = buildColumns(
       stages,
-      [deal({ organization_id: "o1", masked_fields: ["organization_id"] })],
+      [deal({ company_id: "o1", masked_fields: ["company_id"] })],
       new Map(),
       both,
     );
-    expect(columns[0].deals[0].orgWithheld).toBe(true);
-    expect(columns[0].deals[0].orgUnreadable).toBeFalsy();
+    expect(columns[0].deals[0].companyWithheld).toBe(true);
+    expect(columns[0].deals[0].companyUnreadable).toBeFalsy();
   });
 });
 
@@ -327,7 +334,7 @@ describe("the board past the picker's first page", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [deal({ organization_id: "o-offpage" })],
+        deals: [deal({ company_id: "o-offpage" })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
         byId: {
           "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
@@ -347,9 +354,7 @@ describe("the board past the picker's first page", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [
-          deal({ organization_id: null, masked_fields: ["organization_id"] }),
-        ],
+        deals: [deal({ company_id: null, masked_fields: ["company_id"] })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
       }),
     );
@@ -367,7 +372,7 @@ describe("the board past the picker's first page", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [deal({ organization_id: "o-gone" })],
+        deals: [deal({ company_id: "o-gone" })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
       }),
     );
@@ -387,7 +392,7 @@ describe("the board past the picker's first page", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [deal({ organization_id: "o-refused" })],
+        deals: [deal({ company_id: "o-refused" })],
         page: [{ id: "o1", display_name: "Acme Corp" }],
         refuse: ["o-refused"],
       }),
@@ -410,7 +415,7 @@ describe("the board past the picker's first page", () => {
       openPage = resolve;
     });
     const fetchMock = stubBackend({
-      deals: [deal({ organization_id: "o-offpage" })],
+      deals: [deal({ company_id: "o-offpage" })],
       page: [{ id: "o1", display_name: "Acme Corp" }],
       byId: {
         "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
@@ -443,9 +448,7 @@ describe("the deals table's company columns", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [
-          deal({ organization_id: null, masked_fields: ["organization_id"] }),
-        ],
+        deals: [deal({ company_id: null, masked_fields: ["company_id"] })],
       }),
     );
     await toTable();
@@ -464,7 +467,7 @@ describe("the deals table's company columns", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        deals: [deal({ organization_id: "o1" })],
+        deals: [deal({ company_id: "o1" })],
         byId: { o1: { id: "o1", display_name: "Acme Corp" } },
       }),
     );
@@ -496,7 +499,10 @@ describe("the deals table's company columns", () => {
       "fetch",
       stubBackend({
         deals: [
-          deal({ partner_org_id: null, masked_fields: ["partner_org_id"] }),
+          deal({
+            partner_company_id: null,
+            masked_fields: ["partner_company_id"],
+          }),
         ],
       }),
     );
@@ -518,8 +524,8 @@ describe("a deal's edit form over a withheld reference", () => {
 
   const openEdit = async (
     single: Deal,
-    page: OrgRow[],
-    byId?: Record<string, OrgRow>,
+    page: CompanyRow[],
+    byId?: Record<string, CompanyRow>,
     project?: { id: string; name: string },
   ) => {
     const user = userEvent.setup();
@@ -528,49 +534,41 @@ describe("a deal's edit form over a withheld reference", () => {
       stubBackend({ deals: [single], single, page, byId, project }),
     );
     render(<DealScreen id={single.id} />);
-    await user.click(await screen.findByTestId("edit-record"));
+    await screen.findByRole("heading", { name: single.name, level: 1 });
+    if (!single.masked_fields?.length)
+      await user.click(
+        await screen.findByRole("button", { name: "Change Company" }),
+      );
     return user;
   };
 
   it("offers the company field as withheld rather than as an empty picker", async () => {
-    await openEdit(
-      deal({ organization_id: null, masked_fields: ["organization_id"] }),
-      [{ id: "o1", display_name: "Acme Corp" }],
-    );
+    await openEdit(deal({ company_id: null, masked_fields: ["company_id"] }), [
+      { id: "o1", display_name: "Acme Corp" },
+    ]);
 
-    expect(
-      screen.getByRole("combobox", { name: "Company" }).textContent,
-    ).toContain("Company withheld");
+    expect(screen.getAllByText(/Company withheld/).length).toBeGreaterThan(0);
   });
 
   // The reason the field is not simply hidden, and not simply blank: a picker
   // full of companies over a company nobody was shown invites a reader to
   // re-point the deal away from the one a colleague linked.
   it("offers no company to pick while the company is withheld", async () => {
-    const user = await openEdit(
-      deal({ organization_id: null, masked_fields: ["organization_id"] }),
-      [
-        { id: "o1", display_name: "Acme Corp" },
-        { id: "o2", display_name: "Northgate Systems" },
-      ],
-    );
-    await user.click(screen.getByRole("combobox", { name: "Company" }));
-
-    const options = within(screen.getByRole("listbox")).getAllByRole("option");
-    expect(options).toHaveLength(1);
-    expect(options[0].textContent).toContain("Company withheld");
-    expect(screen.queryByRole("option", { name: "Acme Corp" })).toBeNull();
+    await openEdit(deal({ company_id: null, masked_fields: ["company_id"] }), [
+      { id: "o1", display_name: "Acme Corp" },
+      { id: "o2", display_name: "Northgate Systems" },
+    ]);
+    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
   });
 
   it("offers the partner field as withheld too", async () => {
     await openEdit(
-      deal({ partner_org_id: null, masked_fields: ["partner_org_id"] }),
+      deal({ partner_company_id: null, masked_fields: ["partner_company_id"] }),
       [{ id: "o1", display_name: "Acme Corp" }],
     );
 
-    expect(
-      screen.getByRole("combobox", { name: "via Partner" }).textContent,
-    ).toContain("Partner withheld");
+    expect(screen.getAllByText(/Partner withheld/).length).toBeGreaterThan(0);
   });
 
   // Present, and off the pickable page: the same rule the partner field
@@ -578,7 +576,7 @@ describe("a deal's edit form over a withheld reference", () => {
   // blank, which reads as "no company" on a deal that has one.
   it("names a company the pickable page cannot reach", async () => {
     await openEdit(
-      deal({ organization_id: "o-offpage" }),
+      deal({ company_id: "o-offpage" }),
       [{ id: "o1", display_name: "Acme Corp" }],
       { "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" } },
     );
@@ -594,28 +592,23 @@ describe("a deal's edit form over a withheld reference", () => {
   // drop entirely: a missing project row says the deal is on no project, which
   // is the opposite of what `masked_fields` said.
   it("offers the project field as withheld rather than dropping it", async () => {
-    const user = await openEdit(
+    await openEdit(
       deal({
-        organization_id: "o1",
+        company_id: "o1",
         project_id: null,
         masked_fields: ["project_id"],
       }),
       [{ id: "o1", display_name: "Acme Corp" }],
     );
 
-    const picker = screen.getByRole("combobox", { name: "Project" });
-    expect(picker.textContent).toContain("Project withheld");
-    await user.click(picker);
-    const options = within(screen.getByRole("listbox")).getAllByRole("option");
-    expect(options).toHaveLength(1);
-    // Not even the "start a new one" entry: saving it would re-point the deal
-    // off a project the reader never saw.
-    expect(screen.queryByRole("option", { name: /New project/ })).toBeNull();
+    expect(screen.getAllByText(/Project withheld/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
   });
 
   it("names the project a reader may see", async () => {
     await openEdit(
-      deal({ organization_id: "o1", project_id: "p1" }),
+      deal({ company_id: "o1", project_id: "p1" }),
       [{ id: "o1", display_name: "Acme Corp" }],
       undefined,
       { id: "p1", name: "Depot rollout" },
@@ -629,7 +622,7 @@ describe("a deal's edit form over a withheld reference", () => {
   });
 
   it("names a company the pickable page does hold, without a second read", async () => {
-    await openEdit(deal({ organization_id: "o1" }), [
+    await openEdit(deal({ company_id: "o1" }), [
       { id: "o1", display_name: "Acme Corp" },
     ]);
 
@@ -639,15 +632,13 @@ describe("a deal's edit form over a withheld reference", () => {
   });
 });
 
-// The mirror carries the same `masked_fields` the native list does, and its
-// amount cell read a refused figure as a deal nobody had priced — the same
-// defect one surface over.
-describe("the overlay mirror table", () => {
+// The amount cell read a refused figure as a deal nobody had priced — the
+// same defect one surface over.
+describe("the deals table", () => {
   it("reads a withheld amount as withheld, not as an unpriced deal", async () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        overlay: true,
         deals: [
           deal({
             amount_minor: null,
@@ -657,6 +648,9 @@ describe("the overlay mirror table", () => {
         ],
       }),
     );
+    // The amount COLUMN is the table's, and the board is where the screen
+    // opens — so the view dial is turned before the render rather than after.
+    window.location.hash = "#/deals?view=table";
     render(<DealsScreen />);
 
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
@@ -667,17 +661,20 @@ describe("the overlay mirror table", () => {
 describe("a deal's fact line", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  // A bare mask on a line of joined facts says only "something is hidden".
-  // Each withheld fact names the field it withholds.
+  // A bare mask on a strip of named cells says only "something is hidden".
+  // Each withheld fact names the field it withholds. The header's own strip,
+  // because the same masked field is ALSO guarded in the details pane's edit
+  // form, and a query over the whole page would find both.
   it("names which of the facts is withheld", async () => {
     const single = deal({
-      organization_id: null,
-      masked_fields: ["organization_id"],
+      company_id: null,
+      masked_fields: ["company_id"],
     });
     vi.stubGlobal("fetch", stubBackend({ deals: [single], single }));
     render(<DealScreen id="d1" />);
 
-    const mask = await screen.findByRole("img", { name: MASK });
-    expect(mask.parentElement?.textContent).toContain("Company");
+    const masks = await screen.findAllByRole("img", { name: MASK });
+    const mask = masks.find((candidate) => candidate.closest(".record-facts"));
+    expect(mask?.closest(".record-fact")?.textContent).toContain("Company");
   });
 });

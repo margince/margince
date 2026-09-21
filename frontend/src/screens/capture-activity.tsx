@@ -26,6 +26,7 @@ import { CaptureExclusionsCard } from "./capture-exclusions";
 import { useProviderLabel } from "./channelproviders";
 import { QueryGate, throwProblem } from "./common";
 import { useOpenEmail } from "./openemail";
+import { VerdictPassNote } from "./verdictpass";
 
 // Settings → Capture activity: what the pipeline did with the reader's own
 // messages in the last 24 hours.
@@ -122,7 +123,7 @@ export function CaptureActivityTab() {
     <>
       {/* What the reader keeps out, first and on this page: the addresses and
           domains whose mail the CRM never stores. It used to sit two tabs away
-          under Organization → Capture, beside the posture settings an admin
+          under Company → Capture, beside the posture settings an admin
           owns, which put the one control a rep actually reaches for behind a
           door most seats cannot open. Blocking a sender is not an
           administrator's job — it is the answer to what this page is asking
@@ -232,8 +233,13 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
         // it comes off the first page and does not grow as more are fetched.
         const first = loaded.pages[0];
         const entries = loaded.pages.flatMap((page) => page.data);
+        // Filtered on the bucket the COUNTERS group by, not on the outcome
+        // the pipeline recorded. Filtering on the latter is what put
+        // "Showing 49 of 49 Waiting on a verdict" over forty-nine rows each
+        // reading "judged noise" — two answers to one question, one directly
+        // above the other.
         const shown = filter
-          ? entries.filter((entry) => entry.outcome === filter)
+          ? entries.filter((entry) => entry.outcome_now === filter)
           : entries;
         return (
           <>
@@ -246,11 +252,23 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
               description={t("captureActivity.scopeNote")}
               layout="stack"
               control={
-                <CaptureFunnel
-                  funnel={first.funnel}
-                  selected={filter}
-                  onSelect={setFilter}
-                />
+                <>
+                  <CaptureFunnel
+                    funnel={first.funnel}
+                    selected={filter}
+                    onSelect={setFilter}
+                  />
+                  {/* Only where something is actually waiting. A cadence
+                      printed over a window with nothing outstanding is
+                      furniture, and furniture is what a reader learns to skip
+                      before the one day it matters. */}
+                  {(first.funnel.deferred ?? 0) > 0 && (
+                    <VerdictPassNote
+                      clock={first.sender_verdict}
+                      subject="senders"
+                    />
+                  )}
+                </>
               }
             />
             {/* The log, behind a disclosure. It answers a question about ONE
@@ -279,7 +297,7 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                   // counter reading 26 would look like the counter was wrong.
                   // Both numbers, so a filtered view can never be read as the
                   // whole window.
-                  <p className="capture-activity__count t-sub">
+                  <p className="t-sub">
                     {t("captureActivity.filtered", {
                       shown: formatNumber(shown.length, locale),
                       total: formatNumber(first.funnel[filter] ?? 0, locale),
@@ -322,7 +340,6 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                     the reader had no way to fetch. */}
                 {query.hasNextPage && (
                   <Button
-                    small
                     disabled={query.isFetchingNextPage}
                     onClick={() => void query.fetchNextPage()}
                   >
@@ -364,23 +381,13 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
 // It filters the rows already LOADED, not the window, so the count line beside
 // it says both numbers. A filter that silently showed 12 of 26 would be a worse
 // answer than no filter at all.
-// A bucket counts every message that met an outcome, so its label has to hold
-// for all of them at once.
 //
-// Four of the five already do. `deferred` does not: the funnel groups by
-// outcome alone, with no ledger join, so one number covers the senders still
-// being judged AND the ones already answered — and "Waiting on a verdict — 31"
-// over rows that each say the verdict landed is the same contradiction the row
-// avoids, one level up and louder, because the strip is what a reader sees
-// first. What every message in the bucket has in common is that the ladder sent
-// it for a verdict, so that is what the bucket says.
-//
-// The ROW keeps the tense: there it is one message, and whether that one is
-// still waiting is knowable and worth saying.
-function funnelLabel(outcome: Outcome): Outcome | "deferred_sent" {
-  return outcome === "deferred" ? "deferred_sent" : outcome;
-}
-
+// Each tile is labelled with its bucket's own name, which is honest again now
+// that the counters group by the SETTLED outcome: every message under
+// `deferred` really is still waiting. While they grouped by what the pipeline
+// recorded, one number covered the senders being judged and the ones already
+// answered, and this tile read "Waiting on a verdict — 31" over rows that each
+// said the verdict had landed.
 function CaptureFunnel({
   funnel,
   selected,
@@ -401,12 +408,19 @@ function CaptureFunnel({
         <button
           key={outcome}
           type="button"
-          className="capture-activity__funnel-slot"
           aria-pressed={selected === outcome}
           onClick={() => onSelect(selected === outcome ? null : outcome)}
         >
           <StatCard
-            label={t(`captureActivity.outcome.${funnelLabel(outcome)}`)}
+            // Rows on a phone: five slots two abreast clip both the label and
+            // the figure, and the press target stays the whole row because the
+            // plate keeps the button's chrome off it (statstrip.css).
+            narrow="row"
+            // The tile's own short name. The full outcome sentences still feed
+            // the filter line and the row chip, each read one at a time; a slot
+            // compared across a row of five carries a NAME, and "Waiting on a
+            // sender verdict" over a figure is a sentence where a label goes.
+            label={t(`captureActivity.funnel.${outcome}`)}
             // Zero is a reading, not an absence: "no message was dropped as
             // internal today" is exactly what somebody comes here to confirm.
             value={formatNumber(funnel[outcome] ?? 0, locale)}
@@ -440,15 +454,13 @@ function CaptureEntryRow({
         onClick={onOpen}
         aria-label={t("captureActivity.openTrace")}
       >
-        <span className="capture-activity__when t-sub">
+        <span className="t-sub">
           {formatDateTime(entry.occurred_at, locale, zone)}
         </span>
         {/* The provider ID resolved to a name. The contract is explicit that a
             label is never stored — two deploys would disagree about the same
             transport — so it is resolved here, against the registry. */}
-        <span className="capture-activity__connector t-sub">
-          {providerLabel(entry.connector)}
-        </span>
+        <span className="t-sub">{providerLabel(entry.connector)}</span>
         <CaptureEntryOutcome entry={entry} />
         <CaptureEntryContent entry={entry} payloads={payloads} />
         <CaptureEntryResolution entry={entry} />
@@ -483,9 +495,7 @@ function CaptureEntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
           deferral is not waiting for anything — so it is quieter than the
           outcome but never hidden behind an interaction. */}
       {reason ? (
-        <span className="capture-activity__reason t-sub">
-          {t(`captureActivity.reason.${reason}`)}
-        </span>
+        <span className="t-sub">{t(`captureActivity.reason.${reason}`)}</span>
       ) : null}
     </span>
   );
@@ -556,8 +566,6 @@ function CaptureEntryResolution({ entry }: Readonly<{ entry: TraceEntry }>) {
     return null;
   }
   return (
-    <span className="capture-activity__resolution t-sub">
-      {t(`captureActivity.resolution.${status}`)}
-    </span>
+    <span className="t-sub">{t(`captureActivity.resolution.${status}`)}</span>
   );
 }

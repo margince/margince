@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package datasource defines the System-of-Record Provider seam (interfaces.md
-// §3, 03e §2.1): the one interface that binds the AI layers, the MCP tool
-// surface, and the UI to either the SoR-mode modules or an incumbent
-// adapter (Overlay-mode). Nothing above this seam imports the modules or an
-// incumbent SDK directly (AC-OV-1); identical signatures in both modes
-// (AC-OV-2).
+// Package datasource defines the System-of-Record Provider seam: the one
+// interface that binds the AI layers, the MCP tool surface, and the UI to
+// whichever provider answers for the records — this product's own modules, or
+// a fork's adapter over another system. Nothing above this seam imports the
+// modules or a vendor SDK directly, and the signatures are identical whoever
+// answers.
 package datasource
 
 import (
@@ -21,15 +21,17 @@ import (
 // EntityType names the domain entities the provider serves.
 type EntityType string
 
+// The record types a provider can be asked about. One word per thing: the
+// engine, the wire and the database all use these.
 const (
-	EntityPerson       EntityType = "person"
-	EntityOrganization EntityType = "organization"
-	EntityDeal         EntityType = "deal"
-	EntityLead         EntityType = "lead"
-	EntityActivity     EntityType = "activity"
-	EntityProject      EntityType = "project"
+	EntityContact  EntityType = "contact"
+	EntityCompany  EntityType = "company"
+	EntityDeal     EntityType = "deal"
+	EntityLead     EntityType = "lead"
+	EntityActivity EntityType = "activity"
+	EntityProject  EntityType = "project"
 	// EntityRelationship is an EDGE between two records — employment, a deal
-	// or project stakeholder seat, an org↔org partner tie. It belongs in THIS
+	// or project stakeholder seat, a company↔company partner tie. It belongs in THIS
 	// vocabulary and deliberately not in RecordType below: the seam's record
 	// verbs serve it, but nothing points AT an edge. You cannot tag one, add
 	// one to a list, link an activity to it, or grant access to it — so adding
@@ -44,13 +46,13 @@ const (
 	// migrations/core/0171 is that reconciliation, and says what each widening
 	// does and does not open.
 	EntityRelationship EntityType = "relationship"
-	// EntityPartner is the partner EXTENSION on an organization, not a second
-	// kind of company: the row is 1:1 with `organization` and is addressed by
-	// that organization's id, which is why the seam's read verb takes the org
+	// EntityPartner is the partner EXTENSION on a company, not a second
+	// kind of company: the row is 1:1 with `company` and is addressed by
+	// that company's id, which is why the seam's read verb takes the company
 	// id here and no partner id exists to take its place.
 	//
 	// It is deliberately absent from RecordType. Nothing points AT a partner —
-	// you tag, list, link and grant against the ORGANIZATION, and the partner
+	// you tag, list, link and grant against the COMPANY, and the partner
 	// row travels with it. Adding a RecordPartner would widen five polymorphic
 	// columns to hold a target every one of them already reaches by another
 	// name, and give two spellings for one company.
@@ -76,7 +78,7 @@ const (
 // is how `object=activity` came to be creatable and never served.
 func EntityTypes() []EntityType {
 	return []EntityType{
-		EntityPerson, EntityOrganization, EntityDeal, EntityLead,
+		EntityContact, EntityCompany, EntityDeal, EntityLead,
 		EntityActivity, EntityProject, EntityRelationship, EntityPartner,
 	}
 }
@@ -93,11 +95,11 @@ type RecordType string
 // The record vocabulary. Each value is mirrored by a schema CHECK, pinned
 // together by TestEveryDomainEnumMatchesItsSchemaCheck.
 const (
-	RecordPerson       RecordType = "person"
-	RecordOrganization RecordType = "organization"
-	RecordDeal         RecordType = "deal"
-	RecordLead         RecordType = "lead"
-	RecordProject      RecordType = "project"
+	RecordContact RecordType = "contact"
+	RecordCompany RecordType = "company"
+	RecordDeal    RecordType = "deal"
+	RecordLead    RecordType = "lead"
+	RecordProject RecordType = "project"
 )
 
 // RecordTypes returns the vocabulary in a stable order, for the callers
@@ -105,7 +107,7 @@ const (
 // polymorphic column maps — rather than branch on a single value. It hands
 // back a fresh slice so no caller can widen the vocabulary for the others.
 func RecordTypes() []RecordType {
-	return []RecordType{RecordPerson, RecordOrganization, RecordDeal, RecordLead, RecordProject}
+	return []RecordType{RecordContact, RecordCompany, RecordDeal, RecordLead, RecordProject}
 }
 
 // EntityRef points at one record.
@@ -127,7 +129,6 @@ type EntityRef struct {
 // adapter that cannot serve a v2 verb returns ErrUnsupportedBySoR. The
 // freeze is pinned by TestSystemOfRecordProviderV1MethodSetIsFrozen.
 type SystemOfRecordProvider interface {
-	// Reads are mirror-served in overlay mode to meet P4 read budgets.
 	Read(ctx context.Context, ref EntityRef) (Record, error)
 	Search(ctx context.Context, q SearchQuery) (SearchResult, error)
 	ListObjects(ctx context.Context) ([]ObjectDef, error)
@@ -136,34 +137,38 @@ type SystemOfRecordProvider interface {
 
 	// StageSemantic resolves a stage id to its canonical semantic
 	// (open|won|lost) plus owning pipeline — the lookup the advance_deal
-	// tier resolver trusts instead of labels or request args; in overlay
-	// mode it resolves through the incumbent→canonical stage mapping.
+	// tier resolver trusts instead of labels or request args.
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 
-	// Writes are canonical in SoR-mode and write BACK to the incumbent in
-	// overlay mode. Every write carries provenance and the acting
-	// Principal from ctx.
+	// Every write carries provenance and the acting Principal from ctx.
 	Create(ctx context.Context, in CreateInput) (EntityRef, error)
 	Update(ctx context.Context, in UpdateInput) (EntityRef, error)
 	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (EntityRef, error)
-	// Archive soft-deletes one person/organization/deal/project, or one
+	// Archive soft-deletes one contact/company/deal/project, or one
 	// relationship edge (🟡 on the tool surface: a visibility change is hard to
 	// undo for whoever needed the row). Leads leave through their own lifecycle
-	// verbs. Archiving an edge is how a person's employment ENDS on this seam —
+	// verbs. Archiving an edge is how a contact's employment ENDS on this seam —
 	// an edge's endpoints are what it is, so they are never patched.
 	Archive(ctx context.Context, ref EntityRef) (EntityRef, error)
-	// Merge folds source into target (person/organization only), non-lossy,
+	// Merge folds source into target (contact/company only), non-lossy,
 	// and returns the survivor's ref (features/01 §1.3). 🟡 on the tool
 	// surface: collapsing two records into one is destructive and hard to
 	// reverse, so an agent stages it for human confirmation. It is a
 	// cross-module orchestration owned by the composition root's
 	// composite, never one module writing a sibling's tables (ADR-0054 §9).
 	Merge(ctx context.Context, in MergeInput) (EntityRef, error)
-	// PromoteLead graduates a lead into a person (dedupe-aware: merged
-	// reports true when an existing person absorbed the lead). 🟡 — a
+	// PromoteLead graduates a lead into a contact (dedupe-aware: merged
+	// reports true when an existing contact absorbed the lead). 🟡 — a
 	// lifecycle transition that materializes records; cross-module
 	// orchestration like Merge.
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (ref EntityRef, merged bool, err error)
+	//
+	// ifVersion refuses the promotion unless the lead is still at that
+	// version. It is on the seam rather than left to a caller's own guard
+	// because promotion is STAGED for approval: the version the human was
+	// shown is released with the approval, and a pin staged and never applied
+	// is a guarantee the approvals surface advertises and the write does not
+	// keep. Nil attaches no precondition.
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (ref EntityRef, merged bool, err error)
 
 	// Freshness lets a 🟡 high-value action force a synchronous live
 	// read-through to the incumbent before acting (03e §2.3), bypassing
@@ -181,7 +186,7 @@ type Record struct {
 }
 
 // CreateInput — Fields is the typed domain struct for EntityType
-// (*crmcore.Person, …); the provenance stamps are required, not optional.
+// (*crmcore.Contact, …); the provenance stamps are required, not optional.
 type CreateInput struct {
 	EntityType EntityType
 	Fields     any
@@ -234,8 +239,8 @@ type AdvanceDealInput struct {
 	IfVersion                *int64
 }
 
-// MergeInput folds SourceID into TargetID (the survivor). Type is person
-// or organization only — deals and leads have no merge verb. The audit
+// MergeInput folds SourceID into TargetID (the survivor). Type is contact
+// or company only — deals and leads have no merge verb. The audit
 // provenance comes from the acting Principal on ctx, like every write.
 type MergeInput struct {
 	Type     EntityType
@@ -243,9 +248,10 @@ type MergeInput struct {
 	TargetID ids.UUID
 }
 
-// FreshnessInfo travels in tool responses so an agent knows mirror
-// staleness (03e §2.3). Authoritative is false while pending_sync in
-// overlay mode; in SoR-mode it is always true.
+// FreshnessInfo travels in tool responses so an agent knows how stale the
+// record it is answering from may be. Authoritative is true for a provider
+// that holds the record itself, and an adapter serving a copy of somebody
+// else's system answers false while that copy is behind.
 type FreshnessInfo struct {
 	LastSyncedAt  time.Time
 	Authoritative bool
@@ -267,8 +273,8 @@ type SearchResult struct {
 	HasMore    bool
 }
 
-// ObjectDef / FieldDef expose schema introspection — ours in SoR-mode,
-// the incumbent's in overlay mode.
+// ObjectDef / FieldDef expose schema introspection — whichever system the
+// provider answers for.
 type ObjectDef struct {
 	Type   EntityType
 	Label  string

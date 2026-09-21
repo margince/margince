@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Published-surface freeze gate (ADR-0069 §3, EXT-P3; the ADR-0023
+# Published-surface freeze gate (ADR-0120 §3, EXT-P3; the ADR-0023
 # Amendment 2 patch-lane arm): backend/pkg is frozen published API from
 # its first release — it evolves additively or through versioned
 # successors, never in place. This gate apidiffs every published package
@@ -171,7 +171,7 @@ violations="$(grep -Fxv -f "$allowed" "$findings" || true)"
 unused="$(grep -Fxv -f "$findings" "$allowed" || true)"
 
 if [[ -s "$removals" ]]; then
-  echo "FAIL: pkg-freeze — published package removed (never allowlistable; deprecate, then remove with its major cycle — ADR-0069 §3):" >&2
+  echo "FAIL: pkg-freeze — published package removed (never allowlistable; deprecate, then remove with its major cycle — ADR-0120 §3):" >&2
   indent < "$removals" >&2
   failed=1
 fi

@@ -26,7 +26,7 @@ func TestThePersonalReadAnswersTheCallersOwnWindow(t *testing.T) {
 	seedTrace(memberCtx, t, db, me, "http-mine", 0)
 	seedTrace(memberCtx, t, db, ids.Nil, "http-shared", 0)
 
-	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), false)
+	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), false, nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/v1/capture/activity", nil).WithContext(memberCtx)
 	handlers.ListMyCaptureActivity(w, r, crmcontracts.ListMyCaptureActivityParams{})
@@ -58,7 +58,7 @@ func TestTheWorkspaceReadAnswersOnlySharedChannels(t *testing.T) {
 	seedTrace(memberContext(ctx, ws, member), t, db, member, "http-personal", 0)
 	seedTrace(memberContext(ctx, ws, member), t, db, ids.Nil, "http-bot", 0)
 
-	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), true)
+	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), true, nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/v1/capture/activity/workspace", nil).
 		WithContext(managerContext(ctx, ws, manager))
@@ -81,7 +81,7 @@ func TestTheWorkspaceReadAnswersOnlySharedChannels(t *testing.T) {
 
 func TestTheWorkspaceReadRefusesASeatWithoutTheGrantOverHTTP(t *testing.T) {
 	ctx, ws, db, _ := traceReadWorkspace(t)
-	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), false)
+	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), false, nil)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/v1/capture/activity/workspace", nil).

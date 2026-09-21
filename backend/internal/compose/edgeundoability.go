@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // evaluateEdge answers whether one audited change to a LINK can be reversed.
@@ -29,20 +29,7 @@ import (
 // refusals mean the same thing about an edge — and because two of the record's
 // would read the wrong table. The order is the record path's: cheapest and most
 // certain first, so a row failing several reports the most useful one.
-//
-// ExternallyGoverned is NOT asked, and the omission is a decision rather than the
-// record branch missed. That refusal exists because an overlay workspace's
-// records live in the incumbent, so putting one back is a write-back the
-// reversal path cannot link or attribute. A LINK has no incumbent counterpart to
-// write back to: `relationship` is not a member of the overlay mirror's entity
-// set and the overlay provider declares no write verb for it, so the local row is
-// not a copy of anything and the local write is the whole write. Refusing here
-// would leave a link nobody can reverse in a workspace where nothing else could
-// have changed it either.
-//
-// TestALinkInAnOverlayGovernedWorkspaceIsStillReversible pins the answer and the
-// premise together, so the day the mirror learns to carry links this branch is
-// what fails rather than a customer's two systems quietly disagreeing.
+
 func (e Evaluator) evaluateEdge(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, error) {
 	if e.EdgeFacts == nil {
 		return Undoability{}, fmt.Errorf("compose: no edge reader is wired, so entry %s cannot be judged", row.ID)
@@ -111,8 +98,8 @@ func edgeScopeRefusal(err error) (Undoability, bool) {
 // keep one company, so a generic reverse of one is a side door around both rules
 // — including on an unlink, where the honest answer names the kind rather than
 // the un-archive it would also have refused.
-func edgeShapeRefusal(action string, facts people.EdgeFacts) (Undoability, bool) {
-	if facts.Kind == people.ProjectCompanyKind {
+func edgeShapeRefusal(action string, facts contacts.EdgeFacts) (Undoability, bool) {
+	if facts.Kind == contacts.ProjectCompanyKind {
 		return refuse(ReasonNotRestorableByThisPath, facts.Kind), true
 	}
 	if action == edgeActionArchive {

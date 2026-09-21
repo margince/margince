@@ -355,6 +355,54 @@ func IfMatchVersion(w http.ResponseWriter, r *http.Request) (*int64, bool) {
 	return &v, true
 }
 
+// IfNoneMatchHit reports whether r's If-None-Match already names etag (a
+// quoted strong validator, e.g. `"abc123"`), so a caller can answer 304
+// before doing the work a fresh response would need. Per RFC 9110 §13.1.2 the
+// header is a comma-separated list, "*" matches anything, and comparison is
+// WEAK — a proxy that adds a `W/` prefix to this server's own strong tag must
+// still be recognised, or every hop that does that silently pays for the full
+// response this header exists to let it skip. The list is split respecting
+// quoting, not on every comma: a comma is a legal byte inside a quoted
+// etag-value, so a naive split could cut a single candidate in two and miss
+// it, or the request could carry several header lines (Go's Header.Values,
+// each itself comma-separated in the same way).
+func IfNoneMatchHit(r *http.Request, etag string) bool {
+	for _, line := range r.Header.Values("If-None-Match") {
+		for _, candidate := range splitUnquoted(line, ',') {
+			candidate = strings.TrimSpace(candidate)
+			if candidate == "*" {
+				return true
+			}
+			if strings.TrimPrefix(candidate, "W/") == etag {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// splitUnquoted splits s on sep, except where sep falls inside a
+// double-quoted span — the shape an ETag list needs, since RFC 9110's
+// etag-value allows a comma as one of its own bytes.
+func splitUnquoted(s string, sep byte) []string {
+	var parts []string
+	inQuotes := false
+	start := 0
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '"':
+			inQuotes = !inQuotes
+		case sep:
+			if !inQuotes {
+				parts = append(parts, s[start:i])
+				start = i + 1
+			}
+		}
+	}
+	parts = append(parts, s[start:])
+	return parts
+}
+
 // ClearedFields names the top-level keys the body sent as an explicit null.
 //
 // A nullable contract field decodes to a nil pointer whether the caller sent

@@ -16,7 +16,7 @@ package gates
 //
 // Dead code that looks load-bearing is worse than dead code that looks dead,
 // and this shape is the second kind. company.go's manual `version = version + 1`
-// read as a fourth approach to concurrent editing across the organization
+// read as a fourth approach to concurrent editing across the company
 // writers and was counted as one; coldstartprofile.go's overwrite arm carried
 // `updated_at = now()` where its fill arm did not, and the difference read as
 // deliberate. Neither was anything. The file next door already names the
@@ -98,7 +98,7 @@ type writeSegment struct {
 // the `INSERT INTO t … ON CONFLICT … DO UPDATE SET` whose written table is the
 // one the INSERT named. The upsert arm is not an afterthought — a BEFORE UPDATE
 // trigger fires on the conflict arm exactly as it does on a plain UPDATE, and
-// the tree writes that shape (people/projectcompany.go).
+// the tree writes that shape (contacts/projectcompany.go).
 //
 // The alias is optional and SET is a legal identifier, so `UPDATE t SET x = 1`
 // could read as table `t` with alias `SET` and then find no SET clause. It does
@@ -281,10 +281,11 @@ func assignmentTarget(assignment string) string {
 // dead assignment that arrives in the same function later. What the register
 // adds is the product claim the shape cannot carry: WHY this row has to move.
 var touchStatements = gatekit.Waive(map[string]string{
-	"internal/modules/activities/relinkbatch.go:finalizeRelinkedActivity":      "a staged approval pins activity.version, and that pin is the only thing between an approved \"send this body on this conversation\" and the conversation being repointed before the approval redeems; a relink that changes who the activity reaches must move the version the pin re-checks",
-	"internal/modules/capture/sinkproject.go:linkActivityToProject":            "the automatic half of the same relink: filing under a project changes who the activity reaches, so it must move the version a staged approval pinned, for the reason the human path gives",
-	"internal/modules/people/providerclaimrevertfields.go:touchRevertedPerson": "taking a bought profile link or address back off a record changes what that record says without writing a person column, and the contact's version is what an editor's If-Match is checked against — the same claim touchPerson makes for the write direction. Distinct from it because a revert must reach an ARCHIVED contact: archiving is not erasure, the purchase is still on the record, and touchPerson's liveness refusal would roll the whole revert back while the action reported success. The caller holds the row FOR UPDATE, so the bump is not a blind write",
-	"internal/modules/people/linkedinmatchapply.go:touchPerson":                "a LinkedIn handle decision changes what the contact record says without writing a person column, and the contact's own version is what an editor's If-Match is checked against; the row is locked first, so the bump is not a blind write",
+	"internal/modules/activities/relinkbatch.go:finalizeRelinkedActivity":         "a staged approval pins activity.version, and that pin is the only thing between an approved \"send this body on this conversation\" and the conversation being repointed before the approval redeems; a relink that changes who the activity reaches must move the version the pin re-checks",
+	"internal/modules/capture/sinkprojectwrite.go:linkActivityToProject":          "the automatic half of the same relink: filing under a project changes who the activity reaches, so it must move the version a staged approval pinned, for the reason the human path gives",
+	"internal/modules/contacts/providerclaimrevertfields.go:touchRevertedContact": "taking a bought profile link or address back off a record changes what that record says without writing a contact column, and the contact's version is what an editor's If-Match is checked against — the same claim touchContact makes for the write direction. Distinct from it because a revert must reach an ARCHIVED contact: archiving is not erasure, the purchase is still on the record, and touchContact's liveness refusal would roll the whole revert back while the action reported success. The caller holds the row FOR UPDATE, so the bump is not a blind write",
+	"internal/modules/contacts/linkedinmatchapply.go:touchContact":                "a LinkedIn handle decision changes what the contact record says without writing a contact column, and the contact's own version is what an editor's If-Match is checked against; the row is locked first, so the bump is not a blind write",
+	"internal/modules/contacts/domaintriagenametwin.go:adoptDomainIntoCompany":    "adopting a second domain onto a company changes the record's domain set without writing a company column, and the company's version is what an editor's If-Match is checked against — a client holding the version from before the adoption could otherwise replace the domain set and silently drop the domain just added, with no conflict to notice. The same claim an ordinary domain replace-set makes in company_update.go. The row is locked first, so the bump is not a blind write",
 })
 
 // touchTriggerFloor is the smallest number of trigger-touched tables this gate

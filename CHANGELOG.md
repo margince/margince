@@ -3,11 +3,76 @@
 All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-This is a pre-release proof of concept: nothing has been versioned or
-released yet, so everything that exists lives under Unreleased. Version
-numbers appear here when releases start.
+Releases are cut by pushing a `v*` tag, which publishes a GitHub release with
+the desktop bundles attached — see
+[docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md). The constellation
+dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
+
+There is deliberately no empty `Unreleased` section: `scripts/check-changelog-
+sections.sh` refuses a release heading with nothing under it, so one appears
+when it has content.
 
 ## [Unreleased]
+
+### Added
+
+- Mail history: setup and Settings share a dropdown through ten years, show the
+  preview start date, and qualify capped message and cost estimates.
+
+### Removed
+
+- **A company no longer carries a `classification`.** It was superseded a release
+  ago by `lifecycle` — where an account stands with us, one value at a time — and
+  `relationship_types`, what the company IS to us, which is legitimately several
+  things at once. Nothing had written the old field since, so every unassessed
+  account was served the column default `prospect` as though somebody had judged
+  it. The API stops returning it, the company list stops offering it as a filter,
+  and both generated clients drop it. A segment already written against it keeps
+  evaluating — the column survives and the saved-filter vocabulary still reads it
+  — but no surface offers it for a new one.
+- **The backfill stops reporting `dedupe_candidates`.** No statement ever wrote
+  that counter, so it was served as a constant zero to every client polling an
+  import. The column stays; the wire field is gone.
+
+### Changed
+
+- **`/metrics` on the api is closed by default.** It requires `--metrics-token`
+  as a Bearer credential. A deployment whose scraper discovers its targets by
+  annotation and cannot carry one sets `--metrics-access=open`, where the port is
+  already contained. An installation that scraped the api's `/metrics` without a
+  token must set one of the two on upgrade, or its scrapes answer 401.
+
+### Fixed
+
+- **A failed-login lock no longer keeps out a browser that has signed in
+  before.** Signing in sets a `crm_device` cookie; while an account is locked, a
+  browser presenting it for that account is let in with the correct password.
+  Every other sign-in attempt is refused exactly as before.
+- **The MCP connector's OAuth discovery documents name the configured public
+  origin.** Their issuer and endpoint URLs, and the pointer the transport's 401
+  carries, are built from `--public-base-url` rather than from the request, and
+  are sent `Cache-Control: no-store`. With no public base URL configured they
+  answer 404, as they do with the connector off.
+- The exchange-rate refresh accepts a rate from the page it reads only as a plain
+  decimal — digits and one decimal point, within bounded widths — and drops any
+  other form before parsing it, the shape the currency sheet itself accepts.
+- **A colleague connecting an MCP client no longer disconnects everyone else.**
+  A connection was superseded by `client_id` alone, which assumed that id names
+  one install. That holds for a client registered by DCR and fails for one
+  identified by a Client ID Metadata Document, where every human running the
+  software presents the same id — so an installation had one live connection in
+  total. Each new consent revoked the previous human's grant through the cascade
+  that answers token theft, killing their access token and spending their
+  refresh chain, so they were asked to reconnect mid-conversation and in turn
+  evicted whoever had connected before them. A connection is now superseded per
+  client registration **per human**: reconnecting from the same client still
+  replaces your own earlier connection, and never anyone else's.
+- Customer meeting requests remain actionable on won or lost deals and outside
+  recent email history. Source-linked reminders reconcile without duplicates;
+  accepting or completing one updates request state across the deal and email
+  views. Background deal refresh updates facts without model calls.
+
+## [0.0.1] - 2026-09-10
 
 ### Removed
 
@@ -597,6 +662,24 @@ numbers appear here when releases start.
 
 ### Fixed
 
+- **A sentence a card shows instead of content no longer prints against the
+  card's edge.** `EmptyState` draws its sentence on a recessed plate, and the
+  plate re-declared the card's padding while leaving the inline half at zero —
+  so "No offers yet", "Nothing related yet." and every other bare empty state in
+  the product sat hard against the left edge of the grey plate holding them. The
+  plate now names the card's own inset (`--padCard`) and raises only the block
+  half, which is the half it has a reason to change. Three more boxes had the
+  same defect for their own reasons and are fixed with it: the first-run
+  instructional state, the heading of the onboarding read's facts block, and a
+  board's caveat about a failed read handed to a list surface's body slot. In a
+  stack, a list row's title also stopped painting the frozen column's ground —
+  an opaque patch over the card's translucent one — since nothing is frozen when
+  the table is a column of cards. `make fe-edge-padding` renders the whole story
+  catalog at two widths and fails on a box that draws a visible edge with no
+  inline padding between that edge and its text; a stylesheet reader cannot see
+  this defect, because the two rules that make it are correct apart and wrong
+  only together.
+
 - **A record page no longer offers a write the server will refuse.** A rep
   holding the deal grant opened a colleague's deal, was offered Edit, the
   upload, New offer, the stakeholder edges and the stage move, and learned from
@@ -931,4 +1014,4 @@ numbers appear here when releases start.
   without touching a committed file; the annotated template stays the
   parse-guarded source of truth.
 
-[Unreleased]: https://github.com/margince/margince
+[0.0.1]: https://github.com/margince/margince/releases/tag/v0.0.1

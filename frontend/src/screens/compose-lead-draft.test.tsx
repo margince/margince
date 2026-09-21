@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -19,9 +19,9 @@ import {
 
 // Drafting to a LEAD.
 //
-// A lead is the shape the person drafter's own contract describes: the record
+// A lead is the shape the contact drafter's own contract describes: the record
 // IS the recipient, so there is no contact to name and no deal or project to
-// pick. Before this the composer refused every record but an organization, and
+// pick. Before this the composer refused every record but a company, and
 // "Draft with AI" on a lead did nothing at all.
 //
 // These assert which ENDPOINT the button reaches, because that is the whole
@@ -119,6 +119,7 @@ describe("drafting to a lead", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -128,21 +129,19 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(
       await screen.findByDisplayValue("Following up on your pricing question"),
     ).toBeTruthy();
     // The endpoint, named. A lead that reached the ACCOUNT endpoint would be
-    // asking the server to ground a message in an organization it has no link
+    // asking the server to ground a message in a company it has no link
     // to, and a lead that reached none would fill nothing at all.
     expect(
       sent.some((call) => call.key === "POST /leads/l-1/draft-email"),
     ).toBe(true);
-    expect(sent.some((call) => call.key.includes("/organizations/"))).toBe(
-      false,
-    );
+    expect(sent.some((call) => call.key.includes("/companies/"))).toBe(false);
   });
 
   it("carries the reader's own steering and nothing else", async () => {
@@ -160,11 +159,11 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/Steer the draft/),
+      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
       "shorter",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await screen.findByDisplayValue("Following up on your pricing question");
 
@@ -180,6 +179,7 @@ describe("drafting to a lead", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -189,10 +189,12 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    ).toBeTruthy();
   });
 
   // A deployment running no model answers 501, and the composer says so rather
@@ -208,6 +210,7 @@ describe("drafting to a lead", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -217,7 +220,7 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     await waitFor(() =>

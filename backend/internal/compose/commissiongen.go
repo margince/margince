@@ -14,7 +14,7 @@ package compose
 // never paid.
 //
 // It lives in compose because the call crosses three modules. deals owns the
-// event, people owns the partner's margin tier, commissions owns the ledger,
+// event, contacts owns the partner's margin tier, commissions owns the ledger,
 // and a module never imports a sibling — so the edge is injected here.
 //
 // EVERYTHING IS READ FROM THE EVENT, not from the deal. A reopened deal clears
@@ -36,8 +36,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/commissions"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -57,13 +57,13 @@ const (
 type CommissionGen struct {
 	pool    *pgxpool.Pool
 	ledger  *commissions.Store
-	partner *people.Store
+	partner *contacts.Store
 	log     *slog.Logger
 }
 
 // NewCommissionGen builds the accrual consumer over the ledger and the partner
 // store that prices it.
-func NewCommissionGen(pool *pgxpool.Pool, ledger *commissions.Store, partner *people.Store, log *slog.Logger) *CommissionGen {
+func NewCommissionGen(pool *pgxpool.Pool, ledger *commissions.Store, partner *contacts.Store, log *slog.Logger) *CommissionGen {
 	return &CommissionGen{pool: pool, ledger: ledger, partner: partner, log: log}
 }
 
@@ -100,7 +100,7 @@ func (g *CommissionGen) HandleEvent(ctx context.Context, env events.Envelope) er
 
 // accrue prices one win and records it.
 func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved deals.StageChanged) error {
-	if moved.PartnerOrgID == nil || moved.PartnerAttribution == nil {
+	if moved.PartnerCompanyID == nil || moved.PartnerAttribution == nil {
 		return nil
 	}
 	if moved.AmountMinor == nil || moved.Currency == nil {
@@ -112,20 +112,20 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 		return nil
 	}
 
-	tier, err := g.partner.MarginTierOf(ctx, ids.From[ids.OrganizationKind](*moved.PartnerOrgID))
+	tier, err := g.partner.MarginTierOf(ctx, ids.From[ids.CompanyKind](*moved.PartnerCompanyID))
 	if err != nil {
 		return err
 	}
 	_, err = g.ledger.Accrue(ctx, commissions.AccrueInput{
-		DealID:         ids.From[ids.DealKind](env.Entity.ID),
-		PartnerOrgID:   ids.From[ids.OrganizationKind](*moved.PartnerOrgID),
-		TriggerEventID: &env.EventID,
-		Attribution:    *moved.PartnerAttribution,
-		MarginTier:     tier,
-		RateBps:        commissions.RateBpsForTier(tier),
-		BasisMinor:     *moved.AmountMinor,
-		Currency:       *moved.Currency,
-		FxRateToBase:   moved.FxRateToBase,
+		DealID:           ids.From[ids.DealKind](env.Entity.ID),
+		PartnerCompanyID: ids.From[ids.CompanyKind](*moved.PartnerCompanyID),
+		TriggerEventID:   &env.EventID,
+		Attribution:      *moved.PartnerAttribution,
+		MarginTier:       tier,
+		RateBps:          commissions.RateBpsForTier(tier),
+		BasisMinor:       *moved.AmountMinor,
+		Currency:         *moved.Currency,
+		FxRateToBase:     moved.FxRateToBase,
 	})
 	switch {
 	case errors.Is(err, commissions.ErrAlreadyAccrued):

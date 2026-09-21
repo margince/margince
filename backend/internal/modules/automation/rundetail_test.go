@@ -99,3 +99,33 @@ func TestParseRunDetailSurfacesAMalformedPayload(t *testing.T) {
 		t.Fatal("decodeRunDetail accepted malformed jsonb without error")
 	}
 }
+
+// A decline's reason reaches workflow_run.detail, which anybody holding
+// automation:read reads verbatim. workflow.Declined takes a plain string from a
+// module, so this is the one place standing between a handler and that reader.
+func TestADeclinedReasonKeepsItsSentenceAndRefusesADatabaseInternal(t *testing.T) {
+	const generic = "the automation found nothing to do"
+
+	kept := "no eligible owner had capacity for this lead"
+	if got := declinedReason(kept); got != kept {
+		t.Errorf("a written reason came back %q, want it kept — collapsing it "+
+			"would erase the only thing a decline exists to say", got)
+	}
+
+	// Each of these is a message that came from somewhere other than an
+	// author, and each is a way a backend internal reaches a client.
+	for _, leak := range []string{
+		`ERROR: duplicate key value violates unique constraint "lead_pkey" (SQLSTATE 23505)`,
+		`pq: relation "workflow_run" does not exist`,
+		`pgx: column "owner_id" cannot be null`,
+		`a reason naming a "quoted identifier"`,
+		strings.Repeat("prose ", 40),
+		"",
+		"   ",
+	} {
+		if got := declinedReason(leak); got != generic {
+			t.Errorf("declinedReason(%.40q…) = %q, want the generic phrase — a "+
+				"reader holding automation:read must not meet a database internal", leak, got)
+		}
+	}
+}

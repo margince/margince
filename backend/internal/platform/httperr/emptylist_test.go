@@ -28,7 +28,7 @@ type listEnvelope struct {
 // behaves differently is encoding/json.
 //
 // Written as a VALUE, because that is how every handler in this tree calls
-// WriteJSON — `crmcontracts.PersonListResponse{Data: people, …}`. A reflection
+// WriteJSON — `crmcontracts.ContactListResponse{Data: contacts, …}`. A reflection
 // fix that only reached a pointer would pass its own unit test and do nothing
 // in production, which is the shape this case exists to refuse.
 func TestAnEmptyListIsAnArrayNotNull(t *testing.T) {

@@ -11,7 +11,7 @@ import { FALLBACK_RECORD_ZONE } from "./timezone";
 
 // A screen that names a zone has decided something, and the decision is the
 // part that has to be reviewable: whose calendar does this date belong to, the
-// organization's or the reader's? Spelled at the call site, that question gets
+// company's or the reader's? Spelled at the call site, that question gets
 // answered once per screen by whoever is passing through, and the two answers
 // drift apart — `timezone.ts` exists because the same product carried a fixed
 // `Europe/Berlin` on a credential expiry (a personal deadline, wrong for every
@@ -142,6 +142,30 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/ai-admin.tsx",
+    why: "The allowance period resets on the server’s UTC month boundary; the card explicitly labels this operational clock UTC rather than presenting it as a record or viewer date.",
+  },
+  {
+    file: "screens/worklist.reader.test.ts",
+    why: "Pins different viewer and record zones to prove a delayed notification dates the original change in the viewer’s zone.",
+  },
+  {
+    file: "screens/installation-settings.regional.stories.tsx",
+    why: "The fixture supplies the contract-required installation timezone alongside regional settings.",
+  },
+  {
+    file: "format/preferences.test.tsx",
+    why: "Regional notation must preserve explicit timezone and midnight fixtures.",
+  },
+  {
+    file: "screens/worklist.leadfacts.test.ts",
+    why: "Proves a date-only provisional close keeps its day east and west of UTC.",
+  },
+  {
+    file: "screens/projectheaderfacts.test.tsx",
+    why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
+  },
+  {
     file: "screens/taskduedate.test.tsx",
     why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",
   },
@@ -151,15 +175,23 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/working-hours.test.tsx",
-    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
+  },
+  {
+    file: "screens/working-hours.stories.tsx",
+    why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a contact who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {
     file: "screens/settings.testkit.tsx",
-    why: "The stub answers /me/working-hours with the SERVER's answer, and a person who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
+    why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
     file: "screens/worklist.when.test.tsx",
     why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking viewerZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
+  },
+  {
+    file: "screens/brief.readings.test.tsx",
+    why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through RecordZoneProvider, the seam the product itself reads.",
   },
   {
     file: "screens/brief.weekly.test.tsx",
@@ -174,7 +206,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The stub answers a report with the frame a real result carries, and the frame's whole point is that the zone comes from the SERVER rather than the reader. A zone read off the runner would draw a different as-of caption on every machine the catalog builds on.",
   },
   {
-    file: "screens/analytics.test.tsx",
+    file: "screens/analytics.testkit.tsx",
     why: "Same: the stubbed report result carries the installation zone the server sends, and the caption assertion is about that zone reaching the screen unchanged. Reading the runner's zone would make the assertion about the machine.",
   },
   {
@@ -235,7 +267,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "app/mefixture.ts",
-    why: "The offline `me` fixture stands in for a real installation's stored settings, and its organization timezone is one of those settings — a value on the wire, not a zone this code picks.",
+    why: "The offline `me` fixture stands in for a real installation's stored settings, and its company timezone is one of those settings — a value on the wire, not a zone this code picks.",
   },
   {
     file: "design-system/composed.stories.tsx",
@@ -244,6 +276,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "design-system/composed.test.tsx",
     why: "Same prop, asserted: the row's rendered time is only checkable against a zone the test chose.",
+  },
+  {
+    file: "design-system/dealcard.stories.tsx",
+    why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
   },
   {
     file: "design-system/explain.stories.tsx",
@@ -258,6 +294,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The zone picker's option list — IANA names as DATA the control lists, not a zone anything is formatted in.",
   },
   {
+    file: "screens/brief.teamweekly.tsx",
+    why: "WeekPicker performs date-only Monday arithmetic on a UTC carrier. Reading that carrier in UTC preserves the selected calendar date across DST; this is not a display-zone choice.",
+  },
+  {
     file: "format/format.ts",
     why: "monthName reads a UTC-minted date back in UTC to name a month. The zone is not a rendering choice: the instant is midnight on the 1st, so any reader's clock behind UTC lands on the previous month, and this returned December for January in America/New_York.",
   },
@@ -268,6 +308,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "format/calendarday.test.ts",
     why: "middayInstant and calendarDay take a zone and are proven by naming two of them; a machine-dependent zone would make the expectations unwritable.",
+  },
+  {
+    file: "format/daysuntil.test.ts",
+    why: "The zone IS the input under test: the whole case is that a record's date and the count beside it name the same day, which only shows up where the reader's calendar and UTC's disagree — so it needs one named zone east of UTC, one west, and UTC itself to count against. A zone read off the runner would decide whether the defect can appear at all, and the suite would pass over code that is wrong for half the world.",
   },
   {
     file: "format/format.test.ts",
@@ -283,11 +327,11 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/adddocument.test.tsx",
-    why: "Installation-settings fixture: the organization timezone the document form reads back.",
+    why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
     file: "screens/audit.test.tsx",
-    why: "Pins an audit line to the organization's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
+    why: "Pins an audit line to the company's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
   },
   {
     file: "screens/company-context.test.tsx",
@@ -303,7 +347,11 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/contractform.currency.test.tsx",
-    why: "Installation-settings fixture: the organization timezone the contract form reads back.",
+    why: "Installation-settings fixture: the company timezone the contract form reads back.",
+  },
+  {
+    file: "screens/contractform.customseed.test.tsx",
+    why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
   },
   {
     file: "screens/dealbulk.stories.tsx",
@@ -323,7 +371,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "screens/installation-settings.stories.tsx",
-    why: "The Admin settings card DISPLAYS the configured organization timezone; the story needs a configured value.",
+    why: "The Admin settings card DISPLAYS the configured company timezone; the story needs a configured value.",
   },
   {
     file: "screens/installation-settings.test.tsx",
@@ -350,8 +398,8 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {
-    file: "screens/personfiles.test.tsx",
-    why: "Installation-settings fixture backing the person-files read.",
+    file: "screens/contactfiles.test.tsx",
+    why: "Installation-settings fixture backing the contact-files read.",
   },
   {
     file: "screens/privacy.logic.test.ts",

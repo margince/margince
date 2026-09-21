@@ -29,15 +29,13 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -67,34 +65,47 @@ const (
 type CounterpartyVerdictEngine struct {
 	pool       *pgxpool.Pool
 	pending    *capture.PendingStore
-	people     *people.Store
+	contacts   *contacts.Store
 	activities *activities.Store
 	approvals  *approvals.Service
 	brain      completer
 	// triage queues the read that decides whether a domain a verdict just
-	// admitted deserves a company. A `real` answer creates the PERSON; whether
+	// admitted deserves a company. A `real` answer creates the CONTACT; whether
 	// they have an employer is a separate question this engine does not answer.
 	triage *domainTriageTrigger
 	// tagFiler files a created contact under the word its connector was set to.
 	tagFiler *connectorTagFiler
-	log      *slog.Logger
+	// transactional carries the operator's `transactional_never` allowlist, so
+	// the address gate below gives the same answer the tier ladder gives. A
+	// deployment that genuinely sells to one of the listed products declares it
+	// once; a verdict lane that read no allowlist would turn that declaration
+	// into a suppression at the one door that creates records.
+	transactional *capture.TransactionalList
+	log           *slog.Logger
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
-// model lane. It reaches people through the module's own store — the ONE dedupe
-// chokepoint every other creation path uses, so a verdict-created person is
+// model lane. It reaches contacts through the module's own store — the ONE dedupe
+// chokepoint every other creation path uses, so a verdict-created contact is
 // indistinguishable from one capture created directly.
-func NewCounterpartyVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CounterpartyVerdictEngine {
+// lists carries the deployment's capture suppression config — the same value the
+// sink is composed from, so the two doors that can refuse a sender read one
+// allowlist rather than two.
+func NewCounterpartyVerdictEngine(
+	pool *pgxpool.Pool, brain completer, lists CaptureConfig, log *slog.Logger,
+) *CounterpartyVerdictEngine {
 	return &CounterpartyVerdictEngine{
 		pool:       pool,
 		pending:    capture.NewPendingStore(InstallationDB(pool)),
-		people:     newCounterpartyStore(pool),
+		contacts:   newCounterpartyStore(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		approvals:  approvals.NewService(InstallationDB(pool)),
 		brain:      brain,
 		triage:     newDomainTriageTrigger(pool, log),
 		tagFiler:   newConnectorTagFiler(pool),
-		log:        log,
+		transactional: capture.NewTransactionalList(
+			lists.TransactionalExtra, lists.TransactionalNever),
+		log: log,
 	}
 }
 
@@ -123,10 +134,7 @@ const verdictActor = "agent:" + verdictReason
 // layer does that from the args' own role declaration, and re-binding here
 // would make this a second, independent source of truth for the tenant.
 func (e *CounterpartyVerdictEngine) workspaceCtx(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: verdictActor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, verdictActor)
 }
 
 // verdictResult is one model answer.
@@ -235,7 +243,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	ctx context.Context, row capture.PendingCounterparty, budget *reAskBudget,
 ) (int, error) {
 	// The OWNER's own decision first, and no model call at all when there is
-	// one. A person who told this product what a sender is has answered the
+	// one. A contact who told this product what a sender is has answered the
 	// question; asking anyway would spend a call to be told something we then
 	// have to discard, and a machine that could overturn them would make every
 	// correction temporary.
@@ -249,6 +257,23 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	if addressIsARoleMailbox(row.Email) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
+	// The other address-only refusal, and the one this lane was missing: an
+	// address nobody answers at all. See addressNamesNoContact for what the gap
+	// cost — a stray `contact` answer at 0.95 for an expense tool's receipts
+	// address, and the contact it minted.
+	//
+	// Settled as a ROLE MAILBOX rather than as transactional, and the difference
+	// is what the kind authorizes rather than what it reads like. `transactional`
+	// takes apply's noise arm, which suppresses the sender's whole DOMAIN for
+	// company creation and hides their mail — so one `noreply@` at a real
+	// customer would refuse that customer a company record for every colleague,
+	// on the strength of a local part. This kind creates no contact and touches
+	// nothing else, which is the whole claim being made here: nobody answers at
+	// this ADDRESS. What the domain is remains the model's question, and the
+	// mail stays where a human can read it.
+	if addressNamesNoContact(row.Email, row.Domain, e.transactional) {
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
+	}
 	// Everything above answers from the address and the ledger alone; what
 	// follows needs a model. An installation without one asks a human instead —
 	// see askAHumanInstead.
@@ -260,6 +285,13 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return 0, err
 	}
 	if len(answers) == 1 && clearsItsFloor(answers[0]) {
+		stray, settled, err := e.strayAgainstItsOwnHistory(ctx, row, answers[0])
+		if err != nil {
+			return 0, err
+		}
+		if stray {
+			return e.askAboutAStrayAnswer(ctx, row, answers, servedModel, settled)
+		}
 		return e.applyJudged(ctx, row, answers[0].Verdict,
 			capture.MeasuredVerdict(float64(answers[0].Confidence), servedModel))
 	}
@@ -287,6 +319,18 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return 0, err
 	}
 	if len(retry) == 1 && clearsItsFloor(retry[0]) {
+		// The history guard binds here too. A first answer below the floor
+		// followed by a confident creating re-ask is the SAME contradiction the
+		// first-answer branch refuses, and checking only there would leave the
+		// guard reachable by being unsure once — which is the cheaper path for
+		// exactly the borderline sender it exists over.
+		stray, settled, err := e.strayAgainstItsOwnHistory(ctx, row, retry[0])
+		if err != nil {
+			return 0, err
+		}
+		if stray {
+			return e.askAboutAStrayAnswer(ctx, row, retry, retryModel, settled)
+		}
 		return e.applyJudged(ctx, row, retry[0].Verdict,
 			capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel))
 	}
@@ -294,170 +338,13 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// rather than by having quietly run out of attempts.
 	// The LAST answer travels with the retirement. A sender lands here because
 	// the model had an opinion it could not hold confidently enough — "it said
-	// person at 0.78 twice" is why a human is now being asked, and dropping it
+	// contact at 0.78 twice" is why a human is now being asked, and dropping it
 	// would hand them the question with none of the evidence.
 	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask",
 		lastMeasurement(retry, retryModel, answers, servedModel)); err != nil {
 		return 0, err
 	}
 	return 1, nil
-}
-
-// apply commits one verdict. The ledger resolution and whatever the verdict
-// causes share a transaction, so a row can never read `real` without the records
-// it promised, nor `noise` without the hiding it authorized.
-//
-// Resolve's compare-and-set decides who acts: only the caller that actually
-// closed the row runs the effect, which makes a replayed job or a raced sibling
-// a no-op rather than a second creation.
-func (e *CounterpartyVerdictEngine) apply(
-	ctx context.Context, row capture.PendingCounterparty, kind string, ownerSaidSo bool,
-	measured capture.VerdictMeasurement,
-) (bool, error) {
-	verdict, known := statusForKind(kind)
-	if !known {
-		return false, fmt.Errorf("verdict: %q is not a sender kind", kind)
-	}
-	var acted bool
-	var triageDomain string
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		// The owner's decision, re-read HERE rather than trusted from judgeOne.
-		//
-		// judgeOne reads it in a transaction of its own and then spends one or
-		// two model calls before this one opens. A person who answers during
-		// that gap was answered by a stale read: the contact half already
-		// re-checks under the person row lock, but the mail hide and the domain
-		// suppression ran on what was true before they spoke — so a seat who
-		// said "this is business" still had the sender's domain suppressed for
-		// the whole workspace.
-		fresh, err := capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
-		if err != nil {
-			return err
-		}
-		if ownerKind, spoke := kindForOverride(fresh); spoke && ownerKind != kind {
-			// They answered, and differently. THEIR answer is the one applied —
-			// the same one judgeOne would reach through ownerDecided on the next
-			// pass, taken now rather than leaving the row to wait out a backoff
-			// it was already leased under. Abandoning would have been a stall
-			// dressed as caution.
-			kind = ownerKind
-			if verdict, known = statusForKind(kind); !known {
-				return fmt.Errorf("verdict: owner decision maps to %q, which is not a sender kind", kind)
-			}
-			// The measurement described the MODEL's answer, and this is no
-			// longer the model's answer. Recording it against a decision a
-			// person made would put a confidence score on a human.
-			measured = capture.VerdictMeasurement{}
-		}
-		// An override that AGREES still makes this the owner's act rather than
-		// the model's — the domain suppression turns on that distinction.
-		ownerSaidSo = ownerSaidSo || fresh != ""
-
-		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo, measured)
-		if err != nil || !won {
-			return err
-		}
-		acted = true
-		// Exhaustive over verdictKinds, held by TestEveryVerdictKindHasAnEffect
-		// rather than by this comment: two kinds once reached the prompt with no
-		// arm here, and the claim of exhaustiveness is what stopped anybody
-		// checking. A `default` that fell through to hideNoise is how a new kind
-		// would silently start hiding real mail, so there is none.
-		switch kind {
-		case capture.KindPerson:
-			triageDomain, err = e.createCounterparty(ctx, tx, row)
-			return err
-		case capture.KindRoleMailbox, capture.KindOrganizationSender:
-			// Real correspondence with no human to name. The message stays
-			// visible; no contact is invented for a mailbox nobody owns.
-			return nil
-		case capture.KindNewsletter, capture.KindTransactional, capture.KindSpam:
-			// A seat's own `keep out` does NOT suppress the domain. The two
-			// statements are different sizes: the classifier calling a sender
-			// noise is a judgement about the sender, and suppressing their
-			// domain workspace-wide follows from it; a person saying "keep this
-			// out of my mail" is a statement about their own mailbox, and one
-			// rep who once received mail from a partner could otherwise refuse
-			// that company to every colleague — with a per-record person grant
-			// and no capture-settings grant at all.
-			//
-			// The mail hide still runs: it is what "keep out" means, and the
-			// noise scope already excludes anything a colleague corresponded
-			// with.
-			corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
-			if err != nil {
-				return err
-			}
-			if !ownerSaidSo {
-				if err := e.suppressSenderDomain(ctx, tx, row, kind, corresponds); err != nil {
-					return err
-				}
-			}
-			if err := e.hideNoise(ctx, tx, row); err != nil {
-				return err
-			}
-			// An address the workspace has provably written to keeps its
-			// record whatever the classifier called one message — the same
-			// bound the domain suppression draws, read once for both.
-			if corresponds {
-				return nil
-			}
-			return e.retractSendersContacts(ctx, tx, row, ownerSaidSo)
-		case capture.KindAdvisor:
-			// A genuine contact who is the OWNER's. The record is made — a
-			// founder's lawyer is somebody they correspond with — and stays
-			// owner-scoped, because publishing it to the workspace announces
-			// that the founder has a lawyer and what about.
-			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row)
-			return err
-		case capture.KindPersonal:
-			// No record at all: a family member is not a counterparty of the
-			// business. The mail itself is not destroyed here — the purge that
-			// does that is its own change, with an undo window in front of it —
-			// so this withholds the record and leaves the thread to the
-			// mailbox owner.
-			//
-			// hideNoise is deliberately NOT called. Its scope excludes every
-			// address the workspace has written to, which is every address this
-			// kind is ever about, so it would be a no-op that read like a hide.
-			return nil
-		}
-		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
-	})
-	if err != nil {
-		// The address is the only identifying detail here and it is already in
-		// this workspace's own timeline; the model's answer is not, so the
-		// verdict names what was being attempted without echoing content.
-		return false, fmt.Errorf("verdict: applying %s to %s: %w", verdict, row.Email, err)
-	}
-	// Post-commit, like the capture path's own trigger and for the same reason:
-	// the records are already durable, and queueing the read that decides their
-	// company must not be able to roll them back. A miss is the sweep's.
-	if triageDomain != "" && e.triage != nil {
-		e.triage.domainPending(ctx, triageDomain)
-	}
-	return acted, nil
-}
-
-// verdictReason is what the ledger records as the authority for a machine
-// disposition, distinguishing it from a T2 registry rule or a human decision.
-const verdictReason = "capture_counterparty_verdict"
-
-// hideNoise is the `noise` effect's first stage: the mail stops being visible
-// immediately, and its content is redacted later by the sweep (ADR-0072 §4's
-// hide-then-redact). The delay is the undo window — the whole reason a verdict
-// is allowed to hide anything is that a wrong one can still be taken back.
-func (e *CounterpartyVerdictEngine) hideNoise(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) error {
-	// The scope rule lives with the ledger (noiseMailScope): a verdict may only
-	// reach inbound, unattested, unlinked mail from an address the workspace has
-	// never written to. Resolved on the SAME transaction, so what is hidden is
-	// what was true when the verdict committed.
-	due, err := e.pending.NoiseMailForTx(ctx, tx, row.Email, noiseSweepBatch)
-	if err != nil {
-		return err
-	}
-	_, err = e.activities.HideCapturedNoiseTx(ctx, tx, due)
-	return err
 }
 
 // releaseBatch returns claimed rows to the queue when the pass stops before

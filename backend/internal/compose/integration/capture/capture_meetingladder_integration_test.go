@@ -23,7 +23,7 @@ package capture
 //
 // The bounds carry most of the weight. A meeting is caller-supplied data unless
 // something says otherwise: POST /activities takes the kind, the date and the
-// people from a request body, so an unbounded arm would let any seat mint a
+// contacts from a request body, so an unbounded arm would let any seat mint a
 // contact by logging a "meeting".
 
 import (
@@ -57,7 +57,7 @@ func TestTheGuestOnACapturedMeetingBecomesAContact(t *testing.T) {
 	syncMeeting(t, env, "meet1@partner.example")
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'guest@partner.example' AND p.archived_at IS NULL`); n != 1 {
 		t.Fatalf("%d contacts for somebody the workspace is meeting, want 1 — mail is evidence "+
 			"about intent, and a meeting is evidence about time: both sides put an hour in a "+
@@ -77,7 +77,7 @@ func TestOneOrdinaryMessageStillCreatesNobody(t *testing.T) {
 	sync(t, email(meetingGuest, "Guest Partner", captureOwner, "mail1@partner.example", ""))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'guest@partner.example' AND p.archived_at IS NULL`); n != 0 {
 		t.Fatalf("%d contacts from a single ordinary message, want 0 — one send is intent, "+
 			"and a meeting is what this change admits, not any message at all", n)

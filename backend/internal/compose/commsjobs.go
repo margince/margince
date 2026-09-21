@@ -32,6 +32,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
+// commsSendQueue isolates transmission from the default queue.
+//
+// A send became long and outbound-bound when it started carrying files: the
+// upload's request budget is three minutes, because a 20 MiB album cannot cross
+// the wire in thirty seconds. On the shared queue five concurrent sends held
+// every worker for minutes, and that queue also carries Telegram polls, capture
+// syncs and close-date jobs — so a burst of large sends made inbound capture
+// late and nothing said why.
+//
+// jobqueues' own posture was written for this category: the AI-capture pool's
+// reason names "delay sends, Telegram polls, and capture syncs" as the thing to
+// avoid, and the send had since joined the set it was avoiding.
+//
+// THREE rather than deep read's two. A crawl is a background sweep; a send is a
+// message somebody pressed a button for and is waiting on, so the pool is wide
+// enough that an ordinary text send is not queued behind two album uploads.
+const (
+	commsSendQueue      = "comms_send"
+	commsSendMaxWorkers = 3
+)
+
 // SendEmailArgs transmits ONE staged delivery. The workspace travels with it
 // because comms_outbound reads are workspace-predicated and a job carries no
 // session: the worker binds this workspace before the dispatcher reads
@@ -77,14 +98,14 @@ const minSendSnooze = time.Second
 // there is nothing to deduplicate against — and a unique-by-args window would
 // silently drop the second of two legitimate sends staged in the same instant.
 //
-// No queue of its own either, unlike the deep-read and rate-refresh lanes. The
-// criterion those two were split out on is job LENGTH — a multi-minute crawl
-// evicting short maintenance work from the default pool. A send is the short
-// kind: one bounded network round trip, and a paced one snoozes rather than
-// holding its slot. It belongs with the default queue's other jobs, not with
-// the long ones.
+// The queue is named HERE and not only in the contract. comms_send_email is
+// opts_owner: caller, which makes api/jobs.yaml's `queue:` a description of
+// where the rows are meant to land rather than the thing that puts them there;
+// River reads this struct. An InsertOpts naming no queue is River's own
+// default, so leaving it out would keep the send on the shared pool however
+// the contract reads.
 func sendInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{MaxAttempts: sendMaxAttempts}
+	return &river.InsertOpts{Queue: commsSendQueue, MaxAttempts: sendMaxAttempts}
 }
 
 // deliveryDispatcher is the one attempt the worker drives. It exists so the
@@ -130,10 +151,7 @@ func SendWorkerContext(ctx context.Context, workspaceID ids.UUID) context.Contex
 // comes from the job args' own role declaration, which refuses a zero id — a
 // guarantee re-binding here would quietly discard.
 func sendWorkerScope(wsCtx context.Context) context.Context {
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:comms-send",
-	})
-	return principal.WithCorrelationID(wsCtx, ids.NewV7())
+	return principal.SystemActing(wsCtx, "system:comms-send")
 }
 
 func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs]) error {
@@ -370,7 +388,12 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 		// options rather than the constant, so the two cannot be changed
 		// apart: there is exactly one place the ladder length is declared.
 		sendInsertOpts().MaxAttempts,
-	), relay, vault)}
+		// What the jurisdiction demands of the composed message, checked on the
+		// bytes about to leave rather than on the code that should have put
+		// them there. Injected here for the reason the consent gate is: this is
+		// the one construction every send goes through, so no surface can end
+		// up with a dispatcher that checks nothing and looks green doing it.
+	).WithRequirementChecker(requirementCheckerFor(pool)), relay, vault)}
 }
 
 // controllerLaneOn gives the dispatcher the transport for the installation's own
@@ -379,7 +402,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 // A role with no relay gets the dispatcher unchanged, and a controller delivery
 // it picks up parks with a reason naming the missing relay. That is the honest
 // outcome: an unconfigured relay is a deployment fact, and retrying it forever
-// would leave a person's confirmation link expiring in a queue nobody watches.
+// would leave a contact's confirmation link expiring in a queue nobody watches.
 func controllerLaneOn(d *comms.Dispatcher, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	if relay == nil || vault == nil {
 		return d

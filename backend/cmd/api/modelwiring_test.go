@@ -214,7 +214,7 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 // answering from a model.
 var coldStartSurfaces = []string{
 	"cold-start", "scrape", "morning brief", "account brief", "company dossier",
-	"growth fit", "reply draft", "account draft", "person draft", "lead draft",
+	"growth fit", "reply draft", "account draft", "contact draft", "lead draft",
 	"next move", "meeting brief", "relationship brief", "role proposals",
 	"intro request", "intro note",
 }
@@ -254,7 +254,7 @@ func TestOfferDraftOptionsRespectsResolvedPath(t *testing.T) {
 // TestVatCheckEnqueueOptionsRespectsConfiguredBaseURL pins that the api role
 // must not queue a consultation no worker in the installation will ever
 // service: an unconfigured installation binds no enqueue at all, so
-// people.ErrNoVatRegisterConfigured is what a request meets instead.
+// contacts.ErrNoVatRegisterConfigured is what a request meets instead.
 func TestVatCheckEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
 	if got := vatCheckEnqueueOptions(nil, ""); got != nil {
 		t.Fatalf("vatCheckEnqueueOptions(unconfigured) = %d options, want 0", len(got))
@@ -291,7 +291,7 @@ func TestJobEnqueueOptionsGatesVatCheckOnConfiguredBaseURL(t *testing.T) {
 // the api used to wire the coordinate-lookup enqueue unconditionally, so an
 // installation that set MARGINCE_GEOCODE_BASE_URL on the worker alone queued a
 // lookup for every address write and the worker answered each with
-// people.GeocodeFailed — a confident wrong answer about why geocoding does not
+// contacts.GeocodeFailed — a confident wrong answer about why geocoding does not
 // work.
 func TestGeocodeEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
 	if got := geocodeEnqueueOptions(nil, ""); got != nil {

@@ -28,7 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
@@ -36,22 +36,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// CheckOrganizationVatArgs is one queued consultation: the tenant and the
+// CheckCompanyVatArgs is one queued consultation: the tenant and the
 // company.
 //
 // The NUMBER IS NOT among them, deliberately. The worker reads it from the row
 // when it runs, so a consultation queued before a correction asks about the
 // number the company actually states rather than the one it stated when the job
 // was made. A copy in the args would be a receipt for the wrong number.
-type CheckOrganizationVatArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
-	// Requested marks a consultation a PERSON asked for, and it does two things
+type CheckCompanyVatArgs struct {
+	Workspace ids.UUID `json:"workspace_id"`
+	CompanyID ids.UUID `json:"company_id"`
+	// Requested marks a consultation a CONTACT asked for, and it does two things
 	// that both matter.
 	//
 	// It tells the worker to ask even when the stored answer already names this
 	// number: the automatic lanes ask only about a number they have not seen,
-	// because nothing re-reads a website on a schedule either, but a person
+	// because nothing re-reads a website on a schedule either, but a contact
 	// pressing the button has said the stored answer is not good enough.
 	//
 	// It also makes the args DIFFER from a write-queued job's, which is what
@@ -62,10 +62,10 @@ type CheckOrganizationVatArgs struct {
 }
 
 // Kind is the stable job identifier River persists in river_job.
-func (CheckOrganizationVatArgs) Kind() string { return "check_organization_vat" }
+func (CheckCompanyVatArgs) Kind() string { return "check_company_vat" }
 
 // WorkspaceID binds this consultation to its tenant (jobs.WorkspaceScoped).
-func (a CheckOrganizationVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
+func (a CheckCompanyVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // vatCheckQueue is declared in api/jobs.yaml at one worker; the name is spelled
 // here because the insert has to name it.
@@ -81,17 +81,17 @@ const (
 	vatCheckMaxAttempts = 3
 )
 
-// VatCheckEnqueueFor builds the in-transaction enqueue the people store calls
+// VatCheckEnqueueFor builds the in-transaction enqueue the contacts store calls
 // when a VAT number is written.
 //
 // Nil-safe by contract, and nil is a real composition: a deployment that checks
 // no VAT numbers writes the number and queues nothing. The number is what the
 // page stated; the verification is what this installation can offer.
-func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
+func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) contacts.VatCheckEnqueue {
 	if enqueue == nil {
 		return nil
 	}
-	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, requested bool) error {
+	return func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, requested bool) error {
 		ws, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			// No tenant bound means no job that could ever be worked: River
@@ -99,10 +99,10 @@ func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
 			// dequeues. Refusing is louder than inserting an orphan.
 			return errors.New("compose: checking a company's VAT number outside any workspace")
 		}
-		return enqueue.EnqueueTx(ctx, tx, CheckOrganizationVatArgs{
-			Workspace:      ws,
-			OrganizationID: orgID.UUID,
-			Requested:      requested,
+		return enqueue.EnqueueTx(ctx, tx, CheckCompanyVatArgs{
+			Workspace: ws,
+			CompanyID: companyID.UUID,
+			Requested: requested,
 		}, vatCheckInsertOpts())
 	}
 }
@@ -137,7 +137,7 @@ func vatCheckInsertOpts() *river.InsertOpts {
 // answerable, and a worker that was never registered leaves it stuck rather
 // than recorded.
 type vatCheckWorker struct {
-	river.WorkerDefaults[CheckOrganizationVatArgs]
+	river.WorkerDefaults[CheckCompanyVatArgs]
 	pool    *pgxpool.Pool
 	checker vatcheck.Checker
 	clock   func() time.Time
@@ -162,7 +162,7 @@ func newVatCheckWorker(pool *pgxpool.Pool, checker vatcheck.Checker, clock func(
 // failure, and a company whose stated number is not real is exactly the finding
 // this lane exists to surface — forgetting it would re-ask forever and tell
 // nobody.
-func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizationVatArgs]) error {
+func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVatArgs]) error {
 	args := job.Args
 	// Bound through the shared helper, so the args' own WorkspaceID() IS the
 	// binding: a worker that picked its own could claim one workspace and work
@@ -172,16 +172,16 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = vatCheckJobActor(wsCtx)
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
-	orgID := ids.From[ids.OrganizationKind](args.OrganizationID)
+	companyID := ids.From[ids.CompanyKind](args.CompanyID)
 
-	number, ok, err := store.VatNumberForCheck(wsCtx, orgID)
+	number, ok, err := store.VatNumberForCheck(wsCtx, companyID)
 	if err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
 	}
-	// A person who pressed the button asked for THIS consultation, so the only
+	// A contact who pressed the button asked for THIS consultation, so the only
 	// thing that stops it is the company stating no number at all. The staleness
 	// rule the automatic lanes obey is about not spending the installation's
 	// shared rate on questions nobody asked; this one was asked.
@@ -216,11 +216,11 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 		// or retried rather than written (below), so this branch was the only
 		// producer of that status and the distinction it protected was never
 		// visible to anybody.
-		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
-			OrganizationID: orgID,
-			Number:         number,
-			Status:         people.VatCheckInvalid,
-			CheckedAt:      w.clock(),
+		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, contacts.VatCheck{
+			CompanyID: companyID,
+			Number:    number,
+			Status:    contacts.VatCheckInvalid,
+			CheckedAt: w.clock(),
 		}))
 	}
 	var refused *vatcheck.ProviderRefusedError
@@ -242,10 +242,10 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 	if consultedAt.IsZero() {
 		consultedAt = w.clock()
 	}
-	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
-		OrganizationID:     orgID,
+	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, contacts.VatCheck{
+		CompanyID:          companyID,
 		Number:             number,
-		Status:             people.VatCheckStatus(result.Status),
+		Status:             contacts.VatCheckStatus(result.Status),
 		ConsultationNumber: result.ConsultationNumber,
 		RegisteredName:     result.Name,
 		RegisteredAddress:  result.Address,
@@ -268,12 +268,12 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckOrganizat
 func WithVatChecking(inserter *jobs.Runner) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		enqueue := VatCheckEnqueueFor(inserter)
-		// BOTH, because they are two stores: the services read s.peopleStore
+		// BOTH, because they are two stores: the services read s.contactsStore
 		// and the HTTP transport carries its own. Wiring one would leave every
 		// VAT number a rep corrects unchecked with nothing coming to ask.
-		s.peopleStore = s.peopleStore.WithVatCheckEnqueue(enqueue)
+		s.contactsStore = s.contactsStore.WithVatCheckEnqueue(enqueue)
 		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
-		s.peopleHandlers = s.peopleHandlers.WithVatCheckEnqueue(enqueue)
+		s.contactsHandlers = s.contactsHandlers.WithVatCheckEnqueue(enqueue)
 		// And every store compose builds from a pool — the approval effects,
 		// the capture sink, the verdict engine — which is where a site read's
 		// accepted VAT number actually lands.
@@ -281,7 +281,7 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 	}
 }
 
-// vatCheckBinding is the enqueue every people.Store built inside compose picks
+// vatCheckBinding is the enqueue every contacts.Store built inside compose picks
 // up, held at package scope for the reason WithVatChecking cannot cover.
 //
 // The Option wires the two stores the SERVER holds. The approval effects — the
@@ -293,14 +293,14 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 // meant the main path queued nothing at all.
 var vatCheckBinding struct {
 	mu      sync.RWMutex
-	enqueue people.VatCheckEnqueue
+	enqueue contacts.VatCheckEnqueue
 }
 
 // BindVatChecking records the enqueue for every store compose builds from a
 // pool. Called once at boot by the role that queues, after the job runner
 // exists. A nil enqueue is a deployment that checks no VAT numbers, and every
 // such store then writes the number and queues nothing.
-func BindVatChecking(enqueue people.VatCheckEnqueue) {
+func BindVatChecking(enqueue contacts.VatCheckEnqueue) {
 	vatCheckBinding.mu.Lock()
 	defer vatCheckBinding.mu.Unlock()
 	vatCheckBinding.enqueue = enqueue
@@ -309,7 +309,7 @@ func BindVatChecking(enqueue people.VatCheckEnqueue) {
 // boundVatCheckEnqueue reads the binding. Read per STORE rather than captured
 // once, so the ordering between binding and building a store cannot matter —
 // only the ordering against the first write, which is after boot either way.
-func boundVatCheckEnqueue() people.VatCheckEnqueue {
+func boundVatCheckEnqueue() contacts.VatCheckEnqueue {
 	vatCheckBinding.mu.RLock()
 	defer vatCheckBinding.mu.RUnlock()
 	return vatCheckBinding.enqueue
@@ -319,8 +319,5 @@ func boundVatCheckEnqueue() people.VatCheckEnqueue {
 // made on the deployment's own behalf, under its own VAT number, and no user
 // asked for it.
 func vatCheckJobActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:vatcheck",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:vatcheck")
 }

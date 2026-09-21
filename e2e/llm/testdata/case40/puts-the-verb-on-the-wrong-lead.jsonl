@@ -1,0 +1,5 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__qualify_lead", "mcp__margince__promote_lead", "mcp__margince__disqualify_lead"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__qualify_lead", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__promote_lead", "input": {"trigger": "inbound_reply"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__disqualify_lead", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I promoted Bruno to a contact. I disqualified Ines. I wrote off Piet Brandsma.\n\nBrandsma Koeltechniek came off the mail domain, and the title is still missing."}

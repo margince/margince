@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import {
   type DecisionApproval,
@@ -19,7 +20,7 @@ import { AutonomyDot } from "./trust";
 // of time, and one that came back carrying nothing to read at all.
 //
 // Check every frame in BOTH themes. The urgency band is a `color-mix()` over
-// `--warn` and `--danger`, and the ground under it is the staged card's
+// `--warning` and `--danger`, and the ground under it is the staged card's
 // `--aiLight` tint — every one of those re-resolves when the theme flips, so a
 // band that reads clearly on paper can vanish on the dark surface.
 const meta: Meta<typeof DecisionCard> = {
@@ -183,7 +184,75 @@ export const Row: Story = {
   },
 };
 
-// Under six hours: the edge takes the warn tone. The countdown badge is the
+// The row at LIST DENSITY: one line, and the proposal behind the line's own
+// control. It is the same decision and the same verbs — Accept and Later keep
+// their words, a rejection and an edit go in the menu — so what changes is how
+// much of it stands open, which is why this is a density and not a layout.
+//
+// Check the line in BOTH themes at a narrow width: the question is the only
+// thing on it allowed to be clipped, and a chip that gave way instead would
+// lose the word that carries the claim.
+export const CompactRow: Story = {
+  args: {
+    ...Deck.args,
+    layout: "row",
+    compact: { detail: "What is being proposed", more: "Other answers" },
+  },
+};
+
+// The same row with its proposal open. The popover is portalled beside the
+// line, so opening one row moves no other row's verbs — which is the whole
+// reason it is not a fold.
+export const CompactRowOpen: Story = {
+  args: CompactRow.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The panel is portalled to the body, so the frame is the OPEN row rather
+    // than the panel — which is what a reader of the catalog is checking here.
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "What is being proposed" }),
+    );
+  },
+};
+
+/**
+ * The compact row at a PHONE's width, where it cannot be one line and must not
+ * pretend to be: the question takes the first line, the chips and the verbs
+ * take the second, and nothing is clipped or pushed off the pane.
+ *
+ * `uat-phone` is what drives the capture gate's browser to 390px. Storybook's
+ * own viewport is applied by the MANAGER, which the gate's bare `iframe.html`
+ * never runs — so without the tag this would be captured at desktop width and
+ * would picture the very layout it exists to rule out.
+ */
+export const CompactRowPhone: Story = {
+  args: CompactRow.args,
+  tags: ["uat-phone"],
+  // The panel's own inset, so the row folds where it would on a real surface
+  // rather than against the viewport edge — and `fullscreen` keeps the
+  // catalog's own frame off it, because 390px less two frames is not a width
+  // any reader has.
+  decorators: [
+    (Story) => (
+      <div style={{ padding: "var(--padPanel)" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  parameters: { layout: "fullscreen" },
+};
+
+// A lapsed compact row. The verbs are gone — a control whose only possible
+// answer is a refusal is worse than none — and the row says so on the line,
+// where they were.
+export const CompactRowExpired: Story = {
+  args: {
+    ...CompactRow.args,
+    approval: approval({ expires_at: new Date(NOW - HOUR).toISOString() }),
+  },
+};
+
+// Under six hours: the edge takes the warning tone. The countdown badge is the
 // caller's, and it reads the same thresholds — check that the two agree.
 export const ExpiringSoon: Story = {
   args: {
@@ -235,7 +304,7 @@ export const FieldChange: Story = {
         "A mail from Helvetia Rail ended the contract, so this account looks like a former customer.",
       confidence: 0.62,
       proposed_change: {
-        organization_id: "0198c3aa-7f10-7bbb-8888-000000000042",
+        company_id: "0198c3aa-7f10-7bbb-8888-000000000042",
         current_lifecycle: "customer",
         proposed_lifecycle: "former_customer",
         because: "the framework agreement was not renewed for 2027",
@@ -289,7 +358,7 @@ const CLOSE_DATE_META = (
 // story shows the CARD, so it hands over finished strings the way the screen
 // does rather than importing the screen's vocabulary. The date appears once
 // because the sweep proposes the date the deal already carries — it keeps the
-// date on a stale deal and asks a person instead of guessing a new one — and
+// date on a stale deal and asks a contact instead of guessing a new one — and
 // two captions over one value is not a comparison.
 export const DeclaredFields: Story = {
   args: {
@@ -364,7 +433,7 @@ export const VerdictInFlight: Story = {
   args: { ...Deck.args, pending: true },
 };
 
-// The payload came back with nothing a person can read. `empty` is the one
+// The payload came back with nothing a human can read. `empty` is the one
 // state allowed to say "there is none", and the card says it in the caller's
 // words rather than drawing a blank body that reads as a render fault.
 export const NothingToRead: Story = {

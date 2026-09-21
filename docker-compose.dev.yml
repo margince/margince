@@ -1,0 +1,249 @@
+# The dev/test infrastructure stack. `make db-up` brings it up (and applies
+# scripts/db-init.sql on top for the non-owner app role); `make clean` tears
+# it down including data. Ports and credentials are a contract shared with
+# the backend Makefile's MARGINCE_TEST_* defaults, scripts/dev.sh, and CI's
+# service containers — change them everywhere or nowhere.
+#
+# Every host port here MUST stay below 32768. That is the floor of Linux's
+# default ephemeral range (32768–60999, `sysctl net.ipv4.ip_local_port_range`),
+# which the kernel draws from for the SOURCE port of any outbound connection.
+# A port in that range is not ours to bind: any unrelated process on the host —
+# a docker pull, `go mod download`, the CI runner's own agent — can transiently
+# hold it as a client port, and compose then dies with
+# `failed to bind host port for 0.0.0.0:<port>: address already in use`.
+# It is a race, so it presents as a flake that names whichever step happened to
+# call `make db-up`. The numbers below keep the "port with a prefix digit" shape
+# of the originals (55432/56379/59000/59001) while putting the class of failure
+# out of reach; do not renumber back upward. `make check-host-ports` enforces
+# the floor, because the constraint is invisible in the number itself.
+#
+# The second constraint the floor does not cover: scripts/dev.sh spends two
+# spans of its own. The primary worktree's stack is fixed at 8080/18080, and
+# every other worktree CLAIMS a pair from 8081–8179 and 18081–18179 — so
+# 8080–8179 and 18080–18179 are both spoken for, reliably rather than
+# probabilistically. That is why MinIO is 29000/29001 rather than the
+# 19000/19001 the prefix pattern would suggest.
+#
+# The spans used to be 8080–9079 and 18080–19079, because a stack derived its
+# port from `8080 + (cksum(slug) % 1000)`. Claiming replaced hashing — a hash
+# gave two stacks different ports and the same Redis database whenever the two
+# hashes differed by a multiple of the block size, which no port check could
+# see — and the claimed range is narrower, so this is more headroom below
+# 29000 than before, never less.
+#
+# Images are digest-pinned to the multi-arch INDEX digest (works on both
+# arm64 dev machines and amd64 CI — CI's integration lane runs this same
+# compose file via `make db-up`, so these are the only pins). Bump tag and
+# digest together. The check-image-pins gate fails a floating tag here.
+#
+# The project name namespaces this stack's volumes, so it may not collide with
+# a name any earlier stack used: Postgres skips initdb on a non-empty volume,
+# and the owner role would then silently never be created. `margince-dev` is
+# spent — the frozen poc-era stack left `margince-dev_*` volumes behind on
+# every machine that ran it. `margince` is clear of both that stack and the
+# `margince-poc-v1_*` volumes this one used before the repository was renamed;
+# those older volumes are now orphaned, so the first `make db-up` after this
+# change builds a fresh database.
+name: margince
+
+services:
+  postgres:
+    # pgvector ships inside the Postgres image: the search module's hybrid
+    # retrieval needs the extension available at migrate time.
+    image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
+    # max_locks_per_transaction sizes the CLUSTER-WIDE lock table, not a
+    # per-transaction budget: the instance gets
+    # max_locks_per_transaction × (max_connections + max_prepared_transactions)
+    # heavyweight lock slots, shared by every backend, fixed at startup. A
+    # transaction that cannot get a slot does not queue — it fails outright with
+    # `out of shared memory (SQLSTATE 53200)`.
+    #
+    # The integration lane's demand is not incidental, it is the lane's shape.
+    # scripts/test-integration-parallel.sh runs INTEGRATION_JOBS packages at
+    # once (8 in CI), each against its own clone of THIS instance, and each
+    # resets between tests by emptying every table in public + ext inside ONE
+    # transaction — deliberately one, so a reset is atomic (see
+    # backend/internal/platform/testdb/reset.go). A lock is taken per RELATION,
+    # every table AND every index, so a ~620-table schema costs well over a
+    # thousand, and an atomic whole-schema reset cannot cost less. Against the
+    # stock default's 64 × 100 = 6,400 slots the lane is simply over budget, and
+    # the shortfall is what made three unrelated suites fail on 53200 in one CI
+    # shard.
+    #
+    # 512 × 100 = 51,200 slots, so schema growth and a higher INTEGRATION_JOBS do
+    # not immediately re-cross it. Slots are a few hundred bytes each: this costs
+    # single-digit megabytes of shared memory reserved at boot.
+    #
+    # This is headroom, NOT the fix. The fix is that no single transaction holds
+    # the whole schema: EnsureSchema's `DROP SCHEMA public CASCADE` was one
+    # 4,999-lock statement — 78% of the stock instance in one go, so two callers
+    # could never coexist — and reset.go now takes it apart into bounded steps.
+    # Raise this ceiling to paper over a new whole-schema transaction and the
+    # next twenty tables will re-cross it.
+    # max_connections is the SAME lane and the same shape of demand, and until
+    # #1109 it was the one number here nobody had ever set: the stock 100.
+    #
+    # The demand is a product, exactly as the lock demand above is, and
+    # scripts/lib-testdb.sh is where its terms are declared — this number is
+    # their sum, not a round figure chosen to be comfortable:
+    #
+    #   INTEGRATION_JOBS                    8   (.github/workflows/_lane-integration.yml)
+    #   x LANE_CONNS_PER_PACKAGE           24   two pools at LANE_POOL_MAX_CONNS=8,
+    #                                           plus 8 for what the pin does not
+    #                                           reach — see the term's own note
+    #   + one admin connection per slot     1   CREATE/DROP DATABASE at a handover
+    #   ------------------------------------
+    #      8 x (24 + 1)                  = 200
+    #   + LANE_FIXED_CONNS                  8   template migrate 2, superuser
+    #                                           reserve 3, an operator's psql 3
+    #   ------------------------------------
+    #                                    = 208
+    #
+    # This number stays at 408, which is that sum at the SIXTEEN jobs the lane
+    # ran until the memory finding in #5483 brought it to eight. It is left above
+    # the demand deliberately, and it is the one place in this block where the
+    # figure is not the sum: the gate below holds `demand <= max_connections`,
+    # the direction that actually fails a lane, and cutting capacity in the same
+    # change that cut demand would mean a later INTEGRATION_JOBS going back up
+    # re-crosses two ceilings at once instead of one gate.
+    #
+    # Measured, so the terms are not guesses: at INTEGRATION_JOBS=16 the whole
+    # cluster peaks at 86 backends and one package at 16, sampled every 100ms
+    # from OUTSIDE the lane's transactions — a sample taken inside one is frozen
+    # for that transaction's lifetime and under-reports. The gap between 85 and
+    # 408 is the point: the ceiling is what has to fit, because whether a run
+    # stays near its average is decided by how the bursts overlap, which is the
+    # entire content of #1109.
+    #
+    # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/gates/laneconnbudget_test.go)
+    # reads INTEGRATION_JOBS from the workflow and this number from this file, and
+    # asks the lane script's own declare_lane_budget for the sum rather than
+    # re-implementing it. It fails `make check` when the two stop fitting. Raising INTEGRATION_JOBS without raising this is
+    # therefore a red gate rather than a lane that fails somewhere else.
+    #
+    # Capacity is only half of it. The per-package ceiling is PINNED as well:
+    # the lane exports MARGINCE_TEST_POOL_MAX_CONNS and testdb applies it when it
+    # builds a pool, so the demand is a known number rather than whatever
+    # database.NewPool falls back to. It travels as an environment variable and
+    # NOT in the clone DSNs, because cmd/migrate and every bare pgx connection a
+    # fixture opens parse those same DSNs with pgx.ParseConfig, which forwards an
+    # unknown pool_* key to the server as a startup parameter and fails the
+    # connection. Capacity alone would leave the two numbers free to drift apart.
+    #
+    # ⚠ This raises the LOCK budget too, because the product above is
+    # max_locks_per_transaction x (max_connections + max_prepared_transactions):
+    # 512 x 408 = 208,896 slots. Checked rather than assumed, because a change
+    # that fixes connects and reintroduces SQLSTATE 53200 has moved the failure
+    # rather than fixed it: the server reports shared_memory_size = 230MB at 408
+    # and 204MB at 280, so each 128 connections costs ~26MB of shared memory
+    # taken at boot. It is
+    # also the direction that HELPS: a whole-schema reset needs more lock slots,
+    # not fewer. Lower max_connections and that product falls with it, and the
+    # 53200 the comment above is about comes back.
+    # /dev/shm, which is where this image puts every DYNAMIC shared memory
+    # segment (dynamic_shared_memory_type=posix). Docker's default for it is
+    # 64MB, and that default is not sized for the settings above: a parallel
+    # index build or maintenance pass asks for a 32MB segment in one go, and
+    # against 64MB shared with everything else already mapped there it fails
+    # with `could not resize shared memory segment ... No space left on device
+    # (SQLSTATE 53100)`. The failure lands wherever the lane happens to be —
+    # observed here as `make test-it` dying inside pgmigrate, on a different
+    # migration each run — so it does not name its own cause, which is why it
+    # is written down rather than left in the number.
+    #
+    # 1g is headroom, not a tuned figure: it is far above anything the lane has
+    # been seen to ask for, and /dev/shm is a tmpfs, so an unused gigabyte
+    # costs nothing. Raise it, never lower it — the setting only ever binds
+    # when something needs a segment, and the symptom of it binding is an
+    # unrelated-looking migration failure.
+    shm_size: 1g
+    command:
+      - postgres
+      - -c
+      - max_locks_per_transaction=512
+      - -c
+      - max_connections=408
+    environment:
+      POSTGRES_USER: margince_owner
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: margince
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Probe over TCP, never the unix socket: on first boot the entrypoint's
+      # temporary bootstrap server (initdb + init scripts) serves ONLY the
+      # socket, so a socket probe reports ready inside the window where that
+      # server is torn down before the real one starts — and a psql that
+      # trusts compose's Healthy lands on a missing socket. The TCP listener
+      # exists only on the final server.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U margince_owner -d margince"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    # 7.2 is the newest Redis the product supports
+    # (docs/reference/system-requirements.md): 7.4 left the BSD license
+    # family. renovate.json holds this image below 7.3; digest updates
+    # within the 7.2 tag still flow, which is how patch releases arrive.
+    image: redis:7.2@sha256:6461ca4ac0c5c9d81d53685c3bf76aa81f464a9de6cf3a97b80a1da8d1bb1de4
+    # 64 logical dbs, not the default 16. The integration lane gives each package
+    # its own db so two packages can never share one — several of them FLUSHDB
+    # between tests, which makes a shared db a silent corruption rather than a
+    # slowdown. The lane has more packages than 16 and keeps growing; keep this
+    # in step with REDIS_DBS in scripts/test-integration-parallel.sh, which
+    # refuses to run rather than wrap the mapping.
+    # 80 logical databases, in three blocks that must not overlap:
+    #   0        bare `make dev`
+    #   1..63    the parallel integration lane, one per package
+    #            (REDIS_DBS in scripts/test-integration-parallel.sh,
+    #             testdb.RedisDBs — the two must agree)
+    #   64..79   per-worktree dev stacks, one per slug (scripts/dev.sh)
+    # A slug sharing a db with a test package would have its streams FLUSHDB'd
+    # mid-run, and the test would read a dev stack's events as its own.
+    command: ["redis-server", "--databases", "80"]
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # MinIO backs the blobstore seam (attachment/transcript object bytes).
+  # Host ports 29000 (S3 API) / 29001 (console)
+  # are part of the MARGINCE_TEST_BLOBSTORE_* contract shared with the backend
+  # Makefile and CI — change them everywhere or nowhere. No compose healthcheck:
+  # the minio image ships no curl, and platform/blobstore's New tolerates a
+  # not-yet-ready backend with a bounded connect retry and creates the bucket,
+  # so readiness is the store's job, not compose's.
+  minio:
+    # FROM QUAY, NOT DOCKER HUB. The same manifest — the digest below is
+    # unchanged and pins the identical image — but `minio/minio` on Docker Hub
+    # now answers an anonymous pull with "denied: requested access to the
+    # resource is denied", so every CI job that starts this cluster failed at
+    # `db-up` before running a test. Quay is MinIO's own registry and serves
+    # this digest without credentials.
+    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    # :9001 is the CONTAINER-side port, which is what --console-address sets —
+    # the host number lives in `ports:` below and nowhere else. This read
+    # ":59001" until 2026-08-11, matching the host side of the old mapping, so
+    # the console listened on a container port nothing forwarded to and
+    # localhost:59001 was refused for as long as the console has existed. The S3
+    # API was unaffected (it defaults to :9000), which is why the lane never
+    # noticed.
+    command: server /data --console-address ":9001"
+    ports:
+      - "29000:9000"
+      - "29001:9001"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  pgdata: {}
+  minio-data: {}

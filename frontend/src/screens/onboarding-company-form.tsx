@@ -1,6 +1,14 @@
-import { Bot, Check, CheckCircle2, Circle, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, Circle, ShieldCheck } from "lucide-react";
+import { useId } from "react";
 import type { components } from "../api/schema";
-import { Textarea, TextInput } from "../design-system/atoms";
+import {
+  Checkbox,
+  Field,
+  Radio,
+  Textarea,
+  TextInput,
+} from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   ConfidenceMeter,
   confidenceLevel,
@@ -74,12 +82,14 @@ export function CompanyStep({
       {!embedded && (
         <>
           <div className="kick">{t("ob.s1.kick")}</div>
-          <h1 className="ttl">{t("ob.s1.title")}</h1>
+          <Heading size="xlarge" className="ttl">
+            {t("ob.s1.title")}
+          </Heading>
           <p className="ob-sub">{t("ob.s1.sub")}</p>
         </>
       )}
 
-      <div className="confirm-origin">
+      <div className="confirm-origin t-caption">
         <ShieldCheck aria-hidden />
         <span>
           {read
@@ -104,7 +114,10 @@ export function CompanyStep({
       )}
 
       {saveError && (
-        <div className="readfail warn" style={{ marginTop: "var(--space-3)" }}>
+        <div
+          className="readfail warning"
+          style={{ marginTop: "var(--space-3)" }}
+        >
           <span className="rfi">
             <Circle aria-hidden />
           </span>
@@ -175,8 +188,8 @@ export function CompanyStep({
               summary states what is selected, which is the only thing a
               human needs unless they want to change it. */}
           <summary>
-            <span className="seclabel">{t("ob.factsTitle")}</span>
-            <span className="facts-count">
+            <span className="t-eyebrow">{t("ob.factsTitle")}</span>
+            <span>
               {t("ob.factsSelected", {
                 selected: formatNumber(selectedFactKeys.length, locale),
                 total: formatNumber(read.facts.length, locale),
@@ -189,23 +202,20 @@ export function CompanyStep({
             {read.facts.map((fact) => {
               const selected = factSelection.isSelected(fact);
               return (
-                <button
+                <Checkbox
                   key={`${fact.field}:${fact.value_key}`}
-                  type="button"
                   className={`choice-card fact-card ${selected ? "selected" : ""}`}
-                  aria-pressed={selected}
+                  checked={selected}
                   disabled={saveDisabled(factSelection, selected)}
-                  onClick={() => factSelection.toggle(fact)}
-                >
-                  <span className="choice-check">
-                    {selected ? <Check aria-hidden /> : <Circle aria-hidden />}
-                  </span>
-                  <span>
-                    <b>{coldFieldLabel(fact.field, t)}</b>
-                    <span>{fact.value}</span>
-                    <small>{fact.evidence_snippet}</small>
-                  </span>
-                </button>
+                  onChange={() => factSelection.toggle(fact)}
+                  label={
+                    <span>
+                      <b>{coldFieldLabel(fact.field, t)}</b>
+                      <span>{fact.value}</span>
+                      <small>{fact.evidence_snippet}</small>
+                    </span>
+                  }
+                />
               );
             })}
           </div>
@@ -263,47 +273,52 @@ function LegalEntityChoice({
   onPick: (entity: CompanySiteReadLegalEntity) => void;
 }>) {
   const t = useT();
+  const group = useId();
   const entities = read?.legal_entities ?? [];
   if (entities.length < 2) {
     return null;
   }
   const chosen = draft.values.legal_name.trim();
   return (
-    <div className="legal-choice">
-      <div className="l">{t("ob.legalTitle")}</div>
+    // The plates answer ONE question, so they are radios — and a fieldset with
+    // the question as its legend is what the browser already exposes as the
+    // group they belong to.
+    <fieldset className="legal-choice">
+      <legend className="l">{t("ob.legalTitle")}</legend>
       <p className="ob-sub">{t("ob.legalSub")}</p>
       <div className="legal-grid">
         {entities.map((entity) => {
           const selected = chosen !== "" && chosen === entity.name;
           return (
-            <button
+            <Radio
               key={`${entity.name}-${entity.source_url}`}
-              type="button"
               className={`choice-card legal-card ${selected ? "selected" : ""}`}
-              aria-pressed={selected}
-              onClick={() => onPick(entity)}
-            >
-              <span className="choice-check">
-                {selected ? <Check aria-hidden /> : <Circle aria-hidden />}
-              </span>
-              <span>
-                <b>{entity.name}</b>
-                {entity.registered_address ? (
-                  <span>{entity.registered_address}</span>
-                ) : null}
-                {/* Both numbers, because either may be the only one a notice
-                    printed — and this is the moment a person tells two
-                    candidates apart. */}
-                {entity.register_number ? (
-                  <small>{entity.register_number}</small>
-                ) : null}
-                {entity.vat_number ? <small>{entity.vat_number}</small> : null}
-              </span>
-            </button>
+              name={group}
+              value={entity.name}
+              checked={selected}
+              onChange={() => onPick(entity)}
+              label={
+                <span>
+                  <b>{entity.name}</b>
+                  {entity.registered_address ? (
+                    <span>{entity.registered_address}</span>
+                  ) : null}
+                  {/* Both numbers, because either may be the only one a notice
+                      printed — and this is the moment a contact tells two
+                      candidates apart. */}
+                  {entity.register_number ? (
+                    <small>{entity.register_number}</small>
+                  ) : null}
+                  {entity.vat_number ? (
+                    <small>{entity.vat_number}</small>
+                  ) : null}
+                </span>
+              }
+            />
           );
         })}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -329,7 +344,6 @@ function CompanyFormField({
   onBlur: () => void;
 }>) {
   const t = useT();
-  const id = `co-${field}`;
   // A grounding can be real without carrying a score: a legal block the human
   // chose from the read's candidates has the page it was printed on and, when
   // the read captured one, a verbatim quote — but nothing ever measured a
@@ -340,57 +354,60 @@ function CompanyFormField({
   const level = confidenceLevel(grounded?.confidence);
   const snippet = grounded?.evidence_snippet;
   const quote = snippet !== undefined && snippet.trim() !== "" ? snippet : null;
-  // The design-system field shape (create.tsx RecordFormBody is the reference):
-  // .field + .t-label + .input/.textarea. The trust adornments (confidence,
-  // read-from-site, typed-by-you) ride the label; the evidence chip sits under
-  // the control. Onboarding gets no bespoke input styling — the form must read
-  // as the same product as every other screen.
+  // The design-system field, so onboarding gets no bespoke label, refusal or
+  // input styling — the form must read as the same product as every other
+  // screen. The trust adornments (confidence, read-from-site, typed-by-you)
+  // ride the label; the evidence chip sits under the control it is proof for,
+  // which is why it is rendered beside the control rather than after the field.
   return (
-    <div className="field">
-      <label className="t-label" htmlFor={id}>
-        {coldFieldLabel(field, t)}
-        {required ? " *" : ""} {level && <ConfidenceMeter level={level} />}
-        {grounded && (
-          <span className="rfprov">
-            <Bot aria-hidden /> {t("ob.readFromSite")}
-          </span>
-        )}
-        {edited && <ProvenanceTag provenance={{ kind: "human", self: true }} />}
-      </label>
-      {multiline ? (
-        <Textarea
-          id={id}
-          value={value}
-          required={required}
-          aria-invalid={error ? true : undefined}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-        />
-      ) : (
-        <TextInput
-          id={id}
-          value={value}
-          required={required}
-          aria-invalid={error ? true : undefined}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-        />
+    <Field
+      label={
+        <>
+          {coldFieldLabel(field, t)}{" "}
+          {level && <ConfidenceMeter level={level} />}
+          {grounded && (
+            <span className="rfprov">
+              <Bot aria-hidden /> {t("ob.readFromSite")}
+            </span>
+          )}
+          {edited && (
+            <ProvenanceTag provenance={{ kind: "human", self: true }} />
+          )}
+        </>
+      }
+      required={required}
+      error={error ?? undefined}
+    >
+      {(control) => (
+        <>
+          {multiline ? (
+            <Textarea
+              {...control}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={onBlur}
+            />
+          ) : (
+            <TextInput
+              {...control}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={onBlur}
+            />
+          )}
+          {grounded && quote !== null && (
+            <EvidenceChip
+              evidence={{
+                snippet: quote,
+                // source_url is carried only by url-sourced evidence; text and
+                // self-description evidence names its origin instead of
+                // linking.
+                source: grounded.source_url ?? t("ob.readFromSite"),
+              }}
+            />
+          )}
+        </>
       )}
-      {grounded && quote !== null && (
-        <EvidenceChip
-          evidence={{
-            snippet: quote,
-            // source_url is carried only by url-sourced evidence; text and
-            // self-description evidence names its origin instead of linking.
-            source: grounded.source_url ?? t("ob.readFromSite"),
-          }}
-        />
-      )}
-      {error && (
-        <div className="urlnote err">
-          <Circle aria-hidden /> {error}
-        </div>
-      )}
-    </div>
+    </Field>
   );
 }

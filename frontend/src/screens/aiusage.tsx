@@ -4,14 +4,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import {
-  Badge,
   Button,
   DataTable,
   Disclosure,
   EmptyState,
 } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -24,20 +22,10 @@ type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
 export type Month = { from: string; to: string };
 
-export function bandTone(band: string): "warn" | "danger" | undefined {
+export function bandTone(band: string): "warning" | "danger" | undefined {
   if (band === "normal") return undefined;
-  if (band === "degraded") return "warn";
+  if (band === "degraded") return "warning";
   return "danger";
-}
-
-function bandLabel(
-  band: AiUsage["budget"]["band"],
-  t: ReturnType<typeof useT>,
-) {
-  if (band === "degraded") return t("aiusage.band.degraded");
-  if (band === "queued") return t("aiusage.band.queued");
-  if (band === "normal") return t("aiusage.band.normal");
-  return t("aiusage.band.unknown");
 }
 
 // monthAround is the first and last day of the month `offset` months from the
@@ -102,6 +90,8 @@ function aggregate(days: AiUsage["days"]): UsageTask[] {
         (current.cached_hits ?? 0) + (task.cached_hits ?? 0);
       current.tokens_in += task.tokens_in;
       current.tokens_out += task.tokens_out;
+      current.unpriced_calls =
+        (current.unpriced_calls ?? 0) + (task.unpriced_calls ?? 0);
       if (task.cost_est_minor !== undefined) {
         current.cost_est_minor =
           (current.cost_est_minor ?? 0) + task.cost_est_minor;
@@ -126,7 +116,7 @@ function usageColumns(
     {
       key: "task",
       header: t("aiusage.col.task"),
-      render: (r: UsageTask) => r.task,
+      render: (r: UsageTask) => r.task_display_name ?? r.task,
     },
     {
       key: "tier",
@@ -186,12 +176,6 @@ function AiUsageBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const pct =
-    data.budget.monthly_tokens > 0
-      ? Math.round(
-          (data.budget.spent_tokens / data.budget.monthly_tokens) * 100,
-        )
-      : 100;
   const rows = useMemo(() => aggregate(data.days), [data.days]);
   const showCost = useMemo(
     () =>
@@ -205,31 +189,18 @@ function AiUsageBody({
     () => rows.reduce((sum, row) => sum + (row.cost_est_minor ?? 0), 0),
     [rows],
   );
+  // Calls that carried usage and no rate. Their spend is in the token columns
+  // and not in the total beside them, so the total is SHORT — and a money
+  // number that is short without saying so is the one a reader acts on: it is
+  // always the smaller figure, and nobody investigates a bill that looks
+  // cheaper than expected until it does not.
+  const unpricedCalls = useMemo(
+    () => rows.reduce((sum, row) => sum + (row.unpriced_calls ?? 0), 0),
+    [rows],
+  );
 
   return (
     <SettingList>
-      <SettingRow
-        layout="stack"
-        label={t("aiusage.budgetMeter")}
-        description={t("aiusage.budget", {
-          spent: formatNumber(data.budget.spent_tokens, locale),
-          budget: formatNumber(data.budget.monthly_tokens, locale),
-          pct: formatNumber(pct, locale),
-        })}
-        control={
-          <div className="settingrow-measure aiusage-budget">
-            <div className="aiusage-budget-bar">
-              {/* pct, not the raw token pair: a workspace with no monthly budget
-                  configured reads as fully spent (pct is 100 above), and the bar
-                  must say what the caption beside it says. */}
-              <Meter value={pct} max={100} label={t("aiusage.budgetMeter")} />
-            </div>
-            <Badge tone={bandTone(data.budget.band)}>
-              {bandLabel(data.budget.band, t)}
-            </Badge>
-          </div>
-        }
-      />
       <SettingRow
         label={t("aiusage.monthLabel")}
         control={
@@ -238,14 +209,12 @@ function AiUsageBody({
           // button moves it.
           <>
             <Button
-              small
               aria-label={t("aiusage.prevMonth")}
               onClick={() => onMonth(adjacentMonth(month, -1))}
             >
               ‹
             </Button>
             <Button
-              small
               aria-label={t("aiusage.nextMonth")}
               disabled={isCurrentMonth(month)}
               onClick={() => onMonth(adjacentMonth(month, 1))}
@@ -267,6 +236,14 @@ function AiUsageBody({
           showCost ? (
             <>
               {t("aiusage.costNote")} {formatMoney(totalCost, currency, locale)}
+              {unpricedCalls > 0 ? (
+                <>
+                  {" "}
+                  {t("aiusage.costPartial", {
+                    calls: formatNumber(unpricedCalls, locale),
+                  })}
+                </>
+              ) : null}
             </>
           ) : undefined
         }
@@ -296,7 +273,7 @@ function AiUsageBody({
       {data.days.length > 0 && (
         <Disclosure summary={t("aiusage.days.show")}>
           {data.days.map((day) => (
-            <p key={day.date} className="t-mono">
+            <p key={day.date} className="t-num">
               {day.date} ·{" "}
               {formatNumber(
                 day.tasks.reduce((sum, task) => sum + task.calls, 0),

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -41,7 +41,7 @@ type ColdField = components["schemas"]["ColdStartField"];
 const READ_ID = "018f3a1b-0000-7000-8000-0000000000b2";
 
 const savedProfile = {
-  organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+  company_id: "018f3a1b-0000-7000-8000-0000000000a1",
   display_name: "Gradion",
   website: "gradion.com",
   legal_name: "Gradion GmbH",
@@ -70,7 +70,7 @@ function grounded(
 const readingRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "reading",
   status_code: null,
@@ -84,7 +84,7 @@ const readingRead = {
   ],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,
@@ -322,12 +322,10 @@ async function chooseManual() {
   });
 }
 
+// The board asks one question at a time, so its answer box is the only text
+// entry on screen — found by what it IS rather than by the class it wears.
 async function answerManual(value: string) {
-  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-    ".ob-manual-input",
-  );
-  expect(input).not.toBeNull();
-  await userEvent.type(input as HTMLInputElement, value);
+  await userEvent.type(screen.getByRole("textbox"), value);
   await userEvent.click(screen.getByRole("button", { name: /Next question/ }));
 }
 
@@ -661,7 +659,7 @@ describe("the mandatory company minimum", () => {
     await screen.findByLabelText(/Your website address/);
     await chooseManual();
 
-    expect(screen.getByText("Your legal organization")).toBeTruthy();
+    expect(screen.getByText("Your legal company")).toBeTruthy();
     // Past the six optional legal facts to display_name, the one question in
     // this chapter that blocks the interview until it is answered.
     await skipManual();

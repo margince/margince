@@ -83,12 +83,12 @@ func setupIntro(t *testing.T) *introEnv {
 	// — which is what makes the unseen one below a real refusal rather than a
 	// caller who could not read any contact at all.
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, source, captured_by, owner_id)
+		`INSERT INTO contact (id, full_name, source, captured_by, owner_id)
 		 VALUES ($1, 'Dana Buyer', 'manual', 'test', $2)`, e.contact, e.requester); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, source, captured_by, owner_id)
+		`INSERT INTO contact (id, full_name, source, captured_by, owner_id)
 		 VALUES ($1, 'Someone Else', 'manual', 'test', $2)`, e.unseen, e.stranger); err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func (e *introEnv) asUser(u ids.UUID) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"introduction": {Create: true, Read: true, Update: true},
-				"person":       {Read: true},
+				"contact":      {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -126,7 +126,7 @@ func (e *introEnv) asUser(u ids.UUID) context.Context {
 
 func (e *introEnv) ask() NewRequest {
 	return NewRequest{
-		PersonID:       e.contact,
+		ContactID:      e.contact,
 		IntroducerUser: e.introducer,
 		RouteType:      "direct",
 		InternalReason: "Dana reopened the retrofit conversation after 41 days.",
@@ -341,6 +341,13 @@ func waitForLockOn(t *testing.T, e *introEnv, id ids.UUID) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
+		// pg_stat_activity is materialized once per transaction and cached
+		// until it ends, so a probe that did not clear it cannot see a backend
+		// that dialled after the snapshot was taken.
+		if _, err := e.owner.Exec(context.Background(),
+			`SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatalf("clearing the stats snapshot before probing: %v", err)
+		}
 		var waiting bool
 		// A backend blocked on a row lock in THIS database, while the ask still
 		// exists. pg_blocking_pids is the direct question — "is somebody stuck
@@ -392,9 +399,9 @@ func TestAStaleVersionCannotOverwriteAnAnswer(t *testing.T) {
 }
 
 // Naming a record is reading it, and the probe is strict: the contact must
-// EXIST and be live. Art. 17 erasure anonymizes a person in place and stamps
+// EXIST and be live. Art. 17 erasure anonymizes a contact in place and stamps
 // archived_at, so an ask that could still name the tombstone would keep a
-// erased person's name in front of a colleague.
+// erased contact's name in front of a colleague.
 //
 // Row scope is deliberately NOT what this holds. Customer identity is
 // workspace-readable here — every rep reads every contact — so the guard that
@@ -403,17 +410,17 @@ func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
 	e := setupIntro(t)
 
 	missing := e.ask()
-	missing.PersonID = ids.NewV7()
+	missing.ContactID = ids.NewV7()
 	if _, err := e.store.Create(e.asUser(e.requester), missing); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an ask about a contact that does not exist gave %v; want not-found", err)
 	}
 
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET archived_at = now() WHERE id = $1`, e.unseen); err != nil {
+		`UPDATE contact SET archived_at = now() WHERE id = $1`, e.unseen); err != nil {
 		t.Fatal(err)
 	}
 	erased := e.ask()
-	erased.PersonID = e.unseen
+	erased.ContactID = e.unseen
 	if _, err := e.store.Create(e.asUser(e.requester), erased); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an ask named an erased contact (%v)", err)
 	}
@@ -422,7 +429,7 @@ func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
 	// would otherwise leak: routing an ask THROUGH an erased contact.
 	through := e.ask()
 	through.RouteType = "through_contact"
-	through.ThroughPersonID = &e.unseen
+	through.ThroughContactID = &e.unseen
 	if _, err := e.store.Create(e.asUser(e.requester), through); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an ask routed through an erased contact (%v)", err)
 	}
@@ -439,10 +446,7 @@ func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
 // consumer could pretend to be.
 func (e *introEnv) asCapture() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:intro-advance",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:intro-advance")
 }
 
 // evidence seeds a real captured message and answers its id.
@@ -749,11 +753,11 @@ func TestAReplyReplacesTheHandshakesEvidence(t *testing.T) {
 // linkEvidence files a message under a contact, which is what Complete's
 // evidence check requires: an activity cited as proof has to be about the ask's
 // own contact.
-func linkEvidence(t *testing.T, e *introEnv, activity, person ids.UUID) {
+func linkEvidence(t *testing.T, e *introEnv, activity, contact ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, activity, person); err != nil {
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activity, contact); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -762,7 +766,7 @@ func linkEvidence(t *testing.T, e *introEnv, activity, person ids.UUID) {
 //
 // This is the whole reason the lane does not widen to `team` or `all`. An ask
 // names one colleague, and whose favour was asked for is between the two of
-// them until one answers — so the read is bound to the acting person rather
+// them until one answers — so the read is bound to the acting contact rather
 // than to a scope a manager could widen.
 func TestTheQueueCarriesOnlyTheAsksWaitingOnYou(t *testing.T) {
 	e := setupIntro(t)
@@ -849,7 +853,7 @@ func TestTheQueueLeadsWithTheAskAboutToLapse(t *testing.T) {
 	// A second contact, so the duplicate guard admits a second ask on the same
 	// colleague.
 	soonest := e.ask()
-	soonest.PersonID = e.unseen
+	soonest.ContactID = e.unseen
 	soonest.DueAt = testNow.AddDate(0, 0, 2)
 	soonID, err := e.store.Create(e.asUser(e.requester), soonest)
 	if err != nil {

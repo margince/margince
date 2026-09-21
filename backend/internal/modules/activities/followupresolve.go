@@ -8,7 +8,7 @@ package activities
 // remembers to tick a box the system created — so the system watches for
 // the loop actually closing and completes its own tasks. Registered as
 // SYSTEM workflows (always on, never a pausable user automation), the
-// same shape as people's lead-score recompute, and living here because
+// same shape as contacts's lead-score recompute, and living here because
 // the tasks are activity rows and completing one is this module's write.
 //
 // Only SYSTEM tasks (activity.source = 'system') are ever completed.
@@ -65,6 +65,42 @@ const systemCapturedBy = "system"
 // no caller can reach this pattern by writing one.
 const systemCapturedByPattern = systemCapturedBy + ":%"
 
+// NotSystemMinted renders "this row was not written by the product itself"
+// for one activity alias: captured_by is neither the bare system id nor any
+// job's namespaced form. It is the SQL twin of principal.SystemMintedID —
+// one namespace, two languages — spelled from the same pair of constants the
+// follow-up resolvers build their inclusion predicate from.
+//
+// A surface that ATTRIBUTES a task — "you promised", "a commitment is owed"
+// — excludes these rows with it; a surface that merely lists open work keeps
+// them, because a reminder is real work even though it is nobody's promise.
+//
+// The two values bind through the caller's own arg closure, the shape every
+// fragment helper in this module has; only the alias is formatted in, and it
+// is a compile-time literal at every call site, never input.
+func NotSystemMinted(alias string, arg func(any) int) string {
+	return fmt.Sprintf("NOT (%[1]s.captured_by = $%[2]d OR %[1]s.captured_by LIKE $%[3]d)",
+		alias, arg(systemCapturedBy), arg(systemCapturedByPattern))
+}
+
+// SystemMintedExpr is the same namespace test as a bare expression, for the
+// places a statement cannot bind a parameter — an ORDER BY, or a CASE inside
+// one.
+//
+// It is the positive form: true exactly where NotSystemMinted is false. Both
+// read the two constants above, so the three spellings of this one namespace
+// (here, the bound fragment, and principal.SystemMintedID in Go) move together
+// or not at all.
+//
+// The values are formatted in as SQL literals rather than bound, which is safe
+// for the same reason the pattern match itself is: both are compile-time
+// constants of this package, never input, and captured_by is server-stamped
+// from the authenticated principal.
+func SystemMintedExpr(alias string) string {
+	return fmt.Sprintf("(%[1]s.captured_by = '%[2]s' OR %[1]s.captured_by LIKE '%[3]s')",
+		alias, systemCapturedBy, systemCapturedByPattern)
+}
+
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
 // activity lands on the lead, or the lead leaves the open pool (promoted
@@ -85,7 +121,7 @@ func FollowUpWorkflows(store *Store) []workflow.Handler {
 const (
 	activityCapturedTrigger = "activity.captured"
 	// leadPromotedTrigger is the one trigger whose Apply also has to resolve
-	// by PERSON rather than by lead — see the comment on Apply for why.
+	// by CONTACT rather than by lead — see the comment on Apply for why.
 	leadPromotedTrigger     = "lead.promoted"
 	leadDisqualifiedTrigger = "lead.disqualified"
 )
@@ -163,30 +199,30 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		completed += done
 	}
 	// A PROMOTED lead is a different shape from a disqualified one.
-	// carryLeadActivities (people/promote.go) moves the follow-up task's
-	// link from the lead onto the person it became, inside the SAME
+	// carryLeadActivities (contacts/promote.go) moves the follow-up task's
+	// link from the lead onto the contact it became, inside the SAME
 	// transaction that emits this event — so the lead-keyed completion above
 	// never finds it once a lead has genuinely promoted; only the payload
 	// still names where the task went.
 	//
 	// It names the CARRIED ACTIVITIES, which is what makes both outcomes
 	// answerable by one rule. Completing "every open system task on the
-	// person" is exact for a freshly created person and wrong for a merge:
+	// contact" is exact for a freshly created contact and wrong for a merge:
 	// the survivor can already carry its own open system-minted reminders —
-	// no_activity_reminder and check_in_cadence anchor on a person the same
+	// no_activity_reminder and check_in_cadence anchor on a contact the same
 	// way a lead's follow-up does — so that reading would tick off work this
 	// promotion never touched, with an audit row claiming a follow-up
 	// happened that did not. Completing the ids the promotion actually moved
 	// is exact for both, because it is a fact about the promotion rather than
-	// about the person.
+	// about the contact.
 	//
-	// The person-keyed path stays for a payload written before the ids were
+	// The contact-keyed path stays for a payload written before the ids were
 	// carried, and stays gated on "created" there for exactly the reason
 	// above. A replayed old event is then no worse than it was.
 	if w.trigger == leadPromotedTrigger {
 		promoted, err := decodeLeadPromoted(ev.Payload)
 		if err != nil {
-			return workflow.RunResult{}, fmt.Errorf("decoding the promoted person: %w", err)
+			return workflow.RunResult{}, fmt.Errorf("decoding the promoted contact: %w", err)
 		}
 		done, err := w.completePromoted(ctx, promoted)
 		if err != nil {
@@ -202,44 +238,44 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 
 // completePromoted resolves the follow-ups one promotion carried.
 //
-// By the carried ids when the payload names them, and by the person only when
+// By the carried ids when the payload names them, and by the contact only when
 // it does not — see the call site for why the second is gated on a freshly
-// created person and the first needs no gate at all.
+// created contact and the first needs no gate at all.
 func (w followUpAutoResolve) completePromoted(
 	ctx context.Context, promoted promotedLead,
 ) (int, error) {
 	if len(promoted.CarriedActivityIDs) > 0 {
 		done, err := w.store.CompleteCarriedSystemTasks(ctx, promoted.CarriedActivityIDs)
 		if err != nil {
-			return 0, fmt.Errorf("resolving the follow-ups carried onto person %s: %w",
-				promoted.PersonID, err)
+			return 0, fmt.Errorf("resolving the follow-ups carried onto contact %s: %w",
+				promoted.ContactID, err)
 		}
 		return done, nil
 	}
 	if promoted.DedupeOutcome != dedupeOutcomeCreated {
 		return 0, nil
 	}
-	done, err := w.store.CompleteOpenSystemTasksForPerson(ctx, promoted.PersonID)
+	done, err := w.store.CompleteOpenSystemTasksForContact(ctx, promoted.ContactID)
 	if err != nil {
-		return 0, fmt.Errorf("resolving follow-ups on person %s: %w", promoted.PersonID, err)
+		return 0, fmt.Errorf("resolving follow-ups on contact %s: %w", promoted.ContactID, err)
 	}
 	return done, nil
 }
 
-// dedupeOutcomeCreated is people.QualifyLead's own spelling
-// (promote.go) for "a fresh person, not a merge into a survivor" — the one
-// outcome where completing every open system task on the person cannot reach
+// dedupeOutcomeCreated is contacts.QualifyLead's own spelling
+// (promote.go) for "a fresh contact, not a merge into a survivor" — the one
+// outcome where completing every open system task on the contact cannot reach
 // anything this promotion did not itself just carry there.
 const dedupeOutcomeCreated = "created"
 
 // promotedLead is what a lead.promoted payload says about where a lead's
-// tasks went, and whether that person existed before this promotion.
+// tasks went, and whether that contact existed before this promotion.
 type promotedLead struct {
-	PersonID      ids.PersonID
+	ContactID     ids.ContactID
 	DedupeOutcome string
 	// CarriedActivityIDs are the activities this promotion moved from the lead
-	// onto the person. Empty on a payload written before the event carried
-	// them, which is the one case the person-keyed reading still serves.
+	// onto the contact. Empty on a payload written before the event carried
+	// them, which is the one case the contact-keyed reading still serves.
 	CarriedActivityIDs []ids.UUID
 }
 
@@ -251,7 +287,7 @@ func decodeLeadPromoted(payload json.RawMessage) (promotedLead, error) {
 		return promotedLead{}, fmt.Errorf("activities: decoding lead.promoted's payload: %w", err)
 	}
 	out := promotedLead{
-		PersonID:      ids.From[ids.PersonKind](ids.UUID(body.PromotedPersonId)),
+		ContactID:     ids.From[ids.ContactKind](ids.UUID(body.PromotedContactId)),
 		DedupeOutcome: body.DedupeOutcome,
 	}
 	if body.CarriedActivityIds != nil {
@@ -268,7 +304,7 @@ func (w followUpAutoResolve) IdempotencyKey(ev workflow.Event) string {
 
 // linkedLeads answers which leads the captured activity touches — usually
 // none, and then the firing is a cheap no-op. The lead-score recompute in
-// people spells the same query over the same table; it is not shared
+// contacts spells the same query over the same table; it is not shared
 // because a module cannot import a sibling, and the table (activity_link)
 // is this module's own — this side is the owner's copy.
 func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.ActivityID) ([]ids.LeadID, error) {

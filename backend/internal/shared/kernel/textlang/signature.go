@@ -16,7 +16,7 @@ import (
 // candidate reply, and a long English confidentiality notice under a two-line
 // German reply puts dozens of English function words in the lead window at the
 // same weight as the reply's own. Detect then answers English for a message a
-// person wrote in German, which is the defect the whole package exists to
+// contact wrote in German, which is the defect the whole package exists to
 // prevent (DRAFT-AC-E-1).
 //
 // Two boundaries, because two things are being cut and they announce themselves
@@ -36,7 +36,7 @@ func signatureStart(runes []rune) int {
 //
 // Anything below it is the signature by the sender's own client's declaration,
 // so this needs no heuristic. The line is matched exactly: "-- Lars" is a
-// person writing a dash, and "---" is a horizontal rule somebody put in prose.
+// contact writing a dash, and "---" is a horizontal rule somebody put in prose.
 func sigDashStart(runes []rune) int {
 	return firstLineWhere(runes, func(line string) bool {
 		return strings.TrimRight(line, " \t") == "--"
@@ -51,7 +51,7 @@ func sigDashStart(runes []rune) int {
 // only open boilerplate. A generic opener is the trap: "the information
 // contained in this" also opens "…proposal explains our position", so the
 // entries name the noun ("in this e-mail") and a bare "disclaimer:" is left out
-// entirely, because a person writing about a disclaimer starts a line with it.
+// entirely, because a contact writing about a disclaimer starts a line with it.
 //
 // The asymmetry is why. A false positive TRUNCATES somebody's real reply and
 // then answers with the wrong language; a missing entry only leaves that

@@ -3,7 +3,7 @@ version: "2"
 run:
   # The tagged lanes are linted here too. Without this the baseline compiles
   # only untagged files, so the integration and livesmoke harnesses
-  # (internal/compose/integration, platform/testdb, budgettest, …) were the one
+  # (internal/compose/integration, platform/testdb, platform/redistest, …) were the one
   # part of the tree NO pass covered once forbidigo moved out of the strict
   # config — and harness code is exactly where an http.Error or a stray
   # fmt.Print slips in unnoticed. The tagged test files themselves are already
@@ -101,7 +101,7 @@ linters:
           # Default-deny: the shared layer (kernel + apperrors + ports) is
           # stdlib + each other + the published extension surface (which
           # sits BELOW shared: ports alias published seam types so a core
-          # module and an extension register the same type, ADR-0069 §3) —
+          # module and an extension register the same type, ADR-0120 §3) —
           # a new shared package pulling a third-party dep fails HERE, not
           # only in the arch fitness test.
           list-mode: strict
@@ -109,7 +109,7 @@ linters:
             - $gostd
             - github.com/margince/margince/backend/internal/shared
             - github.com/margince/margince/backend/pkg
-        # The published extension surface (backend/pkg, ADR-0069 §3) is the
+        # The published extension surface (backend/pkg, ADR-0120 §3) is the
         # outermost Tier-0 leaf: stdlib + itself, nothing else — anything
         # else it imported would become transitively-frozen published API.
         pkg-purity:
@@ -187,10 +187,10 @@ linters:
       # would be a wider hole than the one being cut, and would go on being
       # wider as patterns are added.
       #
-      # The path prefixes are relative to THIS FILE's directory, which is how
-      # golangci reports issue paths — so backend/tools is `tools/` and
-      # cli/craft is `../cli/craft/`. Neither can match anything in the
-      # product module, whose files report as `internal/`, `cmd/` or `pkg/`.
+      # The path prefix is relative to THIS FILE's directory, which is how
+      # golangci reports issue paths — so backend/tools is `tools/`. It
+      # cannot match anything in the product module, whose files report as
+      # `internal/`, `cmd/` or `pkg/`.
       # If a golangci upgrade ever changed that convention these rules would
       # stop matching and the suppressed findings would come BACK, failing the
       # gate — the safe direction for a mistake in a config like this.
@@ -200,9 +200,6 @@ linters:
       # the gate, where the in-source waiver this replaced would have made
       # someone write a reason for it. That is the cost of the trade.
       - path: '^tools/'
-        linters: [forbidigo]
-        text: 'use slog, not fmt\.Print'
-      - path: '^\.\./cli/craft/'
         linters: [forbidigo]
         text: 'use slog, not fmt\.Print'
 

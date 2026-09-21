@@ -37,10 +37,12 @@ const (
 
 	// The money a project's WON deals fold to, in the installation's base
 	// currency (the frozen base amount), read through the caller's deal row
-	// scope: a per-project total that counted a deal the caller's deal list
-	// would withhold discloses that deal through arithmetic (the rule
-	// ProjectDealTotalsTx keeps).
-	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base), 0)::bigint FROM deal d" +
+	// scope AND their field masks: a per-project total that counted a deal the
+	// caller's deal list would withhold discloses that deal through arithmetic
+	// (the rule ProjectDealTotalsTx keeps), and one that counted a FIGURE the
+	// list withholds discloses the figure the same way.
+	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base) FILTER (WHERE " + reportDealMaskToken +
+		"), 0)::bigint FROM deal d" +
 		" WHERE d.project_id = t.id AND d.status = 'won' AND d.archived_at IS NULL AND " + reportDealScopeToken + ")"
 
 	// A project's commitments are the open tasks filed under it. Overdue is
@@ -59,8 +61,13 @@ const (
 // deal folded by deals.OpenDealBaseValueSQL over the token the engine binds
 // the installation's base currency to. A variable because the fold is built
 // by a function the deals module owns.
+//
+// It takes the same mask filter as the won side. The two have to move
+// together: a mask that withheld a deal from the closed total and let it
+// through the open one would put the same figure back on the same page.
 var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL("d", reportBaseCurrencyToken) +
-	"), 0)::bigint FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
+	") FILTER (WHERE " + reportDealMaskToken + "), 0)::bigint" +
+	" FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
 	reportDealScopeToken + ")"
 
 // projectRowDimensions is the vocabulary the two listing-shaped project keys
@@ -68,12 +75,12 @@ var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL
 // columns a reader needs to act on it.
 func projectRowDimensions() map[string]string {
 	return map[string]string{
-		fieldProjectID:      colProjectRowID,
-		fieldName:           colName,
-		fieldKey:            colKey,
-		fieldPhase:          colPhase,
-		fieldOwnerID:        colOwnerID,
-		fieldOrganizationID: colProjectCustomer,
+		fieldProjectID: colProjectRowID,
+		fieldName:      colName,
+		fieldKey:       colKey,
+		fieldPhase:     colPhase,
+		fieldOwnerID:   colOwnerID,
+		fieldCompanyID: colProjectCustomer,
 	}
 }
 
@@ -82,10 +89,10 @@ func projectRowDimensions() map[string]string {
 //
 // A project is worked by several companies, and a dimension has to be one value
 // per row — you cannot group a project under three headings at once. The
-// customer is the honest choice: it is what organization_id has meant since the
+// customer is the honest choice: it is what company_id has meant since the
 // edge existed, and it is the company a reader means when they ask which
 // account a delivery is for.
-const colProjectCustomer = "(SELECT c.organization_id FROM relationship c" +
+const colProjectCustomer = "(SELECT c.company_id FROM relationship c" +
 	" WHERE c.kind = 'project_company' AND c.project_id = t.id" +
 	" AND c.archived_at IS NULL AND c.role = 'customer'" +
 	" ORDER BY c.created_at, c.id LIMIT 1)"
@@ -93,7 +100,7 @@ const colProjectCustomer = "(SELECT c.organization_id FROM relationship c" +
 // colProjectAnyCompany is what a company FILTER matches: any live company on
 // the project, so narrowing a report to a partner shows the deliveries that
 // partner is genuinely on rather than only the ones they are the customer of.
-const colProjectAnyCompany = "(SELECT c.organization_id FROM relationship c" +
+const colProjectAnyCompany = "(SELECT c.company_id FROM relationship c" +
 	" WHERE c.kind = 'project_company' AND c.project_id = t.id AND c.archived_at IS NULL" +
 	" ORDER BY (c.role = 'customer') DESC, c.created_at, c.id LIMIT 1)"
 
@@ -107,21 +114,29 @@ func projectsByPhaseSpec() reportSpec {
 		table:     tableProject,
 		baseWhere: whereArchivedNull,
 		basePlain: "live (unarchived) projects, with each project's open and won deal value in the installation's base currency",
+		// Stays on the caller's own/team default: owner_id is both a
+		// dimension and a filter here, the aggregates are money
+		// (open/won deal value), and `project` is an identity table (row
+		// scope renders unconditionally TRUE) — declaring
+		// measureEveryReadableRow would remove the only narrowing between a
+		// rep and a named colleague's exact delivery-value figures. The
+		// unowned-row arm (analyticsscope.go) still reaches this report's own
+		// default population.
 		dimensions: map[string]string{
-			fieldPhase:          colPhase,
-			fieldOrganizationID: colProjectCustomer,
-			fieldOwnerID:        colOwnerID,
+			fieldPhase:     colPhase,
+			fieldCompanyID: colProjectCustomer,
+			fieldOwnerID:   colOwnerID,
 		},
 		measures: map[string]string{
 			measureOpenDealValue: openDealValueBaseExpr,
 			measureWonDealValue:  wonDealValueBaseExpr,
 		},
 		filters: map[string]string{
-			fieldOrganizationID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldCompanyID: colProjectAnyCompany,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
-		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The money measures fold DEALS, which the project grant says nothing
 		// about: the deal grant is owed before either is served.
 		grants:    map[string]string{measureOpenDealValue: tableDeal, measureWonDealValue: tableDeal},
@@ -141,21 +156,24 @@ func projectsByPhaseSpec() reportSpec {
 // on which body of work.
 func projectCommitmentsSpec() reportSpec {
 	return reportSpec{
-		entity:     datasource.EntityProject,
-		table:      tableProject,
-		baseWhere:  whereArchivedNull,
-		basePlain:  "live (unarchived) projects, each with the open tasks filed under it (overdue: due date already past)",
+		entity:    datasource.EntityProject,
+		table:     tableProject,
+		baseWhere: whereArchivedNull,
+		basePlain: "live (unarchived) projects, each with the open tasks filed under it (overdue: due date already past)",
+		// Stays on the caller's own/team default, same reason as
+		// projectsByPhaseSpec: owner_id is in defaultBy, and `project` is an
+		// identity table with no other narrowing on it.
 		dimensions: projectRowDimensions(),
 		measures: map[string]string{
 			measureOpenCommitments: openCommitmentsExpr,
 			measureOverdue:         overdueCommitmentsExpr,
 		},
 		filters: map[string]string{
-			fieldOrganizationID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldCompanyID: colProjectAnyCompany,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
-		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The commitment counts read TASKS, which take the activity grant.
 		grants:    map[string]string{measureOpenCommitments: tableActivity, measureOverdue: tableActivity},
 		defaultBy: []string{fieldProjectID, fieldName, fieldKey, fieldPhase, fieldOwnerID},
@@ -178,16 +196,18 @@ func projectsGoneQuietSpec() reportSpec {
 	dimensions[fieldLastActivityAt] = colLastActivity
 	dimensions[fieldQuietSince] = projects.ProjectQuietAnchorSQL("t")
 	return reportSpec{
-		entity:     datasource.EntityProject,
-		table:      tableProject,
-		baseWhere:  whereArchivedNull + " AND " + projects.ProjectInFlightSQL("t"),
-		basePlain:  "live projects being pursued or delivered that nothing has been filed against for at least `days` days (a project with no activity at all is measured from its creation)",
+		entity:    datasource.EntityProject,
+		table:     tableProject,
+		baseWhere: whereArchivedNull + " AND " + projects.ProjectInFlightSQL("t"),
+		basePlain: "live projects being pursued or delivered that nothing has been filed against for at least `days` days (a project with no activity at all is measured from its creation)",
+		// Stays on the caller's own/team default, same reason as
+		// projectsByPhaseSpec.
 		dimensions: dimensions,
 		measures:   map[string]string{},
 		filters: map[string]string{
-			fieldOrganizationID: colProjectAnyCompany,
-			fieldOwnerID:        colOwnerID,
-			fieldPhase:          colPhase,
+			fieldCompanyID: colProjectAnyCompany,
+			fieldOwnerID:   colOwnerID,
+			fieldPhase:     colPhase,
 		},
 		thresholds: map[string]reportThreshold{
 			fieldDays: {
@@ -195,7 +215,7 @@ func projectsGoneQuietSpec() reportSpec {
 				defaultValue: projects.DefaultProjectQuietDays,
 			},
 		},
-		referenceScopes: map[string]string{colProjectCustomer: tableOrganization, colProjectAnyCompany: tableOrganization},
+		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		defaultBy:       []string{fieldProjectID, fieldName, fieldKey, fieldPhase, fieldOwnerID, fieldLastActivityAt, fieldQuietSince},
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "projects"},

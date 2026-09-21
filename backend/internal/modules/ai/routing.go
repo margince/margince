@@ -179,7 +179,8 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 	if len(blank) > 0 {
 		return RoutingConfig{}, fmt.Errorf(
 			"ai: routing config: %s: `input` is written with no value; omit the field to bind a text-only model, or name the modalities the bound model accepts",
-			strings.Join(blank, ", "))
+			strings.Join(blank, ", "),
+		)
 	}
 	return cfg.finalize()
 }
@@ -236,7 +237,7 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 // encoding is deterministic across processes — the property this digest has to
 // have to be compared at all.
 //
-// The distinction is not academic. This value reaches personbrief.Fingerprint
+// The distinction is not academic. This value reaches contactbrief.Fingerprint
 // and its siblings, where it decides whether a stored brief may be reused; a
 // digest of raw bytes meant that ADDING A COMMENT to the routing file
 // invalidated every cached brief, dossier and growth-fit in the installation
@@ -250,7 +251,7 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 func (cfg RoutingConfig) bindingDigest() string {
 	// A plain struct of strings, ints and a string-keyed map — marshal cannot
 	// fail on it, and the same spelling guards the sibling fingerprints in
-	// compose/orgbrief and compose/orgdossier that this digest feeds.
+	// compose/companybrief and compose/companydossier that this digest feeds.
 	encoded, _ := json.Marshal(cfg) //nolint:errchkjson // plain scalars and a string-keyed map; marshal cannot fail
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
@@ -331,6 +332,11 @@ func (cfg RoutingConfig) validate() error {
 			return err
 		}
 	}
+	// The embed lane dials an operator-supplied host like any chat tier, so it
+	// carries the same egress rule on every profile.
+	if err := requireDialableEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
+		return err
+	}
 	// AFTER the sovereign check, matching ValidateTierBinding's order. A
 	// sovereign profile forbids openai_compatible outright, so reporting a
 	// missing host first would answer a question the reader does not have and
@@ -389,6 +395,14 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
 			return err
 		}
+	}
+	// EVERY profile, not only sovereign. base_url is the address this server
+	// dials, and outside the sovereign branch above nothing looked at it at
+	// all: any string that parsed was persisted and later handed to the
+	// outbound client. What each lane may reach is outboundegress.go's rule,
+	// asked here so the operator hears it at the write.
+	if err := requireDialableEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
+		return err
 	}
 	// An OpenAI-wire host has no default to fall back on, so a binding without
 	// one cannot be SERVED — SelectBrain refuses to build the client. Refused

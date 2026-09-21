@@ -14,14 +14,16 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sectionLimit is how many rows of a nested collection one 360 carries.
@@ -34,7 +36,7 @@ type Service struct {
 	pool       *pgxpool.Pool
 	deals      *deals.Store
 	projects   *projects.Store
-	people     *people.Store
+	contacts   *contacts.Store
 	contracts  *contracts.Store
 	activities *activities.Store
 	now        func() time.Time
@@ -48,13 +50,13 @@ func NewService(
 	pool *pgxpool.Pool,
 	dealStore *deals.Store,
 	projectStore *projects.Store,
-	peopleStore *people.Store,
+	contactsStore *contacts.Store,
 	contractStore *contracts.Store,
 	activityStore *activities.Store,
 	now func() time.Time,
 ) *Service {
 	return &Service{
-		pool: pool, deals: dealStore, projects: projectStore, people: peopleStore,
+		pool: pool, deals: dealStore, projects: projectStore, contacts: contactsStore,
 		contracts: contractStore, activities: activityStore, now: now,
 	}
 }
@@ -63,13 +65,20 @@ func NewService(
 // catalog opens a connection of its own, and the page holds the only
 // connection its sections have for as long as it runs.
 //
-// The organization catalog is NOT here: reading it takes organization:read,
+// The company catalog is NOT here: reading it takes company:read,
 // and a refusal above the transaction would fail the whole page for a caller
-// who may read the project but not its company. The organization section
+// who may read the project but not its company. The company section
 // reads it itself, so that refusal lands as an omission.
 type catalogs struct {
 	project projects.CustomColumns
 	deal    deals.CustomColumns
+	// company is here for the same reason as the two above and was
+	// missing: the company section read the catalog itself, from inside
+	// the page's transaction, which is a second connection taken while this
+	// one is held. Under a loaded pool that waits on the connection it is
+	// already inside — a deadlock Postgres cannot break, because it sees two
+	// unrelated sessions rather than one goroutine waiting on itself.
+	company contacts.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -81,6 +90,23 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
+	// The company catalog is read HERE like the two above, and a caller
+	// without the company grant is not refused the page for it.
+	//
+	// That read is gated on company:read — the same grant the section
+	// itself is gated on — so a refusal here is not news: readCompany
+	// still asks, still refuses, and the assembly still omits the section and
+	// names it. Propagating it would turn a NARROWED page into a refused one
+	// for every reader who may see the project and not its company.
+	//
+	// Only a denial is swallowed. Any other failure is a real one, and empty
+	// columns handed to a caller who does hold the grant would silently drop
+	// the company's custom fields from the page.
+	switch c.company, err = s.contacts.ActiveCompanyColumns(ctx); {
+	case err == nil, errors.Is(err, apperrors.ErrPermissionDenied):
+	default:
+		return catalogs{}, err
+	}
 	return c, nil
 }
 
@@ -89,6 +115,12 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 // refusal; every other section is attempted, and a section refused for
 // lack of a grant is omitted and named rather than returned empty.
 func (s *Service) Assemble(ctx context.Context, projectID ids.ProjectID) (crmcontracts.Project360, error) {
+	// The object question at the entry point, not only inside GetProjectTx.
+	// This page is reached from an MCP tool as well as a browser, so the seam
+	// that admits the caller is worth being able to read here.
+	if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
+		return crmcontracts.Project360{}, err
+	}
 	now := s.now().UTC()
 	out := crmcontracts.Project360{AsOf: now, SectionsOmitted: []crmcontracts.Project360Section{}}
 	cats, err := s.readCatalogs(ctx)
@@ -137,10 +169,11 @@ func (a *assembly) sections() error {
 		name crmcontracts.Project360Section
 		read func() error
 	}{
-		{crmcontracts.Project360SectionOrganization, a.readOrganization},
+		{crmcontracts.Project360SectionCompany, a.readCompany},
 		{crmcontracts.Project360SectionPhaseHistory, a.readPhaseHistory},
 		{crmcontracts.Project360SectionDeals, a.readDeals},
 		{crmcontracts.Project360SectionStakeholders, a.readStakeholders},
+		{crmcontracts.Project360SectionHealth, a.readHealth},
 		{crmcontracts.Project360SectionContracts, a.readContracts},
 		{crmcontracts.Project360SectionCommitments, a.readCommitments},
 		{crmcontracts.Project360SectionActivities, a.readTimeline},

@@ -31,8 +31,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// scriptRoots are the trees whose SQL is executed against this schema.
-var scriptRoots = []string{"../../scripts", "../../infra"}
+// scriptRoots are the trees whose SQL is executed against this schema. One
+// tree, and the floor in TestEveryScriptNamesColumnsTheSchemaHas is what keeps
+// that honest: a root that stops resolving empties the corpus, and an empty
+// corpus fails rather than passing while checking nothing.
+var scriptRoots = []string{"../../scripts"}
 
 var (
 	insertColumns = regexp.MustCompile(`(?is)INSERT\s+INTO\s+([a-z_]+)\s*\(([^)]*)\)`)

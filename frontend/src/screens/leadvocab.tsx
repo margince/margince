@@ -6,6 +6,7 @@ import { isOption } from "../app/options";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -193,7 +194,7 @@ function LeadSourceRow({
         canEdit={canEdit}
         onSave={(label) => onUpdate({ label })}
       />
-      <span className="t-mono t-caption lead-vocab-key">{source.key}</span>
+      <span className="t-caption lead-vocab-key">{source.key}</span>
       <Select
         aria-label={t("leadSources.intentFor", { label: source.label })}
         value={source.intent}
@@ -221,13 +222,12 @@ function LeadSourceRow({
           onChange={(next) => onUpdate({ active: next })}
         />
         {removable ? (
-          <Button small variant="danger" onClick={onRemove}>
+          <Button variant="danger" onClick={onRemove}>
             {t("leadSources.remove")}
           </Button>
         ) : (
           canRemove && (
             <span
-              className="t-caption"
               title={
                 builtIn
                   ? t("leadSources.builtInKept")
@@ -276,11 +276,15 @@ function AddSourceDialog({
           );
         }}
       >
-        <h2 className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
           {t("leadSources.newLabel")}
-        </h2>
+        </Heading>
         {create.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("leadSources.notAdded")}
+          >
             {problemMessageOf(create.error, t)}
           </Callout>
         )}
@@ -317,14 +321,13 @@ function AddSourceDialog({
           )}
         </Field>
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("deals.cancel")}
           </Button>
           {/* Two facts, two props: `!ready` is a form with nothing in it yet
               and `isPending` is a write already on its way, and one `disabled`
               covering both draws them the same. */}
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!create.isPending && !ready}
@@ -335,6 +338,33 @@ function AddSourceDialog({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/**
+ * The card's own band under the rows, not one more row: the posture is said once
+ * for the whole card rather than on each of a dozen refused controls, and a
+ * refused write belongs to the card the row it failed on sits in. One component
+ * because all three cards here carry it, and three copies had already drifted
+ * into two primitives for one band.
+ */
+function VocabNotices({
+  readOnly = false,
+  error,
+}: Readonly<{ readOnly?: boolean; error: unknown }>) {
+  const t = useT();
+  if (!readOnly && error === undefined) return null;
+  return (
+    <div className="lead-vocab-notices">
+      {readOnly && (
+        <Callout kind="standing" title={t("leadSources.readOnlyTitle")} />
+      )}
+      {error !== undefined && (
+        <Callout kind="outcome" tone="danger" title={t("leadSources.notSaved")}>
+          {problemMessageOf(error, t)}
+        </Callout>
+      )}
+    </div>
   );
 }
 
@@ -366,7 +396,7 @@ export function LeadSourcesCard() {
       // list of sources as though it were one of them.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("leadSources.addOpen")}
           </Button>
         )
@@ -428,7 +458,7 @@ export function LeadSourcesCard() {
                   {discovered.map((found) => (
                     <li key={found.key} className="lead-vocab-row">
                       <span>{sourceKeyLabel(found.key, administered, t)}</span>
-                      <span className="t-mono t-caption lead-vocab-key">
+                      <span className="t-caption lead-vocab-key">
                         {found.key}
                       </span>
                       <span className="t-caption lead-vocab-count">
@@ -439,7 +469,6 @@ export function LeadSourcesCard() {
                       <span className="lead-vocab-flags">
                         {canCreate && (
                           <Button
-                            small
                             onClick={() =>
                               create.mutate({
                                 key: found.key,
@@ -463,22 +492,7 @@ export function LeadSourcesCard() {
             />
           )}
         </SettingList>
-        {/* The card's own band under the rows, not one more row: the posture is
-            said once for the whole card rather than on each of a dozen refused
-            controls — the boundary is the same for every row in the list — and a
-            refused write belongs to the card the row it failed on sits in. */}
-        {(!canEdit || failure) && (
-          <div className="lead-vocab-notices">
-            {!canEdit && (
-              <p className="t-caption">{t("leadSources.readOnly")}</p>
-            )}
-            {failure && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(failure.error, t)}
-              </Callout>
-            )}
-          </div>
-        )}
+        <VocabNotices readOnly={!canEdit} error={failure?.error} />
         {/* Closing clears the refusal with the form that carried it: the
             dialog's own Callout and the card's read the same sentence, and
             leaving it behind would report a failed add over a card the reader
@@ -511,9 +525,7 @@ export function LeadSourcesCard() {
             }
           }}
         >
-          <p className="t-caption">
-            {t("leadSources.removeBody", { label: removing?.label ?? "" })}
-          </p>
+          <p>{t("leadSources.removeBody", { label: removing?.label ?? "" })}</p>
         </ConfirmModal>
       </PanelBody>
     </Panel>
@@ -647,7 +659,6 @@ export function LeadDisqualifyReasonsCard() {
                             />
                             {removable ? (
                               <Button
-                                small
                                 variant="danger"
                                 onClick={() => setRemoving(reason)}
                               >
@@ -656,7 +667,6 @@ export function LeadDisqualifyReasonsCard() {
                             ) : (
                               canRemove && (
                                 <span
-                                  className="t-caption"
                                   title={
                                     builtIn
                                       ? t("leadSources.builtInKept")
@@ -703,7 +713,6 @@ export function LeadDisqualifyReasonsCard() {
                     onChange={(e) => setLabel(e.target.value)}
                   />
                   <Button
-                    small
                     type="submit"
                     variant="primary"
                     disabled={create.isPending}
@@ -715,18 +724,7 @@ export function LeadDisqualifyReasonsCard() {
             />
           )}
         </SettingList>
-        {(!canEdit || failure) && (
-          <div className="lead-vocab-notices">
-            {!canEdit && (
-              <p className="t-caption">{t("leadSources.readOnly")}</p>
-            )}
-            {failure && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(failure.error, t)}
-              </Callout>
-            )}
-          </div>
-        )}
+        <VocabNotices readOnly={!canEdit} error={failure?.error} />
         <ConfirmModal
           open={removing !== null}
           onClose={() => {
@@ -746,9 +744,7 @@ export function LeadDisqualifyReasonsCard() {
             }
           }}
         >
-          <p className="t-caption">
-            {t("leadReasons.removeBody", { label: removing?.label ?? "" })}
-          </p>
+          <p>{t("leadReasons.removeBody", { label: removing?.label ?? "" })}</p>
         </ConfirmModal>
       </PanelBody>
     </Panel>
@@ -890,16 +886,9 @@ export function LeadHandlingCard() {
             );
           }}
         </QueryGate>
-        {/* Under the rows it belongs to, in the card's own band — the same place
-            the two vocabulary cards above report a refused write, so all three
-            say it in one place. */}
-        {update.isError && (
-          <div className="lead-vocab-notices">
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(update.error, t)}
-            </Callout>
-          </div>
-        )}
+        {/* The same component the two cards above report a refused write with.
+            This card's rows are switches every seat may flip, so no posture. */}
+        <VocabNotices error={update.isError ? update.error : undefined} />
       </PanelBody>
     </Panel>
   );

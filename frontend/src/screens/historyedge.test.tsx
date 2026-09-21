@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -49,12 +49,12 @@ type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 
 const employer: NonNullable<components["schemas"]["HistoryEdge"]> = {
   kind: "employment",
-  other_entity_type: "organization",
-  other_entity_id: "org-9",
+  other_entity_type: "company",
+  other_entity_id: "company-9",
   other_label: "Employer GmbH",
 };
 
-// A link created between this person and a company. The images are the EDGE's
+// A link created between this contact and a company. The images are the EDGE's
 // columns, which is exactly the shape that must not reach a field diff.
 const linked: AuditHistoryEntry = {
   id: "h1",
@@ -76,7 +76,7 @@ function servingHistory(
 ) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    if (url.includes("/organizations/")) {
+    if (url.includes("/companies/")) {
       if (!onOtherLookup) {
         throw new Error(`unexpected endpoint lookup: ${url}`);
       }
@@ -93,7 +93,7 @@ describe("an edge row in a record's history", () => {
   it("renders the server's sentence and no field diff", async () => {
     vi.stubGlobal("fetch", servingHistory([linked]));
     const { container } = render(
-      <RecordHistory kind="person" id="p1" restore={RESTORE} />,
+      <RecordHistory kind="contact" id="p1" restore={RESTORE} />,
     );
 
     expect(
@@ -108,13 +108,13 @@ describe("an edge row in a record's history", () => {
   it("takes the reader to the record at the other end", async () => {
     vi.stubGlobal("fetch", servingHistory([linked]));
     const user = userEvent.setup();
-    render(<RecordHistory kind="person" id="p1" restore={RESTORE} />);
+    render(<RecordHistory kind="contact" id="p1" restore={RESTORE} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Employer GmbH" }),
+      await screen.findByRole("link", { name: "Employer GmbH" }),
     );
 
-    expect(globalThis.location.hash).toBe("#/companies/org-9");
+    expect(globalThis.location.hash).toBe("#/companies/company-9");
   });
 
   // A read that could not name the other end says so. Neither the word "null"
@@ -128,7 +128,7 @@ describe("an edge row in a record's history", () => {
       ),
     );
     const { container } = render(
-      <RecordHistory kind="person" id="p1" restore={RESTORE} />,
+      <RecordHistory kind="contact" id="p1" restore={RESTORE} />,
     );
 
     expect(await screen.findByText(/name didn't load/i)).toBeTruthy();
@@ -155,7 +155,7 @@ describe("an edge row in a record's history", () => {
         },
       ]),
     );
-    render(<RecordHistory kind="person" id="p1" restore={RESTORE} />);
+    render(<RecordHistory kind="contact" id="p1" restore={RESTORE} />);
 
     const button = await screen.findByRole("button", { name: /put back/i });
     expect(button.hasAttribute("disabled")).toBe(true);
@@ -167,7 +167,7 @@ describe("an edge row in a record's history", () => {
   it("marks the row as a link rather than a field change", async () => {
     vi.stubGlobal("fetch", servingHistory([linked]));
     const { container } = render(
-      <RecordHistory kind="person" id="p1" restore={RESTORE} />,
+      <RecordHistory kind="contact" id="p1" restore={RESTORE} />,
     );
 
     await screen.findByText("Ada Admin linked Employer GmbH as cto");
@@ -223,7 +223,7 @@ describe("an ordinary field row is unaffected", () => {
       ]),
     );
     const { container } = render(
-      <RecordHistory kind="person" id="p1" restore={RESTORE} />,
+      <RecordHistory kind="contact" id="p1" restore={RESTORE} />,
     );
 
     expect(await screen.findByText("Job title")).toBeTruthy();
@@ -236,7 +236,7 @@ describe("the harness", () => {
   it("serves the history the rows are read from", async () => {
     const fetchMock = servingHistory([linked]);
     vi.stubGlobal("fetch", fetchMock);
-    render(<RecordHistory kind="person" id="p1" restore={RESTORE} />);
+    render(<RecordHistory kind="contact" id="p1" restore={RESTORE} />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   });
@@ -261,7 +261,7 @@ describe("a link's columns never reach a pair's face", () => {
     after: { role: "cto", started_at: "2026-01-01", is_primary: true },
     edge: {
       kind: "employment",
-      other_entity_type: "organization",
+      other_entity_type: "company",
       other_entity_id: "11111111-1111-1111-1111-111111111111",
       other_label: "Employer GmbH",
     },
@@ -279,7 +279,7 @@ describe("a link's columns never reach a pair's face", () => {
     after: { role: null },
     edge: {
       kind: "employment",
-      other_entity_type: "organization",
+      other_entity_type: "company",
       other_entity_id: "11111111-1111-1111-1111-111111111111",
       other_label: "Employer GmbH",
     },
@@ -308,7 +308,7 @@ describe("reversing a link asks before it writes", () => {
   it("opens a confirmation naming the other record, and does not write on the first press", async () => {
     const fetchMock = servingHistory([linked]);
     vi.stubGlobal("fetch", fetchMock);
-    render(<RecordHistory kind="person" id="p-1" restore={RESTORE} />);
+    render(<RecordHistory kind="contact" id="p-1" restore={RESTORE} />);
     const button = await screen.findByRole("button", { name: /put back/i });
     await userEvent.click(button);
 

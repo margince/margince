@@ -45,6 +45,9 @@ type fakeTelegram struct {
 	// deleteWebhookErr, when non-nil, is what DeleteWebhook answers — the one
 	// provider refusal that can stop a connect after getMe has already succeeded.
 	deleteWebhookErr error
+	// webhookRegistered is what WebhookRegistered answers. False by default,
+	// which is the ordinary case: a bot arrives at connect with no webhook.
+	webhookRegistered bool
 	// deleteWebhookHook runs once, before the next DeleteWebhook takes the lock, so
 	// a test can drive a second concurrent lifecycle operation while this one is
 	// mid-flight at the provider. It fires outside the mutex because what it drives
@@ -119,6 +122,15 @@ func (f *fakeTelegram) GetUpdates(context.Context, string, int64, int, []string)
 	// The connect suite is about the binding lifecycle, never about ingress; a
 	// test that polls here is asking the wrong fixture and must be told so.
 	panic("fakeTelegram: the channel-connect suite must not poll for updates")
+}
+
+// WebhookRegistered: this fixture's bots arrive with no webhook, which is the
+// ordinary case a connect meets. A test that needs the other answer sets
+// webhookRegistered.
+func (f *fakeTelegram) WebhookRegistered(context.Context, string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.webhookRegistered, nil
 }
 
 func (f *fakeTelegram) DeleteWebhook(_ context.Context, token string) error {

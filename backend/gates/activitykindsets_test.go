@@ -56,9 +56,8 @@ func publishedActivityKinds(t *testing.T) []string {
 			if !isNamed || named.Name != "ActivityKind" {
 				continue
 			}
-			literal, isLiteral := value.Values[0].(*ast.BasicLit)
-			if isLiteral && literal.Kind == token.STRING {
-				kinds = append(kinds, strings.Trim(literal.Value, `"`))
+			if kind, isString := gatekit.LiteralText(value.Values[0]); isString {
+				kinds = append(kinds, kind)
 			}
 		}
 	}
@@ -69,8 +68,8 @@ func publishedActivityKinds(t *testing.T) []string {
 // what makes a NEW kind fail: an unlisted one is neither classified nor
 // deliberately excluded, and nobody has decided which it is.
 var neitherSet = gatekit.Waive(map[string]string{
-	"note": "a record of one person's thinking. Nobody was in the room and nothing was exchanged, so it has neither participants nor warmth — an unlinked note is a workspace-shared thought",
-	"task": "one person's intent. Counting it would let a rep's own to-do list score as a relationship, and stamping participants on it would name people who were never told",
+	"note": "a record of one contact's thinking. Nobody was in the room and nothing was exchanged, so it has neither participants nor warmth — an unlinked note is a workspace-shared thought",
+	"task": "one colleague's intent. Counting it would let a rep's own to-do list score as a relationship, and stamping participants on it would name contacts who were never told",
 })
 
 // Every kind the contract publishes is either in the participant set or
@@ -89,12 +88,12 @@ func TestEveryPublishedActivityKindIsClassified(t *testing.T) {
 		if neitherSet.Waived(t, kind) {
 			continue
 		}
-		t.Errorf("activity kind %q is in no relstrength set and in no exclusion — decide whether it is meaningful to ask who was on one (relstrength.participantKinds) and whether it means two people spoke (interactionKinds), and record the answer", kind)
+		t.Errorf("activity kind %q is in no relstrength set and in no exclusion — decide whether it is meaningful to ask who was on one (relstrength.participantKinds) and whether it means two contacts spoke (interactionKinds), and record the answer", kind)
 	}
 }
 
 // THE DIRECTION THE TWO SETS MAY DIFFER IN, and only that direction. A kind may
-// be worth recording the people on without being worth scoring — a group chat
+// be worth recording the contacts on without being worth scoring — a group chat
 // is exactly that — while a kind scored as a relationship with nobody recorded
 // on it would leave the interaction graph unable to say who the relationship is
 // with.
@@ -107,18 +106,24 @@ func TestEveryScoredKindHasParticipants(t *testing.T) {
 	}
 }
 
-// A message has a room and no settled warmth. Both halves are asserted because
-// each is a decision somebody could undo without noticing the other: adding it
-// to the scoring set moves every installation's deal-health and person-strength
-// numbers, and removing it from the participant set puts a group chat back to
-// naming nobody who was in it.
-func TestAMessageHasParticipantsAndIsNotScored(t *testing.T) {
+// A message has a room AND counts as warmth, and it is the unit that makes the
+// second half safe. All three are asserted because each is a decision somebody
+// could undo without noticing the others: dropping it from the scoring set puts
+// a chat-only account back to reading as never having spoken, dropping it from
+// the participant set puts a group chat back to naming nobody who was in it,
+// and counting its rows instead of its conversation-days lets an afternoon of
+// one-line replies outweigh a quarter of meetings.
+func TestAMessageHasParticipantsAndIsScoredByTheConversationDay(t *testing.T) {
 	t.Parallel()
 	if !relstrength.IsParticipantKind("message") {
 		t.Error("a message records no participants — a group chat names everyone who was in it, and this is where that is kept")
 	}
-	if scoredKind(t, "message") {
-		t.Error("a message scores as an interaction — whether chat traffic is warmth is an open product question, and answering it here moves every deal-health and person-strength number")
+	if !scoredKind(t, "message") {
+		t.Error("a message does not score as an interaction — two contacts spoke, which is the membership test the scoring set applies, and an account whose whole relationship runs over a channel reads as having none")
+	}
+	unit := relstrength.InteractionUnitSQL("a")
+	if !strings.Contains(unit, "'message'") || !strings.Contains(unit, "a.thread_key") {
+		t.Errorf("the counting unit is %q, which does not separate a message from the kinds counted per row — the scoring set holds a kind that arrives dozens of rows to a conversation", unit)
 	}
 }
 

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -321,7 +321,7 @@ describe("the completion mark", () => {
     const acting = steppedClock();
     const view = show();
     await acting.click(press("show"));
-    expect(view.baseElement.querySelector(".dot-auto")).not.toBeNull();
+    expect(view.baseElement.querySelector(".toast-dot-success")).not.toBeNull();
   });
 
   it("leaves a refusal unmarked", async () => {
@@ -330,10 +330,10 @@ describe("the completion mark", () => {
     const acting = steppedClock();
     const view = show({
       message: "That did not work.",
-      options: { mark: false },
+      options: { tone: "danger" },
     });
     await acting.click(press("show"));
     expect(screen.getByRole("status")).toHaveTextContent("That did not work.");
-    expect(view.baseElement.querySelector(".dot-auto")).toBeNull();
+    expect(view.baseElement.querySelector(".toast-dot-success")).toBeNull();
   });
 });

@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
@@ -135,7 +136,11 @@ function LinkedInProfileRow() {
     // between whatever it holds, so a surface standing in for a row lines up
     // with the rows around it.
     return (
-      <Callout tone="danger" live="alert">
+      <Callout
+        kind="outcome"
+        tone="danger"
+        title={t("linkedinImport.profileReadFailed")}
+      >
         {problemMessageOf(account.error, t)}
       </Callout>
     );
@@ -159,15 +164,15 @@ function LinkedInProfileRow() {
             : t("linkedinImport.notConnectedNote")
         }
         control={
-          <Button small variant="ghost" onClick={() => setEditing(true)}>
+          <Button variant="ghost" onClick={() => setEditing(true)}>
             {t("linkedinImport.editProfile")}
           </Button>
         }
       />
       <Modal open={editing} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2">
+        <Heading size="large" id={headingId} className="t-h2">
           {t("linkedinImport.editProfileTitle")}
-        </h2>
+        </Heading>
         <form
           className="form-stack li-import-profile-form"
           onSubmit={(event) => {
@@ -201,17 +206,16 @@ function LinkedInProfileRow() {
             )}
           </Field>
           {save.isError && (
-            <Callout tone="danger" live="alert">
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.saveFailed")}
+            >
               {problemMessageOf(save.error, t)}
             </Callout>
           )}
           <div className="actions">
-            <Button
-              small
-              type="button"
-              onClick={close}
-              disabled={save.isPending}
-            >
+            <Button type="button" onClick={close} disabled={save.isPending}>
               {t("create.cancel")}
             </Button>
             {/* An unchanged URL and a save in flight are two different
@@ -220,7 +224,6 @@ function LinkedInProfileRow() {
                 `pending` for the write they have already started, which keeps
                 the button focusable so the wait is announced from it. */}
             <Button
-              small
               variant="primary"
               type="submit"
               disabled={!dirty}
@@ -297,11 +300,13 @@ export function LinkedInImportCard() {
           <p className="t-sub">{t("linkedinImport.working")}</p>
         )}
         {importer.isError && (
-          <div data-testid="linkedin-import-error">
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(importer.error, t)}
-            </Callout>
-          </div>
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("linkedinImport.importFailed")}
+          >
+            {problemMessageOf(importer.error, t)}
+          </Callout>
         )}
         {importer.isSuccess && <ImportResult summary={importer.data} />}
       </PanelBody>

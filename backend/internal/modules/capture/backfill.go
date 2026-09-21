@@ -25,23 +25,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// BackfillWindowMonths is the CAP-PARAM-4 window set, in reach order.
-// "none" is expressed by never starting a run.
-//
-// The set is CLOSED and stays a picker (ADR-0063, widened to 24/60 by
-// ADR-0106): an unbounded window is an unbounded bill, and the picker is
-// where the customer consents to it.
-//
-// Exported because the transport used to keep its own switch over the same
-// values — the `<n>m` wire enum in one file, the months here — and a
-// widening that reached this one and not that one made every new window
-// answer 422 at the door while every gate stayed green. There is one
-// statement of the set in Go now, and the wire mapping is derived from it.
-// The contract enums and the capture_backfill CHECK are pinned against it
-// by TestTheBackfillWindowSetIsOneSet.
+// BackfillWindowMonths returns the supported history windows in reach order.
+// The closed set bounds how much mail a user consents to read and pay for.
+// The contract enums and database constraint are checked against this set by
+// TestTheBackfillWindowSetIsOneSet; transport names derive from these months.
 func BackfillWindowMonths() []int { return slices.Clone(backfillWindowMonths) }
 
-var backfillWindowMonths = []int{3, 6, 12, 24, 60}
+var backfillWindowMonths = []int{3, 6, 12, 24, 36, 60, 84, 120}
 
 var backfillWindows = windowSet(backfillWindowMonths)
 
@@ -69,23 +59,27 @@ var ErrBackfillUnsupported = errors.New("capture: this provider does not support
 
 // BackfillRun is the CAP-DDL-4 row — the single-row activation read.
 type BackfillRun struct {
-	ID            ids.UUID
-	ConnectionID  ids.UUID
-	WindowMonths  int
-	AfterDate     time.Time
-	Status        string
-	Cursor        []byte
-	Estimate      *int
-	Scanned       int
-	Captured      int
-	Skipped       int
-	People        int
-	Organizations int
-	DedupeCands   int
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
-	UpdatedAt     time.Time
-	ErrorClass    *string
+	ID           ids.UUID
+	ConnectionID ids.UUID
+	WindowMonths int
+	AfterDate    time.Time
+	Status       string
+	Cursor       []byte
+	Estimate     *int
+	// EstimateIsFloor says Estimate is a LOWER BOUND rather than a total —
+	// the provider stopped counting at its cap. Persisted with the run
+	// because the progress denominator is read back long after the preview
+	// that produced it, and a bar dividing by a floor overruns silently.
+	EstimateIsFloor bool
+	Scanned         int
+	Captured        int
+	Skipped         int
+	Contacts        int
+	Companies       int
+	StartedAt       *time.Time
+	CompletedAt     *time.Time
+	UpdatedAt       time.Time
+	ErrorClass      *string
 }
 
 // connectionForUser resolves the calling user's connection for provider.
@@ -101,19 +95,25 @@ func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, provider st
 	return id, err
 }
 
+// BackfillPreview binds the provider's count to the date it actually queried.
+type BackfillPreview struct {
+	connector.BackfillEstimate
+	AfterDate time.Time
+}
+
 // EstimateBackfill previews a window's scope: the provider-side message count
 // newer than the window boundary. The consent number (preview before spend,
 // ADR-0020). Pricing the projected spend is the estimator's job now (ADR-0068),
 // so this returns the raw message count only.
-func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (messages int, err error) {
+func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (BackfillPreview, error) {
 	if !backfillWindows[windowMonths] {
-		return 0, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+		return BackfillPreview{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
 	}
 	var connID ids.UUID
 	var name string
 	var credentialRef *string
 	var authBytes []byte
-	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		id, err := r.connectionForUser(ctx, tx, provider, userID)
 		if err != nil {
 			return err
@@ -124,25 +124,26 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 			Scan(&name, &credentialRef, &authBytes)
 	})
 	if err != nil {
-		return 0, err
+		return BackfillPreview{}, err
 	}
 	c, err := r.connector(name)
 	if err != nil {
-		return 0, err
+		return BackfillPreview{}, err
 	}
 	bf, ok := c.(connector.Backfiller)
 	if !ok {
-		return 0, ErrBackfillUnsupported
+		return BackfillPreview{}, ErrBackfillUnsupported
 	}
 	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
 	if err != nil {
-		return 0, err
+		return BackfillPreview{}, err
 	}
-	messages, err = bf.EstimateBackfill(ctx, auth, r.now().AddDate(0, -windowMonths, 0))
+	after := r.now().AddDate(0, -windowMonths, 0)
+	estimate, err := bf.EstimateBackfill(ctx, auth, after)
 	if err != nil {
-		return 0, err
+		return BackfillPreview{}, err
 	}
-	return messages, nil
+	return BackfillPreview{BackfillEstimate: estimate, AfterDate: after}, nil
 }
 
 // EnqueueBackfill schedules the worker job that will page a run. It runs
@@ -163,7 +164,7 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // enqueue is required. A run with no job is not a run: uq_capture_backfill_live
 // keeps the queued row forever, nothing pages it, and every later start for that
 // connection answers 409 backfill_running.
-func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate int, enqueue EnqueueBackfill) (BackfillRun, error) {
+func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
 	if !backfillWindows[windowMonths] {
 		return BackfillRun{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
 	}
@@ -174,6 +175,16 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		connID, err := r.connectionForUser(ctx, tx, provider, userID)
 		if err != nil {
+			return err
+		}
+		// The connection row first, before anything reads capture_backfill.
+		// uq_capture_backfill_live is what stops a second live run, and the
+		// violation it raises is answerable HERE (ErrBackfillRunning) and not on
+		// the other path that can create one: reviveTruncatedBackfillTx runs
+		// inside a successful sync's own transaction, where a failed statement
+		// takes the sync down with it. Serializing on the connection is what
+		// keeps that from being a race somebody loses.
+		if err := lockConnectionTx(ctx, tx, connID); err != nil {
 			return err
 		}
 		// Widen-only protects a mailbox from re-importing a window narrower than
@@ -197,9 +208,9 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		}
 		after := r.now().AddDate(0, -windowMonths, 0)
 		err = tx.QueryRow(ctx, `
-			INSERT INTO capture_backfill (connection_id, window_months, after_date, total_estimate, status, started_at)
-			VALUES ($1, $2, $3, NULLIF($4, 0), 'queued', now())
-			RETURNING id`, connID, windowMonths, after, estimate).Scan(&run.ID)
+			INSERT INTO capture_backfill (connection_id, window_months, after_date, total_estimate, total_estimate_is_floor, status, started_at)
+			VALUES ($1, $2, $3, NULLIF($4, 0), $5, 'queued', now())
+			RETURNING id`, connID, windowMonths, after, estimate.Messages, estimate.Floor).Scan(&run.ID)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				return ErrBackfillRunning
@@ -213,10 +224,12 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		run.WindowMonths = windowMonths
 		run.AfterDate = after
 		run.Status = "queued"
-		if estimate > 0 {
+		if estimate.Messages > 0 {
 			// The previewed estimate rides the returned run exactly as the row
 			// stores it (NULLIF above): the start response's progress denominator.
-			run.Estimate = &estimate
+			messages := estimate.Messages
+			run.Estimate = &messages
+			run.EstimateIsFloor = estimate.Floor
 		}
 		return nil
 	})
@@ -252,16 +265,15 @@ func (r *Registry) BackfillStatus(ctx context.Context, provider string, userID i
 // such sum: each creation is counted straight into its committed column.
 func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillRun, error) {
 	row := tx.QueryRow(ctx, `
-		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate,
+		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate, b.total_estimate_is_floor,
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
-		       b.people_created, b.organizations_created,
-		       b.dedupe_candidates,
+		       b.contacts_created, b.companies_created,
 		       b.started_at, b.completed_at, b.updated_at, b.last_error_class
 		FROM capture_backfill b WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
-	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate,
-		&b.Scanned, &b.Captured, &b.Skipped, &b.People, &b.Organizations, &b.DedupeCands,
+	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate, &b.EstimateIsFloor,
+		&b.Scanned, &b.Captured, &b.Skipped, &b.Contacts, &b.Companies,
 		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error
@@ -308,7 +320,7 @@ func (r *Registry) CancelBackfill(ctx context.Context, provider string, userID i
 // attempt is lost to something the engine never sees — a worker killed
 // mid-page, a rescue, a queue that dropped it — the row stays live with no job
 // behind it, and the index then refuses every future StartBackfill for that
-// connection. The import stops, and the only symptom is a person who cannot
+// connection. The import stops, and the only symptom is a contact who cannot
 // start one.
 //
 // A run's own give-up cap is NOT consulted here. A stranded run has recorded no

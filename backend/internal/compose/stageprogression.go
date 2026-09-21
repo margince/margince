@@ -96,11 +96,7 @@ func StageProgressionDecisions(pool *pgxpool.Pool) *approvals.Service {
 // failure: most deals at most moments have an unmet criterion, and a proposer
 // that put a card up for each of them would be a proposer nobody reads.
 func (p *StageProgressionProposer) Propose(ctx context.Context, dealID ids.DealID) (bool, error) {
-	actorCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   stageProgressionActor,
-	})
-	actorCtx = principal.WithCorrelationID(actorCtx, ids.NewV7())
+	actorCtx := principal.SystemActing(ctx, stageProgressionActor)
 	// Bound before the first transaction opens. A caller that already carries
 	// one — the HTTP surface, a test — resolves the same installation, so this
 	// is not a narrowing.
@@ -318,7 +314,7 @@ func progressionEvidenceKinds(facts deals.StageProgressionFacts) []string {
 // stageProgressionPrecheck refuses a decision the effect could not carry out.
 //
 // The paperless-win case: a move onto a won stage with no signed agreement
-// stages with an EMPTY reason, because only a person can say why there is no
+// stages with an EMPTY reason, because only a contact can say why there is no
 // paper. Without this check the ordinary Accept button commits the approval,
 // the effect then refuses the empty reason, and the card is left approved,
 // unredeemable and undecidable while the deal has not moved. A precheck runs
@@ -346,6 +342,43 @@ func stageProgressionPrecheck() approvals.ReleasePrecheck {
 	}
 }
 
+// refuseAStaleAutomaticMove holds an automatic apply to the rule as it stands
+// NOW, in the transaction that would move the deal.
+//
+// Answers nil for a human decision without asking anything: the question is
+// whether the PRODUCT may still move this by itself, and a contact who pressed
+// approve has already answered a different one.
+func refuseAStaleAutomaticMove(
+	ctx context.Context, tx pgx.Tx, change deals.StageProgressionChange,
+) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent || actor.ID != autoApplyActorID {
+		return nil
+	}
+	var pipelineID ids.PipelineID
+	if err := tx.QueryRow(ctx,
+		`SELECT pipeline_id FROM deal WHERE id = $1`, change.DealID).Scan(&pipelineID); err != nil {
+		return fmt.Errorf("compose: read the deal's pipeline for an automatic move: %w", err)
+	}
+	verdict, err := deals.StageAutopilotModeTx(ctx, tx, deals.TransitionRef{
+		PipelineID:  pipelineID,
+		FromStageID: change.FromStageID,
+		ToStageID:   change.ToStageID,
+	}, time.Now())
+	if err != nil {
+		return err
+	}
+	if verdict.Mode != deals.ModeAuto {
+		// ErrVersionSkew rather than a bare error: the sweep classifies it as
+		// a refusal of THIS row and carries on, which is right — the rule
+		// changed under a decision that had not landed yet, and every other
+		// card still deserves its pass.
+		return fmt.Errorf("the rule changed before this move landed (%s): %w",
+			verdict.Why, apperrors.ErrVersionSkew)
+	}
+	return nil
+}
+
 // stageProgressionEffect performs an approved move: redeem and advance in ONE
 // transaction, so the approval is spent if and only if the deal moved.
 //
@@ -355,7 +388,7 @@ func stageProgressionPrecheck() approvals.ReleasePrecheck {
 // move is lost and the rep is told only that the effect failed.
 //
 // The move runs under the DECIDING HUMAN's authority, not the system's. A
-// person approving a card is making that move themselves, and the audit trail
+// contact approving a card is making that move themselves, and the audit trail
 // should say so: a stage change attributed to the system would leave nobody
 // answerable for a deal that moved.
 func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
@@ -376,6 +409,23 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 		}
 		return svc.RedeemAndApply(ctx, approvalID, deals.StageProgressionKind, diffHash,
 			func(tx pgx.Tx) error {
+				// An AUTOMATIC apply re-asks the governing rule here, inside
+				// the transaction that moves the deal.
+				//
+				// The sweep asked before deciding, and that answer is already
+				// stale by the time this runs: an admin can flip the kill
+				// switch, set the transition back to propose, or the product
+				// can suspend the rule in between. Read there and written
+				// here, the move commits on a permission that no longer
+				// exists — which is exactly what StageAutopilotModeTx's own
+				// comment says the transaction is for.
+				//
+				// A HUMAN's approval skips this. A human deciding is the
+				// authority, and re-asking the autopilot's thresholds would
+				// let a suspended rule block a move somebody explicitly made.
+				if err := refuseAStaleAutomaticMove(ctx, tx, change); err != nil {
+					return err
+				}
 				_, err := store.AdvanceDealTx(ctx, tx, change.DealID, deals.AdvanceDealInput{
 					ToStageID: change.ToStageID,
 					// The card this move came from. Without it readProtection
@@ -385,7 +435,7 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 					ApprovalID: &approvalID.UUID,
 					// Carried from the card the human decided, not composed
 					// here: a win with no agreement behind it is refused
-					// unless somebody says why, and the somebody is the person
+					// unless somebody says why, and the somebody is the contact
 					// who approved the move.
 					WonWithoutContractReason: change.WonWithoutContractReason,
 					WonWithoutContractDetail: change.WonWithoutContractDetail,

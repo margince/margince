@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,11 +29,11 @@ import (
 )
 
 // seedWaitingOfKind writes one inbound message of the given kind, filed under a
-// person so it is sales mail rather than a rep's private correspondence — the
+// contact so it is sales mail rather than a rep's private correspondence — the
 // lane requires that link, and a message seeded without one correctly never
 // appears at all.
 func seedWaitingOfKind(
-	t *testing.T, e *integration.Env, person ids.UUID, kind, subject string, at time.Time,
+	t *testing.T, e *integration.Env, contact ids.UUID, kind, subject string, at time.Time,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -53,8 +54,8 @@ func seedWaitingOfKind(
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a waiting %s: %v", kind, err)
@@ -78,9 +79,9 @@ func waitingOf(rows []attention.WaitingCustomer, id ids.UUID) *attention.Waiting
 func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 	e := integration.Setup(t)
 	asOf := time.Now()
-	person := seedLinkedPerson(t, e, "dana@acme.example")
-	mail := seedWaitingOfKind(t, e, person, "email", "Re: the renewal quote", asOf.Add(-3*24*time.Hour))
-	chat := seedWaitingOfKind(t, e, person, "message", "ping about the quote", asOf.Add(-2*24*time.Hour))
+	contact := seedLinkedContact(t, e, "dana@acme.example")
+	mail := seedWaitingOfKind(t, e, contact, "email", "Re: the renewal quote", asOf.Add(-3*24*time.Hour))
+	chat := seedWaitingOfKind(t, e, contact, "message", "ping about the quote", asOf.Add(-2*24*time.Hour))
 
 	seam := attentionWaiting{
 		store: activities.NewStore(e.DB()),
@@ -122,8 +123,8 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	e := integration.Setup(t)
 	asOf := time.Now()
-	person := seedLinkedPerson(t, e, "dana@acme.example")
-	mail := seedWaitingOfKind(t, e, person, "email", "Severance terms", asOf.Add(-3*24*time.Hour))
+	contact := seedLinkedContact(t, e, "dana@acme.example")
+	mail := seedWaitingOfKind(t, e, contact, "email", "Severance terms", asOf.Add(-3*24*time.Hour))
 
 	// Admitted first, so the refusal below is the audience's doing rather than
 	// the fixture never having qualified.
@@ -157,5 +158,80 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	}
 	if got := waitingOf(after, mail); got != nil {
 		t.Errorf("a limited message reached a colleague's queue: %+v", *got)
+	}
+}
+
+// seedMachineFlood writes count inbound mails from a relay domain, each its own
+// thread and each filed under one contact so it clears the lane's link bar.
+//
+// One statement rather than count of them: the point of the fixture is the
+// scan cap, so it is two hundred rows by construction and a per-row round trip
+// would spend the test's whole budget on seeding.
+func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count int, from time.Time) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			WITH flooded AS (
+			  INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
+			                        source, captured_by, audience, occurred_at, thread_key)
+			  SELECT gen_random_uuid(), 'email', 'Build #'||n||' passed', 'Nothing here needs you.',
+			         'inbound', 'gmail', 'flood-'||n, 'gmail:flood-'||n, 'connector:gmail',
+			         'workspace', $1::timestamptz + make_interval(mins => n), 'flood-thread-'||n
+			    FROM generate_series(1, $2::int) AS n
+			  RETURNING id
+			), wrote AS (
+			  INSERT INTO activity_participant (activity_id, role, address)
+			  SELECT id, 'from', 'bounces@sendgrid.net' FROM flooded
+			  RETURNING activity_id
+			)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			SELECT activity_id, 'contact', $3::uuid FROM wrote`,
+			from, count, contact)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding %d machine mails: %v", count, err)
+	}
+}
+
+// A flood of machine mail newer than a customer's message must not push that
+// customer off the queue.
+//
+// The store's machine rule is six patterns against an address; the seam's is
+// capture.IsMachineAddress, which reads a registrable domain against the
+// transactional baseline. A relay like sendgrid.net matches none of the six, so
+// a scan cap's worth of it is admitted by the store and discarded above the
+// store — and the customer underneath was never read at all. The seam answers
+// by asking for another page, which is what this holds.
+func TestAFloodOfMachineMailDoesNotHideAWaitingCustomer(t *testing.T) {
+	e := integration.Setup(t)
+	asOf := time.Now()
+	contact := seedLinkedContact(t, e, "dana@acme.example")
+	customer := seedWaitingOfKind(t, e, contact, "email", "Re: the renewal quote", asOf.Add(-48*time.Hour))
+	// Exactly the cap, entirely newer than the customer: the first page is all
+	// flood and nothing else fits on it.
+	seedMachineFlood(t, e, seedLinkedContact(t, e, "ci@acme.example"),
+		activities.WaitingScanCap, asOf.Add(-24*time.Hour))
+
+	seam := attentionWaiting{
+		store: activities.NewStore(e.DB()),
+		now:   func() time.Time { return asOf },
+	}
+	rows, _, err := seam.Unanswered(e.Admin(), asOf)
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+
+	if waitingOf(rows, customer) == nil {
+		t.Errorf("the waiting customer was buried under %d machine mails; %d row(s) came back",
+			activities.WaitingScanCap, len(rows))
+	}
+	// The flood itself must still be gone. A refill that kept the machine mail
+	// would satisfy the claim above by showing everything, which is the queue
+	// this lane exists to avoid.
+	for _, row := range rows {
+		if row.EmailSummary != nil && row.EmailSummary.Subject != nil &&
+			strings.HasPrefix(*row.EmailSummary.Subject, "Build #") {
+			t.Fatalf("machine mail reached the queue: %q", *row.EmailSummary.Subject)
+		}
 	}
 }

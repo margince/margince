@@ -7,8 +7,14 @@ import { StatStrip } from "./statstrip";
 
 // The readings row in the states a record page actually puts it in: a full row,
 // a short one, and a row carrying verdicts rather than figures. What each story
-// is really checking is that the row reads ACROSS — one plate, one type scale,
-// rules and no gaps.
+// is really checking is that the row reads ACROSS — equal slots, one type scale
+// and air between them.
+//
+// The scale is the TILE's (atoms.css), not this component's: a slot here draws
+// exactly like a free-standing card, which is why none of these stories passes
+// a size or a variant. The strip used to carry a figure size of its own and a
+// `hero` flag carried a third for the Brief; one reading in three spellings is
+// the defect, and the row's own job is only how many slots and where it folds.
 const meta: Meta<typeof StatStrip> = {
   title: "Design System/StatStrip",
   component: StatStrip,
@@ -28,7 +34,7 @@ export const SixSlots: Story = {
       <StatCard label="Reciprocity" value="1 in · 0 out" />
       <StatCard label="Open deal" value="None" />
       <StatCard label="Next meeting" value="None" />
-      <StatCard label="Consent" value="Allowed" tone="good" dot />
+      <StatCard label="Consent" value="Allowed" tone="success" />
     </StatStrip>
   ),
 };
@@ -45,7 +51,7 @@ export const FewerSlots: Story = {
         detail="offline_demo"
       />
       <StatCard label="Payment behaviour" value="typically 4 days early" />
-      <StatCard label="Health" value="Watch" tone="warn" dot />
+      <StatCard label="Health" value="Watch" tone="warning" onOpen={() => {}} />
     </StatStrip>
   ),
 };
@@ -61,7 +67,7 @@ export const SourcedAndAlerting: Story = {
         value="€1.2m"
         source={<Badge>offline_demo</Badge>}
       />
-      <StatCard label="Overdue" value="€48k" tone="danger" dot alert />
+      <StatCard label="Overdue" value="€48k" tone="danger" alert />
       <StatCard label="Coverage" value="1 colleague" />
     </StatStrip>
   ),
@@ -82,19 +88,14 @@ export const FoldsWithoutAnOrphan: Story = {
         <StatCard label="The ask" value="€95k" />
         <StatCard label="The date" value="14 Mar" />
         <StatCard label="The room" value="3 of 5 roles" />
-        <StatCard
-          label="The momentum"
-          value="Stalled 11 days"
-          tone="warn"
-          dot
-        />
+        <StatCard label="The momentum" value="Stalled 11 days" tone="warning" />
       </StatStrip>
       <StatStrip>
         <StatCard label="Budget" value="€240k" />
         <StatCard label="Spent" value="€181k" />
         <StatCard label="Remaining" value="€59k" />
         <StatCard label="Burn" value="€12k / wk" />
-        <StatCard label="Runway" value="5 weeks" tone="warn" dot />
+        <StatCard label="Runway" value="5 weeks" tone="warning" />
       </StatStrip>
     </div>
   ),
@@ -120,5 +121,147 @@ export const QualifiedRow: Story = {
       />
       <StatCard label="Lead response" value="3" detail="owed a first answer" />
     </StatStrip>
+  ),
+};
+
+// A READING WITH A DOOR, inside the row. The way out is a word in the card's
+// own foot — one spelling for every reading in the product — and the tile
+// stretches that button over itself, so the whole cell answers a press while
+// the words are what name the destination.
+//
+// A slot wrapped in an ANCHOR was tried here and taken out. It read as five
+// green underlined hyperlinks: base.css draws the product's prose links through
+// `a:not([class])`, which scores exactly what `.stat-strip > a` does, so which
+// sheet painted a door came down to bundler order. The frame is kept because
+// what it documents is still true — a row of readings that each open something
+// has to read as a row of panes and not a list of links.
+export const SlotsWithDoors: Story = {
+  name: "Readings that open something",
+  render: () => (
+    <StatStrip>
+      <StatCard
+        label="Urgent"
+        value="4"
+        tone="warning"
+        detail="somebody waiting or a promise breaking"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Meetings today"
+        value="4"
+        detail="1 needs prep"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Leads owed a reply"
+        value="3"
+        detail="owed a first answer"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Pipeline · Q3"
+        value="€420k"
+        detail="€168k weighted · 11 priced"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      {/* A figure the read could not finish counting: the `+` is the caveat, on
+          the figure it qualifies rather than in a sentence under the row. */}
+      <StatCard
+        label="Decisions waiting"
+        value="8+"
+        detail="waiting on your answer"
+        narrow="row"
+        onOpen={() => {}}
+      />
+    </StatStrip>
+  ),
+};
+
+// THE NARROW SHAPE: one full-width ROW per reading, and only for a strip whose
+// slots declared `narrow="row"`.
+//
+// Five 190px boxes two-up is 600px of readings before a phone reader reaches
+// what the page is for. As rows the same five facts are ~60px each, the eye
+// runs down one column of figures instead of hunting two, and the plate draws
+// one hairline between them rather than five borders — a column of bordered
+// panes reads as cards to swipe rather than a list to scan.
+//
+// Read off the CHILDREN with `:has(.stat-card-narrow-row)`, not taken as a second
+// prop, so the plate and its slots cannot disagree about which shape this is.
+// Nineteen other strips in the product keep their 2-column fold at this width,
+// and `SixSlots` above is one of them — open both at the phone viewport and the
+// difference is the whole contract.
+//
+// The card's foot stacks under the figure on the trailing edge rather than
+// riding the label's line: a door beside a figure would be the widest thing on
+// the row and push the reading's own name to a second line.
+export const NarrowRowSlotsFold: Story = {
+  name: "Row slots — the narrow shape",
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <StatStrip>
+      <StatCard
+        label="Urgent"
+        value="8+"
+        tone="warning"
+        detail="somebody waiting or a promise breaking"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Meetings today"
+        value="0"
+        detail="on today's calendar"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Leads owed a reply"
+        value="19+"
+        detail="owed a first answer"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Pipeline · Q3"
+        value="€5m"
+        detail="€3.7m weighted · 33 priced"
+        narrow="row"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Decisions waiting"
+        value="4+"
+        detail="waiting on your answer"
+        narrow="row"
+        onOpen={() => {}}
+      />
+    </StatStrip>
+  ),
+};
+
+export const RowSlotsInANarrowRail: Story = {
+  render: () => (
+    <div style={{ maxWidth: 280 }}>
+      <StatStrip>
+        <StatCard
+          narrow="row"
+          label="Leads to contact"
+          value="2"
+          detail="Assigned and awaiting your first reply"
+          onOpen={() => {}}
+        />
+        <StatCard
+          narrow="row"
+          label="Deal value needing attention"
+          value="No flagged deals"
+          detail="Expected deal value; excludes unpriced deals"
+        />
+      </StatStrip>
+    </div>
   ),
 };

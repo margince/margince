@@ -67,22 +67,24 @@ func (h Handlers) setTeamMember(w http.ResponseWriter, r *http.Request, id crmco
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h Handlers) PreviewAccess(w http.ResponseWriter, r *http.Request) {
+// PreviewAccess answers what a seat with this role and these teams would see.
+//
+// A GET, and the method carries meaning: the seat ceiling is method-based, so a
+// read wearing POST was refused to a read-seat admin — a read, denied to the
+// seat whose whole purpose is reading. The role and teams ride the query for
+// that reason rather than a body.
+func (h Handlers) PreviewAccess(w http.ResponseWriter, r *http.Request, params crmcontracts.PreviewAccessParams) {
 	actor, ok := h.actor(w, r)
 	if !ok {
 		return
 	}
-	var req crmcontracts.AccessPreviewRequest
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
 	var teams []ids.UUID
-	if req.TeamIds != nil {
-		for _, t := range *req.TeamIds {
+	if params.TeamIds != nil {
+		for _, t := range *params.TeamIds {
 			teams = append(teams, ids.UUID(t))
 		}
 	}
-	access, err := h.svc.PreviewAccess(r.Context(), actor, string(req.Role), teams)
+	access, err := h.svc.PreviewAccess(r.Context(), actor, string(params.Role), teams)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -148,8 +150,14 @@ func wireAccess(a Access) crmcontracts.AccessPreview {
 		teams = append(teams, wireTeam(t))
 	}
 	identityRead := crmcontracts.AccessPreviewIdentityReadWorkspace
+	var memberStatus *crmcontracts.AccessPreviewMemberStatus
+	if a.MemberStatus != "" {
+		status := crmcontracts.AccessPreviewMemberStatus(a.MemberStatus)
+		memberStatus = &status
+	}
 	return crmcontracts.AccessPreview{
 		Role:         a.Role,
+		MemberStatus: memberStatus,
 		RowScope:     accessPreviewRowScope(a.Permissions.RowScope),
 		IdentityRead: &identityRead,
 		Objects:      objects,

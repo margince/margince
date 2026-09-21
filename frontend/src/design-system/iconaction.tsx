@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
 import "./iconaction.css";
@@ -33,11 +33,12 @@ import "./iconaction.css";
  */
 export function IconAction({
   label,
+  hint,
   icon,
   variant,
-  small,
   reason,
   reasonId,
+  disabled,
   pending,
   pressed,
   onClick,
@@ -45,10 +46,22 @@ export function IconAction({
 }: Readonly<{
   /** The verb, translated. Spoken as the name and shown as the tip. */
   label: string;
+  /**
+   * What the verb DOES, where the word alone cannot say it.
+   *
+   * A glyph verb answers "what is this" with its label and stops there. Some
+   * verbs need a second sentence — a pin is a personal ordering preference that
+   * holds until it is undone, and none of that is in the word "Pin".
+   *
+   * It joins the TIP and becomes the accessible DESCRIPTION, never part of the
+   * name: a control list that read "Pin to the top of your own worklist, only
+   * you see it…" once per row would be worse than the bare word. Omitted, the
+   * control is exactly what it was.
+   */
+  hint?: string;
   /** The glyph, `aria-hidden` — the label is what names this control. */
   icon: ReactNode;
   variant?: "primary" | "ghost" | "danger";
-  small?: boolean;
   /** Why this verb is unavailable; refuses the press, as on `Button`. */
   reason?: string;
   /**
@@ -56,6 +69,15 @@ export function IconAction({
    * one fact refuses several verbs, as `Button.reasonId` is for.
    */
   reasonId?: string;
+  /**
+   * A precondition this verb is waiting on, with no sentence to go with it —
+   * the third refusal `Button` already draws and the one a glyph most often
+   * needs: a row's quiet verbs held while the write its primary started is out.
+   * `pending` would be the wrong spelling of that (it claims a write THIS
+   * control started) and `reason` the wrong one too (it owes the reader a
+   * sentence, and the fact here is simply "not yet").
+   */
+  disabled?: boolean;
   pending?: boolean;
   /**
    * For a glyph that SETS rather than does — a switch over a region, a filter
@@ -70,17 +92,21 @@ export function IconAction({
   /** Passed through, for a control a test already reaches by its own handle. */
   testId?: string;
 }>) {
-  const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(label);
+  const hintId = useId();
+  const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
+    hint === undefined ? label : `${label}. ${hint}`,
+  );
   return (
     <span className="icon-action" ref={ref} {...trigger}>
       <Button
         iconOnly
         variant={variant}
-        small={small}
         reason={reason}
         reasonId={reasonId}
+        disabled={disabled}
         pending={pending}
         aria-label={label}
+        aria-describedby={hint === undefined ? undefined : hintId}
         aria-pressed={pressed}
         data-testid={testId}
         onClick={onClick}
@@ -88,6 +114,14 @@ export function IconAction({
         {icon}
       </Button>
       {tip}
+      {/* The description a screen reader reads AFTER the name, and the one a
+          pointer gets from the tip above. Visually hidden because the row has
+          no space for it — the tip is where a sighted reader meets it. */}
+      {hint !== undefined && (
+        <span id={hintId} className="sr-only">
+          {hint}
+        </span>
+      )}
     </span>
   );
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -227,4 +227,18 @@ describe("choosing a file", () => {
 
     expect(target().hasAttribute("accept")).toBe(false);
   });
+});
+
+// The prompt is a question until it is answered, and the answer takes the
+// reader's own ink rather than the placeholder's. One class carries that, so
+// nothing else fails when it goes.
+it("marks the label as an answer once a file is chosen, and not before", () => {
+  const { unmount } = show(vi.fn());
+  expect(
+    screen.getByText("Drop the file here, or click to choose one").className,
+  ).not.toContain("chosen");
+  unmount();
+
+  show(vi.fn(), new File(["x"], "contract.pdf", { type: "application/pdf" }));
+  expect(screen.getByText(/contract\.pdf/).className).toContain("chosen");
 });

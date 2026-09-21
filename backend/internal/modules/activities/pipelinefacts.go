@@ -65,10 +65,10 @@ const ClassifyBacklogPredicate = `capture_label IS NULL
 // once and every field comes off the same row — four round trips to assemble one
 // drawer would be four times the cost for no separation anybody benefits from.
 type PipelineFacts struct {
-	// HasPersonLink answers the person-creation rung. The link is the durable
+	// HasContactLink answers the contact-creation rung. The link is the durable
 	// signal: it is also how the link_reconcile sweep finds its work, so a
 	// link-less connector activity is precisely what "not linked yet" means.
-	HasPersonLink bool
+	HasContactLink bool
 
 	// CaptureLabel is the attention label, empty when unlabelled.
 	CaptureLabel string
@@ -81,6 +81,12 @@ type PipelineFacts struct {
 	// member "the classifier reads email only" about an archived email would be
 	// a wrong why, which is worse than no why at all.
 	ClassifyReason pipelinetrace.Reason
+
+	// ThreadKey is the conversation this message belongs to, empty when it has
+	// none. It is the material-events rung's subject: that stage reads a THREAD,
+	// so a transport that carries no thread key has no unit of work for it and
+	// the rung says so rather than reporting a state it does not have.
+	ThreadKey string
 }
 
 // ReadPipelineFacts answers the derived rungs for one activity.
@@ -103,14 +109,15 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 		if err := auth.EnsureActivityContentVisible(ctx, tx, id); err != nil {
 			return err
 		}
-		var label *string
+		var label, threadKey *string
 		var kind, capturedBy string
 		var archived, audienceLimited, senderUndecided, eligible bool
 		row := tx.QueryRow(ctx, `
 			SELECT
 			  EXISTS (SELECT 1 FROM activity_link l
-			           WHERE l.activity_id = activity.id AND l.person_id IS NOT NULL),
+			           WHERE l.activity_id = activity.id AND l.contact_id IS NOT NULL),
 			  capture_label,
+			  thread_key,
 			  kind,
 			  captured_by,
 			  archived_at IS NOT NULL,
@@ -121,12 +128,15 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			  (`+ClassifyBacklogPredicate+`)
 			FROM activity
 			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses())
-		if err := row.Scan(&out.HasPersonLink, &label, &kind, &capturedBy,
+		if err := row.Scan(&out.HasContactLink, &label, &threadKey, &kind, &capturedBy,
 			&archived, &audienceLimited, &senderUndecided, &eligible); err != nil {
 			return err
 		}
 		if label != nil {
 			out.CaptureLabel = *label
+		}
+		if threadKey != nil {
+			out.ThreadKey = *threadKey
 		}
 		out.ClassifyEligible = eligible
 		out.ClassifyReason = classifyReason(classifySubject{

@@ -17,7 +17,7 @@ import (
 
 const fullConfig = `
 version: 1
-organization:
+workspace:
   name: Gradion
   base_currency: EUR
   timezone: Europe/Berlin
@@ -53,8 +53,8 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if cfg.Organization.Name != "Gradion" || cfg.BootstrapAdmin.Email != "lars@example.com" {
-		t.Fatalf("parsed organization/admin = %+v / %+v", cfg.Organization, cfg.BootstrapAdmin)
+	if cfg.Workspace.Name != "Gradion" || cfg.BootstrapAdmin.Email != "lars@example.com" {
+		t.Fatalf("parsed company/admin = %+v / %+v", cfg.Workspace, cfg.BootstrapAdmin)
 	}
 	if cfg.Seeds.Pipeline.Name != "Sales" || len(cfg.Seeds.Pipeline.Stages) != 2 {
 		t.Fatalf("parsed pipeline seed = %+v", cfg.Seeds.Pipeline)
@@ -82,8 +82,8 @@ func TestParseRejectsUnknownKeys(t *testing.T) {
 func TestParseValidatesFailClosed(t *testing.T) {
 	cases := map[string]string{ // #nosec G101 -- yaml documents that must FAIL validation, not credentials
 		"unsupported version":     "version: 2\n",
-		"bad timezone":            "version: 1\norganization: { name: X, timezone: Mars/Olympus }\n",
-		"bad currency":            "version: 1\norganization: { name: X, base_currency: euros }\n",
+		"bad timezone":            "version: 1\nworkspace: { name: X, timezone: Mars/Olympus }\n",
+		"bad currency":            "version: 1\nworkspace: { name: X, base_currency: euros }\n",
 		"admin without password":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
 		"inline secret refused":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
 		"empty pipeline":          "version: 1\nseeds: { pipeline: { name: Sales, stages: [] } }\n",
@@ -92,13 +92,7 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
 		"email without smtp":      "version: 1\nemail: { enabled: true, from_address: a@b.co }\n",
 		"smtp port out of range":  "version: 1\nemail: { enabled: true, from_address: a@b.co, smtp: { host: h, port: 70000 } }\n",
-		"password auth disabled":  "version: 1\nauth: { password: { enabled: false } }\n",
 		"unknown context rollout": "version: 1\ncompany_context: { rollout: everything }\n",
-		"ovb cap at ceiling":      "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 4, cap: 4 }, rest: { ceiling: 100000, cap: 90000 } } }\n",
-		"ovb cap above ceiling":   "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 4 }, rest: { ceiling: 100000, cap: 100001 } } }\n",
-		"ovb zero cap":            "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 0 }, rest: { ceiling: 100000, cap: 90000 } } }\n",
-		"ovb warn not below shed": "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 4 }, rest: { ceiling: 100000, cap: 90000 }, warn_fraction: 0.95, shed_fraction: 0.90 } }\n",
-		"ovb shed above one":      "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 4 }, rest: { ceiling: 100000, cap: 90000 }, warn_fraction: 0.7, shed_fraction: 1.5 } }\n",
 	}
 	for name, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
@@ -107,31 +101,17 @@ func TestParseValidatesFailClosed(t *testing.T) {
 	}
 }
 
-func TestEffectiveOverlayBudgetFillsDefaultsAndMerges(t *testing.T) {
-	// No block → the built-in HubSpot default with spec warn/shed fractions.
-	def, err := Parse([]byte("version: 1\n"))
+// A deployment may close the password door. This file cannot check that
+// something else opens one — which providers are mounted is decided by the
+// credentials and URLs the composition root composes, not by this document —
+// so it parses, and cmd/api refuses the combination that leaves no way in.
+func TestPasswordAuthMayBeTurnedOff(t *testing.T) {
+	cfg, err := Parse([]byte("version: 1\nauth: { password: { enabled: false } }\n"))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	hs := def.EffectiveOverlayBudget()["hubspot"]
-	if hs.Search.Cap != 4 || hs.REST.Cap != 90000 {
-		t.Fatalf("default hubspot caps = search %d / rest %d, want 4 / 90000", hs.Search.Cap, hs.REST.Cap)
-	}
-	if hs.WarnFraction != 0.70 || hs.ShedFraction != 0.90 {
-		t.Fatalf("default hubspot fractions = %g / %g, want 0.70 / 0.90", hs.WarnFraction, hs.ShedFraction)
-	}
-
-	// An operator override with fractions left unset gets the spec defaults.
-	over, err := Parse([]byte("version: 1\noverlay_budget: { hubspot: { search: { ceiling: 10, cap: 8 }, rest: { ceiling: 200000, cap: 150000 } } }\n"))
-	if err != nil {
-		t.Fatalf("parse override: %v", err)
-	}
-	got := over.EffectiveOverlayBudget()["hubspot"]
-	if got.Search.Cap != 8 || got.REST.Cap != 150000 {
-		t.Fatalf("override caps = search %d / rest %d, want 8 / 150000", got.Search.Cap, got.REST.Cap)
-	}
-	if got.WarnFraction != 0.70 || got.ShedFraction != 0.90 {
-		t.Fatalf("override fractions defaulted = %g / %g, want 0.70 / 0.90", got.WarnFraction, got.ShedFraction)
+	if cfg.Auth.PasswordEnabled() {
+		t.Fatal("auth.password.enabled=false parsed as enabled — the switch would be inert")
 	}
 }
 
@@ -246,15 +226,32 @@ func writeTemp(t *testing.T, doc string) string {
 	return path
 }
 
+func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
+	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Operations.AllowTestMailbox {
+		t.Fatal("AllowTestMailbox must default OFF — a capability that can fake a real send outcome is stated, never assumed")
+	}
+	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\noperations:\n  allow_test_mailbox: true\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !on.Operations.AllowTestMailbox {
+		t.Fatal("operations.allow_test_mailbox: true must parse")
+	}
+}
+
 func TestMCPConnectorGateDefaultsOff(t *testing.T) {
-	cfg, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\n"), runtimeenv.Production)
+	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cfg.MCP.ConnectorEnabled {
 		t.Fatal("the connector gate must default OFF — an unset flag must never expose /mcp")
 	}
-	on, err := Load(writeTemp(t, "version: 1\norganization:\n  name: T\nmcp:\n  connector_enabled: true\n"), runtimeenv.Production)
+	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\nmcp:\n  connector_enabled: true\n"), runtimeenv.Production)
 	if err != nil {
 		t.Fatal(err)
 	}

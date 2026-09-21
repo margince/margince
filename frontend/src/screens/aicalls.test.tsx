@@ -1,11 +1,11 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { AiCallsCard } from "./aicalls";
+import { AiCallsCard, useLastCallAt } from "./aicalls";
 
 const summary = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
@@ -110,15 +110,128 @@ function mount(
   return { seen };
 }
 
+// The hook's four answers, read through a component that renders nothing else.
+// A probe rather than a second card: what this file pins is the STATE, and the
+// surface that acts on it is under test beside the card that draws it.
+function LastCallProbe() {
+  const last = useLastCallAt();
+  return (
+    <output>
+      {last.state === "at" ? new Date(last.epochMs).toISOString() : last.state}
+    </output>
+  );
+}
+
+// The same server the card meets, with the trace read answered per case. The
+// probe is mounted alone so nothing else on screen can satisfy a query for it.
+function mountProbe(
+  trace: () => Promise<Response>,
+  allow: GrantSpec = OPERATOR,
+) {
+  const seen: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test",
+      ).pathname;
+      seen.push(path);
+      return path.endsWith("/v1/me")
+        ? new Response(JSON.stringify(meFixture({ allow })), {
+            headers: { "Content-Type": "application/json" },
+          })
+        : trace();
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <LastCallProbe />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return { seen };
+}
+
+function tracePage(rows: unknown[]) {
+  return async () =>
+    new Response(
+      JSON.stringify({
+        data: rows,
+        page: { has_more: false },
+        tasks: [],
+        payload_capture_enabled: false,
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
+// Four silences, and only one of them is a claim about the INSTALLATION.
+//
+// The withheld case and the answered ones are asserted from one fixture pair on
+// purpose: "withheld" is also what the probe reads while /me is still in
+// flight, so it proves nothing until the same wiring one grant apart reaches an
+// instant.
+it("says the trace is withheld rather than that nothing was ever called", async () => {
+  const { seen } = mountProbe(tracePage([summary]), {
+    automation: ["read", "update"],
+  });
+
+  expect(await screen.findByText("withheld")).toBeTruthy();
+  // And the denial is already known, so the read never fires.
+  expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);
+});
+
+it("answers with the newest call's instant once the trace has landed", async () => {
+  mountProbe(tracePage([summary]));
+
+  // The instant the newest row carries, parsed — not a zero and not the row
+  // below it.
+  expect(
+    await screen.findByText(new Date(summary.occurred_at).toISOString()),
+  ).toBeTruthy();
+});
+
+it("says nothing is read yet while the trace is still arriving", async () => {
+  // A request that never settles IS the in-flight state, with no clock and
+  // nothing to wait out.
+  const { seen } = mountProbe(() => new Promise<Response>(() => {}));
+
+  await waitFor(() =>
+    expect(seen.some((path) => path.includes("/ai/calls"))).toBe(true),
+  );
+  expect(screen.getByText("unread")).toBeTruthy();
+});
+
+// A failed read is its own answer, for the reason "never" is: only one of the
+// two resolves by waiting, and a caller that could not tell them apart would
+// draw a reading that goes quiet on a broken read.
+it("says the trace read failed rather than that it is still arriving", async () => {
+  mountProbe(async () => new Response("", { status: 500 }));
+
+  await waitFor(() => expect(screen.getByText("failed")).toBeTruthy());
+  expect(screen.queryByText("unread")).toBeNull();
+});
+
+it("says never called only when the trace answered and held no row", async () => {
+  mountProbe(tracePage([]));
+
+  expect(await screen.findByText("never")).toBeTruthy();
+});
+
 it("renders call badges and expands the attempt and payload detail", async () => {
   mount();
   expect(await screen.findByText("provider_unavailable")).toBeTruthy();
-  expect(screen.getByText("retry ×2")).toBeTruthy();
+  expect(screen.getByText("Retry ×2")).toBeTruthy();
   // One element, not the second of two: the task name used to appear in the
   // filter's option list as well as in the row, and the row is what expands.
   // The disclosure is a real button now, not the row: a `<tr onClick>`

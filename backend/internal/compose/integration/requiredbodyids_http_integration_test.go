@@ -62,23 +62,23 @@ func namesField(problem problemBody, field string) bool {
 // legitimately name. A missing PATH id would 404 for its own reasons and prove
 // nothing about the body.
 type requiredIDFixtures struct {
-	person, organization, activity string
-	tag, project                   string
-	deal, subjectUser              string
+	contact, company, activity string
+	tag, project               string
+	deal, subjectUser          string
 }
 
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {
 	t.Helper()
 	var out requiredIDFixtures
-	out.person = createAndID(t, e, "/v1/people", AnyMap{"full_name": "Merge Source"})
-	out.organization = createAndID(t, e, "/v1/organizations", AnyMap{"display_name": "Merge Org"})
+	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"full_name": "Merge Source"})
+	out.company = createAndID(t, e, "/v1/companies", AnyMap{"display_name": "Merge Company"})
 	out.activity = createAndID(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "body": "relink probe",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": out.person}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": out.contact}},
 	})
 	out.tag = createAndID(t, e, "/v1/tags", AnyMap{"name": "required-ids"})
 	out.project = createAndID(t, e, "/v1/projects", AnyMap{
-		"name": "Stakeholder probe", "organization_id": out.organization, "source": "manual",
+		"name": "Stakeholder probe", "company_id": out.company, "source": "manual",
 	})
 	out.deal = seedDealForRequiredIDs(t, e)
 
@@ -156,22 +156,22 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			supplied: AnyMap{"name": "Orphan stage", "position": 9, "pipeline_id": absent},
 			field:    "pipeline_id",
 		},
-		"MergePersonJSONBody.target_id": {
-			method: "POST", path: "/v1/people/" + f.person + "/merge",
+		"MergeContactJSONBody.target_id": {
+			method: "POST", path: "/v1/contacts/" + f.contact + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
 		},
-		"MergeOrganizationJSONBody.target_id": {
-			method: "POST", path: "/v1/organizations/" + f.organization + "/merge",
+		"MergeCompanyJSONBody.target_id": {
+			method: "POST", path: "/v1/companies/" + f.company + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
 		},
 		"RelinkActivityJSONBody.entity_id": {
 			method: "POST", path: "/v1/activities/" + f.activity + "/relink",
-			omitted:  AnyMap{"entity_type": "person"},
-			supplied: AnyMap{"entity_type": "person", "entity_id": absent},
+			omitted:  AnyMap{"entity_type": "contact"},
+			supplied: AnyMap{"entity_type": "contact", "entity_id": absent},
 			field:    "entity_id",
 		},
 		"RecordConsentRequest.purpose_id": {
-			method: "POST", path: "/v1/people/" + f.person + "/consent",
+			method: "POST", path: "/v1/contacts/" + f.contact + "/consent",
 			// wording rides along because a grant without it is refused naming
 			// THAT field, and this case asserts the refusal names purpose_id.
 			omitted:  AnyMap{"new_state": "granted", "wording": "Yes, you may contact me about this."},
@@ -179,38 +179,34 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			field:    "purpose_id",
 		},
 		"IssueDoubleOptInJSONBody.purpose_id": {
-			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
+			method: "POST", path: "/v1/contacts/" + f.contact + "/consent/double-opt-in",
 			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
-			// This endpoint mints nothing and resolves nothing: it refuses every
-			// caller with a conflict, whatever purpose they name. So it has no row
-			// to hide and no 404 to give — and equally no way to enumerate, since
-			// a visible purpose, an invisible one and one that never existed all
-			// get the identical answer. The omitted half above is still held: a
-			// body-id probe runs ahead of the refusal precisely so this endpoint
-			// does not become the one place a missing id goes unnamed.
-			suppliedStatus: http.StatusConflict,
+			// No exception any more. This endpoint used to refuse every caller
+			// with a conflict, so it had no row to hide; it resolves the purpose
+			// and mints a link now, which puts it back under the rule every other
+			// required body id follows.
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
-			omitted:  AnyMap{"entity_type": "person"},
-			supplied: AnyMap{"entity_type": "person", "entity_id": absent},
+			omitted:  AnyMap{"entity_type": "contact"},
+			supplied: AnyMap{"entity_type": "contact", "entity_id": absent},
 			field:    "entity_id",
 		},
-		"SetProjectStakeholderRequest.person_id": {
+		"SetProjectStakeholderRequest.contact_id": {
 			method: "PUT", path: "/v1/projects/" + f.project + "/stakeholders",
 			omitted:  AnyMap{"role": "sponsor"},
-			supplied: AnyMap{"role": "sponsor", "person_id": absent},
-			field:    "person_id",
+			supplied: AnyMap{"role": "sponsor", "contact_id": absent},
+			field:    "contact_id",
 		},
 		// Two required ids, so two rows: a guard that named only the first would
 		// leave the second answering not-found for a subject nobody sent.
 		"CreateRecordGrantRequest.record_id": {
 			method: "POST", path: "/v1/record-grants",
 			omitted: AnyMap{
-				"access": "read", "record_type": "person", "subject_type": "user", "subject_id": f.subjectUser,
+				"access": "read", "record_type": "contact", "subject_type": "user", "subject_id": f.subjectUser,
 			},
 			supplied: AnyMap{
-				"access": "read", "record_type": "person", "subject_type": "user",
+				"access": "read", "record_type": "contact", "subject_type": "user",
 				"subject_id": f.subjectUser, "record_id": absent,
 			},
 			field: "record_id",
@@ -218,11 +214,11 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		"CreateRecordGrantRequest.subject_id": {
 			method: "POST", path: "/v1/record-grants",
 			omitted: AnyMap{
-				"access": "read", "record_type": "person", "subject_type": "user", "record_id": f.person,
+				"access": "read", "record_type": "contact", "subject_type": "user", "record_id": f.contact,
 			},
 			supplied: AnyMap{
-				"access": "read", "record_type": "person", "subject_type": "user",
-				"record_id": f.person, "subject_id": absent,
+				"access": "read", "record_type": "contact", "subject_type": "user",
+				"record_id": f.contact, "subject_id": absent,
 			},
 			field: "subject_id",
 		},

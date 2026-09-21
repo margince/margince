@@ -1,0 +1,67 @@
+/* Stack and Row — the space between two things, and nothing else.
+ *
+ * No ground, no border, no padding, no type. Everything a reader can SEE
+ * belongs to Card, Panel or the control itself; a layout primitive that drew
+ * anything would be a second card under a name that hides it.
+ *
+ * The gap classes are shared by both, so a unit that switches a Stack to a Row
+ * keeps the step it chose. */
+
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ds-row {
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+}
+
+/* Named steps rather than a style attribute: a unit ships no stylesheet, and
+   an inline `gap` would let one pick 7px. */
+.ds-gap-1 {
+  gap: var(--space-1);
+}
+.ds-gap-2 {
+  gap: var(--space-2);
+}
+.ds-gap-3 {
+  gap: var(--space-3);
+}
+.ds-gap-4 {
+  gap: var(--space-4);
+}
+.ds-gap-6 {
+  gap: var(--space-6);
+}
+
+.ds-align-center {
+  align-items: center;
+}
+.ds-align-start {
+  align-items: flex-start;
+}
+.ds-align-baseline {
+  align-items: baseline;
+}
+
+.ds-justify-start {
+  justify-content: flex-start;
+}
+.ds-justify-end {
+  justify-content: flex-end;
+}
+.ds-justify-between {
+  justify-content: space-between;
+}
+
+/* Wrapping is the default: a row of chips on a narrow screen has to go
+   somewhere, and off-screen is the one answer that loses the content. */
+.ds-row-wrap {
+  flex-wrap: wrap;
+}
+.ds-row-nowrap {
+  flex-wrap: nowrap;
+}

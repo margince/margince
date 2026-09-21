@@ -13,20 +13,17 @@
   corner-shape: round;
 }
 .dot-auto {
-  background: var(--online);
+  background: var(--success);
 }
 .dot-confirm {
-  background: var(--away);
+  background: var(--warning);
 }
 
 .evidence-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-  background: var(--bgCard);
+  background: var(--bgChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: 3px 8px;
@@ -82,9 +79,6 @@ button.evidence-chip:hover {
 .evidence-chip-snippet {
   display: block;
   max-width: 100%;
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   overflow-wrap: anywhere;
 }
 
@@ -92,101 +86,36 @@ button.evidence-chip:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 .confidence-high .dot {
-  background: var(--online);
+  background: var(--success);
 }
 .confidence-med .dot {
-  background: var(--away);
+  background: var(--warning);
 }
 .confidence-low .dot {
-  background: var(--dnd);
+  background: var(--danger);
 }
 
-.provenance {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-}
-.provenance-agent {
-  background: var(--aiLight);
-  color: var(--aiText);
-}
-.provenance-human {
-  background: var(--bgCard);
-  /* --tealText, not --teal: the two are byte-identical in light, and only
-     --tealText is lifted for dark. Unlifted teal on a dark card measures
-     2.74:1 at this size — under the 4.5:1 text floor, on the most-rendered
-     arm of the five. */
-  color: var(--tealText);
-}
-/* The installation's own housekeeping: neither a person nor a model, so it
-   borrows neither the human teal nor the AI tint. Plain ink on the card ground
-   is the quietest thing that is still a claim — a scheduled sweep drawn in the
-   AI colour would tell a reader a model decided something here. */
-.provenance-system {
-  background: var(--bgCard);
-  color: var(--textPrimary);
-}
-/* A buyer typed it, so the tag keeps the human arm's plain card ground and
-   never the AI tint — a person did this. The ink is the accent rather than the
-   colleague teal because a buyer is a person from OUTSIDE the organization, and
-   the accent is already how the product marks a buyer's own contribution (the
-   stripe on their Deal Room comment). */
-.provenance-buyer {
-  background: var(--bgCard);
-  color: var(--accentText);
-}
-/* An unrecorded source claims neither a person nor a machine, and reads as
-   the absence it is rather than borrowing either one's colour. */
-.provenance-unknown {
-  background: var(--bgCard);
-  color: var(--textMeta);
-  font-style: italic;
-}
-
-/* The agent's row: a staged proposal is visibly NOT yet real — the agent's
-   tint for ground, a dashed indigo edge until a person accepts it, the
-   card's corner. Indigo is a fact about who wrote it, never a mood. */
-.staging-card {
-  background: var(--aiLight);
-  border: 1.5px dashed var(--aiMed);
-  border-radius: var(--r-md);
-  padding: var(--space-4) var(--space-5);
-}
+/* The agent's row: a staged proposal is visibly NOT yet real. Its ground, its
+   dashed indigo edge and its corner are the panel-ai family's and are declared
+   once in panel.css, beside the panel a machine wrote — indigo is a fact about
+   who wrote something, never a mood, and one claim is one declaration. What
+   follows is only what the ROW puts on that box. */
 .staging-card .staged-value {
   color: var(--aiText);
-  font-weight: 600;
 }
 /* The line a reader takes the row in by, set off from the meta above it and
    in the display face: it is the row's one headline. */
 .staging-card .approval-headline {
   margin-top: var(--space-2);
-  font-family: var(--f-display);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 /* The sentence explaining the headline above it — why this is staged, not what
    it says. Close to what it explains: a full line's air between the two would
-   read as a second, unrelated fact.
- *
- * Demoted by SIZE, not by ink. `--textSecondary` measures 4.33:1 against this
- * card's AI-tinted ground and fails AA — the staging card paints `--aiLight`
- * over the card, so the same token that passes on a plain card does not pass
- * here. This is the ancestor-dependent contrast trap the Badge hit before it
- * (4.54:1 vs 4.05:1 on identical tokens); the fix is the body ink, which reads
- * 9.1:1, with `t-caption` doing the demoting. */
+   read as a second, unrelated fact. */
 .staging-card .approval-why {
   margin-top: var(--space-1);
-  color: var(--textContent);
 }
 
 /* The persisted counterpart a resolved proposal settles into: a pane with a
@@ -198,16 +127,27 @@ button.evidence-chip:hover {
   padding: var(--space-4) var(--space-5);
 }
 
+/* The staged proposal's gate, in its two shapes, which want the same air and
+ * only one of them wants the row.
+ *
+ * The VERDICT shape is an `ActionRow` — Accept alone on the trailing edge, the
+ * verbs that decline as glyphs on the leading one — and it takes this class as
+ * its placement hook, for the margin alone: its own layout, wrap and action
+ * gap are `.action-row`'s, spelled there in the same values. The margin is the
+ * rung `.dcard-verbs` takes, which is the same decision drawn on a card.
+ *
+ * The EDITING shape is a form holding a field and its submit, which
+ * `ActionRow` is explicitly not for, and the flex row below is what lays that
+ * one out. */
 .approval-gate {
   display: flex;
   gap: var(--gapActions);
-  margin-top: 12px;
+  margin-top: var(--space-3);
   flex-wrap: wrap;
 }
 
 .staged-edit {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--accent);
@@ -217,7 +157,7 @@ button.evidence-chip:hover {
      Button that has one, and without it the two ends of that row were
      different heights — which reads as a field that has not finished loading
      rather than as a field beside its verb. */
-  min-block-size: var(--control-h);
+  min-block-size: var(--controlHeight);
 }
 
 .field-diff {
@@ -225,8 +165,6 @@ button.evidence-chip:hover {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 
 /* Either side of a diff can be a whole jsonb document — a scraped fact set
@@ -258,20 +196,16 @@ button.evidence-chip:hover {
   overflow-y: auto;
 }
 
-/* --textMeta, not --textTertiary: the value a field USED to hold is the half of
- * a diff a reader checks the new one against, so it is text to be read at 12px
- * and takes the AA small-text role. The line-through is what says "replaced" —
- * subordinating it with colour as well would cost the reader the old value. */
+/* The line-through is what says "replaced". */
 .field-diff-from {
-  color: var(--textMeta);
   text-decoration: line-through;
 }
 
-/* --successText, not --success: this is 12px text ON the success tint, and its
- * own family's ink over its own family's ground measures 4.48:1 there — under
- * AA, which axe reads as serious on every timeline showing a field change. The
- * paragraph above made exactly this call for the FROM side and this side never
- * got the same pass. */
+/* --successText, not --success: this is 12px text ON the success tint, and the
+ * base hue over its own family's ground is nowhere near AA there — which axe
+ * reads as serious on every timeline showing a field change. The paragraph
+ * above made exactly this call for the FROM side and this side never got the
+ * same pass. */
 .field-diff-to {
   color: var(--successText);
   background: var(--successBg);
@@ -284,29 +218,7 @@ button.evidence-chip:hover {
  * text, and the italic alone marks it as the component's own wording rather
  * than a value that was stored. */
 .field-diff-empty {
-  color: var(--textMeta);
   font-style: italic;
-}
-
-/* Left on --textTertiary deliberately: this is the aria-hidden ArrowRight
- * GLYPH, not text. It is a mark, which is the role --textTertiary names
- * (tokens.css), and its meaning is already carried without it — the two sides
- * are labelled "old value" / "new value" for a screen reader and drawn
- * struck-through and pill-green for everyone else. */
-.field-diff-arrow {
-  color: var(--textTertiary);
-}
-
-.passport-chip {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--f-mono);
-  font-size: var(--fs-eyebrow);
-  color: var(--aiText);
-  background: var(--aiLight);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 1px 8px;
 }
 
 /*
@@ -353,6 +265,6 @@ button.evidence-chip:hover {
 }
 .evidence-chip:active,
 .evidence-chip-toggle:active {
-  background-color: var(--bgCard);
+  background-color: var(--bgChip);
   transition-duration: var(--dur-tap);
 }

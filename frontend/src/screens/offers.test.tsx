@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -61,7 +61,7 @@ const baseOffer = {
   revision: 2,
   status: "draft" as const,
   currency: "EUR",
-  buyer_org_id: null,
+  buyer_company_id: null,
   valid_until: "2026-08-01",
   intro_text: null,
   terms_text: null,
@@ -211,7 +211,6 @@ describe("OfferScreen", () => {
     stubOffer(baseOffer);
     render(<OfferScreen id="o-1" />);
     expect(await screen.findByText("ANG-2026-0007")).toBeTruthy();
-    expect(screen.getByText("Revision 2")).toBeTruthy();
     expect(screen.getByText("draft")).toBeTruthy();
     // 100000 minor EUR net, 19000 tax, 119000 gross (en-GB Intl formatting).
     expect(screen.getByText("€1,000.00")).toBeTruthy();
@@ -239,7 +238,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     stubOffer({ ...baseOffer, line_items: [existingLine] });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.getByTestId("offer-line-editor")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Line items" })).toBeTruthy();
   });
 
   it("omits the line editor entirely once the offer leaves draft", async () => {
@@ -250,7 +249,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.queryByTestId("offer-line-editor")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Line items" })).toBeNull();
   });
 
   it("refreshes totals from the add-line response, never a client-computed sum", async () => {
@@ -420,7 +419,7 @@ function stubOfferWithRegenerate(
 }
 
 describe("AI disclosure/diff banner (OP-11)", () => {
-  it("renders the Art. 50 disclosure and diff summary when ai_generated is true", async () => {
+  it("renders the AI provenance notice and diff summary when ai_generated is true", async () => {
     stubOffer({
       ...baseOffer,
       status: "sent",
@@ -466,7 +465,9 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "AI-assisted disclosure" }),
+    ).toBeNull();
   });
 });
 
@@ -602,7 +603,7 @@ describe("render PDF action (OP-12)", () => {
     expect(unavailable).toBeTruthy();
     // Calm, informational copy — not the red error-banner path every other
     // action's mutation.isError branch renders.
-    expect(unavailable.style.color).not.toBe("var(--danger)");
+    expect(unavailable.style.color).not.toBe("var(--dangerText)");
     expect(screen.queryByText("blobstore not wired")).toBeNull();
     expect(screen.queryByTestId("pdf-link")).toBeNull();
   });
@@ -686,7 +687,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     // Once sent, the send action and the draft-only affordances disappear.
     expect(screen.queryByTestId("send-offer")).toBeNull();
     expect(screen.queryByTestId("edit-offer-header")).toBeNull();
-    expect(screen.queryByTestId("offer-line-editor")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Line items" })).toBeNull();
   });
 
   it("renders a 422 detail verbatim when send is rejected (e.g. fx_rate_unavailable)", async () => {

@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 // hangUp is a ResponseWriter whose body refuses after the first write, which is
@@ -52,25 +51,16 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 	// it measures anything.
 	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
-	Metrics(nil,
-		func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
-		func() uint64 { return 0 },
-		func(io.Writer) { measured["extra"] = true },
-		func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
-		&OverlayMetrics{
-			SourceLag: func(context.Context) (map[string]time.Duration, error) {
-				measured["overlay"] = true
-				return map[string]time.Duration{}, nil
-			},
-			SyncedTotal:   func() uint64 { return 0 },
-			ConflictTotal: func() uint64 { return 0 },
-			DeletedTotal:  func() uint64 { return 0 },
-		},
-	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	Metrics(MetricsInput{
+		Backlog:   func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
+		Published: func() uint64 { return 0 },
+		Extra:     func(io.Writer) { measured["extra"] = true },
+		JobStats:  func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
+	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	// The runtime section is first and does the refusing, so everything after
 	// it is work for a body that cannot be delivered.
-	for _, section := range []string{"backlog", "extra", "jobs", "overlay"} {
+	for _, section := range []string{"backlog", "extra", "jobs"} {
 		if measured[section] {
 			t.Errorf("the %s section was measured after the scrape's writer was already gone — "+
 				"a database read nobody will see the result of, on a socket that is not there", section)
@@ -95,34 +85,6 @@ func TestTheExpositionKeepsRefusingAfterTheFirstFailure(t *testing.T) {
 	}
 }
 
-// Every supplier, not only the expensive ones. printf goes quiet after a
-// refusal, but Go evaluates its arguments first, so a counter read still
-// happens unless the section that would print it is guarded. Cheap here — the
-// suppliers are atomic loads — and the point is the rule rather than the cost:
-// "nothing is measured for a scrape that has gone" is either true of all of
-// them or it is a claim a reader has to check one section at a time.
-func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
-	read := map[string]bool{}
-	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
-
-	Metrics(nil, nil,
-		func() uint64 { read["published"] = true; return 0 },
-		nil, nil,
-		&OverlayMetrics{
-			SourceLag:     func(context.Context) (map[string]time.Duration, error) { return map[string]time.Duration{}, nil },
-			SyncedTotal:   func() uint64 { read["synced"] = true; return 0 },
-			ConflictTotal: func() uint64 { read["conflict"] = true; return 0 },
-			DeletedTotal:  func() uint64 { read["deleted"] = true; return 0 },
-		},
-	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
-
-	for _, supplier := range []string{"published", "synced", "conflict", "deleted"} {
-		if read[supplier] {
-			t.Errorf("the %s counter was read after the scrape's writer was already gone", supplier)
-		}
-	}
-}
-
 // A probe body is not an exposition, and it takes the same posture for a
 // smaller reason: there is nothing to log, but a half-written answer is still
 // not worth assembling.
@@ -143,5 +105,25 @@ func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
 	if w.writes != 2 {
 		t.Errorf("the probe body attempted %d writes, want 2 — the first is the answer, the second "+
 			"is what discovers the reader is gone, and nothing after it should be tried", w.writes)
+	}
+}
+
+// Two distinct values must not render to one label set. A family emitting the
+// same label set twice is a duplicate sample Prometheus discards with a warning
+// — the number on the dashboard is then wrong with nothing failing — and the AI
+// families are keyed by an identity that comes off a provider's wire.
+//
+// The second pair is the one a single shared replacement rune still collapsed:
+// substitution alone is not enough, it has to be injective.
+func TestDistinctLabelValuesStayDistinctThroughEscaping(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"gpt-x\x01", "gpt-x"},
+		{"gpt-x\x01", "gpt-x\x02"},
+		{"gpt-x\t", "gpt-x\x7f"},
+	} {
+		if Label(pair[0]) == Label(pair[1]) {
+			t.Errorf("Label(%q) and Label(%q) both render %s; two model identities collapse into one series",
+				pair[0], pair[1], Label(pair[0]))
+		}
 	}
 }

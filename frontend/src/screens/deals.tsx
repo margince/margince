@@ -5,6 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import {
   type ComponentProps,
   type Dispatch,
@@ -20,98 +21,110 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
+import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
 import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
+import { scrollPageToTop } from "../app/reveal";
 import { navigate, routeHash } from "../app/router";
-import { useInstallationSettings } from "../app/uploadlimit";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
-import { activityTimeline } from "../design-system/activitytimeline";
+import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
   Button,
-  Card,
   DataTable,
   EmptyState,
-  Modal,
-  OverflowMenu,
   SegmentedControl,
-  TextInput,
 } from "../design-system/atoms";
 import {
   type BoardColumn,
   type BoardDeal,
   type BoardMoneyColumn,
   PipelineBoard,
-  RecordView,
 } from "../design-system/composed";
-import {
-  IdentityFact,
-  IdentityLine,
-  IdentityMeta,
-} from "../design-system/identityline";
+import { IconAction } from "../design-system/iconaction";
+import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
-import type { ListColumn, ListSelection } from "../design-system/listtable";
+import {
+  CellStrip,
+  type ListColumn,
+  type ListSelection,
+} from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
-import {
-  useRecordTimeline,
-  useTimelineFilters,
-} from "../design-system/recordtimeline";
+import { useRecordTimeline } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
-import { StageLadder, type StageStep } from "../design-system/stageladder";
-import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
+import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDuration,
   formatMoney,
-  formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
-import { idleSince } from "../format/idlebase";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  type AcquisitionSource,
+  useAcquisitionSources,
+} from "./acquisitionsources.queries";
 import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
-import { ArchiveAction } from "./archive";
+import { toBoardDeal } from "./boarddeal";
 import {
   LoadMoreButton,
-  OverlayUnavailable,
-  problemFieldErrorsOf,
   problemMessageOf,
   provenanceOf,
   QueryGate,
-  QueryStates,
   throwProblem,
-  timelineZoneNotice,
   useMe,
-  useSorMode,
   useViewerId,
 } from "./common";
-import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
-import { CustomFieldsCard } from "./customfields.card";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "./customfields.form";
-import { DealCommitteeMap } from "./deal360/dealcommittee";
+import {
+  type ClosedDeal,
+  CloseReviewOffer,
+  closedDealOf,
+} from "./deal360/closereviewoffer";
+import {
+  type AdvanceInput,
+  ConfirmAdvanceModal,
+  type PendingAdvance,
+} from "./deal360/confirmadvance";
+import { DealActions } from "./deal360/dealactions";
+import { DealBrief } from "./deal360/dealbrief";
+import { DEAL_OFFERS_ANCHOR, DealCockpit } from "./deal360/dealcockpit";
+import {
+  commercialMotion,
+  dealCommercialFields,
+  dealPriority,
+  MOTION_OPTIONS,
+  PRIORITY_OPTIONS,
+} from "./deal360/dealcommercialfields";
+import { DealCommitteeCard } from "./deal360/dealcommitteecard";
+import { dealSurfaceChips } from "./deal360/dealfilterchips";
+import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
+import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealPulse } from "./deal360/dealpulse";
-import { DealSeats } from "./deal360/dealseats";
-import { DealStrip } from "./deal360/dealstrip";
+import { DealRoomTab } from "./deal360/dealroomtab";
+import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
-import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
+import { dealMailAside, lastMailColumn } from "./dealmailaside";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -119,21 +132,15 @@ import {
   StartDeliveryPrompt,
   useProjectsOfCompany,
 } from "./dealproject";
-import { DealRoomAside } from "./dealroom";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
-import { EditAction } from "./edit";
 import {
   EntityRef,
   type OwnerNaming,
-  rosterOwnerName,
   rosterOwnerNaming,
   useEntityName,
   useRoster,
-  useRosterPartial,
 } from "./entityref";
-import { RecordHistoryTab } from "./history";
 import {
-  type FilterSpec,
   LIST_PAGE_SIZES,
   type ListQuery,
   type ListState,
@@ -146,37 +153,27 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { LogActivity } from "./logactivity";
-import { useOpenEmail, withEmailOpener } from "./openemail";
+import { useOpenEmail } from "./openemail";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
-import { RecordEmailVerb } from "./recordemail";
+import { RecordCustomFields } from "./recordcustomfields";
+import { saveRecordEdit } from "./recordedit";
+import { RecordFields, rawRecord } from "./recordfields";
 import { tagsColumn } from "./recordlist";
-import { invalidateRecord } from "./recordwritekeys";
-import { RelationshipsTab } from "./relationships";
+import { useRecordOwners } from "./recordreferences";
+import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { ShareAction } from "./share";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
-import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
-import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "./winreason";
 
-// Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance
-// (terminal stages are a 🟡 confirm, AC-deal-6), the board↔table segmented
-// control over the SAME fetched set (no reload), and the deal 360 with the
-// stage stepper and the live pending-approval staged cards. Weighting math
-// stays out of the UI beyond same-currency page-local sub-lines: a mixed-
-// currency column renders no sum (the FX rule: never sum native minors
-// across currencies).
+// Kanban, table and deal detail share the fetched records and approval flow.
+// Mixed-currency columns never sum native minor units; weighting stays server-side.
 
 type Deal = components["schemas"]["Deal"];
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type Stage = components["schemas"]["Stage"];
 type Pipeline = components["schemas"]["Pipeline"];
 type Offer = components["schemas"]["Offer"];
-type DealStatusCard = components["schemas"]["DealStatusCard"];
-type Activity = components["schemas"]["Activity"];
 
 /**
  * The pipeline a record belongs to, falling back to the default.
@@ -216,13 +213,9 @@ function usePipeline(pipelineId?: string | null) {
 // on which screen loaded last; ["pipelines","all"] still gets refreshed by
 // any mutation that invalidates the ["pipelines"] prefix (react-query prefix
 // matching), so freshness is preserved without a shape collision.
-// enabled is false in overlay mode: the overlay deals view renders no
-// pipeline board or picker (a stage-less mirror has no pipelines to show),
-// so it never needs this fetch.
-function usePipelines(enabled: boolean) {
+function usePipelines() {
   return useQuery({
     queryKey: ["pipelines", "all"],
-    enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/pipelines", {
         params: { query: {} },
@@ -240,22 +233,10 @@ type DealFilters = {
   sort: string;
   includeArchived: boolean;
   filters: Record<string, string>;
-  // Overlay mode reads a mirror that refuses every dial below (sort, and the
-  // pipeline/stage/owner/org filters) with a 422 — so in overlay we send none
-  // of them and let the deals list come back flat. The screen forces the table
-  // view and hides the pickers to match (a stage-keyed board cannot place a
-  // mirror deal, whose pipeline/stage is null in overlay, OVA-MAP-6).
-  overlay: boolean;
 };
 
-// The two dials this screen owns beyond the shared list vocabulary.
-//
-// `pipeline_id` is already a wire parameter name, so the address and the
-// endpoint say it the same way. `view` is the screen's own, because which of
-// the board and the table is drawn changes nothing about which deals exist —
-// and it is why these two are held out of the list codec rather than passed
-// through it: read as filters they would be sent to /deals, which takes
-// neither.
+// Drawing mode and pipeline selection are URL dials, not deal-list filters.
+
 const PIPELINE_PARAM = "pipeline_id";
 const VIEW_PARAM = "view";
 
@@ -300,10 +281,8 @@ function forecastCategoryFilter(
   return FORECAST_FILTER_VALUES.find((admitted) => admitted === value);
 }
 
-// dealsQueryParams builds the native board's /deals query — the full dial
-// set (pipeline/stage/owner/org filters + sort). It is never called in
-// overlay mode (useDeals is disabled there and OverlayDealsTable sends its
-// own overlay-shaped params), so it carries no overlay branch.
+// dealsQueryParams builds the board's /deals query — the full dial set
+// (pipeline/stage/owner/company filters + sort).
 function dealsQueryParams(f: DealFilters) {
   const { filters } = f;
   return {
@@ -313,8 +292,8 @@ function dealsQueryParams(f: DealFilters) {
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
-    organization_id: filters.organization_id || undefined,
-    partner_org_id: filters.partner_org_id || undefined,
+    company_id: filters.company_id || undefined,
+    partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     forecast_category: forecastCategoryFilter(filters.forecast_category),
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
@@ -328,10 +307,6 @@ function dealsQueryParams(f: DealFilters) {
   };
 }
 
-// The board is not paginated — limit:100 is an honest documented cap (a
-// live Kanban reads one screenful, not a keyset walk). Disabled in overlay
-// mode: there the flat mirror table paginates through OverlayDealsTable
-// (its own keyset walk), so this single-page native query does not fetch.
 /**
  * The deals the board and the table share.
  *
@@ -345,11 +320,9 @@ function dealsQueryParams(f: DealFilters) {
 function useDeals(f: DealFilters) {
   return useInfiniteQuery({
     queryKey: ["deals", f],
-    enabled: !f.overlay,
-    // `as` steers useInfiniteQuery's TPageParam generic to the cursor type,
-    // exactly as OverlayDealsTable does and for the same reason: a bare
-    // `undefined` infers TPageParam=undefined and the string cursor no longer
-    // type-checks.
+    // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
+    // bare `undefined` infers TPageParam=undefined and the string cursor no
+    // longer type-checks.
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/deals", {
@@ -375,8 +348,9 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
-  if (filters.organization_id) out.organization_id = filters.organization_id;
-  if (filters.partner_org_id) out.partner_org_id = filters.partner_org_id;
+  if (filters.company_id) out.company_id = filters.company_id;
+  if (filters.partner_company_id)
+    out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
   if (filters.partner_sourced === "true") out.partner_sourced = true;
   return out;
@@ -438,10 +412,7 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    //
-    // Overlay is separate and not a reason: the board does not render at all
-    // there, so there is no column to explain anything to.
-    enabled: !f.overlay && totalsWithheldBecause(f, viewerID) === undefined,
+    enabled: totalsWithheldBecause(f, viewerID) === undefined,
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
@@ -467,95 +438,25 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
   });
 }
 
-// OverlayDealsTable is the overlay-mode deals view: a flat mirror table
-// (a stage-keyed board cannot place a mirror deal, whose pipeline/stage is
-// null — OVA-MAP-6) that walks the keyset cursor the API returns
-// (page.next_cursor / page.has_more) with a Load-more affordance, rather
-// than the native board's honest one-screenful cap. Overlay reads 422 every
-// sort/filter dial, so it sends only limit + include_archived + cursor.
-function OverlayDealsTable({
-  includeArchived,
-}: Readonly<{ includeArchived: boolean }>) {
-  const query = useInfiniteQuery({
-    queryKey: ["deals", "overlay", includeArchived],
-    // `as` steers useInfiniteQuery's TPageParam generic to the cursor type:
-    // a bare `undefined` infers TPageParam=undefined, which then rejects the
-    // string cursor getNextPageParam returns (the whole query's data type
-    // collapses to unknown). A typed local does not carry through the
-    // generic inference — so the assertion is load-bearing here, not
-    // cosmetic. biome (the frontend gate) does not flag it.
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/deals", {
-        params: {
-          query: {
-            limit: 100,
-            include_archived: includeArchived || undefined,
-            cursor: pageParam,
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    getNextPageParam: (last) =>
-      last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
-  });
-  const t = useT();
-  // Once ANY page has loaded, render the table — a later Load-more failure
-  // must NOT discard the rows already fetched (routing the whole thing
-  // through QueryGate would show the full error state on any page error,
-  // throwing away usable results). Only the INITIAL load goes through
-  // QueryStates' pending/error; a failed next page leaves the table up and
-  // re-enables the Load-more button to retry.
-  const pages = query.data?.pages ?? [];
-  if (pages.length === 0) {
-    return (
-      <QueryStates
-        query={query}
-        pendingLabel={t("deals.loading")}
-        // A table's worth of rows. The default placeholder is three lines, and
-        // a list that arrives into a third of the room the placeholder held
-        // pushes the page down under the reader as it lands.
-        pendingLines={8}
-      >
-        {null}
-      </QueryStates>
-    );
-  }
-  const deals = pages.flatMap((p) => p.data);
-  if (deals.length === 0) {
-    return <EmptyState>{t("common.empty")}</EmptyState>;
-  }
-  return (
-    <>
-      <DealTable deals={deals} />
-      <LoadMoreButton query={query} />
-    </>
-  );
-}
-
 /** A company's display name and the mark drawn beside it. */
-type OrgMark = { name: string; logoUrl?: string | null };
+type CompanyMark = { name: string; logoUrl?: string | null };
 
 /**
- * Every company the loaded deals name, id → mark (`useOrgMarks` resolves them).
+ * Every company the loaded deals name, id → mark (`useCompanyMarks` resolves them).
  *
  * A company this reader may not read is in no map: the wire sends
- * `organization_id` as null and names it in `masked_fields`, so what the card
+ * `company_id` as null and names it in `masked_fields`, so what the card
  * needs there is the withheld READING, which the card itself spells as the mask
  * — not a name this screen could supply.
  */
-export type CompanyMarks = ReadonlyMap<string, OrgMark>;
+export type CompanyMarks = ReadonlyMap<string, CompanyMark>;
 
 /**
  * What the screen knows about the companies its deals name.
  *
  * `unreadable` is the reading the board used to lose. A read that FAILED — a
  * 403 because the reader holds row visibility of the company but no
- * `organization:read` grant, a 5xx, a dropped connection — is not the same fact
+ * `company:read` grant, a 5xx, a dropped connection — is not the same fact
  * as a deal that names no company, and collapsing the two told the reader the
  * most misleading of the two. The table has always had this reading through
  * `EntityRef`'s failed state; this is the board's half of it.
@@ -565,74 +466,18 @@ export type CompanyNaming = Readonly<{
   unreadable: ReadonlySet<string>;
 }>;
 
-/**
- * What a deal's company reads as on its card, in the four readings it has.
- *
- * Withheld carries the mask, the same control the table's company cell draws. A
- * company the screen has a name for is named. A company whose read FAILED says
- * so, because a deal that names a company the reader could not fetch is not a
- * deal with no company. Only a deal naming no company draws nothing.
- *
- * A name still in flight also draws nothing rather than a uuid: the card's
- * company line is a name a reader recognises and an id is not one. That is the
- * one case where an empty slot is a wait rather than a claim, and it resolves
- * itself.
- */
-function dealCompany(
-  deal: Deal,
-  naming: CompanyNaming,
-): Pick<BoardDeal, "org" | "orgLogoUrl" | "orgWithheld" | "orgUnreadable"> {
-  if (deal.masked_fields?.includes("organization_id")) {
-    return { org: "", orgWithheld: true };
-  }
-  if (deal.organization_id && naming.unreadable.has(deal.organization_id)) {
-    return { org: "", orgUnreadable: true };
-  }
-  const mark = deal.organization_id
-    ? naming.marks.get(deal.organization_id)
-    : undefined;
-  return { org: mark?.name ?? "", orgLogoUrl: mark?.logoUrl };
-}
-
-export function toBoardDeal(
-  deal: Deal,
-  naming: CompanyNaming,
-  owners?: OwnerNaming,
-): BoardDeal {
-  const since = idleSince(deal);
-  return {
-    id: deal.id,
-    name: deal.name,
-    ...dealCompany(deal, naming),
-    // Both halves as the wire sent them. Nobody has priced every deal, and a
-    // card that filled in either half would state a figure this deal does not
-    // have — a zero amount, or a euro sign over an unknown currency.
-    valueMinor: deal.amount_minor ?? null,
-    currency: deal.currency ?? null,
-    ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
-    stalled: deal.stalled ?? false,
-    archived: deal.archived_at != null,
-    closeDate: deal.expected_close_date ?? null,
-    closeDateProvisional: deal.close_date_provisional ?? false,
-    owner: owners?.(deal.owner_id) ?? null,
-  };
-}
-
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 type CreateDealRequest = components["schemas"]["CreateDealRequest"];
 
-// One deal as the edit form's initial values. Extracted from the badge row
-// that renders the form: mapping a record onto form fields is its own job, and
-// keeping it inline made a component that already draws badges, an edit dialog
-// and an archive verb carry a twentieth concern.
-//
-// It is also the patch's BASELINE (mapDealUpdate), so a field this function
-// misreads becomes a field every save reports as changed.
-//
-// Every absent value becomes "" rather than a default. A currency the FORM
-// chose is a currency the SAVE writes, so seeding one made an unpriced deal
-// acquire it the moment a reader edited its name — and since amount and
-// currency are paired by CHECK, that turned an innocent rename into a refusal.
+// Missing money stays blank; present figures use their currency's minor-unit scale.
+// This projection seeds both the controls and their update comparison.
+function moneyFieldValue(
+  minor: number | null | undefined,
+  currency?: string | null,
+): string {
+  return minor != null && currency ? String(toMajorUnits(minor, currency)) : "";
+}
+
 function dealEditRecord(deal: Deal): Record<
   string,
   string | number | undefined
@@ -644,25 +489,21 @@ function dealEditRecord(deal: Deal): Record<
     id: deal.id,
     version: deal.version,
     name: deal.name,
-    // The currency's own scale, not a hundred. amount_minor and currency are
-    // NULL together (the deal_amount_currency_pair CHECK), so a priced deal
-    // always carries the code — but a row that WITHHELD the currency for row
-    // scope while sending the amount would be scaled at the two-digit default
-    // and shown wrong. There is no honest figure without its unit, so the field
-    // stays empty rather than guessing one.
-    amount:
-      deal.amount_minor != null && deal.currency
-        ? String(toMajorUnits(deal.amount_minor, deal.currency))
-        : "",
+    amount: moneyFieldValue(deal.amount_minor, deal.currency),
+    expected_arr: moneyFieldValue(deal.expected_arr_minor, deal.currency),
     currency: deal.currency ?? "",
     owner_id: deal.owner_id ?? "",
-    organization_id: deal.organization_id ?? "",
-    partner_org_id: deal.partner_org_id ?? "",
+    company_id: deal.company_id ?? "",
+    partner_company_id: deal.partner_company_id ?? "",
     partner_attribution: deal.partner_attribution ?? "",
     forecast_category: deal.forecast_category ?? "",
     expected_close_date: deal.expected_close_date ?? "",
     wait_until: deal.wait_until ?? "",
     project_id: deal.project_id ?? "",
+    description: deal.description ?? "",
+    commercial_motion: deal.commercial_motion ?? "",
+    priority: deal.priority ?? "",
+    acquisition_source: deal.acquisition_source ?? "",
   };
 }
 
@@ -718,7 +559,7 @@ function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
  * form does not even RENDER — `partner_attribution` on an installation with no
  * partners — resubmitted `null` as a real instruction to clear it. The API reads
  * an explicit null as "forget this" and refused, correctly, naming a field the
- * person had never seen. Nothing the person did not touch travels now.
+ * contact had never seen. Nothing the contact did not touch travels now.
  *
  * A blank over a stored value is still a change, and still travels as null: the
  * pickers offer "Unset" in words, so clearing a company or a partner is a
@@ -726,7 +567,7 @@ function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
  *
  * `amount` arrives in major units from the form and the wire is minor units
  * (deal creation applies the same conversion above). The two money halves are
- * compared as the form spells them, because that is where the person's edit is.
+ * compared as the form spells them, because that is where the contact's edit is.
  *
  * `masked` names the fields THIS reader was not shown. A withheld reference
  * arrives as null with `masked_fields` naming it — deliberately, so a reader
@@ -743,8 +584,9 @@ export function mapDealUpdate(
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const currency = str(values.currency);
   const amount = str(values.amount);
+  const expectedArr = str(values.expected_arr);
   const patch: UpdateDealRequest = {};
-  // One reading of "the person moved this field", over the form's own spelling
+  // One reading of "the contact moved this field", over the form's own spelling
   // of the value rather than the wire's: a select left alone holds exactly the
   // string it was seeded with, and the wire shape (minor units, a narrowed
   // vocabulary) is derived from that string afterwards.
@@ -763,7 +605,7 @@ export function mapDealUpdate(
       patch[wireKey] = value();
     }
   }
-  // A required field: an emptied name is a form the person has not finished,
+  // A required field: an emptied name is a form the contact has not finished,
   // not an instruction to erase the deal's name.
   onMove("name", "name", () => str(values.name) || undefined);
   // The money pair travels together whenever either half moves, because the
@@ -779,23 +621,27 @@ export function mapDealUpdate(
   if (moved("amount") || (moved("currency") && amount)) {
     patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
   }
+  // ARR carries its currency's scale for the same reason the amount does, and
+  // travels on a currency move for the same reason: the code is what says how
+  // many minor units the figure counts in.
+  if (moved("expected_arr") || (moved("currency") && expectedArr)) {
+    patch.expected_arr_minor = expectedArr
+      ? toMinorUnits(Number(expectedArr), currency)
+      : null;
+  }
   onMove("currency", "currency", () => currency || undefined);
-  onMove(
-    "organization_id",
-    "organization_id",
-    () => str(values.organization_id) || null,
-  );
+  onMove("company_id", "company_id", () => str(values.company_id) || null);
   onMove("owner_id", "owner_id", () => str(values.owner_id) || null);
   onMove(
-    "partner_org_id",
-    "partner_org_id",
-    () => str(values.partner_org_id) || null,
+    "partner_company_id",
+    "partner_company_id",
+    () => str(values.partner_company_id) || null,
   );
   // Only alongside a partner. Clearing the partner clears what they did with
   // it — the two are one fact, stored under one CHECK — so sending the
   // attribution's own null beside it would name a claim with nobody left to
   // attribute it to, which the API refuses.
-  if (str(values.partner_org_id)) {
+  if (str(values.partner_company_id)) {
     onMove("partner_attribution", "partner_attribution", () =>
       partnerAttribution(str(values.partner_attribution)),
     );
@@ -812,13 +658,27 @@ export function mapDealUpdate(
   // Resolved by the screen before mapping: the "new project" answer has
   // already become an id by the time the patch is built.
   onMove("project_id", "project_id", () => str(values.project_id) || null);
+  if (values.description !== seeded.description)
+    patch.description =
+      typeof values.description === "string" && values.description.trim()
+        ? values.description
+        : null;
+  onMove("commercial_motion", "commercial_motion", () =>
+    commercialMotion(str(values.commercial_motion)),
+  );
+  onMove("priority", "priority", () => dealPriority(str(values.priority)));
+  onMove(
+    "acquisition_source",
+    "acquisition_source",
+    () => str(values.acquisition_source) || null,
+  );
   return withoutMasked(patch, masked);
 }
 
 /**
  * The patch minus every field the reader was not shown.
  *
- * `partner_org_id` carries its attribution: the server withholds the pair
+ * `partner_company_id` carries its attribution: the server withholds the pair
  * together, so returning one half of it would decide what a partner nobody
  * could see is owed.
  */
@@ -832,11 +692,15 @@ function withoutMasked(
   const out: Record<string, unknown> = { ...patch };
   for (const field of masked) {
     delete out[field];
-    if (field === "partner_org_id") {
+    if (field === "partner_company_id") {
       delete out.partner_attribution;
     }
-    if (field === "amount_minor") {
+    if (field === "amount_minor" || field === "expected_arr_minor") {
+      // The server withholds the whole money reading as one unit, so a patch
+      // that kept either figure would write back a half it was never shown.
       delete out.currency;
+      delete out.amount_minor;
+      delete out.expected_arr_minor;
     }
   }
   return out as UpdateDealRequest;
@@ -858,6 +722,7 @@ export function mapDealCreate(
 ): CreateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const amount = str(values.amount);
+  const expectedArr = str(values.expected_arr);
   const currency = str(values.currency) || "EUR";
   return {
     name: str(values.name),
@@ -867,9 +732,12 @@ export function mapDealCreate(
     // currency carries — a dong has none, so multiplying by a hundred here
     // priced the deal a hundredfold and nothing downstream could tell.
     amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+    expected_arr_minor: expectedArr
+      ? toMinorUnits(Number(expectedArr), currency)
+      : null,
     currency,
-    organization_id: str(values.organization_id) || null,
-    partner_org_id: str(values.partner_org_id) || null,
+    company_id: str(values.company_id) || null,
+    partner_company_id: str(values.partner_company_id) || null,
     // The empty option means the caller made no claim, and null is how that
     // travels: the server then reads a named partner as `sourced`, which is
     // what the option says it does. An attribution naming no partner is
@@ -877,6 +745,10 @@ export function mapDealCreate(
     partner_attribution: partnerAttribution(str(values.partner_attribution)),
     expected_close_date: str(values.expected_close_date) || null,
     project_id: str(values.project_id) || null,
+    description: str(values.description) || null,
+    commercial_motion: commercialMotion(str(values.commercial_motion)),
+    priority: dealPriority(str(values.priority)),
+    acquisition_source: str(values.acquisition_source) || null,
     source: "manual",
   };
 }
@@ -907,7 +779,7 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
  * The companies a deal may name as the partner who brought it.
  *
  * Only companies that ARE partners: the picker once offered every
- * organization, which let a deal be attributed to an ordinary customer — and
+ * company, which let a deal be attributed to an ordinary customer — and
  * an attribution to a company with no partner row has no margin tier behind
  * it, so it looks attributed and silently never earns anything.
  *
@@ -916,7 +788,7 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
  * question to ask, and the two fields stay off the form entirely.
  */
 export function usePartnerOptions(
-  orgs: { id: string; display_name: string }[],
+  companies: { id: string; display_name: string }[],
 ): { value: string; label: string }[] {
   const partners = useQuery({
     queryKey: ["partners", "options"],
@@ -932,9 +804,9 @@ export function usePartnerOptions(
     staleTime: 60_000,
   });
   // The names come from a read of the PARTNER companies rather than from
-  // whatever page of organizations the screen happens to hold.
+  // whatever page of companies the screen happens to hold.
   //
-  // The caller's `orgs` is one capped page (50 on the deals screen), and
+  // The caller's `companies` is one capped page (50 on the deals screen), and
   // intersecting the two dropped any partner whose company fell outside it —
   // silently, and differently depending on which screen asked. That is
   // survivable for a form picker, which injects the deal's own stored partner
@@ -947,7 +819,7 @@ export function usePartnerOptions(
       // relationship_type=partner reads the same set from the other side, so
       // the page is partner companies rather than the first N companies of
       // any kind. The cap matches /partners' own.
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { relationship_type: "partner", limit: 200 } },
       });
       if (error) {
@@ -959,17 +831,17 @@ export function usePartnerOptions(
   // Still the caller's page as a fallback while the keyed read is in flight,
   // so the options do not blink empty on every mount.
   const named = new Map<string, string>(
-    orgs.map((org) => [org.id, org.display_name]),
+    companies.map((company) => [company.id, company.display_name]),
   );
-  for (const org of names.data ?? []) {
-    named.set(org.id, org.display_name);
+  for (const company of names.data ?? []) {
+    named.set(company.id, company.display_name);
   }
   return (partners.data ?? []).flatMap((partner) => {
-    const label = named.get(partner.organization_id);
-    // A partner whose organization the caller cannot read is left out rather
+    const label = named.get(partner.company_id);
+    // A partner whose company the caller cannot read is left out rather
     // than offered as a bare id: picking it would name a company the picker
     // could not show them.
-    return label ? [{ value: partner.organization_id, label }] : [];
+    return label ? [{ value: partner.company_id, label }] : [];
   });
 }
 
@@ -1010,8 +882,8 @@ function partnerFields(
     // here to attribute either. `mapDealUpdate` leaves both out of the patch.
     return [
       {
-        key: "partner_org_id",
-        label: "deal.partnerOrg",
+        key: "partner_company_id",
+        label: "deal.partnerCompany",
         type: "select",
         options: [{ value: "", label: t("deal.partnerWithheld") }],
       },
@@ -1030,8 +902,8 @@ function partnerFields(
       : partnerOptions;
   return [
     {
-      key: "partner_org_id",
-      label: "deal.partnerOrg",
+      key: "partner_company_id",
+      label: "deal.partnerCompany",
       type: "select",
       options,
     },
@@ -1041,7 +913,7 @@ function partnerFields(
       key: "partner_attribution",
       label: "deal.partnerAttribution",
       type: "select",
-      showWhen: (values) => Boolean(values.partner_org_id),
+      showWhen: (values) => Boolean(values.partner_company_id),
       options: ATTRIBUTION_OPTIONS.map((o) => ({
         value: o.value,
         label: t(o.label),
@@ -1053,21 +925,23 @@ function partnerFields(
 /**
  * The partner a deal already names, ready to stand as its own option.
  *
- * Falls back to the raw id when the org list cannot name it — an unreadable or
+ * Falls back to the raw id when the company list cannot name it — an unreadable or
  * off-page company. Ugly, and correct: the alternative is a blank select whose
  * save clears an attribution the reader never touched.
  */
 function attributedPartner(
   deal: Deal,
-  orgs: { id: string; display_name: string }[],
+  companies: { id: string; display_name: string }[],
 ): { id: string; label: string } | undefined {
-  if (!deal.partner_org_id) {
+  if (!deal.partner_company_id) {
     return undefined;
   }
-  const named = orgs.find((org) => org.id === deal.partner_org_id);
+  const named = companies.find(
+    (company) => company.id === deal.partner_company_id,
+  );
   return {
-    id: deal.partner_org_id,
-    label: named?.display_name ?? deal.partner_org_id,
+    id: deal.partner_company_id,
+    label: named?.display_name ?? deal.partner_company_id,
   };
 }
 
@@ -1089,27 +963,27 @@ function attributedPartner(
 function companyEditField(
   t: (k: MessageKey) => string,
   opts: {
-    orgs: { id: string; display_name: string }[];
+    companies: { id: string; display_name: string }[];
     masked: readonly string[];
     currentCompany?: { id: string; label: string };
   },
 ): CreateField {
-  if (opts.masked.includes("organization_id")) {
+  if (opts.masked.includes("company_id")) {
     return {
-      key: "organization_id",
-      label: "create.organization",
+      key: "company_id",
+      label: "create.relatedCompany",
       type: "select",
       options: [{ value: "", label: t("deal.companyWithheld") }],
     };
   }
-  const options = opts.orgs.map((org) => ({
-    value: org.id,
-    label: org.display_name,
+  const options = opts.companies.map((company) => ({
+    value: company.id,
+    label: company.display_name,
   }));
   const current = opts.currentCompany;
   return {
-    key: "organization_id",
-    label: "create.organization",
+    key: "company_id",
+    label: "create.relatedCompany",
     type: "select",
     options:
       current && !options.some((option) => option.value === current.id)
@@ -1121,7 +995,7 @@ function companyEditField(
 export function dealEditFields(
   t: (k: MessageKey) => string,
   opts: {
-    orgs: { id: string; display_name: string }[];
+    companies: { id: string; display_name: string }[];
     partnerOptions: { value: string; label: string }[];
     // The partner this deal ALREADY names, when it names one. Keeps the field
     // (and its stored value) on a form whose pickable list does not reach it.
@@ -1130,6 +1004,11 @@ export function dealEditFields(
     // page does not reach it — the same rule as `attributedPartner`, for the
     // same reason.
     currentCompany?: { id: string; label: string };
+    // The administered acquisition-source catalog, and the key this deal
+    // already carries — which may name a RETIRED entry the picker must still
+    // offer, or the next save clears a value nobody touched.
+    acquisitionSources?: AcquisitionSource[];
+    currentAcquisitionSource?: string | null;
     // The fields of THIS deal the reader was not shown, as `masked_fields`
     // named them. A withheld reference is offered as withheld rather than as
     // an empty picker.
@@ -1152,7 +1031,17 @@ export function dealEditFields(
   ];
   return [
     { key: "name", label: "create.dealName", required: true },
-    { key: "amount", label: "create.amount", type: "number" },
+    { key: "amount", label: "create.amount", type: "number", step: "any" },
+    // The recurring half of the price, annual, in the same currency as the
+    // amount above. Beside it rather than in a section of its own because the
+    // two are one money value on the row: they share the currency field below,
+    // and the server refuses either one stranded without it.
+    {
+      key: "expected_arr",
+      label: "deal.expectedArr",
+      type: "number",
+      step: "any",
+    },
     {
       key: "currency",
       label: "create.currency",
@@ -1174,7 +1063,7 @@ export function dealEditFields(
       t,
       opts.partnerOptions,
       opts.attributedPartner,
-      opts.masked.includes("partner_org_id"),
+      opts.masked.includes("partner_company_id"),
     ),
     {
       key: "forecast_category",
@@ -1187,6 +1076,17 @@ export function dealEditFields(
     },
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
     { key: "wait_until", label: "deal.waitUntil", type: "date" },
+    {
+      key: "__commercial__",
+      labelText: t("deal.commercialContext"),
+      divider: true,
+    },
+    ...dealCommercialFields(t, {
+      motionOptions: MOTION_OPTIONS,
+      priorityOptions: PRIORITY_OPTIONS,
+      sources: opts.acquisitionSources ?? [],
+      currentSource: opts.currentAcquisitionSource,
+    }),
   ];
 }
 
@@ -1262,7 +1162,7 @@ export function buildStageTotals(
 /**
  * The company marks the board draws, for every company its cards name.
  *
- * The create form's picker reads ONE capped page of organizations, and the
+ * The create form's picker reads ONE capped page of companies, and the
  * board took its marks from exactly that page — so a deal whose company fell
  * outside it drew a card with no company row at all, which a reader reads as a
  * deal nobody has linked. The set that has to be resolvable is the set the
@@ -1273,20 +1173,20 @@ export function buildStageTotals(
  * A withheld company is never among them — the wire sends no id to read — so
  * this cannot turn a mask into a name.
  */
-export function useOrgMarks(
+export function useCompanyMarks(
   deals: Deal[],
-  page: Organization[],
+  page: Company[],
   pageSettled: boolean,
 ): CompanyNaming {
-  const fromPage = new Map<string, OrgMark>(
-    page.map((org) => [
-      org.id,
-      { name: org.display_name, logoUrl: org.logo_url },
+  const fromPage = new Map<string, CompanyMark>(
+    page.map((company) => [
+      company.id,
+      { name: company.display_name, logoUrl: company.logo_url },
     ]),
   );
   // Nothing is fanned out until the picker's page has ANSWERED. The two reads
   // are issued together and settle in no fixed order, so on every render where
-  // the deals have arrived and the organizations have not, `fromPage` is empty
+  // the deals have arrived and the companies have not, `fromPage` is empty
   // and every company a loaded deal names looks unresolved — one request each,
   // for a page that is about to answer most of them. A cold board paint fired
   // up to a hundred, and nothing un-sends a request.
@@ -1294,8 +1194,8 @@ export function useOrgMarks(
     ? [
         ...new Set(
           deals.flatMap((deal) =>
-            deal.organization_id && !fromPage.has(deal.organization_id)
-              ? [deal.organization_id]
+            deal.company_id && !fromPage.has(deal.company_id)
+              ? [deal.company_id]
               : [],
           ),
         ),
@@ -1303,9 +1203,9 @@ export function useOrgMarks(
     : [];
   const reads = useQueries({
     queries: unnamed.map((id) => ({
-      queryKey: ["organizations", "mark", id],
-      queryFn: async (): Promise<OrgMark | null> => {
-        const { data, error, response } = await api.GET("/organizations/{id}", {
+      queryKey: ["companies", "mark", id],
+      queryFn: async (): Promise<CompanyMark | null> => {
+        const { data, error, response } = await api.GET("/companies/{id}", {
           params: { path: { id } },
         });
         if (error) {
@@ -1405,7 +1305,7 @@ export function buildColumns(
 function CompanyCell({
   deal,
   field,
-}: Readonly<{ deal: Deal; field: "organization_id" | "partner_org_id" }>) {
+}: Readonly<{ deal: Deal; field: "company_id" | "partner_company_id" }>) {
   if (deal.masked_fields?.includes(field)) {
     return <FieldGuard mode="masked" />;
   }
@@ -1413,13 +1313,12 @@ function CompanyCell({
   if (!id) {
     return null;
   }
-  return <EntityRef kind="organization" id={id} asText />;
+  return <EntityRef kind="company" id={id} asText />;
 }
 
-// The amount's three readings, in one place because two tables draw them: the
-// native list and the overlay mirror. Withheld is not empty — the mirror
-// carries the same `masked_fields` the native list does, and reading a refused
-// amount as an unpriced deal is the defect this cell exists to prevent.
+// The amount's three readings, in one place because both the list and the
+// board draw them. Withheld is not empty — reading a refused amount as an
+// unpriced deal is the defect this cell exists to prevent.
 function AmountCell({
   deal,
   locale,
@@ -1431,7 +1330,7 @@ function AmountCell({
     return null;
   }
   return (
-    <span className="t-mono">
+    <span className="t-num">
       {formatMoney(deal.amount_minor, deal.currency, locale)}
     </span>
   );
@@ -1439,10 +1338,7 @@ function AmountCell({
 
 // The table-view column set. Module-level (not inlined in DealsScreen,
 // which is already at the cognitive-complexity ceiling) — stage_id → name
-// and amount/close formatting are the only per-row logic, everything else
-// is direct field access. Only amount_minor and expected_close_date are in
-// the deals list's sortable vocabulary (data-model.md DM-VOCAB-3); name,
-// stage and status carry no `sort` because the API has no column for them.
+// and amount/close formatting are the only per-row logic.
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -1452,44 +1348,46 @@ function dealColumns(
   return [
     {
       key: "name",
-      header: t("people.name"),
+      header: t("contacts.name"),
       cell: (deal) => deal.name,
+      // Alphabetical, which a list of deals had no way to offer until the
+      // API's sort vocabulary took the columns this list draws.
+      sort: "name",
       fixed: true,
     },
     tagsColumn<Deal>(t),
     {
       // The company the deal is with. Withheld is not empty: the wire sends a
-      // null `organization_id` and names the field in `masked_fields` when the
+      // null `company_id` and names the field in `masked_fields` when the
       // reader may not read that company, and a blank cell cannot be told
       // apart from a deal nobody has linked.
       //
-      // No `sort`, for the reason the partner column below carries none: the
-      // API's sortable vocabulary does not include it, and a header that
-      // looked sortable and refused would be worse than one that never
-      // offered.
+      // Ordered by the company's NAME, not by the id the field is called
+      // after: the sort vocabulary names the reference and the server decides
+      // what ordering it means. A company this reader may not open sorts last,
+      // with the rest, because ordering by a name is reading it.
       key: "company",
-      header: t("create.organization"),
-      cell: (deal) => <CompanyCell deal={deal} field="organization_id" />,
+      header: t("create.relatedCompany"),
+      sort: "company_id",
+      cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
     },
     {
       // Which partner brought the deal, when one did. Optional: a workspace
       // that runs no partner programme has an empty column, and hiding it
       // per-row is worse in a list than an empty cell — a column that comes
       // and goes cannot be scanned down.
-      //
-      // It carries no `sort`, because the API's sortable vocabulary is a fixed
-      // five-field set that does not include it. That limitation is not this
-      // column's to fix (see the sorting issue), and a header that looked
-      // sortable and refused would be worse than one that never offered.
       key: "partner",
-      header: t("deal.partnerOrg"),
-      cell: (deal) => <CompanyCell deal={deal} field="partner_org_id" />,
+      header: t("deal.partnerCompany"),
+      sort: "partner_company_id",
+      cell: (deal) => <CompanyCell deal={deal} field="partner_company_id" />,
     },
     {
       key: "stage",
       header: t("deals.stage"),
-      // stage_id is null for an overlay-mirror deal (OVA-MAP-6) — no native
-      // stage row to name; a native deal always has one.
+      // Ordered by the stage's place in its PIPELINE. Alphabetical stages are
+      // the funnel shuffled, which is never what somebody sorting by stage
+      // means.
+      sort: "stage_id",
       cell: (deal) =>
         deal.stage_id ? (stageName.get(deal.stage_id) ?? "") : "",
     },
@@ -1506,7 +1404,11 @@ function dealColumns(
       sort: "expected_close_date",
       cell: (deal) =>
         deal.expected_close_date
-          ? formatDate(deal.expected_close_date, locale, recordZone)
+          ? formatDate(
+              middayInstant(deal.expected_close_date, recordZone),
+              locale,
+              recordZone,
+            )
           : null,
     },
     {
@@ -1521,83 +1423,37 @@ function dealColumns(
       sort: "last_activity_at",
       cell: (deal) =>
         deal.last_activity_at ? (
-          <span className="deal-signal">
-            {formatDuration(
-              Math.max(
-                0,
-                Date.now() - new Date(deal.last_activity_at).getTime(),
-              ),
-              locale,
+          <CellStrip>
+            <span>
+              {formatDuration(
+                Math.max(0, Date.now() - Date.parse(deal.last_activity_at)),
+                locale,
+              )}
+            </span>
+            {deal.stalled && (
+              <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
             )}
-            {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
-          </span>
+          </CellStrip>
         ) : (
-          <span className="t-caption">{t("deals.lastSignalNone")}</span>
+          <span>{t("deals.lastSignalNone")}</span>
         ),
     },
+    lastMailColumn(t),
     {
       key: "status",
       header: t("lead.status"),
       cell: (deal) => (
         <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
       ),
+      // By the stored value, so the three groups sit together. Alphabetical
+      // rather than by lifecycle — `lost` before `open` before `won` — because
+      // `deal.status` is a text column and the machinery orders by the column
+      // rather than by a vocabulary this side would have to keep a second copy
+      // of.
+      sort: "status",
     },
   ];
 }
-
-// Narrows the Select's plain string back to the vocabulary. The control is
-// built from WON_REASONS, so this never rejects in practice — but a cast would
-// make that an assumption instead of a check, and the value goes on to be
-// stored as an assertion about how a deal closed.
-function asWonReason(value: string): WonReason | "" {
-  const known = WON_REASONS.find((reason) => reason === value);
-  return known ?? "";
-}
-
-/**
- * Whether a detail carries any visible character, matching the rule the server
- * applies (`saysSomething` in win_evidence.go).
- *
- * `trim()` alone is not the same test. A zero-width space is not whitespace to
- * either language, so a detail of "​" would pass a trim check here, enable
- * Confirm, and then be refused by the server — the reader having explained
- * precisely nothing, which is the state the vocabulary exists to prevent.
- */
-function saysSomething(text: string): boolean {
-  return /\P{White_Space}/u.test(text.replace(/\p{Cf}/gu, ""));
-}
-
-// The one member that explains nothing on its own, so the server demands a
-// detail after it (`WonReasonDetailRequiredError`).
-const WON_REASON_NEEDING_DETAIL: WonReason = "other";
-
-// The server's refusal when a win names neither a contract nor a reason. The
-// dialog keys on THIS rather than on the 422 status: an advance can be refused
-// for reasons that have nothing to do with evidence, and asking "how was it
-// won?" after a version conflict would be nonsense.
-const WIN_EVIDENCE_REQUIRED = "win_evidence_required";
-
-type PendingAdvance = {
-  dealId: string;
-  // Carried through the confirm rather than looked up when it closes: the write
-  // pins the deal as it stood on the board the reader dropped it on, so a stage
-  // change made while the dialog was open fails loud instead of being erased.
-  version: number | undefined;
-  toStage: Stage;
-};
-
-type AdvanceInput = {
-  dealId: string;
-  version: number | undefined;
-  toStage: Stage;
-  lostReason?: string;
-  // Why this win has no signed contract behind it. Absent on the ordinary win,
-  // where the contract IS the answer — the server distinguishes the two, and
-  // that distinction is what makes "how many won deals have no paper" a
-  // question reports can answer.
-  wonWithoutContractReason?: WonReason;
-  wonWithoutContractDetail?: string;
-};
 
 /**
  * The ONE way this screen advances a deal, shared by the board's drag and the
@@ -1605,7 +1461,7 @@ type AdvanceInput = {
  *
  * An advance is a write like any other, so it is pinned like any other: the
  * version the reader's own card or record was drawn from rides the variables,
- * and two people moving one deal at the same moment no longer both succeed —
+ * and two contacts moving one deal at the same moment no longer both succeed —
  * the second reads the version the first replaced and fails 409 version_skew
  * instead of quietly undoing a stage change nobody saw.
  */
@@ -1702,7 +1558,7 @@ export function dealStatusTone(
 }
 
 // Bespoke selects for the filters whose option labels are runtime strings
-// (pipeline/stage/org names) — a chip's option label is a MessageKey, so
+// (pipeline/stage/company names) — a chip's option label is a MessageKey, so
 // these three cannot go through ListTable's chips. Each writes into the
 // same ListQuery.filters bag the table's chips read, deleting the key on a
 // blank choice so the two stay in one coherent query state.
@@ -1722,19 +1578,22 @@ function setOrClearFilter(
   });
 }
 
-// The company filter's own value source: a workspace holds more organizations
-// than any fixed list should offer, so the value step searches /organizations
+// The company filter's own value source: a workspace holds more companies
+// than any fixed list should offer, so the value step searches /companies
 // by name instead of one this screen happened to fetch for something else.
 async function searchCompanies(
   query: string,
 ): Promise<readonly { value: string; label: string }[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q: query, limit: 20 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ value: org.id, label: org.display_name }));
+  return data.data.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
 }
 
 // Whether the reader has narrowed this list themselves.
@@ -1769,9 +1628,9 @@ function dealFilterChips(
       options: stages.map((stage) => ({ value: stage.id, label: stage.name })),
     },
     {
-      key: "organization_id",
-      label: t("create.organization"),
-      allLabel: t("deals.filterOrgAll"),
+      key: "company_id",
+      label: t("create.relatedCompany"),
+      allLabel: t("deals.filterCompanyAll"),
       options: [],
       search: searchCompanies,
     },
@@ -1780,8 +1639,7 @@ function dealFilterChips(
 
 // How the deals are shown rather than which ones: the board/table switch and
 // the pipeline being looked at. Both sit on the right with the table's own
-// display controls. All board-only dials the overlay mirror refuses, so
-// overlay never calls this.
+// display controls.
 function DealViewTools({
   view,
   setView,
@@ -1862,8 +1720,8 @@ function DealBoardBody({
   effectivePipeline,
   loadedDeals,
   stageTotalsQuery,
-  orgs,
-  orgsSettled,
+  companies,
+  companiesSettled,
   openDeal,
   cardDragHandlers,
   columnDropHandlers,
@@ -1878,8 +1736,8 @@ function DealBoardBody({
   // totalsWithheldBecause where the query's own `enabled` reads it, so the
   // column's explanation and the query's absence cannot disagree.
   totalsWithheld?: MessageKey;
-  orgs: Organization[];
-  orgsSettled: boolean;
+  companies: Company[];
+  companiesSettled: boolean;
   openDeal: ComponentProps<typeof PipelineBoard>["onOpen"];
   cardDragHandlers: ComponentProps<typeof PipelineBoard>["cardDragHandlers"];
   columnDropHandlers: ComponentProps<
@@ -1895,13 +1753,17 @@ function DealBoardBody({
     loadedDeals.some((deal) => Boolean(deal.owner_id)),
   );
   // Every company the CARDS name. The picker's capped page answers most of them
-  // for free; the rest are resolved by id (useOrgMarks), so no card is left
+  // for free; the rest are resolved by id (useCompanyMarks), so no card is left
   // standing over a company the board simply failed to look up.
   //
   // Only the board asks: the table names its companies through the same
   // per-record reference every other cross-record cell uses, and handing it
   // this map as well would read each company twice.
-  const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
+  const companyMarks = useCompanyMarks(
+    loadedDeals,
+    companies,
+    companiesSettled,
+  );
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
@@ -1911,8 +1773,7 @@ function DealBoardBody({
           // included, so keeping the gate around a loaded board would
           // let one failed "load more" throw away every card already on
           // screen. Past the first page the board stands and the button
-          // retries — exactly what OverlayDealsTable does above, and for
-          // the same reason.
+          // retries.
           (dealsQuery.data?.pages ?? []).length === 0 ? (
             <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
               {() => null}
@@ -1926,11 +1787,12 @@ function DealBoardBody({
                   effectivePipeline.stages ?? [],
                   loadedDeals,
                   stageTotalsQuery.data ?? new Map(),
-                  orgMarks,
+                  companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
                   rosterOwnerNaming(roster),
                 )}
                 onOpen={openDeal}
+                mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
               />
@@ -2045,9 +1907,8 @@ function useBoardInteractions({
 // already a wire parameter name, and the second is the one dial here that is
 // about DRAWING rather than about which deals exist.
 function useDealScreenDials({
-  overlay,
   pipelines,
-}: Readonly<{ overlay: boolean; pipelines?: Pipeline[] }>) {
+}: Readonly<{ pipelines?: Pipeline[] }>) {
   const [params, setParams] = useUrlParams();
   const opening = useMemo<ListQuery>(
     () => ({
@@ -2108,11 +1969,10 @@ function useDealScreenDials({
     sort: query.sort,
     includeArchived: query.includeArchived,
     filters: query.filters,
-    overlay,
   };
 
   const view: "board" | "table" =
-    overlay || params.get(VIEW_PARAM) === "table" ? "table" : "board";
+    params.get(VIEW_PARAM) === "table" ? "table" : "board";
   const setView = (next: "board" | "table") =>
     setParams(
       withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
@@ -2130,105 +1990,6 @@ function useDealScreenDials({
   };
 }
 
-// The surface's own narrowing chips, beside the stage and company ones
-// dealFilterChips builds.
-//
-// A function because two of the four are CONDITIONAL, and the condition is
-// the interesting part of each: a chip offered before its options are known
-// reads as "clear this filter" to the table, and a chip withdrawn while its
-// filter is applied leaves the list narrowed with no dial to clear it.
-function dealSurfaceChips({
-  me,
-  partnerOptions,
-  partnerApplied,
-}: Readonly<{
-  me?: ReturnType<typeof useMe>["data"];
-  partnerOptions: { value: string; label: string }[];
-  partnerApplied?: string;
-}>): FilterSpec[] {
-  return [
-    {
-      key: "stalled",
-      label: "deals.filterStalled",
-      allLabel: "deals.filterStalledAll",
-      options: [{ value: "true", label: "deals.filterStalled" }],
-    },
-    // Offered only once the viewer's own id is known. An option whose
-    // value is still "" reads as "clear this filter" to the table, so
-    // picking "Only mine" mid-load would quietly narrow nothing.
-    ...(me
-      ? [
-          {
-            key: "owner_id",
-            label: "deals.filterOwnerMe" as const,
-            allLabel: "deals.filterOwnerAll" as const,
-            options: [
-              {
-                value: me.user.id,
-                label: "deals.filterOwnerMe" as const,
-              },
-            ],
-          },
-        ]
-      : []),
-    {
-      key: "partner_sourced",
-      label: "deals.filterPartnerSourced",
-      allLabel: "deals.filterPartnerAll",
-      options: [{ value: "true", label: "deals.filterPartnerSourced" }],
-    },
-    // The forecast's own buckets, in the order the tiles read them. Four, not
-    // five: `slipped` is derived by the report from a claimed category and a
-    // close date, so there is no column to filter on and a chip offering it
-    // would narrow to nothing.
-    //
-    // Unconditional, unlike the two above: the vocabulary is the schema's, so
-    // there is no moment when the options are not yet known.
-    {
-      key: "forecast_category",
-      label: "deals.filterForecast",
-      allLabel: "deals.filterForecastAll",
-      options: [
-        { value: "commit", label: "deal.fcCommit" },
-        { value: "best_case", label: "deal.fcBestCase" },
-        { value: "pipeline", label: "deal.fcPipeline" },
-        { value: "omitted", label: "deal.fcOmitted" },
-      ],
-    },
-    // Which partner, not just whether there is one. Absent entirely
-    // when the installation has made no company a partner: a picker
-    // with nothing in it asks a question that has no answers, the same
-    // rule the deal form's own partner fields follow.
-    //
-    // The options come from usePartnerOptions, so a partner whose
-    // company this reader cannot open is not offered — picking it
-    // would name a company the screen could not then show them.
-    // Present whenever there are partners to pick OR one is already
-    // applied. A saved view can restore a partner_org_id after the
-    // programme was wound down or while the options are still in
-    // flight, and hiding the chip then would leave the list narrowed
-    // by a filter with no dial to see or clear it.
-    ...(partnerOptions.length > 0 || partnerApplied
-      ? [
-          {
-            key: "partner_org_id" as const,
-            label: "deals.filterPartner" as const,
-            allLabel: "deals.filterPartnerAnyOne" as const,
-            // `text`, not `label`: a partner's name is the server's
-            // data, not this screen's vocabulary, and FilterOption's
-            // union exists for exactly that. Every other chip here
-            // names a message key because its options are a fixed set
-            // somebody wrote; a company name has nothing to translate.
-            options: partnerOptions.map((option) => ({
-              value: option.value,
-              text: option.label,
-            })),
-          },
-        ]
-      : []),
-  ];
-}
-
 // The create form, with the one question it has to ask the server: which
 // projects the company named in the OPEN FORM is on.
 //
@@ -2240,7 +2001,7 @@ function DealCreateAction({
   pipeline,
   cf,
   openStages,
-  orgs,
+  companies,
   partnerOptions,
   startOpen,
 }: Readonly<{
@@ -2249,7 +2010,7 @@ function DealCreateAction({
   // screen's own rather than waiting for the pipelines this form is gated on.
   cf: ObjectCustomFields;
   openStages: Stage[];
-  orgs: Organization[];
+  companies: Company[];
   partnerOptions: { value: string; label: string }[];
   startOpen: boolean;
 }>) {
@@ -2277,7 +2038,7 @@ function DealCreateAction({
     // so the deal can name it at birth.
     const projectId = await resolveDealProject(
       values,
-      values.organization_id?.trim() || null,
+      values.company_id?.trim() || null,
       t,
     );
     const { data, error } = await api.POST("/deals", {
@@ -2302,10 +2063,10 @@ function DealCreateAction({
       screen="deals"
       create={createDeal}
       startOpen={startOpen}
-      onValuesChange={(values) => setFormCompany(values.organization_id ?? "")}
+      onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
-        { key: "amount", label: "create.amount", type: "number" },
+        { key: "amount", label: "create.amount", type: "number", step: "any" },
         {
           key: "currency",
           label: "create.currency",
@@ -2327,12 +2088,12 @@ function DealCreateAction({
           })),
         },
         {
-          key: "organization_id",
-          label: "create.organization",
+          key: "company_id",
+          label: "create.relatedCompany",
           type: "select",
-          options: orgs.map((org) => ({
-            value: org.id,
-            label: org.display_name,
+          options: companies.map((company) => ({
+            value: company.id,
+            label: company.display_name,
           })),
         },
         // The body of work this deal is about, chosen or started here: a
@@ -2434,7 +2195,7 @@ function savableDealQuery(query: ListQuery, pipelineId: string): ListQuery {
     : query;
 }
 
-// The dials that sit above whichever non-overlay surface is showing.
+// The dials that sit above whichever surface is showing.
 //
 // The board/table switch and the pipeline picker are shared, so the reader
 // sees the same dials either way. The SAVE action is not: a view holds a sort
@@ -2491,8 +2252,7 @@ export function DealsScreen({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("deal");
-  const overlay = useSorMode() === "overlay";
-  const pipelinesQuery = usePipelines(!overlay);
+  const pipelinesQuery = usePipelines();
   const meQuery = useMe();
   const savedViews = useSavedViewTabs("deals");
   const {
@@ -2503,7 +2263,7 @@ export function DealsScreen({
     dealFilters,
     view,
     setView,
-  } = useDealScreenDials({ overlay, pipelines: pipelinesQuery.data });
+  } = useDealScreenDials({ pipelines: pipelinesQuery.data });
   const dealsQuery = useDeals(dealFilters);
   // The board's column totals: a per-stage server aggregate
   // over EVERY matching deal, not just the capped page useDeals fetches —
@@ -2516,11 +2276,11 @@ export function DealsScreen({
     dealFilters,
     meQuery.data?.user.id,
   );
-  // A stage-keyed board cannot place a mirror deal (its pipeline/stage is the
-  // null pipeline/stage), so overlay mode opens on the flat table and hides the toggle
-  // (below) — the mode is fixed for the page's life, so a static initial value
-  // is enough.
   const [pending, setPending] = useState<PendingAdvance | null>(null);
+  // The deal that just closed, while the review is on offer for it. Separate
+  // from `pending`, which is the question BEFORE the close; this is the offer
+  // after one landed, and the close dialog is already gone by then.
+  const [closed, setClosed] = useState<ClosedDeal | null>(null);
   // Bulk selection, by deal id. Cleared after any bulk run except for the rows
   // that refused, since every other row's version has moved.
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -2557,10 +2317,10 @@ export function DealsScreen({
     },
   };
 
-  const orgsQuery = useQuery({
-    queryKey: ["organizations"],
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -2570,7 +2330,10 @@ export function DealsScreen({
     },
   });
 
-  const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
+  const partnerOptions = usePartnerOptions(companiesQuery.data?.data ?? []);
+  // The channel catalog for the filter chip. Shared cache with the edit form's
+  // own read, so opening one after the other costs a single request.
+  const acquisitionSources = useAcquisitionSources().data;
 
   // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
   // won/lost are reached through the confirmed advance, never at create.
@@ -2579,16 +2342,14 @@ export function DealsScreen({
   const { openDeal, cardDragHandlers, columnDropHandlers } =
     useBoardInteractions({ stages, loadedDeals, advance, setPending });
 
-  // Create writes a native deal — the mirror refuses it (unsupported_by_sor),
-  // so the affordance is hidden in overlay, matching the board mutations.
   // Shared between the board and the table surface: whichever view is
   // showing, the action lives in the surface's own header, not a wrap sibling.
-  const createAction = !overlay && openStages.length > 0 && (
+  const createAction = openStages.length > 0 && (
     <DealCreateAction
       pipeline={effectivePipeline}
       cf={cf}
       openStages={openStages}
-      orgs={orgsQuery.data?.data ?? []}
+      companies={companiesQuery.data?.data ?? []}
       partnerOptions={partnerOptions}
       startOpen={startCreating}
     />
@@ -2637,24 +2398,13 @@ export function DealsScreen({
         loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}
-        orgs={orgsQuery.data?.data ?? []}
-        orgsSettled={orgsQuery.isSuccess}
+        companies={companiesQuery.data?.data ?? []}
+        companiesSettled={companiesQuery.isSuccess}
         openDeal={openDeal}
         cardDragHandlers={cardDragHandlers}
         columnDropHandlers={columnDropHandlers}
       />
     ) : undefined;
-
-  // Overlay mode draws the flat, keyset-paginated mirror table — no pipeline
-  // board and no stage columns, because a stage-keyed board cannot place a deal
-  // whose pipeline and stage are null. It goes in the surface's own body slot,
-  // the way the board does: it had been rendered beside the surface instead,
-  // with a hand-rolled archived checkbox borrowing the list stylesheet's
-  // private class, and so lost the count, the note saying why the dials are
-  // missing, and every other piece of chrome a list on this product has.
-  const overlayBody = overlay ? (
-    <OverlayDealsTable includeArchived={query.includeArchived} />
-  ) : undefined;
 
   return (
     <div className="wrap">
@@ -2668,8 +2418,8 @@ export function DealsScreen({
         searchable={false}
         action={createAction}
         tools={tools}
-        body={overlayBody ?? boardBody}
-        bodyOwnsPaging={overlay || view === "board"}
+        body={boardBody}
+        bodyOwnsPaging={view === "board"}
         bodyCount={
           view === "board" &&
           dealsQuery.data &&
@@ -2687,15 +2437,14 @@ export function DealsScreen({
         chips={dealSurfaceChips({
           me: meQuery.data,
           partnerOptions,
-          partnerApplied: query.filters.partner_org_id,
+          partnerApplied: query.filters.partner_company_id,
+          acquisitionSources: acquisitionSources,
+          retiredSuffix: t("deal.acquisitionRetired"),
         })}
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
       {advance.isError && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
           {problemMessageOf(advance.error, t)}
         </p>
       )}
@@ -2705,468 +2454,32 @@ export function DealsScreen({
         onConfirm={(input) =>
           // mutateAsync REJECTS on failure; this dialog wants the outcome, and
           // an unhandled rejection in a click handler is not one. onError still
-          // runs, so the screen's own error surface is unaffected.
+          // runs, so the screen's own error surface is unaffected. The SAVED
+          // DEAL comes back on success, because the review offered next needs
+          // the closing the server just recorded.
           advance.mutateAsync(input).then(
-            () => null,
+            (deal) => deal,
             (error: unknown) => error,
           )
         }
+        onClosed={(deal, reason) => setClosed(closedDealOf(deal, reason))}
       />
-    </div>
-  );
-}
-
-/**
- * The 🟡 confirm a terminal advance goes through (AC-deal-6), wherever the
- * advance was asked for — the board's drag or the record page's stepper.
- *
- * Closing a deal is the one stage move that cannot be undone by moving it
- * back, so the question is asked in ONE place: a second copy of this dialog is
- * how the two surfaces would end up disagreeing about whether a lost deal
- * needs a reason.
- */
-function ConfirmAdvanceModal({
-  pending,
-  onClose,
-  onConfirm,
-}: Readonly<{
-  pending: PendingAdvance | null;
-  onClose: () => void;
-  // Resolves when the advance settles, so this dialog acts on the outcome of
-  // THIS attempt. It returns the error rather than throwing it: the caller's
-  // own error surface still reports the failure, and a rejection here would be
-  // an unhandled one in an event handler.
-  onConfirm: (input: AdvanceInput) => Promise<unknown>;
-}>) {
-  const t = useT();
-  const tierMap = useAgentTierMap();
-  const [lostReason, setLostReason] = useState("");
-  const [wonReason, setWonReason] = useState<WonReason | "">("");
-  const [wonDetail, setWonDetail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  // The deal this dialog has been told has no contract behind it, pinned to the
-  // exact attempt that was refused.
-  //
-  // Read off the shared mutation's `error` instead, the refusal outlives the
-  // deal that earned it: cancel here, open Won on a DIFFERENT deal, and the
-  // reason panel greets a deal that may well have a contract — and the server
-  // takes a stated reason at its word without looking for one, so that deal is
-  // recorded as won-without-paper when it was not. That falsifies the exact
-  // count the reason vocabulary exists to make truthful.
-  const [refusedDealId, setRefusedDealId] = useState<string | null>(null);
-
-  // EVERY way out of this dialog clears what was typed — the buttons, Escape,
-  // and the backdrop alike. The component stays mounted between openings, so a
-  // reason typed and then abandoned would otherwise still be sitting there the
-  // next time a deal is closed, and it would describe a different deal.
-  const dismiss = () => {
-    setLostReason("");
-    setWonReason("");
-    setWonDetail("");
-    setRefusedDealId(null);
-    onClose();
-  };
-
-  const needsLostReason = pending?.toStage.semantic === "lost";
-  // The reason panel appears only once the server has asked for it, and only
-  // for the deal it asked about. A win with a signed contract is one click,
-  // exactly as before: making every rep justify a win the paperwork already
-  // explains is how a required field becomes a field everyone fills with the
-  // same lie.
-  const needsWonReason =
-    pending?.toStage.semantic === "won" && refusedDealId === pending.dealId;
-  const detailMissing =
-    wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
-
-  return (
-    <Modal open={pending !== null} onClose={dismiss} labelledBy="advance-title">
-      {pending && (
-        <>
-          <p className="t-sub" id="advance-title">
-            <AutonomyDot tier={verbTier("progress_deal", tierMap)} />{" "}
-            {t("deals.confirmAdvance", { stage: pending.toStage.name })}
-          </p>
-          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
-            {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
-          </p>
-          {needsLostReason && (
-            <div className="field" style={{ marginTop: "var(--space-2)" }}>
-              <span className="t-label" id="lost-reason-label">
-                {t("deals.lostReason")}
-              </span>
-              <TextInput
-                aria-labelledby="lost-reason-label"
-                value={lostReason}
-                onChange={(event) => setLostReason(event.target.value)}
-              />
-            </div>
-          )}
-          {needsWonReason && (
-            <WonReasonFields
-              reason={wonReason}
-              detail={wonDetail}
-              onReason={(next) => {
-                setWonReason(next);
-                // The detail belongs to "Something else" alone. Kept across a
-                // change of reason it would sit invisibly behind a field the
-                // reader can no longer see, which is not a state they can
-                // correct.
-                if (next !== WON_REASON_NEEDING_DETAIL) {
-                  setWonDetail("");
-                }
-              }}
-              onDetail={setWonDetail}
-            />
-          )}
-          <div className="actions">
-            <Button onClick={dismiss}>{t("deals.cancel")}</Button>
-            <Button
-              variant="primary"
-              disabled={
-                submitting ||
-                (needsLostReason && lostReason.trim() === "") ||
-                (needsWonReason && (wonReason === "" || detailMissing))
-              }
-              onClick={async () => {
-                setSubmitting(true);
-                const error = await onConfirm({
-                  dealId: pending.dealId,
-                  version: pending.version,
-                  toStage: pending.toStage,
-                  lostReason: lostReason.trim() || undefined,
-                  ...wonAnswer(needsWonReason, wonReason, wonDetail),
-                });
-                setSubmitting(false);
-                // ONE refusal keeps this dialog open: the server saying this
-                // win names no evidence, because the answer to that is a field
-                // the reader can fill in right here. Every other outcome closes
-                // it — a success has nothing left to ask, and a 403 or a 409
-                // has no answer this dialog can offer, so holding it open would
-                // trap the reader behind a modal whose error text renders on
-                // the screen underneath it.
-                if (error && winEvidenceRefused(error)) {
-                  setRefusedDealId(pending.dealId);
-                  return;
-                }
-                dismiss();
-              }}
-            >
-              {t("deals.confirm")}
-            </Button>
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-/**
- * The won-without-contract answer as the advance should carry it, or nothing.
- *
- * The detail rides ONLY with the reason that needs one. Sent alongside any
- * other reason it would be stored anyway — the server writes both columns as
- * given — so a reader who typed a detail under "Something else" and then chose
- * "On a purchase order" would leave text on the deal, and in its audit trail,
- * that they had every reason to believe they had discarded when the field
- * disappeared.
- */
-function wonAnswer(active: boolean, reason: WonReason | "", detail: string) {
-  if (!active || reason === "") {
-    return {};
-  }
-  const explained = reason === WON_REASON_NEEDING_DETAIL;
-  return {
-    wonWithoutContractReason: reason,
-    wonWithoutContractDetail: explained ? detail.trim() : undefined,
-  };
-}
-
-// Whether a failed advance is the server asking how a contract-less deal was
-// won. Keyed on the field code, not the 422: an advance is refused for several
-// reasons, and only this one has an answer the reader can give here.
-function winEvidenceRefused(error: unknown): boolean {
-  return problemFieldErrorsOf(error).some(
-    (fault) => fault.code === WIN_EVIDENCE_REQUIRED,
-  );
-}
-
-// The reason a deal was won with no paper behind it: a closed vocabulary, plus
-// the free-text detail the one open-ended member needs.
-function WonReasonFields({
-  reason,
-  detail,
-  onReason,
-  onDetail,
-}: Readonly<{
-  reason: WonReason | "";
-  detail: string;
-  onReason: (value: WonReason | "") => void;
-  onDetail: (value: string) => void;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
-        {t("deals.winNoEvidence")}
-      </p>
-      <div className="field" style={{ marginTop: "var(--space-2)" }}>
-        <span className="t-label" id="won-reason-label">
-          {t("deals.winReason")}
-        </span>
-        <Select
-          aria-labelledby="won-reason-label"
-          placeholder={t("deals.winReasonPick")}
-          value={reason}
-          onChange={(value) => onReason(asWonReason(value))}
-          options={WON_REASONS.map((option) => ({
-            value: option,
-            label: t(WON_REASON_LABELS[option]),
-          }))}
-        />
-      </div>
-      {reason === WON_REASON_NEEDING_DETAIL && (
-        <div className="field" style={{ marginTop: "var(--space-2)" }}>
-          <span className="t-label" id="won-detail-label">
-            {t("deals.winReasonDetail")}
-          </span>
-          <TextInput
-            aria-labelledby="won-detail-label"
-            value={detail}
-            onChange={(event) => onDetail(event.target.value)}
-          />
-        </div>
-      )}
-    </>
-  );
-}
-
-/**
- * The flat deal table the overlay mirror is drawn as.
- *
- * No sort of its own. It holds the pages walked so far of a cursor keyed on
- * `external_id`, so ordering that subset would present an order the rest of the
- * set does not share — and the mirror answers 422 to every sort dial, so there
- * is no server order to ask for either. This table therefore draws rows in
- * cursor order and says nothing about sorting at all.
- */
-function DealTable({ deals }: Readonly<{ deals: Deal[] }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-
-  return (
-    <div>
-      <DataTable
-        label={t("nav.deals")}
-        columns={[
-          {
-            key: "name",
-            header: t("people.name"),
-            render: (deal: Deal) => deal.name,
-          },
-          {
-            key: "stage",
-            header: t("deals.stage"),
-            // Always empty HERE, and named rather than looked up. This table
-            // draws the overlay mirror and nothing else, and a mirror deal
-            // carries no native pipeline or stage (OVA-MAP-6) — so the column
-            // keeps the shape the native table has while having nothing of its
-            // own to say. A stage map passed in to be read would only ever
-            // answer for a row this table cannot hold.
-            render: () => "",
-          },
-          {
-            key: "amount",
-            header: t("deals.amount"),
-            render: (deal: Deal) => <AmountCell deal={deal} locale={locale} />,
-          },
-          {
-            key: "close",
-            header: t("deals.close"),
-            render: (deal: Deal) =>
-              deal.expected_close_date
-                ? formatDate(deal.expected_close_date, locale, recordZone)
-                : null,
-          },
-          {
-            key: "status",
-            header: t("lead.status"),
-            render: (deal: Deal) => (
-              <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-            ),
-          },
-        ]}
-        rows={deals}
-        rowKey={(deal) => deal.id}
-        onRowClick={(deal) => navigate({ screen: "deals", id: deal.id })}
-      />
+      {/* Offered the moment a deal closes, from the list as from the record
+          page: the reader who just said why is the one who can answer the
+          rest. */}
+      <CloseReviewOffer closed={closed} onDismiss={() => setClosed(null)} />
     </div>
   );
 }
 
 // The FX-converted base-currency sub-line (D-14): shown only when the deal
 // carries a frozen fx_rate_to_base (won/lost deals freeze it at close; open
-// deals in a non-base currency may not have one yet). Prop-driven and
-// exported so a later Storybook task can render it without a live fetch.
-export function FxLine({
-  amountMinor,
-  baseCurrency,
-  fxRateToBase,
-  fxRateDate,
-  locale,
-}: Readonly<{
-  amountMinor: number | null;
-  // The installation's own base currency, from its settings. Not a constant:
-  // an installation whose base is not the euro was reading a euro sign over a
-  // figure converted into something else, which is the one error a converted
-  // figure must not make. Null while the settings read is in flight or refused
-  // — an unnamed base is not a euro base.
-  baseCurrency: string | null;
-  fxRateToBase: string;
-  fxRateDate: string | null;
-  locale: Locale;
-}>) {
-  const t = useT();
-  const recordZone = useRecordZone();
-  // A deal carrying a rate but no amount converts to nothing, not to zero.
-  const baseMinor =
-    amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
-  return (
-    <p className="t-caption">
-      {t("deal.fxBase", {
-        value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
-        rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
-      })}
-    </p>
-  );
-}
+// deals in a non-base currency may not have one yet). Its body moved into
+// dealcockpit.tsx, where the money cell draws it as a second line; re-exported
+// here so this stays the one import path this file's own stories and tests
+// already use.
+export { FxLine } from "./deal360/dealcockpit";
 
-// Reopens a won/lost deal back to an open-semantic stage — the same advance
-// mutation shape the board drag uses, with status:"open" forced. Split out
-// of DealActions for the same readability reason as the other header actions.
-function ReopenAction({
-  dealId,
-  dealVersion,
-  openStages,
-  disabledReasonId,
-}: Readonly<{
-  dealId: string;
-  // The version the header this button sits in was rendered from, so the reopen
-  // pins the deal the reader was looking at. Stated by the caller rather than
-  // read here: this action holds no query of its own to read a fresh one from,
-  // and a fresh one would be the wrong answer anyway.
-  dealVersion: number | undefined;
-  openStages: Stage[];
-  // The id of the sentence saying why this reopen is refused, when it is.
-  // STATE-4a: a control blocked by the record's STATE rather than by a
-  // permission stays visible and says why, because the reason is the
-  // information and hiding the control hides a fact the reader needs.
-  disabledReasonId?: string;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [stageId, setStageId] = useState<string | null>(null);
-  const reopen = useMutation({
-    mutationKey: ["deal-edit", dealId],
-    // Stage and version both ride the variables: a version read out of the
-    // closure would be the one from the render before this dialog opened, and a
-    // reopen that pins the wrong version either fails for no reason the reader
-    // can see or lands on a deal somebody else has since moved.
-    mutationFn: async (input: {
-      toStageId: string;
-      version: number | undefined;
-    }) => {
-      const { data, error } = await api.POST("/deals/{id}/advance", {
-        params: {
-          path: { id: dealId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { to_stage_id: input.toStageId, status: "open" },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: () => {
-      setOpen(false);
-      for (const queryKey of dealRecordKeys(dealId)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      queryClient.invalidateQueries({ queryKey: ["deals"] });
-    },
-  });
-  return (
-    <>
-      <Button
-        small
-        reasonId={disabledReasonId}
-        data-testid="reopen-open"
-        onClick={() => setOpen(true)}
-      >
-        {t("deal.reopen")}
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy="reopen-title"
-      >
-        <p className="t-sub" id="reopen-title">
-          {t("deal.reopenPick")}
-        </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            margin: "var(--space-3) 0",
-          }}
-        >
-          {openStages.map((s) => (
-            <Button
-              key={s.id}
-              small
-              aria-pressed={stageId === s.id}
-              data-testid={`reopen-stage-${s.id}`}
-              onClick={() => setStageId(s.id)}
-            >
-              {s.name}
-            </Button>
-          ))}
-        </div>
-        {reopen.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
-            {problemMessageOf(reopen.error, t)}
-          </p>
-        )}
-        <div className="actions">
-          <Button small onClick={() => setOpen(false)}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            small
-            variant="primary"
-            data-testid="reopen-confirm"
-            disabled={!stageId || reopen.isPending}
-            onClick={() => {
-              if (stageId) {
-                reopen.mutate({ toStageId: stageId, version: dealVersion });
-              }
-            }}
-          >
-            {t("deal.reopenConfirm")}
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-// The edit form's project fields, in the two readings a stored project has.
-// Named rather than inlined so `DealActions` stays under the complexity ceiling,
-// and so the masked case reads as one decision.
 function editProjectFields(
   t: (key: MessageKey) => string,
   opts: Readonly<{
@@ -3201,275 +2514,145 @@ function editProjectFields(
   );
 }
 
-// The two people surfaces under the deal's overview.
-//
-// The seats are in the RAIL as context — who these people are. The map is in
-// the column because it is a working surface: it draws how the deal is threaded
-// and where the cover is missing, which is what a reader acts on.
-//
-// The stakeholders panel is where a seat is ADDED, changed and removed. The
-// rail's seats and the map both read the coverage view, which carries no
-// relationship id and so can carry no verb — a deal's stakeholders were
-// readable on three surfaces and writable on none of them, reachable only from
-// whichever person happened to already be linked. It is the generic
-// relationships panel under a deal scope, not a second one: create, edit and
-// remove have one implementation for every kind.
-//
-// Named rather than inlined so DealScreen's render callback stays under the
-// complexity ceiling.
-function DealPeoplePanels({
-  dealId,
-  overlay,
-  refusedReasonId,
-}: Readonly<{
-  dealId: string;
-  overlay: boolean;
-  // The page's one sentence about why this deal takes no changes: a seat is
-  // written through the deal's own write gate, so the panel's verbs are
-  // refused by the same fact as Edit.
-  refusedReasonId?: string;
-}>) {
-  // Out in overlay mode, where the deal is a mirror with no native row for a
-  // relationship to point at. The committee map is not here any more: it is
-  // one half of the reading's reference pair, beside the offers.
-  if (overlay) {
-    return null;
-  }
-  return (
-    <RelationshipsTab
-      scope={{ deal_id: dealId }}
-      refusedReasonId={refusedReasonId}
-    />
-  );
-}
-
-// This deal's VERBS — split out of DealScreen's render so the record-view
-// callback stays readably small. An archived deal is read-only (no
-// edit/archive/advance path exists server-side for a non-live row), so its
-// verbs render REFUSED rather than missing: the page's one sentence about the
-// archive says why, and each of them points at it (STATE-4a). A missing control
-// says nothing about the deal, while a refused one names the reason.
-//
-// They used to ride the record view's BADGES slot, which is where a record says
-// what it IS rather than what can be done to it — so the deal page passed
-// `actionsInline` with no `actions` to place, and four buttons sat in the row
-// meant for a status and a project chip. Edit leads because it is the verb a
-// reader reaches for; the three whose consequence has to be read before they
-// are pressed go behind the overflow.
-// The shared Email verb every record header carries. Not in overlay, where
-// the mirror owns the deal's mail.
-function DealEmailVerb({
+export function DealDetails({
   deal,
-  overlay,
-  disabledReasonId,
-}: Readonly<{ deal: Deal; overlay: boolean; disabledReasonId?: string }>) {
-  // The same coverage read the readings band and the coverage card already
-  // make, served from one cache entry — so asking here costs no request. Off
-  // in overlay for the reason the hook documents: a mirrored deal's coverage
-  // cannot be assembled, and a doomed fetch reads as "nobody is on this deal".
-  const coverage = useDealCoverage(deal.id, !overlay);
-  const recordAddress = useDealRecipientAddress(coverage);
-  if (overlay) {
-    return null;
-  }
-  return (
-    <RecordEmailVerb
-      entityType="deal"
-      entityId={deal.id}
-      // Who a FIRST message on this deal goes to: the champion, else somebody
-      // the deal is actually in conversation with, else the first seat. Only
-      // ever an offer — the composer fills an empty To field once and never
-      // over what the reader typed.
-      recordAddress={recordAddress}
-      disabledReasonId={disabledReasonId}
-    />
-  );
-}
-
-function DealActions({
-  deal,
-  orgs,
+  companies,
   meId,
-  openStages,
-  refusedReasonId,
 }: Readonly<{
   deal: Deal;
-  orgs: { id: string; display_name: string }[];
+  companies: { id: string; display_name: string }[];
   meId: string;
-  openStages: Stage[];
-  // The id of the page's one sentence about why this deal takes no changes —
-  // archived, or not this caller's to write — and undefined while it does.
-  // Every verb the sentence refuses points at that one element instead of
-  // printing the same line four times.
-  refusedReasonId?: string;
 }>) {
   const t = useT();
-  const cf = useObjectCustomFields("deal");
-  // Reads the same cached partner list the deals list built, so opening Edit
-  // costs no extra request.
-  const partnerOptions = usePartnerOptions(orgs);
+  const partnerOptions = usePartnerOptions(companies);
+  const acquisitionSources = useAcquisitionSources().data;
   const masked = deal.masked_fields ?? [];
-  // The company this deal names, resolvable whether or not the picker's capped
-  // page reached it. The page answers first; only a company it does not carry
-  // is read by id, through the SAME cache entry the subtitle's own reference
-  // already fills, so the common case costs nothing.
-  const companyOnPage = orgs.find((org) => org.id === deal.organization_id);
-  const companyById = useEntityName(
-    "organization",
-    companyOnPage ? null : deal.organization_id,
+  const companyOnPage = companies.find(
+    (company) => company.id === deal.company_id,
   );
-  const currentCompany = deal.organization_id
+  const companyById = useEntityName(
+    "company",
+    companyOnPage ? null : deal.company_id,
+  );
+  const currentCompany = deal.company_id
     ? {
-        id: deal.organization_id,
-        // The raw id is the floor rather than the aim: ugly, and still better
-        // than a blank picker whose save clears the company nobody touched.
+        id: deal.company_id,
         label:
-          companyOnPage?.display_name ??
-          companyById.name ??
-          deal.organization_id,
+          companyOnPage?.display_name ?? companyById.name ?? deal.company_id,
       }
     : undefined;
-  // The seam serves update and archive for a mirrored deal (write-back
-  // projects onto the incumbent, overlay/provider_writes.go), so Edit and
-  // Archive render in overlay too. Reopen and share stay hidden: reopen
-  // dials advance under the hood, which the seam refuses outright (a mirror
-  // deal carries no native pipeline/stage, OVA-MAP-6), and a record grant
-  // probes the native deal row (auth.EnsureLinkTarget), which a mirror deal
-  // has no row in, so the grant 404s — overlay visibility is governed by
-  // mirror_visibility, which record_grant does not feed.
-  const overlay = useSorMode() === "overlay";
-  // Email is the one verb here that writes no deal row, so only the archive
-  // refuses it: a colleague's deal still takes a message from this reader.
-  const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
-  // This deal's company, so the picker offers the projects that company is on —
-  // as customer, partner or subcontractor. The server decides which; asking for
-  // every project and filtering here on organization_id would show only the
-  // ones it is the CUSTOMER of.
-  const openProjects = useProjectsOfCompany(deal.organization_id ?? undefined);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const formCompany = formValues.company_id ?? deal.company_id ?? undefined;
+  const openProjects = useProjectsOfCompany(formCompany);
   const projectById = useEntityName("project", deal.project_id);
   const currentProject = deal.project_id
     ? { id: deal.project_id, label: projectById.name ?? deal.project_id }
     : undefined;
-  // What the form OPENS on, named once because two things need the same answer:
-  // the form seeds its controls from it, and the patch is a diff against it.
-  // Two spellings of "the record as the form read it" would drift, and the one
-  // that drifts decides whether an untouched field is sent as a change.
-  const seeded = { ...dealEditRecord(deal), ...cf.recordSlice(deal) };
+  const seeded = { ...dealEditRecord(deal), original: deal };
+  const canEdit = useCanWriteRecord("deal", deal) && !deal.archived_at;
+  const owners = useRecordOwners(deal.owner_id);
+  // Company/project and money/currency are coupled writes: changing a visible
+  // member must not silently rewrite a reference or unit the reader cannot see.
+  const readOnlyFields: Record<string, string> = Object.fromEntries(
+    masked.map((key) => [
+      key === "amount_minor"
+        ? "amount"
+        : key === "expected_arr_minor"
+          ? "expected_arr"
+          : key,
+      t("record.notShown"),
+    ]),
+  );
+  if (deal.arr_source_offer_id)
+    Object.assign(readOnlyFields, {
+      expected_arr: t("deal.arrFromOffer"),
+      currency: t("deal.arrFromOffer"),
+    });
   return (
     <>
-      <DealEmailVerb
-        deal={deal}
-        overlay={overlay}
-        disabledReasonId={refusedByArchive}
-      />
-      <EditAction<Deal>
-        disabledReasonId={refusedReasonId}
-        label={t("deal.edit")}
-        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
+      <RecordFields
+        kind="deal"
+        onValuesChange={setFormValues}
+        canEdit={canEdit}
+        groups={[
+          {
+            label: t(
+              deal.arr_source_offer_id ? "deal.expectedArr" : "create.amount",
+            ),
+            keys: deal.arr_source_offer_id
+              ? ["expected_arr", "currency"]
+              : ["amount", "expected_arr", "currency"],
+          },
+          {
+            label: t("create.relatedCompany"),
+            keys: ["company_id", "project_id", "new_project_name"],
+          },
+          {
+            label: t("deal.partnerCompany"),
+            keys: ["partner_company_id", "partner_attribution"],
+          },
+        ]}
+        readOnlyFields={readOnlyFields}
+        maskedFields={masked
+          .filter((key) =>
+            ["amount_minor", "expected_arr_minor", "currency"].includes(key),
+          )
+          .map((key) =>
+            key === "amount_minor"
+              ? "amount"
+              : key === "expected_arr_minor"
+                ? "expected_arr"
+                : key,
+          )}
+        title={t("co.details.title")}
         fields={[
           ...dealEditFields(t, {
-            orgs,
+            companies,
             partnerOptions,
-            attributedPartner: attributedPartner(deal, orgs),
+            attributedPartner: attributedPartner(deal, companies),
             currentCompany,
             masked,
             me: meId,
             currentOwner: deal.owner_id ?? null,
-            // EMPTY, not a default. `dealEditFields` only uses this to put the
-            // record's own currency at the head of the option list, and a deal
-            // nobody has priced has none to put there.
             currency: deal.currency ?? "",
-          }),
+            acquisitionSources: acquisitionSources,
+            currentAcquisitionSource: deal.acquisition_source,
+          }).map(
+            (field): CreateField =>
+              field.key === "owner_id"
+                ? { ...field, label: "list.owner", options: owners }
+                : field,
+          ),
           ...editProjectFields(t, {
             masked,
             openProjects,
-            currentProject,
-            company: deal.organization_id ?? undefined,
+            currentProject:
+              formCompany === deal.company_id ? currentProject : undefined,
+            company: formCompany,
           }),
-          ...cf.formFields,
         ]}
         record={seeded}
-        update={async (values, _rows, opened) => {
-          // The company the form SUBMITS, not the one the deal had: a
-          // project started here belongs to the company the save names.
-          const submitted = stringValues(values);
-          const projectId = await resolveDealProject(
-            submitted,
-            submitted.organization_id?.trim() || null,
-            t,
+        save={async (values, _rows, opened) => {
+          const submitted = stringValues({ ...opened, ...values });
+          const projectId = Object.hasOwn(values, "project_id")
+            ? await resolveDealProject(
+                submitted,
+                submitted.company_id?.trim() || null,
+                t,
+              )
+            : submitted.project_id;
+          return saveRecordEdit(
+            "deal",
+            rawRecord(opened),
+            mapDealUpdate(
+              { ...opened, ...values, project_id: projectId ?? "" },
+              opened,
+              masked,
+            ),
           );
-          const { data, error } = await api.PATCH("/deals/{id}", {
-            params: {
-              path: { id: deal.id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
-              ...mapDealUpdate(
-                { ...values, project_id: projectId ?? "" },
-                // The reading the form opened on, not the live one: `seeded`
-                // is rebuilt on every render, so a refetch mid-edit would make
-                // somebody else's change read as this person's.
-                opened ?? seeded,
-                masked,
-              ),
-              // The other half of the same body, diffed the same way and
-              // against the same baseline. A snapshot here reproduced the
-              // reported defect exactly: `cf_*` columns are clearable through
-              // no path, so one empty custom field refused every save.
-              ...cf.toPatch(values, opened ?? {}),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
         }}
-        invalidate="deals"
-        recordKey="deal"
       />
-      {/* Behind the overflow, all three: archiving a deal, handing a link to
-          somebody outside the workspace, and reopening a closed one are verbs
-          whose consequence a reader has to read before pressing, so each of
-          them wants a whole line rather than a place in a row. */}
-      <OverflowMenu label={t("record.moreActions")}>
-        <ArchiveAction
-          disabledReasonId={refusedReasonId}
-          label={t("deal.archive")}
-          confirmText={t("deal.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: deal.name })}
-          archive={async () => {
-            const { data, error } = await api.DELETE("/deals/{id}", {
-              params: { path: { id: deal.id } },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
-          }}
-          invalidate="deals"
-          recordKey="deal"
-          onArchived={() => navigate({ screen: "deals" })}
-        />
-        {!overlay && (
-          <ShareAction
-            recordType="deal"
-            recordId={deal.id}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
-        {/* Reopen answers a CLOSED deal, so an open one has no reason to be
-            told about it — absent, not refused. An archived closed deal keeps
-            it, refused: the reader came asking whether this can come back. */}
-        {!overlay && (deal.status === "won" || deal.status === "lost") && (
-          <ReopenAction
-            dealId={deal.id}
-            dealVersion={deal.version}
-            openStages={openStages}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
-      </OverflowMenu>
+      <RecordCustomFields kind="deal" record={deal} />
     </>
   );
 }
@@ -3477,7 +2660,8 @@ function DealActions({
 type Approval = components["schemas"]["Approval"];
 
 // The live 🟡 confirm-first staging queue for this deal — split out of
-// DealScreen's render for the same readability reason as DealActions above.
+// DealScreen's render for the same readability reason DealActions moved to
+// its own file (deal360/dealactions.tsx).
 function DealApprovals({
   approvals,
   decide,
@@ -3495,51 +2679,59 @@ function DealApprovals({
     return null;
   }
   return (
-    <Card
-      title={t("deal.pendingApprovals")}
-      style={{ marginBottom: "var(--space-4)" }}
-    >
-      {approvals.map((approval) => (
-        <div
-          key={approval.id}
-          className="staging-card"
-          style={{ marginBottom: 8 }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
-            {/* The same two facts the approvals inbox states, said the same
+    <Panel title={t("deal.pendingApprovals")}>
+      {/* The interval between two staged cards belongs to the stack rather
+          than to each card, so the last one does not pay for a neighbour it
+          does not have. */}
+      <PanelBody className="form-stack">
+        {approvals.map((approval) => (
+          <div key={approval.id} className="staging-card">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+              }}
+            >
+              <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
+              {/* The same two facts the approvals inbox states, said the same
                 way. Printed off the wire they read `advance_deal` and
                 `agent:capture` — the vocabulary the API speaks, on a page
                 whose reader never sees the API. */}
-            <span className="t-label">
-              {approvalKindLabel(approval.kind, t)}
-            </span>
-            <ProvenanceTag
-              provenance={provenanceOf(approval.proposed_by, viewerId)}
-            />
-          </div>
-          <div className="approval-gate">
-            <Button
-              variant="primary"
-              small
-              onClick={() =>
-                decide({ approvalId: approval.id, verdict: "approve" })
+              <span className="t-label">
+                {approvalKindLabel(approval.kind, t)}
+              </span>
+              <ProvenanceTag
+                provenance={provenanceOf(approval.proposed_by, viewerId)}
+              />
+            </div>
+            <ActionRow
+              className="approval-gate"
+              primary={
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    decide({ approvalId: approval.id, verdict: "approve" })
+                  }
+                >
+                  {t("trust.accept")}
+                </Button>
               }
             >
-              {t("trust.accept")}
-            </Button>
-            <Button
-              small
-              onClick={() =>
-                decide({ approvalId: approval.id, verdict: "reject" })
-              }
-            >
-              {t("trust.dismiss")}
-            </Button>
+              {/* Dismiss here sends the `reject` verdict — the same answer the
+                decision card's trash can gives, so it wears the same glyph. */}
+              <IconAction
+                label={t("trust.dismiss")}
+                icon={<Trash2 aria-hidden />}
+                onClick={() =>
+                  decide({ approvalId: approval.id, verdict: "reject" })
+                }
+              />
+            </ActionRow>
           </div>
-        </div>
-      ))}
-    </Card>
+        ))}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -3569,23 +2761,14 @@ export function OffersPanel({
   onCreate: (currency: string) => void;
 }>) {
   const t = useT();
-  // Offers are read (and created) against a mirrored deal — the list read 404s
-  // and creation would write, both refused in overlay. Show the honest
-  // unavailable state instead of an empty panel with a New-offer button.
-  const overlay = useSorMode() === "overlay";
-  if (overlay) {
-    return (
-      <Card title={t("deal.offers")} style={{ marginBottom: "var(--space-4)" }}>
-        <OverlayUnavailable />
-      </Card>
-    );
-  }
   return (
-    <Card
+    <Panel
       title={t("deal.offers")}
-      actions={
+      // The panel's ONE verb, in the header band beside the title: a single
+      // button that opens what the panel lists belongs to the panel's name
+      // rather than to a strip under its rows.
+      titleAction={
         <Button
-          small
           // `reason` disables the control AND points at the explanation. Passing
           // `disabled` beside it would cancel the refusal it sets, so the
           // in-flight case stays on `disabled` and the state case on `reason`.
@@ -3603,252 +2786,59 @@ export function OffersPanel({
           {t("deal.newOffer")}
         </Button>
       }
-      style={{ marginBottom: "var(--space-4)" }}
     >
-      {offers &&
-        (offers.length > 0 ? (
-          <DataTable
-            label={t("deal.offers")}
-            columns={[
-              {
-                key: "offer_number",
-                header: t("deal.offerNumber"),
-                render: (offer: Offer) => offer.offer_number,
-              },
-              {
-                key: "revision",
-                header: t("deal.offerRevision"),
-                render: (offer: Offer) => String(offer.revision),
-              },
-              {
-                key: "status",
-                header: t("lead.status"),
-                render: (offer: Offer) => <Badge>{offer.status}</Badge>,
-              },
-              {
-                key: "gross",
-                header: t("deals.amount"),
-                render: (offer: Offer) => (
-                  <span className="t-mono">
-                    {formatMoney(offer.gross_minor, offer.currency, locale)}
-                  </span>
-                ),
-              },
-            ]}
-            rows={offers}
-            rowKey={(offer) => offer.id}
-            onRowClick={(offer) => navigate({ screen: "offers", id: offer.id })}
-          />
-        ) : (
-          <EmptyState>{t("deal.offersEmpty")}</EmptyState>
-        ))}
-    </Card>
+      <PanelBody>
+        {offers &&
+          (offers.length > 0 ? (
+            <DataTable
+              label={t("deal.offers")}
+              columns={[
+                {
+                  key: "offer_number",
+                  header: t("deal.offerNumber"),
+                  render: (offer: Offer) => offer.offer_number,
+                },
+                {
+                  key: "revision",
+                  header: t("deal.offerRevision"),
+                  render: (offer: Offer) => String(offer.revision),
+                },
+                {
+                  key: "status",
+                  header: t("lead.status"),
+                  render: (offer: Offer) => <Badge>{offer.status}</Badge>,
+                },
+                {
+                  key: "gross",
+                  header: t("deals.amount"),
+                  render: (offer: Offer) => (
+                    <span className="t-num">
+                      {formatMoney(offer.gross_minor, offer.currency, locale)}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={offers}
+              rowKey={(offer) => offer.id}
+              onRowClick={(offer) =>
+                navigate({ screen: "offers", id: offer.id })
+              }
+            />
+          ) : (
+            <EmptyState>{t("deal.offersEmpty")}</EmptyState>
+          ))}
+      </PanelBody>
+    </Panel>
   );
 }
 
-const DEAL_TABS = ["overview", "files", "history"] as const;
+const DEAL_TABS = ["overview", "room", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
-
-// The pipeline's stages as ladder rungs: what is behind the deal, where it
-// stands, and the ways out.
-//
-// `position` orders the pipeline and is what the trail is read from — a stage
-// earlier in the pipeline than the deal's own has been passed. A deal whose
-// stage the pipeline cannot name (an overlay mirror carrying the incumbent's
-// id, a stage archived out from under it) leaves every rung unpassed rather
-// than guessing a position, because a trail drawn from a guess says the deal
-// went through stages it may never have seen.
-function dealStageSteps({
-  deal,
-  stages,
-  refused,
-  onAdvance,
-}: Readonly<{
-  deal: Deal;
-  stages: readonly Stage[];
-  refused: boolean;
-  onAdvance: (toStage: Stage) => void;
-}>): StageStep[] {
-  const here = stages.find((stage) => stage.id === deal.stage_id);
-  return stages.map((stage) => ({
-    key: stage.id,
-    label: stage.name,
-    done: here !== undefined && stage.position < here.position,
-    current: stage.id === deal.stage_id,
-    // Won and lost are the two ways out rather than two more rungs.
-    terminal: stage.semantic !== "open",
-    disabled: refused,
-    onPick: () => onAdvance(stage),
-  }));
-}
 
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
 // fetches, no behavior change from the pre-tab layout.
-// What the identity line reads off a deal. Every field is optional because
-// every one of them is a fact a deal can lack or a reader can be refused.
-type DealIdentity = Pick<
-  Deal,
-  | "amount_minor"
-  | "currency"
-  | "stage_id"
-  | "owner_id"
-  | "organization_id"
-  | "partner_org_id"
-  | "partner_attribution"
-  | "masked_fields"
->;
-
-/**
- * The one line of facts under a deal's name: what it is worth, where it sits
- * on the board, whose deal it is, and — when one brought it — which partner.
- *
- * It is the design system's `IdentityLine`, the same row the account and the
- * contact draw under their own names, so the three records read the same way.
- * These facts used to stand in a labelled box beside the verbs instead
- * (`DealFacts`), which made the deal the only record whose head answered "what
- * is this" in a different shape from every other — and cost the verbs the room
- * they need beside a name at the record rung.
- *
- * The partner was editable in the form and rendered nowhere, so a deal that a
- * partner sourced looked identical to one we won alone. That is the fact the
- * commission is computed from, and a figure a partner is paid on has to be
- * visible on the record it came from.
- *
- * Each reference goes through EntityRef, which resolves the name and links to
- * the record — and withholds both when the reader may not open it, which is
- * why the ids are not printed as a fallback. A withheld fact NAMES the field
- * it withholds: on a line of joined facts a bare mask says only "something
- * here is hidden", and the amount, the company and the partner are three
- * different things to be refused.
- */
-export function DealIdentityLine({
-  deal,
-  stages,
-  locale,
-}: Readonly<{
-  // The facts this line draws and no more. A presentational row does not need
-  // a whole `Deal` to say what one is worth, and asking for one makes every
-  // story and test that draws the line assemble a record it does not read.
-  deal: DealIdentity;
-  // The stages the PAGE already sorted for the board, not a second read.
-  stages: readonly { id: string; name: string }[];
-  locale: Locale;
-}>) {
-  const t = useT();
-  // Only asked for when there is an owner to name: an unowned deal needs no
-  // roster read to say so.
-  const roster = useRoster("user", Boolean(deal.owner_id));
-  const partial = useRosterPartial("user", Boolean(deal.owner_id));
-  const masked = deal.masked_fields ?? [];
-  // An em dash rather than the stage id: a deal in overlay mode carries no
-  // native pipeline row, and printing a UUID where a stage name goes reads as
-  // a fault.
-  const stage = stages.find((candidate) => candidate.id === deal.stage_id);
-  return (
-    <IdentityMeta>
-      <IdentityLine>
-        {masked.includes("organization_id") ? (
-          <IdentityFact>
-            {t("create.organization")} <FieldGuard mode="masked" />
-          </IdentityFact>
-        ) : (
-          deal.organization_id && (
-            <IdentityFact>
-              <EntityRef kind="organization" id={deal.organization_id} />
-            </IdentityFact>
-          )
-        )}
-        <IdentityFact>
-          {/* A masked amount NAMES the field, like every other refusal on this
-              line: a lone lock among joined facts says only that something
-              here is hidden, and "no value recorded" and "you may not see the
-              value" are different statements about a deal. */}
-          {masked.includes("amount_minor") ? (
-            <>
-              {t("deals.amount")} <FieldGuard mode="masked" />
-            </>
-          ) : (
-            dealAmount(deal, locale)
-          )}
-        </IdentityFact>
-        <IdentityFact>{stage?.name ?? "—"}</IdentityFact>
-        <IdentityFact quiet>
-          {t("list.owner")}:{" "}
-          {rosterOwnerName(
-            deal.owner_id,
-            roster,
-            partial,
-            t,
-            t("co.pulse.unowned"),
-          )}
-        </IdentityFact>
-        {masked.includes("partner_org_id") ? (
-          // No attribution word here: what the partner did is withheld WITH
-          // the partner, so naming one would decide what a partner nobody
-          // could see is owed.
-          <IdentityFact>
-            {t("deal.partnerOrg")} <FieldGuard mode="masked" />
-          </IdentityFact>
-        ) : (
-          deal.partner_org_id && (
-            <IdentityFact>
-              {/* Sourced and influenced are paid differently, so the line says
-                  which one rather than a neutral "partner: X" that hides the
-                  distinction the commission turns on. */}
-              {t(
-                deal.partner_attribution === "influenced"
-                  ? "deal.partnerInfluenced"
-                  : "deal.partnerSourced",
-              )}{" "}
-              <EntityRef kind="organization" id={deal.partner_org_id} />
-            </IdentityFact>
-          )
-        )}
-      </IdentityLine>
-    </IdentityMeta>
-  );
-}
-
-// The value, or an em dash when the deal carries none. The masked case is the
-// caller's, because a refusal on this line is written as the field's name
-// beside the mark rather than as the mark alone.
-function dealAmount(deal: DealIdentity, locale: Locale): ReactNode {
-  if (deal.amount_minor == null || !deal.currency) {
-    return "—";
-  }
-  return formatMoney(deal.amount_minor, deal.currency, locale);
-}
-
-// Deal360 leads the page. It is absent on an overlay-backed deal: the briefing
-// is written from records this installation holds, and a mirrored deal's
-// timeline is the incumbent's rather than ours.
-function DealLead({
-  dealId,
-  dealName,
-  overlay,
-  pulse,
-  spine,
-}: Readonly<{
-  dealId: string;
-  dealName: string;
-  overlay: boolean;
-  pulse: ReactNode | undefined;
-  spine: ReactNode;
-}>) {
-  if (overlay) {
-    return null;
-  }
-  return (
-    <DealStatusCardPanel
-      dealId={dealId}
-      dealName={dealName}
-      pulse={pulse}
-      spine={spine}
-    />
-  );
-}
 
 /**
  * The deal's tags, drawn by the SHARED panel.
@@ -3863,38 +2853,31 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
   // object grant — a grant by itself would offer the picker on a colleague's
   // deal, and to a read seat the server refuses before RBAC is consulted.
   const canUpdate = useCanWriteRecord("deal", deal);
-  const overlay = useSorMode() === "overlay";
   return (
     <TagsPanel
       entityType="deal"
       entityID={deal.id}
-      canEdit={canUpdate && !deal.archived_at && !overlay}
+      canEdit={canUpdate && !deal.archived_at}
     />
   );
 }
 
 function DealOverviewPane({
   deal,
-  stages,
   dealApprovals,
   onDecide,
   offers,
   creatingOffer,
   locale,
-  baseCurrency,
   onCreateOffer,
-  overlay,
-  onAdvance,
-  advancing,
-  advanceRefused,
+  readOnly,
   refusedReasonId,
   pulse,
   spine,
   coverage,
-  onOpenHistory,
+  onOpenEmail,
 }: Readonly<{
   deal: Deal;
-  stages: Stage[];
   dealApprovals: Approval[];
   onDecide: (input: {
     approvalId: string;
@@ -3903,18 +2886,13 @@ function DealOverviewPane({
   offers: Offer[] | undefined;
   creatingOffer: boolean;
   locale: Locale;
-  baseCurrency: string | null;
   onCreateOffer: (currency: string) => void;
-  overlay: boolean;
-  onAdvance: (toStage: Stage) => void;
-  /** One advance at a time: a second click while the first is in flight would
-   * send a second write pinned to the same version, and the loser reads as a
-   * conflict the reader never caused. */
-  advancing: boolean;
-  /** Where this deal cannot be moved at all — archived (restore it first),
-   * not this caller's to write, or mirrored from an incumbent that refuses
-   * the write. */
-  advanceRefused: boolean;
+  /** Whether the deal takes NO field write at all — archived, or not this
+   * caller's to write. Deliberately NOT `advanceRefused`, which also refuses a
+   * CLOSED deal: reopening is its own deliberate action, while correcting the
+   * brief of a deal that was won last week is an ordinary edit the server
+   * accepts. Conflating them hid the brief control on every closed deal. */
+  readOnly: boolean;
   /** The id of the page's sentence about why this deal takes no changes, or
    * undefined while it does. An offer is hung off the deal, so a deal this
    * caller cannot write takes no new offer from them either. */
@@ -3926,88 +2904,78 @@ function DealOverviewPane({
   spine: ReactNode;
   // Who is on the deal, for the reading's reference pair beside the offers.
   coverage: ReturnType<typeof useDealCoverage>;
-  // Where the momentum reading's door goes: the history tab, which the page
-  // owns.
-  onOpenHistory: () => void;
+  // Opens a cited message in the page's own email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
-  const t = useT();
   return (
     // The same stack every record's overview reads down, with its rhythm.
     <div className="record-stack">
-      {/* The readings open the overview, as they do on every record page.
-          Not in overlay, where the mirror carries no offers or seats. */}
-      {!overlay && (
-        <DealStrip
-          deal={deal}
-          offers={offers}
-          coverage={coverage.coverage}
-          coverageWithheld={coverage.withheld}
-          onOpenHistory={onOpenHistory}
-        />
-      )}
-      {deal.fx_rate_to_base != null && (
-        <FxLine
-          amountMinor={deal.amount_minor ?? null}
-          baseCurrency={baseCurrency}
-          fxRateToBase={deal.fx_rate_to_base}
-          fxRateDate={deal.fx_rate_date ?? null}
-          locale={locale}
-        />
-      )}
+      {/* The readings that used to open this stack — the four-tile strip and
+          the stage stepper — moved into the cockpit band above the tabs
+          (deals.tsx), which is where a reader now finds them on every tab
+          rather than one scroll into this one. */}
       {/* A won deal with no project, on a company with exactly one open
           project, is offered that project once. Nothing else here asks. */}
-      {!overlay && <StartDeliveryPrompt deal={deal} />}
-      {/* Where the deal is now is a fact, not a choice, so the current stage
-          stays a marker. Every other stage is the move to it — which is what
-          makes a deal closable from its own page rather than only by dragging
-          its card on the board. */}
-      {stages.length > 0 && (
-        <StageLadder
-          label={t("deals.stage")}
-          steps={dealStageSteps({
-            deal,
-            stages,
-            refused: advancing || advanceRefused,
-            onAdvance,
-          })}
-        />
-      )}
-      {/* ONE READING, IN PARTS, below the stage bar on purpose: a reader
-          takes in WHERE the deal is before they read the account of how it got
-          there. The call with the deal's thread, the move the briefing names,
-          the brief itself, and under them the two sections a reader consults
-          rather than reads — what is on the table, and who is in the room.
-          The buying committee sits beside the offers rather than at the foot
-          of the page, because the two are the deal's two sides. */}
+      <StartDeliveryPrompt deal={deal} />
+      {/* ONE READING, IN PARTS: the call with the deal's thread, the move the
+          briefing names, the brief itself, and under them the two sections a
+          reader consults rather than reads — what is on the table, and who is
+          in the room. The buying committee sits beside the offers rather than
+          at the foot of the page, because the two are the deal's two sides. */}
       <RecordReading>
-        <DealLead
+        <DealStatusCardPanel
           dealId={deal.id}
           dealName={deal.name}
-          overlay={overlay}
           pulse={pulse}
           spine={spine}
+          onOpenEmail={onOpenEmail}
         />
         <DealApprovals approvals={dealApprovals} decide={onDecide} />
         <RecordReadingPair>
-          <OffersPanel
-            offers={offers}
-            creating={creatingOffer}
-            locale={locale}
-            dealCurrency={deal.currency ?? null}
-            refusedReasonId={refusedReasonId}
-            onCreate={onCreateOffer}
-          />
-          <DealCommitteeMap
+          {/* The money reading's door scrolls here; the id is the strip's own
+              constant, so a rename cannot leave the door pointing at nothing. */}
+          <div id={DEAL_OFFERS_ANCHOR}>
+            <OffersPanel
+              offers={offers}
+              creating={creatingOffer}
+              locale={locale}
+              dealCurrency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+              onCreate={onCreateOffer}
+            />
+          </div>
+          <DealCommitteeCard
+            dealId={deal.id}
             coverage={coverage.coverage}
             withheld={coverage.withheld}
             pending={coverage.pending}
-            overlay={overlay}
+            refusedReasonId={refusedReasonId}
           />
         </RecordReadingPair>
       </RecordReading>
-      <CustomFieldsCard object="deal" record={deal} />
-      <RecordContextPanel entityType="deal" id={deal.id} />
-      <LogActivity entityType="deal" entityId={deal.id} />
+      <DealBrief
+        brief={deal.description}
+        // The record's own write refusal, not the advance verb's. A CLOSED
+        // deal takes no stage move without a deliberate reopen, and takes an
+        // ordinary field edit perfectly well — the server asks only for update
+        // permission, row writability and an unarchived record.
+        readOnly={readOnly}
+      />
+      {/* Under the brief, and only on a closed deal: the panel returns null
+          while the deal is still open, because there is no outcome to review
+          yet and inviting one would be asking for a verdict nobody can give. */}
+      <OutcomeReviewPanel
+        dealId={deal.id}
+        status={deal.status}
+        closingOccurrenceId={deal.closing_occurrence_id}
+      />
+      {/* Neither the related-evidence panel nor the inline log form stands
+          here any more. The evidence it listed — recent touches, open tasks,
+          the contacts and companies around the deal — is already the reading
+          above and the rail beside it, and a reader given the same records
+          twice has two lists to reconcile. Logging is a verb, and the head
+          carries it (dealactions.tsx): a form always open at the foot of the
+          page asks for a note on every read. */}
     </div>
   );
 }
@@ -4018,33 +2986,6 @@ function DealOverviewPane({
 // element that renders null, because RecordView reserves the band's space for
 // anything it is handed, and a page that always kept the gap would read as a
 // record with something to say about itself and nothing said.
-// The sentence under the call: whose move it is.
-//
-// Absent in overlay mode for the reason the readings are: whose move it is, is
-// read from this installation's own timeline, and a mirrored deal's is the
-// incumbent's.
-function dealPulse({
-  card,
-  timeline,
-  overlay,
-}: Readonly<{
-  card?: DealStatusCard;
-  timeline: readonly Activity[];
-  overlay: boolean;
-}>): ReactNode | undefined {
-  if (overlay) {
-    return undefined;
-  }
-  return <DealPulse card={card} timeline={timeline} />;
-}
-
-// The band under the header: the deal's four readings, and the archived notice
-// when there is one.
-//
-// RecordView reserves the band's space for anything it is handed, so this
-// answers `undefined` rather than a null-rendering element when there is
-// nothing to say — which is only ever the case in overlay mode, where the
-// readings are assembled from records this installation does not hold.
 // One sentence for why this deal takes no changes, whichever reason applies,
 // so every refused control can point at it. Absent while the deal is live and
 // the reader's: a line always reserved would read as a record with something
@@ -4059,11 +3000,31 @@ function dealBand({
   if (reason === undefined) {
     return undefined;
   }
-  return (
-    <p id={reasonId} className="t-caption">
-      {reason}
-    </p>
-  );
+  return <p id={reasonId}>{reason}</p>;
+}
+
+/**
+ * useDeal is the deal page's read of the deal record itself.
+ *
+ * A hook rather than a query inline in the screen, so the four record reads
+ * are mounted the same way — which is what lets one suite prove the live
+ * cadence over all of them (FE-PARAM-5, app/queryclient.ts). The cadence
+ * itself is the client's, keyed on the read: nothing is spread in here to
+ * forget.
+ */
+export function useDeal(id: string) {
+  return useQuery({
+    queryKey: ["deal", id],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals/{id}", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
 }
 
 export function DealScreen({ id }: Readonly<{ id: string }>) {
@@ -4077,19 +3038,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
   const [pending, setPending] = useState<PendingAdvance | null>(null);
+  // The deal that just closed, while the review is on offer for it. Separate
+  // from `pending`, which is the question BEFORE the close; this is the offer
+  // after one landed, and the close dialog is already gone by then.
+  const [closed, setClosed] = useState<ClosedDeal | null>(null);
   const advance = useAdvanceDeal();
-  const dealQuery = useQuery({
-    queryKey: ["deal", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   // Every write affordance on this page answers ONE question, asked once: an
   // archived deal takes no changes, and one this caller cannot write takes
@@ -4104,23 +3058,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // The id every refused control points at, or nothing while the deal takes
   // changes — resolved once here so the render below reads one name.
   const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
-  // One shared singleton read (the ["installation-settings"] key), not a
-  // per-deal request: the FX line has to name the base currency it converted
-  // into, and nothing on the deal itself carries it.
-  const baseCurrency = useInstallationSettings().data?.base_currency ?? null;
   const me = useMe();
-  const viewerId = useViewerId();
-  // Overlay serves a read-only mirror: entity-scoped activity reads (timeline)
-  // and the deal's stakeholders/offers sub-resources 422/404, and offer
-  // creation would write to a mirrored deal. Gate all of it on this.
-  const overlay = useSorMode() === "overlay";
   // Asked here rather than inside the aside, because an element is truthy
   // whatever it renders: a slot filled with a component that draws nothing
   // still reserves the aside column and its landmark.
-  const orgs = useQuery({
-    queryKey: ["organizations"],
+  const companies = useQuery({
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -4140,34 +3085,26 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // and the readings band share those cache entries rather than adding two
   // requests for facts the page already holds.
   const statusQuery = useDealStatusCard(id);
-  const coverageRead = useDealCoverage(id, !overlay);
-  // The pane's content, or nothing while it is folded: an aside handed to the
-  // view reserves its column, so a closed pane hands it none.
-  const dealContext = (deal: Deal) =>
-    details.open ? (
-      <DealContext deal={deal} coverage={coverageRead} overlay={overlay} />
-    ) : undefined;
-  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
-  const timelineQuery = useRecordTimeline("deal", id, {
-    filters: timelineFilters,
-  });
-  // The thread under the call reads the WHOLE history, not the page the filter
-  // strip narrowed: a filter is a view of the timeline tab, and a call that
-  // said "no reply since" because the reader had hidden emails would be false.
-  // The two share one query whenever no filter is set.
+  const coverageRead = useDealCoverage(id);
+  // The channel catalog, for the side pane's label. Same cache entry the edit
+  // form reads, so opening one after the other costs a single request.
+  // The pane's content, handed over whether or not it is showing: `asideOpen`
+  // folds the column, and its cards mount only while it is open or leaving.
+  const dealContext = (deal: Deal) => (
+    <DealContext
+      deal={deal}
+      companies={companies.data?.data ?? []}
+      meId={me.data?.user.id ?? ""}
+    />
+  );
+  // The thread under the call reads the WHOLE history, not whatever the
+  // History tab's own filter has narrowed: a filter is a view of that tab,
+  // and a call that said "no reply since" because the reader had hidden
+  // emails there would be false.
   const threadQuery = useRecordTimeline("deal", id);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const rawTimelineEntries = activityTimeline(
-    timelineQuery.activities,
-    viewerId,
-    (activity) => (
-      <TimelineActions activity={activity} entityType="deal" entityId={id} />
-    ),
-  );
-  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
-    enabled: !overlay,
     queryFn: async () => {
       const { data, error } = await api.GET("/deals/{id}/offers", {
         params: { path: { id } },
@@ -4226,200 +3163,208 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           const dealApprovals = (approvalsQuery.data?.data ?? []).filter(
             (approval) => approval.target_entity_id === deal.id,
           );
+          // Pinned to one closure so the cockpit's ladder and the overview's
+          // former stepper (now the same control) never drift into two
+          // versions of what an advance means.
+          const onAdvance = (toStage: Stage) => {
+            // The version this record was drawn from, exactly as the board
+            // pins the version its card was drawn from: the write names the
+            // deal as the reader saw it, so a change made elsewhere meanwhile
+            // fails loud.
+            const input = { dealId: deal.id, version: deal.version, toStage };
+            if (toStage.semantic === "open") {
+              advance.mutate(input);
+            } else {
+              setPending(input);
+            }
+          };
           return (
-            <RecordView
-              // Context first: who these people are, before the verbs that act
-              // on them. The seats moved out of the main column when the
-              // readings band started counting them — the same two facts were
-              // reaching a reader three times on one screen. The pane is the
-              // one every record page draws, with the same fold and the same
-              // memory of it.
-              aside={dealContext(deal)}
-              name={deal.name}
-              pulse={
-                <DealIdentityLine deal={deal} stages={stages} locale={locale} />
-              }
-              zone={recordZone}
-              actionsInline
-              // The deal's standing reads beside its name, not at the far
-              // end of the header among the verbs: a reader asking "is this
-              // still open?" was looking at the name and finding the answer
-              // across the page, above the buttons that act on it.
-              nameBadge={
-                <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-              }
-              badges={<DealProjectChip deal={deal} />}
-              actions={
-                <DealActions
-                  deal={deal}
-                  orgs={orgs.data?.data ?? []}
-                  meId={me.data?.user.id ?? ""}
-                  openStages={openStages}
-                  refusedReasonId={refusedReasonId}
-                />
-              }
-              band={dealBand({
-                reason: readOnlyReason,
-                reasonId: readOnlyReasonId,
-              })}
-              timeline={timelineEntries}
-              timelineGroups={groupChronology(
-                timelineEntries,
-                timelineQuery.hasNextPage,
-              )}
-              timelineHeader={
-                overlay ? undefined : (
-                  <TimelineFilterBar
-                    value={timelineFilters}
-                    onChange={setTimelineFilters}
-                  />
-                )
-              }
-              timelineFooter={
-                <>
-                  <LoadMoreButton query={timelineQuery} />
-                  {/* One drawer over the deal, beside the timeline it opens
-                      from. */}
-                  <OpenEmailDrawer
-                    activityId={openEmail}
-                    zone={recordZone}
-                    onClose={() => setOpenEmail(null)}
-                  />
-                </>
-              }
-              timelineNotice={timelineZoneNotice(
-                { overlay, pending: timelineQuery.isPending },
-                t,
-              )}
-            >
-              {/* The same strip every record carries: a place a reader
-                  navigates, drawn as a rule with the open body underlined. */}
-              <RecordTabs
-                options={DEAL_TABS}
-                value={tab}
-                onChange={setTab}
-                labels={{
-                  overview: t("tab.overview"),
-                  files: t("tab.documents"),
-                  history: t("tab.history"),
-                }}
-                // The switch for the deal's details column, at the end of the
-                // tab row: it chooses what the page shows BESIDE the work, so
-                // it stands with the controls that choose what the work column
-                // shows. In the head it sat among the deal's own verbs — write,
-                // edit, the overflow — and read as one more thing to do to the
-                // record rather than as a way to see more of it.
-                trailing={<PageAsideToggle />}
-              />
-              {/* One stack for the whole overview: the work column draws its
-                  children with no interval of its own, so the reading and the
-                  people under it take the record's rhythm from here rather
-                  than from a margin one of them carries. */}
-              {tab === "overview" && (
-                <div className="record-stack">
-                  <DealOverviewPane
+            <div className="record-sheet">
+              <RecordView
+                // Context first: who these contacts are, before the verbs that act
+                // on them. The seats moved out of the main column when the
+                // readings band started counting them — the same two facts were
+                // reaching a reader three times on one screen. The pane is the
+                // one every record page draws, with the same fold and the same
+                // memory of it.
+                aside={dealContext(deal)}
+                asideOpen={details.open}
+                name={deal.name}
+                // One rung under the record scale: the name is still the
+                // largest thing on the page, but beside a work column that
+                // opens on the reader's ask it no longer needs to be the size
+                // of a masthead.
+                scale="compact"
+                // The way in — which account this deal is on — on the name's
+                // own line, the same inline shape every other record's head
+                // draws its subtitle in.
+                nameBadge={<DealSubtitle deal={deal} />}
+                zone={recordZone}
+                actionsInline
+                // The deal's standing reads beside its name, not at the far
+                // end of the header among the verbs: a reader asking "is this
+                // still open?" was looking at the name and finding the answer
+                // across the page, above the buttons that act on it.
+                pulse={
+                  <IdentityLine separator="space">
+                    <Badge tone={dealStatusTone(deal.status)}>
+                      {deal.status}
+                    </Badge>
+                    <DealProjectChip deal={deal} />
+                  </IdentityLine>
+                }
+                // What it is worth, where it sits, when it is due, whose deal
+                // it is, which account it is on and how it reached Margince —
+                // the identity line's long dot-separated sentence went here,
+                // as named cells rather than a sentence to re-parse.
+                badges={
+                  <DealIdentityFacts
                     deal={deal}
                     stages={stages}
-                    dealApprovals={dealApprovals}
-                    onDecide={(input) => decide.mutate(input)}
-                    offers={offersQuery.data?.data}
-                    creatingOffer={createOffer.isPending}
                     locale={locale}
-                    baseCurrency={baseCurrency}
-                    onCreateOffer={(currency) => createOffer.mutate(currency)}
-                    overlay={overlay}
-                    advancing={advance.isPending}
-                    pulse={dealPulse({
-                      card: statusQuery.data,
-                      timeline: timelineQuery.activities,
-                      overlay,
-                    })}
-                    spine={
-                      <TimelineThread
-                        thread={threadQuery}
-                        commercial={{
-                          next_close_on: deal.expected_close_date,
-                        }}
-                        onOpenEmail={setOpenEmail}
-                      />
-                    }
-                    coverage={coverageRead}
-                    onOpenHistory={() => setTab("history")}
-                    // A deal that takes no changes — archived, or not this
-                    // caller's to write — is not moved through the pipeline,
-                    // and the mirror answers an advance with unsupported_by_sor
-                    // — a control that can only fail is worse than none.
-                    //
-                    // A CLOSED deal is refused here too, but for a different
-                    // reason: reopening is its own deliberate action, with a
-                    // dialog that says the close date and the frozen rate are
-                    // being cleared. A stepper button that reopened silently
-                    // would be a second, quieter door to the same write.
-                    advanceRefused={
-                      readOnly || overlay || deal.status !== "open"
-                    }
-                    refusedReasonId={refusedReasonId}
-                    onAdvance={(toStage) => {
-                      // The version this record was drawn from, exactly as the
-                      // board pins the version its card was drawn from: the
-                      // write names the deal as the reader saw it, so a change
-                      // made elsewhere meanwhile fails loud.
-                      const input = {
-                        dealId: deal.id,
-                        version: deal.version,
-                        toStage,
-                      };
-                      if (toStage.semantic === "open") {
-                        advance.mutate(input);
-                      } else {
-                        setPending(input);
-                      }
-                    }}
                   />
-                  <DealPeoplePanels
-                    dealId={deal.id}
-                    overlay={overlay}
-                    refusedReasonId={refusedReasonId}
-                  />
-                </div>
-              )}
-              {tab === "files" && !overlay && <DealFiles deal={deal} />}
-              {tab === "files" && overlay && <OverlayUnavailable />}
-              {tab === "history" && !overlay && (
-                <RecordHistoryTab
-                  kind="deal"
-                  id={deal.id}
-                  currency={deal.currency}
-                  restore={{
-                    version: deal.version,
-                    onRestored: () =>
-                      invalidateRecord(queryClient, "deal", deal.id),
-                  }}
-                />
-              )}
-              {tab === "history" && overlay && <OverlayUnavailable />}
-              {advance.isError && (
-                <p
-                  className="t-caption"
-                  style={{
-                    color: "var(--danger)",
-                    marginTop: "var(--space-2)",
-                  }}
-                >
-                  {problemMessageOf(advance.error, t)}
-                </p>
-              )}
-              <ConfirmAdvanceModal
-                pending={pending}
-                onClose={() => setPending(null)}
-                onConfirm={(input) =>
-                  advance.mutateAsync(input).then(
-                    () => null,
-                    (error: unknown) => error,
-                  )
                 }
-              />
-            </RecordView>
+                actions={
+                  <DealActions
+                    deal={deal}
+                    openStages={openStages}
+                    refusedReasonId={refusedReasonId}
+                  />
+                }
+                // Where the deal stands, at the foot of its head: a reader
+                // arrives asking which stage this is in, and one who has
+                // already picked a tab has walked past the answer.
+                standing={
+                  <DealCockpit
+                    deal={deal}
+                    stages={stages}
+                    advancing={advance.isPending}
+                    // A deal that takes no changes — archived, or not this
+                    // caller's to write — is not moved through the
+                    // pipeline: a control that can only fail is worse than
+                    // none. A CLOSED deal is refused here too, but for a
+                    // different reason: reopening is its own deliberate
+                    // action, with a dialog that says the close date and
+                    // the frozen rate are being cleared. A stepper button
+                    // that reopened silently would be a second, quieter
+                    // door to the same write.
+                    advanceRefused={readOnly || deal.status !== "open"}
+                    refusedReasonId={refusedReasonId}
+                    onAdvance={onAdvance}
+                  />
+                }
+                // The sentence naming why this deal takes no changes, while
+                // it does not.
+                band={dealBand({
+                  reason: readOnlyReason,
+                  reasonId: readOnlyReasonId,
+                })}
+                // The strip frames the whole record rather than the work alone:
+                // it runs across both columns, and the details pane opens under
+                // it, so choosing a body and choosing what stands beside it read
+                // as two controls on one page instead of one nested in the other.
+                tabs={
+                  <RecordTabs
+                    options={DEAL_TABS}
+                    value={tab}
+                    onChange={(next) => {
+                      setTab(next);
+                      scrollPageToTop();
+                    }}
+                    labels={{
+                      overview: t("tab.overview"),
+                      room: t("tab.dealRoom"),
+                      files: t("tab.documents"),
+                      history: t("tab.history"),
+                    }}
+                    // The switch for the deal's details column, at the end of the
+                    // tab row: it chooses what the page shows BESIDE the work, so
+                    // it stands with the controls that choose what the work
+                    // column shows, and never in the head among the deal's verbs.
+                    trailing={<PageAsideToggle />}
+                  />
+                }
+              >
+                {/* One stack for the whole overview: the work column draws its
+                  children with no interval of its own, so the reading and the
+                  contacts under it take the record's rhythm from here rather
+                  than from a margin one of them carries. */}
+                {tab === "overview" && (
+                  <div className="record-stack">
+                    <DealOverviewPane
+                      deal={deal}
+                      onOpenEmail={setOpenEmail}
+                      dealApprovals={dealApprovals}
+                      onDecide={(input) => decide.mutate(input)}
+                      offers={offersQuery.data?.data}
+                      creatingOffer={createOffer.isPending}
+                      locale={locale}
+                      onCreateOffer={(currency) => createOffer.mutate(currency)}
+                      pulse={
+                        <DealPulse
+                          card={statusQuery.data}
+                          timeline={threadQuery.activities}
+                        />
+                      }
+                      spine={
+                        <TimelineThread
+                          thread={threadQuery}
+                          commercial={{
+                            next_close_on: deal.expected_close_date,
+                          }}
+                          onOpenEmail={setOpenEmail}
+                        />
+                      }
+                      coverage={coverageRead}
+                      readOnly={readOnly}
+                      refusedReasonId={refusedReasonId}
+                    />
+                  </div>
+                )}
+                {tab === "room" && (
+                  <DealRoomTab dealId={deal.id} dealName={deal.name} />
+                )}
+                {tab === "files" && <DealFiles deal={deal} />}
+                {tab === "history" && (
+                  <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
+                )}
+                {/* One drawer over the deal. Both the overview's citations and
+                  the history tab's own rows open it, so a message found from
+                  either place lands in the same reader. */}
+                <OpenEmailDrawer
+                  activityId={openEmail}
+                  zone={recordZone}
+                  onClose={() => setOpenEmail(null)}
+                />
+                {advance.isError && (
+                  <p
+                    style={{
+                      color: "var(--dangerText)",
+                      marginTop: "var(--space-2)",
+                    }}
+                  >
+                    {problemMessageOf(advance.error, t)}
+                  </p>
+                )}
+                <ConfirmAdvanceModal
+                  pending={pending}
+                  onClose={() => setPending(null)}
+                  onConfirm={(input) =>
+                    advance.mutateAsync(input).then(
+                      (deal) => deal,
+                      (error: unknown) => error,
+                    )
+                  }
+                  onClosed={(deal, reason) =>
+                    setClosed(closedDealOf(deal, reason))
+                  }
+                />
+                <CloseReviewOffer
+                  closed={closed}
+                  onDismiss={() => setClosed(null)}
+                />
+              </RecordView>
+            </div>
           );
         }}
       </QueryGate>
@@ -4427,35 +3372,31 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   );
 }
 
-// The deal's context, for the details pane: the seats first, then how the deal
-// is filed, then the deal rooms and the mail card. DealSeats is present in
-// overlay mode too, stating the refusal — dropping it there took the seats
-// away silently, which reads as "nobody is on this deal"; the rooms and the
-// mail aside stay out because they are actions rather than a withheld fact.
+// The deal's context, for the details pane: what the deal is, who of ours owns
+// it, then how the deal is filed and the mail card.
 function DealContext({
   deal,
-  coverage,
-  overlay,
+  companies,
+  meId,
 }: Readonly<{
   deal: Deal;
-  coverage: ReturnType<typeof useDealCoverage>;
-  overlay: boolean;
+  companies: { id: string; display_name: string }[];
+  meId: string;
 }>) {
+  // The same per-row answer the deal's other verbs read. An archived deal
+  // takes no new responsibilities, and neither does one this seat may read
+  // but not write.
+  const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
   return (
     <>
-      <DealSeats
-        coverage={coverage.coverage}
-        withheld={coverage.withheld}
-        pending={coverage.pending}
-        overlay={overlay}
-      />
+      {/* What the deal IS commercially, then who OURS are on it. The buyer's
+          seats are not here: they live in the committee card in the column, with
+          the verbs that change them, and a rail copy of that list is what this
+          page carried three of. */}
+      <DealDetails deal={deal} companies={companies} meId={meId} />
+      <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
-      {!overlay && (
-        <>
-          <DealRoomAside dealId={deal.id} dealName={deal.name} />
-          <DealEmailAside dealId={deal.id} />
-        </>
-      )}
+      <DealEmailAside dealId={deal.id} />
     </>
   );
 }

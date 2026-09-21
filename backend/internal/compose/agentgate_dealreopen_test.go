@@ -160,24 +160,24 @@ var wellFormedDynamicCalls = map[string]func(t *testing.T, stage ids.UUID) (*htt
 		return requestForDeal(t, ids.NewV7()), []byte(`{"to_stage_id":"` + stage.String() + `"}`)
 	},
 	// A relink's tier turns on the DESTINATION type, not on any record, so the
-	// well-formed call is an ordinary move onto a person — the auto-executing
+	// well-formed call is an ordinary move onto a contact — the auto-executing
 	// side. The project side is what the pair below proves separately.
 	"relinkActivity": func(t *testing.T, _ ids.UUID) (*http.Request, []byte) {
 		t.Helper()
 		return requestForRelink(t, ids.NewV7()),
-			[]byte(`{"entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+			[]byte(`{"entity_type":"contact","entity_id":"` + ids.NewV7().String() + `"}`)
 	},
 	// The batch forms answer the same destination question off the same
 	// argument, with no routed id to carry.
 	"relinkThread": func(t *testing.T, _ ids.UUID) (*http.Request, []byte) {
 		t.Helper()
 		return httptest.NewRequest(http.MethodPost, "/v1/activities/relink-thread", http.NoBody),
-			[]byte(`{"thread_key":"thread-1","entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+			[]byte(`{"thread_key":"thread-1","entity_type":"contact","entity_id":"` + ids.NewV7().String() + `"}`)
 	},
 	"relinkActivities": func(t *testing.T, _ ids.UUID) (*http.Request, []byte) {
 		t.Helper()
 		return httptest.NewRequest(http.MethodPost, "/v1/activities/relink-bulk", http.NoBody),
-			[]byte(`{"activity_ids":["` + ids.NewV7().String() + `"],"entity_type":"person","entity_id":"` +
+			[]byte(`{"activity_ids":["` + ids.NewV7().String() + `"],"entity_type":"contact","entity_id":"` +
 				ids.NewV7().String() + `"}`)
 	},
 }
@@ -212,7 +212,7 @@ func TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot(t *testing.
 	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
 	// Nil dependencies are enough: resolving a tier reads the arguments and
 	// invokes no handler.
-	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil)
 
 	pol, described := agentPolicies["POST /v1/activities/{id}/relink"]
 	if !described {
@@ -233,7 +233,7 @@ func TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot(t *testing.
 			"filing under a project writes an irreversible six-year retention floor",
 		},
 		{
-			"person", mcp.TierAutoExecute,
+			"contact", mcp.TierAutoExecute,
 			"an ordinary association a member can undo by relinking again",
 		},
 		{
@@ -277,7 +277,7 @@ func TestEveryDynamicTierRouteHasACommandThatAnswersItsTier(t *testing.T) {
 	// derives the routes to check from the policy table, so a registry missing
 	// this set would report the route as unresolvable rather than skip it.
 	// Nil dependencies are enough: resolving a tier invokes no handler.
-	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil)
 
 	checked := 0
 	for route, pol := range agentPolicies {

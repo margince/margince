@@ -36,7 +36,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -52,6 +52,9 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"NaturalKey": "half core-derived: the published Record carries the provider's own Key and the port pairs it with the derived source system",
 	"Links": "deliberately absent — a record naming the core rows it attaches to would make the link-visibility probe a per-row existence oracle over the scope the ingest runs under. " +
 		"What a message is about is decided by the core's counterparty resolution",
+	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
+		"Deliberately unpublishable, for the reason participantsAreProviderAttested is. The values are provider-stated — an RFC Message-ID, an iCal UID — and a unit able to assert one could name an identity it never observed and reach the activity holding it. That is the same forgery the inbound-mail rule refuses for a Cc line, reached through a different field. " +
+		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
 	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
 		"Deliberately unpublishable rather than merely unpublished: it is the core's answer about the SOURCE, stamped from the registry that ran the connector, and a unit able to assert it could manufacture an interaction edge naming any colleague — the exact forgery the inbound-mail rule refuses. " +
 		"Unexported so it cannot be set by assignment either, which means a unit's record arrives un-attested and keeps the strict mail rule",
@@ -62,6 +65,10 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 		"shape no unit has exercised",
 	"PartDrops": "the breadcrumb for refused attachments, held with Parts for the same reason " +
 		"and landing in the same PR — a drop cannot exist while what it accounts for does not",
+	"Containers": "where the PROVIDER filed a message — a Gmail label, a Graph folder, an IMAP mailbox — which a capture exclusion can name. " +
+		"Held rather than closed: the value is provider-qualified, and the qualifier is an allowlist of the providers whose namespaces the exclusion validator knows (containerProviders in the capture module). " +
+		"A unit's own provider is not on it, so a published field would let a unit state a container no rule can name — a value that travels the whole pre-store path and matches nothing, which reads to its author like a rule that does not work. " +
+		"It lands with the first unit that has containers AND a provider on that list, in the same PR, for the reason Parts is held: a frozen field with no caller freezes a shape no unit has exercised",
 	"Fields": "the envelope's `any`. The published surface is typed instead — Record.Activity — so a unit cannot hand the sink a shape it does not switch on",
 	"DeliveredTo": "the receiving server's own delivery header, and it is a CORE judgement rather than a field to publish: the value is trusted only from a header position a sender could not have authored, which mailmap.TopDeliveredTo decides once. " +
 		"A unit supplying it would be supplying the conclusion instead of the evidence — and the conclusion adds an address to a seat's own self-set, which is the one thing a unit must not be able to assert. Empty from a unit means what it means everywhere: no trustworthy claim, so no alias is learned",
@@ -247,13 +254,13 @@ func TestTheMessageKindVocabulariesAgree(t *testing.T) {
 // matching the lane it was meant to unlock, and a unit that correctly vouched
 // for its addresses would silently have them refused.
 func TestTheMergeKeyVocabulariesAgree(t *testing.T) {
-	if string(extension.MergeKeyEmail) != people.LaneEmail {
+	if string(extension.MergeKeyEmail) != contacts.LaneEmail {
 		t.Errorf("the email merge key: published %q, ladder lane %q — a source declaring the published one would have its addresses refused",
-			extension.MergeKeyEmail, people.LaneEmail)
+			extension.MergeKeyEmail, contacts.LaneEmail)
 	}
 }
 
-// TestThePublishedActivityTypesMatchTheCoresA published field whose TYPE
+// TestThePublishedActivityTypesMatchTheCores. A published field whose TYPE
 // diverged would compile on both sides and lose meaning in the middle — a
 // string where the core wants a time is the obvious one, and it is the one a
 // hand-written bridge makes possible.
@@ -351,10 +358,10 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 
 // The counterparty BINDING is bounded by the same declaration, and it is a
 // separate gate because it writes a different row. The activity's provider
-// decides where a reply would be sent; this one writes person_channel_identity,
+// decides where a reply would be sent; this one writes contact_channel_identity,
 // which is where the core resolves WHO it is sent to — so a unit able to bind an
 // account under a core connector's provider could attach an account it controls
-// to somebody else's person record and inherit the replies meant for them.
+// to somebody else's contact record and inherit the replies meant for them.
 func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
 	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
@@ -366,7 +373,7 @@ func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
 		t.Errorf("a record with no channel identity was refused (%v); it identifies its counterparty by address", err)
 	}
 	if err := refuseUnitIdentity("mine", "telegram"); err == nil {
-		t.Error("a unit bound an account under telegram; the next reply on that person's conversation would go to the unit's account")
+		t.Error("a unit bound an account under telegram; the next reply on that contact's conversation would go to the unit's account")
 	} else if !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("the refusal is %v, want extension.ErrInvalid", err)
 	}

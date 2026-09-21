@@ -24,7 +24,7 @@ var quietToday = quietAt(0)
 func TestQuietReasonNamesWhoWeOweAReplyTo(t *testing.T) {
 	anna := ids.NewV7()
 	facts := QuietFacts{
-		LastInbound:  &QuietSide{At: quietAt(-21), PersonID: anna},
+		LastInbound:  &QuietSide{At: quietAt(-21), ContactID: anna},
 		LastOutbound: &QuietSide{At: quietAt(-30)},
 	}
 
@@ -41,7 +41,7 @@ func TestQuietReasonSaysWeGotNoReplyWhenWeSpokeLast(t *testing.T) {
 	anna := ids.NewV7()
 	facts := QuietFacts{
 		LastInbound:  &QuietSide{At: quietAt(-40)},
-		LastOutbound: &QuietSide{At: quietAt(-10), PersonID: anna},
+		LastOutbound: &QuietSide{At: quietAt(-10), ContactID: anna},
 	}
 
 	got := quietReason(facts, QuietNames{anna: "Anna Weber"}, quietToday, time.UTC)
@@ -65,16 +65,16 @@ func TestQuietReasonPicksTheDirectionOfTheNewerMessage(t *testing.T) {
 	names := QuietNames{them: "Anna Weber", us: "Boris Klein"}
 
 	theyRepliedLast := quietReason(QuietFacts{
-		LastInbound:  &QuietSide{At: quietAt(-5), PersonID: them},
-		LastOutbound: &QuietSide{At: quietAt(-9), PersonID: us},
+		LastInbound:  &QuietSide{At: quietAt(-5), ContactID: them},
+		LastOutbound: &QuietSide{At: quietAt(-9), ContactID: us},
 	}, names, quietToday, time.UTC)
 	if !strings.Contains(theyRepliedLast, "Anna Weber wrote") {
 		t.Errorf("reason = %q, want the inbound reading — they spoke most recently", theyRepliedLast)
 	}
 
 	weWroteLast := quietReason(QuietFacts{
-		LastInbound:  &QuietSide{At: quietAt(-9), PersonID: them},
-		LastOutbound: &QuietSide{At: quietAt(-5), PersonID: us},
+		LastInbound:  &QuietSide{At: quietAt(-9), ContactID: them},
+		LastOutbound: &QuietSide{At: quietAt(-5), ContactID: us},
 	}, names, quietToday, time.UTC)
 	if !strings.Contains(weWroteLast, "We wrote to Boris Klein") {
 		t.Errorf("reason = %q, want the outbound reading — we spoke most recently", weWroteLast)
@@ -110,14 +110,14 @@ func TestQuietReasonSaysWhatActuallyHappened(t *testing.T) {
 		},
 	} {
 		theyLast := quietReason(QuietFacts{
-			LastInbound: &QuietSide{At: quietAt(-20), PersonID: anna, Kind: tc.kind},
+			LastInbound: &QuietSide{At: quietAt(-20), ContactID: anna, Kind: tc.kind},
 		}, names, quietToday, time.UTC)
 		if !strings.Contains(theyLast, tc.inbound) {
 			t.Errorf("inbound %s reason = %q, want %q in it", tc.kind, theyLast, tc.inbound)
 		}
 
 		weLast := quietReason(QuietFacts{
-			LastOutbound: &QuietSide{At: quietAt(-20), PersonID: anna, Kind: tc.kind},
+			LastOutbound: &QuietSide{At: quietAt(-20), ContactID: anna, Kind: tc.kind},
 		}, names, quietToday, time.UTC)
 		if !strings.Contains(weLast, tc.outbound) {
 			t.Errorf("outbound %s reason = %q, want %q in it", tc.kind, weLast, tc.outbound)
@@ -138,7 +138,7 @@ func TestQuietReasonDegradesAnUnknownKindToTheNeutralVerb(t *testing.T) {
 }
 
 // An unnamed counterparty is the common case, not an edge one: an unmatched
-// address carries no person, and privacy erasure nulls the link outright. The
+// address carries no contact, and privacy erasure nulls the link outright. The
 // reason must still read as a sentence.
 func TestQuietReasonDegradesToAGenericNounWithoutAName(t *testing.T) {
 	facts := QuietFacts{LastInbound: &QuietSide{At: quietAt(-8)}}
@@ -161,9 +161,9 @@ func TestQuietReasonSaysSoWhenThereIsNoCorrespondenceAtAll(t *testing.T) {
 	}
 }
 
-// The span is what a person would say out loud. Days while a reader still
+// The span is what a contact would say out loud. Days while a reader still
 // counts in days, weeks once they would not.
-func TestQuietForSpeaksInTheUnitAPersonWouldUse(t *testing.T) {
+func TestQuietForSpeaksInTheUnitAContactWouldUse(t *testing.T) {
 	for _, tc := range []struct {
 		daysAgo int
 		want    string

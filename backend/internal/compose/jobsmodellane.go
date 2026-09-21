@@ -46,8 +46,8 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 			newStageEvidenceReadWorker(pool, cfg.StageEvidenceBrain, log))
 	}
 	addDeclaredWorker[AccountScanArgs](reg, newAccountScanWorker(pool, cfg.AccountScanBrain, cfg.AccountScanRoutingVersion, log))
-	addDeclaredWorker[GeocodeOrganizationArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
-	addDeclaredWorker[CheckOrganizationVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))
+	addDeclaredWorker[GeocodeCompanyArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
+	addDeclaredWorker[CheckCompanyVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))
 	addDeclaredWorker[DocumentExtractArgs](reg, newDocumentExtractWorker(pool, cfg.DocumentExtractBrain, cfg.SendBlob, log))
 	addDeclaredWorker[VoiceBuildArgs](reg, newVoiceBuildWorker(pool, cfg.VoiceBrain, log))
 	// The weekly retrospective moved here when it grew a lane. It is
@@ -56,6 +56,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// documented as taking no config is the wrong place for something that
 	// reads one.
 	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain, cfg.WeeklyLearningsBrain, cfg.WeeklyMail)
+	addDeclaredWorker[AIBudgetResumeArgs](reg, newAIBudgetResumeWorker(pool, log))
 	addDeclaredWorker[VoiceBuildRetryArgs](reg, &voiceBuildRetryWorker{store: ai.NewVoiceStore(InstallationDB(pool)), log: log})
 	// The reindex is a dispatcher plus a workspace worker, and neither is
 	// ticked: the api enqueues the dispatcher once per confirmed reindex

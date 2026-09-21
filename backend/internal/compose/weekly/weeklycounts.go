@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -48,31 +49,22 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 		dealScope = sqlUnbounded
 	}
 
+	verbsPos := arg(privacy.ScrubVerbs())
+	completion := taskCompletionAtSQL("a", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT
-		  (SELECT count(*) FROM activity a
-		    WHERE a.kind = 'task' AND a.archived_at IS NULL
-		      AND a.assignee_id = $%[3]d
-		      AND a.due_at >= $%[1]d AND a.due_at < $%[2]d AND (%[4]s)),
-		  -- Delivered: of the tasks that fell due in the week, the ones
-		  -- finished. Scoped to the SAME due window as the line above, because
-		  -- the two are read as a ratio — counting everything closed in the
-		  -- week against everything due in it can print "4 of 2", which is not
-		  -- a number anybody can act on.
-		  (SELECT count(*) FROM activity a
-		    WHERE a.kind = 'task' AND a.archived_at IS NULL
-		      AND a.assignee_id = $%[3]d AND a.is_done
-		      AND a.due_at >= $%[1]d AND a.due_at < $%[2]d
-		      AND a.done_at IS NOT NULL AND (%[4]s)),
-		  -- Carried over: fell due BEFORE the week and is still open. A task
-		  -- merely created earlier and not yet due has not been postponed at
-		  -- all, and reporting it as carried over tells a rep they are behind
-		  -- on work nobody has asked for yet.
-		  (SELECT count(*) FROM activity a
-		    WHERE a.kind = 'task' AND a.archived_at IS NULL
-		      AND a.assignee_id = $%[3]d AND NOT a.is_done
-		      AND a.due_at IS NOT NULL AND a.due_at < $%[1]d AND (%[4]s)),
+        WITH tasks AS (
+          SELECT a.*, %[6]s AS completed_at FROM activity a
+           WHERE a.kind='task' AND a.archived_at IS NULL
+             AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
+             AND ((a.due_at >= $%[1]d AND a.due_at < $%[2]d)
+               OR a.done_at >= $%[1]d OR (a.due_at < $%[2]d AND NOT a.is_done)
+               OR a.updated_at >= $%[2]d))
+        SELECT
+          (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
+          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d),
+          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d AND completed_at < $%[2]d),
+          (SELECT count(*) FROM tasks WHERE due_at < $%[2]d AND (completed_at IS NULL OR completed_at >= $%[2]d)),
 		  -- Moved EXCLUDES deals that closed this week. The stage change that
 		  -- closed a deal is the same event as the win, and counting both tells
 		  -- the rep one thing twice — and the deal lines below already exclude
@@ -103,8 +95,8 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 		     JOIN brief_run br ON br.id = bi.brief_run_id
 		    WHERE br.user_id = $%[3]d AND bi.state = 'dismissed'
 		      AND bi.state_at >= $%[1]d AND bi.state_at < $%[2]d)`,
-		startPos, endPos, userPos, activityScope, dealScope), args...).
-		Scan(&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
+		startPos, endPos, userPos, activityScope, dealScope, completion), args...).
+		Scan(&c.TasksCompleted, &c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
 			&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 			&c.ProposalsAccepted, &c.ProposalsRejected,
 			&c.BriefItemsActed, &c.BriefItemsDismissed)
@@ -113,6 +105,13 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	}
 	return c, nil
 }
+
+// Both the weekly counts and the funnel scorecard use the arrival cohort and
+// the same closing instant. A missing breach stamp does not prove an SLA target.
+const (
+	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d`
+	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d`
+)
 
 // countWeekLeads counts how the week's inbound leads were answered.
 //
@@ -152,12 +151,12 @@ func countWeekLeads(
 		  (SELECT count(*) FROM lead l
 		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
 		      AND `+arrived+`
-		      AND l.first_response_at IS NOT NULL AND l.sla_breached_at IS NULL
+		      AND `+responseRecordedInWeekSQL+`
 		      AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
 		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
 		      AND `+arrived+`
-		      AND l.sla_breached_at IS NOT NULL AND (%[4]s))`,
+		      AND `+breachRecordedInWeekSQL+` AND (%[4]s))`,
 		startPos, endPos, userPos, scope), args...).
 		Scan(&routed, &answered, &breached)
 	if err != nil {
@@ -172,13 +171,43 @@ func countWeekLeads(
 // A booking cancelled or no-showed is not a conversation the week can be
 // credited with, so only `held` counts.
 //
-// Attributed by captured_by, because a meeting has no owner: the
-// activity_task_fields CHECK reserves assignee_id for tasks, so filtering
-// meetings by it would match nothing and report every rep as having held none.
+// Attributed by HOST, falling back to the capturer only where no host is
+// recorded.
 //
-// "Left a next step" is a task raised AFTER the meeting against a record the
-// meeting was also filed under — through the shared record rather than a direct
-// pointer, because there is no meeting_id on a task.
+// assignee_id is reserved for tasks by the activity_task_fields CHECK, so it
+// cannot answer here — but host_user_id can, and it names the contact whose
+// meeting it was rather than the contact or connector that filed it. Read by
+// capturer alone, a meeting a colleague minuted or a calendar connector
+// imported counted for whoever recorded it and not for the rep who sat in it,
+// so the same meeting moved between reps depending on how it reached the CRM.
+//
+// The fallback is bounded to rows with NO host: a meeting that names one is
+// that contact's, and letting the capturer also claim it would count one meeting
+// twice across two reps' weeks.
+//
+// A recorded next step must name this meeting as its source and be readable
+// by the member. A task merely sharing an account does not prove an outcome.
+// Only tasks created from the meeting before the week closed count.
+//
+// meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
+// hosted by them, or — where no host was recorded — filed by them.
+//
+// TWO readers ask it, the headline count here and the funnel in
+// weeklyscorecard.go, and they must not disagree: a meeting credited to
+// different contacts by the two panels is one page contradicting itself about the
+// same week. The caller supplies its own placeholders because the two queries
+// number their arguments differently.
+//
+// The fallback is bounded to rows with NO host on purpose. A meeting naming one
+// is that contact's, and letting its recorder also claim it would count one
+// meeting twice across two reps.
+//
+// Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
+func meetingIsTheirsSQL(hostPos, capturedPos string) string {
+	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s))",
+		hostPos, capturedPos)
+}
+
 func countWeekMeetings(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (held, withNextStep int, err error) {
@@ -186,12 +215,18 @@ func countWeekMeetings(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos := arg(start), arg(end)
 	capturedPos := arg("human:" + userID.String())
+	hostPos := arg(userID)
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
 		return 0, 0, err
 	}
-	const heldByRep = `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND m.meeting_status = 'held' AND m.captured_by = $%[3]d
+	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
+	if err != nil {
+		return 0, 0, err
+	}
+	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
+		      AND m.meeting_status = 'held'
+		      AND ` + meetingIsTheirsSQL("$%[5]d", "$%[3]d") + `
 		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
@@ -199,18 +234,12 @@ func countWeekMeetings(
 		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`),
 		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
 		      AND EXISTS (
-		        SELECT 1 FROM activity_link ml
-		          JOIN activity_link tl ON tl.entity_type = ml.entity_type
-		            AND tl.person_id IS NOT DISTINCT FROM ml.person_id
-		            AND tl.organization_id IS NOT DISTINCT FROM ml.organization_id
-		            AND tl.deal_id IS NOT DISTINCT FROM ml.deal_id
-		            AND tl.lead_id IS NOT DISTINCT FROM ml.lead_id
-		            AND tl.project_id IS NOT DISTINCT FROM ml.project_id
-		          JOIN activity task ON task.id = tl.activity_id
-		         WHERE ml.activity_id = m.id AND task.kind = 'task'
+		        SELECT 1 FROM activity task
+		         WHERE task.source_activity_id = m.id AND task.kind = 'task'
 		           AND task.archived_at IS NULL
-		           AND task.created_at >= m.occurred_at))`,
-		startPos, endPos, capturedPos, scope), args...).
+		           AND task.created_at >= m.occurred_at
+		           AND task.created_at < $%[2]d AND (%[6]s)))`,
+		startPos, endPos, capturedPos, scope, hostPos, taskScope), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)
@@ -239,10 +268,18 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		dealScope = sqlUnbounded
 	}
 
+	// The week's closed list prints each deal's figure beside its name, so the
+	// mask reaches it here as it does the deal list. The `moved` leg below
+	// already selects a typed NULL for this column, so a masked row lines up
+	// with a shape this UNION carries anyway.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH closed AS (
 			SELECT d.id, d.name, d.status AS outcome, NULL::text AS to_stage,
-			       d.amount_minor, d.currency, d.closed_at AS at
+			       %[6]s, d.currency, d.closed_at AS at
 			  FROM deal d
 			 WHERE d.status IN ('won', 'lost')
 			   AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d
@@ -269,7 +306,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		  FROM (SELECT * FROM closed UNION ALL SELECT * FROM moved) lines
 		 ORDER BY (outcome = 'moved'), at DESC, id
 		 LIMIT $%[4]d`,
-		startPos, endPos, userPos, capPos, dealScope), args...)
+		startPos, endPos, userPos, capPos, dealScope, amountSQL), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's deals: %w", err)
 	}

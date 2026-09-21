@@ -9,6 +9,7 @@ import type { components } from "../api/schema";
 import { isOption } from "../app/options";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -19,7 +20,7 @@ import "./users-admin.css";
 
 // The invite form: an address, a name, a role and the teams the member lands
 // in, committed together. Two surfaces ask it — the roster's dialog in
-// Settings → People and the setup journey's team step — and it is one form so
+// Settings → Contacts and the setup journey's team step — and it is one form so
 // the two cannot come to invite differently. What happens after the write
 // (closing a dialog, minting a set-password link, moving the journey on) is
 // the caller's, through `onInvited`.
@@ -67,9 +68,9 @@ export type InvitedMember = Readonly<{ id: string; name: string }>;
 
 /**
  * The name a member is created under when the form asks for none: the part
- * of the address before the @, with the dots and underscores people write
+ * of the address before the @, with the dots and underscores contacts write
  * between their names read as spaces and each word capitalised. It is a
- * starting point the admin can change in Settings → People, and it is what
+ * starting point the admin can change in Settings → Contacts, and it is what
  * the roster shows until they do — so it has to read as a name, not as an
  * address fragment.
  */
@@ -95,7 +96,7 @@ export function InviteUserForm({
   titleId?: string;
   /**
    * Whether the form asks for the member's name. The setup journey does not:
-   * one address is enough to get a first person in, and the name is derived
+   * one address is enough to get a first contact in, and the name is derived
    * from it (`nameFromEmail`) until somebody changes it.
    */
   askName?: boolean;
@@ -159,10 +160,10 @@ export function InviteUserForm({
     >
       {titleId !== undefined && (
         <>
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.inviteTitle")}
-          </h2>
-          <p className="t-caption">{t("users.inviteSub")}</p>
+          </Heading>
+          <p>{t("users.inviteSub")}</p>
         </>
       )}
       <Field label={t("users.emailLabel")} required>
@@ -204,7 +205,7 @@ export function InviteUserForm({
           team edits only its own records, and the preview below says so
           before the invite goes out. */}
       <fieldset className="users-invite-teams">
-        <legend className="t-caption">{t("users.teamsLabel")}</legend>
+        <legend className="t-name">{t("users.teamsLabel")}</legend>
         {(teams.data ?? []).flatMap((entry) =>
           "name" in entry ? (
             <Checkbox
@@ -226,30 +227,30 @@ export function InviteUserForm({
         )}
         {/* "No teams yet" is a claim about the workspace, so only a roster
             read to its end may make it: a walk that stopped early would have
-            an admin invite people into no team at all on the strength of
+            an admin invite contacts into no team at all on the strength of
             pages nothing read. */}
         {teams.data?.length === 0 && !teamsPartial && (
-          <p className="t-caption">{t("users.noTeamsYet")}</p>
+          <p>{t("users.noTeamsYet")}</p>
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>
       <AccessPreviewPanel role={role} teamIds={teamIds} />
+      {/* ABOVE the submit row, where the sibling dialogs in this family put a
+          refusal: under the button it reads as a footnote to the form rather
+          than as the answer to the press. */}
+      {error && (
+        <Callout tone="danger" kind="outcome" title={t("users.inviteFailed")}>
+          {error}
+        </Callout>
+      )}
       {/* `.form-actions` rather than a bare button: `.form-stack` stretches
           its children, and a submit that fills the dialog reads as a banner
           rather than as the move the form is for. */}
       <div className="form-actions">
-        <Button variant="primary" small type="submit" disabled={!canInvite}>
+        <Button variant="primary" type="submit" disabled={!canInvite}>
           <UserPlus aria-hidden /> {t("users.invite")}
         </Button>
       </div>
-      {/* A refused invite is the surface saying something is wrong, which is
-          what Callout's `danger` tone is. `alert` because the reader pressed
-          the button and has to act on the answer. */}
-      {error && (
-        <Callout tone="danger" live="alert">
-          {error}
-        </Callout>
-      )}
     </form>
   );
 }

@@ -139,13 +139,13 @@ func (d *firstSeamDrafter) DraftFirstEmail(_ context.Context, intent string) (st
 // adapter that never calls it reads exactly like the deterministic path it
 // replaced, and every other test here would stay green.
 func TestTheAccountDraftAsksTheFirstMessageSeamWhenTheDrafterHasOne(t *testing.T) {
-	links := []agents.RecordLink{{EntityType: "person", EntityID: ids.NewV7()}}
+	links := []agents.RecordLink{{EntityType: "contact", EntityID: ids.NewV7()}}
 	intent := "introduce ourselves after meeting at K5"
 
 	drafter := &firstSeamDrafter{}
-	subject, body, err := commsAdapter{draft: drafter}.DraftAccountEmail(context.Background(), links, intent)
+	subject, body, err := commsAdapter{draft: drafter}.DraftCompanyEmail(context.Background(), links, intent)
 	if err != nil {
-		t.Fatalf("DraftAccountEmail: %v", err)
+		t.Fatalf("DraftCompanyEmail: %v", err)
 	}
 	if drafter.asked != intent {
 		t.Errorf("the first-message seam was asked %q, want the caller's intent %q", drafter.asked, intent)
@@ -157,9 +157,9 @@ func TestTheAccountDraftAsksTheFirstMessageSeamWhenTheDrafterHasOne(t *testing.T
 	// And the floor for a drafter that cannot: a deployment running no model
 	// still gets a real message rather than a refusal.
 	floorSubject, floorBody := activities.DeterministicEmailDraft(firstMessageContext, intent)
-	subject, body, err = commsAdapter{draft: replyOnlyDrafter{}}.DraftAccountEmail(context.Background(), links, intent)
+	subject, body, err = commsAdapter{draft: replyOnlyDrafter{}}.DraftCompanyEmail(context.Background(), links, intent)
 	if err != nil {
-		t.Fatalf("DraftAccountEmail on a reply-only drafter: %v", err)
+		t.Fatalf("DraftCompanyEmail on a reply-only drafter: %v", err)
 	}
 	if subject != floorSubject || body != floorBody {
 		t.Errorf("a reply-only drafter did not fall to the floor: subject=%q body=%q", subject, body)

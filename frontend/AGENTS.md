@@ -51,15 +51,19 @@ existed**, wrote a reasonable-looking component, and passed review on it. So:
   the table never names, a rich-text editor having already gone missing from it.
 
 Some of this is held deterministically — `make native-controls`,
-`catalog.test.ts`, `type-one-spelling.test.ts` and the `check-ds-*.sh` and
+`catalog.test.ts`, `type-source.test.ts` and the `check-ds-*.sh` and
 `check-space-tokens.sh` script gates — but none
 can tell that the component you just wrote already existed under another name. The
 catalog gate keeps it findable; the grep is still yours.
 
+**A label in a pill is one `Badge`**: `soft` or `primary`, seven tones, icon left.
+Soft is a tint plus tone hairline, primary a solid fill; `ai` draws Sparkles.
+No caps, no click; `badge-spelling.test.ts` fails a hand-rolled pill or restyle.
+
 ### Indigo is a claim about provenance
 
 `--ai` / `--aiLight` / `--aiMed` / `--aiText` mark **information or an action
-proposed by an agent rather than by a person** — decision cards, staged values,
+proposed by an agent rather than by a contact** — decision cards, staged values,
 the orb and the lit margin included. One colour, one meaning: it is never
 decoration, and tinting a card indigo because it looked good tells every reader
 something false about who decided. `1.5px dashed var(--aiMed)` means staged and
@@ -67,7 +71,7 @@ not yet accepted; the dashes going solid is acceptance. Text on `--aiLight` take
 `--aiText`, never `--ai`, which fails AA on its own family's ground.
 `--orbAmber` / `--orbRed` / `--orbGrey` are OUTCOME, not provenance, and stay put.
 
-Why, plus the token table and the provenance triad:
+Why, plus the token table and `ProvenanceTag`, the rule at its smallest:
 [`src/design-system/README.md`](src/design-system/README.md). `check-ds-purity.sh`
 holds that colours come from tokens; nothing can tell you the token you picked
 means the wrong thing.
@@ -169,4 +173,4 @@ component in `src/design-system/` or a screen surface:
   about CI, not permission to skip it.
 - `src/design-system/README.md` is the catalog and the prose that goes with it.
   A new control, a new variant, or a changed prop contract updates that file too.
-  It is what the next person reads instead of hand-rolling a second dropdown.
+  It is what the next contact reads instead of hand-rolling a second dropdown.

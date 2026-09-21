@@ -51,7 +51,7 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 // opens the transaction itself reads the catalog BEFORE opening it, then
 // threads the answer in — the same order every store-opened entry point keeps,
 // because the catalog read takes a connection of its own. It takes
-// project:read, as people's ActiveOrganizationColumns takes organization:read:
+// project:read, as contacts's ActiveCompanyColumns takes company:read:
 // which columns a record type carries is a fact about that record type.
 func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
@@ -86,7 +86,7 @@ type ListProjectsInput struct {
 	Cursor          *string
 	Limit           *int
 	Query           *string
-	OrganizationID  *ids.OrganizationID
+	CompanyID       *ids.CompanyID
 	OwnerID         *ids.UserID
 	Phase           *string
 	Key             *string
@@ -110,13 +110,69 @@ const projectQuickFindExpr = `(coalesce(name,'') || ' ' || coalesce(key,''))`
 // two are equal by coincidence, not by rule.
 const projectNameField = "name"
 
+// The two columns the list draws that it did not sort by.
+const (
+	projectPhaseColumn   = "phase"
+	projectCompanyColumn = "company_id"
+)
+
 // projectListFields is the project list's core sortable vocabulary.
-var projectListFields = map[string]string{
-	"created_at":       storekit.KindTimestamp,
-	"updated_at":       storekit.KindTimestamp,
-	"last_activity_at": storekit.KindTimestamp,
-	projectNameField:   fieldcatalog.TypeText,
-	"target_end_date":  fieldcatalog.TypeDate,
+var projectListFields = map[string]storekit.SortField{
+	"created_at":        storekit.Column(storekit.KindTimestamp),
+	"updated_at":        storekit.Column(storekit.KindTimestamp),
+	"last_activity_at":  storekit.Column(storekit.KindTimestamp),
+	projectNameField:    storekit.Column(fieldcatalog.TypeText),
+	targetEndDateColumn: storekit.Column(fieldcatalog.TypeDate),
+	// The Owner header has offered this sort for as long as the list has drawn
+	// the column, and the server refused it: `project.owner_id` is a column of
+	// the row like any other, so the refusal was the vocabulary's omission
+	// rather than anything about the field.
+	filterOwnerID: storekit.Column(storekit.KindUUID),
+	// The Phase header, by how LIVE the work is rather than by the word.
+	// phaseRank is the account page's own arrangement, read here so the two
+	// surfaces cannot disagree about which phase comes first.
+	projectPhaseColumn: {Kind: fieldcatalog.TypeNumber, Expr: orderByPhase},
+	// The Company header. A project names one account and the reader may not
+	// see every account, so the same rule the deals list applies holds here:
+	// ordering by a name is reading it, and a company outside this caller's
+	// scope orders the page by nothing.
+	projectCompanyColumn: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompany},
+}
+
+// orderByPhase arranges projects the way the account page already arranges
+// them (phaseRank), rather than by the phase word.
+func orderByPhase(context.Context, func(any) int) (string, error) {
+	return phaseRank("project"), nil
+}
+
+// orderByReadableCompany orders by the customer's name, and by NOTHING for a
+// company this caller may not read.
+//
+// Ordering by a value is reading it, so BOTH halves of RBAC bound it. The
+// object grant first: auth.ScopeClauseFor answers row visibility and never
+// asks whether this caller may read companies at all, so a seat holding
+// project.read and no company.read would otherwise have its page arranged
+// by company names it is refused on every other surface.
+//
+// Then the row scope, INSIDE the subquery: a company outside it answers NULL,
+// which the ORDER BY already puts last, and those projects land in the tail
+// together saying nothing about which account they name — the same answer the
+// row gives when it withholds the reference.
+func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "company") {
+		// Ordered by nothing: every row sits in the tail and the page falls
+		// back to its tie-breaker.
+		return "NULL::text", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope != "" {
+		scope = " AND " + scope
+	}
+	return `(SELECT company_sort.display_name FROM company company_sort
+	          WHERE company_sort.id = project.` + projectCompanyColumn + scope + `)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.
@@ -173,14 +229,14 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	if in.Query != nil && *in.Query != "" {
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
-	if in.OrganizationID != nil {
+	if in.CompanyID != nil {
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
 		// to a partner must show the deliveries that partner is on.
 		where = append(where, storekit.SQLf(
 			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.organization_id = $%d AND c.archived_at IS NULL)`,
-			arg(*in.OrganizationID)))
+				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL)`,
+			arg(*in.CompanyID)))
 	}
 	if in.OwnerID != nil {
 		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
@@ -197,9 +253,13 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	return where
 }
 
-const projectColumns = `id, name, key, organization_id, owner_id, phase, closed_reason,
+// A var rather than a const: the seat-name subselect is built by a function.
+var projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
 	description, started_at, target_end_date, ended_at, last_activity_at,
-	source, captured_by, version, created_at, updated_at, archived_at`
+	source, captured_by,
+	source_system, source_author_id, source_author_name,
+	` + sourceAuthorSeatNameSQL("project") + `,
+	version, created_at, updated_at, archived_at`
 
 // readProject resolves one project row; active names the custom-field
 // columns to carry alongside the core ones — nil for internal decision
@@ -220,16 +280,20 @@ func readProject(ctx context.Context, tx pgx.Tx, id ids.ProjectID, archived stor
 // trailing expressions the caller's SELECT appended.
 func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Project, error) {
 	var p crmcontracts.Project
-	var id, orgID ids.UUID
+	var id, companyID ids.UUID
 	var ownerID *ids.UUID
 	var phase string
 	var startedAt, targetEnd, endedAt *time.Time
 	var version int64
+	var sourceSystem, authorName, authorSeatName *string
+	var authorID *ids.UUID
 
 	dests := []any{
-		&id, &p.Name, &p.Key, &orgID, &ownerID, &phase, &p.ClosedReason,
+		&id, &p.Name, &p.Key, &companyID, &ownerID, &phase, &p.ClosedReason,
 		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt,
-		&p.Source, &p.CapturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&p.Source, &p.CapturedBy,
+		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -240,8 +304,8 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 
 	p.Id = openapi_types.UUID(id)
-	anchor := openapi_types.UUID(orgID)
-	p.OrganizationId = &anchor
+	anchor := openapi_types.UUID(companyID)
+	p.CompanyId = &anchor
 	p.OwnerId = uuidPtr(ownerID)
 	projectPhase := crmcontracts.ProjectPhase(phase)
 	p.Phase = &projectPhase
@@ -255,5 +319,6 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.EndedAt = &openapi_types.Date{Time: *endedAt}
 	}
 	p.Version = &version
+	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	return p, nil
 }

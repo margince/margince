@@ -12,7 +12,7 @@
 //
 // RunService faces IN. A domain module calls it to queue and read runs, and
 // sees nothing else — not the adapter, not the ledger, not the budget. That is
-// what lets modules/people ask for an enrichment without depending on
+// what lets modules/contacts ask for an enrichment without depending on
 // modules/integrations, which the module DAG forbids.
 //
 // This package is Tier-0 and stdlib-only, so nothing here names a database
@@ -191,10 +191,10 @@ type Descriptor struct {
 // anything that outlives the request.
 type Credential []byte
 
-// PersonIdentifiers is the closed set of facts that may be sent about a
-// person. Surfe accepts a LinkedIn URL, or a name plus a company — and
+// ContactIdentifiers is the closed set of facts that may be sent about a
+// contact. Surfe accepts a LinkedIn URL, or a name plus a company — and
 // nothing else (PI-PARAM-11). A field absent here cannot leave.
-type PersonIdentifiers struct {
+type ContactIdentifiers struct {
 	LinkedInURL   string
 	FirstName     string
 	LastName      string
@@ -207,7 +207,7 @@ type Request struct {
 	// CorrelationID is the run's external correlation id — an opaque handle
 	// carrying no subject identity, safe to hand a third party.
 	CorrelationID string
-	Identifiers   PersonIdentifiers
+	Identifiers   ContactIdentifiers
 	Categories    []Category
 	Cascades      []Cascade
 }
@@ -242,8 +242,8 @@ func (o Outcome) Terminal() bool {
 	return o != OutcomeAccepted && o != OutcomePending
 }
 
-// ClaimKey is the bounded vocabulary of what a run can assert about a person.
-// It matches the person_provider_claim CHECK constraint exactly.
+// ClaimKey is the bounded vocabulary of what a run can assert about a contact.
+// It matches the contact_provider_claim CHECK constraint exactly.
 type ClaimKey string
 
 const (
@@ -356,7 +356,7 @@ type Run struct {
 	Snapshot        Snapshot
 	ID              string
 	SubjectKind     string
-	PersonID        string
+	ContactID       string
 	Provider        string
 	Trigger         Trigger
 	State           RunState
@@ -379,7 +379,7 @@ type Run struct {
 
 // QueueInput is a request to enrich one subject.
 type QueueInput struct {
-	PersonID string
+	ContactID string
 	// Provider empty means "every connected provider that admits this
 	// trigger" — the event consumer's case, which should not have to know
 	// what is registered.
@@ -398,7 +398,7 @@ type QueueInput struct {
 	//
 	// What it is FOR: automatic enrichment takes the free categories on
 	// everybody, and a human presses a button to buy a priced one for a named
-	// person. Without a per-run set, that button could only change the setting
+	// contact. Without a per-run set, that button could only change the setting
 	// for every future run too.
 	Categories []Category
 }
@@ -413,7 +413,7 @@ type RunService interface {
 	QueueRun(ctx context.Context, in QueueInput) (Run, error)
 
 	// GetRun reads one run for a subject.
-	GetRun(ctx context.Context, personID, runID string) (Run, error)
+	GetRun(ctx context.Context, contactID, runID string) (Run, error)
 }
 
 // NotConnected is the RunService used when no provider is wired. Every call

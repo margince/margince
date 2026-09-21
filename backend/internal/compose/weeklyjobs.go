@@ -23,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -52,7 +51,7 @@ const narrateBudget = 40 * time.Second
 // reviewHour is the local hour on Monday from which a rep's week is measured.
 //
 // Late enough that the week it closes is genuinely over in the installation's
-// own zone, early enough that the review is waiting when the first person
+// own zone, early enough that the review is waiting when the first contact
 // opens Margince.
 const reviewHour = 6
 
@@ -119,6 +118,10 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 	sysCtx := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:weekly-review",
 	})
+	ready, err := w.reviewWindowOpen(sysCtx, now)
+	if err != nil || !ready {
+		return err
+	}
 	due, err := w.repsDueTheirReview(sysCtx, wsID, now)
 	if err != nil {
 		return err
@@ -137,9 +140,11 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 	// the last of them has their week written.
 	var failures []error
 	mailable := make([]mailableReview, 0, len(due))
+	failedMembers := make(map[ids.UUID]bool)
 	for _, userID := range due {
 		ready, err := w.measureFor(sysCtx, wsID, userID, now)
 		if err != nil {
+			failedMembers[userID] = true
 			failures = append(failures, fmt.Errorf("weekly review for user %s: %w", userID, err))
 			continue
 		}
@@ -147,28 +152,14 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 			mailable = append(mailable, ready)
 		}
 	}
-	// The mail second, on whatever deadline is left. A relay that eats the
-	// remainder now costs reps their MESSAGE, which the claim leaves unspent
-	// for a later tick to retry — the review itself is already committed.
+	// Finish database-only measurements before optional model or relay calls.
+	failures = append(failures, w.snapshotTeams(sysCtx, wsID, now, failedMembers)...)
 	for _, ready := range mailable {
-		// The rep's authority on the JOB's live context: her principal decides
-		// what may be read and sent, the running job decides how long there is
-		// to do it and when to stop.
 		sendCtx := principal.WithCorrelationID(
 			principal.WithActor(ctx, ready.rep), ids.NewV7())
+		w.enrichReview(sendCtx, ready.review, now)
 		w.mailWeekly(sendCtx, ready.reviewID, now)
 	}
-	// The team snapshots THIRD, and last for a reason of its own: each one is a
-	// total over member reviews, so a snapshot assembled while reps were still
-	// being measured would freeze a team that was half-counted and nothing
-	// afterwards would say so. It runs after the mail because it is the least
-	// urgent of the three — a lead reads it on Monday, and a tick that ran out
-	// of budget here costs a snapshot the next tick rebuilds, not a review.
-	//
-	// Failures are collected, not returned: one team that cannot be assembled
-	// must not report the whole workspace's reviews as failed when they are
-	// written and committed.
-	failures = append(failures, w.snapshotTeams(sysCtx, wsID, now)...)
 	if len(failures) > 0 {
 		return fmt.Errorf("weekly_review_generate_workspace: %d of %d reps: %w",
 			len(failures), len(due), errors.Join(failures...))
@@ -199,51 +190,20 @@ func (w *weeklyGenerateWorker) measureFor(
 	}
 	repCtx := principal.WithActor(ctx, repPrincipal)
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())
-	review, created, err := w.engine.AssembleFor(repCtx, now)
+	review, _, err := w.engine.AssembleFor(repCtx, now)
 	if err != nil {
 		// A seat whose role grants no deal read has no week to measure, and
 		// that is a configuration rather than a fault: failing the job would
 		// make one such seat cost the whole workspace its retrospectives, and
 		// River would retry into the same refusal every pass.
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			w.log.InfoContext(ctx, "no weekly review for a seat whose role does not grant reading deals",
-				"user", userID, "workspace", wsID)
+			w.log.InfoContext(ctx, "weekly review withheld by the member authority",
+				"user", userID, "workspace", wsID, "cause", err)
 			return mailableReview{}, nil
 		}
 		return mailableReview{}, err
 	}
-	// The sentence, after the review is committed and never as part of it. A
-	// model that is slow, absent or wrong must not be able to cost the rep the
-	// counts and the deal lines — those are the review, and this is a remark
-	// about them.
-	//
-	// RETRIED, not written once. A review can land un-narrated for reasons that
-	// pass: the role had no lane, the budget was spent, the provider was down,
-	// the reply would not parse. Narrating only on the pass that CREATED the
-	// row would make every one of those permanent — the dispatcher ticks again
-	// within the week, finds the row already there, and never looks at it
-	// again. So a later tick narrates a week that has no stamp, and leaves one
-	// that has alone: re-narrating would rewrite a sentence the rep has read.
-	if review.NarratedAt == nil {
-		w.narrate(repCtx, review, now)
-	}
-	// After the sentence, and on the same retry terms: a week that has not been
-	// learned from is learned from on a later tick, and one that has is left
-	// alone. RecordLearnings is the arbiter — it refuses a second pass itself —
-	// so this check is the cheap half and not the correctness half.
-	if review.LearningsState == weekly.LearningsNotRun {
-		w.learn(repCtx, review, now)
-	}
-	_ = created
-	// HANDED BACK rather than mailed here. The caller runs every send after
-	// the last rep is measured — see measureWorkspace for why interleaving
-	// them costs later reps their review.
-	//
-	// It carries the id and not the review: mailWeekly re-reads the row inside
-	// its own claim, because the narration above wrote to that same row and
-	// mailing the in-memory copy would post a week whose sentence had just
-	// been written and was not in it.
-	return mailableReview{rep: repPrincipal, reviewID: review.ID}, nil
+	return mailableReview{rep: repPrincipal, reviewID: review.ID, review: review}, nil
 }
 
 // mailableReview is one measured week waiting for its message, with the
@@ -256,6 +216,7 @@ func (w *weeklyGenerateWorker) measureFor(
 // context would freeze both, so a worker shutting down would go on dialling a
 // relay for a job nobody is waiting for.
 type mailableReview struct {
+	review   weekly.Review
 	rep      principal.Principal
 	reviewID ids.UUID
 }
@@ -275,7 +236,7 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 	in := narrative.Input{
 		WeekStart: review.LocalWeekStart.Format(time.DateOnly),
 		Counts: narrative.Counts{
-			TasksDue: review.Counts.TasksDue, TasksDone: review.Counts.TasksDone,
+			TasksDue: review.Counts.TasksDue, TasksDone: review.Counts.TasksDone, TasksCompleted: review.Counts.TasksCompleted,
 			TasksCarriedOver: review.Counts.TasksCarriedOver,
 			DealsMoved:       review.Counts.DealsMoved,
 			DealsWon:         review.Counts.DealsWon, DealsLost: review.Counts.DealsLost,
@@ -283,6 +244,13 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 			ProposalsRejected:   review.Counts.ProposalsRejected,
 			BriefItemsActed:     review.Counts.BriefItemsActed,
 			BriefItemsDismissed: review.Counts.BriefItemsDismissed,
+			// The scorecard reports these; without them a week of answering
+			// leads and holding meetings reaches the narrator as zeros.
+			LeadsRouted:           review.Counts.LeadsRouted,
+			LeadsAnsweredInTarget: review.Counts.LeadsAnsweredInTarget,
+			LeadsBreached:         review.Counts.LeadsBreached,
+			MeetingsHeld:          review.Counts.MeetingsHeld,
+			MeetingsWithNextStep:  review.Counts.MeetingsWithNextStep,
 		},
 	}
 	for _, line := range review.Deals {
@@ -326,25 +294,11 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 
 // repsDueTheirReview lists the workspace's active full-seat humans whose local
 // Monday has reached reviewHour and who hold no review for the closed week.
-//
-// Overlay workspaces are refused outright: the review counts native deal rows,
-// which an overlay workspace keeps in the incumbent, so a pass there would
-// measure a week of zeroes — and "a quiet week" and "this cannot be answered
-// here" read identically while only one is true.
 func (w *weeklyGenerateWorker) repsDueTheirReview(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) ([]ids.UUID, error) {
 	var due []ids.UUID
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		overlay, err := overlayModeOf(ctx, tx)
-		if err != nil {
-			return fmt.Errorf("resolving the workspace's system-of-record mode: %w", err)
-		}
-		if overlay {
-			w.log.InfoContext(ctx, "weekly review skipped: the workspace keeps its deals in the incumbent",
-				"workspace", wsID)
-			return nil
-		}
 		// The engine's own week arithmetic, not a second copy: this decides who
 		// is due and the store then dates what it writes. Two spellings would
 		// let the pair disagree about which week a review belongs to.
@@ -352,55 +306,38 @@ func (w *weeklyGenerateWorker) repsDueTheirReview(
 		if err != nil {
 			return err
 		}
-		_, local, err := briefs.LocalDayAt(ctx, tx, now)
-		if err != nil {
-			return err
-		}
-		// From Monday's review hour onward, ANY day of the week — not Monday
-		// alone.
-		//
-		// A Monday-only guard loses a week outright: if the worker is down
-		// that day, the next Monday measures the NEW closed week and the
-		// missed one is never written. Nothing would report it, because the
-		// anti-join only ever asks about the current week. Letting the rest of
-		// the week backfill is what makes the schedule self-healing, and the
-		// per-week uniqueness is what stops it writing twice.
-		if local.Weekday() == time.Sunday || local.Hour() < reviewHour {
-			return nil
-		}
-		due, err = repsWithoutAReviewFor(ctx, tx, thisWeek.AddDate(0, 0, -7))
+
+		due, err = w.repsWithoutAReviewFor(ctx, tx, thisWeek.AddDate(0, 0, -7))
 		return err
 	})
 	return due, err
 }
 
 // repsWithoutAReviewFor is the candidate query: every seat whose review for the
-// closed week is missing or unnarrated.
+// closed week is missing or has unfinished optional work.
 //
 // The anti-join is an optimisation, not the correctness —
 // uq_weekly_review_user_week is what makes a second review impossible, and a
 // rep who gains one between this read and the write simply joins it.
-func repsWithoutAReviewFor(ctx context.Context, tx pgx.Tx, week time.Time) ([]ids.UUID, error) {
-	rows, err := tx.Query(ctx, `
+func (w *weeklyGenerateWorker) repsWithoutAReviewFor(ctx context.Context, tx pgx.Tx, week time.Time) ([]ids.UUID, error) {
+	var args []any
+	bind := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
+	weekBind := bind(week)
+	narratorBind, learnerBind, mailBind := bind(w.narrator != nil), bind(w.learner != nil), bind(w.mail.Mailer != nil)
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT u.id
 		FROM app_user u
 		WHERE `+identity.LiveMemberSQL("u")+`
 		  AND u.is_agent = false
 		  AND u.seat_type = 'full'
-		  -- A rep is due while they have no review for the week, OR have one
-		  -- that nobody has narrated. The second arm is the retry: a review
-		  -- can land un-narrated because the role had no lane, the budget was
-		  -- spent or the provider was down, and without it every one of those
-		  -- would be permanent — the next tick finds the row and looks away.
-		  --
-		  -- AssembleFor is idempotent (uq_weekly_review_user_week), so a rep
-		  -- admitted by the second arm re-reads their own review rather than
-		  -- writing a second.
+		  -- Each optional pass is independently retryable after measurement.
 		  AND NOT EXISTS (
 			SELECT 1 FROM weekly_review wr
-			WHERE wr.user_id = u.id AND wr.local_week_start = $1
-			  AND wr.narrated_at IS NOT NULL)
-		ORDER BY u.id`, week)
+			WHERE wr.user_id = u.id AND wr.local_week_start = %s
+			  AND (NOT %s::boolean OR wr.narrated_at IS NOT NULL)
+			  AND (NOT %s::boolean OR wr.learnings_state <> 'not_run')
+			  AND (NOT %s::boolean OR wr.mail_attempted_at IS NOT NULL))
+		ORDER BY u.id`, weekBind, narratorBind, learnerBind, mailBind), args...)
 	if err != nil {
 		return nil, err
 	}

@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,17 +57,24 @@ func (s *Store) approvalVisibleTo(ctx context.Context, approvalID ids.UUID) (boo
 		targetType *string
 		targetID   *ids.UUID
 		stagedFor  *ids.UUID
+		kind       string
+		body       []byte
 	)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		args := []any{approvalID}
 		return tx.QueryRow(ctx,
-			`SELECT target_entity_type, target_entity_id, on_behalf_of FROM approval WHERE id = $1`,
-			approvalID).Scan(&targetType, &targetID, &stagedFor)
+			fmt.Sprintf(`SELECT target_entity_type, target_entity_id, on_behalf_of, kind, proposed_change FROM approval WHERE id = $%d`, len(args)),
+			args...).Scan(&targetType, &targetID, &stagedFor, &kind, &body)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
+	}
+	actor, _ := principal.Actor(ctx)
+	if approvalsubject.Withheld(kind, body, actor.UserID) {
+		return false, nil
 	}
 	return s.approvalShapeVisible(ctx, targetType, targetID, stagedFor)
 }
@@ -210,9 +218,13 @@ const (
 // TestEveryApprovalTargetTakesItsOwningStoresRule pins each type to its own rule,
 // which is what a collision breaks.
 var approvalTargetRules = func() map[string]approvalTargetRule {
+	//nolint:goconst // the keys are WIRE target types read as data, and the rule each
+	// takes is the point of the table. A constant shared with the entity switch next
+	// door would assert the two vocabularies are one, which is the claim this table
+	// exists to make one row at a time.
 	rules := map[string]approvalTargetRule{
-		"person":           targetRuleRowScoped,
-		"organization":     targetRuleRowScoped,
+		"contact":          targetRuleRowScoped,
+		"company":          targetRuleRowScoped,
 		"deal":             targetRuleRowScoped,
 		"lead":             targetRuleRowScoped,
 		"project":          targetRuleRowScoped,

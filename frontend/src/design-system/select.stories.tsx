@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { Field } from "./atoms";
-import { Select, type SelectOption } from "./select";
+import { MultiSelect, Select, type SelectOption } from "./select";
 import { TAG_TONES } from "./tagpill";
 import "./tagpill.css";
 
@@ -77,6 +77,16 @@ const ZONES: readonly SelectOption[] = [
   "Europe/Zurich",
 ].map((zone) => ({ value: zone, label: zone }));
 
+// A roster: one short label and the long ones a real workspace carries. The
+// point of the set is the DISTANCE between the two, which is what a list sized
+// to its trigger destroys.
+const CONTACTS: readonly SelectOption[] = [
+  { value: "mine", label: "Mine" },
+  { value: "kr", label: "Dr. Katharina Reinhardt-Vogel" },
+  { value: "jb", label: "Jean-Baptiste Moreau-Lefèvre" },
+  { value: "nn", label: "Nguyễn Thị Minh Khai" },
+];
+
 const column: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -138,6 +148,41 @@ export const WithPlaceholder: Story = {
         required
         hint="A deal has to sit somewhere in the pipeline."
       />
+    </div>
+  ),
+};
+
+/**
+ * A SHORT TRIGGER OVER LONG OPTIONS, which is the case the list's own width
+ * exists for. "Mine" is the chosen value, so the closed face is narrow; every
+ * option behind it is a full name. Sized to the trigger, the list read
+ * "Dr. Kathari…" for all of them and the reader could not tell one colleague
+ * from another in the one place the control is asked to.
+ *
+ * Open it: the face stays narrow — a trigger that grew with its value would
+ * move whatever sits beside it — and the list stands out past the trigger to
+ * the width its longest label needs, capped at 24rem.
+ */
+export const ShortTriggerLongOptions: Story = {
+  render: () => (
+    <div style={{ ...column, maxWidth: "9rem" }}>
+      <Demo label="Viewing" options={CONTACTS} start="mine" />
+    </div>
+  ),
+};
+
+/**
+ * The same list on a control at the TRAILING EDGE of the page, which is where
+ * the Worklist's own dial sits. The list may not run off the screen to reach
+ * its content width, so the cap is the room measured from its leading edge
+ * rather than a fraction of the viewport.
+ */
+export const ContentSizedAtTheEdge: Story = {
+  render: () => (
+    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ ...column, maxWidth: "9rem" }}>
+        <Demo label="Viewing" options={CONTACTS} start="mine" />
+      </div>
     </div>
   ),
 };
@@ -300,6 +345,67 @@ export const AdornmentsDark: Story = {
   render: () => (
     <div style={column}>
       <Demo label="Colour" options={TONES} start="violet" />
+    </div>
+  ),
+};
+
+function MultiDemo({
+  options,
+  start = [],
+  label,
+  placeholder,
+}: Readonly<{
+  options: readonly SelectOption[];
+  start?: readonly string[];
+  label: string;
+  placeholder?: string;
+}>) {
+  const [values, setValues] = useState<string[]>([...start]);
+  return (
+    <Field label={label}>
+      {(control) => (
+        <MultiSelect
+          {...control}
+          options={options}
+          values={values}
+          onChange={setValues}
+          placeholder={placeholder}
+        />
+      )}
+    </Field>
+  );
+}
+
+/**
+ * The multi-value sibling: a pick TOGGLES membership and the list stays open,
+ * so choosing three of thirty options is three clicks. The closed face reads
+ * the chosen labels in option order and ellipsizes past the field's width —
+ * open the long-vocabulary field to see the checks against a list a checkbox
+ * group would have drawn as a page of its own.
+ */
+export const Multi: Story = {
+  render: () => (
+    <div style={column}>
+      <MultiDemo
+        label="Stages"
+        options={STAGES}
+        start={["qualify", "proposal"]}
+      />
+      <MultiDemo label="Time zones" options={ZONES} placeholder="Not set" />
+    </div>
+  ),
+};
+
+/** The multi face and its checks on a dark ground. */
+export const MultiDark: Story = {
+  globals: { theme: "dark" },
+  render: () => (
+    <div style={column}>
+      <MultiDemo
+        label="Stages"
+        options={STAGES}
+        start={["qualify", "won", "lost"]}
+      />
     </div>
   ),
 };

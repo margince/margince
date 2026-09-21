@@ -96,7 +96,7 @@ default.
   `color-mix()` of a canonical token, never a new hex, so it follows the dark
   theme's accent lift automatically and passes the purity gate. Then atoms, the
   **EvidenceMark** (`evidencemark*`) — the ONE §4 provenance affordance: a dotted
-  underline on a value that came from somewhere other than a person typing it,
+  underline on a value that came from somewhere other than a contact typing it,
   opening to where it came from, how sure we were, the text it was read from, and
   when. One mark is open across the page at a time, for pointer and keyboard
   alike. It replaces the stack of three chips that used to sit under every value;
@@ -135,7 +135,7 @@ default.
   multipart (the OAuth discovery read in `connected-agents.tsx` is a raw `fetch`
   too, but it is not a `/v1` route at all). Also the session cookie and the `/v1`
   mount — no tenant header:
-  one installation serves one organization, and the server binds that singleton
+  one installation serves one company, and the server binds that singleton
   itself, so two tests assert the absence of any workspace header).
 - `e2e/` — the Playwright harness: AC-named acceptance tests, the 390px
   no-horizontal-scroll sweep, axe WCAG 2.2 AA on every core screen, the
@@ -147,7 +147,9 @@ default.
 ## The gates (all run by `pnpm check` / `pnpm e2e`)
 
 1. Token canon — every §2 Ledger-Green value pinned to the design canon.
-2. Three type families only (Bricolage Grotesque / Geist / Geist Mono).
+2. Three type families only: Outfit (display), Geist (everything read,
+   figures included, aligned with `tabular-nums`), Geist Mono (code only —
+   `pre`, `code`, `samp`, `.code-block`).
 3. Literal colours live only in `tokens.css`.
 4. No hard-coded user-facing copy — JSX text and user-facing attributes
    must come from the i18n catalogs (TS AST walk).

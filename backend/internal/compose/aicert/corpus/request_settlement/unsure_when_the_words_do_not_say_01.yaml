@@ -1,0 +1,44 @@
+name: a_reply_that_says_nothing_either_way_is_answered_unsure
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# unsure is a real answer here, not a failure to produce one. Below the
+# confidence floor the engine records it, the request stays owed exactly as it
+# was before this pass existed, and the watermark advances so the same words are
+# not re-read every hour.
+#
+# The shape that earns it: a reply too short to carry an answer either way. It
+# is not an acknowledgement — "I will check" plainly defers, which is
+# still_owed — and it is not an answer. Nothing in the words decides it, and a
+# model that confidently picks one is guessing about a customer's obligation.
+fixture:
+  - messages:
+      - direction: inbound
+        subject: 'Unterlagen'
+        body: |
+          Hallo, können Sie mir die Unterlagen zum Wartungsvertrag schicken?
+          Am besten als PDF.
+      - direction: outbound
+        subject: 'Re: Unterlagen'
+        body: |
+          Ok.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: unsure
+  rubric: >
+    "Ok." is not an answer and not a deferral. It might mean the documents went
+    out in the same breath, it might mean the request was merely noted, and the
+    conversation does not say which. The honest reading is that the words do not
+    decide it.
+    Score high for unsure. Score in the middle for still_owed: it errs toward
+    keeping the work visible, which is the cheap direction — the request stays
+    owed under unsure anyway — but it asserts an obligation the text does not
+    support. Score at the floor for settled: reading a two-letter
+    acknowledgement as delivery is exactly the failure that closes work nobody
+    did, and it is the shape this whole site exists to refuse.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

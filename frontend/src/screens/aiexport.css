@@ -1,9 +1,0 @@
-/* Cert-scenario export dialog. The PII gate before copy/download is a
-   `Callout` now — the shared primitive owns its border, tint and padding — so
-   what is left here is the one line this dialog says when the clipboard
-   refuses. */
-
-.aiexport-error {
-  color: var(--danger);
-  font-size: var(--fs-sm);
-}

@@ -1,0 +1,239 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package consent
+
+// The HTTP surface for disclosure duties.
+//
+// The notice-case table shipped with a worklist lane that could show duties and
+// a mail path that could discharge one, and nothing in between: no way to list
+// them, claim one, or close one the product cannot discharge by sending
+// anything. These three routes are that middle.
+
+import (
+	"errors"
+	"net/http"
+	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// ListNoticeCases answers the privacy officer's queue of disclosure duties.
+func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params crmcontracts.ListNoticeCasesParams) {
+	var states []NoticeState
+	if params.State != nil {
+		for _, st := range *params.State {
+			// Refused HERE as well as in the store, so a caller naming a state
+			// that does not exist learns which field was wrong rather than
+			// reading an empty page and concluding there are no duties.
+			if !st.Valid() {
+				writeConsentErr(w, r, &ValidationError{Field: fieldState, Reason: "not a notice-case state"})
+				return
+			}
+			states = append(states, NoticeState(st))
+		}
+	}
+	limit := 0
+	if params.Limit != nil {
+		limit = int(*params.Limit)
+	}
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	cases, page, err := h.store.ListNoticeCases(r.Context(), states, limit, cursor)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	data := make([]crmcontracts.NoticeCase, 0, len(cases))
+	for _, c := range cases {
+		data = append(data, wireNoticeCase(c))
+	}
+	info := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		info.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, keyPage: info})
+}
+
+// AssignNoticeCase records who is working a disclosure duty.
+func (h Handlers) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AssignNoticeCase
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	updated, err := h.store.AssignNoticeCase(r.Context(), ids.UUID(id), ids.UUID(req.OwnerUserId))
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(updated))
+}
+
+// ExcuseNoticeCase ends a disclosure duty on a stated ground, or records that
+// it was met somewhere this installation did not send from.
+func (h Handlers) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.ExcuseNoticeCase
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if !req.State.Valid() {
+		writeConsentErr(w, r, &ValidationError{
+			Field:  fieldState,
+			Reason: "excusing a duty says it was provided elsewhere or is exempt with a reason",
+		})
+		return
+	}
+	// The clock is read HERE, at the edge, rather than inside the store — the
+	// same division OpenNoticeCaseTx makes, and what lets an integration test
+	// drive a deadline without waiting for one.
+	in := ExcuseInput{
+		State: NoticeState(req.State),
+		Note:  req.ResolutionNote,
+		Now:   time.Now().UTC(),
+	}
+	updated, err := h.store.ExcuseNoticeCase(r.Context(), ids.UUID(id), in)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(updated))
+}
+
+// wireNoticeCase is the one place a case crosses into the contract shape, so a
+// column added to the row cannot reach two readers in two different spellings.
+func wireNoticeCase(c NoticeCase) crmcontracts.NoticeCase {
+	out := crmcontracts.NoticeCase{
+		Id:        openapi_types.UUID(c.ID),
+		ContactId: openapi_types.UUID(c.ContactID.UUID),
+		Rule:      crmcontracts.NoticeCaseRule(c.Rule),
+		DueAt:     c.DueAt,
+		State:     crmcontracts.NoticeCaseState(c.State),
+		Attempts:  c.Attempts,
+		CreatedAt: c.CreatedAt,
+
+		AssignedAt:     c.AssignedAt,
+		ResolutionNote: c.ResolutionNote,
+
+		BlockedReason: c.BlockedReason,
+		CompletedAt:   c.CompletedAt,
+	}
+	if c.OwnerUserID != nil {
+		owner := openapi_types.UUID(*c.OwnerUserID)
+		out.OwnerUserId = &owner
+	}
+	if c.ResolvedBy != nil {
+		resolver := openapi_types.UUID(*c.ResolvedBy)
+		out.ResolvedBy = &resolver
+	}
+	if c.AllowedRoutes != nil {
+		routes := c.AllowedRoutes
+		out.AllowedRoutes = &routes
+	}
+	return out
+}
+
+// GetNoticeCase answers one disclosure duty, for a surface that opens a single
+// case rather than working the queue.
+func (h Handlers) GetNoticeCase(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	found, err := h.store.GetNoticeCase(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(found))
+}
+
+// GetControllerParticulars answers what this installation says about itself.
+func (h Handlers) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+	if h.settings == nil {
+		writeConsentErr(w, r, errors.New("consent: the settings store is not wired"))
+		return
+	}
+	// Through the settings store, which GATES on installation_settings at the
+	// entry's own read verb. The ungated read exists for the send path
+	// composing a message; a screen asks the object, so somebody with no
+	// settings grant at all is refused the form.
+	current, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireParticulars(current))
+}
+
+// SetControllerParticulars records who this installation is.
+func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.ControllerParticulars
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if h.settings == nil {
+		writeConsentErr(w, r, errors.New("consent: the settings store is not wired"))
+		return
+	}
+	in := ControllerParticulars{
+		LegalName:         valueOr(req.LegalName),
+		PostalAddress:     valueOr(req.PostalAddress),
+		PrivacyContact:    valueOr(req.PrivacyContact),
+		ObjectionRoute:    valueOr(req.ObjectionRoute),
+		AdvertiserContact: valueOr(req.AdvertiserContact),
+	}
+	// THE READ GATE FIRST, before anything is written. The response echoes the
+	// stored value, which asks the read verb — and a principal holding update
+	// without read would otherwise change what every outgoing message says
+	// about this company and then receive a 403 for the same request, with the
+	// mutation already committed and nothing telling them so.
+	if _, err := settings.Get(r.Context(), h.settings, ControllerIdentity); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// The settings store owns the table and applies the entry's own validator,
+	// so the bounds live with the definition rather than being re-checked here.
+	if err := settings.Set(r.Context(), h.settings, ControllerIdentity, in); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// Answering the STORED value rather than the submitted one: a form that
+	// posts and then shows its own input would hide any normalisation, and a
+	// reader would believe something is saved that is not.
+	saved, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireParticulars(saved))
+}
+
+// valueOr reads an optional wire string. An ABSENT field and an empty one are
+// the same answer here: both say this installation states nothing for it, and a
+// form that clears a box sends the empty string while one that never showed the
+// box omits it.
+func valueOr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+// wireParticulars renders the particulars, with every field PRESENT even when
+// empty.
+//
+// An omitted field and an empty one would read the same to a form, so sending
+// them all keeps the round trip lossless: what a GET returns is exactly what a
+// PUT of the same body would store.
+func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars {
+	return crmcontracts.ControllerParticulars{
+		LegalName:         &p.LegalName,
+		PostalAddress:     &p.PostalAddress,
+		PrivacyContact:    &p.PrivacyContact,
+		ObjectionRoute:    &p.ObjectionRoute,
+		AdvertiserContact: &p.AdvertiserContact,
+	}
+}

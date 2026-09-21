@@ -15,7 +15,7 @@ import (
 // InWorkspace runs fn on the owner connection inside ONE transaction, so a
 // fixture's writes land or roll back together the way a production write does.
 //
-// It takes no slug: one installation serves one organization (ADR-0061), so
+// It takes no slug: one installation serves one company (ADR-0061), so
 // there is one row to find and nothing for a caller to select between.
 //
 // It lives in apptest rather than beside the suites that call it because it takes

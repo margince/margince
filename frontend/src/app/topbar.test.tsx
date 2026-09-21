@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +23,7 @@ import { TopBar } from "./topbar";
 //
 // Three of those five are proved here, because three of them are the top bar's
 // own: the toggle, the trail and the search. The chip and the account menu are
-// components with suites of their own (sormodechip.test.tsx, account.test.tsx);
+// components with suites of their own (account.test.tsx);
 // what this file asserts about them is nothing, and what the SHELL asserts is
 // that they are mounted (shell.test.tsx).
 //
@@ -108,12 +108,12 @@ describe("Top bar search (AC-shell-7)", () => {
     const user = userEvent.setup();
     const onOpenSearch = vi.fn();
     const { container } = renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { onOpenSearch, onToggle: ignoreToggle },
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Search everything…" }),
+      screen.getByRole("button", { name: "Find or ask Margince" }),
     );
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
     // A field here would be a second search that answers to nothing: the
@@ -123,23 +123,23 @@ describe("Top bar search (AC-shell-7)", () => {
 
   it("is a button rather than the field it is styled as", () => {
     const { container } = renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { onToggle: ignoreToggle },
     );
     expect(container.querySelector(".topbar-search")?.tagName).toBe("BUTTON");
   });
 
   // The shortcut cap is a hint about how else to get here, not a second name: a
-  // reader who says "Search everything" must reach it, and none of them should
+  // reader who says "Find or ask Margince" must reach it, and none of them should
   // be made to spell out ⌘K. `name` is an exact match on the computed name, so
   // a kbd that leaked into it fails this.
   it("is named for what it does, with the shortcut kept out of that name", () => {
     const { container } = renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { onToggle: ignoreToggle },
     );
     expect(
-      screen.getByRole("button", { name: "Search everything…" }),
+      screen.getByRole("button", { name: "Find or ask Margince" }),
     ).toBeTruthy();
     // One cap per key, and the GROUP is what is hidden — a per-cap attribute
     // would leave the group announcing itself as the caps' container.
@@ -148,7 +148,10 @@ describe("Top bar search (AC-shell-7)", () => {
     // Two caps, whichever platform the test host claims to be: the chord reads
     // "⌘ then K" on a Mac and "Ctrl then K" elsewhere, and the split is what
     // keeps those one source rather than two spellings.
-    const caps = [...(keys?.querySelectorAll("kbd") ?? [])].map(
+    // `kbd.kbd`: the caps in this strip ARE the design system's one key cap
+    // (`Kbd`), not a box the top bar draws for itself, so the selector fails if
+    // the strip goes back to spelling its own.
+    const caps = [...(keys?.querySelectorAll("kbd.kbd") ?? [])].map(
       (cap) => cap.textContent,
     );
     expect(caps).toHaveLength(2);
@@ -164,7 +167,7 @@ describe("Top bar sidebar toggle", () => {
   it("reports the sidebar expanded and calls the handler on click", async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    renderTopBar({ screen: "brief" }, { onToggle });
+    renderTopBar({ screen: "home" }, { onToggle });
 
     const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -178,7 +181,7 @@ describe("Top bar sidebar toggle", () => {
   // changes.
   it("reports the sidebar collapsed and names the state it will move to", () => {
     renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { collapsed: true, onToggle: ignoreToggle },
     );
     const toggle = screen.getByRole("button", { name: "Expand sidebar" });
@@ -189,7 +192,7 @@ describe("Top bar sidebar toggle", () => {
   // conditioned on the handler because the handler is the only evidence the bar
   // has that a sidebar exists at all.
   it("mints no control when it is handed no toggle", () => {
-    const { container } = renderTopBar({ screen: "brief" });
+    const { container } = renderTopBar({ screen: "home" });
     expect(container.querySelector(".topbar-toggle")).toBeNull();
     expect(screen.queryByRole("button", { name: /sidebar$/ })).toBeNull();
   });
@@ -201,7 +204,7 @@ describe("Top bar sidebar toggle", () => {
 describe("Top bar trail", () => {
   it("names the page once on a list route, with nothing to lead back to", () => {
     renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Pipeline"]);
+    expect(stopTexts()).toEqual(["Deals"]);
     // A one-stop trail is the page and nothing else: no link, and no separator
     // leading a stop that is not there.
     expect(within(trail()).queryByRole("link")).toBeNull();
@@ -210,7 +213,7 @@ describe("Top bar trail", () => {
 
   it("leads a record back to the list it was opened from", () => {
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     renderWith(
       client,
       <TopBar
@@ -221,8 +224,8 @@ describe("Top bar trail", () => {
       />,
     );
 
-    expect(stopTexts()).toEqual(["People", "Anna Weber"]);
-    const back = within(trail()).getByRole("link", { name: "People" });
+    expect(stopTexts()).toEqual(["Contacts", "Anna Weber"]);
+    const back = within(trail()).getByRole("link", { name: "Contacts" });
     expect(back.getAttribute("href")).toBe("#/contacts");
     // The record itself is the page: not a link, and the one current claim.
     const stops = within(trail()).getAllByRole("listitem");
@@ -245,7 +248,7 @@ describe("Top bar trail", () => {
       { screen: "contacts", id: "p-anna" },
       { onToggle: ignoreToggle },
     );
-    expect(stopTexts()).toEqual(["People", "p-anna"]);
+    expect(stopTexts()).toEqual(["Contacts", "p-anna"]);
   });
 
   it("leads a section entry back to the section it belongs to", () => {

@@ -29,20 +29,17 @@ func (s *stubUndelivered) ParkedSends(_ context.Context, since time.Time, _ int)
 }
 
 func undeliveredLaneService(undelivered Undelivered) *Service {
-	return NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	).WithUndelivered(undelivered)
+	return NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithUndelivered(undelivered)
 }
 
-func TestAGivenUpSendNamesItselfAndOpensThePerson(t *testing.T) {
-	person := ids.NewV7()
+func TestAGivenUpSendNamesItselfAndOpensTheContact(t *testing.T) {
+	contact := ids.NewV7()
 	abandoned := readInstant.Add(-3 * time.Hour)
 	stub := &stubUndelivered{rows: []ParkedSend{
-		{ID: ids.NewV7(), Subject: "Proposal for Weber GmbH", Reason: "the mailbox is no longer send-capable", ParkedAt: abandoned, PersonID: person},
+		{ID: ids.NewV7(), Subject: "Proposal for Weber GmbH", Reason: "the mailbox is no longer send-capable", ParkedAt: abandoned, ContactID: contact},
 		{ID: ids.NewV7(), Subject: "Intro", ParkedAt: abandoned},
 	}}
-	out, err := undeliveredLaneService(stub).Assemble(context.Background())
+	out, err := undeliveredLaneService(stub).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -64,11 +61,11 @@ func TestAGivenUpSendNamesItselfAndOpensThePerson(t *testing.T) {
 	if filed.Detail == nil || *filed.Detail != "the mailbox is no longer send-capable" {
 		t.Errorf("detail = %v, want the dispatcher's own words", filed.Detail)
 	}
-	if filed.Subject == nil || ids.UUID(filed.Subject.Id) != person {
-		t.Fatalf("subject = %v, want the person the send is filed under", filed.Subject)
+	if filed.Subject == nil || ids.UUID(filed.Subject.Id) != contact {
+		t.Fatalf("subject = %v, want the contact the send is filed under", filed.Subject)
 	}
 	if !slices.Contains(filed.Actions, crmcontracts.AttentionItemActions("open")) {
-		t.Error("a send filed under a person offers no open — the page where sending it again lives")
+		t.Error("a send filed under a contact offers no open — the page where sending it again lives")
 	}
 	unfiled := (*out.Undelivered)[1]
 	if unfiled.Subject != nil || len(unfiled.Actions) != 0 {
@@ -77,7 +74,7 @@ func TestAGivenUpSendNamesItselfAndOpensThePerson(t *testing.T) {
 }
 
 func TestARefusedUndeliveredReadIsNamedAsWithheld(t *testing.T) {
-	out, err := undeliveredLaneService(&stubUndelivered{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	out, err := undeliveredLaneService(&stubUndelivered{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -92,7 +89,7 @@ func TestARefusedUndeliveredReadIsNamedAsWithheld(t *testing.T) {
 // Every send leaving is an EMPTY lane — the feed looked — which the absent
 // lane never promises.
 func TestEverySendThatLeftReadsAsAnEmptyLane(t *testing.T) {
-	out, err := undeliveredLaneService(&stubUndelivered{}).Assemble(context.Background())
+	out, err := undeliveredLaneService(&stubUndelivered{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

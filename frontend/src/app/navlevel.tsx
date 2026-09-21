@@ -12,6 +12,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -35,7 +36,7 @@ import { navigate, type Route, routeHash } from "./router";
 //
 // Depth reaches this file only as data: a level's entries address themselves
 // from its `path`, and every level names itself the same way — through the
-// heading over its first group. Nothing here counts levels.
+// label over its first group. Nothing here counts levels.
 
 // The sidebar shows one tooltip at a time and keys it by the row's own ADDRESS,
 // so two levels' rows cannot collide on a key — and the primary level's rows
@@ -49,7 +50,7 @@ const BACK_TIP_KEY = "rail-level-back";
 // Where a reader who never walked into the section is sent when they walk out
 // of it: a deep link carries no origin, and an invented one would be a claim
 // about where they had been.
-const BRIEF: Route = { screen: "brief" };
+const BRIEF: Route = { screen: "home" };
 
 // What a walk between levels needs to remember, and both halves of it outlive
 // the panel — because they have to. A section route swaps one rail component for
@@ -236,7 +237,13 @@ function NavLevelRow({
           either way. */}
       <span className="navlabel">{label}</span>
       {count !== undefined && count > 0 && (
-        <span className="count">{formatNumber(count, locale)}</span>
+        // The wrapper only places the figure: trailing in a row, pinned to
+        // the glyph's corner when the rail is collapsed or a phone bar.
+        <span className="count">
+          <Badge variant="primary" tone="accent">
+            {formatNumber(count, locale)}
+          </Badge>
+        </span>
       )}
       {/* Inside the row, not beside it: the tooltip sits outside the row's box
           but within its subtree, so moving the pointer onto it never leaves the
@@ -270,13 +277,35 @@ function NavLevelGroupView({
   centreAfter?: string;
 }>) {
   const t = useT();
+  // The id that ties the group to the words naming it. DERIVED from the message
+  // key and never generated, so it is the same across renders and the same in a
+  // snapshot — and the key is already what makes a group unique in its level,
+  // being the React key the level maps these with.
+  const labelId = group.headingKey ? `navgroup-${group.headingKey}` : undefined;
   return (
-    <div className="navgroup">
-      {/* The heading keeps its box in both states — collapsed it hides its text
-          and draws a hairline inside the same space. Swapping it for a shorter
-          <hr> re-spaced every group and drifted the icons. */}
+    // A named GROUP, not a heading and its section. The words name a set of
+    // links inside a navigation landmark, which is where a reader meets them;
+    // as a heading they were a rung in the document outline for every rail
+    // group, and ten rungs that lead nowhere is what a heading list becomes.
+    // The role and the name arrive together or not at all: the level's lead
+    // group carries no words (the Home row stands on its own), and an unnamed
+    // group is one more box to step into and back out of with nothing said.
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: `role` and `aria-labelledby` are the same conditional — a group either has words and is named by them, or has neither. The rule reads the two attributes apart and cannot see that they cannot disagree.
+    <div
+      className="navgroup"
+      role={labelId ? "group" : undefined}
+      aria-labelledby={labelId}
+    >
+      {/* Collapsed the label hides its text and draws a hairline inside the same
+          space — it keeps its box in both states, and swapping it for a shorter
+          <hr> re-spaced every group and drifted the icons. The group is still
+          NAMED there: a hidden element referenced by `aria-labelledby` is read
+          for the name, which is the whole reason the name is wired this way
+          rather than taken from the content. */}
       {group.headingKey && (
-        <h2 className="navheading">{t(group.headingKey)}</h2>
+        <div className="navheading" id={labelId}>
+          {t(group.headingKey)}
+        </div>
       )}
       {group.items.map((entry) => (
         <Fragment key={entry.id}>

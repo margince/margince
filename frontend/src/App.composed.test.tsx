@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -64,7 +64,6 @@ describe("extension routes (composed registry)", () => {
     // The published operations, not decoration: this is the whole content of a
     // unit surface at this stage, and a screen that resolved the descriptor and
     // then rendered nothing from it would pass a name-only assertion.
-    expect(screen.getByText("Published operations")).toBeTruthy();
     expect(screen.getByText("List demo notes — GET /ext/notes")).toBeTruthy();
   });
 

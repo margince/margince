@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import {
@@ -373,7 +373,7 @@ describe("the other fact-picking surfaces", () => {
   it("refuses a fact past the ceiling on the review card, and says why", async () => {
     const user = userEvent.setup();
     render(<ConfirmHarness initial={AT_CAP} />);
-    const refused = screen.getByRole("button", { name: /Office 100(?!\d)/ });
+    const refused = screen.getByRole("checkbox", { name: /Office 100(?!\d)/ });
 
     expect(refused).toBeDisabled();
     expect(screen.getByText(CAP_SENTENCE)).toBeInTheDocument();
@@ -388,20 +388,20 @@ describe("the other fact-picking surfaces", () => {
     const user = userEvent.setup();
     render(<ConfirmHarness initial={AT_CAP} />);
 
-    await user.click(screen.getByRole("button", { name: /Office 0(?!\d)/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Office 0(?!\d)/ }));
 
     expect(keysOf()).toHaveLength(MAX_SELECTED_FACTS - 1);
     expect(keysOf()).not.toContain(MANY[0].value_key);
     expect(screen.queryByText(CAP_SENTENCE)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Office 100(?!\d)/ }),
+      screen.getByRole("checkbox", { name: /Office 100(?!\d)/ }),
     ).toBeEnabled();
   });
 
   it("refuses a fact past the ceiling on the edit form, and says why", async () => {
     const user = userEvent.setup();
     render(<FormHarness initial={AT_CAP} />);
-    const refused = screen.getByRole("button", { name: /Office 100(?!\d)/ });
+    const refused = screen.getByRole("checkbox", { name: /Office 100(?!\d)/ });
 
     expect(refused).toBeDisabled();
     expect(screen.getByText(CAP_SENTENCE)).toBeInTheDocument();
@@ -416,7 +416,7 @@ describe("the other fact-picking surfaces", () => {
     const user = userEvent.setup();
     render(<FormHarness initial={[]} />);
 
-    await user.click(screen.getByRole("button", { name: /Office 3(?!\d)/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Office 3(?!\d)/ }));
 
     expect(keysOf()).toEqual([MANY[3].value_key]);
   });
@@ -651,9 +651,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // Identity carries display_name (required, empty) alongside four merely
     // empty-and-optional fields — it must read as blocking.
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
-    expect(identityLink.querySelector('[data-blocking="true"]')).not.toBeNull();
+    expect(identityLink.querySelector(".badge-danger")).not.toBeNull();
 
     // None of buying_intents, common_objections or sales_motion is in
     // REQUIRED_FIELDS — sales can never present as blocking, however many
@@ -666,7 +666,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       name: /Positioning and sales/,
     });
     expect(salesLink.querySelector('[data-blocking="true"]')).toBeNull();
-    expect(salesLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(salesLink.querySelector(".badge-danger")).toBeNull();
     expect(salesLink.querySelector(".ob-triage-nav-advisory")).not.toBeNull();
     const salesItem = salesLink.parentElement as HTMLElement;
     const buyingIntents = within(salesItem).getByRole("button", {
@@ -860,7 +860,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     // display_name is required and empty — the one field that actually
     // blocks confirm, and the only count this section's badge carries.
@@ -878,7 +878,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     const section = identityLink.closest("li");
     if (section === null) {
@@ -996,7 +996,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // first section — the same honest default the live browser starts from
     // before anything has scrolled.
     expect(current).toEqual([
-      within(nav).getByRole("button", { name: /Legal organization/ }),
+      within(nav).getByRole("button", { name: /Legal company/ }),
     ]);
   });
 
@@ -1036,76 +1036,76 @@ describe("CompanyConfirmCard as a triage surface", () => {
     expect(within(salesLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
 
-  const FOUNDER: components["schemas"]["CompanySiteReadPerson"] = {
+  const FOUNDER: components["schemas"]["CompanySiteReadContact"] = {
     name: "Jamie Fox",
     role: "Co-founder",
     evidence_snippet: "Jamie Fox, co-founder, leads product.",
     evidence_url: "https://gradion.com/team",
   };
 
-  // People are a company fact (who to talk to), the same class of thing as
+  // Contacts are a company fact (who to talk to), the same class of thing as
   // an office or a service line — they belong on the board, in the section
   // nav and the group list, not folded into the tail below it.
-  it("promotes people found on the site to their own section on the board", () => {
-    renderTriage([], { ...readWith([]), people: [FOUNDER] });
+  it("promotes contacts found on the site to their own section on the board", () => {
+    renderTriage([], { ...readWith([]), contacts: [FOUNDER] });
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     expect(
-      within(nav).getByRole("button", { name: /^People/ }),
+      within(nav).getByRole("button", { name: /^Contacts/ }),
     ).toBeInTheDocument();
 
-    const heading = screen.getByRole("heading", { name: "People", level: 3 });
+    const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     // The section sits in the group list, the same place every field group
     // does — not in the reference tail further down.
     expect(heading.closest(".ob-triage-groups")).not.toBeNull();
     expect(heading.closest(".ob-triage-readmore")).toBeNull();
     const section = heading.closest("section");
     if (section === null) {
-      throw new Error("expected the People section to exist");
+      throw new Error("expected the Contacts section to exist");
     }
     expect(within(section).getByText("Jamie Fox")).toBeInTheDocument();
     expect(within(section).getByText("Co-founder")).toBeInTheDocument();
   });
 
-  it("says plainly when the read found no people, rather than a zero count", () => {
+  it("says plainly when the read found no contacts, rather than a zero count", () => {
     renderTriage([], readWith([]));
 
-    const heading = screen.getByRole("heading", { name: "People", level: 3 });
+    const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     const section = heading.closest("section");
     if (section === null) {
-      throw new Error("expected the People section to exist");
+      throw new Error("expected the Contacts section to exist");
     }
     expect(
-      within(section).getByText("No people found on your site."),
+      within(section).getByText("No contacts found on your site."),
     ).toBeInTheDocument();
     // No bare digit stands in for the honest sentence, and the section
     // carries no outstanding count of its own in the nav either — nothing
     // here is the human's to resolve.
     expect(within(section).queryByText(/^\d+$/)).not.toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
-    const peopleLink = within(nav).getByRole("button", { name: /^People/ });
-    expect(within(peopleLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
+    const contactsLink = within(nav).getByRole("button", { name: /^Contacts/ });
+    expect(within(contactsLink).queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
 
-  // The count beside People or Facts means "this is what I found", never
+  // The count beside Contacts or Facts means "this is what I found", never
   // "this needs you" — it must equal the section's own content and must
   // never be mistaken, sighted or not, for an outstanding-work count.
-  it("shows how many people the read found in the nav, as a found quantity rather than outstanding work", () => {
+  it("shows how many contacts the read found in the nav, as a found quantity rather than outstanding work", () => {
     const found = [FOUNDER, { ...FOUNDER, name: "Alex Chen", role: "COO" }];
-    renderTriage([], { ...readWith([]), people: found });
+    renderTriage([], { ...readWith([]), contacts: found });
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
-    const peopleLink = within(nav).getByRole("button", {
-      name: /^People.*2 found/,
+    const contactsLink = within(nav).getByRole("button", {
+      name: /^Contacts.*2 found/,
     });
-    expect(within(peopleLink).getByText("2")).toBeInTheDocument();
+    expect(within(contactsLink).getByText("2")).toBeInTheDocument();
     // Never the blocking/advisory pill's own class — a find is not a gap.
-    expect(peopleLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(contactsLink.querySelector(".badge-danger")).toBeNull();
 
-    const heading = screen.getByRole("heading", { name: "People", level: 3 });
+    const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     const section = heading.closest("section");
     if (section === null) {
-      throw new Error("expected the People section to exist");
+      throw new Error("expected the Contacts section to exist");
     }
     expect(within(section).getAllByRole("listitem")).toHaveLength(found.length);
   });
@@ -1136,7 +1136,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       name: /^Facts.*3 found/,
     });
     expect(within(factsLink).getByText("3")).toBeInTheDocument();
-    expect(factsLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(factsLink.querySelector(".badge-danger")).toBeNull();
 
     // The nav's number is the same 3 the section itself renders — one
     // derivation, not a second tally kept in step by hand.
@@ -1258,7 +1258,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
     const identityLink = within(nav).getByRole("button", {
-      name: /Legal organization/,
+      name: /Legal company/,
     });
     const section = identityLink.closest("li") as HTMLElement;
     const advisoryItems = () =>
@@ -1483,8 +1483,8 @@ describe("CompanyConfirmCard as a triage surface", () => {
     const signalByField: Record<string, string> = {
       display_name: "required, still empty",
       industry: "empty",
-      legal_name: "typed by you",
-      registered_address: "from your profile",
+      legal_name: "Typed by you",
+      registered_address: "From your profile",
       offer_summary: "high",
       icp: "medium",
       value_proposition: "low",
@@ -1692,7 +1692,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Save the fact: Founded 2011" }),
+      screen.getByRole("checkbox", { name: "Save the fact: Founded 2011" }),
     );
 
     expect(setSelectedFactKeys).toHaveBeenCalledWith([
@@ -1718,7 +1718,7 @@ function readWith(
     profile_fields: [],
     facts: [...facts],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "hash",

@@ -12,24 +12,20 @@ import {
 import type { ReactNode } from "react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { calendarDay, middayInstant } from "../format/calendarday";
 import { splitEmailBody } from "../format/emailtext";
 import {
   formatDate,
-  formatDayMonth,
-  formatDuration,
   formatMoneyOrAbsent,
   formatNumber,
   formatTimeOfDay,
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { Avatar, Badge, Button } from "./atoms";
+import { Avatar, Badge, Button, OptionCount } from "./atoms";
+import { type BoardDealMail, DealCard } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
-import { PageZones, type PageZonesShape } from "./pagezones";
+import { Eyebrow } from "./eyebrow";
 import { withWhom } from "./participants";
-import { FieldGuard } from "./rbac";
-import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
@@ -39,6 +35,11 @@ import "./composed.css";
 // distinguishable styles through composition.
 
 // ----- Pipeline board -----
+
+// The card itself lives in dealcard.tsx: one concept per file, and the board
+// and its card are two. Re-exported here so a caller of the board finds the
+// card where the catalog names it.
+export { type BoardDealMail, DealCard };
 
 export type BoardRecord = {
   id: string;
@@ -50,34 +51,44 @@ export type BoardDeal = BoardRecord & {
    * The company this deal is with, as a name a reader recognises. Empty for a
    * deal that names no company, which is the one reading that draws nothing.
    */
-  org: string;
+  company: string;
+  /**
+   * The company's own address, when the caller has one to give.
+   *
+   * An href and not an id, for the reason the deal's own `href` is one: this
+   * tier holds no routes, and a design-system card that knew how to build
+   * `#/companies/{id}` would be the app's routing table living in two places.
+   * Absent renders the company as prose, which is what a caller that cannot
+   * link it is saying.
+   */
+  companyHref?: string;
   /** The company's resolved mark. Absent leaves the monogram, which is the
    *  floor rather than a fallback. */
-  orgLogoUrl?: string | null;
+  companyLogoUrl?: string | null;
   /**
    * The company is not this reader's to read: the wire sent no id and named the
    * field in `masked_fields`, so the slot carries the MASK rather than a name.
    *
-   * A flag rather than a node in `org`, for the reason `TimelineEntry.withheld`
+   * A flag rather than a node in `company`, for the reason `TimelineEntry.withheld`
    * is one: the withheld reading is this tier's to spell, and a caller handing
    * in its own words for it is how one reading ends up with two spellings. It
    * also keeps the mark honest — a monogram cut from the word for "withheld"
    * would be a mark no company has.
    */
-  orgWithheld?: boolean;
+  companyWithheld?: boolean;
   /**
    * The company's name could not be READ — the caller's lookup failed rather
-   * than answering. A distinct flag from `orgWithheld`, because the two say
+   * than answering. A distinct flag from `companyWithheld`, because the two say
    * opposite things about the reader: withheld means the answer exists and is
    * not theirs, unreadable means nobody got an answer at all.
    *
-   * It exists because the alternative is worse than either. An empty `org` is
+   * It exists because the alternative is worse than either. An empty `company` is
    * the reading for a deal that names NO company, and a failed lookup falling
    * into it tells the reader the deal is unlinked when it is linked to a
    * company they simply could not fetch. The table's own company cell has had
    * this reading all along; this is the card's half of it.
    */
-  orgUnreadable?: boolean;
+  companyUnreadable?: boolean;
   /**
    * The deal's money, as the two halves it actually has: an integer minor
    * amount and its ISO currency, either of which can be missing on a deal
@@ -109,6 +120,16 @@ export type BoardDeal = BoardRecord & {
    * told apart.
    */
   owner?: string | null;
+  /**
+   * The newest email on the deal that the whole workspace may see, as how long
+   * ago it was and which way it went. A span rather than an instant, for the
+   * reason `ageMs` is one: the caller owns the clock, and a card that read
+   * `Date.now()` would be a card no test could pin. Absent or null on a deal
+   * nobody has mailed about, and the card then draws no mail line at all —
+   * "no mail yet" is a fact the timeline states, not one worth a row on every
+   * fresh card in a column.
+   */
+  lastEmail?: BoardDealMail | null;
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -183,226 +204,6 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   currency: string | null;
 };
 
-/**
- * The company slot on a deal card, in the four readings a company has.
- *
- * Withheld is the MASK — the same `FieldGuard` control the deals table's
- * company cell draws, so one refusal has one spelling wherever it is read. A
- * name that could not be read says so, in the same words the shared reference
- * resolver uses for its own failed read. A company the caller named takes its
- * mark and its name. Only a deal that names no company draws nothing, which is
- * the one reading an empty slot states truthfully.
- */
-function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
-  const t = useT();
-  if (deal.orgWithheld) {
-    return (
-      <span className="deal-org">
-        <FieldGuard mode="masked" />
-      </span>
-    );
-  }
-  if (deal.orgUnreadable) {
-    return (
-      <span className="deal-org">
-        <span className="deal-org-name">{t("ref.nameLoadFailed")}</span>
-      </span>
-    );
-  }
-  if (!deal.org) {
-    return null;
-  }
-  return (
-    <span className="deal-org">
-      <Avatar name={deal.org} src={deal.orgLogoUrl} shape="organization" />
-      {/* The name needs a box of its own to be truncated in: a bare text node
-          has nothing for the ellipsis to apply to, and wraps under its own
-          mark instead. */}
-      <span className="deal-org-name">{deal.org}</span>
-    </span>
-  );
-}
-
-/**
- * Who carries the deal, as a mark at the edge of the company line.
- *
- * A monogram is not an answer on its own — a teammate has to decode it — so the
- * mark carries the full name as its label, which a screen reader gets as part
- * of the card's own name and a pointer gets as a tip. The tip grants no tab
- * stop of its own: the card is a link and already has one, and a second stop
- * inside it would be a control that does nothing.
- */
-function DealOwner({ name }: Readonly<{ name: string }>) {
-  const tip = useTooltip<HTMLSpanElement>(name);
-  return (
-    <span
-      className="deal-owner"
-      role="img"
-      aria-label={name}
-      ref={tip.ref}
-      {...tip.trigger}
-    >
-      <Avatar name={name} size="xs" />
-      {tip.tip}
-    </span>
-  );
-}
-
-/**
- * When the deal closes, on the card's figure line.
- *
- * Read as a calendar day in the record's zone, never as the instant midnight
- * UTC — that instant is the previous date for half the world. The tone marks
- * the DATE when it is one nobody confirmed or one already behind us, and says
- * so in words for a reader who does not get the colour; the deal strip states
- * the same fact the same two ways.
- */
-function DealCloses({
-  day,
-  provisional,
-  zone,
-}: Readonly<{ day: string; provisional: boolean; zone: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const overdue = day < calendarDay(new Date(), zone);
-  const classes =
-    provisional || overdue ? "deal-closes deal-closes-warn" : "deal-closes";
-  return (
-    <span className={classes}>
-      {t("deal.closes", {
-        date: formatDayMonth(middayInstant(day, zone), locale, zone),
-      })}
-      {provisional && (
-        <span className="sr-only"> · {t("deal.closesProvisional")}</span>
-      )}
-    </span>
-  );
-}
-
-/**
- * One deal, as a card on the board.
- *
- * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
- * work in front of the reader, and a board is scanned: three coloured chips per
- * card turned five columns into a field of colour with the deal names competing
- * against it. The words are a column in the deals table and a panel on the
- * record, which are the two places a reader goes to ask how something is filed.
- * What stays here is what a reader triages by — who it is with, what it is,
- * what it is worth, how long it has sat, and what is wrong with it.
- */
-export function DealCard({
-  deal,
-  href,
-  zone,
-  onOpen,
-  dragHandlers,
-}: Readonly<{
-  deal: BoardDeal;
-  /**
-   * The IANA zone the close date is read in. A close date is a calendar day,
-   * and a day formatted as if it were an instant lands on the previous date
-   * for every reader west of Greenwich — so the card takes the zone the record
-   * lives in, the same way the timeline does, rather than the browser's.
-   */
-  zone: string;
-  /**
-   * The deal's own address.
-   *
-   * An anchor and not a button, which is what this was: a card that opens a
-   * record is a link, and drawn as a button it could not be opened in a new
-   * tab, middle-clicked, or copied — while every other record row in the
-   * product could. The board is the one surface where a rep wants three deals
-   * open side by side, so it was the worst place to lose that.
-   *
-   * The address arrives as a prop because this tier holds no routes: it is the
-   * same reason `OffsiteLink` takes an href and `ProjectLinks` takes an
-   * adapter.
-   */
-  href: string;
-  /**
-   * What a press does BESIDE following the link, and the reason the event
-   * comes with it: the board's card is draggable, and the click that ends a
-   * drag must not also navigate. A caller that needs to refuse the press calls
-   * `preventDefault` on the event it is handed.
-   */
-  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
-  dragHandlers?: {
-    draggable: true;
-    onDragStart: (event: React.DragEvent) => void;
-  };
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // No `stalled` class: the warn Badge below says it in words, and an edge
-  // stripe saying the same thing is one statement drawn twice — the reader who
-  // cannot see colour reads the badge, and the reader who can read both.
-  const classes = [
-    "deal-card",
-    deal.staged ? "staged" : "",
-    deal.archived ? "archived" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <a
-      href={href}
-      className={classes}
-      data-deal={deal.id}
-      onClick={(event) => onOpen?.(deal, event)}
-      {...dragHandlers}
-    >
-      {/* Read in the order a rep asks (composed.css says why): what needs
-          them, on this card, if anything; whose deal it is; what it is worth
-          and when it closes; and what it is called. */}
-      {(deal.staged ||
-        deal.stalled ||
-        deal.singleThreaded ||
-        deal.archived) && (
-        <span className="deal-flags">
-          {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
-          {deal.singleThreaded && (
-            <Badge quiet tone="danger">
-              {t("deal.singleThreaded")}
-            </Badge>
-          )}
-          {deal.stalled && (
-            <Badge quiet tone="warn">
-              {t("deal.stalled")}
-            </Badge>
-          )}
-          {/* How long it has sat is the size of the stall, and only then: on a
-              healthy card the number is a fact nobody acts on. */}
-          {deal.stalled && (
-            <span className="deal-age">
-              {formatDuration(deal.ageMs, locale)}
-            </span>
-          )}
-          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
-        </span>
-      )}
-      <span className="deal-head">
-        <DealCardCompany deal={deal} />
-        {deal.owner && <DealOwner name={deal.owner} />}
-      </span>
-      <span className="deal-figure">
-        <span className="deal-value">
-          {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
-        </span>
-        {deal.closeDate ? (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        ) : (
-          <span className="deal-closes">{t("deal.undated")}</span>
-        )}
-      </span>
-      <span className="deal-name">{deal.name}</span>
-    </a>
-  );
-}
-
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
   /**
@@ -443,6 +244,8 @@ type DealBoardProps = BoardHandlers<BoardDeal> & {
    */
   cardHref: (deal: BoardDeal) => string;
   onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+  /** Each card's mail flyout — see `DealCard`'s `mailAside`. */
+  mailAside?: (deal: BoardDeal) => ReactNode;
   /** The zone a close date is read in — see `DealCard`'s `zone`. */
   zone: string;
 };
@@ -525,15 +328,20 @@ function BoardLayout<Record extends BoardRecord>({
                 three open stages focusable to no effect. */}
             <div className="board-col-head" {...foldProps(column)}>
               <span className="stage">{column.label}</span>
-              {/* TWO SPANS, not one composed string. The name is data of
+              {/* ITS OWN NODE, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
                   and must not. Written as "{label}: {count}" into the truncating
                   span, a long stage name ellipsised the figure away — which is
                   the one thing this head was rearranged to keep on screen.
-                  Hidden from a screen reader, which is told "12 deals" below
-                  with the unit this bare figure leaves out. */}
+                  `OptionCount` is the product's one count chip, so the figure
+                  beside a stage is drawn exactly as the figure beside a tab.
+                  The WRAPPER is what carries `aria-hidden`: the chip speaks its
+                  own figure, and this column already tells a screen reader "12
+                  deals" below, with the unit a bare figure leaves out — so the
+                  whole chip, separator included, stays out of the accessible
+                  tree rather than announcing the number twice. */}
               <span className="board-col-count" aria-hidden="true">
-                {formatNumber(column.count ?? column.deals.length, locale)}
+                <OptionCount count={column.count ?? column.deals.length} />
               </span>
               {money && (
                 <span className="prob">
@@ -591,12 +399,18 @@ function BoardLayout<Record extends BoardRecord>({
 
                   It is a SENTENCE, and it takes the wrapping class rather than
                   the weighted figure's: sharing that class ellipsised it to
-                  "Loaded only — filter to My deals fo…" in a 240px stage. */}
-              {money && column.sumHidden && (
-                <span className="board-col-refusal">
-                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
-                </span>
-              )}
+                  "Loaded only — filter to My deals fo…" in a 240px stage.
+
+                  An EMPTY column says nothing: with no deals counted there is
+                  no sum to refuse, and ten columns repeating the sentence over
+                  a blank board read as ten errors. */}
+              {money &&
+                column.sumHidden &&
+                (column.count ?? column.deals.length) > 0 && (
+                  <span className="board-col-refusal">
+                    {column.sumHiddenReason ?? t("board.mixedCurrencies")}
+                  </span>
+                )}
             </div>
             {!column.collapsed &&
               column.deals.map((record) => (
@@ -636,6 +450,7 @@ export function PipelineBoard<Record extends BoardRecord>(
           href={props.cardHref(deal)}
           zone={props.zone}
           onOpen={props.onOpen}
+          mailAside={props.mailAside}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />
       )}
@@ -651,7 +466,7 @@ export function PipelineBoard<Record extends BoardRecord>(
 
 /**
  * TimelineGroup is a run of entries the reader sees as ONE event: a
- * conversation, or one message sent to several people. It lives here with the
+ * conversation, or one message sent to several contacts. It lives here with the
  * component that renders it — the rules that BUILD one are a screen concern,
  * but the shape is the list's own vocabulary.
  */
@@ -675,7 +490,7 @@ export type TimelineEntry = {
   //
   // `change` is not an activity: it is a field edit projected from the audit
   // spine. It rides the same list because what was said to an account and what
-  // was changed about it are one chronology to the person reading them — kept
+  // was changed about it are one chronology to the reader reading them — kept
   // apart, a rep comparing "we told them X" against "someone set stage to Y"
   // had to hold two orderings in their head.
   kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
@@ -707,9 +522,9 @@ export type TimelineEntry = {
    */
   counterparts?: string;
   /**
-   * The same people, one name each, before they were joined into the phrase
+   * The same contacts, one name each, before they were joined into the phrase
    * above. A thread lists everyone it was with and draws each sender's face,
-   * and both need a person, not a phrase: a set of phrases lists "Ida Keller"
+   * and both need a contact, not a phrase: a set of phrases lists "Ida Keller"
    * and "Ida Keller, Marc Dubois" as two entries, and a monogram of a phrase
    * is nobody's. Absent where nothing resolved a name, exactly as the phrase.
    */
@@ -839,369 +654,6 @@ const TIMELINE_ICON = {
   message: MessageCircle,
   change: PencilLine,
 } as const;
-
-// Where a record's verbs land. Three places can hold them — beside the
-// standing column, on the identity's own row, or in a band under the header —
-// and the choice is made once here rather than restated as a condition at
-// each of the three, where a reader had to hold all three at once to know
-// which one wins.
-function actionsPlacement(
-  actions: ReactNode,
-  inline: boolean | undefined,
-  controls: ReactNode,
-): "none" | "inline" | "controls" | "below" {
-  if (!actions) {
-    return "none";
-  }
-  if (inline) {
-    return "inline";
-  }
-  return controls ? "controls" : "below";
-}
-
-// The identity block: who this record is, and the verbs and standing that
-// belong beside the name rather than under it. Split from RecordView because
-// the two answer different questions — this one what the record IS, the other
-// how its columns are laid out — and reading either meant holding both.
-function RecordHead({
-  name,
-  avatarSrc,
-  nameBadge,
-  subtitle,
-  pulse,
-  badges,
-  controls,
-  actions,
-  actionsAt,
-  wide,
-  markShape,
-}: Readonly<{
-  name: string;
-  avatarSrc?: string | null;
-  nameBadge?: ReactNode;
-  subtitle?: ReactNode;
-  pulse?: ReactNode;
-  badges?: ReactNode;
-  controls?: ReactNode;
-  actions?: ReactNode;
-  actionsAt: "none" | "inline" | "controls" | "below";
-  wide: boolean;
-  markShape: "person" | "organization";
-}>) {
-  const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
-  return (
-    <header className={wide ? "record-head record-head-wide" : "record-head"}>
-      {/* The wide header's chip is the page's own mark rather than a marker
-          beside a name, so it takes the largest rung. This used to be a
-          `.record-head-wide .avatar` override in composed.css, which meant the
-          chip's size was decided by a class on its parent and the `size` prop
-          said something that was not true. */}
-      <Avatar
-        name={name}
-        src={avatarSrc}
-        size={wide ? "xl" : "md"}
-        shape={markShape}
-      />
-      <div className="record-id">
-        {/* The record page's name, and the one badge that belongs on ITS
-            OWN line — a record's standing, read immediately after what it
-            is named, not one fact among the others under it. A div, not a
-            p, for the same reason as record-sub below: a caller passing
-            structure there must not land inside a paragraph the browser
-            silently un-nests. */}
-        <div className="record-name-row">
-          {/* The shell's page head yields to it on a record route — it
-              prints the trail that leads here and nothing at heading
-              level, so this stays the page's one h1. */}
-          {/* A record's name is user data of unbounded length. It is drawn on
-              one line and truncated rather than allowed to grow the header;
-              the tooltip is what carries the whole of it, and appears only
-              when there was more name than row. */}
-          <h1 ref={nameTip.ref} {...nameTip.trigger}>
-            {name}
-            {nameTip.tip}
-          </h1>
-          {nameBadge}
-        </div>
-        {/* A div, not a p: a caller passing structure — the company page's
-            description line plus its chip row — would otherwise nest block
-            elements inside a paragraph, which the browser silently un-nests,
-            leaving the chips outside the header they belong to. */}
-        {subtitle && <div className="record-sub">{subtitle}</div>}
-        {pulse && <div className="record-pulse">{pulse}</div>}
-      </div>
-      {badges && <div className="record-badges">{badges}</div>}
-      {/* The record's standing and its verbs, stacked at the top right. Only a
-          caller that passes `controls` gets this column: every other record
-          keeps the action row under the header, which is where its own layout
-          puts it. */}
-      {controls && (
-        <div className="record-controls">
-          {controls}
-          {actionsAt === "controls" && (
-            <div className="record-actions">{actions}</div>
-          )}
-        </div>
-      )}
-      {actionsAt === "inline" && (
-        <div className="record-actions record-actions-inline">{actions}</div>
-      )}
-    </header>
-  );
-}
-
-export function RecordView({
-  name,
-  avatarSrc,
-  nameBadge,
-  subtitle,
-  badges,
-  pulse,
-  actions,
-  controls,
-  markShape = "person",
-  actionsInline,
-  band,
-  rail,
-  railLabel,
-  aside,
-  asideLabel,
-  timeline,
-  timelineGroups,
-  onOpenThread,
-  timelineHeader,
-  timelineFooter,
-  timelineNotice,
-  tabs,
-  zone,
-  children,
-}: Readonly<{
-  name: string;
-  // The record's own image for the header chip — a company's resolved logo.
-  // Null or absent renders the deterministic monogram, which is the floor for
-  // every record type that has no image at all.
-  avatarSrc?: string | null;
-  // The record's standing, read on the SAME line as its name rather than as
-  // one more fact under it — the company page's editable lifecycle badge.
-  // Absent on every record that has no such single, always-shown value.
-  nameBadge?: ReactNode;
-  // A string for the records whose subtitle IS one line of joined facts, or a
-  // node for a record that needs structure under its name — the company page's
-  // editable description plus its row of attribute chips.
-  subtitle?: ReactNode;
-  badges?: ReactNode;
-  // A one-line "state of this record" strip under the name — warmth, last
-  // touch, owner. Absent on records that have no such summary.
-  pulse?: ReactNode;
-  // The record's verbs, kept beside the identity rather than scattered
-  // through the body.
-  actions?: ReactNode;
-  // The record's standing — the values a reader changes in place rather than
-  // acts on: lifecycle, owner. Passing it moves the action row up beside them,
-  // which is the company page's layout; a record that passes none keeps the
-  // action row under the header.
-  controls?: ReactNode;
-  // What KIND of record this is, which decides whether its mark is drawn round
-  // like a face or as a rounded square like a logo. Defaults to `person`,
-  // which is what every record but an organization is.
-  markShape?: "person" | "organization";
-  // Puts `actions` on the SAME row as the identity block, right-aligned,
-  // instead of the default full-width row underneath the header (or the
-  // stacked column `controls` produces). An explicit opt-in: every other
-  // record keeps its actions where its own layout already puts them.
-  actionsInline?: boolean;
-  // The three-zone record page: rail is the left column (what this record
-  // IS), children the middle (what is happening), aside the right (the
-  // business around it). With neither rail nor aside the layout collapses
-  // to the single column every existing caller already renders.
-  // Full-width content between the identity and the columns: the account's
-  // readings and its tab bar. Absent on a record that has neither.
-  band?: ReactNode;
-  rail?: ReactNode;
-  // What the rail column IS, on the same rule as asideLabel below: it defaults
-  // to the record's profile because that is what a rail usually holds, and a
-  // page whose rail holds something else names it. A record page that also has
-  // a Profile TAB is exactly that case — two regions called "Profile", one of
-  // them wrong, is a dead end for anyone navigating by landmark.
-  railLabel?: string;
-  aside?: ReactNode;
-  // What the aside column IS, for a reader navigating by landmark. Defaults to
-  // the record's context; a page whose aside holds something else names it,
-  // because two regions with one name is a dead end for anyone moving between
-  // them.
-  asideLabel?: string;
-  // The entries, or undefined when this view has NO timeline at all. The
-  // distinction is the same one every card on a record page keeps: absent is
-  // not empty. `[]` renders the section with its honest "nothing logged yet";
-  // undefined omits the section, for a view whose body is not a history.
-  timeline?: TimelineEntry[];
-  /**
-   * When set, the timeline renders CONVERSATIONS rather than messages. The
-   * flat list stays the default: a person's timeline is a handful of rows and
-   * grouping it would collapse events that were never one.
-   */
-  timelineGroups?: readonly TimelineGroup[];
-  onOpenThread?: (threadKey: string) => void;
-  // Controls above the timeline list (filters), and below it (load more).
-  timelineHeader?: ReactNode;
-  timelineFooter?: ReactNode;
-  // When set, replaces the timeline list — e.g. an overlay-mode "not available"
-  // note, since the mirror cannot serve entity-scoped activity reads. Keeps the
-  // section honest instead of rendering an empty list that reads as "no activity".
-  timelineNotice?: ReactNode;
-  // The bar that chooses which part of the record is below it. It runs the
-  // full width over the columns, because the details pane opens under it
-  // (DESIGN.md §6): the switch at the row's end governs the column beside the
-  // work, and a strip confined to the work column would end where the pane it
-  // opens begins. The slot exists so the interval under it and the
-  // one-row-that-scrolls behaviour are the record page's, spelled once — two
-  // pages had already written the same wrapper under two names.
-  tabs?: ReactNode;
-  zone: string;
-  children?: ReactNode;
-}>) {
-  const t = useT();
-  // The grid follows which slots are actually filled, because a three-column
-  // template with an empty column does not collapse: it reserves the space and
-  // leaves the story narrower than the rail beside it.
-  const shape = zonesShape(Boolean(rail), Boolean(aside));
-  // Also when the verbs sit on the identity's own row: that record's block is
-  // a name over a description, a chip row and a meta line, and centring the
-  // mark against a stack that tall floats it to the middle of the chips
-  // instead of beside the name it belongs to.
-  //
-  // These are the SAME two slots `actionsPlacement` reads, which is what makes
-  // "a wide head never puts its verbs in the row below it" a fact about the
-  // component rather than a convention its callers keep: a head is wide only
-  // if it was handed `controls` or `actionsInline`, and either of those places
-  // the verbs inside the header. The record-head-wide rules in composed.css
-  // rest on that.
-  const headerWide = Boolean(controls) || Boolean(actionsInline);
-  const actionsAt = actionsPlacement(actions, actionsInline, controls);
-  return (
-    /* The record's own blocks arrive in order — head, then actions, then the
-       band, then the zones — rather than the whole record fading in as one
-       plate. It is an `.arrive-stack` and therefore not itself an arriving
-       block (design-system/enter.css), which is what keeps the two fades from
-       multiplying. */
-    <div className="arrive-stack">
-      <RecordHead
-        name={name}
-        avatarSrc={avatarSrc}
-        nameBadge={nameBadge}
-        subtitle={subtitle}
-        pulse={pulse}
-        badges={badges}
-        controls={controls}
-        actions={actions}
-        actionsAt={actionsAt}
-        wide={Boolean(headerWide)}
-        markShape={markShape}
-      />
-      {actionsAt === "below" && <div className="record-actions">{actions}</div>}
-      {/* The band runs the full width of the record, between the identity and
-          the columns. What describes the WHOLE account — its readings, the bar
-          that chooses which part of it to read — belongs here rather than in
-          the work column, where it would sit beside the rail as though it were
-          one more thing to read rather than the frame around all of them. */}
-      {band && <div className="record-band">{band}</div>}
-      {tabs && <div className="record-tabs">{tabs}</div>}
-      <PageZones
-        shape={shape}
-        className={zonesClassName(shape)}
-        rail={rail}
-        railLabel={railLabel ?? t("record.profile")}
-        railClassName="record-rail"
-        /* An `.arrive-stack`: the work column's blocks arrive one after the
-           next, and — because a tab's panel is a fresh element while the strip
-           above it is not — switching tabs fades the new panel in without
-           touching the strip. That is the whole tab-panel transition; no
-           wrapper, no state, and nothing to keep in step with the strip. */
-        mainClassName="arrive-stack"
-        main={
-          <>
-            {children}
-            {timeline && (
-              /* The record's story, under whatever the open tab drew. It owns
-                 the break above it because the work column owns no interval —
-                 the deal's and the project's bodies met the chronology's
-                 heading at the border. */
-              <section
-                className="record-timeline"
-                aria-label={t("record.timeline")}
-              >
-                <h2 className="t-sub">{t("record.timeline")}</h2>
-                {/* The dials above the list are one block with one rhythm: the
-                    cuts through the chronology, then the narrowing of whichever
-                    cut is open. Rendered as bare siblings they touched, and two
-                    rows of controls with no interval between them read as one
-                    control that has wrapped. */}
-                {timelineHeader && (
-                  <div className="timeline-header">{timelineHeader}</div>
-                )}
-                {/* The chronology sits on a card of its own, like every other
-                    body on the page. Loose on the page ground it read as the
-                    page's own text rather than as one of the record's
-                    sections, and the rail down its left had nothing to run
-                    inside. The notice takes no card: a sentence about why
-                    there are no rows is not a list of them. */}
-                {timelineNotice ?? (
-                  <div className="timeline-card">
-                    {timelineGroups ? (
-                      <GroupedTimelineList
-                        groups={timelineGroups}
-                        zone={zone}
-                        onOpenThread={onOpenThread}
-                      />
-                    ) : (
-                      <TimelineList entries={timeline} zone={zone} />
-                    )}
-                  </div>
-                )}
-                {timelineFooter}
-              </section>
-            )}
-          </>
-        }
-        aside={aside}
-        asideLabel={asideLabel ?? t("record.context")}
-        asideClassName="record-aside"
-      />
-    </div>
-  );
-}
-
-// Which columns this record actually has. The grid itself is `PageZones` — a
-// record page is one page shape among others, and the ratios and the folds are
-// not the record's to own.
-function zonesShape(hasRail: boolean, hasAside: boolean): PageZonesShape {
-  if (hasRail && hasAside) {
-    return "both";
-  }
-  if (hasRail) {
-    return "rail";
-  }
-  if (hasAside) {
-    return "aside";
-  }
-  return "single";
-}
-
-// What the record adds to the grid container on top of the layout.
-//
-// `arrive-stack` on every shape, including the one with no columns: a record's
-// blocks arrive individually (design-system/enter.css), and a container that is
-// a stack does not itself arrive. Leaving one link of that chain unmarked is
-// what makes a block fade in BEHIND a parent that is still fading in — two
-// fades multiplied, which reads as the content being dim rather than as it
-// arriving.
-//
-// `record-zones` carries only the phone bottom clearance for the sticky action
-// bar (composed.css), which is why the single-column shape does not get it: a
-// record with no columns never had it either.
-function zonesClassName(shape: PageZonesShape): string {
-  return shape === "single" ? "arrive-stack" : "record-zones arrive-stack";
-}
 
 // A link inside a captured message, rendered as an element rather than as
 // markup: the body is escaped text and stays that way. The visible label is the
@@ -1403,15 +855,15 @@ function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   }
   const direction = conversationDirection(entry);
   if (direction === "inbound") {
-    return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
+    return <Badge tone="warning">{t("convo.yourMove")}</Badge>;
   }
   if (direction === "outbound") {
-    return <Badge quiet>{t("convo.waitingOnThem")}</Badge>;
+    return <Badge>{t("convo.waitingOnThem")}</Badge>;
   }
   return null;
 }
 
-function TimelineList({
+export function TimelineList({
   entries,
   zone,
 }: Readonly<{ entries: TimelineEntry[]; zone: string }>) {
@@ -1429,7 +881,7 @@ function TimelineList({
  *
  * A thread is one card, open: what it IS — "3 messages", who with, whose
  * move — over its subject, then the messages themselves. A bulk send is
- * folded, stating "sent to 3 people" before what it says, because the reader
+ * folded, stating "sent to 3 contacts" before what it says, because the reader
  * is scanning for an event rather than for a sentence; expanding it shows the
  * same rows the flat list would have shown, from the same component, so the
  * two can never drift.
@@ -1474,12 +926,11 @@ export function GroupedTimelineList({
 }
 
 /**
- * TimelineWhen is the row's place on the axis: the day, and under it the
- * time of day. The day alone told a reader two calls happened on the 26th
- * and not which came first, or whether the reply landed an hour after the
- * ask or a working day later — the one thing a chronology is opened to
- * settle. The mono face keeps the column straight whatever each date's
- * digits are.
+ * TimelineWhen is the row's place on the axis: the day, and under it the time
+ * of day. The day alone told a reader two calls happened on the 26th and not
+ * which came first, or whether the reply landed an hour after the ask or a
+ * working day later — the one thing a chronology is opened to settle. Tabular
+ * digits keep the column straight whatever each date's digits are.
  */
 function TimelineWhen({
   atIso,
@@ -1487,7 +938,7 @@ function TimelineWhen({
 }: Readonly<{ atIso: string; zone: string }>) {
   const { locale } = useLocale();
   return (
-    <span className="tl-when t-mono">
+    <span className="tl-when t-num">
       {formatDate(atIso, locale, zone)}
       <span className="tl-when-time">
         {formatTimeOfDay(atIso, locale, zone)}
@@ -1514,7 +965,7 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
 }
 
-// The same people one at a time, for a set and for a face. The resolved
+// The same contacts one at a time, for a set and for a face. The resolved
 // names when the adapter had any; otherwise the one phrase the row shows,
 // which is then the best name there is. Nothing on a withheld row, as above.
 function otherSideNames(entry: TimelineEntry): readonly string[] {
@@ -1530,7 +981,7 @@ function otherSideNames(entry: TimelineEntry): readonly string[] {
 
 // Who a thread was with, as one phrase: the other side's names, each once,
 // joined ONCE at the end — joining per message and then collecting the
-// phrases listed one person under two spellings. Our own seats are not
+// phrases listed one contact under two spellings. Our own seats are not
 // listed: every thread on this record is with us, and a name that appears
 // on all of them tells a reader nothing.
 function threadParticipants(
@@ -1564,9 +1015,18 @@ function messageLead(
     };
   }
   if (entry.direction === "outbound") {
+    // An imported row knows who sent it, and neither "we" nor "you" is that
+    // colleague: the import ran as one administrator, so every row it wrote
+    // reads as that seat's own sending. The author is asked first for the same
+    // reason the provenance tag asks it first.
+    const author =
+      entry.provenance.kind === "human"
+        ? entry.provenance.author?.display_name
+        : undefined;
     const self = entry.provenance.kind === "human" && entry.provenance.self;
     return {
-      actor: self ? t("timeline.thread.you") : t("timeline.thread.we"),
+      actor:
+        author ?? (self ? t("timeline.thread.you") : t("timeline.thread.we")),
       verb: who
         ? t("timeline.thread.sentTo", { who })
         : t("timeline.thread.sent"),
@@ -1584,8 +1044,7 @@ function messageLead(
 //
 // Answers the state; the badge at the mount below draws it. Reading a
 // message's access word is not drawing the message, and keeping the two apart
-// is what lets that be seen rather than argued: there is no markup here to
-// check.
+// lets that be seen rather than argued: there is no markup here to check.
 function messageVisibilityState(entry: TimelineEntry): Visibility | null {
   if (entry.withheld) {
     return "withheld";
@@ -1612,8 +1071,7 @@ function threadMessageOpener(entry: TimelineEntry): (() => void) | undefined {
 
 // The mark beside a message: the sender's face on their word, a send mark on
 // ours, a lock on one the reader may not open, and the kind's own icon where
-// nobody is named. A monogram of "We" or of "Them" would be a face nobody
-// has.
+// nobody is named. A monogram of "We" or of "Them" would be a face nobody has.
 function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   if (entry.withheld) {
     return (
@@ -1622,11 +1080,11 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
       </span>
     );
   }
-  // The face is ONE person's — the first named on the other side — never
+  // The face is ONE contact's — the first named on the other side — never
   // the phrase the lead line shows, whose monogram would be nobody's.
   const [face] = otherSideNames(entry);
   if (entry.direction === "inbound" && face) {
-    return <Avatar name={face} size="xs" />;
+    return <Avatar name={face} />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
@@ -1675,27 +1133,36 @@ function MessageWords({
 function ThreadMessage({
   entry,
   zone,
-}: Readonly<{ entry: TimelineEntry; zone: string }>) {
+  cardDay,
+}: Readonly<{
+  entry: TimelineEntry;
+  zone: string;
+  // The day the card's gutter already prints: the newest member's. A member
+  // from that day says only its time; one from another day says its day too.
+  cardDay: string;
+}>) {
   const { locale } = useLocale();
   const t = useT();
   const lead = messageLead(entry, t);
   const visibility = messageVisibilityState(entry);
   const onOpen = threadMessageOpener(entry);
+  const day = formatDate(entry.atIso, locale, zone);
   const content = (
     <>
       <MessageMark entry={entry} />
       <span className="tl-msg-body">
         <span className="tl-msg-lead">
           <b className="tl-msg-who">{lead.actor}</b>
-          {lead.verb && <span className="tl-msg-verb">{lead.verb}</span>}
+          {lead.verb && <span>{lead.verb}</span>}
           {visibility && <VisibilityBadge state={visibility} />}
         </span>
         <MessageWords entry={entry} t={t} />
       </span>
-      {/* Day and time both: the card's gutter carries the newest message's
-          day, and an older member may be from another one. */}
-      <span className="tl-msg-when t-mono">
-        {formatDate(entry.atIso, locale, zone)}{" "}
+      {/* The time, and the day only when it is not the one the gutter already
+          shows: a one-message thread printed its date twice a hand apart, and
+          an older member from another day still needs its own. */}
+      <span className="tl-msg-when t-num">
+        {day !== cardDay && `${day} `}
         {formatTimeOfDay(entry.atIso, locale, zone)}
       </span>
     </>
@@ -1765,13 +1232,9 @@ function ThreadRow({
       <div className="tl-body">
         <div className="tl-thread">
           <span className="tl-head">
-            <Badge>{t("timeline.group.kind")}</Badge>
-            <span className="tl-group-count">
-              {groupCountLabel(group, locale)}
-            </span>
-            {participants && (
-              <span className="tl-thread-with">{participants}</span>
-            )}
+            <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
+            <span>{groupCountLabel(group, locale)}</span>
+            {participants && <span>{participants}</span>}
             {/* Whose move the conversation waits on, read off its newest
                 message — on the card that stands for it, never on the
                 members inside. */}
@@ -1794,14 +1257,17 @@ function ThreadRow({
           <ul className="tl-thread-messages">
             {shown.map((entry) => (
               <li key={entry.id}>
-                <ThreadMessage entry={entry} zone={zone} />
+                <ThreadMessage
+                  entry={entry}
+                  zone={zone}
+                  cardDay={formatDate(newest.atIso, locale, zone)}
+                />
               </li>
             ))}
           </ul>
           <span className="tl-meta">
             {folded > 0 && (
               <Button
-                small
                 aria-expanded={allOpen}
                 onClick={() => setAllOpen(!allOpen)}
               >
@@ -1819,7 +1285,7 @@ function ThreadRow({
                 of it. */}
             {group.partial &&
               (threadKey && onOpenThread ? (
-                <Button small onClick={() => onOpenThread(threadKey)}>
+                <Button onClick={() => onOpenThread(threadKey)}>
                   {t("timeline.group.openThread")}
                 </Button>
               ) : (
@@ -1837,7 +1303,7 @@ function ThreadRow({
 // groupCountLabel counts the group's members in words that read. A group of
 // one is reachable both ways — a thread whose other messages are on another
 // page, and a single message the sender attested as a bulk send — and the
-// plural forms rendered "1 messages" and "sent to 1 people" for it.
+// plural forms rendered "1 messages" and "sent to 1 contacts" for it.
 function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
   const base =
@@ -1847,7 +1313,7 @@ function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   });
 }
 
-// BulkGroupRow is one send to several people, folded: the newest copy stands
+// BulkGroupRow is one send to several contacts, folded: the newest copy stands
 // for the send while it is closed, and opening it lists every copy through
 // the ordinary row. A THREAD is not drawn here — it is a conversation, and
 // ThreadRow draws it open, as one card of messages.
@@ -1915,11 +1381,9 @@ function BulkGroupRow({
           </>
         )}
         <span className="tl-meta">
-          <span className="tl-group-count">
-            {groupCountLabel(group, locale)}
-          </span>
+          <span>{groupCountLabel(group, locale)}</span>
           <ProvenanceTag provenance={newest.provenance} />
-          <Button small aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Button aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? t("timeline.group.collapse") : t("timeline.group.expand")}
           </Button>
           {/* A bulk send cannot be completed: it has no thread to ask the
@@ -1967,7 +1431,7 @@ function directionPhrase(
   if (entry.direction === "inbound") {
     return t("timeline.receivedFrom", { who });
   }
-  // A meeting or a note has no side. It still has people in it, and naming
+  // A meeting or a note has no side. It still has contacts in it, and naming
   // them is the whole reason this line exists.
   return t("timeline.withWhom", { who });
 }
@@ -2051,16 +1515,14 @@ export function TimelineRow({
                 inside phrasing content. The row lays out identically, because
                 .tl-body is a flex column either way. */}
       <div className="tl-body">
-        {/* What KIND of thing this was, and which way it went — one line above
-            the headline, because both qualify it and set inline they read as
-            the first words of the subject. */}
+        {/* What KIND of thing this was, as a kicker and not a status, and
+            which way it went — one line above the headline, because both
+            qualify it and set inline they read as the subject's first words. */}
         <span className="tl-head">
-          <Badge>{t(TIMELINE_KIND_LABEL[entry.kind])}</Badge>
-          {/* What the record DID, for a row that is not an exchange: the badge
+          <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
+          {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
-          {entry.qualifier && (
-            <span className="tl-direction">{entry.qualifier}</span>
-          )}
+          {entry.qualifier && <span>{entry.qualifier}</span>}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
               fact about the relationship, which is what the row is for.
@@ -2069,7 +1531,7 @@ export function TimelineRow({
               still says who this record is talking to, which is the thing the
               audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span className="tl-direction">
+            <span>
               {directionPhrase(
                 entry.withheld ? { ...entry, counterparts: undefined } : entry,
                 t,

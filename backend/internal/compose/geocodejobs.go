@@ -27,7 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -36,34 +36,34 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// GeocodeOrganizationArgs is one queued lookup: the tenant and the company.
+// GeocodeCompanyArgs is one queued lookup: the tenant and the company.
 //
 // The ADDRESS IS NOT among them, deliberately. The worker reads it from the
 // row when it runs, so a lookup queued before an edit resolves the address the
 // company actually has rather than the one it had when the job was made. A
 // copy in the args would be the stale-coordinate bug moved one layer out.
-type GeocodeOrganizationArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
+type GeocodeCompanyArgs struct {
+	Workspace ids.UUID `json:"workspace_id"`
+	CompanyID ids.UUID `json:"company_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
-func (GeocodeOrganizationArgs) Kind() string { return "geocode_organization" }
+func (GeocodeCompanyArgs) Kind() string { return "geocode_company" }
 
 // WorkspaceID binds this lookup to its tenant (jobs.WorkspaceScoped).
-func (a GeocodeOrganizationArgs) WorkspaceID() ids.UUID { return a.Workspace }
+func (a GeocodeCompanyArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// GeocodeEnqueueFor builds the in-transaction enqueue the people store calls
+// GeocodeEnqueueFor builds the in-transaction enqueue the contacts store calls
 // when an address is written.
 //
 // Nil-safe by contract, and nil is a real composition: a deployment with no
 // geocoder writes the address and queues nothing. The address is what the
 // caller asked for; the coordinates are what this installation can offer.
-func GeocodeEnqueueFor(enqueue geocodeEnqueuer) people.GeocodeEnqueue {
+func GeocodeEnqueueFor(enqueue geocodeEnqueuer) contacts.GeocodeEnqueue {
 	if enqueue == nil {
 		return nil
 	}
-	return func(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) error {
+	return func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
 		ws, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			// No tenant bound means no job that could ever be worked: River
@@ -71,9 +71,9 @@ func GeocodeEnqueueFor(enqueue geocodeEnqueuer) people.GeocodeEnqueue {
 			// dequeues. Refusing is louder than inserting an orphan.
 			return errors.New("compose: geocoding a company outside any workspace")
 		}
-		return enqueue.EnqueueTx(ctx, tx, GeocodeOrganizationArgs{
-			Workspace:      ws,
-			OrganizationID: orgID.UUID,
+		return enqueue.EnqueueTx(ctx, tx, GeocodeCompanyArgs{
+			Workspace: ws,
+			CompanyID: companyID.UUID,
 		}, geocodeInsertOpts())
 	}
 }
@@ -123,7 +123,7 @@ const (
 	// geocodeMaxWorkers mirrors api/jobs.yaml. One, for the policy reason
 	// stated at the top of this file.
 	geocodeMaxWorkers = 1
-	// geocodeMaxAttempts mirrors people.geocodeMaxAttempts: River stops
+	// geocodeMaxAttempts mirrors contacts.geocodeMaxAttempts: River stops
 	// retrying at the same count the attempt ledger stops accepting.
 	geocodeMaxAttempts = 3
 )
@@ -135,7 +135,7 @@ const (
 // later loses its provider must be answerable, and a worker that was never
 // registered leaves it stuck rather than recorded.
 type geocodeWorker struct {
-	river.WorkerDefaults[GeocodeOrganizationArgs]
+	river.WorkerDefaults[GeocodeCompanyArgs]
 	pool     *pgxpool.Pool
 	geocoder geocode.Client
 }
@@ -157,7 +157,7 @@ func newGeocodeWorker(pool *pgxpool.Pool, geocoder geocode.Client) *geocodeWorke
 // address write asks again forever; a lookup that failed must be remembered
 // too, so the attempt ledger can stop retrying it. The only path that records
 // nothing is the one where there was nothing to ask about.
-func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganizationArgs]) error {
+func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyArgs]) error {
 	args := job.Args
 	// Bound through the shared helper, so the args' own WorkspaceID() IS the
 	// binding: a worker that picked its own could claim one workspace and work
@@ -169,20 +169,20 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		return jobs.FaultContext(ctx, err)
 	}
 	// The lookup reads and writes under an actor of its own, and it needs one:
-	// AddressForGeocode takes organization:read and RecordGeocode takes
-	// organization:update, both of which refuse a context with no principal.
+	// AddressForGeocode takes company:read and RecordGeocode takes
+	// company:update, both of which refuse a context with no principal.
 	//
 	// Nobody noticed until the backfill queued the first job. Every enqueue
 	// before it rode an address WRITE, and no address had been written on an
 	// installation whose companies were seeded before the geocoder was
 	// configured — so the worker had never actually run.
 	wsCtx = geocodeJobActor(wsCtx)
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
-	orgID := ids.From[ids.OrganizationKind](args.OrganizationID)
+	companyID := ids.From[ids.CompanyKind](args.CompanyID)
 
-	address, ok, err := store.AddressForGeocode(wsCtx, orgID)
+	address, ok, err := store.AddressForGeocode(wsCtx, companyID)
 	if err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the address to geocode: %w", err))
 	}
@@ -197,7 +197,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		// the refusal rather than failing keeps the job from retrying against a
 		// provider that will never exist.
 		return jobs.FaultContext(wsCtx,
-			store.RecordGeocode(wsCtx, orgID, people.GeocodeFailed, nil, nil, "", address.InputHash))
+			store.RecordGeocode(wsCtx, companyID, contacts.GeocodeFailed, nil, nil, "", address.InputHash))
 	}
 
 	// THE CACHE IS ASKED FIRST, and it is a policy requirement rather than an
@@ -208,7 +208,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 	if cached, hit, err := store.LookupPlace(wsCtx, address.Query); err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the place cache: %w", err))
 	} else if hit {
-		return jobs.FaultContext(wsCtx, store.RecordGeocode(wsCtx, orgID, people.GeocodeOK,
+		return jobs.FaultContext(wsCtx, store.RecordGeocode(wsCtx, companyID, contacts.GeocodeOK,
 			&cached.Lat, &cached.Lon, cached.Provider, address.InputHash))
 	}
 
@@ -250,10 +250,10 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		// A provider that named a wait gets that wait. Retrying on River's own
 		// schedule when Nominatim has said "not for ten minutes" is how a rate
 		// limit becomes a block.
-		recErr := store.RecordGeocode(wsCtx, orgID, people.GeocodeFailed, nil, nil, "", address.InputHash)
+		recErr := store.RecordGeocode(wsCtx, companyID, contacts.GeocodeFailed, nil, nil, "", address.InputHash)
 		var refused *geocode.ProviderRefusedError
 		if errors.As(err, &refused) && refused.RetryAfter > 0 {
-			recErr = store.RecordGeocodeBackoff(wsCtx, orgID, address.InputHash, refused.RetryAfter)
+			recErr = store.RecordGeocodeBackoff(wsCtx, companyID, address.InputHash, refused.RetryAfter)
 		}
 		// Wrapped so the ROW says what kind of thing went wrong. Unclassified,
 		// it published "the diagnosis is in the process log", which is true and
@@ -273,7 +273,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		// place. A FACT about the address, so it is recorded and NOT retried:
 		// asking again changes nothing until the address itself changes.
 		return jobs.FaultContext(wsCtx,
-			store.RecordGeocode(wsCtx, orgID, people.GeocodeNoMatch, nil, nil, geocodeProvider, address.InputHash))
+			store.RecordGeocode(wsCtx, companyID, contacts.GeocodeNoMatch, nil, nil, geocodeProvider, address.InputHash))
 	}
 	// Remembered BEFORE the row is written, so a failure to record the company
 	// does not also lose the lookup: the point is a fact about a place, and the
@@ -283,22 +283,19 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 	// but a cache that silently stops taking entries makes this installation
 	// re-ask the provider for every place, which is the policy breach the cache
 	// exists to prevent. A reader of river_job.errors should see it.
-	cacheErr := store.RememberPlace(wsCtx, address.Query, people.CachedPlace{
+	cacheErr := store.RememberPlace(wsCtx, address.Query, contacts.CachedPlace{
 		Lat: point.Lat, Lon: point.Lon, Provider: geocodeProvider,
 	})
 	return jobs.FaultContext(wsCtx, errors.Join(
-		store.RecordGeocode(wsCtx, orgID, people.GeocodeOK, &point.Lat, &point.Lon, geocodeProvider, address.InputHash),
+		store.RecordGeocode(wsCtx, companyID, contacts.GeocodeOK, &point.Lat, &point.Lon, geocodeProvider, address.InputHash),
 		cacheErr))
 }
 
 // geocodeJobActor binds the principal a geocode lookup runs as: the
 // installation asking where its own company is, named so an audit row does not
-// have to invent a person who was not involved.
+// have to invent a contact who was not involved.
 func geocodeJobActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:geocode",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:geocode")
 }
 
 // geocodeProvider names what answered, recorded on the row so a later change
@@ -319,12 +316,12 @@ const geocodeProvider = "nominatim"
 func WithGeocoding(inserter *jobs.Runner) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		enqueue := GeocodeEnqueueFor(inserter)
-		// BOTH, because they are two stores. The services read s.peopleStore
-		// and the HTTP transport carries its own, built by newPeopleHandlers —
+		// BOTH, because they are two stores. The services read s.contactsStore
+		// and the HTTP transport carries its own, built by newContactsHandlers —
 		// so wiring one left every address a rep writes marked stale with
 		// nothing coming to resolve it.
-		s.peopleStore = s.peopleStore.WithGeocodeEnqueue(enqueue)
+		s.contactsStore = s.contactsStore.WithGeocodeEnqueue(enqueue)
 		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
-		s.peopleHandlers = s.peopleHandlers.WithGeocodeEnqueue(enqueue)
+		s.contactsHandlers = s.contactsHandlers.WithGeocodeEnqueue(enqueue)
 	}
 }

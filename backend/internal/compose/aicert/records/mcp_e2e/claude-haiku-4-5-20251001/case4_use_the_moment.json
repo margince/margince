@@ -1,0 +1,19 @@
+{
+  "scenario": "case4_use_the_moment",
+  "criteria": [
+    1,
+    6
+  ],
+  "passed": 0,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 78,
+    "output_tokens": 3869,
+    "cache_creation_input_tokens": 15879,
+    "cache_read_input_tokens": 394574,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.0936
+  }
+}

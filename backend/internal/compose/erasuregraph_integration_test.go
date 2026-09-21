@@ -7,13 +7,13 @@ package compose
 
 // Art. 17 over the relationship graph (ADR-0078).
 //
-// The graph stores two things about a data subject that the person row does
+// The graph stores two things about a data subject that the contact row does
 // not: WHO they were in a conversation with, and — for a party who never
 // became a record — the raw address a message carried them under. Both are
-// personal data, and both survived the person_email purge.
+// personal data, and both survived the contact_email purge.
 //
 // This was a live hole. The projection's consumer listened for a
-// `person.erased` event that no code path emits, so an erasure completed
+// `contact.erased` event that no code path emits, so an erasure completed
 // successfully while leaving the subject's correspondence pattern standing —
 // who talked to them, how often, how recently. Erasure now discharges it
 // inside its own transaction, because an obligation that depends on an event
@@ -50,19 +50,19 @@ func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
 	now := time.Now().UTC()
 	const subjectEmail = "erase.me@counterparty.test"
 
-	var person ids.UUID
+	var contact ids.UUID
 	var activityID ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO person (full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES ('Erase Me', $1, 'manual', 'human:test', 'workspace')
-			RETURNING id`, e.Rep1).Scan(&person); err != nil {
+			RETURNING id`, e.Rep1).Scan(&contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-			VALUES ($1, $2, true, 'manual', 'human:test')`, person, subjectEmail); err != nil {
+			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+			VALUES ($1, $2, true, 'manual', 'human:test')`, contact, subjectEmail); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
@@ -76,17 +76,17 @@ func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
 			VALUES ($1, $2, 'to')`, activityID, e.Rep1); err != nil {
 			return err
 		}
-		// The subject appears twice: as a resolved person, and — on a second
+		// The subject appears twice: as a resolved contact, and — on a second
 		// message — as a bare address, the row that exists for a party who
 		// never became a record.
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, address, role)
-			VALUES ($1, $2, $3, 'from')`, activityID, person, subjectEmail); err != nil {
+			INSERT INTO activity_participant (activity_id, contact_id, address, role)
+			VALUES ($1, $2, $3, 'from')`, activityID, contact, subjectEmail); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, activityID, person); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, activityID, contact); err != nil {
 			return err
 		}
 		return nil
@@ -99,28 +99,28 @@ func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)
 	}
-	if n := countRows(t, e, `SELECT count(*) FROM graph_interaction_edge WHERE person_id = $1`, person); n != 1 {
+	if n := countRows(t, e, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact); n != 1 {
 		t.Fatalf("the edge was not created in the first place (%d rows)", n)
 	}
 
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).ErasePerson(e.Admin(), person, "subject request"); err != nil {
+	if err := privacy.NewEraser(InstallationDB(e.Pool)).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("erasing: %v", err)
 	}
 
 	// The correspondence pattern goes. It says who talked to the subject, how
 	// often and how recently — derived data, but derived from data that is
 	// now gone.
-	if n := countRows(t, e, `SELECT count(*) FROM graph_interaction_edge WHERE person_id = $1`, person); n != 0 {
+	if n := countRows(t, e, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact); n != 0 {
 		t.Errorf("%d interaction edges survived the erasure: the projection still holds who corresponded with the subject", n)
 	}
-	// And the raw address goes with it — it survives the person_email purge
+	// And the raw address goes with it — it survives the contact_email purge
 	// by construction, and would keep the erased subject re-matchable.
 	if n := countRows(t, e,
-		`SELECT count(*) FROM activity_participant WHERE address = $1 OR person_id = $2`, subjectEmail, person); n != 0 {
+		`SELECT count(*) FROM activity_participant WHERE address = $1 OR contact_id = $2`, subjectEmail, contact); n != 0 {
 		t.Errorf("%d participant rows still name the erased subject by address or id", n)
 	}
 	// The colleague's own participation is NOT collateral damage: other
-	// people in that conversation are not the subject, and erasing the record
+	// contacts in that conversation are not the subject, and erasing the record
 	// that a colleague was in a meeting is not what Art. 17 asks for.
 	if n := countRows(t, e,
 		`SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2`, activityID, e.Rep1); n != 1 {

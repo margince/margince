@@ -2,6 +2,18 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { chipInks } from "../../scripts/lib/chip-inks";
+import {
+  composite,
+  contrastOf,
+  luminance,
+  normalize,
+  parseBlock,
+  states,
+  themes,
+  tokenDecls,
+  tokensCss,
+} from "./tokens-testing";
 
 // Pins the light-mode token layer to the canonical Ledger-Green values from the
 // spec's design/mockups/app.css :root (design-language §2, ADR-0040). A value
@@ -9,15 +21,6 @@ import { describe, expect, it } from "vitest";
 // or Dispact warm-stone — fails the build.
 
 const here = dirname(fileURLToPath(import.meta.url));
-const tokensCss = readFileSync(join(here, "tokens.css"), "utf8");
-
-// The same sheet with its comments removed, for every test that reads
-// DECLARATIONS. A declaration and a sentence about a declaration are not the
-// same thing, and this file explains most of its values in prose that names
-// them; left in, that prose parses as declarations of its own. The shape tests
-// below keep reading the raw text, so the line number they report in a failure
-// is the line a reader can open.
-const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
 // Values verbatim from the mockups; comparison normalizes case, whitespace and
 // a leading zero before a decimal point so formatting is free but values are not.
@@ -33,6 +36,7 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // prose. The derivation itself is not re-run here — the assertions that matter
 // are the ordering and the contrast pairs further down, which a wrong tint
 // fails whether or not the arithmetic is repeated.
+
 const canonical: Record<string, string> = {
   "--bgPage": "#f1f5f2",
   "--bgSidebar": "#e6eae7",
@@ -44,69 +48,61 @@ const canonical: Record<string, string> = {
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
   "--textPrimary": "#15201B",
-  "--textContent": "#36433D",
-  "--textSecondary": "#5f6a64",
-  "--textTertiary": "#9AA6A0",
-  "--textMuted": "#CBD2CD",
-  "--textMeta": "#5E6C65",
+  "--textSecondary": "lch(40% 1 282)",
   "--textOnAccent": "#fff",
   "--borderSubtle": "#E3EAE6",
   "--borderStrong": "#D1D8D4",
-  "--online": "#22c55e",
   "--teal": "#0E7490",
-  "--tealLight": "rgba(14,116,144,.1)",
-  "--away": "#fbbf24",
-  "--dnd": "#ef4444",
   "--bgRail": "#13231D",
   "--ai": "#5B61D6",
   "--aiLight": "rgba(91,97,214,.08)",
   "--aiMed": "rgba(91,97,214,.30)",
   "--aiText": "#3F45B0",
-  "--success": "#15803d",
-  "--successBg": "rgba(34,197,94,.12)",
-  "--warn": "#92400e",
-  "--warnBg": "rgba(251,191,36,.16)",
-  "--warnBorder": "rgba(251,191,36,.45)",
-  "--danger": "#b91c1c",
-  "--dangerBg": "rgba(239,68,68,.1)",
+  // The five states, light. Only the BASE of each is a choice; every other
+  // member is derived from it, and the derivation itself is asserted further
+  // down rather than repeated here — this table is the pin that says a value
+  // moved at all.
+  "--info": "#0485f7",
+  "--infoText": "#0060b7",
+  "--infoSurface": "color-mix(in srgb, var(--info) 12%, var(--bgElevated))",
+  "--infoBg": "color-mix(in srgb, var(--info) 12%, transparent)",
+  "--infoBorder": "color-mix(in srgb, var(--info) 45%, transparent)",
+  "--success": "#17c964",
+  "--successText": "#007435",
+  "--successSurface":
+    "color-mix(in srgb, var(--success) 12%, var(--bgElevated))",
+  "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
+  "--successBorder": "color-mix(in srgb, var(--success) 45%, transparent)",
+  "--warning": "#f5a524",
+  "--warningText": "#8a5900",
+  "--warningSurface":
+    "color-mix(in srgb, var(--warning) 16%, var(--bgElevated))",
+  "--warningBg": "color-mix(in srgb, var(--warning) 16%, transparent)",
+  "--warningBorder": "color-mix(in srgb, var(--warning) 45%, transparent)",
+  "--danger": "#ff383c",
+  "--dangerText": "#c5001b",
+  "--dangerSurface": "color-mix(in srgb, var(--danger) 10%, var(--bgElevated))",
+  "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
+  "--dangerBorder": "color-mix(in srgb, var(--danger) 45%, transparent)",
+  // Discovery's light ramp is given as hexes by the design source; no share of
+  // #964ac0 over --bgElevated reaches #eed7fc, which is bluer than the ground
+  // it would have to be mixed into. The hue gate below is what holds them to
+  // the same family the other four derive into.
+  "--discovery": "#964ac0",
+  "--discoveryText": "#48245d",
+  "--discoverySurface": "#eed7fc",
+  "--discoveryBg": "color-mix(in srgb, var(--discovery) 12%, transparent)",
+  "--discoveryBorder": "#d8a0f7",
   "--r-xs": "4px",
   "--r-sm": "8px",
   "--r-control": "12px",
   "--r-md": "16px",
   "--r-lg": "20px",
   "--r-full": "9999px",
-  "--f-display": '"Outfit",system-ui,sans-serif',
-  "--f-body": '"Geist",system-ui,sans-serif',
-  "--f-mono": '"Geist Mono",ui-monospace,monospace',
+  "--fontFamilyHeading": '"Outfit",system-ui,sans-serif',
+  "--fontFamilyBody": '"Geist",system-ui,sans-serif',
+  "--fontFamilyMono": '"Geist Mono",ui-monospace,monospace',
 };
-
-function normalize(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/(^|[^0-9])0\./g, "$1.")
-    .replace(/(\.[0-9]*?)0+([^0-9]|$)/g, "$1$2");
-}
-
-function parseBlock(css: string, selector: string): Record<string, string> {
-  // Parentheses and the colon are escaped too, so a selector carrying a
-  // functional pseudo-class (`:root:not([data-theme="light"])`) is matched as
-  // the literal text it is rather than compiled into a capture group — which
-  // matches nothing, and would report the block as missing.
-  const match = css.match(
-    new RegExp(`${selector.replace(/[[\]"=():]/g, "\\$&")}\\s*\\{([^}]*)\\}`),
-  );
-  if (!match) {
-    throw new Error(`tokens.css has no ${selector} block`);
-  }
-  const props: Record<string, string> = {};
-  for (const [, name, value] of match[1].matchAll(
-    /(--[\w-]+)\s*:\s*([^;]+);/g,
-  )) {
-    props[name] = value.trim();
-  }
-  return props;
-}
 
 // A media query opened INSIDE :root ends the block early, and every token
 // declared below it is stranded in that query — present on the devices the
@@ -144,17 +140,14 @@ describe("the token block's shape", () => {
   });
 
   // The scale the whole product measures itself in has to be in the block every
-  // document gets, not in one a device may not match.
-  it("declares the layout and type scales unconditionally", () => {
+  // document gets, not in one a device may not match. The TYPE half of the same
+  // obligation is type-tokens.test.ts's, which reads this same :root block.
+  it("declares the layout scale unconditionally", () => {
     const light = parseBlock(tokenDecls, ":root");
     for (const name of [
       "--space-1",
       "--space-6",
       "--space-16",
-      "--control-h",
-      "--control-h-sm",
-      "--fs-body",
-      "--f-body",
       "--phoneNavClearance",
     ]) {
       expect(light[name], `${name} missing from :root`).toBeTruthy();
@@ -180,7 +173,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   });
 
   it("keeps brand emerald and success grass-green tonally distinct (§2)", () => {
-    expect(normalize(light["--accent"])).not.toBe(normalize(light["--online"]));
+    expect(normalize(light["--accent"])).not.toBe(
+      normalize(light["--success"]),
+    );
   });
 
   // The surface ladder is a set of RELATIONS, not five independent colours, and
@@ -197,86 +192,6 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   // way and only the DIRECTION of each step is shared. Each theme therefore
   // states its own expected order, and both are checked the same way.
   describe("the surface ladder holds its order", () => {
-    // Relative luminance, WCAG 2.x §relativeluminancedef. Hex only, which is
-    // what every rung on this ladder is — an alpha colour has no luminance of
-    // its own, and none of these is one.
-    function luminance(hex: string): number {
-      const h = hex.trim().replace("#", "");
-      const full =
-        h.length === 3
-          ? h
-              .split("")
-              .map((d) => d + d)
-              .join("")
-          : h;
-      expect(full, `${hex} is not a 3- or 6-digit hex`).toHaveLength(6);
-      const [r, g, b] = [0, 2, 4].map((i) => {
-        const c = Number.parseInt(full.slice(i, i + 2), 16) / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
-
-    // A token's channels, whether it is written as a hex or as an rgba(). The
-    // alpha comes back too, because a tint's alpha is the whole reason the
-    // composite tests below exist.
-    function channels(value: string): [number, number, number, number] {
-      const v = value.trim();
-      if (v.startsWith("#")) {
-        const h = v.slice(1);
-        const full =
-          h.length === 3
-            ? h
-                .split("")
-                .map((d) => d + d)
-                .join("")
-            : h.slice(0, 6);
-        const [r, g, b] = [0, 2, 4].map((i) =>
-          Number.parseInt(full.slice(i, i + 2), 16),
-        );
-        return [r, g, b, 1];
-      }
-      const inside = v.match(/rgba?\(([^)]+)\)/);
-      if (!inside) {
-        throw new Error(`${value} is neither a hex nor an rgb()`);
-      }
-      const parts = inside[1]
-        .replace(/\//g, ",")
-        .split(",")
-        .map((n) => Number.parseFloat(n.trim()));
-      return [parts[0], parts[1], parts[2], parts[3] ?? 1];
-    }
-
-    // Source-over, the compositing every alpha tint in this file goes through
-    // when a browser paints it on a ground.
-    function composite(fg: string, bg: string): string {
-      const [r, g, b, a] = channels(fg);
-      const [br, bg_, bb] = channels(bg);
-      const mix = [
-        r * a + br * (1 - a),
-        g * a + bg_ * (1 - a),
-        b * a + bb * (1 - a),
-      ].map((n) => Math.round(n));
-      return `rgb(${mix.join(", ")})`;
-    }
-
-    function contrastOf(fg: string, bg: string): number {
-      // Text is opaque in every role measured here; a ground never is not.
-      const lf = luminanceOf(fg);
-      const lb = luminanceOf(bg);
-      const [hi, lo] = lf > lb ? [lf, lb] : [lb, lf];
-      return (hi + 0.05) / (lo + 0.05);
-    }
-
-    function luminanceOf(value: string): number {
-      const [r, g, b] = channels(value);
-      const [lr, lg, lb] = [r, g, b].map((n) => {
-        const c = n / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
-    }
-
     // Darkest first, as measured. The two themes are deliberately DIFFERENT
     // sequences: light recesses the rail's hover below its ground while dark
     // lifts it above, because a dark surface has only one direction to move in.
@@ -331,45 +246,54 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // pair. axe on the e2e routes caught two of the seventeen, which is what a
     // route sample can do: it sees the combinations those pages happened to
     // render. This derives the obligation from the palette instead, so the next
-    // person who retunes a ground finds out here rather than from a user.
+    // contact who retunes a ground finds out here rather than from a user.
     //
     // Only TEXT roles, and only against grounds they can actually sit on.
-    // --textTertiary is deliberately not in the list: it is a decorative tone
-    // that never carries prose, and holding it to 4.5:1 would make it
-    // --textSecondary.
     it("every text role clears AA on every ground it sits on, both themes", () => {
-      const dark = {
-        ...light,
-        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
-      };
+      // The status Text tokens are in this list and their bases are not, which
+      // is the split the family is built on: --successText and its siblings ARE
+      // prose roles — a form error, a stale-value caveat, a badge's ink — while
+      // --success is a fill, a bar and a 17px figure, measured at the figure's
+      // own size and not at the prose floor.
       const prose = [
         "--textPrimary",
-        "--textContent",
         "--textSecondary",
-        "--textMeta",
         "--accentText",
         "--tealText",
+        ...states.map((state) => `--${state}Text`),
       ];
       // Per ground, the roles that can actually be read on it — not a cross
-      // product. The two rungs that carry less than everything are the reason
-      // this is a map: a hovered RAIL row sets its own ink to --textPrimary
-      // (app/shell.css), so the mid-tones never land on --bgSidebarHover, and
-      // asserting they do would force that rung lighter than the rail it has to
-      // stay darker than. The rail's static ground does carry mid-tone prose —
-      // group headings, the entitlement row — so it is held to everything.
+      // product. A ground that carries less than everything is the reason this
+      // is a map: a hovered RAIL row sets its own ink to --textPrimary
+      // (app/shell.css), so an accent label never lands on --bgSidebarHover,
+      // and asserting it does would force that rung lighter than the rail it
+      // has to stay darker than.
       const carries: Record<string, string[]> = {
         "--bgPage": prose,
         "--bgElevated": prose,
         "--bgCard": prose,
         "--bgHover": prose,
         "--bgSidebar": prose,
-        "--bgSidebarHover": ["--textPrimary", "--textContent", "--accentText"],
+        "--bgSidebarHover": ["--textPrimary", "--accentText"],
+        // A FILLED control or a primary badge is a ground too, its label read
+        // on the fill, and so is the opaque Surface a soft badge letters on.
+        // A state's fill is its TEXT token, never its base: no one ink sits on
+        // the five bases (white pays 2.04:1 on --warning, a near-black 3.19:1
+        // on --discovery) and the dark danger base takes neither, which is how
+        // a button filled with --danger shipped as an axe failure. The ink
+        // FLIPS with the theme, because the ground under it does.
+        ...Object.fromEntries(
+          states.flatMap((state) => [
+            [`--${state}Text`, ["--textOnStatusControl"]],
+            [`--${state}Surface`, [`--${state}Text`]],
+          ]),
+        ),
+        "--accent": ["--textOnAccentControl"],
+        "--ai": ["--textOnAccent"],
+        "--textPrimary": ["--bgPage"],
       };
       const failures: string[] = [];
-      for (const [theme, pal] of [
-        ["light", light],
-        ["dark", dark],
-      ] as const) {
+      for (const [theme, pal] of Object.entries(themes)) {
         for (const [ground, roles] of Object.entries(carries)) {
           for (const role of roles) {
             const ratio = contrastOf(pal[role], pal[ground]);
@@ -394,32 +318,20 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // an accent tint on the rail are a 26px figure and a glyph, which is where
     // 1.4.3's large-text allowance and 1.4.11's non-text floor apply.
     it("tinted chips clear AA over every ground they composite on", () => {
-      const dark = {
-        ...light,
-        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
-      };
-      // The three families with a Text token, plus the three STATUS families,
-      // which were absent from this list for the reason that is worth stating:
-      // the list was the families that HAD a *Text token, so the ones whose ink
-      // is the family colour itself were never measured. That is a corpus short
-      // of its subject — --success on --successBg is 4.48:1 and shipped, in two
-      // writers, until axe caught one of them on one route. Warn and danger
-      // clear AA on their own tints today and are here so a retune cannot
-      // quietly take that away.
+      // Every family that tints, each paired with the ink its tint needs: a
+      // family left off this list is a contrast pair nothing measures.
       const pairs = [
         ["--accentText", "--accentLight"],
-        ["--tealText", "--tealLight"],
         ["--aiText", "--aiLight"],
-        ["--successText", "--successBg"],
-        ["--warn", "--warnBg"],
-        ["--dangerText", "--dangerBg"],
+        ...states.map((state) => [`--${state}Text`, `--${state}Bg`]),
+        // --bgChip is the NEUTRAL member, whose ink its family does not fix:
+        // it carries whatever the chip's rule sets, so every role that lands
+        // on one is measured over it.
+        ...chipInks.map((ink) => [ink, "--bgChip"]),
       ] as const;
       const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
       const failures: string[] = [];
-      for (const [theme, pal] of [
-        ["light", light],
-        ["dark", dark],
-      ] as const) {
+      for (const [theme, pal] of Object.entries(themes)) {
         for (const [role, tint] of pairs) {
           for (const ground of grounds) {
             const behind = composite(pal[tint], pal[ground]);
@@ -496,6 +408,16 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(normalize(dark["--bgSidebarHover"])).toBe("#0a100e");
     });
 
+    // The two neutrals, pinned in dark because dark is where they diverge most
+    // from the light values and where the sweeps read them against near-black.
+    it("pins both neutral inks", () => {
+      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
+      expect(normalize(dark["--textPrimary"])).toBe("#fff");
+      expect(normalize(dark["--textSecondary"])).toBe(
+        normalize("lch(63.304% 1.425 272)"),
+      );
+    });
+
     it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {
       expect(dark["--bgRail"]).toBeUndefined();
     });
@@ -510,7 +432,17 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         tokenDecls,
         ':root:not([data-theme="light"])',
       );
-      expect(preferred).toEqual(dark);
+      // Normalized on both sides: the two arms sit at different indents, so the
+      // formatter wraps a long value in one and not the other. That is where
+      // the line broke, not what the colour is.
+      const shape = (block: Record<string, string>) =>
+        Object.fromEntries(
+          Object.entries(block).map(([name, value]) => [
+            name,
+            normalize(value),
+          ]),
+        );
+      expect(shape(preferred)).toEqual(shape(dark));
     });
 
     // The guard is the half that has to keep the SPA exactly as it renders

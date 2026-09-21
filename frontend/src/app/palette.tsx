@@ -1,10 +1,15 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Sparkles } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../api/client";
-import { EmptyState, PendingBody, SearchField } from "../design-system/atoms";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Badge,
+  EmptyState,
+  Kbd,
+  PendingBody,
+  SearchField,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
+import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
@@ -16,18 +21,13 @@ import {
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { NAV } from "./nav";
+import { CREATE_ID, NAV } from "./nav";
+import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 import { navigate, type Route } from "./router";
-import {
-  SEARCH_HIT_KIND_KEY,
-  type SearchHitType,
-  searchHitDestination,
-} from "./searchkinds";
 
-// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a
-// type tag (screen / action / record); record entries are fed by the search
-// seam once the data layer lands — the tagging and ranking mechanics are
-// already here. The "Ask AI: …" run-as-NL row is always appended last.
+// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
+// tag (screen / action / record); record entries are fed by the search seam
+// once the data layer lands — the ranking mechanics are already here.
 
 export type Command = {
   id: string;
@@ -61,7 +61,7 @@ const SETTINGS_ALIASES: Readonly<
   "capture-activity": ["capture log", "trace"],
   company: ["general", "currency", "workspace", "fx"],
   authentication: ["sign-in", "sso", "oauth app", "login"],
-  members: ["users", "people", "roster", "invite"],
+  members: ["users", "contacts", "roster", "invite"],
   teams: ["team"],
   seats: ["license", "billing", "plan", "subscription"],
   pipelines: ["stages", "deal stages"],
@@ -70,7 +70,7 @@ const SETTINGS_ALIASES: Readonly<
   tags: ["labels", "vocabulary"],
   products: ["price list", "rate card", "offer-templates"],
   capture: ["email capture", "inbox"],
-  integrations: ["webhook", "api", "overlay"],
+  integrations: ["webhook", "api"],
   knowledge: ["handbook", "corpus", "documents"],
   import: ["csv", "upload", "migration"],
   models: ["routing", "providers", "keys", "embeddings"],
@@ -87,21 +87,18 @@ const SETTINGS_ALIASES: Readonly<
 export function useBuiltinCommands(): Command[] {
   const t = useT();
   const { locale } = useLocale();
-  // The same table the settings rail walks, not a second opinion about it.
-  //
-  // This read the retired register while the rail read the catalog, which is
-  // precisely the disagreement the catalog exists to prevent: the palette would
-  // offer a shortcut to a page the rail no longer lists, or miss one it does.
-  // Both resolve `visibleSettingsPages` now.
+  // The same table the settings rail walks, not a second opinion about it: a
+  // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
       label: t(item.labelKey),
       // The route id is the screen's stable English name and doubles as its
-      // alias, so a relabeled destination stays findable under both words in
-      // both locales without a hand-kept synonym list.
-      keywords: [item.screen],
+      // alias, so a destination stays findable under it in every locale. The
+      // row's own aliases (app/nav.ts) ride alongside it, which is what keeps a
+      // word a reader already learned pointing at the row that carries it.
+      keywords: [item.screen, ...(item.aliases ?? [])],
       type: "screen",
       route: { screen: item.screen },
     }));
@@ -124,7 +121,7 @@ export function useBuiltinCommands(): Command[] {
         id: "action:new-deal",
         label: t("action.newDeal"),
         type: "action",
-        route: { screen: "deals", id: "new" },
+        route: { screen: "deals", id: CREATE_ID },
       },
       {
         id: "action:read-company",
@@ -140,12 +137,9 @@ export function useBuiltinCommands(): Command[] {
       },
     ];
     // Every settings entry, derived from the register rather than hand-listed.
-    // Two of them used to be named here and the rest were left out on the
-    // grounds that "the rail door beside them" reached them — which was never
-    // true of settings: no settings entry is a rail row, so an entry this list
-    // omits is an entry only a reader who already knows the shelving can open.
-    // Deriving also means a tab added to the register arrives here, instead of
-    // being the third one somebody notices is missing.
+    // No settings entry is a rail row, so nothing else reaches them: a
+    // hand-listed set omits entries only a reader who already knows the
+    // shelving can open, where deriving brings a new tab here for free.
     //
     // Gated on the SAME predicate the settings level uses, because that level
     // falls back to Account for an entry the principal may not open — so an
@@ -159,7 +153,7 @@ export function useBuiltinCommands(): Command[] {
       route: settingsHref(page.id),
     }));
     // The scheduled queue, which is off the rail deliberately — a queue of one
-    // person's own unsent mail is not an eleventh destination (pagemeta.ts says
+    // contact's own unsent mail is not an eleventh destination (pagemeta.ts says
     // so) — and was therefore reachable only by typing the address. The
     // composer that queued a message is one door; this is the other, for the
     // rep who closed that toast an hour ago and now wants the message back.
@@ -194,166 +188,15 @@ export function useBuiltinCommands(): Command[] {
   }, [t, visible, locale]);
 }
 
-// How long a palette search may take before the wait is worth reporting. Below
-// this the answer is quicker than a keystroke and a placeholder would flash on
-// every letter typed; above it, an unchanged list reads as a palette that has
-// stopped listening.
-const SEARCH_PENDING_DELAY_MS = 300;
-
-// What the live search arm has to say: the rows it found, and whether it is
-// still working or gave up. The two flags are returned rather than swallowed —
-// the palette used to answer a failed search with an empty array, which is the
-// same shape as "no matches" and told the reader the workspace holds nothing
-// when the truth was that nobody had asked it.
-type SearchArm = Readonly<{
-  commands: Command[];
-  pending: boolean;
-  failed: boolean;
-}>;
-
-// Live record hits for the palette (RS-1): debounced via useDeferredValue
-// rather than a timer (craft: no real-clock waits in the render path), and
-// gated on a 2-char floor so single keystrokes don't fire a query per key.
-function useSearchCommands(query: string): SearchArm {
-  const t = useT();
-  const deferred = useDeferredValue(query.trim());
-  const enabled = deferred.length >= 2;
-  const result = useQuery({
-    queryKey: ["palette-search", deferred],
-    enabled,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/search", {
-        params: { query: { q: deferred, limit: 5 } },
-      });
-      if (error) {
-        // Thrown rather than flattened to an empty list: react-query carries it
-        // to `isError`, and the palette says the search failed instead of
-        // reporting an empty workspace. The builtin commands keep working
-        // beside it, which is the degradation that was wanted — losing the
-        // sentence was not.
-        throw new Error(t("palette.searchFailed"));
-      }
-      return data.data;
-    },
-  });
-  // Every hit with somewhere to go. `searchHitRoute` is the one place that
-  // knows where each kind lives, so a type the server learns to return is
-  // routable here the moment it is routable anywhere — and an activity, which
-  // has no page, drops out by answering null rather than by being named in a
-  // second list that has to be kept in step.
-  //
-  // An EMAIL hit goes to the search SCREEN with that message open. The palette
-  // owns no page and every Command carries a route, so it cannot open a drawer
-  // itself — it sends the reader to the one page that already owns this one.
-  const hits = (result.data ?? []).flatMap((hit) => {
-    const route = searchHitDestination(
-      { ...hit, type: hit.type as SearchHitType },
-      deferred,
-    );
-    return route ? [{ hit, route }] : [];
-  });
-  const projectLines = useProjectHitLines(
-    hits.filter(({ hit }) => hit.type === "project").map(({ hit }) => hit.id),
-  );
-  return {
-    commands: hits.map(({ hit, route }) => ({
-      id: `record:${hit.type}:${hit.id}`,
-      label: hit.title ?? hit.id,
-      // A project's secondary line is its key or its company, not the word
-      // "project": a search hit for one carries no snippet, and two projects
-      // called "Rollout" are told apart by the key a rep already types into
-      // subject lines. Every other kind names the kind — TRANSLATED, because
-      // this line used to print the wire word and showed a German reader
-      // "organization" where the rest of the product says Firma.
-      subtitle:
-        hit.type === "project"
-          ? (projectLines.get(hit.id) ??
-            t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]))
-          : t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]),
-      type: "record" as const,
-      route,
-    })),
-    // `isFetching` rather than `isPending`: a disabled query reports pending
-    // forever, and the palette opens with an empty box every time.
-    pending: enabled && result.isFetching,
-    failed: enabled && result.isError,
-  };
-}
-
-/**
- * The secondary line for each project hit: the key when the project has one,
- * else the company's name. At most five hits are on screen, so the reads are
- * per record and share the cache entries the project page and the company
- * reference already fill.
- */
-function useProjectHitLines(projectIds: string[]): Map<string, string> {
-  const projects = useQueries({
-    queries: projectIds.map((id) => ({
-      queryKey: ["project", id, "ref"],
-      staleTime: 60_000,
-      queryFn: async () => {
-        const { data, error } = await api.GET("/projects/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          // A palette line that cannot be resolved falls back to the kind;
-          // the hit itself still routes. The project page reports the
-          // failure in full.
-          return null;
-        }
-        return data;
-      },
-    })),
-  });
-  const companyIds = projects.flatMap((query) =>
-    query.data && !query.data.key && query.data.organization_id
-      ? [query.data.organization_id]
-      : [],
-  );
-  const companies = useQueries({
-    queries: companyIds.map((id) => ({
-      // The same entry EntityRef fills for a company reference.
-      queryKey: ["organization", "ref", id],
-      staleTime: 60_000,
-      queryFn: async () => {
-        const { data, error } = await api.GET("/organizations/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          return null;
-        }
-        return data.display_name ?? null;
-      },
-    })),
-  });
-  const companyName = new Map(
-    companyIds.map((id, index) => [id, companies[index]?.data ?? null]),
-  );
-  const lines = new Map<string, string>();
-  projects.forEach((query, index) => {
-    const project = query.data;
-    if (!project) {
-      return;
-    }
-    const line =
-      project.key ??
-      (project.organization_id
-        ? companyName.get(project.organization_id)
-        : null);
-    if (line) {
-      lines.set(projectIds[index], line);
-    }
-  });
-  return lines;
-}
-
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
   screen: "palette.typeScreen",
   action: "palette.typeAction",
   record: "palette.typeRecord",
 };
 
-export const ASK_QUERY_KEY = "margince.askQuery";
+// `#/ai?q=<question>`: the row's question travels in the ADDRESS, because a
+// reader already on the AI surface changes no path and so remounts nothing.
+export const ASK_QUESTION_PARAM = "q";
 
 export function CommandPalette({
   open,
@@ -368,12 +211,21 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const panel = useRef<HTMLDivElement>(null);
+  const overlay = useRef<HTMLDivElement>(null);
 
-  // What every dialog in this product owes the keyboard, from the one place it
-  // is spelled: Escape from anywhere inside, Tab kept in, and focus returned to
-  // whatever opened this when it closes. The palette had none of the three —
+  // The palette draws its own chrome and borrows the two contracts every dialog
+  // in this product keeps. This is the second of them: the exit animation needs
+  // the box to still be on the page to play on, and React would have taken it
+  // off on the render that closed it. The keyframes are the centred dialog's
+  // own, admitted to those rules by class (atoms.css).
+  const { mounted, state } = usePresence({ open, element: overlay });
+
+  // And the first: Escape from anywhere inside, Tab kept in, and focus returned
+  // to whatever opened this when it closes. The palette had none of the three —
   // Escape belonged to the search input, so it did nothing from a result row,
-  // and Shift+Tab left for the page behind on the first press.
+  // and Shift+Tab left for the page behind on the first press. Keyed on `open`
+  // and not on `mounted`, so the reader gets their place back the moment they
+  // dismiss rather than at the end of an animation.
   useDialogFocus({ open, onClose, container: panel });
 
   // AC-shell-3: opening CLEARS the input. Focus is the hook's — the input is
@@ -414,7 +266,6 @@ export function CommandPalette({
       }
     : null;
 
-  // The run-as-NL row (AC-shell-4): appended last whenever there is a query.
   const askRow: Command | null = query.trim()
     ? {
         id: "ask-ai",
@@ -433,24 +284,39 @@ export function CommandPalette({
     Math.max(0, Math.min(index, rows.length - 1));
 
   const run = (command: Command) => {
-    if (command.id === "ask-ai") {
-      // NOSONAR: persisted value is a trimmed plain string from a controlled input, consumed as text (never eval'd or rendered as HTML)
-      sessionStorage.setItem(ASK_QUERY_KEY, query.trim());
-    }
     onClose();
-    navigate(command.route);
+    const asking = command.id === "ask-ai";
+    navigate(
+      command.route,
+      asking ? new Map([[ASK_QUESTION_PARAM, query.trim()]]) : undefined,
+    );
   };
 
-  if (!open) {
+  if (!mounted) {
     return null;
   }
+  const leaving = state === "closing";
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop dismiss; Esc is the keyboard path
-    // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handled on the input below
+    // The two a11y suppressions this element carried are gone rather than kept:
+    // `aria-hidden` below takes the overlay out of the accessibility tree while
+    // it leaves, and the rules that wanted a keyboard handler beside the
+    // backdrop click no longer fire on it. Escape is still the keyboard path,
+    // and it is `useDialogFocus`'s.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled on the input inside
       className="overlay palette-overlay"
+      data-state={state}
+      // Painted and nothing else while it leaves: `inert` takes it out of the
+      // tab order and out of hit testing, `aria-hidden` out of the
+      // accessibility tree — an inert node keeps its role, so without the
+      // second one a palette on its way out is still a dialog to a reader.
+      inert={leaving}
+      aria-hidden={leaving || undefined}
+      ref={overlay}
       onClick={(event) => {
+        if (leaving) {
+          return;
+        }
         if (event.target === event.currentTarget) {
           onClose();
         }
@@ -494,14 +360,21 @@ export function CommandPalette({
               }
             }}
           />
-          <span className="kbd">{"esc"}</span>
+          {/* The key's own name, not copy: it is what is printed on the cap a
+              reader is looking at, in every locale, the way the ⌘/Ctrl caps
+              beside the search box are. */}
+          <Kbd>{"esc"}</Kbd>
         </div>
         <div className="palette-list">
           {/* A failed search says so and keeps the builtin commands beside it.
-              It is not an EmptyState: the list is not empty, and the one thing
-              a reader must not conclude is that the workspace holds nothing. */}
+              Neither an EmptyState nor `danger`: the list is not empty, and the
+              one thing a reader must not conclude is that there is nothing. */}
           {search.failed && (
-            <Callout tone="warn" live="status" className="palette-notice">
+            <Callout
+              tone="warning"
+              kind="outcome"
+              title={t("palette.searchFailedTitle")}
+            >
               {t("palette.searchFailed")}
             </Callout>
           )}
@@ -546,7 +419,7 @@ export function CommandPalette({
               {command.subtitle && (
                 <span className="sub t-caption">{command.subtitle}</span>
               )}
-              <span className="type">{t(TYPE_KEY[command.type])}</span>
+              <Badge>{t(TYPE_KEY[command.type])}</Badge>
             </button>
           ))}
         </div>
@@ -556,11 +429,10 @@ export function CommandPalette({
 }
 
 // Global ⌘K / Ctrl+K binding (AC-shell-3).
-// The palette answers to Meta+K and Ctrl+K both, but an affordance may only
-// advertise one, and it has to be the one the reader's keyboard has: a Windows
-// user told to press ⌘K is being told to press a key that is not there. Pure in
-// its argument so the call site passes `navigator.platform` and this stays
-// testable without stubbing the platform.
+// Both chords work, but an affordance may only advertise ONE and it has to be
+// the one the reader's keyboard has: a Windows user told to press ⌘K is told to
+// press a key that is not there. Pure in its argument, so the call site passes
+// `navigator.platform` and this stays testable without stubbing it.
 /**
  * The chord as its KEYS, because the one surface that draws it draws a cap per
  * key (app/topbar.tsx).

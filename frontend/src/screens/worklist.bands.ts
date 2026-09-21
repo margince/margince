@@ -9,20 +9,15 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // holding no rows — and no client file read it. Headings were inferred from the
 // rows instead, which can say everything except the one thing the field exists
 // for: a band with nothing under it draws nothing, so a reader whose Now band
-// is empty is told the same as a reader whose page simply started at Build
-// pipeline.
+// is empty is told the same as a reader whose page simply started at
+// Prospecting.
 //
 // "Nothing needs you today" is an answer. Inferring headings from rows cannot
 // give it, because the absence leaves no row to hang it on.
 //
-// THE QUEUE'S OWN ORDER IS NEVER CHANGED HERE, and that is the whole shape of
-// this file. The server sends the rows sorted with each band contiguous, and
-// says so in the contract; the ranks the page prints are positions in that
-// order. Grouping the rows BY band instead — walking `bands` and collecting
-// each one's rows — reorders them whenever the two disagree, which a paginated
-// walk makes possible, and the page then prints rank 2 above rank 1. So the
-// sections are runs of CONSECUTIVE rows, and `bands` is read only for which
-// headings exist and which of them are empty.
+// Preserve the server's order. Prospecting and existing work may interleave
+// as deadlines and value change, so a heading labels each consecutive run.
+// Declared bands supply empty headings; they never regroup the rows.
 
 type Band = NonNullable<WorklistItem["band"]>;
 
@@ -72,7 +67,7 @@ export function bandSections(
  * Slot each declared band the loaded rows never reached into its own place.
  *
  * Walked against the DECLARED order rather than appended, so an empty Now sits
- * above a drawn Build pipeline instead of after everything. A band the rows
+ * above a drawn Prospecting instead of after everything. A band the rows
  * name and the server did not declare keeps its place in the run order: it is
  * real work, and a heading this build cannot place must not reorder the rest.
  */
@@ -121,4 +116,65 @@ export function unbandedRows(
   queue: readonly WorklistItem[],
 ): readonly WorklistItem[] {
   return queue.filter((item) => !item.band);
+}
+
+/**
+ * The groups that earn a heading, which is a narrower set than the wire's.
+ *
+ * `overdue` and `today` are deliberately absent: they draw under the band's own
+ * heading, so there is no copy key for them and the type says so rather than
+ * leaving a caller to discover it from a missing translation.
+ */
+export type HeadedDueGroup = "tomorrow" | "this_week" | "later";
+
+/** One run of rows inside a band that share a due group. */
+export type DueRun = {
+  /** Absent on rows carrying no deadline, which draw under no sub-heading. */
+  group?: HeadedDueGroup;
+  items: WorklistItem[];
+};
+
+/** The copy key for a run's heading, so the caller never builds one by hand. */
+export function dueRunHeading(group: HeadedDueGroup) {
+  return `worklist.dueGroup.${group}` as const;
+}
+
+/**
+ * A band's rows split into consecutive runs by the day their work is due.
+ *
+ * Consecutive, never regrouped: the server ranks the queue and the page draws
+ * the order it is given, so this only ever names a boundary the ranking already
+ * put there. Sorting here would let the page disagree with the counts above it.
+ *
+ * Overdue and today's work carry no sub-heading — the band's own heading
+ * already says that is what it is — so only the runs a reader would otherwise
+ * mistake for today get one.
+ */
+export function dueRuns(items: readonly WorklistItem[]): DueRun[] {
+  const runs: DueRun[] = [];
+  for (const item of items) {
+    const group = headedDueGroup(item.due_group);
+    const open = runs.at(-1);
+    if (open && open.group === group) {
+      open.items.push(item);
+      continue;
+    }
+    runs.push({ group, items: [item] });
+  }
+  return runs;
+}
+
+/**
+ * Which groups earn a heading of their own.
+ *
+ * A row with no group, an overdue one and today's all draw under the band
+ * heading, so they share one unlabelled run rather than three.
+ */
+function headedDueGroup(
+  group: WorklistItem["due_group"],
+): HeadedDueGroup | undefined {
+  if (!group || group === "overdue" || group === "today") {
+    return undefined;
+  }
+  return group;
 }

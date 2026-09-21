@@ -9,6 +9,8 @@ package deals
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // closeClock is noon UTC so the workspace-zone date is unambiguous.
@@ -113,20 +115,28 @@ func TestCloseDateActionTiers(t *testing.T) {
 		wantDowngrade   bool
 	}{
 		// §11 worked example: early-stage, clear-overdue, active, outside
-		// the forecast → the agent rolls the date, final.
-		{"clear overdue on an active low-stakes deal auto-applies",
-			activeDeal(datep(-12)), CloseDateActionAutoApply, false, false},
-		{"forecast-bearing overdue goes provisional",
-			commit(activeDeal(datep(-12))), CloseDateActionProvisionalConfirm, true, false},
+		// the forecast → the agent rolls the date at once rather than
+		// leaving it for a human. PROVISIONAL, because what it rolls to is
+		// a stage-velocity estimate: 🟢 buys promptness, never the claim
+		// that a buyer agreed to the replacement.
+		{"clear overdue auto-applies provisionally", activeDeal(datep(-12)), CloseDateActionAutoApply, true, false},
+		{
+			"forecast-bearing overdue goes provisional",
+			commit(activeDeal(datep(-12))), CloseDateActionProvisionalConfirm, true, false,
+		},
 		{"late stage overdue goes provisional", func() CloseDateInput {
 			in := activeDeal(datep(-12))
 			in.StageWinProbability = 60
 			return in
 		}(), CloseDateActionProvisionalConfirm, true, false},
-		{"missing date goes provisional",
-			activeDeal(nil), CloseDateActionProvisionalConfirm, true, false},
-		{"unrealistic-soon goes provisional",
-			activeDeal(datep(5)), CloseDateActionProvisionalConfirm, true, false},
+		{
+			"missing date goes provisional",
+			activeDeal(nil), CloseDateActionProvisionalConfirm, true, false,
+		},
+		{
+			"unrealistic-soon retains the recorded date",
+			activeDeal(datep(5)), CloseDateActionProvisionalConfirm, false, false,
+		},
 		// A paused deal still must not claim a past date (§11 edge case):
 		// the wait suppresses quiet, not overdue — 🟡, never 🟢-silent.
 		{"paused overdue commit deal goes provisional", func() CloseDateInput {
@@ -188,9 +198,11 @@ func TestProposedCloseDateUsesVelocityAndStageFloor(t *testing.T) {
 		velocity  float64
 		wantDays  int
 	}{
+		{"one-week floor for fast stages", 1, 0.5, 7},
+		{"fractional weeks round up", 2, 7.1, 21},
 		{"fallback velocity, two stages", 2, 0, 2 * CloseDateStageDays},
-		{"observed velocity outranks the fallback", 2, 18, 36},
-		{"at least one stage-worth even on the last stage", 0, 18, 18},
+		{"observed velocity outranks the fallback", 2, 18, 42},
+		{"at least one stage-worth even on the last stage", 0, 18, 21},
 	}
 	for _, c := range cases {
 		got := proposedCloseDate(today, c.remaining, c.velocity)
@@ -258,5 +270,53 @@ func TestOverdueIsAskedInTheInstallationsZone(t *testing.T) {
 	tomorrow := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
 	if CloseIsOverdue(tomorrow, now, saigon) {
 		t.Error("a deal expected on the 24th is overdue on the 24th in Saigon")
+	}
+}
+
+// The 🔻 branch used to assign the notched category unconditionally. Since
+// forecastDowngrade floors at "omitted", a deal already sitting there was
+// assigned "omitted" again every night it stayed quiet — and storekit.Patch
+// records an assignment without comparing it, so that non-empty patch became
+// a real audit row and a real deal.updated event for a change that never
+// happened. Thirty-two of forty such rows in one installation were identical
+// before/after images.
+func TestAnUnchangedForecastCategoryIsNotWritten(t *testing.T) {
+	omitted, pipeline := "omitted", "pipeline"
+	// Below every forecast threshold, so a deal with no override derives
+	// "pipeline" — the state a first downgrade actually moves away from.
+	const lowStageWinProbability = 20
+	cases := []struct {
+		name      string
+		stored    *string
+		notched   string
+		wantWrite bool
+	}{
+		// The floor case, and the one that wrote a row every night: an
+		// explicitly-omitted deal notches to omitted, which is where it
+		// already is.
+		{"already at the floor", &omitted, "omitted", false},
+		// A deal carrying no override sits at the probability-derived
+		// default, so the first notch down is a real move and must write.
+		{"no override, first notch down", nil, "omitted", true},
+		{"a real notch down still writes", &pipeline, "omitted", true},
+	}
+	for _, c := range cases {
+		// Derive the effective category the way the sweep does rather than
+		// stating it: a hand-written pair can describe a deal
+		// effectiveForecastCategory would never produce.
+		effective := effectiveForecastCategory(c.stored, lowStageWinProbability)
+		p := storekit.NewPatch()
+		setForecastCategory(p, c.stored, effective, c.notched)
+		if p.Empty() == c.wantWrite {
+			t.Errorf("%s: patch empty = %v, want a write = %v", c.name, p.Empty(), c.wantWrite)
+		}
+	}
+}
+
+func TestActiveDealRetainsNearFutureDateWithoutMakingItProvisional(t *testing.T) {
+	in := activeDeal(datep(5))
+	got := CloseDateAssessment(in, closeClock, time.UTC)
+	if !hasFlag(got, CloseDateUnrealisticSoon) || got.ProposedClose == nil || !got.ProposedClose.Equal(*in.ExpectedClose) || got.Provisional {
+		t.Fatalf("near-future commitment was replaced: %+v", got)
 	}
 }

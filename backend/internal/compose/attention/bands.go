@@ -41,7 +41,7 @@ const (
 // already produces. Spelled here so the client is told the sequence rather than
 // inferring it from the rows it happens to receive: a day with no `now` rows
 // must still draw its remaining bands in this order.
-var bandOrder = []string{bandNow, bandBuildPipeline, bandKeepMomentum, bandReview}
+var bandOrder = []string{bandNow, bandKeepMomentum, bandBuildPipeline, bandReview}
 
 // bandOfRow says which heading a row sits under.
 //
@@ -51,19 +51,13 @@ var bandOrder = []string{bandNow, bandBuildPipeline, bandKeepMomentum, bandRevie
 // covers both an assigned task and a lead's follow-up, and those are different
 // answers to "what am I being asked to do".
 //
-// CROWDING CHANGES THE BAND, and this is where two right rules meet. Past the
-// lead group a wait is demoted so a hundred replies cannot own the page — that
-// is the anti-monopoly rule, and it has to move the row a long way down.
-// Headings have to stay contiguous, or the page draws "Now" twice with other
-// work in between. Demoting the row's POSITION while leaving its heading
-// alone cannot satisfy both.
-//
-// So a crowded row is not `now` work any more. It is still a customer waiting,
-// still says so on its face, and still sits above the hygiene: what changed is
-// the claim that it needs answering today, which is exactly what being the
-// ninth of its kind means.
+// CROWDING MOVES A ROW DOWN THE PAGE AND NEVER UP, which is where two right
+// rules meet. Past the lead group a wait is demoted so a hundred replies cannot
+// own the page — that is the anti-monopoly rule, and it has to move the row a
+// long way down. A crowded row leaves the immediate-work band but remains ahead
+// of hygiene. The two agreed-work labels can recur as their facts decide the
+// order.
 func bandOfRow(row ranked) string {
-	item := row.item
 	// A pinned row is whatever the reader said it was, and they put it at the
 	// top: it leads the page, so it heads the first band.
 	//
@@ -72,12 +66,39 @@ func bandOfRow(row ranked) string {
 	// would sort first and be headed `keep_momentum` — the page drawing that
 	// heading above its own Now band, and the reader's one override putting a
 	// row where they asked while telling them it was somewhere else.
-	if item.Level == levelPinned {
+	if row.item.Level == levelPinned {
 		return bandNow
 	}
 	if row.crowded {
+		return crowdedBelow(bandOfItem(row.item))
+	}
+	return bandOfItem(row.item)
+}
+
+// crowdedBelow is where a crowded row sits: out of the immediate-work band and
+// ahead of hygiene, and never further UP the page than it already was.
+//
+// Crowding is the anti-monopoly rule, so the one thing it may not do is
+// promote. Answering keep_momentum for every crowded row was a demotion while
+// the only crowded rows were waiting customers, which band `now`. When the rule
+// widened off that one lane and onto the source every row carries, the same
+// answer promoted the two bands drawn BELOW keep_momentum: past the eighth
+// pending decision the extra ones sorted above the first eight, so the
+// decisions that had waited longest — and expire soonest — went to the bottom
+// of the queue, which is the page crowding exists to prevent.
+//
+// A row already at or below the band keeps its own. It is still demoted, by the
+// ordering's crowded step, which sorts under the band and separates the
+// crowded from the rest within it.
+func crowdedBelow(band string) string {
+	if bandRank(band) < bandRank(bandKeepMomentum) {
 		return bandKeepMomentum
 	}
+	return band
+}
+
+// bandOfItem is the band a row's own facts put it in, before crowding.
+func bandOfItem(item crmcontracts.WorklistItem) string {
 	if item.Level <= levelWaiting {
 		return bandNow
 	}
@@ -157,6 +178,8 @@ func bandsOf(items []crmcontracts.WorklistItem) []crmcontracts.WorklistBand {
 // A band this build does not know sorts last rather than first: an unknown
 // heading must not push real work off the top of the page.
 func bandRank(band string) int {
+	// Existing customer work precedes routine prospecting. A lead with a real
+	// response deadline already belongs to the urgent band.
 	for i, known := range bandOrder {
 		if known == band {
 			return i

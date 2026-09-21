@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -27,11 +28,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -84,8 +87,13 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
-	e.corrector = deals.NewCloseDateCorrector(e.DB(), closeDateStager{svc: e.svc},
-		quietReviewReader{db: e.DB(), owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}}, quiet, installseam.Deals()).
+	// The policy production builds, not a stub that always says yes: whether a
+	// rep has left close dates to the sweep is exactly what these tests are
+	// about, and a harness answering it itself would prove nothing.
+	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
+	e.corrector = deals.NewCloseDateCorrector(e.DB(),
+		closeDatePolicy{svc: e.svc, owner: owner},
+		quietReviewReader{db: e.DB(), owner: owner}, quiet, installseam.Deals()).
 		WithClock(func() time.Time { return e.day })
 	return e
 }
@@ -96,8 +104,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 // run.
 func (e *closeDateEnv) sweep() error {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: closeDateSweepActor})
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.SystemActing(ctx, closeDateSweepActor)
 	return e.corrector.SweepWorkspace(ctx)
 }
 
@@ -114,7 +121,7 @@ func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, 
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		// The deal carries an owner because the gone-quiet review reads its
-		// correspondence under that person's authority — an unowned deal is
+		// correspondence under that contact's authority — an unowned deal is
 		// reviewed unnamed, which is a case its own test covers.
 		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, forecast_category, expected_close_date, last_activity_at, created_at, source, captured_by, owner_id)
 		 VALUES ($1, $2, $3, $4, 10000, 'EUR', $5, $6,
@@ -248,7 +255,7 @@ func TestForecastExcludesFlaggedDealsFromCommitAndBestCase(t *testing.T) {
 
 // --- B-E09.20: the A6 tiers ---
 
-func TestCloseDateSweepAutoRollsClearOverdueActiveDeal(t *testing.T) {
+func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	e := setupCloseDate(t)
 	// Early stage (20%), plainly overdue, touched 3 days ago, no forecast
 	// override → the §11 worked example's 🟢 case. Two open stages remain
@@ -264,11 +271,18 @@ func TestCloseDateSweepAutoRollsClearOverdueActiveDeal(t *testing.T) {
 	if swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
 		t.Errorf("auto-rolled date = %v, want %s (2 stages × 14-day fallback)", swept.expectedClose, want.Format(time.DateOnly))
 	}
-	if swept.provisional {
-		t.Error("🟢 auto-apply is final — the date must not be provisional")
+	// The rolled date is a stage-velocity estimate, so it lands PROVISIONAL
+	// and asks. The 🟢 tier buys promptness — the deal stops claiming a date
+	// that has passed, tonight, without waiting for a human — not the claim
+	// that a buyer agreed to the replacement. Nothing on this path read a
+	// buyer's message, and a date nobody confirmed must not enter supported
+	// forecast claims looking confirmed.
+	if !swept.provisional {
+		t.Error("the auto-rolled date is a velocity estimate — it must be provisional")
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
-		t.Errorf("🟢 tier staged %d approvals, want none (the rep is informed, not asked)", got)
+		t.Errorf("the tier staged %d cards; an estimate is APPLIED and announced on the "+
+			"morning receipt, where the rep can put it back", got)
 	}
 
 	// Reversibility: the audit row carries the exact before/after images.
@@ -345,7 +359,14 @@ func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
 	}
 }
 
-func TestCloseDateSweepStagesProvisionalForForecastBearingDeal(t *testing.T) {
+// A commit-bearing deal is re-dated provisionally and drops out of Commit.
+//
+// It used to raise a card as well, and the card is what this change removes:
+// the sweep had already written the date, so asking a rep to confirm it was a
+// question whose answer changed nothing. The forecast exclusion is the part
+// that always mattered — a provisional date is a machine's estimate, and the
+// number must not count it.
+func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 	e := setupCloseDate(t)
 	// Explicit commit + late stage: overdue, active — never auto-final.
 	id := e.seedSweepDeal(t, "Commit slipped", e.late, stringp("commit"), intp(-10), 3)
@@ -364,8 +385,9 @@ func TestCloseDateSweepStagesProvisionalForForecastBearingDeal(t *testing.T) {
 	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
 		t.Errorf("forecast_category = %v, want the untouched commit override (the number moves by exclusion, not by edit)", swept.forecastCat)
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Fatalf("pending close_date_correction approvals = %d, want 1", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the sweep raised %d cards; the correction is applied and reported "+
+			"on the morning receipt, so there is nothing to confirm", got)
 	}
 
 	// Excluded from Commit while provisional (AC-F9): the commit filter
@@ -376,34 +398,46 @@ func TestCloseDateSweepStagesProvisionalForForecastBearingDeal(t *testing.T) {
 		t.Errorf("commit rows while provisional = %+v, want none", result.Rows)
 	}
 
-	// A second nightly run must not stack a duplicate proposal.
+	// A second nightly run leaves a corrected deal alone: its date is no longer
+	// flagged, so there is nothing to correct twice.
+	before := e.readSwept(t, id)
+	e.nextDay()
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("after a second sweep, pending approvals = %d, want still 1", got)
+	if after := e.readSwept(t, id); !sameDay(after.expectedClose, before.expectedClose) {
+		t.Errorf("a second sweep moved the date again, from %v to %v",
+			dayOf(before.expectedClose), dayOf(after.expectedClose))
 	}
 }
 
-func TestCloseDateConfirmAppliesTheDateAndClearsProvisional(t *testing.T) {
+// A card left over from before this change can still be confirmed.
+//
+// The sweep no longer stages one, but an installation upgrading mid-week has
+// pending cards its last nightly run raised, and each names a deal standing on
+// a provisional date. The confirm effect stays registered for exactly them:
+// dropping it would leave those deals provisional forever, with the only verb
+// that could settle them gone.
+//
+// Staged directly here, because the pass that used to make one does not.
+func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Confirm me", e.late, stringp("commit"), intp(-10), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	var approvalID ids.ApprovalID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM approval WHERE kind = 'close_date_correction' AND target_entity_id = $1 AND status = 'pending'`,
-		id).Scan(&approvalID); err != nil {
-		t.Fatalf("no staged correction to decide: %v", err)
+	swept := e.readSwept(t, id)
+	if !swept.provisional || swept.expectedClose == nil {
+		t.Fatalf("the sweep left no provisional date to confirm: %+v", swept)
 	}
+	approvalID := e.stageLegacyCard(t, id, *swept.expectedClose)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	if _, err := e.svc.Decide(human, approvalID, true, nil); err != nil {
 		t.Fatalf("approve + effect: %v", err)
 	}
 
-	swept := e.readSwept(t, id)
+	swept = e.readSwept(t, id)
 	if swept.provisional {
 		t.Error("confirmation must clear close_date_provisional")
 	}
@@ -418,7 +452,8 @@ func TestCloseDateConfirmAppliesTheDateAndClearsProvisional(t *testing.T) {
 	}
 }
 
-func TestCloseDateSweepDowngradesQuietDealWithoutRedatingForward(t *testing.T) {
+// Quietness lowers confidence while a recorded future date stays intact.
+func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	e := setupCloseDate(t)
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
@@ -435,13 +470,14 @@ func TestCloseDateSweepDowngradesQuietDealWithoutRedatingForward(t *testing.T) {
 		t.Errorf("forecast_category = %v, want best_case (one notch down from commit)", swept.forecastCat)
 	}
 	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
-		t.Errorf("date = %v, want the original %s — a quiet deal is never re-dated forward", swept.expectedClose, originalDate.Format(time.DateOnly))
+		t.Errorf("date = %v, want retained %s", swept.expectedClose, originalDate)
 	}
 	if swept.provisional {
-		t.Error("a future-dated quiet deal needs no provisional replacement")
+		t.Error("retaining the date must not make a human date provisional")
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Errorf("🔻 must surface the gone-quiet review: pending = %d, want 1", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the gone-quiet tier staged %d cards; both the notch and the date "+
+			"are applied, and one receipt carries them with one way back", got)
 	}
 }
 
@@ -533,5 +569,392 @@ func TestCloseDateSweepWaitUntilSuppressesDowngradeButNotOverdue(t *testing.T) {
 	}
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) || !swept.provisional {
 		t.Errorf("(date, provisional) = (%v, %v) — the past date must be replaced provisionally", swept.expectedClose, swept.provisional)
+	}
+}
+
+// The starvation the frozen membership exists to end.
+//
+// The old candidate query was `ORDER BY created_at, id LIMIT 200` over the live
+// deal table, with no cursor and no record of a pass. A corrected deal stays
+// eligible — the sweep leaves it provisional, and provisional is one of the
+// three conditions that admit a deal — so the same oldest 200 rows re-qualified
+// every night, the LIMIT cut at the same place, and deal 201 was never reached.
+// Not assessed late: not assessed at all, on any night, forever.
+//
+// So the fixture is deliberately shaped like the real failure: 200 healthy deals
+// created FIRST, which the old query would have filled its whole page with, and
+// the overdue one created last so it sorts past the cut. A pass that reaches it
+// is a pass that walked its whole frozen set.
+func TestCloseDateSweepReachesDealsPastTheOldPageLimit(t *testing.T) {
+	e := setupCloseDate(t)
+
+	// Healthy near-term dates: eligible for the pre-filter (inside the stalled
+	// window), flagged by nothing, so each settles as a plain check.
+	healthy := 200
+	for i := range healthy {
+		e.seedSweepDeal(t, fmt.Sprintf("Healthy %03d", i), e.early, nil, intp(30), 3)
+	}
+	// Created last, so it sorts behind every one of them.
+	overdue := e.seedSweepDeal(t, "Overdue behind the old cut", e.early, nil, intp(-12), 3)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The deal the old shape could never see now carries its correction.
+	swept := e.readSwept(t, overdue)
+	if swept.expectedClose == nil || !swept.expectedClose.After(today()) {
+		t.Errorf("the deal past the old page limit still claims %v — it was never assessed",
+			swept.expectedClose)
+	}
+	if !swept.provisional {
+		t.Error("its replacement date is an estimate and must be provisional")
+	}
+
+	// And the pass can say so: one run, covering everything it froze.
+	var (
+		eligible, checked int
+		status            string
+	)
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT eligible, checked, status FROM close_date_run ORDER BY started_at DESC LIMIT 1`).
+		Scan(&eligible, &checked, &status); err != nil {
+		t.Fatalf("the pass recorded no run: %v", err)
+	}
+	if eligible != healthy+1 {
+		t.Errorf("froze %d deals, want the %d seeded", eligible, healthy+1)
+	}
+	if checked != eligible {
+		t.Errorf("checked %d of %d — a complete pass settles its whole set", checked, eligible)
+	}
+	if status != deals.CloseDateRunComplete {
+		t.Errorf("run status = %q, want %q", status, deals.CloseDateRunComplete)
+	}
+}
+
+// A pass interrupted part-way resumes where it stopped rather than starting
+// again at the first row — which is what made the worker's 5-minute deadline a
+// permanent cap rather than a pause.
+func TestCloseDateSweepResumesAnUnfinishedPass(t *testing.T) {
+	e := setupCloseDate(t)
+	for i := range 3 {
+		e.seedSweepDeal(t, fmt.Sprintf("Overdue %d", i), e.early, nil, intp(-12), 3)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	var runID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM close_date_run ORDER BY started_at DESC LIMIT 1`).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reopen the finished run with one member unsettled and the cursor behind
+	// it: exactly the state a killed worker leaves.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE close_date_run SET status = 'running', finished_at = NULL, checked = checked - 1
+		  WHERE id = $1`, runID); err != nil {
+		t.Fatal(err)
+	}
+	var reopened ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`UPDATE close_date_run_member SET outcome = 'pending', settled_at = NULL
+		  WHERE ctid IN (SELECT ctid FROM close_date_run_member
+		                  WHERE run_id = $1 ORDER BY deal_created_at DESC, deal_id DESC LIMIT 1)
+		 RETURNING deal_id`, runID).Scan(&reopened); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The SAME run finished — a second one would mean it restarted rather than
+	// resumed, and would have re-corrected every deal it had already handled.
+	var runs int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM close_date_run`).Scan(&runs); err != nil {
+		t.Fatal(err)
+	}
+	if runs != 1 {
+		t.Errorf("close_date_run rows = %d, want 1 — the retry opened a second pass", runs)
+	}
+	var status string
+	var eligible, checked int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT status, eligible, checked FROM close_date_run WHERE id = $1`, runID).
+		Scan(&status, &eligible, &checked); err != nil {
+		t.Fatal(err)
+	}
+	if status != deals.CloseDateRunComplete || checked != eligible {
+		t.Errorf("resumed run: status %q, checked %d of %d — want a completed pass",
+			status, checked, eligible)
+	}
+}
+
+// A deal created after the freeze belongs to the NEXT pass, and one that closes
+// mid-pass keeps its place in the ledger with a reason. Both are what make
+// "checked N of M" reconcile instead of drifting with the live table.
+func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
+	e := setupCloseDate(t)
+	settled := e.seedSweepDeal(t, "Archived before the sweep runs", e.early, nil, intp(-12), 3)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET archived_at = now() WHERE id = $1`, settled); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The archived deal never entered the frozen set: the freeze reads live
+	// open deals, so a deal already gone is not owed an outcome.
+	var members int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM close_date_run_member WHERE deal_id = $1`, settled).Scan(&members); err != nil {
+		t.Fatal(err)
+	}
+	if members != 0 {
+		t.Errorf("an archived deal joined the frozen set (%d members)", members)
+	}
+
+	// A deal created now is not retrofitted into the finished pass.
+	fresh := e.seedSweepDeal(t, "Created after the freeze", e.early, nil, intp(-12), 3)
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM close_date_run_member WHERE deal_id = $1`, fresh).Scan(&members); err != nil {
+		t.Fatal(err)
+	}
+	if members != 0 {
+		t.Errorf("a deal created after the freeze joined that pass (%d members)", members)
+	}
+}
+
+// A member that goes away between the freeze and its turn is SKIPPED, not
+// dropped. Losing it from the ledger would quietly shrink the denominator, and
+// "checked 9 of 9" would be true of a set that used to have ten deals in it.
+func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
+	e := setupCloseDate(t)
+	doomed := e.seedSweepDeal(t, "Archived after the freeze", e.early, nil, intp(-12), 3)
+
+	// Run once so the deal is frozen into a pass, then reopen that pass with
+	// this member unsettled and archive the deal underneath it — the state a
+	// concurrent human archive leaves for the resuming walk.
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	var runID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM close_date_run ORDER BY started_at DESC LIMIT 1`).Scan(&runID); err != nil {
+		t.Fatal(err)
+	}
+	// Zero the tallies with the members, so what the resumed walk records is
+	// the only thing these counters hold.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE close_date_run
+		    SET status = 'running', finished_at = NULL, checked = 0, corrected = 0, staged = 0
+		  WHERE id = $1`, runID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE close_date_run_member SET outcome = 'pending', settled_at = NULL
+		  WHERE run_id = $1`, runID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET archived_at = now() WHERE id = $1`, doomed); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	var outcome string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT outcome FROM close_date_run_member WHERE run_id = $1 AND deal_id = $2`,
+		runID, doomed).Scan(&outcome); err != nil {
+		t.Fatalf("the archived member left the ledger: %v", err)
+	}
+	if outcome != "skipped" {
+		t.Errorf("outcome = %q, want skipped — it was frozen in, so it is owed an answer", outcome)
+	}
+	// And the pass still accounts for it: settled, so the run can finish, while
+	// staying outside the corrected tally.
+	var eligible, checked, corrected int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT eligible, checked, corrected FROM close_date_run WHERE id = $1`, runID).
+		Scan(&eligible, &checked, &corrected); err != nil {
+		t.Fatal(err)
+	}
+	if checked != eligible {
+		t.Errorf("checked %d of %d — a skipped member is still settled", checked, eligible)
+	}
+	if corrected != 0 {
+		t.Errorf("corrected = %d, want 0 — an archived deal is not corrected", corrected)
+	}
+}
+
+// The ledger records what the pass DID, not which tier it picked.
+//
+// The outcome used to be read off the chosen action, so a tier that decided to
+// correct and then wrote nothing still counted as a correction. Switching
+// maintenance off is the clearest case: every branch stops writing, and a
+// receipt built from intentions would report a night's worth of corrections
+// that never touched a deal — the same "machine work that changed nothing"
+// this ledger exists to expose.
+func TestCloseDateRunCountsOnlyWritesThatHappened(t *testing.T) {
+	e := setupCloseDate(t)
+	e.seedSweepDeal(t, "Overdue but maintenance is off", e.early, nil, intp(-12), 3)
+
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO setting (key, value, updated_at) VALUES ($1, 'false'::jsonb, now())
+		 ON CONFLICT (key) DO UPDATE SET value = 'false'::jsonb, updated_at = now()`,
+		deals.MaintenanceWritesEnabled.Key()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	var eligible, checked, corrected int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT eligible, checked, corrected FROM close_date_run ORDER BY started_at DESC LIMIT 1`).
+		Scan(&eligible, &checked, &corrected); err != nil {
+		t.Fatal(err)
+	}
+	if eligible != 1 || checked != 1 {
+		t.Errorf("eligible %d checked %d — the deal is still assessed with writes off", eligible, checked)
+	}
+	if corrected != 0 {
+		t.Errorf("corrected = %d, want 0 — nothing was written, so nothing was corrected", corrected)
+	}
+	// And the deal really is untouched: still claiming its past date.
+	swept := e.readSwept(t, e.firstDealID(t))
+	if swept.expectedClose == nil || !swept.expectedClose.Before(today()) {
+		t.Errorf("the deal was re-dated to %v with maintenance switched off", swept.expectedClose)
+	}
+}
+
+// firstDealID is the only deal these single-deal cases seed.
+func (e *closeDateEnv) firstDealID(t *testing.T) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM deal ORDER BY created_at LIMIT 1`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// stageLegacyCard raises the confirm card the sweep used to raise, for the one
+// test that still needs one: an installation upgrading with cards already
+// pending.
+func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed time.Time) ids.ApprovalID {
+	t.Helper()
+	proposal := deals.CloseDateCorrection{
+		DealID:            ids.From[ids.DealKind](dealID),
+		ExpectedCloseDate: proposed.Format(time.DateOnly),
+		PreviousCloseDate: stringp(proposed.Format(time.DateOnly)),
+		Asking:            deals.AskingIsThisDateRight,
+	}
+	raw, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical, hash, err := diffhash.Canonical(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetType := approvalTargetDeal
+	id, err := e.svc.Stage(e.Admin(), approvals.StageInput{
+		Kind:           deals.CloseDateCorrectionKind,
+		ProposedChange: canonical,
+		DiffHash:       hash,
+		TargetType:     targetType,
+		TargetID:       dealID,
+		Summary:        "Confirm the real close date",
+	})
+	if err != nil {
+		t.Fatalf("staging the leftover card: %v", err)
+	}
+	return id
+}
+
+// A rep who has asked to be asked keeps their deals, whoever the pass first
+// saw holding them.
+//
+// The member page joins the live deal table, so an ordinary hand-over is
+// already picked up on the next page. What it cannot see is a hand-over that
+// lands AFTER that page is read and before the row lock is taken — the same
+// window the status re-check beside it exists for. The policy is re-asked there
+// when the owner has moved, so the sweep never writes for the rep who declined.
+func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Not to be touched", e.late, stringp("commit"), intp(30), 90)
+	originalDate := today().AddDate(0, 0, 30)
+	e.optOutOfCorrections(t, e.Rep1)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	swept := e.readSwept(t, id)
+	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date = %v, want the original %s — this rep asked to be asked",
+			swept.expectedClose, originalDate.Format(time.DateOnly))
+	}
+	if swept.provisional {
+		t.Error("the deal is marked provisional, so the sweep wrote to a rep who opted out")
+	}
+}
+
+// optOutOfCorrections records a rep's real "ask me every time" for close-date
+// corrections, through the policy table the sweep actually reads.
+func (e *closeDateEnv) optOutOfCorrections(t *testing.T, userID ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO approval_autonomy_policy (user_id, kind, mode)
+		 VALUES ($1, 'close_date_correction', 'manual')
+		 ON CONFLICT (user_id, kind) DO UPDATE SET mode = excluded.mode`,
+		userID); err != nil {
+		t.Fatalf("recording the rep's opt-out: %v", err)
+	}
+}
+
+// A reader with no deal grant loses the corrections, not the whole panel.
+//
+// The receipt lane has two sources and they answer one question between them:
+// approvals the system decided, and corrections the sweep applied. A seat that
+// may not read deals has no corrections to be told about — but it may well have
+// approvals, and propagating the refusal took the entire receipt surface away
+// over a grant that has nothing to do with the rows it was hiding.
+func TestAReaderWithNoDealGrantStillSeesTheirOtherReceipts(t *testing.T) {
+	e := setupCloseDate(t)
+	seam := attentionReceipts{svc: e.svc, deals: deals.NewStore(e.DB(), DealsInstallation())}
+	// Everything a rep normally holds EXCEPT the deal object.
+	noDeals := principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	}
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, noDeals)
+
+	received, err := seam.Recent(ctx, time.Now().Add(-24*time.Hour), 10)
+	if err != nil {
+		t.Fatalf("the receipt lane refused a reader with no deal grant: %v", err)
+	}
+	if received == nil {
+		// nil and empty read the same to the caller; the assertion that matters
+		// is the absent error above. Stated so the test says what it accepts.
+		received = []attention.Receipt{}
+	}
+	for _, receipt := range received {
+		if receipt.Kind == deals.CloseDateCorrectionKind {
+			t.Errorf("a reader with no deal grant was handed a close-date correction: %+v", receipt)
+		}
 	}
 }

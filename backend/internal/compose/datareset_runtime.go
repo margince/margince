@@ -19,8 +19,7 @@ import (
 // ResetRuntime is the non-Postgres runtime a data reset must clear: the job
 // queue, the event bus, and the cache-flush announcement. Each member is a
 // func injected by cmd, which owns the Redis and River clients — compose names
-// neither, and must not start (platform/overlaybudget/meter.go's RebindFrom
-// records the same discipline).
+// neither, and must not start.
 //
 // A zero value is legitimate: a role that wired no queue and no bus resets
 // what it can reach instead of refusing to reset at all.
@@ -50,10 +49,6 @@ type resetCounts struct {
 	CacheKeys      int
 	ObjectsDeleted int
 	DrainTimedOut  bool
-	// SorModeReverted records that the installation was in overlay mode and
-	// this reset returned it to native. Not a count, but it rides here for the
-	// same reason the counts do: the audit row and the log line both report it.
-	SorModeReverted bool
 	// SecretsPurged counts the sealed credentials redeemed from the vault.
 	SecretsPurged int
 	// secretRefs carries the handles collected inside the sweep's transaction
@@ -63,8 +58,8 @@ type resetCounts struct {
 	secretRefs []string
 }
 
-// runRuntimePhase quiets the fleet, drains the outbox, purges the queue, the bus
-// and this workspace's budget counters, and then runs sweep — the Postgres sweep
+// runRuntimePhase quiets the fleet, drains the outbox, purges the queue and the
+// bus, and then runs sweep — the Postgres sweep
 // — with the fleet still paused. sweep receives the tally so far so the audit row
 // it writes can name what the purges cleared, and writes its own back into it.
 //
@@ -105,18 +100,6 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 			return counts, err
 		}
 		counts.StreamsPurged, counts.CacheKeys = streams, keys
-	}
-	// The overlay budget's counters are Redis keys exactly like the bus's dedupe
-	// marks, they need nothing from the sweep's transaction, and purging them
-	// here is what makes cache_keys_deleted one number: the audit row written
-	// inside that transaction reports the same total as the response and the log
-	// line. A meter with no Redis client purges nothing and reports zero.
-	if h.budget != nil {
-		n, err := h.budget.PurgeWorkspace(ctx, ws)
-		if err != nil {
-			return counts, err
-		}
-		counts.CacheKeys += n
 	}
 	if err := sweep(&counts); err != nil {
 		return counts, err
@@ -166,11 +149,7 @@ func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime
 // reset endpoint enforces. Dropping a cached answer costs a recomputation and
 // nothing else, which is why the cache flush fans out and the lockout reset
 // below does not.
-func (s *Server) FlushResetCaches(ws ids.UUID) {
-	if s.sorDispatch != nil {
-		s.sorDispatch.Invalidate(ws)
-	}
-}
+func (s *Server) FlushResetCaches(ids.UUID) {}
 
 // flushAfterOwnReset is the flush for the process that actually PERFORMED the
 // reset, and it is deliberately not the one the control channel reaches.
@@ -185,7 +164,7 @@ func (s *Server) FlushResetCaches(ws ids.UUID) {
 //
 // Only the system-of-record cache is keyed by ws; the buckets clear
 // installation-wide. That is exact rather than over-broad: one installation
-// serves one organization (A107/ADR-0061), so there is no second workspace
+// serves one company (ADR-0061), so there is no second workspace
 // whose buckets this could reach.
 func (s *Server) flushAfterOwnReset(ws ids.UUID) {
 	s.FlushResetCaches(ws)

@@ -16,8 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -50,11 +50,15 @@ type grantRequirement struct {
 }
 
 // kindLinkedInMatch is the staged kind for "this imported connection is this
-// contact". This module makes three separate statements about it — the grants
-// deciding it needs, that only the member it was staged for may decide it, and
-// that it declines the version pin — and a typo across them would leave the
-// kind half-governed with nothing saying so. Compose owns the registration
-// spelling; the compose-side waiver fitness tests bind the two together.
+// contact". This module makes two separate statements about it — the grants
+// deciding it needs, and that it declines the version pin — and a typo across
+// them would leave the kind half-governed with nothing saying so. Compose owns
+// the registration spelling; the compose-side waiver fitness tests bind the two
+// together.
+//
+// It is NOT narrowed to one seat. The proposal's subject is a contact the
+// decider can already read, so who may decide it is the inbox's ordinary rule:
+// the grant below, and visibility of that contact.
 const kindLinkedInMatch = "linkedin_match"
 
 // kindHeldDraft is an automation-composed reply held for the rep it was written
@@ -64,11 +68,38 @@ const kindLinkedInMatch = "linkedin_match"
 // kind half-governed with nothing saying so.
 const kindHeldDraft = "held_draft"
 
+// kindDealFollowUp is the nightly reconciliation's "this conversation left no
+// next step" card, and kindTranscriptProposal the next step a transcript
+// recorded somebody committing to. Named rather than spelled: this module makes
+// three separate statements about each — the grants deciding it needs, that the
+// rep it was staged for decides it alone, and what filing it means — and a typo
+// across them would leave the kind half-governed with nothing saying so.
+const (
+	kindDealFollowUp       = "deal_follow_up"
+	kindTranscriptProposal = "transcript_proposal"
+)
+
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
 // registers both its effects: the message lives in activities and the inbox
 // lives here, so the edge is injected there and both halves name one kind.
 const KindScheduledSendHeld = "scheduled_send_held"
+
+// KindCommunicationReview is a send the engine refused, put in front of
+// somebody who may decide it goes anyway.
+//
+// NOT SELF-ONLY, unlike the held-message kind above, and that is the whole
+// point of routing one. A rep refused at the keyboard may not hold the
+// authority to override the engine; this card exists so they can ask somebody
+// who does. A kind only its initiator could decide would put the question back
+// in front of the colleague who could not answer it.
+const KindCommunicationReview = "communication_review"
+
+// objectCommunicationException is the RBAC object directing a send answers to,
+// spelled here as identity's policy spells it. Deciding one of these cards IS
+// directing a send, so it takes the same grant the direct-send door takes —
+// anything less would make the card a way around that door.
+const objectCommunicationException = "communication_exception"
 
 // decisionGrants maps each stageable kind onto the RBAC its effect needs given
 // the KIND ALONE; approving requires every one of them. A kind whose grant also
@@ -83,11 +114,11 @@ var decisionGrants = map[string][]grantRequirement{
 	// grant rather than the send's, because a gate that admitted a decision its
 	// effect then refuses would commit the decision and fail the work: the card
 	// gone, the message still held. selfOnlyKinds narrows it from "anyone
-	// holding that grant" to the one person whose message it is.
+	// holding that grant" to the one contact whose message it is.
 	KindScheduledSendHeld: {{objectActivity, principal.ActionUpdate}},
 	// Committing an import writes the estate in bulk, so deciding one requires
 	// the same grant creating a run does. It is the CREATE grant rather than an
-	// update: an import creates records, and the person releasing it is
+	// update: an import creates records, and the contact releasing it is
 	// authorising those creations, not editing a run.
 	KindImportCommit: {{targetImportRun, principal.ActionCreate}},
 	// A step-up requires NO object grant, and the empty slice is the decision
@@ -95,7 +126,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// does not widen what the agent may read, only how much of what it may
 	// already read it may be handed. There is no object to name, and naming one
 	// would be a fiction that decided the wrong question — a human holding
-	// deal.update is not thereby the person who lent this passport.
+	// deal.update is not thereby the contact who lent this passport.
 	//
 	// What bounds it instead is selfOnlyKinds below: the lender, and nobody
 	// else. Without that entry this empty set would make a step-up decidable by
@@ -103,20 +134,34 @@ var decisionGrants = map[string][]grantRequirement{
 	// the two entries are one decision and TestAStepUpIsDecidedByTheLenderAlone
 	// holds them together.
 	KindVolumeRelease: {},
+	// Deciding a refused send is directing it, so it takes the grant the
+	// direct-send door takes. The card is a route to that act, not a second
+	// authority for it — a reviewer who could approve here but not direct
+	// would be releasing work they could not perform, and the effect would
+	// refuse after the decision had already committed.
+	KindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
 
 	"advance_deal": {{tableDeal, principal.ActionUpdate}},
 	// progress_deal is advance_deal plus a timeline note; the gated effect
 	// is the deal move, so deciding it needs the same grant.
 	"progress_deal": {{tableDeal, principal.ActionUpdate}},
-	"promote_lead":  {{tableLead, principal.ActionUpdate}, {tablePerson, principal.ActionCreate}},
+	"promote_lead":  {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionCreate}},
 	// Disqualifying retires the lead in place, and the store gates it on
-	// `lead:delete` (people/lead.go DisqualifyLead) as the REST twin's DELETE
+	// `lead:delete` (contacts/lead.go DisqualifyLead) as the REST twin's DELETE
 	// implies. Deciding takes the grant PERFORMING it takes: anything less and
 	// the confirm-first control point sits with someone who could not do the
 	// thing they are releasing.
 	"disqualify_lead": {{tableLead, principal.ActionDelete}},
+	// Demotion reverses a promotion: the lead returns to the open ladder and the
+	// contact the promotion created is archived. Both halves are gated where they
+	// are performed (contacts/demote.go), so deciding takes both — the lead's
+	// update and the contact's delete. The contact grant is the one that matters:
+	// releasing a demotion is releasing the archival of a contact somebody may
+	// have been working, and an approver who could not archive that contact is
+	// not the contact to authorise it.
+	"demote_lead": {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionDelete}},
 	// A tag merge releases the source's NAME and no later act restores it, which
-	// is why it confirms where a record merge does not: mergePerson archives the
+	// is why it confirms where a record merge does not: mergeContact archives the
 	// source with `merged_into_id` and audit walks it back, and a tag keeps no
 	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
@@ -129,14 +174,14 @@ var decisionGrants = map[string][]grantRequirement{
 	// time; the approver needs the write grant, the consent gate runs in
 	// the handler regardless of who approved.
 	"send_email": {{objectActivity, principal.ActionCreate}},
-	// send_account_email is the same send from the other origin (ADR-0087 §6):
+	// send_company_email is the same send from the other origin (ADR-0087 §6):
 	// it starts a conversation instead of continuing one, and the effect it
 	// stages is the identical activity write. The records the message is filed
 	// under are named rather than inherited, and those are row-scope probed at
 	// staging and again at insert — they are a question about the STAGER's
 	// reach, not about the approver's, so they add nothing here. Governed
 	// identically to the reply means exactly this grant and no other.
-	"send_account_email": {{objectActivity, principal.ActionCreate}},
+	"send_company_email": {{objectActivity, principal.ActionCreate}},
 	// send_message is the same effect on a messaging channel: an activity
 	// write, with the consent gate running in the handler whoever approved it.
 	"send_message": {{objectActivity, principal.ActionCreate}},
@@ -159,27 +204,23 @@ var decisionGrants = map[string][]grantRequirement{
 	"relink_thread":     {{objectActivity, principal.ActionUpdate}},
 	"relink_activities": {{objectActivity, principal.ActionUpdate}},
 	// Accepting a cold-start read-back writes enrichment fields onto an
-	// organization; "enrich" is the same effect staged through the
+	// company; "enrich" is the same effect staged through the
 	// transport gate by an agent caller.
-	"coldstart": {{tableOrganization, principal.ActionUpdate}},
-	"enrich":    {{tableOrganization, principal.ActionUpdate}},
+	"coldstart": {{tableCompany, principal.ActionUpdate}},
+	"enrich":    {{tableCompany, principal.ActionUpdate}},
 	// A rate refresh proposes an effective-dated row on a workspace-shared price
 	// sheet, and deciding it requires BOTH write verbs on that sheet.
 	//
-	// The release is an upsert: it inserts a new (currency, day) or replaces an
-	// existing rate, and which one it will be is not knowable when the decision
-	// is made — the sheet can change between the decision and the apply. The
-	// apply also runs as the system principal, so the store's in-transaction
-	// check on the specific verb never fires here; this is the only grant
-	// standing between an approver and the row the release replaces.
+	// The release is an upsert and which half it will be is not knowable when the
+	// decision is made. The apply runs as the system principal, so the store's
+	// in-transaction check never fires here; this is the only grant standing
+	// between an approver and the row the release replaces.
 	//
-	// Either verb alone would authorize the operation it does not name: a
-	// create-only approver could release an overwrite, precisely the
-	// substitution the store's second check exists to refuse. Requiring both is
-	// the conservative reading — approve an upsert only if you could have
-	// performed either half yourself. Every seeded role holding one holds the
-	// other (writeNoDelete for admin and ops, the zero grant for everyone
-	// else), so this constrains edited roles only, and constrains them right.
+	// Either verb alone would authorize the operation it does not name — a
+	// create-only approver releasing an overwrite. Requiring both is the
+	// conservative reading: approve an upsert only if you could have performed
+	// either half. Every seeded role holding one holds the other, so this
+	// constrains edited roles only.
 	"fx_rate_proposal": {
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
@@ -189,39 +230,39 @@ var decisionGrants = map[string][]grantRequirement{
 		{targetAIModelRate, principal.ActionUpdate},
 	},
 	// Accepting a deep site read writes profile fields and category facts
-	// onto the target organization — the same update authority enrich needs.
-	"deepread": {{tableOrganization, principal.ActionUpdate}},
-	// Accepting a site_lead proposal (a published person from a deep read's
+	// onto the target company — the same update authority enrich needs.
+	"deepread": {{tableCompany, principal.ActionUpdate}},
+	// Accepting a site_lead proposal (a published contact from a deep read's
 	// team page) captures them as a LEAD through the capture sink — the
 	// effect is a lead create, so deciding it needs that grant.
 	"site_lead": {{tableLead, principal.ActionCreate}},
 	// Approving a LinkedIn match links an imported connection to a contact and
-	// writes that contact's LinkedIn address — a person write, so deciding it
+	// writes that contact's LinkedIn address — a contact write, so deciding it
 	// needs the grant the write itself takes.
-	kindLinkedInMatch: {{tablePerson, principal.ActionUpdate}},
+	kindLinkedInMatch: {{tableContact, principal.ActionUpdate}},
 	// Accepting a capture_counterparty proposal (ADR-0072/A118: a first-time
-	// sender the verdict engine could not judge) creates the person and, unless
-	// the domain is free-mail, the organization behind them — so deciding it
+	// sender the verdict engine could not judge) creates the contact and, unless
+	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
-	"capture_counterparty": {{tablePerson, principal.ActionCreate}, {tableOrganization, principal.ActionCreate}},
+	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
-	// refused to create beside its near-match) creates the person; when the
+	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create
-	// plus the person-anchor update that edge takes), and when nobody holds
-	// that employer yet, the organization behind them. Deciding needs every
+	// plus the contact-anchor update that edge takes), and when nobody holds
+	// that employer yet, the company behind them. Deciding needs every
 	// grant the release can spend, exactly as if the approver had typed the
 	// card in — a shorter list would show the card to an approver whose
 	// approval then fails partway.
 	"vcard_create": {
-		{tablePerson, principal.ActionCreate},
-		{tablePerson, principal.ActionUpdate},
-		{tableOrganization, principal.ActionCreate},
+		{tableContact, principal.ActionCreate},
+		{tableContact, principal.ActionUpdate},
+		{tableCompany, principal.ActionCreate},
 		{targetRelationship, principal.ActionCreate},
 	},
-	// Accepting an org_name_promotion proposal (PO-F-2a: one employee's
+	// Accepting a company_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
-	// the organization — the same update authority the name editor needs.
-	"org_name_promotion": {{tableOrganization, principal.ActionUpdate}},
+	// the company — the same update authority the name editor needs.
+	"company_name_promotion": {{tableCompany, principal.ActionUpdate}},
 	// Accepting a lifecycle_change proposal (the account-intelligence arc: the
 	// correspondence says the contract ended while the record still reads as
 	// live) moves the account's stage — the same update authority the header's
@@ -229,25 +270,25 @@ var decisionGrants = map[string][]grantRequirement{
 	//
 	// It also carries the signal's own summary in its payload and settles that
 	// signal on accept, so it needs the signal grant too. Without it an
-	// organization editor could read model-derived correspondence and close a
+	// company editor could read model-derived correspondence and close a
 	// signal they have no standing to see — the ordinary triage path takes
 	// signal:update and EnsureSignalVisible for exactly that reason.
-	"lifecycle_change": {{tableOrganization, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
+	"lifecycle_change": {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
-	"close_date_correction": {{tableDeal, principal.ActionUpdate}},
+	closeDateCorrectionKind: {{tableDeal, principal.ActionUpdate}},
 	// Confirming an overnight follow-up proposal (features/07 §8a) creates
 	// the drafted task activity; the target deal's visibility gates who
 	// may see and decide it (targetVisible), the create grant gates the
 	// write the confirm performs.
-	"deal_follow_up": {{objectActivity, principal.ActionCreate}},
+	kindDealFollowUp: {{objectActivity, principal.ActionCreate}},
 	// Confirming a next step read out of a meeting transcript (S-E04.3)
 	// creates the task activity it proposed. The transcript activity it is
 	// filed against gates who may see and decide it (targetVisible); the
 	// create grant gates the write the confirm performs. Read is not enough:
 	// somebody who may read the transcript but not add to the timeline could
 	// otherwise release a task they could not have logged themselves.
-	"transcript_proposal": {{objectActivity, principal.ActionCreate}},
+	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
@@ -312,52 +353,6 @@ var targetResolvedGrants = map[string]principal.Action{
 	"create_record":  principal.ActionCreate,
 }
 
-// selfOnlyKinds are the staging kinds whose proposal is nobody's business but
-// the member it was staged for.
-//
-// The inbox is a SHARED surface by design — a manager triages what a rep
-// staged — and for almost every kind that is the point. It is wrong for one:
-// a LinkedIn match names a third party out of one member's imported address
-// book, people who never agreed to be in this CRM at all. The endpoints this
-// kind replaced were owner-only and said so; routing the same question through
-// a shared inbox would have handed every admin a readable copy of a
-// colleague's contact list, which is a bigger disclosure than the feature it
-// enables.
-//
-// So a self-only kind adds one predicate to the two below: the deciding human
-// must BE the member it was staged for. It is the inbox's mirror of the
-// webhooks module's selfOnlyEvents, which keeps the same three LinkedIn facts
-// off the workspace fan-out for the same reason.
-//
-// A step-up is the other: "may this agent keep reading" is a question about ONE
-// connection, and the only person who can answer it is the human whose authority
-// that connection borrows.
-// A held scheduled send is the third: the message is one rep's, the decision is
-// whether to retry it or abandon it, and nobody else has standing to answer.
-var selfOnlyKinds = map[string]bool{
-	kindLinkedInMatch:     true,
-	KindVolumeRelease:     true,
-	KindScheduledSendHeld: true,
-	// A vCard review is one member's own uploaded address book, exactly the
-	// LinkedIn-match shape: the staged card names a third party who never
-	// agreed to be in this CRM, and a shared inbox would hand every
-	// person:create holder a readable copy of a colleague's contacts.
-	"vcard_create": true,
-	// A held draft is the fourth, and it is about WHOSE MAILBOX the message
-	// leaves from rather than who may read it. Releasing one sends it, and the
-	// send stamps its identity from the approving human: comms.stagingUser
-	// takes the sending credential from the authenticated principal, and the
-	// display name and signature come from that same actor. So a colleague who
-	// approved a rep's draft did not authorise the rep's message — they sent
-	// their own, into a customer thread they were never part of, signed by
-	// themselves.
-	//
-	// The narrowing puts the decision back with the person the message would go
-	// out as. It is also what kindHeldDraft's own doc has always claimed ("held
-	// for the rep it was written for") and what nothing enforced.
-	kindHeldDraft: true,
-}
-
 // decidable is the ONE visibility-and-authority predicate for the inbox
 // and the decision: true when p holds every grant approving a would
 // require AND could read the staged target itself — the object-read grant
@@ -366,8 +361,9 @@ var selfOnlyKinds = map[string]bool{
 // gate can never drift apart — you see exactly what you could act on, and
 // what you cannot see you cannot decide (in either direction). Two shapes
 // narrow that to ONE seat, the member the row was staged for: a self-only
-// kind, and a staged create against a table whose rows belong to one human
-// each. An unknown kind (no mapping) or unknown target type is not
+// kind, a staged create against a table whose rows belong to one human
+// each, and a kind that is one rep's own morning work
+// (decidedByTheSeatStagedFor). An unknown kind (no mapping) or unknown target type is not
 // decidable: fail-closed.
 func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bool, error) {
 	if requireDecisionGrants(p, a) != nil {
@@ -377,29 +373,6 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 		return false, nil
 	}
 	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
-}
-
-// withheldFromOtherSeats is the self-only narrowing of decidable, spelled once
-// because three reads apply it: the inbox scan through decidable, and the two
-// target-filtered reads (inbox.listForTarget, Service.PendingForTarget) which
-// settle target visibility for the record instead of per row and so cannot call
-// decidable itself. It reports the rows this caller must NOT see — true when the
-// staging is bound to one seat and p is not it.
-//
-// Two routes to the same predicate: a kind whose subject is one member's own
-// business, and a staged create against a table whose rows belong to one human
-// each — where no row exists yet for an ownership probe to ask. Fail-closed on a
-// missing stager: a proposal nobody is recorded for is one nobody may read, not
-// one everybody may.
-//
-// Held by: TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing
-// (backend/gates/approvalselfonlyreaders_test.go) — it fails when a reader
-// filters rows with requireDecisionGrants and does not also call this.
-func withheldFromOtherSeats(p principal.Principal, a row) bool {
-	if !selfOnlyKinds[a.Kind] && !stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
-		return false
-	}
-	return a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

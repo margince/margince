@@ -171,7 +171,7 @@ func (s *RunnerService) canResume(
 		// The passport died while the run was parked (revoked, expired, human
 		// deactivated). The run cannot act anymore. WHICH of those happened is
 		// the identity module's own message, so it goes to the operator and not
-		// to the column the person reads.
+		// to the column the reader reads.
 		s.log.Warn("runner: a suspended run's authority died before it could resume",
 			"trigger_ref", suspended.TriggerRef, "run", suspended.RunID, "cause", err)
 		return identity.AgentIdentity{}, runner.AgentSpec{}, runner.FailurePassportNoLongerValid

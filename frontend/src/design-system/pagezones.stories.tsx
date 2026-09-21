@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Button } from "./atoms";
 import { PageZones } from "./pagezones";
 import { Panel, PanelBody } from "./panel";
 
@@ -64,7 +67,7 @@ export const Aside: Story = {
 };
 
 // The rail on the LEFT: what the subject IS, read before what is happening to
-// it — the person record's shape.
+// it — the contact record's shape.
 export const Rail: Story = {
   args: {
     shape: "rail",
@@ -129,5 +132,67 @@ export const Folded: Story = {
     railLabel: "Profile",
     aside: business,
     asideLabel: "Context",
+  },
+};
+
+/**
+ * The details pane folded AWAY — the same shape, the same named areas, the
+ * pane's track at zero, and the work column taking back the gutter it no
+ * longer owes so it ends flush at the page's right edge.
+ *
+ * A picture of the resting state rather than of the fold: the column travels
+ * over `--dur-move`, which is `AsideToggle` below.
+ */
+export const AsideClosed: Story = {
+  args: {
+    shape: "aside",
+    main: work,
+    aside: business,
+    asideLabel: "Context",
+    asideOpen: false,
+  },
+};
+
+// The pane arriving and leaving, which is the reason `asideOpen` exists: the
+// content is handed over at every width and the flag alone decides whether the
+// column stands. A screen wires this switch into `PageAsideToggle` and the
+// memory behind it (app/pageaside.tsx); here it is a bare button, because what
+// this story is for is the COLUMN.
+function TogglePane() {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <Button aria-pressed={open} onClick={() => setOpen(!open)}>
+        Details
+      </Button>
+      <PageZones
+        shape="aside"
+        main={work}
+        aside={business}
+        asideLabel="Context"
+        asideOpen={open}
+      />
+    </>
+  );
+}
+
+export const AsideToggle: Story = {
+  render: () => <TogglePane />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    const toggle = await canvas.findByRole("button", { name: "Details" });
+    await user.click(toggle);
+    // Waited for rather than asserted outright: the landmark is held while the
+    // column travels, and it is the END of that travel this is the spec for.
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("complementary", { name: "Context" }),
+      ).toBeNull(),
+    );
+    await user.click(toggle);
+    await expect(
+      await canvas.findByRole("complementary", { name: "Context" }),
+    ).toBeVisible();
   },
 };

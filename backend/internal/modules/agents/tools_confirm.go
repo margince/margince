@@ -12,7 +12,7 @@ package agents
 // They no longer stage by DEFAULT. A passport carries the granting human's own
 // seat, grants and row scope, so a verb this family holds is one its holder
 // could perform unaided in the web app, and requiring a second confirmation
-// from the same person made the agent surface weaker than the person behind
+// from the same contact made the agent surface weaker than the contact behind
 // it rather than safer. This is ADR-0055's argument — already accepted for
 // DECIDING an approval — applied to doing the thing itself.
 //
@@ -52,7 +52,7 @@ import (
 // rather than derived so adding a branch to Archive is a deliberate edit in
 // both places.
 var archivableRecordTypes = []string{
-	string(datasource.EntityPerson), string(datasource.EntityOrganization),
+	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
 	string(datasource.EntityRelationship), string(datasource.EntityActivity),
 }
@@ -60,13 +60,12 @@ var archivableRecordTypes = []string{
 // archivableHere answers what the ROUTED executor archives, falling back to the
 // native list above when the provider cannot say.
 //
-// The list above is what the NATIVE provider archives, and for an installation
-// running in overlay mode that is three types too wide: overlay archives
-// person, organization and deal, and refuses project, relationship and
-// activity. A stage-time check reading the native list therefore admitted an
-// archive the executor was always going to refuse — the one failure this
-// tool's confirm-first shape exists to prevent, and the failure the comment on
-// archivableRecordTypes describes happening to `activity` once already.
+// The list above is what the NATIVE provider archives, and a fork's adapter may
+// archive fewer types than that. A stage-time check reading the native list
+// against such a provider admits an archive the executor was always going to
+// refuse — the one failure this tool's confirm-first shape exists to prevent,
+// and the failure the comment on archivableRecordTypes describes happening to
+// `activity` once already.
 //
 // The fallback is not a shrug: a provider that does not answer
 // RecordArchiverV2 is a fork's own adapter, and the native set is the only
@@ -108,9 +107,9 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
 		Description:   archiveRecordCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "archivePerson/archiveOrganization/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
+		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization","deal","project","relationship","activity"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -200,8 +199,13 @@ func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 
 // LeadPromoter is the provider extension promotion rides (the sor seam
 // has no promotion verb yet — fable feedback/17).
+//
+// ifVersion carries the version the write must be conditioned on, for the
+// reason LeadDisqualifier's does: this verb STAGES a target version at
+// approval time, and a promotion that applied none would mint a contact from
+// lead fields a concurrent edit may have changed since the human approved.
 type LeadPromoter interface {
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error)
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error)
 }
 
 type promoteArgs struct {
@@ -217,7 +221,7 @@ type promoteLead struct {
 
 func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "promote_lead", Title: "Promote a lead to a person", Version: toolVersionV1,
+		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "promoteLead",
@@ -261,7 +265,14 @@ func (t promoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := requireGenuineTrigger(args.Trigger); err != nil {
 		return nil, err
 	}
-	ref, merged, err := t.promoter.PromoteLead(ctx, args.LeadID, args.Trigger, args.EvidenceNote)
+	// nil, because this tool takes no if_version of its own: the pin it
+	// applies is the one the approval was released against, as every other
+	// staged write's is.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	ref, merged, err := t.promoter.PromoteLead(ctx, args.LeadID, args.Trigger, args.EvidenceNote, pin)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +281,7 @@ func (t promoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		return nil, fmt.Errorf("crmagents: promotion landed but read-back failed: %w", err)
 	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
-	return json.Marshal(PromoteLeadResult{Merged: merged, Person: newWireRecord(ctx, rec)})
+	return json.Marshal(PromoteLeadResult{Merged: merged, Contact: newWireRecord(ctx, rec)})
 }
 
 // --- merge_records (🟡 write — collapses two records into one) ---
@@ -281,9 +292,9 @@ type mergeArgs struct {
 	TargetID   ids.UUID `json:"target_id"`
 }
 
-// mergeableTypes: only person and organization have a merge verb (deals and
+// mergeableTypes: only contact and company have a merge verb (deals and
 // leads leave through their own lifecycle).
-var mergeableTypes = map[string]bool{"person": true, "organization": true}
+var mergeableTypes = map[string]bool{importObjectContact: true, importObjectCompany: true}
 
 // mergeableTypeNames renders the vocabulary above for a refusal, sorted so the
 // message is byte-stable across processes rather than following map order.
@@ -305,9 +316,9 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "mergePerson/mergeOrganization",
+		OpenAPIOp: "mergeContact/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization"]},
+			"record_type":{"type":"string","enum":["contact","company"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

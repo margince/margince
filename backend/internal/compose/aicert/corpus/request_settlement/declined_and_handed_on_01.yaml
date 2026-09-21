@@ -1,0 +1,57 @@
+name: declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Settled does not mean "we did what they asked". It means nothing is left on
+# our desk, and the two ways that happens without delivering anything are
+# declining and handing the ask to somebody named.
+#
+# The second shape is the one a rule written around "did we deliver it" gets
+# wrong: the reply delivers nothing at all, and still nobody here owes a thing.
+fixture:
+  - messages:
+      - direction: inbound
+        subject: 'Invitation to join the panel'
+        body: |
+          We would be delighted to have you on the panel for the November
+          session. Would you be able to join us?
+      - direction: outbound
+        subject: 'Re: Invitation to join the panel'
+        body: |
+          Thank you so much for thinking of me. Sadly I will be in Europe those
+          days, so I have to pass this time. Let me introduce Rich Pham, who has
+          been building the practice with me and would be a better guest for this
+          topic anyway.
+  - messages:
+      - direction: inbound
+        subject: 'Zugang zum Testsystem'
+        body: |
+          Können Sie uns zwei Zugänge zum Testsystem einrichten? Die Kollegen
+          wollen nächste Woche anfangen.
+      - direction: outbound
+        subject: 'Re: Zugang zum Testsystem'
+        body: |
+          Klar. Ich habe die beiden Zugänge gerade angelegt, die
+          Einladungsmails sind unterwegs.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: settled
+    - verdict: settled
+  rubric: >
+    Both are settled, by the two different routes that are not delivery.
+    The first declines and hands the ask to a named colleague. We are not doing
+    what was asked and we never will, and that is precisely why nothing is
+    outstanding on our side — a reader told they still owe this panel a speaker
+    has been told something false.
+    The second delivers: the accesses are created and the mail is sent, in the
+    same reply.
+    Score at the floor if either is judged still_owed. Reading a decline as an
+    outstanding obligation is the failure that matters most here, because it
+    keeps a task alive for work that will never be done and can never be
+    completed by doing it.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

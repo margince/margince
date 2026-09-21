@@ -11,7 +11,7 @@
 #   - Clones are copied from a migrated template (margince_test), CREATE DATABASE
 #     ... TEMPLATE — a fast file copy. This repo has two kinds of integration
 #     package: the compose/e2e suites migrate the database themselves, but the
-#     module suites (people, agents, consent, identity) assume an already-migrated
+#     module suites (contacts, agents, consent, identity) assume an already-migrated
 #     database and only seed their own rows. A migrated template satisfies both:
 #     the module suites get their schema for free, and the self-migrating suites
 #     rebuild it once per process (harness migrate-once) — either way correct. The
@@ -131,7 +131,7 @@ db_admin() {
 
 # ---------------------------------------------------------------------------
 # The lane's CONNECTION budget, and it is a product the way the lock budget in
-# infra/docker-compose.dev.yml is.
+# docker-compose.dev.yml is.
 #
 # Concurrent packages run against ONE server, and each opens pools sized by
 # database.NewPool's fallback — 16 per pool whenever nothing says otherwise.
@@ -147,7 +147,7 @@ db_admin() {
 # The terms below make the demand a number the lane can state. They are read
 # back by TestTheLaneFitsInsideTheClusterItRunsAgainst
 # (backend/gates/laneconnbudget_test.go), which fails `make check` when the committed
-# max_connections in infra/docker-compose.dev.yml stops covering them — so the
+# max_connections in docker-compose.dev.yml stops covering them — so the
 # arithmetic cannot drift the way it drifted to get here. That test asks THIS
 # function for the number rather than re-implementing the expression: two
 # spellings of one formula is the shape the whole issue is about.
@@ -436,7 +436,7 @@ drop_clone() { local db="$1"; db_admin drop-db --name "$db" >/dev/null; }
 #
 # It exists because the benchmark suites are DESTRUCTIVE in a way the lane's
 # suites are not. perfbench's benchDatabase does `DROP SCHEMA public CASCADE`
-# and then seeds up to 250k persons and 500k activities, with no cleanup —
+# and then seeds up to 250k contacts and 500k activities, with no cleanup —
 # reasonable for a measurement, ruinous for the database it runs in. Pointed at
 # the default MARGINCE_TEST_DSN, that database is `margince_test`: the TEMPLATE
 # every per-package clone is copied from. ensure_template reuses an existing
@@ -480,10 +480,17 @@ bucket_for() { echo "${2:-${MARGINCE_TEST_BLOBSTORE_BUCKET:-margince-test}}-p${1
 # is allowed to cost. Exits rather than returning on a bad value: a lane that ran
 # on a budget nobody asked for is worse than one that refuses to start.
 #
-# The budget is sized for the slowest package, not the median: compose/integration
-# alone runs within a few seconds of 300s and tips over it under the concurrency
-# the parallel lane itself creates, which reads as a regression in whatever branch
-# happens to be running. 600s is headroom while that package is split.
+# 600s is the BUDGET — the policy number a package is priced against and told to
+# split before it crosses. The parallel lane keeps it under that name (IT_BUDGET)
+# and scales the go-test TIMEOUT separately, because the two are different
+# questions wearing one number: what a package is allowed to COST, and how long a
+# single `go test` may run before it is presumed hung.
+#
+# They were the same number until compose/integration grew past it. A sharded CI
+# run executes a sixth of the tree and fit comfortably; the unsharded local lane
+# ran the same package's 2284 tests against the same bound and was killed at the
+# ceiling with every test passing — so the lane reported nothing about any of
+# them. See the parallel lane for how the two are separated now.
 #
 # `go test -timeout` also accepts 10m or 1h30s. The parallel lane's budget column
 # reads this as a seconds count, so anything else would price every package

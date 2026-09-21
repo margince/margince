@@ -90,15 +90,17 @@ const (
 
 func (promoteLead) RecordTypeOf(json.RawMessage) string          { return typeLead }
 func (disqualifyLead) RecordTypeOf(json.RawMessage) string       { return typeLead }
+func (demoteLead) RecordTypeOf(json.RawMessage) string           { return typeLead }
 func (advanceProjectPhase) RecordTypeOf(json.RawMessage) string  { return typeProject }
 func (commitImport) RecordTypeOf(json.RawMessage) string         { return typeImportRun }
 func (sendEmailTool) RecordTypeOf(json.RawMessage) string        { return typeActivity }
 func (sendMessageTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
-func (sendAccountEmailTool) RecordTypeOf(json.RawMessage) string { return typeActivity }
+func (sendCompanyEmailTool) RecordTypeOf(json.RawMessage) string { return typeActivity }
 func (bookMeetingTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
 
 func (promoteLead) ServesRecordType(recordType string) bool     { return recordType == typeLead }
 func (disqualifyLead) ServesRecordType(recordType string) bool  { return recordType == typeLead }
+func (demoteLead) ServesRecordType(recordType string) bool      { return recordType == typeLead }
 func (commitImport) ServesRecordType(recordType string) bool    { return recordType == typeImportRun }
 func (sendEmailTool) ServesRecordType(recordType string) bool   { return recordType == typeActivity }
 func (sendMessageTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
@@ -108,7 +110,7 @@ func (advanceProjectPhase) ServesRecordType(recordType string) bool {
 	return recordType == typeProject
 }
 
-func (sendAccountEmailTool) ServesRecordType(recordType string) bool {
+func (sendCompanyEmailTool) ServesRecordType(recordType string) bool {
 	return recordType == typeActivity
 }
 

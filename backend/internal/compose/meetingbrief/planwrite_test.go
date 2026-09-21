@@ -26,7 +26,7 @@ func writtenPlan(t *testing.T, reply string, in Input) (Plan, crmcontracts.Writt
 func TestNoLaneKeepsTheFloorPlan(t *testing.T) {
 	in := fullInput()
 	got, by := WritePlan(context.Background(), nil, in, floorFor(in), "en")
-	if by != crmcontracts.Deterministic {
+	if by != crmcontracts.WrittenByDeterministic {
 		t.Errorf("writer = %q, want deterministic", by)
 	}
 	if got.Objective == nil {
@@ -40,7 +40,7 @@ func TestAFailedLaneFallsToTheFloorPlan(t *testing.T) {
 	in := fullInput()
 	lane := &laneReturning{err: errors.New("over budget")}
 	got, by := WritePlan(context.Background(), lane, in, floorFor(in), "en")
-	if by != crmcontracts.Deterministic {
+	if by != crmcontracts.WrittenByDeterministic {
 		t.Errorf("writer = %q, want deterministic after a lane error", by)
 	}
 	if got.Objective == nil {
@@ -55,7 +55,7 @@ func TestASparseReplyKeepsTheFloorsCoveragePerField(t *testing.T) {
 	floor := floorFor(in)
 	got, by := writtenPlan(t, `{"opening":{"text":"Open on the security pack.",
 		"nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}]}}`, in)
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Errorf("writer = %q, want model — a written opening is a written plan", by)
 	}
 	if got.Opening == nil || !strings.Contains(got.Opening.Text, "security pack") {
@@ -85,10 +85,14 @@ func TestAShortModelListIsToppedUpFromTheFloor(t *testing.T) {
 	// A record with enough in it that the floor writes several questions.
 	in.Company = "Northwind"
 	in.Commitments = append(in.Commitments,
-		ClaimIn{PersonName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
-			Status: statusOpen, SourceID: activityID},
-		ClaimIn{PersonName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
-			Status: statusOpen, SourceID: activityID})
+		ClaimIn{
+			ContactName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
+			Status: statusOpen, SourceID: activityID,
+		},
+		ClaimIn{
+			ContactName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
+			Status: statusOpen, SourceID: activityID,
+		})
 	floor := floorFor(in)
 	if len(floor.Questions) < 2 {
 		t.Fatalf("the fixture gives the floor %d questions; this test needs at least 2", len(floor.Questions))
@@ -203,7 +207,7 @@ func TestAReplyThatSurvivesNothingFallsToTheFloor(t *testing.T) {
 	elsewhere := "0198f000-0000-7000-8000-0000000000ff"
 	got, by := writtenPlan(t, `{"objective":{"text":"Invented.","nature":"recommendation",
 		"evidence":[{"entity_type":"activity","entity_id":"`+elsewhere+`"}]}}`, in)
-	if by != crmcontracts.Deterministic {
+	if by != crmcontracts.WrittenByDeterministic {
 		t.Errorf("writer = %q, want deterministic — nothing the model said survived", by)
 	}
 	if got.Objective == nil {

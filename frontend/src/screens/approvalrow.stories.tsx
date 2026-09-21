@@ -12,7 +12,7 @@ import {
 } from "./story-utils";
 
 // One staged proposal as a decidable row — the canonical affordance for
-// anything an agent proposes and a person decides. Several surfaces draw this
+// anything an agent proposes and a human decides. Several surfaces draw this
 // row (the workspace queue, Brief, the company record), so it is the one place
 // the states below are worth reading side by side.
 //
@@ -47,7 +47,7 @@ function approval(over: Partial<Approval>): Approval {
     on_behalf_of: "u-1",
     created_at: "2026-08-20T09:00:00Z",
     ...over,
-  } as unknown as Approval;
+  };
 }
 
 // `decide` is what the approve/reject buttons hit. A story that wants the row's

@@ -138,7 +138,7 @@ func TestTheBackfillAttributesConnectorMailToItsMailboxOwner(t *testing.T) {
 
 func TestTheBackfillRefusesToGuessBetweenTwoMailboxes(t *testing.T) {
 	e := integration.Setup(t)
-	// Two people have connected the same provider. An activity captured as
+	// Two contacts have connected the same provider. An activity captured as
 	// 'connector:gmail' could be either mailbox and the row carries no
 	// evidence that separates them.
 	seedConnection(t, e, e.Rep1)
@@ -229,4 +229,76 @@ func seedLegacyActivityOfKind(t *testing.T, e *integration.Env, sourceID, captur
 		t.Fatalf("seeding a %s: %v", kind, err)
 	}
 	return id
+}
+
+// TestTheBackfillLeavesRepairedHistoryAlone is the guard that makes an
+// authorship repair durable.
+//
+// A row imported from another system is stamped captured_by whoever RAN the
+// import, so class 1 above would attribute every one of them to that one
+// colleague. The repair that reads the source system's own headers corrects
+// that — and where the source named no parties at all, its honest answer is an
+// activity with a source author and NO participant rows.
+//
+// That is exactly the shape this pass selects on. Without the source-author
+// exclusion the job would re-select every such row on its next tick, hand the
+// whole imported history back to the importer, and rebuild the interaction
+// edges the repair had just corrected. The repair would appear to work and
+// then silently come undone, which is worse than never having run.
+func TestTheBackfillLeavesRepairedHistoryAlone(t *testing.T) {
+	e := integration.Setup(t)
+	seedConnection(t, e, e.Rep1)
+
+	// Imported, then repaired: the author is on record, and the source named
+	// nobody else, so it carries no participants. captured_by still names the
+	// importer, which is what makes it bait for class 1.
+	repaired := seedLegacyActivity(t, e, "bf-repaired-1", "human:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
+	setSourceAuthor(t, e, repaired, e.Rep2)
+
+	// Imported and repaired, but the author holds no seat here — only a name
+	// the source knew. The exclusion has to hold on the name column too, or
+	// every author who never worked here loses their attribution on the next
+	// tick.
+	named := seedLegacyActivity(t, e, "bf-repaired-2", "human:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
+	setSourceAuthorName(t, e, named, "Mutaz Suleiman")
+
+	// An ordinary un-repaired row, so the test proves the exclusion is narrow:
+	// the pass must keep doing its job for everything else.
+	untouched := seedLegacyActivity(t, e, "bf-untouched-1", "human:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
+
+	runBackfill(t, e)
+
+	if got := participantUsers(t, e, repaired); len(got) != 0 {
+		t.Errorf("a repaired activity was re-attributed to %v; the repair's own answer of 'no participants' was read as 'not yet processed'", got)
+	}
+	if got := participantUsers(t, e, named); len(got) != 0 {
+		t.Errorf("an activity authored by somebody with no seat was re-attributed to %v; the exclusion must hold on source_author_name too", got)
+	}
+	if got := participantUsers(t, e, untouched); len(got) != 1 || got[0] != e.Rep1 {
+		t.Errorf("an un-repaired activity attributed to %v, want %s — the exclusion has swallowed rows it was never meant to reach", got, e.Rep1)
+	}
+}
+
+// setSourceAuthor puts an author on record for an activity, as the repair does.
+func setSourceAuthor(t *testing.T, e *integration.Env, activityID, author ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET source_author_id = $2 WHERE id = $1`, activityID, author)
+		return err
+	}); err != nil {
+		t.Fatalf("recording the source author of %s: %v", activityID, err)
+	}
+}
+
+// setSourceAuthorName records an author who holds no seat in this installation.
+func setSourceAuthorName(t *testing.T, e *integration.Env, activityID ids.UUID, name string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET source_author_name = $2 WHERE id = $1`, activityID, name)
+		return err
+	}); err != nil {
+		t.Fatalf("recording the source author name of %s: %v", activityID, err)
+	}
 }

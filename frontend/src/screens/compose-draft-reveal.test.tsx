@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -15,7 +15,7 @@ import {
 // WHERE a finished draft leaves the reader.
 //
 // The draft answers into the middle of a scrolling drawer and grows everything
-// above the body as it lands: the Art. 50 band appears where the draft bar was,
+// above the body as it lands: the provenance band appears where the draft bar was,
 // carrying the disclosure sentence, what the draft was based on and the voice
 // version, and the head below it fills with a recipient and a subject. The
 // words the rep pressed the button for end up under all of that — off the fold
@@ -102,6 +102,7 @@ describe("where a finished draft leaves the reader", () => {
     stubRoutes();
     render(
       <ComposeModal
+        intent="Discuss pricing"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -116,9 +117,9 @@ describe("where a finished draft leaves the reader", () => {
     editor.scrollIntoView = reveal;
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
-    await screen.findByTestId("ai-disclosure-banner");
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
 
     // The BODY is what is brought back, not the band that displaced it: the
     // band is the notice, and the words are what the press was for.

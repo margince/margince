@@ -3,7 +3,10 @@
    The name leads because that is what they are looking for. */
 .vcard-import-report {
   list-style: none;
-  margin: var(--space-4) 0 0;
+  /* No interval of its own: the dialog's stack spaces this list the way it
+     spaces the dropzone and the refusal above it, and a margin here as well is
+     that one interval said twice. */
+  margin: 0;
   padding: 0;
   max-height: 18rem;
   overflow-y: auto;
@@ -22,13 +25,9 @@
   border-bottom: 0;
 }
 
-.vcard-import-name {
-  font-weight: 500;
-}
-
 /* The one outcome that asks something of the reader. A card that merely
    resembles somebody was written nowhere, and nothing else on this list needs
    them to act. */
-.vcard-import-warn {
-  color: var(--warn);
+.vcard-import-warning {
+  color: var(--warningText);
 }

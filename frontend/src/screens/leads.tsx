@@ -1,88 +1,60 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BriefcaseBusiness,
-  Building2,
-  FolderKanban,
-  Link as LinkIcon,
-  Mail,
-  Rss,
-  User,
-} from "lucide-react";
+import { ArrowUpRight, CheckSquare, FileText } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
+import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
+import { scrollPageToTop } from "../app/reveal";
 import { navigate, useRoute } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
   Button,
   Disclosure,
   Field,
+  OverflowMenu,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { ContactLink } from "../design-system/contactlink";
-import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
-import { InlineChoice, InlineText } from "../design-system/inlinechoice";
-import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
   type RecordTimeline,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
-import { Select } from "../design-system/select";
-import { SurfaceState } from "../design-system/surfacestate";
-import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { RecordView } from "../design-system/recordview";
 import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
-  formatDateTime,
   formatDecimal,
   formatNumber,
 } from "../format/format";
-import { daysPast } from "../format/lateness";
 import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  LoadMoreButton,
-  OverlayUnavailable,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  timelineZoneNotice,
-  useMe,
-  useSorMode,
-  useViewerId,
-} from "./common";
+import { useClaimRecord } from "./claimrecord";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import type { CreateField } from "./create";
-import { CustomFieldsCard } from "./customfields.card";
-import { useObjectCustomFields } from "./customfields.form";
-import { EditAction } from "./edit";
+import { EntityRef, useEntityName } from "./entityref";
+import { useRecordHistory } from "./history";
+import { leadBand } from "./leadband";
+import { LeadBrief } from "./leadbrief";
+import { LeadFacts, LeadPulse, LeadSubtitle } from "./leadheader";
+import { LeadHistoryTab } from "./leadhistory";
+import { MergedLeadPanel } from "./leadmerged";
 import {
-  EntityRef,
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
-import { RecordHistoryTab, useRecordHistory } from "./history";
-import {
+  leadStatusLabel,
   promoteEligible,
   scoreFactorLabel,
   scoreTone,
 } from "./leadpresentation";
+import { LeadDealsProjectsTab, LeadRail } from "./leadraillinks";
 import { LeadReadings } from "./leadreadings";
 import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
@@ -90,48 +62,37 @@ import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
-import { LogActivity } from "./logactivity";
-import { useOpenEmail, withEmailOpener } from "./openemail";
-import {
-  CallCard,
-  RecordReading,
-  RecordReadingPair,
-  TimelineThread,
-  TodayPanel,
-  TodoRow,
-} from "./record360";
-import { RecordEmailAside, RecordEmailVerb } from "./recordemail";
+import { leadTodoRows } from "./leadtoday";
+import { LogActivityAction } from "./logactivity";
+import { useOpenEmail } from "./openemail";
+import { RecordReading, TimelineThread, TodayPanel } from "./record360";
+import { RecordCustomFields } from "./recordcustomfields";
+import { saveRecordEdit } from "./recordedit";
+import { RecordEmailVerb } from "./recordemail";
+import { RecordFields } from "./recordfields";
+import { searchProjectReferences, useRecordOwners } from "./recordreferences";
 import { ShareAction } from "./share";
-import { groupChronology } from "./timelinegroups";
 import "./leads.css";
 
 // Leads (B-EP09.10a/b): visually SEGREGATED from the contact graph — the
 // lead surface is accent-tinted, lead detail is its own screen (never
-// person.html — gap §3.5), and promote is eligibility-gated. Lead score is
+// contact.html — gap §3.5), and promote is eligibility-gated. Lead score is
 // lead-local; the ≥60 / 40–59 / <40 colour thresholds are pinned by test.
 // Search/filter/sort/pagination (P-14), the rich create modal (P-15), the
 // If-Match edit form (P-1), and the dedupe view-existing link (P-16) are
-// wired in here the same way as contacts (people.tsx) — the Promote button
+// wired in here the same way as contacts (contacts.tsx) — the Promote button
 // and score/status/company badges on the lead 360 stay exactly as they
 // were. Status-change and score-override are Phase 4, not surfaced here.
 
 type Lead = components["schemas"]["Lead"];
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
-import {
-  sourceLabelFor,
-  sourcePickOptions,
-  useLeadSources,
-} from "./leadsources";
+import { sourcePickOptions, useLeadSources } from "./leadsources";
 
-export {
-  promoteEligible,
-  scoreTone,
-  terminalBadge,
-} from "./leadpresentation";
+export { promoteEligible, scoreTone } from "./leadpresentation";
+export { terminalBadge } from "./leadstanding";
 
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
-import { invalidateRecord } from "./recordwritekeys";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -158,23 +119,30 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Builds the PATCH body: only the five scalar fields this task surfaces —
-// status and score are Phase 4 and never sent from this form.
+// Status and score use their domain actions; Details sends only submitted identity fields.
 export function mapLeadUpdate(
   values: Record<string, unknown>,
 ): UpdateLeadRequest {
+  const field = (key: string) =>
+    Object.hasOwn(values, key)
+      ? stringField(values[key]).trim() || null
+      : undefined;
   return {
-    full_name: stringField(values.full_name).trim() || undefined,
-    email: stringField(values.email).trim() || undefined,
-    title: stringField(values.title).trim() || undefined,
-    company_name: stringField(values.company_name).trim() || undefined,
+    full_name: field("full_name"),
+    email: field("email"),
+    title: field("title"),
+    company_name: field("company_name"),
+    source: stringField(values.source).trim() || undefined,
+    candidate_company_key: field("candidate_company_key"),
+    project_id: field("project_id"),
+    owner_id: stringField(values.owner_id).trim() || undefined,
   };
 }
 
 const leadEditFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
   { key: "email", label: "create.email", type: "email" },
-  { key: "title", label: "create.personTitle" },
+  { key: "title", label: "create.contactTitle" },
   { key: "company_name", label: "create.companyName" },
 ];
 
@@ -224,12 +192,10 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 
   return (
     <div className="lead-stack-tight">
-      <span className="t-caption">{t("lead.shortfall.lead")}</span>
+      <span>{t("lead.shortfall.lead")}</span>
       <ul className="lead-plainlist">
         {missing.map((reason) => (
-          <li key={reason} className="t-caption">
-            {reason}
-          </li>
+          <li key={reason}>{reason}</li>
         ))}
       </ul>
     </div>
@@ -253,12 +219,10 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   });
 
   if (explain.isPending) {
-    return <span className="t-caption">{t("lead.scoreLoading")}</span>;
+    return <span>{t("lead.scoreLoading")}</span>;
   }
   if (explain.isError) {
-    return (
-      <span className="t-caption">{problemMessageOf(explain.error, t)}</span>
-    );
+    return <span>{problemMessageOf(explain.error, t)}</span>;
   }
   const current = explain.data?.current;
   if (!explain.data?.explained || !current) {
@@ -274,7 +238,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
     return lead.score === 0 ? (
       <ScoreShortfall lead={lead} />
     ) : (
-      <span className="t-caption">{t("lead.scoreNotStoredYet")}</span>
+      <span>{t("lead.scoreNotStoredYet")}</span>
     );
   }
   const factors = current.factors ?? [];
@@ -286,26 +250,26 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   return (
     <div className="lead-stack-tight">
       {overridden && (
-        <span className="t-caption">
+        <span>
           {t("lead.scoreFactorsExplainMachine", {
             score: formatNumber(current.score_computed, locale),
           })}
         </span>
       )}
       {factors.length === 0 ? (
-        <span className="t-caption">{t("lead.scoreNoFactors")}</span>
+        <span>{t("lead.scoreNoFactors")}</span>
       ) : (
         <ul className="lead-plainlist">
           {factors.map((factor) => (
             <li key={factor.factor} className="lead-factor">
               <span>{scoreFactorLabel(factor.factor, t)}</span>
-              <span className="t-mono">
+              <span className="t-num">
                 {formatDecimal(factor.points, locale, 1)}
               </span>
               {factor.base_points != null && (
                 // The decay as arithmetic a reader can check: 25 halving
                 // every 14 days is why this row reads 12.5 today.
-                <span className="t-caption t-mono">
+                <span className="t-caption t-num">
                   {t("lead.scoreDecayed", {
                     base: formatNumber(factor.base_points, locale),
                   })}
@@ -329,178 +293,13 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
           ))}
         </ul>
       )}
-      <span className="t-caption t-mono">
+      <span className="t-caption t-num">
         {t("lead.scoreReconciles", {
           raw: formatDecimal(current.raw_sum, locale, 2),
           rounded: formatNumber(current.rounded_sum, locale),
           score: formatNumber(current.score_computed, locale),
         })}
       </span>
-    </div>
-  );
-}
-
-// A factor's name in the reader's language, falling back to the raw key so
-// a factor the UI has no wording for yet still appears with its points —
-// an unnamed contribution is better than a silently missing one.
-// Ownership: who holds the lead, and reassignment to any workspace user.
-// The owner reads as a NAME — EntityRef resolves it off the shared `/users`
-// roster and falls back to the id only while that load is in flight or when
-// the viewer cannot see the roster, so a reader is never handed a bare uuid.
-// Reassignment is a plain owner change (UC-E13-04): the server audits it and
-// keeps whatever routing decision it overrides, so the only thing this
-// control owes the reader is an honest list of who they can hand it to.
-// How one candidate reads in the list. The viewer reads as "Me": a rep scanning
-// this list looks for themselves, not for their own name among colleagues'. A
-// user with no display name still has to be pickable, so the id stands in
-// rather than rendering a blank row.
-function candidateLabel(
-  entry: Readonly<{ id: string; display_name?: string }>,
-  meId: string | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  if (entry.id === meId) {
-    return t("lead.assignToMe");
-  }
-  return entry.display_name ?? entry.id;
-}
-
-// The assignee list's four readings, as early returns rather than one chained
-// conditional: a roster still arriving, a roster that failed, a workspace with
-// nobody else in it, and the picker itself.
-function AssigneePicker({
-  roster,
-  rosterPartial,
-  candidates,
-  meId,
-  pending,
-  onPick,
-}: Readonly<{
-  roster: ReturnType<typeof useRoster>;
-  rosterPartial: boolean;
-  candidates: readonly Readonly<{ id: string; display_name?: string }>[];
-  meId: string | undefined;
-  pending: boolean;
-  onPick: (ownerId: string) => void;
-}>) {
-  const t = useT();
-  if (roster.isPending) {
-    return <span className="t-caption">{t("share.rosterLoading")}</span>;
-  }
-  if (roster.isError) {
-    return (
-      <div className="lead-line">
-        <span className="t-caption share-error">
-          {t("share.rosterErrorUsers")}
-        </span>
-        <Button small onClick={() => roster.refetch()}>
-          {t("common.retry")}
-        </Button>
-      </div>
-    );
-  }
-  // "Nobody else" is a claim about the WHOLE workspace, so only a roster read
-  // to its end may make it. Over a walk that stopped early it would report a
-  // lead as unassignable when the colleague to hand it to sits on a page
-  // nothing here read.
-  if (candidates.length === 0 && !rosterPartial) {
-    return <span className="t-caption">{t("lead.assignNobodyElse")}</span>;
-  }
-  return (
-    <>
-      <Select
-        aria-label={t("lead.assignTo")}
-        placeholder={t("lead.assignChoose")}
-        value=""
-        disabled={pending}
-        options={candidates.map((entry) => ({
-          value: entry.id,
-          label: candidateLabel(entry, meId, t),
-        }))}
-        onChange={onPick}
-      />
-      <RosterPartialNote partial={rosterPartial} />
-    </>
-  );
-}
-
-function LeadOwner({
-  lead,
-  meId,
-  pending,
-  onAssign,
-  refusedReasonId,
-}: Readonly<{
-  lead: Lead;
-  meId: string | undefined;
-  pending: boolean;
-  onAssign: (ownerId: string) => void;
-  // The page's one sentence about why this lead takes no changes, while it
-  // does not: assigning writes the owner, so it is refused by the same fact
-  // as every other write here.
-  refusedReasonId?: string;
-}>) {
-  const t = useT();
-  const pickerId = useId();
-  const [picking, setPicking] = useState(false);
-  const roster = useRoster("user", picking);
-  const rosterPartial = useRosterPartial("user", picking);
-  // Everyone but the current owner, with the VIEWER first: assigning to
-  // yourself is the common case on a small team, and it is now an option in
-  // this one control rather than a button of its own (ADR-0108 §5).
-  const candidates = (roster.data ?? [])
-    .filter((entry) => !("is_agent" in entry) || !entry.is_agent)
-    .filter((entry) => entry.id !== lead.owner_id)
-    .sort((a, b) => {
-      if (a.id === meId) return -1;
-      if (b.id === meId) return 1;
-      return 0;
-    });
-
-  return (
-    <div className="lead-stack">
-      <div className="lead-line">
-        <span className="t-caption">{t("lead.ownerLabel")}</span>
-        {lead.owner_id ? (
-          lead.owner_id === meId ? (
-            <span className="t-caption">{t("lead.ownerYou")}</span>
-          ) : (
-            <EntityRef kind="user" id={lead.owner_id} />
-          )
-        ) : (
-          <span className="t-caption">{t("lead.unassigned")}</span>
-        )}
-        {/* ONE control, not a button that assigns to you beside a button
-            that reveals a picker nobody can see until they press it
-            (ADR-0108 §5). The viewer is the first option because
-            self-assignment is the common case on a small team. */}
-        <Button
-          small
-          disabled={pending}
-          reasonId={refusedReasonId}
-          aria-expanded={picking}
-          aria-controls={pickerId}
-          onClick={() => setPicking(!picking)}
-        >
-          {t("lead.assign")}
-        </Button>
-      </div>
-
-      <div id={pickerId}>
-        {picking && (
-          <AssigneePicker
-            roster={roster}
-            rosterPartial={rosterPartial}
-            candidates={candidates}
-            meId={meId}
-            pending={pending}
-            onPick={(value) => {
-              onAssign(value);
-              setPicking(false);
-            }}
-          />
-        )}
-      </div>
     </div>
   );
 }
@@ -552,7 +351,7 @@ function LeadScorePanel({
 
   return (
     <div className="lead-stack">
-      <span className="t-caption">{t("lead.explainScore")}</span>
+      <span>{t("lead.explainScore")}</span>
       <ScoreBreakdown id={id} lead={lead} />
       {lead.score_override_reason ? (
         <div className="lead-stack">
@@ -569,7 +368,6 @@ function LeadScorePanel({
             </p>
           )}
           <Button
-            small
             disabled={writer.patch.isPending || readOnly}
             reasonId={readOnly ? terminalReasonId : undefined}
             onClick={() => writer.save({ score: null })}
@@ -604,7 +402,6 @@ function LeadScorePanel({
           <div className="lead-line">
             <Button
               variant="primary"
-              small
               disabled={reasonBlank || scoreInvalid || writer.patch.isPending}
               reasonId={readOnly ? terminalReasonId : undefined}
               onClick={() =>
@@ -616,7 +413,7 @@ function LeadScorePanel({
             >
               {t("lead.saveOverride")}
             </Button>
-            <Button small onClick={() => setOverriding(false)}>
+            <Button onClick={() => setOverriding(false)}>
               {t("create.cancel")}
             </Button>
           </div>
@@ -626,7 +423,6 @@ function LeadScorePanel({
         // naming what the badge above already says. The override is a rare
         // action and stands alone.
         <Button
-          small
           reasonId={readOnly ? terminalReasonId : undefined}
           onClick={() => setOverriding(true)}
         >
@@ -652,97 +448,85 @@ function LeadScorePanel({
  */
 function LeadIdentityFields({
   lead,
-  save,
-  saving,
-  readOnlyReason,
-}: Readonly<{
-  lead: Lead;
-  save: (body: UpdateLeadRequest) => Promise<void>;
-  saving: boolean;
-  readOnlyReason?: string;
-}>) {
+  writer,
+}: Readonly<{ lead: Lead; writer: LeadWriter }>) {
   const t = useT();
+  const project = useEntityName("project", lead.project_id);
   const sources = useLeadSources();
-  const fromConnector = (lead.source ?? "").startsWith("connector:");
-  // One write at a time: a second row opened while a save is in flight would
-  // carry the If-Match the first write is about to make stale.
-  const canEdit = !readOnlyReason && !saving;
+  const owners = useRecordOwners(lead.owner_id);
+  const connector = (lead.source ?? "").startsWith("connector:");
   return (
-    <Panel title={t("lead.details")}>
-      <PanelBody>
-        <FieldGrid icons>
-          <FieldRow label={t("create.fullName")} icon={<User />}>
-            <InlineText
-              label={t("create.fullName")}
-              value={lead.full_name ?? ""}
-              placeholder={t("lead.detailsUnset")}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              onSave={(next) => save({ full_name: next.trim() || null })}
-            />
-          </FieldRow>
-          <FieldRow
-            label={t("create.personTitle")}
-            icon={<BriefcaseBusiness />}
-          >
-            <InlineText
-              label={t("create.personTitle")}
-              value={lead.title ?? ""}
-              placeholder={t("lead.detailsUnset")}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              onSave={(next) => save({ title: next.trim() || null })}
-            />
-          </FieldRow>
-          <FieldRow label={t("create.companyName")} icon={<Building2 />}>
-            <InlineText
-              label={t("create.companyName")}
-              value={lead.company_name ?? ""}
-              placeholder={t("lead.detailsUnset")}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              onSave={(next) => save({ company_name: next.trim() || null })}
-            />
-          </FieldRow>
-          <FieldRow label={t("create.email")} icon={<Mail />}>
-            {lead.email ?? t("lead.detailsUnset")}
-          </FieldRow>
-          <FieldRow label={t("create.linkedinUrl")} icon={<LinkIcon />}>
-            {lead.linkedin_url ? (
-              <OffsiteLink href={lead.linkedin_url}>
-                {t("lead.openLinkedIn")}
-              </OffsiteLink>
-            ) : (
-              t("lead.detailsUnset")
-            )}
-          </FieldRow>
-          <FieldRow label={t("lead.source")} icon={<Rss />}>
-            <InlineChoice
-              label={t("lead.source")}
-              hideLabel
-              value={lead.source ?? ""}
-              options={sourcePickOptions(sources.data?.data, lead.source, t)}
-              // A connector's value stays where the connector put it; the
-              // administered list is what a human may pick from.
-              canEdit={canEdit && !fromConnector}
-              readOnlyReason={
-                fromConnector ? t("lead.sourceFromConnector") : readOnlyReason
+    <>
+      <RecordFields
+        title={t("lead.details")}
+        kind="lead"
+        links={
+          lead.linkedin_url
+            ? {
+                linkedin_url: {
+                  href: lead.linkedin_url,
+                  label: t("record.openProfile"),
+                },
               }
-              render={() => sourceLabelFor(lead, sources.data?.data, t)}
-              onSave={(next) => save({ source: next })}
-            />
-          </FieldRow>
-          {lead.project_id && (
-            <FieldRow label={t("lead.project")} icon={<FolderKanban />}>
-              <EntityRef kind="project" id={lead.project_id} />
-            </FieldRow>
-          )}
-        </FieldGrid>
-        {/* Email is read-only here because it is the lead's dedupe key. The Edit
-            modal owns the write so a 409 collision with a live lead has a place
-            to link the incumbent record. */}
-      </PanelBody>
-    </Panel>
+            : undefined
+        }
+        record={lead}
+        fields={[
+          ...leadEditFields,
+          {
+            key: "owner_id",
+            label: "list.owner",
+            type: "select",
+            options: owners,
+            required: true,
+          },
+          {
+            key: "status",
+            label: "history.field.status",
+            toInput: () => {
+              const label = leadStatusLabel(lead.status);
+              return label ? t(label) : lead.status;
+            },
+          },
+          { key: "score", label: "lead.score", type: "number" },
+          { key: "linkedin_url", label: "create.linkedinUrl" },
+          { key: "candidate_company_key", label: "record.companyRoutingKey" },
+          {
+            key: "project_id",
+            label: "lead.project",
+            searchTargets: searchProjectReferences,
+            options: lead.project_id
+              ? [
+                  {
+                    value: lead.project_id,
+                    label: project.name ?? lead.project_id,
+                  },
+                ]
+              : [],
+          },
+          {
+            key: "source",
+            label: "lead.source",
+            type: "select",
+            required: true,
+            options: sourcePickOptions(sources.data?.data, lead.source, t),
+          },
+        ]}
+        groups={[{ label: t("create.email"), keys: ["email"] }]}
+        canEdit={!writer.readOnly}
+        readOnlyFields={{
+          linkedin_url: t("record.leadProfileReadOnly"),
+          status: t("record.leadStatusAction"),
+          score: t("record.leadScoreAction"),
+          ...(connector ? { source: t("lead.sourceFromConnector") } : {}),
+        }}
+        resolveExisting={(_code, id) => ({ screen: "leads", id })}
+        save={async (values, _rows, opened) =>
+          saveRecordEdit("lead", opened, mapLeadUpdate(values))
+        }
+      />
+      <RecordCustomFields kind="lead" record={lead} />
+    </>
   );
 }
 
@@ -752,19 +536,8 @@ function LeadIdentityFields({
  * over as one object rather than as a mutation plus a loose function, so no
  * caller can reach past `save` to `mutate` and skip the version it stamps.
  */
-type LeadWriter = ReturnType<typeof useLeadPatch>;
+export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
-/**
- * The lead page's ONE write, and the two facts every control on it reads.
- *
- * The ladder, the identity grid, the owner picker and the score override are
- * now in two different columns, and they were one card when they shared this
- * mutation. Sharing it is the part that matters: one PATCH shape, one
- * If-Match, one invalidation, so two edits a second apart cannot send two
- * versions of the same row. A second `useMutation` in the rail would be a
- * second writer of one invariant, which is the defect this hook exists to
- * make impossible rather than to document.
- */
 /**
  * One write's variables: what to change, and the record it is changing.
  *
@@ -830,14 +603,18 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   });
   const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
 
-  // The inline rows await their save and render what it throws, so they need a
-  // promise rather than the mutation's fire-and-forget. mutateAsync is that
-  // same mutation — one PATCH shape, one If-Match, one invalidation.
-  const saveField = async (body: UpdateLeadRequest) => {
-    await patch.mutateAsync(write(body));
-  };
+  // Taking an unowned lead is a CLAIM, not a patch: the write arm refuses an
+  // ownerless row on purpose, so the request that works here is the claim
+  // door. It lives beside `patch` rather than in the control that calls it
+  // because the page states what a write refused in ONE banner, and a refusal
+  // thrown inside a rail that is not currently rendered reaches nobody.
+  const claim = useMutation({
+    mutationKey: ["lead-claim", lead.id],
+    mutationFn: useClaimRecord("lead", lead.id, lead.version),
+    onSuccess: onChanged,
+  });
 
-  return { patch, readOnly, readOnlyReason, save, saveField };
+  return { patch, claim, readOnly, readOnlyReason, save };
 }
 
 /**
@@ -846,100 +623,8 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
  * It is the tinted panel because it is the only surface here asking for a
  * MOVE — everything else on the page reports. The tone follows the finding
  * rather than the layout: a first response already breached is bad news, and
- * the warn family is what says so, in the same pairing `Callout` draws.
+ * the warning family is what says so, in the same pairing `Callout` draws.
  */
-function LeadLadderPanel({
-  lead,
-  writer,
-  overlay,
-  onQualify,
-  onDisqualify,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  overlay: boolean;
-  onQualify: () => void;
-  onDisqualify: () => void;
-}>) {
-  const t = useT();
-  const { readOnly } = writer;
-  return (
-    <Panel
-      title={t("lead.ladder.title")}
-      tone={lead.sla_state === "breached" ? "warn" : "accent"}
-    >
-      <PanelBody>
-        <div className="lead-stack">
-          {/* The ladder leads: where this lead stands and how it got there is
-              the first thing a rep needs, and the step they take next is one
-              click on it (the terminal steps open their own dialogs). The
-              mirror refuses a lifecycle write, so in overlay it only reads. */}
-          <LeadStepper
-            lead={lead}
-            pending={writer.patch.isPending}
-            readOnlyReason={
-              writer.readOnlyReason ??
-              (overlay ? t("lead.ladder.overlay") : undefined)
-            }
-            onStep={(status) => {
-              // Same one-write-at-a-time rule as the inline rows: a status
-              // sent while another save is in flight races it for If-Match.
-              if (!writer.patch.isPending && !readOnly && !overlay) {
-                writer.save({ status });
-              }
-            }}
-            onQualify={onQualify}
-            onDisqualify={onDisqualify}
-          />
-        </div>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-/**
- * The rail: the lead's own words, and who owns it.
- *
- * Both are things a rep CONSULTS while doing the work in the column beside
- * it. The score used to fold into this column too; it is a reading with an
- * edit behind it and sits in the record's reading now, beside the inputs that
- * feed it.
- */
-function LeadRail({
-  lead,
-  writer,
-  terminalReasonId,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  terminalReasonId: string;
-}>) {
-  const { readOnly } = writer;
-  const t = useT();
-  const me = useMe();
-  return (
-    <div className="record-stack">
-      <LeadIdentityFields
-        lead={lead}
-        save={writer.saveField}
-        saving={writer.patch.isPending}
-        readOnlyReason={writer.readOnlyReason}
-      />
-      <Panel title={t("lead.railTitle")}>
-        <PanelBody>
-          <LeadOwner
-            lead={lead}
-            meId={me.data?.user?.id}
-            refusedReasonId={readOnly ? terminalReasonId : undefined}
-            pending={writer.patch.isPending || readOnly}
-            onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
-          />
-        </PanelBody>
-      </Panel>
-    </div>
-  );
-}
-
 /**
  * The score as a card of the reading: it folds to one line with its top
  * factor, and opens for the breakdown and the override. Beside it, in the
@@ -1019,12 +704,10 @@ function LeadScoreCard({
 function LeadCall({
   lead,
   thread,
-  overlay,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
   thread: RecordTimeline;
-  overlay: boolean;
   // The page's one drawer, handed down to the thread. A conversation the
   // thread names and cannot open is the one place in the product that does
   // that.
@@ -1034,106 +717,14 @@ function LeadCall({
   const { locale } = useLocale();
   const standing = leadStanding(lead, t, locale, viewerZone());
   return (
-    <CallCard
-      name={leadIdentityName(lead) || t("lead.unnamed")}
+    <LeadBrief
       standing={{ label: standing.label, tone: standing.tone }}
       because={standing.because}
       restsOn={standing.restsOn}
     >
-      {/* The timeline is a read the mirror refuses, so in overlay the query
-          never runs and its page is empty — which the thread would draw as a
-          lead nobody has written to. The call stands; under it the reader is
-          told the history lives in the incumbent. */}
-      {overlay ? (
-        <OverlayUnavailable />
-      ) : (
-        <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
-      )}
-    </CallCard>
+      <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
+    </LeadBrief>
   );
-}
-
-// What needs a person on this lead: the first response, while it is owed, and
-// the next task on it. Neither is the agent's move — a lead carries no
-// suggestions — so both draw as to-dos the record already carries. A closed
-// lead is not worked and draws none.
-function leadTodoRows(
-  lead: Lead,
-  t: Translator,
-  locale: Locale,
-  // A task's DEADLINE is the record's day — the team agreed it and every
-  // colleague must quote the same one. The response clocks below stay on the
-  // reader's own: how long a lead has been waiting on them is about them.
-  recordZone: string,
-): ReactNode[] {
-  if (lead.archived_at) {
-    return [];
-  }
-  const zone = viewerZone();
-  const rows: ReactNode[] = [];
-  if (!lead.first_response_at) {
-    rows.push(
-      <TodoRow
-        key="answer"
-        title={t("lead.today.answer", {
-          name: leadIdentityName(lead) || t("lead.unnamed"),
-        })}
-        meta={t("lead.today.answerMeta")}
-        due={firstResponseDue(lead, t, locale, zone)}
-      />,
-    );
-  }
-  if (lead.next_task_subject) {
-    const late = lead.next_task_due_at
-      ? daysPast(Date.parse(lead.next_task_due_at), Date.now()).late
-      : false;
-    rows.push(
-      <TodoRow
-        key="task"
-        title={lead.next_task_subject}
-        meta={t("lead.today.nextTask")}
-        due={
-          lead.next_task_due_at
-            ? {
-                label: late
-                  ? t("co.next.overdue")
-                  : t("co.next.due", {
-                      when: formatDateAbbrev(
-                        lead.next_task_due_at,
-                        locale,
-                        recordZone,
-                      ),
-                    }),
-                tone: late ? "danger" : undefined,
-              }
-            : { label: t("co.next.undated") }
-        }
-      />,
-    );
-  }
-  return rows;
-}
-
-// When the first response is owed, in the server's own three states. No clock
-// means owed without a date, which is not the same as late.
-function firstResponseDue(
-  lead: Lead,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): { label: string; tone?: "warn" | "danger" } | undefined {
-  if (!lead.sla_deadline_at || !lead.sla_state) {
-    return undefined;
-  }
-  if (lead.sla_state === "breached") {
-    return { label: t("co.next.overdue"), tone: "danger" };
-  }
-  return {
-    label: t("co.next.due", {
-      when: formatDateTime(lead.sla_deadline_at, locale, zone),
-    }),
-    tone: lead.sla_state === "at_risk" ? "warn" : undefined,
-  };
 }
 
 /**
@@ -1214,7 +805,7 @@ function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
  * reads GET /leads/{id}/promote-preview, which runs the promotion's own dedupe
  * ladder without writing.
  *
- * An absent person on a `merge` never means "no match" — it means the matched
+ * An absent contact on a `merge` never means "no match" — it means the matched
  * contact is outside the reader's row scope, and the line says so rather than
  * promising a new contact the server will not create.
  */
@@ -1253,9 +844,7 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   };
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.demote")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("lead.demote")}</Button>
       <ConfirmModal
         open={open}
         onClose={close}
@@ -1288,7 +877,7 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
 /**
  * PromotedLeadPanel is what a promoted lead's page is FOR (ADR-0119/A170).
  *
- * The page used to redirect to the person, which told the reader the lead had
+ * The page used to redirect to the contact, which told the reader the lead had
  * ceased to exist — untrue of a record this product keeps, audits and can
  * reverse (ADR-0008 §4). It also left the reversal that ADR promises with no
  * surface to be started from, and hid whether promotion merged into a contact
@@ -1300,11 +889,10 @@ function PromotedLeadPanel({
   lead,
   promotion,
 }: Readonly<{ lead: Lead; promotion: PromotionRecord }>) {
-  const overlay = useSorMode() === "overlay";
   const t = useT();
   const { locale } = useLocale();
   const triggerLabel = promotionTriggerLabel(promotion.trigger);
-  // Four states, not two. The person link below is a fact the LEAD row carries,
+  // Four states, not two. The contact link below is a fact the LEAD row carries,
   // so it renders either way; only the outcome waits on the audit read.
   const outcomeLine = () => {
     if (promotion.pending) {
@@ -1331,7 +919,7 @@ function PromotedLeadPanel({
         <div className="lead-stack">
           <p className="t-body">{outcomeLine()}</p>
           <p className="t-body">
-            <EntityRef kind="person" id={lead.promoted_person_id} />
+            <EntityRef kind="contact" id={lead.promoted_contact_id} />
           </p>
           {lead.promoted_at && (
             <p className="t-caption">
@@ -1357,16 +945,15 @@ function PromotedLeadPanel({
             </p>
           )}
           {/* The reversal lives here and nowhere else: this is the record the
-              promotion is a fact about. Not in overlay, where the mirror owns
-              the person. */}
-          {!overlay && <DemoteAction id={lead.id} />}
+              promotion is a fact about. */}
+          <DemoteAction id={lead.id} />
         </div>
       </PanelBody>
     </Panel>
   );
 }
 
-const LEAD_TABS = ["overview", "history"] as const;
+const LEAD_TABS = ["overview", "deals", "history"] as const;
 type LeadTab = (typeof LEAD_TABS)[number];
 
 /** isLeadTab narrows a URL segment, which is any string a reader can type. */
@@ -1377,7 +964,7 @@ function isLeadTab(value: string | undefined): value is LeadTab {
 // The lead's tab, addressed rather than held beside the address: a tab that
 // survives a reload and can be linked to, and Back that steps between the tabs
 // a reader opened instead of leaving the lead altogether. Same shape as the
-// account's (screens/organizations.tsx) and the contact's.
+// account's (screens/companies.tsx) and the contact's.
 function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
   const route = useRoute();
   const addressed =
@@ -1428,144 +1015,85 @@ function LeadOverviewPane({
   id,
   writer,
   promotion,
-  overlay,
   terminalReasonId,
   thread,
-  onQualify,
-  onDisqualify,
-  onTouchLogged,
+  onReply,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
   id: string;
   writer: LeadWriter;
   promotion: PromotionRecord;
-  overlay: boolean;
   terminalReasonId: string;
   // The lead's unfiltered timeline read, which the thread under the call is
   // drawn from — the whole read, so its failure reaches the call too.
   thread: RecordTimeline;
-  onQualify: () => void;
-  onDisqualify: () => void;
-  // Owned by LeadScreen, ABOVE the tab switch: the refresh timers this
-  // schedules must survive this pane unmounting when the reader flips to
-  // History mid-climb.
-  onTouchLogged: () => void;
+  // The "Answer" row's own verb: opens the SAME composer the header's Email
+  // verb opens, owned by LeadRecord so both controls answer to one open
+  // state rather than each mounting its own copy of it.
+  onReply: () => void;
   // The page's one email drawer, for the thread under the call.
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The verb the reader arrived to perform, named by the address rather than
-  // guessed: a caller that sends somebody here to log a call says so, and the
-  // composer opens on that kind instead of on a note the reader has to change.
-  //
-  // Left in the address rather than consumed, like every other dial this
-  // product carries: the link is one somebody can paste, and Back returns to
-  // the same screen it described.
-  const [params] = useUrlParams();
-  const askedToLogCall = params.get(ACTION_PARAM) === CALL_ACTION;
-  const composer = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!askedToLogCall) {
-      return;
-    }
-    // The composer follows the facts, so a reader who arrived FOR it lands
-    // above it. jsdom has no scrollIntoView; the browser always does.
-    composer.current?.scrollIntoView?.({ block: "start" });
-  }, [askedToLogCall]);
+  // The lead carries no task id of its own, so both the panel head's way out
+  // and the "Next task" row's own verb open the same queue.
+  const onOpenTasks = () => navigate({ screen: "worklist" });
   return (
     <div className="record-stack">
       {/* The readings open the overview, as they do on every record page. */}
       <LeadReadings lead={lead} />
+      {/* A merged-away lead's page leads with where it went, for the same
+          reason: the reader arrived asking what happened to this prospect. */}
+      {lead.merged_into_id && (
+        <MergedLeadPanel mergedIntoId={lead.merged_into_id} />
+      )}
       {/* A promoted lead's page leads with what the promotion did — the
           reader arrived asking whether this became a contact, and which one. */}
-      {lead.promoted_person_id && (
+      {lead.promoted_contact_id && (
         <PromotedLeadPanel lead={lead} promotion={promotion} />
       )}
-      <LeadLadderPanel
-        lead={lead}
-        writer={writer}
-        overlay={overlay}
-        onQualify={onQualify}
-        onDisqualify={onDisqualify}
-      />
       {/* ONE READING, IN PARTS — the shape every record page reads in: the
-          call with the lead's own thread under it, what needs a person, and
+          call with the lead's own thread under it, what needs a contact, and
           under them the two sections a reader consults rather than reads —
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
-        <LeadCall
-          lead={lead}
-          thread={thread}
-          overlay={overlay}
-          onOpenEmail={onOpenEmail}
-        />
-        <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
-          {leadTodoRows(lead, t, locale, recordZone)}
+        <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
+        <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
+          {leadTodoRows(
+            lead,
+            t,
+            locale,
+            recordZone,
+            onReply,
+            onOpenTasks,
+            writer.readOnly ? terminalReasonId : undefined,
+          )}
         </TodayPanel>
-        <RecordReadingPair>
-          <LeadScoreCard
-            lead={lead}
-            id={id}
-            writer={writer}
-            terminalReasonId={terminalReasonId}
-          />
-          <Panel title={t("lead.signalsTitle")}>
-            <PanelBody>
-              <LeadManualSignals
-                // Keyed by lead: a half-typed input for one lead must not be
-                // submitted against the next one the reader navigates to.
-                key={id}
-                id={id}
-                readOnlyReason={writer.readOnlyReason}
-              />
-            </PanelBody>
-          </Panel>
-        </RecordReadingPair>
-      </RecordReading>
-      {/* The composer follows the facts so opening a lead answers "what
-          should I do" before asking the rep to type. */}
-      {!lead.archived_at && !overlay && (
-        <div ref={composer}>
-          <LogActivity
-            entityType="lead"
-            entityId={id}
-            askedKind={askedToLogCall ? "call" : undefined}
-            onLogged={onTouchLogged}
-          />
-        </div>
-      )}
-      {/* An address that named a verb this posture cannot perform is answered,
-          not ignored. The composer is absent in overlay for every reader, and
-          for a reader who followed a link TO it that absence would read as a
-          broken page rather than as a mirrored record the product may not
-          write. */}
-      {!lead.archived_at && overlay && askedToLogCall && (
-        <SurfaceState
-          loadingLabel={t("tab.overview")}
-          state="unsupported"
-          // Never drawn — the state above is fixed — but the primitive asks
-          // every caller for the sentence it would say if it were empty.
-          emptyLabel={t("lead.callNotInOverlay")}
-          detail={{ unsupportedReason: t("lead.callNotInOverlay") }}
-        >
-          {null}
-        </SurfaceState>
-      )}
-      {!lead.archived_at && !overlay && (
-        <RecordEmailAside
-          entityType="lead"
-          entityId={id}
-          // A lead IS the recipient: the address is on the record itself
-          // rather than on a contact behind it, and a first message to one
-          // has no thread to resolve a counterparty from.
-          recordAddress={lead.email ?? undefined}
-          detectWaitingReply
+        {/* Full width, in sequence, rather than side by side (RecordReadingPair):
+            the score card is one line and the signals form is tall, and a
+            short card beside a long one reads as a layout that ran out of
+            content rather than as two readings a rep consults in order. */}
+        <LeadScoreCard
+          lead={lead}
+          id={id}
+          writer={writer}
+          terminalReasonId={terminalReasonId}
         />
-      )}
-      <CustomFieldsCard object="lead" record={lead} />
+        <Panel title={t("lead.signalsTitle")}>
+          <PanelBody>
+            <LeadManualSignals
+              // Keyed by lead: a half-typed input for one lead must not be
+              // submitted against the next one the reader navigates to.
+              key={id}
+              id={id}
+              readOnlyReason={writer.readOnlyReason}
+            />
+          </PanelBody>
+        </Panel>
+      </RecordReading>
     </div>
   );
 }
@@ -1577,19 +1105,22 @@ function LeadOverviewPane({
 function LeadActions({
   lead,
   id,
-  cf,
-  overlay,
   onQualify,
   onDisqualify,
+  onLogged,
   terminalReasonId,
   refusedReasonId,
+  emailOpen,
+  onEmailOpenChange,
 }: Readonly<{
   lead: Lead;
   id: string;
-  cf: ReturnType<typeof useObjectCustomFields>;
-  overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
+  // Fires once the Log activity/Add task drawer actually logs something, so
+  // the page can re-poll the ladder fields an activity can move (status,
+  // score, the next task), the same rule the drawer's own `onLogged` states.
+  onLogged: () => void;
   // The id of the ONE sentence this page prints about why the lead takes no
   // changes. Every refused control points at it rather than repeating it,
   // which is what stops a terminal lead printing the same line five times.
@@ -1599,15 +1130,54 @@ function LeadActions({
   // Email is the one verb here that writes no lead row, so it keeps reading
   // the closure alone.
   refusedReasonId?: string;
+  // The header's composer, lifted to LeadRecord: the "Answer" row's own Reply
+  // verb opens this SAME state rather than a copy of it.
+  emailOpen: boolean;
+  onEmailOpenChange: (open: boolean) => void;
 }>) {
   const t = useT();
+  // useCanWrite, not useCan: the drawer below issues a POST, and a read seat
+  // is refused before RBAC is consulted, the same rule contactactions.tsx
+  // and companyheaderactions.tsx state for the identical pair of verbs.
+  // Independent of the terminal check: a live lead a seat may not log
+  // against is refused for THIS reason, not that one.
+  const me = useMe();
+  const canLog = useCanWrite("activity", "create");
+  const logRefusedId = useId();
+  // A guard that has not answered yet refuses nothing: claiming a refusal
+  // `/me` has not decided is worse than a control that is briefly quiet.
+  const logGrantKnown = me.data?.authorization !== undefined;
+  const archived = lead.archived_at ? terminalReasonId : undefined;
+  const logRefused =
+    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
+  const logPending = !archived && !logGrantKnown;
+  // The verb the reader arrived to perform, named by the address rather than
+  // guessed: a caller that sends somebody here to log a call says so, and the
+  // drawer opens already showing it instead of the note they would have to
+  // change it to.
+  //
+  // Left in the address rather than consumed, like every other dial this
+  // product carries: the link is one somebody can paste, and Back returns to
+  // the same screen it described.
+  const [params] = useUrlParams();
+  const askedToLogCall = params.get(ACTION_PARAM) === CALL_ACTION;
+  const [drawer, setDrawer] = useState<"log" | "task" | null>(
+    askedToLogCall ? "log" : null,
+  );
+  // A link pressed on the record the reader is ALREADY on changes the address
+  // and nothing else, no remount, so the initializer above never runs again.
+  useEffect(() => {
+    if (askedToLogCall) {
+      setDrawer("log");
+    }
+  }, [askedToLogCall]);
   return (
     <>
       {/* Promote is the page's ONE primary action and it leads, in the header
           where a reader looks for the verb (ADR-0108 §6). Ineligibility is
           stated on the control itself rather than as a sentence beside it —
           a disabled button whose reason is elsewhere is a dead button. */}
-      {!lead.archived_at && !overlay && (
+      {!lead.archived_at && (
         <Button
           variant="primary"
           data-testid="lead-qualify"
@@ -1617,88 +1187,97 @@ function LeadActions({
           }
           onClick={onQualify}
         >
-          {t("lead.promote")}
+          {/* The glyph is the promotion itself: a lead leaving this page
+              upward, for the contact and deal it becomes. No `size` — the
+              button owns its icon's geometry, and a call site that names one
+              is a second author of it. */}
+          <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
-      {/* The shared Email verb every record header carries. Not in overlay,
-          where the mirror owns the lead's mail. */}
-      {!overlay && (
-        <RecordEmailVerb
+      {/* The shared Email verb every record header carries. Its open state is
+          lifted so the overview's "Answer" row can open this SAME composer. */}
+      <RecordEmailVerb
+        entityType="lead"
+        entityId={id}
+        recordAddress={lead.email ?? undefined}
+        disabledReasonId={archived}
+        open={emailOpen}
+        onOpenChange={onEmailOpenChange}
+      />
+      {/* A hairline between reaching the record and recording what happened
+          to it: two groups of verbs, not one toolbar. */}
+      <span className="record-actions-sep" aria-hidden="true" />
+      {!archived && logGrantKnown && !canLog && (
+        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+      )}
+      {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
+          This is the standing way in, the same pair contactactions.tsx and
+          companyheaderactions.tsx carry: what happened, and what happens
+          next. The drawer stays local to this header, unlike company's own
+          daily-brief card, because nothing else on the lead page opens it. */}
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("log")}
+      >
+        <FileText aria-hidden="true" /> {t("log.title")}
+      </Button>
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("task")}
+      >
+        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
+      </Button>
+      {drawer && (
+        <LogActivityAction
           entityType="lead"
           entityId={id}
-          recordAddress={lead.email ?? undefined}
-          disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
+          askedKind={
+            drawer === "task" ? "task" : askedToLogCall ? "call" : undefined
+          }
+          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
+          openOnMount
+          onLogged={onLogged}
+          onClose={() => setDrawer(null)}
         />
       )}
-      {/* A terminal lead keeps its controls, DISABLED with the reason
+      {/* Everything else this lead offers, behind one trigger. Qualify and
+          Email are what a rep reaches for between calls; the rest are rare
+          enough that a reader hunting one of them should not have to read
+          past them to find a common verb. Worded and glyphless in here: a
+          list of named actions with one unnamed square in it makes that
+          square the only row a reader has to hover to identify.
+
+          A terminal lead keeps these controls, DISABLED with the reason
           (STATE-4a): the reason is the information, and hiding the control
           hides a fact the reader needs. Both closures reach this page — a
           disqualified lead and, since ADR-0119/A170, a promoted one — and the
           band above names which, so these controls point at that one
-          sentence rather than guessing at it. */}
-      <EditAction<Lead>
-        disabledReasonId={refusedReasonId}
-        label={t("record.edit")}
-        savedMessage={(saved) =>
-          t("record.saveDone", { name: saved.full_name ?? "" })
-        }
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
-        fields={[...leadEditFields, ...cf.formFields]}
-        record={{
-          id: lead.id,
-          version: lead.version,
-          full_name: lead.full_name ?? "",
-          email: lead.email ?? "",
-          title: lead.title ?? "",
-          company_name: lead.company_name ?? "",
-          ...cf.recordSlice(lead),
-        }}
-        update={async (values, _rows, opened) => {
-          const { data, error } = await api.PATCH("/leads/{id}", {
-            params: {
-              path: { id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
-              ...mapLeadUpdate(values),
-              // A diff against what the form prefilled from: a snapshot sends
-              // `null` for every empty custom field, and the API reads that as
-              // clearing a column nobody touched.
-              ...cf.toPatch(values, opened ?? {}),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="leads"
-        recordKey="lead"
-      />
-      {/* The overlay seam refuses disqualify (a cross-type lifecycle
-          transition) and share (a grant probes a native row a mirror lead
-          does not have), so in overlay these are genuinely UNSUPPORTED
-          rather than state-blocked — a different STATE-4a cause, and the
-          answer for that one is absence. */}
-      {!overlay && (
-        <>
-          {/* Disqualify asks why, in its own dialog — and is a secondary
-              verb, not a red one: closing a lead is routine work. A terminal
-              lead keeps the control, disabled with the page's one reason. */}
-          <Button
-            data-testid="lead-disqualify"
-            reasonId={refusedReasonId}
-            onClick={onDisqualify}
-          >
-            {t("record.disqualify")}
-          </Button>
-          <ShareAction
-            recordType="lead"
-            recordId={lead.id}
-            disabledReasonId={refusedReasonId}
-          />
-        </>
-      )}
+          sentence rather than guessing at it. The band is also WHY the
+          sentence is passed in rather than minted here: a reason living in
+          the panel would not exist until the menu was first opened. */}
+      <OverflowMenu label={t("record.moreActions")}>
+        <ShareAction
+          recordType="lead"
+          recordId={lead.id}
+          disabledReasonId={refusedReasonId}
+        />
+        {/* Last: it is the one verb here a reader cannot walk back from
+                the header, so it does not sit where a pointer sliding down
+                the list reaches it on the way to something routine. It asks
+                why, in its own dialog, and stays a secondary verb rather than
+                a red one — closing a lead is ordinary work, and the panel's
+                seam (atoms.css) belongs to the destructive verbs. A terminal
+                lead keeps the control, disabled with the page's one reason. */}
+        <Button
+          data-testid="lead-disqualify"
+          reasonId={refusedReasonId}
+          onClick={onDisqualify}
+        >
+          {t("record.disqualify")}
+        </Button>
+      </OverflowMenu>
     </>
   );
 }
@@ -1731,7 +1310,7 @@ function LeadDialogs({
               {t("lead.qualify.done", {
                 name: leadIdentityName(lead),
               })}{" "}
-              <EntityRef kind="person" id={result.person.id} />
+              <EntityRef kind="contact" id={result.contact.id} />
               {result.deal_id && (
                 <>
                   {" · "}
@@ -1766,21 +1345,7 @@ function LeadDialogs({
  * render prop, and moving the mutation above the gate would have it guarding a
  * record it had not read yet.
  */
-function LeadRecord({
-  lead,
-  id,
-  cf,
-  overlay,
-}: Readonly<{
-  lead: Lead;
-  id: string;
-  cf: ReturnType<typeof useObjectCustomFields>;
-  // Read ABOVE the query gate and handed down, so the posture is known on the
-  // page's FIRST paint. Read here it would start loading only once the lead
-  // had arrived, and the page would draw one frame of native affordances — an
-  // offered Disqualify the mirror refuses — before correcting itself.
-  overlay: boolean;
-}>) {
+function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const refreshAfterTouch = useLadderRefresh(id);
@@ -1789,28 +1354,12 @@ function LeadRecord({
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
   const [tab, setTab] = useLeadTab(id);
-  // The seam serves update for a mirrored lead (write-back projects onto the
-  // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
-  // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type
-  // lifecycle transition the seam refuses outright, so it and share stay
-  // hidden (share: a record grant probes the native lead row, which a
-  // mirror lead has no row in — see deals.tsx's DealBadges).
-  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
-  const timelineQuery = useRecordTimeline("lead", id, {
-    filters: timelineFilters,
-  });
-  // The thread under the call reads the WHOLE history, not the page the filter
-  // strip narrowed. A filter is a view of the timeline tab; a call that said
-  // "no reply since" because the reader had hidden emails would be false, and
-  // the two share one query whenever no filter is set.
+  // The thread under the call reads the WHOLE history, not whatever the
+  // History tab's own filter has narrowed. A filter is a view of that tab; a
+  // call that said "no reply since" because the reader had hidden emails
+  // would be false.
   const threadQuery = useRecordTimeline("lead", id);
-  const viewerId = useViewerId();
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const rawTimelineEntries = activityTimeline(
-    timelineQuery.activities,
-    viewerId,
-  );
-  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
   // What the last qualify did, said once: the contact and, when one was
   // opened, the deal. The page stays (ADR-0119) and the outcome panel below
@@ -1819,199 +1368,192 @@ function LeadRecord({
   // column as a second, permanent copy of the same news.
   const toast = useToast();
   // A promoted lead keeps its page (ADR-0119/A170). It no longer redirects to
-  // the person: the redirect said the lead had ceased to exist, which is
+  // the contact: the redirect said the lead had ceased to exist, which is
   // untrue of a record this product keeps, audits and can reverse — and it
   // left the reversal with nowhere to start from. The page reads the
   // promotion off its own audit row and says what happened.
-  const promotion = usePromotionRecord(id, Boolean(lead.promoted_person_id));
+  const promotion = usePromotionRecord(id, Boolean(lead.promoted_contact_id));
   const writer = useLeadPatch(lead, id, () => {
     for (const key of leadWriteKeys(id)) {
       queryClient.invalidateQueries({ queryKey: key });
     }
   });
+  // The header's composer, lifted here so the overview's "Answer" row opens
+  // the SAME one rather than a copy of it (RecordEmailVerb's own controlled
+  // mode).
+  const [composing, setComposing] = useState(false);
 
   return (
-    <RecordView
-      // What a rep CONSULTS — who owns this and why it scores what it scores
-      // — in the details pane beside the work, so the work column stays the
-      // work and the context does not move when the tab does. The same pane,
-      // fold and memory of it as every other record page.
-      aside={
-        details.open ? (
+    <div className="record-sheet">
+      <RecordView
+        // One rung under the record scale: the name is still the largest thing
+        // on the page, but beside a work column that opens on the agent's ask
+        // it no longer needs to be the size of a masthead, the same rung the
+        // contact page reads at (contactpage.tsx).
+        scale="compact"
+        // What a rep CONSULTS — who owns this and why it scores what it scores
+        // — in the details pane beside the work, so the work column stays the
+        // work and the context does not move when the tab does. The same pane,
+        // fold and memory of it as every other record page.
+        // At every width, and told whether it is showing, so the column
+        // folds rather than vanishing when the toggle shuts it.
+        aside={
           <LeadRail
             lead={lead}
             writer={writer}
+            onQualify={() => setDialog("qualify")}
+            reasonId={writer.readOnly ? terminalReasonId : undefined}
+            details={<LeadIdentityFields lead={lead} writer={writer} />}
+          />
+        }
+        asideOpen={details.open}
+        name={leadIdentityName(lead) || t("lead.unnamed")}
+        avatarSrc={null}
+        // The role and the company, on the name's own line: the contact
+        // page's register for the same two facts (ContactSubtitle). A lead
+        // carries no company FK, so unlike the contact's this is never a link.
+        nameBadge={<LeadSubtitle lead={lead} />}
+        // The pills under the name: that this is a lead, and where it stands
+        // on the ladder. A reader has to know this is a prospect and not a
+        // contact BEFORE they read anything else about them (ADR-0108 §1).
+        pulse={<LeadPulse lead={lead} />}
+        // The facts strip: how to reach this lead, where it came from, and who
+        // holds it. Owner keeps its Assign control live in the cell rather than
+        // reading only: it used to live in the pulse row for the same reason
+        // it lives here now: ownership was reachable only from the details
+        // pane, which REMEMBERS being folded, so the one control that takes a
+        // lead out of the unassigned queue was, for anyone who had ever
+        // collapsed the pane, behind a toggle they had to remember. Rendered
+        // here and nowhere else: a second copy in the pane made every owner
+        // query on the page ambiguous, which is two controls disagreeing
+        // waiting to happen.
+        badges={
+          <LeadFacts
+            lead={lead}
+            id={id}
+            writer={writer}
             terminalReasonId={terminalReasonId}
           />
-        ) : undefined
-      }
-      name={leadIdentityName(lead) || t("lead.unnamed")}
-      avatarSrc={null}
-      // The "Lead" marker rides the identity, not a badge among badges: a
-      // reader has to know this is a prospect and not a contact BEFORE they
-      // read anything else about them (ADR-0108 §1).
-      subtitle={<Badge tone="accent">{t("lead.marker")}</Badge>}
-      // The address is a way to ACT: a reader who sees one expects to click
-      // it, and a header that showed it and did nothing taught them the
-      // record was a printout. It opens the composer on this lead, as the
-      // Email verb beside it does, and like that verb it is refused on a
-      // closed lead — as text, since the verb already carries the reason.
-      pulse={
-        lead.email ? (
-          <ContactLink
-            kind="email"
-            value={lead.email}
-            record={{ entityType: "lead", entityId: id }}
-            readOnly={Boolean(lead.archived_at)}
-            className="link-button lead-email"
-            textClassName="lead-email"
+        }
+        actions={
+          <LeadActions
+            lead={lead}
+            id={id}
+            terminalReasonId={terminalReasonId}
+            refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+            onLogged={refreshAfterTouch}
+            emailOpen={composing}
+            onEmailOpenChange={setComposing}
           />
-        ) : null
-      }
-      actions={
-        <LeadActions
+        }
+        actionsInline
+        // The shell stamps timeline rows in this zone. The viewer's own is the
+        // honest default for a prospect: a lead carries no workspace location of
+        // its own to prefer over where the reader is.
+        zone={viewerZone()}
+        // Where the lead stands, at the foot of its head — the same place a
+        // deal's own ladder stands, for the question both records are asked
+        // first.
+        standing={
+          <LeadStepper
+            lead={lead}
+            pending={writer.patch.isPending}
+            readOnlyReason={writer.readOnlyReason}
+            onStep={(status) => {
+              // Same one-write-at-a-time rule as the inline rows: a status
+              // sent while another save is in flight races it for If-Match.
+              if (!writer.patch.isPending && !writer.readOnly) {
+                writer.save({ status });
+              }
+            }}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+          />
+        }
+        band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
+        // The same strip every record in the product carries: a place a reader
+        // navigates, drawn as a rule with the open body underlined, rather than
+        // a pill that offers a setting.
+        tabs={
+          <RecordTabs
+            options={LEAD_TABS}
+            value={tab}
+            onChange={(next) => {
+              setTab(next);
+              scrollPageToTop();
+            }}
+            labels={{
+              overview: t("tab.overview"),
+              // The same key the account's own Deals & projects tab carries:
+              // both hold one deal and one project, read the same way.
+              deals: t("tab.dealsProjects"),
+              history: t("tab.history"),
+            }}
+            // The switch for the details pane, at the end of the tab row: it
+            // chooses what the page shows beside the work, so it stands with
+            // the controls that choose what the work column shows. Drawn as a
+            // link in the row rather than a boxed control, the same quiet
+            // reading the contact page's tab strip gives it.
+            trailing={
+              <PageAsideToggle
+                quiet
+                labels={{
+                  show: t("record.panel.showDetails"),
+                  hide: t("record.panel.hideDetails"),
+                }}
+              />
+            }
+          />
+        }
+      >
+        {tab === "overview" && (
+          <LeadOverviewPane
+            lead={lead}
+            id={id}
+            writer={writer}
+            promotion={promotion}
+            terminalReasonId={terminalReasonId}
+            thread={threadQuery}
+            onOpenEmail={setOpenEmail}
+            onReply={() => setComposing(true)}
+          />
+        )}
+        {tab === "deals" && (
+          <LeadDealsProjectsTab
+            lead={lead}
+            writer={writer}
+            onQualify={() => setDialog("qualify")}
+            reasonId={writer.readOnly ? terminalReasonId : undefined}
+          />
+        )}
+        <LeadDialogs
           lead={lead}
-          id={id}
-          cf={cf}
-          overlay={overlay}
-          terminalReasonId={terminalReasonId}
-          refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
-        />
-      }
-      actionsInline
-      // The shell stamps timeline rows in this zone. The viewer's own is the
-      // honest default for a prospect: a lead carries no workspace location of
-      // its own to prefer over where the reader is.
-      zone={viewerZone()}
-      timeline={timelineEntries}
-      timelineGroups={groupChronology(
-        timelineEntries,
-        timelineQuery.hasNextPage,
-      )}
-      timelineHeader={
-        overlay ? undefined : (
-          <TimelineFilterBar
-            value={timelineFilters}
-            onChange={setTimelineFilters}
-          />
-        )
-      }
-      timelineFooter={
-        <>
-          <LoadMoreButton query={timelineQuery} />
-          {/* One drawer over the lead, beside the timeline it opens from. */}
-          <OpenEmailDrawer
-            activityId={openEmail}
-            zone={viewerZone()}
-            onClose={() => setOpenEmail(null)}
-          />
-        </>
-      }
-      timelineNotice={timelineZoneNotice(
-        { overlay, pending: timelineQuery.isPending },
-        t,
-      )}
-      band={
-        <>
-          {/* The page's one write serves both columns and every tab, so what
-              it REFUSES is stated where both are visible. In the ladder panel
-              this reached only the Overview tab, and a rail write refused
-              while the reader was on History said nothing at all. */}
-          {writer.patch.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(writer.patch.error, t)}
-            </Callout>
-          )}
-          {/* Stated ONCE for the page. Every control the closure refuses
-              points at this element by id, so a screen reader reaches it from
-              each of them without the sentence being printed beside all six. */}
-          {writer.readOnlyReason && (
-            <p id={terminalReasonId} className="t-caption">
-              {/* Which closure, not merely THAT it is closed. Both terminal
-                  states archive the row, so keying this off archived_at alone
-                  told every promoted lead it had been disqualified — invisible
-                  until ADR-0119 stopped the page redirecting away before
-                  anyone could read it. A live lead that is somebody else's
-                  prints the writer's own sentence instead. */}
-              {lead.archived_at
-                ? lead.status === "promoted"
-                  ? t("lead.terminalPromoted")
-                  : t("lead.terminalDisqualified")
-                : writer.readOnlyReason}
-            </p>
-          )}
-        </>
-      }
-      // The same strip every record in the product carries: a place a reader
-      // navigates, drawn as a rule with the open body underlined, rather than
-      // a pill that offers a setting.
-      tabs={
-        <RecordTabs
-          options={LEAD_TABS}
-          value={tab}
-          onChange={setTab}
-          labels={{
-            overview: t("tab.overview"),
-            history: t("tab.history"),
-          }}
-          // The switch for the details pane, at the end of the tab row: it
-          // chooses what the page shows beside the work, so it stands with
-          // the controls that choose what the work column shows.
-          trailing={<PageAsideToggle />}
-        />
-      }
-    >
-      {tab === "overview" && (
-        <LeadOverviewPane
-          lead={lead}
-          id={id}
-          writer={writer}
-          promotion={promotion}
-          overlay={overlay}
-          terminalReasonId={terminalReasonId}
-          thread={threadQuery}
-          onOpenEmail={setOpenEmail}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
-          onTouchLogged={refreshAfterTouch}
-        />
-      )}
-      <LeadDialogs
-        lead={lead}
-        dialog={dialog}
-        onClose={() => setDialog(null)}
-        onQualified={(done) => {
-          setDialog(null);
-          toast.show(done);
-        }}
-      />
-      {tab === "history" && !overlay && (
-        <RecordHistoryTab
-          kind="lead"
-          id={lead.id}
-          restore={{
-            version: lead.version,
-            onRestored: () => invalidateRecord(queryClient, "lead", lead.id),
+          dialog={dialog}
+          onClose={() => setDialog(null)}
+          onQualified={(done) => {
+            setDialog(null);
+            toast.show(done);
           }}
         />
-      )}
-      {tab === "history" && overlay && <OverlayUnavailable />}
-    </RecordView>
+        {tab === "history" && (
+          <LeadHistoryTab lead={lead} onOpenEmail={setOpenEmail} />
+        )}
+        {/* One drawer over the lead, whichever tab is open: the Overview
+            call's own thread and the History tab's rows both open into it. */}
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={viewerZone()}
+          onClose={() => setOpenEmail(null)}
+        />
+      </RecordView>
+    </div>
   );
 }
 
 export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const cf = useObjectCustomFields("lead");
-  // The seam serves update for a mirrored lead (write-back projects onto the
-  // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
-  // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type
-  // lifecycle transition the seam refuses outright, so it and share stay
-  // hidden (share: a record grant probes the native lead row, which a mirror
-  // lead has no row in — see deals.tsx's DealBadges).
-  const overlay = useSorMode() === "overlay";
   const leadQuery = useQuery({
     queryKey: leadKey(id),
     queryFn: async () => {
@@ -2032,13 +1574,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and
           // this screen stays mounted from one to the next.
-          <LeadRecord
-            key={lead.id}
-            lead={lead}
-            id={id}
-            cf={cf}
-            overlay={overlay}
-          />
+          <LeadRecord key={lead.id} lead={lead} id={id} />
         )}
       </QueryGate>
     </div>

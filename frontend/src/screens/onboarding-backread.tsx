@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
-import { Button, Radio, Skeleton } from "../design-system/atoms";
+import { Button, Skeleton } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ImportWindowPicker } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { problemMessageOf } from "./common";
 import { errorClassKey } from "./connector-status";
@@ -39,32 +40,22 @@ type BackfillPreview = components["schemas"]["BackfillPreview"];
 type BackfillCounts = NonNullable<BackfillStatus["counts"]>;
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 
-// The startable windows, in reach order. `none` is expressed by never starting
-// a run at all — which is what the leave-without-reading control does, and
-// which windows are startable is `ImportWindow`, beside the operations this
-// step and the Settings card share.
-const WINDOWS: readonly { value: ImportWindow; label: MessageKey }[] = [
-  { value: "3m", label: "ob.backread.window3m" },
-  { value: "6m", label: "ob.backread.window6m" },
-  { value: "12m", label: "ob.backread.window12m" },
-  { value: "24m", label: "ob.backread.window24m" },
-  { value: "60m", label: "ob.backread.window60m" },
-];
-
 // The contract pins v1 estimates to USD minor units and leaves `currency`
 // optional, so USD is the documented fallback rather than a guess. The symbol
 // itself is never spelled here — Intl derives it from the code and the locale.
 const FALLBACK_CURRENCY = "USD";
 
 // Declaration order is render order. Every entry names a persisted count on the
-// wire and the copy for it; `dedupe_candidates` is deliberately absent — it is
-// review work, not a finding, and has no sentence in this step.
+// wire and the copy for it, and the list is now the whole of what the wire
+// carries: the backfill's dedupe counter was served as a constant zero — no
+// writer ever set it — and has been removed from the contract rather than left
+// as a tally this step deliberately declined to render.
 const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "messages_scanned", label: "ob.backread.tallyMessages" },
   { key: "captured", label: "ob.backread.tallyCaptured" },
   { key: "skipped", label: "ob.backread.tallySkipped" },
-  { key: "people_created", label: "ob.backread.tallyPeople" },
-  { key: "organizations_created", label: "ob.backread.tallyCompanies" },
+  { key: "contacts_created", label: "ob.backread.tallyContacts" },
+  { key: "companies_created", label: "ob.backread.tallyCompanies" },
 ];
 
 // The template-ready `{detail}` value for a mutation that may or may not
@@ -119,11 +110,16 @@ export function OnboardingBackread({
   // `preview.data`/`preview.error` are the mutation's LAST result, which
   // survives past the render where `selected` changes to a window nobody has
   // previewed yet. `preview.variables` is the window that result actually
-  // belongs to, so it gates both what scope is shown and whether Start may
-  // fire: a stale estimate for the old window is withheld rather than shown
-  // as though it answered the new pick, and Start waits for THIS selection's
-  // preview to settle — successfully or not (an estimate that failed is still
-  // a settled answer; see `BackreadScope`).
+  // belongs to, so it gates what scope is shown: a stale estimate for the old
+  // window is withheld rather than shown as though it answered the new pick,
+  // and until THIS selection's own count settles the scope says it is still
+  // counting rather than standing empty.
+  //
+  // Start does not wait on it. The window is the consent — it is what the
+  // reader picked and what bounds the run — while the estimate only describes
+  // that window, and counting a large mailbox takes seconds. A verb held shut
+  // for those seconds gives no reason for being shut, so it reads as a broken
+  // button at the one moment the reader is least sure anything is working.
   const previewForSelection = preview.variables === selected;
   const previewSettled = previewForSelection && !preview.isPending;
 
@@ -172,7 +168,7 @@ export function OnboardingBackread({
             ? safeDetail(preview.isError, preview.error, t)
             : null
         }
-        previewReady={previewSettled}
+        counting={!previewSettled}
         starting={start.isPending}
         held={disabled}
         startProblem={safeDetail(start.isError, start.error, t)}
@@ -204,7 +200,7 @@ function BackreadSetup({
   onSelect,
   preview,
   previewProblem,
-  previewReady,
+  counting,
   starting,
   startProblem,
   held,
@@ -219,42 +215,35 @@ function BackreadSetup({
    *  begin ahead of it. Separate from `starting`, which also drives the verb's
    *  own copy — a button reading "starting…" when nothing started is a lie. */
   held?: boolean;
-  /** True once THIS selection's own preview has settled (found or failed).
-   *  Start waits for it so a read can never fire against a scope the reader
-   *  has not actually seen. */
-  previewReady: boolean;
+  /** THIS selection's estimate has not settled yet (found or failed), so the
+   *  scope is still being counted. It is a sentence in the scope panel, never
+   *  a hold on the start: see the note in `OnboardingBackread`. */
+  counting: boolean;
   starting: boolean;
   startProblem: string | null;
   onStart: () => void;
   onDone: () => void;
 }>) {
   const t = useT();
-  const group = useId();
 
   return (
     <section className="ob-backread">
-      <h3 className="ob-backread-h t-h3">{t("ob.backread.heading")}</h3>
-      <fieldset className="ob-backread-windows">
-        <legend className="sr-only">{t("ob.backread.heading")}</legend>
-        {WINDOWS.map((option) => (
-          <Radio
-            className="ob-backread-window"
-            key={option.value}
-            name={group}
-            checked={selected === option.value}
-            onChange={() => onSelect(option.value)}
-            label={t(option.label)}
-          />
-        ))}
-      </fieldset>
-      <BackreadScope preview={preview} problem={previewProblem} />
-      <p className="ob-backread-note t-caption">{t("ob.backread.note")}</p>
+      <Heading size="medium" className="ob-backread-h t-h3">
+        {t("ob.backread.heading")}
+      </Heading>
+      <ImportWindowPicker
+        value={selected}
+        onChange={onSelect}
+        preview={preview}
+      />
+      <BackreadScope
+        preview={preview}
+        problem={previewProblem}
+        counting={counting}
+      />
+      <p>{t("ob.backread.note")}</p>
       <div className="ob-backread-acts">
-        <Button
-          variant="primary"
-          disabled={starting || !previewReady || held}
-          onClick={onStart}
-        >
+        <Button variant="primary" disabled={starting || held} onClick={onStart}>
           {t("ob.backread.start")}
         </Button>
         <Button disabled={held} onClick={() => onDone()}>
@@ -270,13 +259,19 @@ function BackreadSetup({
   );
 }
 
-// What the selected window would touch. An estimator that failed is stated and
-// leaves the start available: not knowing the size of the mailbox is a reason
-// to say so, never a reason to refuse the read.
+// What the selected window would touch. An estimate still being counted, and an
+// estimator that failed, are each stated here and neither stands in the way of
+// the start: not knowing the size of the mailbox yet is a reason to say so,
+// never a reason to refuse the read.
 function BackreadScope({
   preview,
   problem,
-}: Readonly<{ preview: BackfillPreview | undefined; problem: string | null }>) {
+  counting,
+}: Readonly<{
+  preview: BackfillPreview | undefined;
+  problem: string | null;
+  counting: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // Absent when no model rate applied to this window — an unpriced estimate
@@ -292,22 +287,29 @@ function BackreadScope({
 
   return (
     <div className="ob-backread-scope" aria-live="polite">
+      {counting && <p>{t("ob.backread.estimating")}</p>}
       {preview && (
         <p className="ob-backread-estimate">
-          {t("ob.backread.estimate", {
-            messages: formatNumber(preview.estimated_messages, locale),
-          })}
+          {t(
+            preview.estimate_is_floor
+              ? "ob.backread.estimateAtLeast"
+              : "ob.backread.estimate",
+            {
+              messages: formatNumber(preview.estimated_messages, locale),
+            },
+          )}
         </p>
       )}
       {preview?.estimate_quality === "heuristic" && (
-        <p className="ob-backread-qualifier t-caption">
-          {t("ob.backread.estimateHeuristic")}
-        </p>
+        <p className="t-caption">{t("ob.backread.estimateHeuristic")}</p>
       )}
       {cost !== null && (
         <p className="ob-backread-cost">
           {t("ob.backread.estimateCost", { cost })}
         </p>
+      )}
+      {preview?.estimate_is_floor && cost !== null && (
+        <p className="t-caption">{t("backfill.costFloorNote")}</p>
       )}
       {problem !== null && (
         <p className="ob-backread-problem" role="alert">
@@ -354,7 +356,11 @@ function BackreadRun({
 
   return (
     <section className="ob-backread">
-      {heading !== null && <h3 className="ob-backread-h t-h3">{t(heading)}</h3>}
+      {heading !== null && (
+        <Heading size="medium" className="ob-backread-h t-h3">
+          {t(heading)}
+        </Heading>
+      )}
       {live && <BackreadProgress run={run} />}
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />
@@ -460,21 +466,11 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
   const t = useT();
   switch (run.state) {
     case "queued":
-      return (
-        <p className="ob-backread-note t-caption">{t("ob.backread.queued")}</p>
-      );
+      return <p>{t("ob.backread.queued")}</p>;
     case "running":
-      return (
-        <p className="ob-backread-note t-caption">
-          {t("ob.backread.runningNote")}
-        </p>
-      );
+      return <p>{t("ob.backread.runningNote")}</p>;
     case "done":
-      return (
-        <p className="ob-backread-note t-caption">
-          {t("ob.backread.doneNote")}
-        </p>
-      );
+      return <p>{t("ob.backread.doneNote")}</p>;
     case "error":
       return (
         <p className="ob-backread-problem" role="alert">
@@ -491,7 +487,7 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
       // in the inbox, waiting on review, whether or not the run kept going.
       const captured = run.counts?.captured ?? 0;
       return (
-        <p className="ob-backread-note t-caption">
+        <p>
           {t(
             captured > 0
               ? "ob.backread.cancelledPartial"

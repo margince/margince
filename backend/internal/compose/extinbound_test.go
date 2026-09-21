@@ -200,7 +200,7 @@ func TestInboundMountsExactPatternsAndShadowsNothing(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted}
 	mux := http.NewServeMux()
 	reached := ""
-	for _, path := range []string{"/webhooks/gmail", "/webhooks/hubspot"} {
+	for _, path := range []string{"/webhooks/gmail", "/webhooks/graph"} {
 		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			reached = r.URL.Path
 			w.WriteHeader(http.StatusOK)
@@ -211,7 +211,7 @@ func TestInboundMountsExactPatternsAndShadowsNothing(t *testing.T) {
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
 		extensionRuntimeBinding{}, quietLog())
 
-	for _, path := range []string{"/webhooks/gmail", "/webhooks/hubspot"} {
+	for _, path := range []string{"/webhooks/gmail", "/webhooks/graph"} {
 		reached = ""
 		if got := serve(mux, httptest.NewRequest(http.MethodPost, path, nil)).Code; got != http.StatusOK {
 			t.Errorf("%s answered %d — the extension mount shadowed it", path, got)
@@ -389,7 +389,7 @@ func TestABareConnectorIsDeniedByRequire(t *testing.T) {
 		Type: principal.PrincipalConnector,
 		ID:   "connector:ext:u",
 	})
-	if err := auth.Require(ctx, "person", principal.ActionRead); err == nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err == nil {
 		t.Fatal("a bare connector with no permissions passed auth.Require")
 	}
 }
@@ -401,7 +401,7 @@ func TestABareConnectorIsDeniedByRequire(t *testing.T) {
 var inboundEdgeDoors = []string{"MountInboundEndpoints", "inboundHandler.ServeHTTP", "inboundRuntimeFor"}
 
 // auth.RequireHuman ADMITS connectors, so a gate spelled with it alone would
-// pass an anonymous signed request as though a person had made it. This walks
+// pass an anonymous signed request as though a contact had made it. This walks
 // the compose package from the edge's doors through every same-package call it
 // can reach and pins that none of them calls it.
 //
@@ -511,7 +511,7 @@ func walkInboundCalls(t *testing.T, key string, bodies map[string]*ast.FuncDecl,
 		if sel, ok := n.(*ast.SelectorExpr); ok {
 			if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" && sel.Sel.Name == "RequireHuman" {
 				t.Errorf("%s names auth.RequireHuman and is reachable from the anonymous inbound edge — "+
-					"connectors pass that check, so it would admit a signed request as though a person had made it", key)
+					"connectors pass that check, so it would admit a signed request as though a contact had made it", key)
 			}
 		}
 		call, ok := n.(*ast.CallExpr)

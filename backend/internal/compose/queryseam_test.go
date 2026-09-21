@@ -4,15 +4,11 @@
 package compose
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -55,56 +51,21 @@ func TestTheSurfaceAndTheExecutorAgreeOnDegradation(t *testing.T) {
 	}
 }
 
-// The mode guard is the reason this tool is composed here rather than
-// registered next to its executor: the plan runs against the NATIVE tables, and
-// an overlay workspace has no rows in them. A well-formed empty answer is the
-// silent break ADR-0018 forbids, so the refusal is the declared one.
-func TestAnOverlayWorkspaceIsRefusedRatherThanAnsweredFromNativeTables(t *testing.T) {
-	reached := false
-	guarded := nativeOnlyQueryRunner(stubOverlayMode{overlay: true}, func(context.Context, json.RawMessage) (agents.QueryAnswer, error) {
-		reached = true
-		return agents.QueryAnswer{}, nil
-	})
-
-	_, err := guarded(t.Context(), json.RawMessage(`{"version":"v1","target":"deal"}`))
-	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Errorf("err = %v, want the declared unsupported-by-SoR refusal", err)
-	}
-	if reached {
-		t.Error("the executor ran for an overlay workspace, against tables holding none of its records")
-	}
-}
-
-// An unresolved mode refuses. Defaulting to native would answer an overlay
-// workspace from the wrong tables on exactly the request whose mode nobody
-// could read — the case the guard exists for.
-func TestAnUnreadableModeRefusesRatherThanAssumingNative(t *testing.T) {
-	failed := errors.New("resolving the workspace mode")
-	guarded := nativeOnlyQueryRunner(stubOverlayMode{err: failed}, func(context.Context, json.RawMessage) (agents.QueryAnswer, error) {
-		t.Error("the executor ran without the mode having been resolved")
-		return agents.QueryAnswer{}, nil
-	})
-
-	if _, err := guarded(t.Context(), json.RawMessage(`{}`)); !errors.Is(err, failed) {
-		t.Errorf("err = %v, want the mode read's own failure", err)
-	}
-}
-
 // The executor answers refs and the tool answers records, so everything that
 // justifies a row has to survive the crossing. Evidence is the part that would
 // be missed: a hop dropped here is a filter the caller can no longer see.
 func TestTheSeamCarriesEveryReasonARowWasAdmitted(t *testing.T) {
-	deal, org := ids.NewV7(), ids.NewV7()
+	deal, company := ids.NewV7(), ids.NewV7()
 	answer := queryAnswerOf(search.QueryResult{
 		Rows: []search.QueryRow{{
 			Type: "deal", ID: deal, Title: "Retrofit line", Score: 0.42,
 			Evidence: []search.QueryEvidence{{
-				Relation: "organization_id", Type: "organization", ID: org, Title: "Kärcher",
+				Relation: "company_id", Type: "company", ID: company, Title: "Kärcher",
 			}},
 		}},
 		Coverage:  search.CoverageRankedSemantic,
 		Notes:     []search.QueryNote{{Code: search.CodeResultTruncated, Path: "limit", Detail: "more match"}},
-		Narrative: "Deals at an organization in Stuttgart.",
+		Narrative: "Deals at a company in Stuttgart.",
 		Limit:     25,
 	})
 
@@ -112,15 +73,15 @@ func TestTheSeamCarriesEveryReasonARowWasAdmitted(t *testing.T) {
 		t.Fatalf("refs = %+v, want the executor's row with its score", answer.Refs)
 	}
 	evidence := answer.Refs[0].Evidence
-	if len(evidence) != 1 || evidence[0].ID != org || evidence[0].RecordType != "organization" ||
-		evidence[0].Relation != "organization_id" || evidence[0].Title != "Kärcher" {
+	if len(evidence) != 1 || evidence[0].ID != company || evidence[0].RecordType != "company" ||
+		evidence[0].Relation != "company_id" || evidence[0].Title != "Kärcher" {
 		t.Errorf("evidence = %+v, want the hop record that admitted the row", evidence)
 	}
 	if len(answer.Notes) != 1 || answer.Notes[0].Code != search.CodeResultTruncated ||
 		answer.Notes[0].Path != "limit" {
 		t.Errorf("notes = %+v, want the executor's own note with its path", answer.Notes)
 	}
-	if answer.Coverage != search.CoverageRankedSemantic || answer.Narrative != "Deals at an organization in Stuttgart." {
+	if answer.Coverage != search.CoverageRankedSemantic || answer.Narrative != "Deals at a company in Stuttgart." {
 		t.Errorf("coverage/narrative = %q/%q, want them carried verbatim", answer.Coverage, answer.Narrative)
 	}
 }
@@ -151,12 +112,3 @@ func TestQueryWorkspaceIsOnTheComposedSurface(t *testing.T) {
 		t.Errorf("tier = %v, want auto-execute: a read is reversible and logged", spec.Tier)
 	}
 }
-
-// stubOverlayMode answers a fixed mode, which is what lets the guard's two
-// branches be exercised without a database.
-type stubOverlayMode struct {
-	overlay bool
-	err     error
-}
-
-func (s stubOverlayMode) isOverlayUncached(context.Context) (bool, error) { return s.overlay, s.err }

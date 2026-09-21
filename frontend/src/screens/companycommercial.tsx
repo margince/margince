@@ -29,11 +29,11 @@ import "./company360.css";
 // every other figure on the page. The record exists now, so the block reports
 // it instead.
 
-type Organization360 = components["schemas"]["Organization360"];
-type Deal = NonNullable<Organization360["deals"]>["data"][number];
+type Company360 = components["schemas"]["Company360"];
+type Deal = NonNullable<Company360["deals"]>["data"][number];
 type Offer = components["schemas"]["Offer"];
 type ContractStrip = NonNullable<
-  NonNullable<Organization360["state_strip"]>["contracts"]
+  NonNullable<Company360["state_strip"]>["contracts"]
 >;
 
 /**
@@ -47,9 +47,7 @@ type ContractStrip = NonNullable<
  * with no offer to name is not a section, and an empty block under the deal
  * rows would read as a missing feature rather than as "there is none".
  */
-export function CompanyLastOffer({
-  view,
-}: Readonly<{ view?: Organization360 }>) {
+export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -83,9 +81,7 @@ export function CompanyLastOffer({
   }
   return (
     <PanelBody className="com-block">
-      <span className="t-caption">
-        {t("commercial.lastOffer", { deal: leading.name })}
-      </span>
+      <span>{t("commercial.lastOffer", { deal: leading.name })}</span>
       <span className="co-row-meta t-caption">
         <button
           type="button"
@@ -162,13 +158,13 @@ export function offerAmount(
 
 const OFFER_TONE: Record<
   Offer["status"],
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   draft: undefined,
   sent: undefined,
   accepted: "success",
   rejected: "danger",
-  expired: "warn",
+  expired: "warning",
   superseded: undefined,
 };
 
@@ -187,7 +183,7 @@ const OFFER_TONE: Record<
  */
 export function CompanyContractState({
   view,
-}: Readonly<{ view?: Organization360 }>) {
+}: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -202,14 +198,14 @@ export function CompanyContractState({
   if (contracts.active_count === 0) {
     return (
       <PanelBody className="com-block">
-        <span className="t-caption">{t("contracts.state.none")}</span>
+        <span>{t("contracts.state.none")}</span>
       </PanelBody>
     );
   }
 
   return (
     <PanelBody className="com-block">
-      <span className="t-caption">
+      <span>
         {t("contracts.state.title", {
           count: formatNumber(contracts.active_count, locale),
         })}
@@ -231,7 +227,7 @@ export function CompanyContractState({
           )}
         {contracts.cancellation_pending &&
           contracts.cancellation_effective_on && (
-            <Badge tone="warn">
+            <Badge tone="warning">
               {t("contracts.state.endsOn", {
                 when: formatDate(
                   contracts.cancellation_effective_on,

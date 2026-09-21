@@ -8,7 +8,7 @@ package compose
 //
 // The first build gave the suggest tier its own list, its own confirm and
 // reject endpoints and its own card. That was a second inbox: the product
-// already has one place where a proposal waits for a person, it already
+// already has one place where a proposal waits for a contact, it already
 // records who decided what and when, and a member who works through their
 // morning approvals should not also have to remember a settings tab.
 //
@@ -26,10 +26,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -50,13 +51,18 @@ const linkedInMatchKind = "linkedin_match"
 // decide it.
 type linkedInMatchProposal struct {
 	ConnectionID ids.UUID `json:"connection_id"`
-	PersonID     ids.UUID `json:"person_id"`
+	// OwnerUserID is the member whose network produced the pair, stamped at
+	// staging from the ghost row. The apply binds on it: without it the write
+	// gated the CONTACT and nothing tied the CONNECTION, so a payload naming
+	// another member's connection applied to it.
+	OwnerUserID ids.UUID `json:"owner_user_id"`
+	ContactID   ids.UUID `json:"contact_id"`
 	// ConnectionName and ConnectionCompany are the export's own spelling. The
 	// folded forms the matcher compared on are deliberately absent: nobody can
 	// decide "andreas muller · simio".
 	ConnectionName    string `json:"connection_name"`
 	ConnectionCompany string `json:"connection_company,omitempty"`
-	PersonName        string `json:"person_name"`
+	ContactName       string `json:"contact_name"`
 }
 
 // withGhostOwnerAsSubject records the acting member as the subject the
@@ -76,12 +82,12 @@ func withGhostOwnerAsSubject(ctx context.Context) (context.Context, ids.UUID, er
 	return principal.WithActor(ctx, actor), actor.OnBehalfOf, nil
 }
 
-// linkedInMatchStager is the seam people.Handlers calls after an import. It
+// linkedInMatchStager is the seam contacts.Handlers calls after an import. It
 // holds the approvals service so the transport does not have to, and builds it
 // ONCE: the registration list is a dozen effects over a dozen stores, and
 // rebuilding it per upload produces the same service every time.
 func linkedInMatchStager(pool *pgxpool.Pool) func(context.Context) error {
-	svc, store := approvalsServiceWithEffects(pool), people.NewStore(InstallationDB(pool))
+	svc, store := approvalsServiceWithEffects(pool), contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context) error {
 		_, err := StageLinkedInMatches(ctx, svc, store)
 		return err
@@ -94,39 +100,41 @@ func linkedInMatchStager(pool *pgxpool.Pool) func(context.Context) error {
 // It runs under the ghost owner's own authority — the caller establishes that,
 // as every other pass over these rows does — so a contact outside their row
 // scope never becomes a proposal they can see.
-func StageLinkedInMatches(ctx context.Context, svc *approvals.Service, store *people.Store) (int, error) {
+func StageLinkedInMatches(ctx context.Context, svc *approvals.Service, store *contacts.Store) (int, error) {
 	pending, err := store.PendingLinkedInMatches(ctx)
 	if err != nil {
 		return 0, err
 	}
-	return stagePendingLinkedInMatches(ctx, svc, pending)
+	return stagePendingLinkedInMatches(ctx, svc, store, pending)
 }
 
-// StageLinkedInMatchesForPerson is the same pass narrowed to the matches about
+// StageLinkedInMatchesForContact is the same pass narrowed to the matches about
 // ONE contact.
 //
 // The rule both entry points keep is that a pass proposes over the SAME scope it
 // matched. Matching against a single arrival can only have raised questions
 // about that arrival, so this is the complete answer for that caller as well as
 // the bounded one: proposing the member's entire outstanding set instead would
-// run once per person event and only ever rejoin rows that already exist.
-func StageLinkedInMatchesForPerson(ctx context.Context, svc *approvals.Service, store *people.Store, person ids.UUID) (int, error) {
-	pending, err := store.PendingLinkedInMatchesForPerson(ctx, person)
+// run once per contact event and only ever rejoin rows that already exist.
+func StageLinkedInMatchesForContact(ctx context.Context, svc *approvals.Service, store *contacts.Store, contact ids.UUID) (int, error) {
+	pending, err := store.PendingLinkedInMatchesForContact(ctx, contact)
 	if err != nil {
 		return 0, err
 	}
-	return stagePendingLinkedInMatches(ctx, svc, pending)
+	return stagePendingLinkedInMatches(ctx, svc, store, pending)
 }
 
 // stagePendingLinkedInMatches turns the candidates a match produced into
 // proposals — the one place both scopes pass through.
-func stagePendingLinkedInMatches(ctx context.Context, svc *approvals.Service, pending []people.PendingLinkedInMatch) (int, error) {
+func stagePendingLinkedInMatches(
+	ctx context.Context, svc *approvals.Service, store *contacts.Store, pending []contacts.PendingLinkedInMatch,
+) (int, error) {
 	// Staged ON BEHALF OF the member whose network produced it, so the audit
 	// trail records whose export raised the question. It grants nothing and
 	// withholds nothing: who may decide is the inbox's ordinary rule — the
 	// grants the effect needs, and visibility of the CONTACT the proposal is
 	// about. ADR-0078/A123 settles that deliberately: who-knows-whom is
-	// workspace-shared metadata, guarded by "you only see edges for a person
+	// workspace-shared metadata, guarded by "you only see edges for a contact
 	// you can see at all", which is exactly what that rule already applies.
 	ctx, _, err := withGhostOwnerAsSubject(ctx)
 	if err != nil {
@@ -140,16 +148,36 @@ func stagePendingLinkedInMatches(ctx context.Context, svc *approvals.Service, pe
 		}
 		if proposed {
 			staged++
+			continue
+		}
+		// Not staged means one thing here and the engine is precise about it:
+		// StageUnlessDeclined refuses only when a prior offer for this identity
+		// was REJECTED. So this is where a refusal made BEFORE the decline
+		// effect shipped becomes observable, and the connection is marked
+		// terminal — a repair pass, not the path a rejection takes now.
+		//
+		// A rejection made today lands in linkedInMatchDeclineEffect, inside the
+		// decision's own transaction, so the ghost goes terminal at the moment
+		// the human says no rather than on the next hourly sweep. This call
+		// stays because it is what heals the rows refused before that existed,
+		// and because it costs one predicate that matches nothing once they are.
+		//
+		// The cost of not doing it is what makes it worth a write: the sweep
+		// enumerates (unmatched, suggested), so a refused row was matched,
+		// read and staged on every hourly pass for ever, always to no effect.
+		if err := store.RecordLinkedInMatchRefused(ctx, m.ConnectionID); err != nil {
+			return staged, err
 		}
 	}
 	return staged, nil
 }
 
-func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m people.PendingLinkedInMatch) (bool, error) {
+func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m contacts.PendingLinkedInMatch) (bool, error) {
 	canonical, hash, err := diffhash.Object(map[string]any{
-		"connection_id": m.ConnectionID.String(), "person_id": m.PersonID.String(),
+		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
+		"contact_id":      m.ContactID.String(),
 		"connection_name": m.ConnectionName, "connection_company": m.ConnectionCompany,
-		"person_name": m.PersonName,
+		"contact_name": m.ContactName,
 	})
 	if err != nil {
 		return false, err
@@ -172,12 +200,12 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m people
 		Kind:           linkedInMatchKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
-		TargetType:     string(recordTypePerson),
-		TargetID:       m.PersonID,
+		TargetType:     string(recordTypeContact),
+		TargetID:       m.ContactID,
 		Identity:       identity,
 		JoinPending:    true,
 		Summary: fmt.Sprintf("%s at %s looks like %s",
-			m.ConnectionName, employerOrPlaceholder(m.ConnectionCompany), m.PersonName),
+			m.ConnectionName, employerOrPlaceholder(m.ConnectionCompany), m.ContactName),
 	})
 	return proposed, err
 }
@@ -189,16 +217,39 @@ func employerOrPlaceholder(s string) string {
 	return s
 }
 
+// linkedInMatchDeclineEffect marks the ghost row terminal when a member says no.
+//
+// Rejecting used to change nothing on the connection. The approvals record said
+// declined and the domain record still said suggested, and the two disagreed
+// until a sweep happened to notice — up to an hour, and only because
+// StageUnlessDeclined refused to re-propose. The dead branches were the tell:
+// matchRankOrder carried a `rejected` slot and the pending read carried
+// `<> 'rejected'`, and no writer in the tree could produce a row for either.
+//
+// The DECISION's transaction, handed in: the rejection and the mark commit
+// together, so a failed mark takes the rejection with it and the member can
+// answer again. Rejected-but-still-suggested is the one outcome this card
+// cannot produce — the same shape heldDeclineEffect takes, and for the same
+// reason.
+func linkedInMatchDeclineEffect(store *contacts.Store) approvals.DeclinedEffect {
+	return func(ctx context.Context, tx pgx.Tx, _ ids.ApprovalID, proposedChange json.RawMessage) error {
+		var p linkedInMatchProposal
+		if err := json.Unmarshal(proposedChange, &p); err != nil {
+			return fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
+		}
+		// The OWNER and the CONTACT the proposal named, not the deciding actor
+		// and not whoever the row points at now: a refusal answers one
+		// suggestion, and the store binds on the pair for the same reason the
+		// apply does.
+		return contacts.RecordLinkedInMatchRefusedTx(ctx, tx, p.ConnectionID, p.OwnerUserID, p.ContactID)
+	}
+}
+
 // linkedInMatchAcceptEffect links the connection to the contact and puts the
 // LinkedIn address on the record — the same write the automatic exact-name
 // path performs, released by a human instead of by a string comparison.
-func linkedInMatchAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func linkedInMatchAcceptEffect(svc *approvals.Service) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		// The single-use redemption IS the idempotency claim: whoever consumes
-		// the approval executes, anyone else finds it consumed.
-		if _, _, err := svc.Redeem(ctx, approvalID, linkedInMatchKind, diffHash); err != nil {
-			return err
-		}
 		var p linkedInMatchProposal
 		if err := json.Unmarshal(proposedChange, &p); err != nil {
 			return fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
@@ -206,9 +257,22 @@ func linkedInMatchAcceptEffect(svc *approvals.Service, store *people.Store) appr
 		if _, ok := principal.Actor(ctx); !ok {
 			return fmt.Errorf("compose: LinkedIn match effect without a deciding principal")
 		}
+		// ONE TRANSACTION, which is what RedeemAndApply is for. Redeem-then-apply
+		// was two: the redemption committed, and a failure in the apply left the
+		// approval consumed and the connection never linked — unrecoverable
+		// through the API, because the row is decided and re-deciding answers
+		// 409. Redeem's own doc says callers should use this and have no window
+		// at all, and every other accept effect in compose already does.
+		//
+		// The single-use redemption is still the idempotency claim: whoever
+		// consumes the approval executes, anyone else finds it consumed. What
+		// changes is that a consumed approval now implies the write landed.
+		//
 		// Executed as the DECIDER, not as a machine: a member approving a match
 		// is making the claim themselves, and the write must be gated by their
 		// grants and recorded against them.
-		return store.ApplyLinkedInMatch(ctx, p.ConnectionID, p.PersonID)
+		return svc.RedeemAndApply(ctx, approvalID, linkedInMatchKind, diffHash, func(tx pgx.Tx) error {
+			return contacts.ApplyLinkedInMatchTx(ctx, tx, p.ConnectionID, p.OwnerUserID, p.ContactID)
+		})
 	}
 }

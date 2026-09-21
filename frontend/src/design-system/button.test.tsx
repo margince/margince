@@ -1,11 +1,17 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  extensionFrontendFiles,
+  filesMatching,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 import { Button } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -31,20 +37,35 @@ function stripComments(css: string): string {
 }
 
 describe("Button", () => {
-  it("names its variant and size in the class list the stylesheet keys on", () => {
+  it("names its variant in the class list the stylesheet keys on", () => {
     render(
       <>
         <Button variant="primary">Save</Button>
-        <Button variant="danger" small>
-          Delete
-        </Button>
+        <Button variant="danger">Delete</Button>
       </>,
     );
     expect(classesOf("Save")).toContain("btn");
     expect(classesOf("Save")).toContain("btn-primary");
-    expect(classesOf("Save")).not.toContain("btn-sm");
     expect(classesOf("Delete")).toContain("btn-danger");
-    expect(classesOf("Delete")).toContain("btn-sm");
+  });
+
+  // There is ONE button height, and the variant classes are the only thing a
+  // caller can pick. A size prop is what the class list used to also carry, and
+  // a second height is a second answer to "how tall is a control" — the pair
+  // drifted apart on every screen that mixed them. Held over the sheet as well
+  // as over the class list: a rule reintroducing a rung would render at a
+  // height no assertion here would otherwise see.
+  it("has one height, so no rule in the sheet sets a second one", () => {
+    render(<Button variant="primary">Save</Button>);
+    expect(
+      classesOf("Save").some((name) => /^btn-(sm|lg|xs)$/.test(name)),
+    ).toBe(false);
+
+    const css = stripComments(readFileSync(join(here, "base.css"), "utf8"));
+    expect(css).not.toContain("btn-sm");
+    const rule = /(?:^|\n)\.btn\s*\{([^}]*)\}/.exec(css);
+    expect(rule).not.toBeNull();
+    expect(rule?.[1]).toMatch(/min-block-size:\s*var\(--controlHeight\)/);
   });
 
   it("defaults to the ghost variant, so a bare Button is still a styled one", () => {
@@ -457,17 +478,20 @@ describe("base.css draws the federated door without touching the mark", () => {
 
   it("floors the door at the touch target on a fine pointer too", () => {
     const css = readFileSync(join(here, "base.css"), "utf8");
-    const rule = /(?:^|\n)\.btn-federated\s*\{([^}]*)\}/.exec(css);
+    // The variant's OWN rule, not every rule whose selector list names it: the
+    // wrap it shares with `.btn-valuelabel` is declared under both, and a match
+    // on the first selector list would read that one's declarations instead.
+    const rule =
+      /(?:^|\n)\.btn-federated\s*\{([^}]*min-block-size[^}]*)\}/.exec(css);
     expect(rule).not.toBeNull();
-    // `--control-h` is 40px for a fine pointer and rises to 44 only for a coarse
-    // one, and `.btn` pins a 1.25 line-height — so leaning on the shared height
-    // alone lands this box at 41px on a mouse. The floor is declared here, and
-    // `max()` keeps the shared height wherever it is the taller of the two.
+    // `--controlHeight` is 32 for every pointer, so leaning on the shared height
+    // alone lands this box short of the target a door owes. The floor is declared here, and `max()` keeps the
+    // shared height wherever it is the taller of the two.
     // The RENDERED height is what actually matters and jsdom cannot compute
     // `max()`; the login spec measures it. This asserts the declaration survives,
     // because a deletion here would only surface in that slower lane.
     expect(rule?.[1]).toMatch(
-      /min-block-size:\s*max\(var\(--control-h\),\s*44px\)/,
+      /min-block-size:\s*max\(var\(--controlHeight\),\s*44px\)/,
     );
   });
 });
@@ -503,7 +527,7 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
 
   // The two floors `.btn` keeps so a short verb still reads as a pressable box.
   // A text affordance is not a box: left in place they draw 6rem of width and
-  // 40px of height around a link, which is the button chrome surviving the
+  // a control's height around a link, which is the button chrome surviving the
   // variant that removed it.
   it("gives up the width and height floors the button box keeps", () => {
     const css = readFileSync(join(here, "atoms.css"), "utf8");
@@ -513,5 +537,112 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
     expect(rule).not.toBeNull();
     expect(rule?.[1]).toMatch(/min-inline-size:\s*0/);
     expect(rule?.[1]).toMatch(/min-block-size:\s*0/);
+  });
+});
+
+// The control owns its icon's size, and this is the fitness function for it.
+//
+// A "New deal" button shipped its Plus at 14px while `.btn svg` said
+// --controlIcon, and the reason is worth stating because it decides what this
+// gate can be: lucide's `size` prop writes width/height ATTRIBUTES, which every
+// author rule outranks, so a `size={14}` inside a button renders at the
+// control's size anyway and is merely a false claim at the call site. An inline
+// STYLE is the one spelling that wins, and that is what drew the 14px. Both are
+// the same defect — a call site answering a question the control already
+// answers — so both are named here rather than only the one that shows.
+//
+// A census over the tree rather than a render of this file: what a reader sees
+// is the icon inside whichever of two hundred screens drew it, and a gate that
+// reads only its own imports reports PASS on a tree it never looked at.
+describe("a glyph inside a control takes no size of its own", () => {
+  const CONTROL_TAGS = new Set(["Button", "IconAction"]);
+  // The classes the control stylesheets key on, so an `<a className="btn">` and
+  // a row's own `.iconbtn` are judged as the controls they are drawn as.
+  const CONTROL_CLASS = /\b(btn|iconbtn|link-button)\b/;
+
+  function isControl(node: ts.Node): boolean {
+    const open = ts.isJsxElement(node)
+      ? node.openingElement
+      : ts.isJsxSelfClosingElement(node)
+        ? node
+        : undefined;
+    if (open === undefined) return false;
+    if (CONTROL_TAGS.has(open.tagName.getText())) return true;
+    return open.attributes.properties.some(
+      (attribute) =>
+        ts.isJsxAttribute(attribute) &&
+        attribute.name.getText() === "className" &&
+        attribute.initializer !== undefined &&
+        CONTROL_CLASS.test(attribute.initializer.getText()),
+    );
+  }
+
+  // Both spellings: the `size` prop that states a number the control already
+  // owns, and the inline width/height that actually overrides it.
+  function sizesItself(attribute: ts.JsxAttributeLike): boolean {
+    if (!ts.isJsxAttribute(attribute)) return false;
+    const name = attribute.name.getText();
+    const text = attribute.getText();
+    if (name === "size") return /^size=\{?\d+\}?$/.test(text);
+    if (name === "style") {
+      return /\b(width|height|inlineSize|blockSize)\s*:/.test(text);
+    }
+    return false;
+  }
+
+  // Parses every .tsx in frontend/src and in each extension frontend to read
+  // the glyphs out of it — past the 10s default under CI's coverage run.
+  it("names no size on a glyph any control already sizes", {
+    timeout: 60_000,
+  }, () => {
+    const root = join(here, "..");
+    // A unit's screen is shipped UI in the same bundle and draws this tier's
+    // controls, so a census stopping at frontend/src would hold the core to a
+    // rule the extension tier escapes.
+    const files = filesMatching(root, /\.tsx$/).concat(
+      extensionFrontendFiles(join(root, "..", "..", "extensions")),
+    );
+    // The one way a census fails: it reads a smaller tree, finds nothing, and
+    // reports the same word a clean tree does. A floor makes an empty walk say
+    // so instead — the same guard `native-controls.test.ts` keeps.
+    expect(files.length).toBeGreaterThan(100);
+    // And the extension tier specifically: the floor above is one the core
+    // satisfies alone, so it cannot notice a walk that stops at src/.
+    expect(
+      files.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
+    ).toBe(true);
+    const found: string[] = [];
+    for (const file of files) {
+      const source = sourceFileAt(file);
+      const walk = (node: ts.Node, inControl: boolean) => {
+        const here = inControl || isControl(node);
+        const open = ts.isJsxElement(node)
+          ? node.openingElement
+          : ts.isJsxSelfClosingElement(node)
+            ? node
+            : undefined;
+        // The control's own props are its business; what is judged is what it
+        // WRAPS — the glyph a caller handed it, as a child or through `icon`.
+        if (
+          open !== undefined &&
+          here &&
+          !CONTROL_TAGS.has(open.tagName.getText())
+        ) {
+          for (const attribute of open.attributes.properties) {
+            if (!sizesItself(attribute)) continue;
+            const { line } = source.getLineAndCharacterOfPosition(
+              attribute.getStart(),
+            );
+            found.push(
+              `${relative(root, file)}:${line + 1}: <${open.tagName.getText()} ${attribute.getText()}>`,
+            );
+          }
+        }
+        node.forEachChild((child) => walk(child, here));
+      };
+      walk(source, false);
+    }
+    expect(found).toEqual([]);
   });
 });

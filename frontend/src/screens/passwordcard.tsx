@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -132,7 +133,7 @@ export function PasswordSettingRow({
         label={t("password.title")}
         description={t("password.body")}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button variant="ghost" onClick={() => setOpen(true)}>
             {t("password.open")}
           </Button>
         }
@@ -143,100 +144,103 @@ export function PasswordSettingRow({
           element apart, and the only thing telling them apart was reading the
           sentence. */}
       {done && (
-        <Callout tone="success" live="status">
+        <Callout kind="outcome" tone="success" title={t("password.doneTitle")}>
           {t("password.done")}
         </Callout>
       )}
-      {open && (
-        <Modal open onClose={close} labelledBy={titleId}>
-          {/* A real form, so Enter submits it. Three password fields that could
+      <Modal open={open} onClose={close} labelledBy={titleId}>
+        {/* A real form, so Enter submits it. Three password fields that could
               only be committed by reaching for the button is not how anyone
               types a credential, and the button carried no `type` at all —
               Button defaults to `type="button"`, so even inside a form it would
               not have. */}
-          <form
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (ready && !change.isPending) change.mutate(fields);
-            }}
-          >
-            <h2 className="t-h3 modal-title" id={titleId}>
-              {t("password.title")}
-            </h2>
-            {change.isError && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(change.error, t, t("password.errorGeneric"))}
-              </Callout>
-            )}
-            {/* Every password field carries a reveal, this one included. A
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (ready && !change.isPending) change.mutate(fields);
+          }}
+        >
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+            {t("password.title")}
+          </Heading>
+          {change.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("password.changeFailedTitle")}
+            >
+              {problemMessageOf(change.error, t, t("password.errorGeneric"))}
+            </Callout>
+          )}
+          {/* Every password field carries a reveal, this one included. A
                 mistyped CURRENT password is the cheapest of the three to
                 diagnose — the server refuses it in one round trip — but being
                 refused without being able to see what you typed is how a reader
                 concludes they have forgotten a password they know. */}
-            <Field
-              label={t("password.current")}
-              required
-              trailing={current.trailing}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type={current.type}
-                  name="current-password"
-                  autoComplete="current-password"
-                  value={fields.current}
-                  onChange={(event) => set("current")(event.target.value)}
-                />
-              )}
-            </Field>
-            {/* The new pair has the strongest claim on it: a mistyped current
+          <Field
+            label={t("password.current")}
+            required
+            trailing={current.trailing}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type={current.type}
+                name="current-password"
+                autoComplete="current-password"
+                value={fields.current}
+                onChange={(event) => set("current")(event.target.value)}
+              />
+            )}
+          </Field>
+          {/* The new pair has the strongest claim on it: a mistyped current
                 password is refused, while a mistyped NEW one simply becomes the
                 password — with a twelve-character floor and a confirm field that
                 agreed with it. */}
-            <Field
-              label={t("password.next")}
-              required
-              error={tooShort ? t("password.tooShort") : undefined}
-              // The rule, until the rule is being broken — at which point the
-              // refusal restates it in the danger tone and a second grey copy of
-              // the same sentence underneath is noise.
-              hint={tooShort ? undefined : t("password.hint")}
-              trailing={next.trailing}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type={next.type}
-                  name="new-password"
-                  autoComplete="new-password"
-                  value={fields.next}
-                  onChange={(event) => set("next")(event.target.value)}
-                />
-              )}
-            </Field>
-            <Field
-              label={t("password.confirm")}
-              required
-              error={mismatch ? t("password.mismatch") : undefined}
-              trailing={confirm.trailing}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type={confirm.type}
-                  name="confirm-password"
-                  autoComplete="new-password"
-                  value={fields.confirm}
-                  onChange={(event) => set("confirm")(event.target.value)}
-                />
-              )}
-            </Field>
-            <div className="form-actions">
-              <Button small variant="ghost" onClick={close}>
-                {t("password.cancel")}
-              </Button>
-              {/* Two facts, two props. `!ready` is a form that is not filled in
+          <Field
+            label={t("password.next")}
+            required
+            error={tooShort ? t("password.tooShort") : undefined}
+            // The rule, until the rule is being broken — at which point the
+            // refusal restates it in the danger tone and a second grey copy of
+            // the same sentence underneath is noise.
+            hint={tooShort ? undefined : t("password.hint")}
+            trailing={next.trailing}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type={next.type}
+                name="new-password"
+                autoComplete="new-password"
+                value={fields.next}
+                onChange={(event) => set("next")(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("password.confirm")}
+            required
+            error={mismatch ? t("password.mismatch") : undefined}
+            trailing={confirm.trailing}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type={confirm.type}
+                name="confirm-password"
+                autoComplete="new-password"
+                value={fields.confirm}
+                onChange={(event) => set("confirm")(event.target.value)}
+              />
+            )}
+          </Field>
+          <div className="form-actions">
+            <Button variant="ghost" onClick={close}>
+              {t("password.cancel")}
+            </Button>
+            {/* Two facts, two props. `!ready` is a form that is not filled in
                   yet and `change.isPending` is a write already on its way, and
                   folding them into one `disabled` drew them the same: the reader
                   could not tell "I still have to type something" from "it is
@@ -248,20 +252,18 @@ export function PasswordSettingRow({
                   otherwise flip `ready` false, hand the button `disabled` on top
                   of `pending`, and — since refusal outranks busy — drop both the
                   focus and the busy state in the middle of the change. */}
-              <Button
-                small
-                type="submit"
-                variant="primary"
-                disabled={!change.isPending && !ready}
-                pending={change.isPending}
-                busyLabel={t("password.changing")}
-              >
-                {t("password.submit")}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!change.isPending && !ready}
+              pending={change.isPending}
+              busyLabel={t("password.changing")}
+            >
+              {t("password.submit")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

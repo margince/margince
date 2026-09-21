@@ -6,7 +6,7 @@
 //
 // Every message the product sent was hard-coded English while the screens were
 // translated three ways. For the two transactional messages that is a small
-// thing — a person reading a password link already knows what they asked for.
+// thing — a reader reading a password link already knows what they asked for.
 // The weekly retrospective is not: it arrives unasked every Monday, it is the
 // product talking to a rep about their own week, and a German-speaking rep read
 // their Home panel in German and then got an English summary of the same
@@ -27,7 +27,11 @@
 // (backend/gates/mailcopy_test.go)
 package mailcopy
 
-import "strings"
+import (
+	"slices"
+	"strings"
+	"time"
+)
 
 // Language is a base language this installation can send in. The set is the
 // contract's `base_language` enum, and English is what an installation that
@@ -51,6 +55,47 @@ const (
 // build that adds a language to the contract and not to this catalog is caught
 // by the gate, not by a rep's mailbox.
 const Fallback = English
+
+// DateLayout is how a date is written in this installation's mail, in every
+// language.
+//
+// ISO, and that is deliberate: `2 January 2006` puts an English month name in
+// the middle of a German sentence — the half-translated message this catalog
+// exists to stop — and a numeric order like 06/01 is read as 6 January by half
+// the world. Go's layouts name months in English and nothing here translates
+// one, so a formatted date is the one part of a mail a catalog cannot fix.
+//
+// It lives beside the copy rather than beside each sender. The weekly, the
+// morning brief and the confirm link all write dates a recipient reads, and
+// three constants would be three chances to decide this differently.
+const DateLayout = time.DateOnly
+
+// Languages is every language this build carries copy for, in a stable order.
+//
+// DERIVED from the catalog rather than restated. The set is already written
+// three times — the constants above, the map catalog.go builds, and
+// textlang.Shipped — and a fourth hand-written list would be the one that goes
+// stale: a language added to the catalog but forgotten here would publish two
+// wordings where three are needed and pin two hashes where three are, with
+// nothing failing to say so.
+//
+// Sorted so a caller writing one row per language writes them the same way on
+// every boot. Map iteration is random, and a bootstrap that inserted three rows
+// in a different order each time would be harder to read in an audit log than
+// it needs to be.
+//
+// Held by: TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits
+// (backend/gates/mailcopy_test.go), which fails when the contract admits a
+// language the catalog has no copy for — so a set this returns short is a set
+// that gate has already refused.
+func Languages() []Language {
+	out := make([]Language, 0, len(catalog))
+	for language := range catalog {
+		out = append(out, language)
+	}
+	slices.Sort(out)
+	return out
+}
 
 // For is the copy one installation's mail is written in.
 func For(language string) Copy {
@@ -89,7 +134,7 @@ type Copy struct {
 	UnsubscribeLabel       string
 	ManagePreferencesLabel string
 
-	// The password reset a person asked for.
+	// The password reset a colleague asked for.
 	ResetSubject string
 	ResetIntro   string
 	ResetAction  string
@@ -133,6 +178,95 @@ type Copy struct {
 	WeeklyOutcomeWon   string
 	WeeklyOutcomeLost  string
 	WeeklyOutcomeMoved string
+
+	// The two links the installation sends as ITSELF rather than on a rep's
+	// behalf: the confirm-details link and the double-opt-in link.
+	//
+	// These are the hardest copy in the catalog to get wrong safely. Both go to
+	// somebody who did not ask for them and may not remember the company, so a
+	// bare "confirm your details" reads exactly like a phishing mail; and both
+	// are EVIDENCE — the consent proof records which version a contact was
+	// shown, so what these say is what an installation will one day have to
+	// stand behind. A translation that softens "we will not write to you about
+	// it" into a pleasantry changes what was promised, not just how it reads.
+	ConfirmRecordSubject  string
+	ConfirmRecordBody     string
+	ConfirmConsentSubject string
+	ConfirmConsentBody    string
+	// The PRIVACY NOTICE, which asks for nothing.
+	//
+	// It is a separate message from the record confirmation beside it because
+	// the two do different jobs and only one of them is owed. Art. 14 requires
+	// telling somebody we hold their data; it requires no answer from them. The
+	// record confirmation discharges that duty and ALSO asks whether they want
+	// to hear from us — a marketing question riding a legal obligation, which
+	// is the arrangement a supervisory authority reads as consent obtained
+	// under pressure.
+	//
+	// It also reaches contacts the other one cannot. A contact who asked us to
+	// stop is still owed their disclosure, and only the privacy-notice category
+	// survives that stop (consent/authorizesuppression.go's
+	// survivesARestriction). Before this template existed the duty was owed and
+	// undeliverable.
+	NoticeSubject string
+	NoticeBody    string
+	// ConfirmMarketingAsk is the QUESTION ON THE PAGE, not in the mail — the
+	// sentence beside the yes/no a subject actually answers.
+	//
+	// It lives in this catalog rather than in the frontend's because it is the
+	// proposition a consent is given to, and a proof row that quoted a string
+	// the client sent would be evidence the client wrote. Published through the
+	// same text-version machinery as the mail wording, so the grant can name
+	// the row the controller published.
+	//
+	// ConfirmMarketingYes and ConfirmMarketingNo are the two answers, here for
+	// the same reason: what a subject chose is part of what they were asked.
+	ConfirmMarketingAsk string
+	ConfirmMarketingYes string
+	ConfirmMarketingNo  string
+	// ConfirmSubscriptionAsk is the OTHER question, and the two are not
+	// interchangeable. A record-confirmation link asks the generic marketing
+	// question above; a dedicated subscription link names the purpose it was
+	// minted for — "confirm that you want to receive {purpose}" — which is a
+	// narrower and more specific proposition.
+	//
+	// Binding either door to the other's sentence would record somebody
+	// agreeing to something they were not asked, which is the defect the whole
+	// published-question change exists to end.
+	//
+	// {purpose} is substituted with the purpose's own label at render time.
+	ConfirmSubscriptionAsk     string
+	ConfirmSubscriptionConfirm string
+	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
+	// APPENDED to it when the link has a date, with the date as %s.
+	//
+	// Two strings rather than one sentence with a substitution: the shipped
+	// English replaced a phrase inside its own body text, which only works
+	// while every language spells that sentence the same way.
+	ConfirmPersonal string
+	ConfirmExpiry   string
+	// The closing line, different for the two messages: a record confirmation
+	// asks nothing of its reader, while an unanswered opt-in withholds the
+	// permission until they answer.
+	ConfirmRecordIgnore  string
+	ConfirmConsentIgnore string
+	// The privacy notice's closing line. It asks for nothing, so it says so:
+	// a reader who does nothing has lost nothing, which is what makes this a
+	// notice rather than a request.
+	NoticeIgnore string
+
+	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
+	// Vietnamese recipient who refuses further advertising: a confirmation
+	// that their refusal was received, within twenty-four hours.
+	//
+	// IT CARRIES NO LINK and no advertising of its own. This is the one message
+	// the product sends to somebody who has just told it to stop, so anything
+	// in it beyond "we heard you" would be the thing they asked not to receive
+	// — and a link asking them to do something more would read as a message
+	// that did not take the first answer.
+	OptOutAckSubject string
+	OptOutAckBody    string
+	OptOutAckIgnore  string
 
 	// The morning brief. Shorter than the weekly on purpose: it arrives every
 	// working day, so it names the top of the queue and links to the rest

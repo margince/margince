@@ -212,7 +212,7 @@ func (w *window) snapshot() []model.Message {
 }
 
 //promptlang:exempt the rule IS present and is not visible here: it reaches this prompt as Job.LanguageRule, rendered by promptlang.Rule in compose/runnerservice.go, because a module may not import compose. The gate reads one file at a time and cannot follow a string across that boundary, so this waiver stands in for what it cannot see — systemPrompt writes the block it is given, and TestTheRunnerPromptCarriesTheLanguageItWasGiven holds that.
-//promptvoice:exempt the agent loop's output is a tool call, not prose; whatever it eventually writes for a person is written by the surface that renders it.
+//promptvoice:exempt the agent loop's output is a tool call, not prose; whatever it eventually writes for a contact is written by the surface that renders it.
 func (w *window) asRequest(remainingOutputTokens, promptWindow int) model.Request {
 	maxTokens := perCallOutputCeiling
 	if remainingOutputTokens < maxTokens {
@@ -272,34 +272,65 @@ func estimateTokens(system string, msgs []model.Message) int {
 
 // systemPrompt is the §2.0 shared frame plus the tool surface: JSON-only
 // output, the evidence rule, and untrusted-content handling.
+//
+// STOPPING IS DESCRIBED AS A MOVE, in the same block and at the same weight as
+// taking one. It used to read `{"final": …} when the goal is done`, which names
+// completion and nothing else — and the corpus measured what that costs:
+// `a_goal_no_tool_can_serve_ends_the_turn` and `ambiguity_ends_the_turn` scored
+// 0 across 84 runs, on three bindings, with no movement between a 31-tool
+// window and an 8-tool one. The failure shape said why: the turn took
+// `query_workspace` or `search_records` where the scenario expected `final`.
+// The models were not choosing badly among tools; they were not treating "stop"
+// as an available move at all.
+//
+// It matters beyond the score. An unattended agent that cannot end a turn with
+// "nothing here serves this" will always report something, and a morning brief
+// that always has content is one whose silence carries no information — which is
+// most of what a well-behaved agent should produce on a quiet day.
 func systemPrompt(specs []mcp.ToolSpec, fence promptfence.Fence, languageRule string) string {
 	var b strings.Builder
 	b.WriteString(`You are the Margince agent runner, a CRM reasoning component, not a chatbot.
 You work toward the stated goal by calling tools, one per turn.
 
 Respond with ONE JSON object and nothing else:
-  {"tool": "<name>", "args": {…}}   to call a tool, or
-  {"final": {…}}                     when the goal is done (include a "summary" string grounded in your observations).
+  {"tool": "<name>", "args": {…}}   to take a step, or
+  {"final": {…}}                    to end the turn (include a "summary" string grounded in your observations).
+
+Ending the turn is a step, not the absence of one. Three things end it:
+- the goal is done;
+- no tool here can serve the goal — say so, and what a human would do instead;
+- the goal is ambiguous and your observations already show why — name the alternatives rather than pick one.
+"Nothing here serves this" is a complete answer; calling a tool because one was available is a guess.
 
 Rules:
 - Every claim in your final output must be grounded in an observation; omit what you cannot ground.
 - The trigger is ` + triggerProvenance + `: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
-` + surfaceSchemaRules + `- `)
-	b.WriteString(fence.Rule("captured external"))
+` + surfaceSchemaRules)
 	// The rule governs the run's final summary, which is filed on a record the
 	// whole team reads. Empty when the caller passed none — the certification
 	// lane — and an empty block writes nothing rather than a blank line.
 	if languageRule != "" {
-		b.WriteString("\n\n")
 		b.WriteString(languageRule)
+		b.WriteString("\n")
 	}
 	b.WriteString(`
-
 Available tools:
 `)
 	b.WriteString(ToolListing(specs))
+	// The data boundary goes LAST, after the tool catalog, and the order is the
+	// only thing here chosen for cost. Everything above is identical for every
+	// run of a given tool surface; the marker is not, because it is minted per
+	// run. A provider that reuses a byte-identical prefix can therefore reuse
+	// the catalog — which is 97 of this prompt's 98 KB — and with the marker
+	// ahead of it, it could reuse nothing at all.
+	//
+	// Position carries no meaning for the rule itself: it names the boundary
+	// that bounds the captured text in the USER turns, all of which arrive
+	// after the whole system prompt either way.
+	b.WriteString("\n- ")
+	b.WriteString(fence.Rule("captured external"))
 	return b.String()
 }
 

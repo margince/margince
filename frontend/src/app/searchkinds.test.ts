@@ -12,7 +12,7 @@ import {
 
 describe("searchHitRoute", () => {
   it("sends a record to its own 360", () => {
-    expect(searchHitRoute("person", "p1")).toEqual({
+    expect(searchHitRoute("contact", "p1")).toEqual({
       screen: "contacts",
       id: "p1",
     });
@@ -74,7 +74,7 @@ describe("searchHitDestination", () => {
   });
 
   it("leaves every other type on the destination it had", () => {
-    expect(searchHitDestination({ type: "person", id: "p1" }, "ada")).toEqual({
+    expect(searchHitDestination({ type: "contact", id: "p1" }, "ada")).toEqual({
       screen: "contacts",
       id: "p1",
     });

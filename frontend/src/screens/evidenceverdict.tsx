@@ -8,6 +8,7 @@ import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
 // A human's verdict on a machine's claim: agree with it, or correct it.
@@ -31,7 +32,7 @@ import "./evidenceverdict.css";
 // original claim, so "what did it say before I fixed it" is always answerable.
 
 type ProfileField = components["schemas"]["CompanyProfileField"];
-type OrganizationFact = components["schemas"]["OrganizationFact"];
+type CompanyFact = components["schemas"]["CompanyFact"];
 
 // A claim a human can rule on, in the one shape both sidecars reduce to. The
 // two differ in how they are addressed — a profile field by its key, a fact by
@@ -55,14 +56,13 @@ export type EvidenceClaim = {
 // twice, the two would drift the first time either added a `staleTime` or a
 // `select`, and the two surfaces would then disagree about a record they are
 // showing side by side.
-export function useOrgProfileFields(orgId: string) {
+export function useCompanyProfileFields(companyId: string) {
   return useQuery({
-    queryKey: profileFieldsKey(orgId),
+    queryKey: profileFieldsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/organizations/{id}/profile-fields",
-        { params: { path: { id: orgId } } },
-      );
+      const { data, error } = await api.GET("/companies/{id}/profile-fields", {
+        params: { path: { id: companyId } },
+      });
       if (error) {
         throwProblem(error);
       }
@@ -73,12 +73,12 @@ export function useOrgProfileFields(orgId: string) {
 
 // React Query matches key segments exactly, so a near-miss spelling invalidates
 // nothing and a surface goes on showing a claim the human already settled.
-export function profileFieldsKey(orgId: string) {
-  return ["org-profile-fields", orgId] as const;
+export function profileFieldsKey(companyId: string) {
+  return ["company-profile-fields", companyId] as const;
 }
 
 export function profileFieldClaim(
-  orgId: string,
+  companyId: string,
   field: ProfileField,
 ): EvidenceClaim {
   return {
@@ -88,10 +88,10 @@ export function profileFieldClaim(
     verifiedBy: field.verified_by,
     confirmPath: async () => {
       const { error } = await api.POST(
-        "/organizations/{id}/profile-fields/{field}/confirm",
+        "/companies/{id}/profile-fields/{field}/confirm",
         {
           params: {
-            path: { id: orgId, field: field.field },
+            path: { id: companyId, field: field.field },
             ...ifMatch(requireVersion(field.version)),
           },
         },
@@ -102,14 +102,14 @@ export function profileFieldClaim(
     },
     correctPath: async (value) => {
       const { error } = await api.PATCH(
-        "/organizations/{id}/profile-fields/{field}",
+        "/companies/{id}/profile-fields/{field}",
         {
           params: {
-            path: { id: orgId, field: field.field },
+            path: { id: companyId, field: field.field },
             // Both verbs pin the row they answer for. A confirmation is a human
             // agreeing with a value they READ, so it is the verb a stale version
             // damages most: agreeing with a claim that has since been corrected
-            // stamps a person's name on a value they never saw.
+            // stamps a contact's name on a value they never saw.
             ...ifMatch(requireVersion(field.version)),
           },
           body: { value },
@@ -122,10 +122,7 @@ export function profileFieldClaim(
   };
 }
 
-export function factClaim(
-  orgId: string,
-  fact: OrganizationFact,
-): EvidenceClaim {
+export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
   // The contract addresses a fact as `<field>:<value_key>`. A single-value fact
   // carries an empty value_key and so ends in a bare colon — which is the
   // spelling, not a missing half.
@@ -137,16 +134,16 @@ export function factClaim(
     verifiedBy: fact.verified_by,
     confirmPath: async () => {
       const { error } = await api.POST(
-        "/organizations/{id}/facts/{factKey}/confirm",
-        { params: { path: { id: orgId, factKey } } },
+        "/companies/{id}/facts/{factKey}/confirm",
+        { params: { path: { id: companyId, factKey } } },
       );
       if (error) {
         throwProblem(error);
       }
     },
     correctPath: async (value) => {
-      const { error } = await api.PATCH("/organizations/{id}/facts/{factKey}", {
-        params: { path: { id: orgId, factKey } },
+      const { error } = await api.PATCH("/companies/{id}/facts/{factKey}", {
+        params: { path: { id: companyId, factKey } },
         body: { value },
       });
       if (error) {
@@ -157,10 +154,10 @@ export function factClaim(
 }
 
 export function EvidenceVerdict({
-  orgId,
+  companyId,
   claim,
   canEdit,
-}: Readonly<{ orgId: string; claim: EvidenceClaim; canEdit: boolean }>) {
+}: Readonly<{ companyId: string; claim: EvidenceClaim; canEdit: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -168,19 +165,19 @@ export function EvidenceVerdict({
   const [correcting, setCorrecting] = useState(false);
   const [draft, setDraft] = useState(claim.value);
 
-  // Both verbs change the sidecar AND, for a canonical field, the organization
+  // Both verbs change the sidecar AND, for a canonical field, the company
   // row — so the record read, the list it appears in and the 360 that summarizes
   // it all go stale together and are refetched together.
   const settle = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["organizations"] }),
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] }),
+      queryClient.invalidateQueries({ queryKey: ["companies"] }),
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] }),
       // The keys below are the ones the CONSUMERS register. React Query matches
       // key segments exactly, so a near-miss spelling invalidates nothing and
       // the page keeps offering a verdict on a claim the human already settled.
-      queryClient.invalidateQueries({ queryKey: ["organization", orgId] }),
-      queryClient.invalidateQueries({ queryKey: profileFieldsKey(orgId) }),
-      queryClient.invalidateQueries({ queryKey: ["org-facts", orgId] }),
+      queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
+      queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
+      queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
     ]);
   };
   const confirm = useMutation({
@@ -223,7 +220,6 @@ export function EvidenceVerdict({
           onChange={(event) => setDraft(event.target.value)}
         />
         <Button
-          small
           disabled={!correct.isPending && draft.trim() === ""}
           pending={correct.isPending}
           busyLabel={t("evidence.saving")}
@@ -231,7 +227,7 @@ export function EvidenceVerdict({
         >
           {t("evidence.save")}
         </Button>
-        <Button small onClick={() => setCorrecting(false)}>
+        <Button onClick={() => setCorrecting(false)}>
           {t("evidence.cancel")}
         </Button>
         {/* The draft survives a failed save: the field above still holds what
@@ -248,7 +244,6 @@ export function EvidenceVerdict({
   return (
     <span className="evidence-verdict">
       <Button
-        small
         pending={confirm.isPending}
         busyLabel={t("evidence.saving")}
         onClick={() => confirm.mutate()}
@@ -256,7 +251,6 @@ export function EvidenceVerdict({
         {t("evidence.confirm")}
       </Button>
       <Button
-        small
         onClick={() => {
           setDraft(claim.value);
           setCorrecting(true);

@@ -19,35 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SyncHealth is the overlay sync's current concerns: the poller backing off,
-// the incumbent budget degraded, mirror classes stale or still backfilling,
-// and the classes an incumbent-driven write overwrote here.
-// Aggregated by the owning module (one concern per condition, never one per
-// row), so a broken connector is one card and not a flood.
-//
-// The seam behind it answers apperrors.ErrModeNotOverlay for a workspace that
-// never connected an incumbent, and the feed renders that as an ABSENT lane:
-// an installation not in overlay mode does not look here, which is a
-// different fact from a healthy sync and from a withheld one.
-type SyncHealth interface {
-	Concerns(ctx context.Context) ([]SyncConcern, error)
-}
-
-// SyncConcern is one sync condition worth the reader's glance. Kind names it;
-// the other fields carry that kind's facts and are zero for the rest.
-type SyncConcern struct {
-	Kind string
-	// ErrorClass and Failures describe a failing sweep; NextSweepAt is when
-	// the poller retries.
-	ErrorClass  string
-	Failures    int
-	NextSweepAt *time.Time
-	// Band is the budget band a degraded budget sits in (warn or shed).
-	Band string
-	// Objects are the canonical classes a stale/backfilling concern covers.
-	Objects []string
-}
-
 // CaptureHealth is the reader's own capture connections needing the reader's
 // hand — re-authentication, a connection in error, a failing sync, a history
 // import that ended in error. One concern per connection, its worst condition,
@@ -66,6 +37,15 @@ type CaptureConcern struct {
 	Provider     string
 	// AccountLabel is the display-only mailbox address when one was recorded.
 	AccountLabel string
+
+	// FailingSince is when this concern's failure streak began, nil for a
+	// condition that is a state rather than a streak — a disconnected mailbox
+	// is not failing, it is off. It is what makes this lane answer "has
+	// anything been wrong for a while" rather than only "is anything wrong":
+	// a sync that postpones itself is never late by any age reading, so an
+	// hour-old outage and a mailbox idling between ticks reach here identically
+	// without it.
+	FailingSince *time.Time
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the
@@ -116,9 +96,9 @@ type ParkedSend struct {
 	// Reason is the dispatcher's own words for giving up.
 	Reason   string
 	ParkedAt time.Time
-	// PersonID is the person the send's activity is filed under, zero when it
+	// ContactID is the contact the send's activity is filed under, zero when it
 	// is filed under none — the card then offers no open.
-	PersonID ids.UUID
+	ContactID ids.UUID
 }
 
 // Bounces is the reader's own sends whose delivery reports came back hard —
@@ -139,12 +119,12 @@ type BouncedSend struct {
 	// Reason is the receiving side's own words for the refusal.
 	Reason    string
 	BouncedAt time.Time
-	// PersonID is the person the send's activity is filed under, zero when it
+	// ContactID is the contact the send's activity is filed under, zero when it
 	// is filed under none — the card then offers no open.
-	PersonID ids.UUID
+	ContactID ids.UUID
 	// Recipient is the address that refused the send.
 	//
-	// Without it the card names a person and a subject, and a rep opening a
+	// Without it the card names a contact and a subject, and a rep opening a
 	// contact who carries three addresses cannot tell which one is dead — the
 	// row reports a failure and leaves the reader to guess at the fix. Empty
 	// when the send carries none, and the card then says nothing about where it

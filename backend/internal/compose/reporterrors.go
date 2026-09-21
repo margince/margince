@@ -7,12 +7,13 @@ package compose
 // this names what a plan may not say.
 
 import (
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -55,9 +56,9 @@ type FieldNotAllowedError struct {
 
 func (e *FieldNotAllowedError) Error() string {
 	if e.Slot == "" {
-		return fmt.Sprintf("report: field %q is outside this report's vocabulary", e.Field)
+		return fmt.Sprintf("report: field %s is outside this report's vocabulary", httperr.QuoteCaller(e.Field))
 	}
-	return fmt.Sprintf("report: this report's `%s` does not accept %q", e.Slot, e.Field)
+	return fmt.Sprintf("report: this report's `%s` does not accept %s", e.Slot, httperr.QuoteCaller(e.Field))
 }
 
 // MessageFault carries the 422 verdict on the error itself, so the ONE taxonomy
@@ -103,9 +104,15 @@ type UnknownReportError struct {
 	Served []string
 }
 
+// Error names the refused key and every key that would have worked.
+//
+// The key is the CALLER's, and this refusal reaches an agent through a sentinel
+// branch that bounds nothing — so it is bounded here, where it enters, rather
+// than left to a renderer that does not. The served keys are ours and travel
+// whole: they are the half a caller acts on.
 func (e *UnknownReportError) Error() string {
-	return fmt.Sprintf("report %q is not a report this installation serves; the prebuilt reports are: %s",
-		e.Report, strings.Join(e.Served, ", "))
+	return fmt.Sprintf("report %s is not a report this installation serves; the prebuilt reports are: %s",
+		httperr.QuoteCaller(e.Report), strings.Join(e.Served, ", "))
 }
 
 // Unwrap puts it on the sentinel table's 404 row. Deliberately NOT a
@@ -135,8 +142,8 @@ type FilterValueNotAllowedError struct {
 }
 
 func (e *FilterValueNotAllowedError) Error() string {
-	return fmt.Sprintf("report: this report's `%s` cannot compare %s against %q",
-		slotFilters, e.Kind, e.Filter)
+	return fmt.Sprintf("report: this report's `%s` %s",
+		slotFilters, analyticsquery.CannotCompare(e.Kind, e.Filter))
 }
 
 // MessageFault reuses the contract's one declared 422 code, for the reason
@@ -147,8 +154,8 @@ func (e *FilterValueNotAllowedError) Error() string {
 // onto themselves.
 func (e *FilterValueNotAllowedError) MessageFault() (code, message string) {
 	return reportFieldNotAllowedCode,
-		e.Error() + " — quote the value as text (a period like \"2026\" or \"2026-Q1\"), " +
-			"or send true/false for a yes-or-no filter"
+		e.Error() + " — " + analyticsquery.QuoteAsTextAdvice +
+			", or send true/false for a yes-or-no filter"
 }
 
 // reportFilterValue admits a caller's filter value, or refuses it as their
@@ -170,27 +177,7 @@ func reportFilterValue(filter string, value any) (any, error) {
 	case string, bool:
 		return value, nil
 	default:
-		return nil, &FilterValueNotAllowedError{Filter: filter, Kind: jsonShapeOf(value)}
-	}
-}
-
-// jsonShapeOf names an arrived value in the caller's own vocabulary.
-//
-// Deliberately NOT %T: the caller wrote JSON and has never heard of float64 or
-// map[string]interface {}. Naming a Go type in a 422 both fails to locate their
-// mistake and leaks how this server is built.
-//
-//craft:ignore naked-any it names the shape of a decoded JSON value, which is any by construction
-func jsonShapeOf(value any) string {
-	switch value.(type) {
-	case float64, int, int64, json.Number:
-		return "a number"
-	case map[string]any:
-		return "an object"
-	case []any:
-		return "a list"
-	default:
-		return "that value"
+		return nil, &FilterValueNotAllowedError{Filter: filter, Kind: analyticsquery.JSONShapeOf(value)}
 	}
 }
 
@@ -233,7 +220,8 @@ func (e *EmptyReportPlanError) MessageFault() (code, message string) {
 type ReservedAliasError struct{ Alias string }
 
 func (e *ReservedAliasError) Error() string {
-	return fmt.Sprintf("report: %q is reserved for the drill-through handle this surface adds to every row", e.Alias)
+	return fmt.Sprintf("report: %s is reserved for the drill-through handle this surface adds to every row",
+		httperr.QuoteCaller(e.Alias))
 }
 
 // MessageFault reuses the contract's one declared 422 code, for the reason

@@ -132,9 +132,7 @@ func (e *WorkflowEngine) RetryRun(ctx context.Context, runID ids.UUID) (RetryOut
 	// The same context shape HandleEvent builds: a retry is the firing
 	// happening again, not a new kind of caller.
 	runCtx := principal.WithWorkspaceID(ctx, candidate.event.WorkspaceID)
-	runCtx = principal.WithActor(runCtx,
-		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
-	runCtx = principal.WithCorrelationID(runCtx, ids.NewV7())
+	runCtx = principal.SystemActing(runCtx, systemActor)
 	runCtx = principal.WithCausationEvent(runCtx, candidate.event.ID)
 	if err := e.runOne(runCtx, candidate.handler, candidate.event); err != nil {
 		return RetryOutcome{}, fmt.Errorf("retrying %s: %w", candidate.handler.Spec().Name, err)
@@ -243,8 +241,14 @@ func eventFromEnvelope(raw []byte, workspace ids.UUID) (workflow.Event, error) {
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return workflow.Event{}, fmt.Errorf("decoding the stored trigger event: %w", err)
 	}
+	return workflowEvent(env, workspace), nil
+}
+
+// Live delivery and redrive preserve the same original author and occurrence.
+func workflowEvent(env kevents.Envelope, workspace ids.UUID) workflow.Event {
 	return workflow.Event{
 		ID:          env.EventID,
+		Actor:       env.Actor,
 		Type:        env.Type,
 		WorkspaceID: workspace,
 		OccurredAt:  env.OccurredAt,
@@ -253,5 +257,5 @@ func eventFromEnvelope(raw []byte, workspace ids.UUID) (workflow.Event, error) {
 			ID:   env.Entity.ID,
 		},
 		Payload: env.Payload,
-	}, nil
+	}
 }

@@ -14,11 +14,13 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,7 +31,7 @@ const (
 	mintedIdentity  = "019fad38-minted@margince.test"
 	stampedIdentity = "CAFAR1txEuKW@mail.gmail.com"
 	// counterparty is who this message was with. Both the send and the
-	// provider's echo of it name the same person, which is one of the things
+	// provider's echo of it name the same contact, which is one of the things
 	// the absorb insists on before it takes a row off the timeline.
 	counterparty = "buyer@example.test"
 )
@@ -83,10 +85,7 @@ func (e *sendEnv) sentRow(t *testing.T, id ids.ActivityID) sentRow {
 // staging and transmit must not strand the message's identity.
 func (e *sendEnv) asSendWorker() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:comms-send",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:comms-send")
 }
 
 // reconcile drives the seam the way comms drives it: inside a workspace-bound
@@ -277,5 +276,50 @@ func TestAnAnchorsSourceIDDoesNotBecomeTheThreadKey(t *testing.T) {
 	// mail client. Only the key the engine trusts is refused.
 	if len(chain.references) == 0 || chain.references[0] != victimsThreadRoot {
 		t.Errorf("references = %v, want the anchor's identity kept for RFC822 threading", chain.references)
+	}
+}
+
+// AN ARCHIVED ANCHOR REFUSES HERE TOO, and that is the whole of this fix.
+//
+// SendEmail resolves the origin first, reading the anchor storekit.LiveOnly, so
+// an already-archived anchor is refused there. It then opens the staging
+// transaction, and THIS read is the one that builds the chain — it did not
+// filter on archived_at, so an anchor archived between the two still yielded a
+// threading chain and the reply went out onto a conversation the workspace had
+// since archived.
+//
+// The race is not what is asserted, because the race is not what is wrong: the
+// two reads disagreeing is. Archiving first and calling this directly asks the
+// question the window creates — does the second read accept what the first
+// refuses — without an injected seam standing in for either of them.
+func TestAnArchivedAnchorYieldsNoThreadingChain(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	anchor := e.seedAnchor(t, "root@corp.example", "root@corp.example")
+
+	// Live, it threads: the control, without which the refusal below could be
+	// any other reason this read answers nothing.
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test")
+		return err
+	}); err != nil {
+		t.Fatalf("a live anchor was refused: %v", err)
+	}
+
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET archived_at = now() WHERE id = $1`, anchor)
+		return err
+	}); err != nil {
+		t.Fatalf("archiving the anchor: %v", err)
+	}
+
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test")
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound — the same answer origin resolution gives for an "+
+			"anchor that was already archived, so the two reads cannot disagree about one row", err)
 	}
 }

@@ -14,6 +14,9 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
 // Zone answers the installation's timezone, which is what decides when "today"
@@ -63,44 +66,71 @@ func WithNoticeCases(n NoticeCases) Option {
 // endOfDay is the boundary every due-dated lane stops at, so a promise, a task
 // and a meeting falling on the same afternoon are judged against one instant.
 //
-// THE INSTALLATION'S midnight, not UTC's. Truncating the clock to 24 hours
-// answers UTC midnight wherever the installation is, which put a UTC+7 seat's
-// "today" through 07:00 tomorrow and cut a UTC-4 seat's short at 20:00 — the
-// same convention error the morning brief's local_day exists to avoid.
+// THE INSTALLATION'S midnight, not UTC's — storekit.StartOfNextDay derives it
+// in the installation's zone, exact on the two mornings a year the clocks move
+// where a truncated 24 hours would land an hour off. The same primitive backs
+// every calendar-day surface the product derives.
 //
-// AddDate over the local date, not Add(24h) over the instant: a day is 23 or 25
-// hours where clocks change, and adding a fixed span lands an hour off on those
-// two mornings a year — in the direction that drops work the reader is owed.
 // ONCE PER ASSEMBLY, and the answer is carried to every lane that needs it. An
 // operator moving the installation mid-read would otherwise give one lane
 // yesterday's boundary and the next one today's, inside a single response — and
 // each resolution is a transaction, so asking per lane also pays three times for
 // one fact.
-func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
+// It returns the ZONE it resolved beside the boundary, because the grouping
+// below needs the same one: asked again per lane, an operator moving the
+// installation mid-read would give one lane yesterday's zone and the next
+// today's, inside a single response.
+func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, *time.Location, error) {
 	loc, err := s.location(ctx)
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, nil, err
 	}
-	return startOfNextDay(asOf.In(loc), loc), nil
+	return storekit.StartOfNextDay(asOf, loc), loc, nil
 }
 
 // startOfDay is the other end of the same day, for a lane that looks BACK.
 //
 // The forward lanes ask what is still coming and stop at endOfDay; a lane about
 // what already happened needs where today began, and "today" has to mean the
-// same thing at both ends or a meeting at 08:00 falls between them.
-//
-// It is startOfNextDay asked about YESTERDAY, rather than a second walk: that
-// function's whole subtlety is the zones where local midnight does not exist,
-// and a midnight built here directly would be wrong on exactly the mornings
-// that comment describes.
+// same thing at both ends or a meeting at 08:00 falls between them. Both ends
+// come from the storekit primitive, so a backward lane and a forward one
+// measure the day by one rule.
 func (s *Service) startOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
 	loc, err := s.location(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
-	local := asOf.In(loc)
-	return startOfNextDay(local.AddDate(0, 0, -1), loc), nil
+	return storekit.StartOfDay(asOf, loc), nil
+}
+
+// unansweredSince is where the lane of meetings owing an outcome opens.
+//
+// NOT startOfDay, and the difference is the whole of the bug it fixes. That
+// boundary answers "when did today begin", which is the right question for a
+// lane about today and the wrong one for a debt: a meeting nobody closed off
+// does not stop owing an answer because the clock passed midnight, and a window
+// that opened there dropped it silently at the exact moment the reader went
+// home.
+//
+// It walks back from the day's start rather than from asOf, so the window's
+// lower edge is a local midnight like every other boundary in this file. Off
+// the instant instead, the lane would open mid-morning and a meeting from
+// fourteen days ago would drift in and out of it as the day wore on.
+//
+// AddDate over the local date rather than a fixed span of hours, for the reason
+// startOfNextDay spells out: a fortnight contains a clock change twice a year,
+// and subtracting 14×24h lands an hour off on those — in the direction that
+// drops the oldest meeting a day early.
+func (s *Service) unansweredSince(ctx context.Context, asOf time.Time) (time.Time, error) {
+	began, err := s.startOfDay(ctx, asOf)
+	if err != nil {
+		return time.Time{}, err
+	}
+	loc, err := s.location(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return began.In(loc).AddDate(0, 0, -unansweredLookbackDays), nil
 }
 
 // location resolves the installation's zone, or UTC when none is bound.
@@ -125,39 +155,54 @@ func (s *Service) location(ctx context.Context) (*time.Location, error) {
 	return resolved, nil
 }
 
-// startOfNextDay is the first instant of the day after local's, in loc.
-//
-// NOT local midnight constructed directly, because in some zones it does not
-// exist. Havana and Santiago spring forward AT midnight, and Go normalises the
-// missing 00:00 BACKWARD — to 23:00 on the previous date, an hour before the day
-// this bounds has even ended, so the last hour's work would fall off today's
-// lane. Beirut springs forward at midnight too and normalises FORWARD, to 01:00,
-// which is right by luck rather than by rule.
-//
-// So the rule is asked directly: the first instant whose local date is
-// tomorrow's. Noon is the anchor because no zone shifts its clock at midday, so
-// "tomorrow" is never ambiguous to begin with, and the walk back from it stops
-// at the transition on the days there is one. At most a few hundred steps, once
-// per assembly, and exact on every day of the year rather than on most of them.
-func startOfNextDay(local time.Time, loc *time.Location) time.Time {
-	noon := time.Date(local.Year(), local.Month(), local.Day(), 12, 0, 0, 0, loc).AddDate(0, 0, 1)
-	year, month, day := noon.Date()
-	if midnight := time.Date(year, month, day, 0, 0, 0, 0, loc); sameDate(midnight, noon) {
-		return midnight
-	}
-	first := noon
-	for {
-		earlier := first.Add(-time.Minute)
-		if !sameDate(earlier, noon) {
-			return first
-		}
-		first = earlier
-	}
-}
+// The five runs a dated row can fall into. Named rather than spelled at each
+// arm: the same words are the contract's enum and the client's copy keys, and a
+// typo in one of them renders a heading nobody has translated.
+const (
+	dueGroupOverdue  = "overdue"
+	dueGroupToday    = "today"
+	dueGroupTomorrow = "tomorrow"
+	dueGroupThisWeek = "this_week"
+	dueGroupLater    = "later"
+)
 
-// sameDate compares two instants by the LOCAL calendar date they fall on.
-func sameDate(a, b time.Time) bool {
-	ay, am, ad := a.Date()
-	by, bm, bd := b.Date()
-	return ay == by && am == bm && ad == bd
+// upcomingWeekDays is how far past today "this week" reaches. A rolling seven
+// days rather than a calendar week: on a Sunday a calendar week would name the
+// day itself, and a reader asking what is coming means the next seven days
+// whichever day they ask on.
+const upcomingWeekDays = 7
+
+// dueGroup names which run of the page a dated row belongs to, so the client
+// can head "Due tomorrow" and "Due this week" without deciding the boundary
+// itself.
+//
+// The server decides it for the reason every other boundary on this page is the
+// server's: the day's end depends on the installation's zone, and a browser
+// computing it from its own clock puts a task in a different group from the
+// count sitting above it.
+//
+// asOf and until are the same two instants the whole assembly runs on: they are
+// resolved once in assembleDay and handed down, rather than re-derived per lane.
+func dueGroup(deadlineAt, asOf, until time.Time, loc *time.Location) string {
+	// Lateness is deadline.Passed's decision, never a comparison spelled here:
+	// a list, a card and an agent tool once disagreed about a promise due at
+	// this very instant because each made the call itself.
+	if deadline.Passed(&deadlineAt, asOf) {
+		return dueGroupOverdue
+	}
+	// The rest compare against DAY BOUNDARIES rather than against the clock,
+	// which is a different question and one this file owns: where today ends,
+	// where tomorrow ends, and how far "this week" reaches.
+	tomorrowEnds := storekit.StartOfNextDay(until, loc)
+	weekEnds := until.AddDate(0, 0, upcomingWeekDays)
+	switch {
+	case deadlineAt.Before(until):
+		return dueGroupToday
+	case deadlineAt.Before(tomorrowEnds):
+		return dueGroupTomorrow
+	case deadlineAt.Before(weekEnds):
+		return dueGroupThisWeek
+	default:
+		return dueGroupLater
+	}
 }

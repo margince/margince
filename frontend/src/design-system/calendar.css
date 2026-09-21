@@ -17,7 +17,6 @@
 }
 .calendar-month {
   flex: 1;
-  font-weight: var(--fw-medium);
 }
 
 .calendar-grid {
@@ -27,26 +26,23 @@
   justify-items: center;
 }
 
-.calendar-weekday {
-  color: var(--textMeta);
-}
-
 /* A day is a circle the size of the tap target, not a cell: the selected day
    is marked by a disc, and a square mark in a grid of squares reads as a
-   highlighted table cell rather than as a date chosen. */
+   highlighted table cell rather than as a date chosen. The target is the one
+   control height — a day is pressed like any other control — rather than a
+   second number that happened to agree with it. */
 .calendar-day {
   display: flex;
   align-items: center;
   justify-content: center;
-  inline-size: 2rem;
-  block-size: 2rem;
+  inline-size: var(--controlHeight);
+  block-size: var(--controlHeight);
   padding: 0;
   border: 0;
   border-radius: var(--r-full);
   corner-shape: round;
   background: none;
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -58,24 +54,24 @@
   outline-offset: 2px;
 }
 
-/* A neighbouring month's day. Still pressable — a reader who wants the 1st of
-   next month should not have to page for it — but quiet, so the month on show
-   is legible as a block. */
+/* A day belonging to the month either side of the one on show. The grid is
+   six full weeks, so up to eleven of its forty-two cells are not the month the
+   reader is reading — and at one ink they are indistinguishable from it, which
+   is how a reader picks the 1st of the wrong month. Secondary ink, not hidden:
+   the days are still selectable. */
 .calendar-day-outside {
-  color: var(--textMuted);
+  color: var(--textSecondary);
 }
 
 /* Today, unchosen: a quiet disc. It answers "where am I" without competing
    with the day the reader has actually picked. */
 .calendar-day-today {
   background: var(--bgHover);
-  font-weight: var(--fw-medium);
 }
 
 .calendar-day[aria-pressed="true"] {
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-weight: var(--fw-medium);
 }
 .calendar-day[aria-pressed="true"]:hover {
   background: var(--accent);

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -89,24 +89,28 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/o-1")) {
+        if (request.url.includes("/companies/o-1")) {
           return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
         }
         return jsonResponse({}, 404);
       }),
     );
-    render(<EntityRef kind="organization" id="o-1" />);
+    render(<EntityRef kind="company" id="o-1" />);
 
-    const link = await screen.findByRole("button", { name: "Brandt GmbH" });
+    // The href IS the destination. Asserting it rather than a click's effect
+    // is the stronger claim: it is also what a new tab, a bookmark and a
+    // middle-click follow, and none of those goes through an onClick.
+    const link = await screen.findByRole("link", { name: "Brandt GmbH" });
+    expect(link.getAttribute("href")).toBe("#/companies/o-1");
     await userEvent.click(link);
     expect(window.location.hash).toBe("#/companies/o-1");
   });
 
-  it("resolves a person to contacts/{id} and a deal to deals/{id}", async () => {
+  it("resolves a contact to contacts/{id} and a deal to deals/{id}", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/people/p-1")) {
+        if (request.url.includes("/contacts/p-1")) {
           return jsonResponse({ id: "p-1", full_name: "Anna Weber" });
         }
         if (request.url.includes("/deals/d-1")) {
@@ -115,11 +119,12 @@ describe("EntityRef", () => {
         return jsonResponse({}, 404);
       }),
     );
-    const { rerender } = render(<EntityRef kind="person" id="p-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Anna Weber" }),
-    );
-    expect(window.location.hash).toBe("#/contacts/p-1");
+    const { rerender } = render(<EntityRef kind="contact" id="p-1" />);
+    expect(
+      (await screen.findByRole("link", { name: "Anna Weber" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/contacts/p-1");
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -128,10 +133,11 @@ describe("EntityRef", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Q3 Renewal" }),
-    );
-    expect(window.location.hash).toBe("#/deals/d-1");
+    expect(
+      (await screen.findByRole("link", { name: "Q3 Renewal" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/deals/d-1");
   });
 
   it("resolves a lead to leads/{id} (P-16: lead joins the ENTITY registry)", async () => {
@@ -145,10 +151,11 @@ describe("EntityRef", () => {
       }),
     );
     render(<EntityRef kind="lead" id="l-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Jordan Lee" }),
-    );
-    expect(window.location.hash).toBe("#/leads/l-1");
+    expect(
+      (await screen.findByRole("link", { name: "Jordan Lee" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/leads/l-1");
   });
 
   it("falls back to the id (no link) once the lookup has settled without a name", async () => {
@@ -158,7 +165,7 @@ describe("EntityRef", () => {
       "fetch",
       vi.fn(async () => jsonResponse({ id: "o-nameless" })),
     );
-    render(<EntityRef kind="organization" id="o-nameless" />);
+    render(<EntityRef kind="company" id="o-nameless" />);
     await waitFor(() => expect(screen.getByText("o-nameless")).toBeTruthy());
     expect(screen.queryByRole("button", { name: "o-nameless" })).toBeNull();
   });
@@ -168,7 +175,7 @@ describe("EntityRef", () => {
       "fetch",
       vi.fn(async () => jsonResponse({ title: "Forbidden" }, 403)),
     );
-    render(<EntityRef kind="organization" id="o-403" />);
+    render(<EntityRef kind="company" id="o-403" />);
 
     expect(await screen.findByText("Name didn't load")).toBeTruthy();
     // Painting the id here would report the reference as settled: a reader
@@ -217,7 +224,7 @@ describe("EntityRef", () => {
           }),
       ),
     );
-    render(<EntityRef kind="organization" id="o-slow" />);
+    render(<EntityRef kind="company" id="o-slow" />);
 
     expect(await screen.findByText("Loading…")).toBeTruthy();
     expect(screen.queryByText("o-slow")).toBeNull();
@@ -263,7 +270,7 @@ describe("EntityRef", () => {
   it("shows a dash and fetches nothing when the id is absent", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    render(<EntityRef kind="person" id={null} />);
+    render(<EntityRef kind="contact" id={null} />);
     expect(screen.getByText("—")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -309,7 +316,7 @@ describe("EntityRef", () => {
     expect(screen.queryByRole("button", { name: "Platform Team" })).toBeNull();
   });
 
-  it("falls back to the mono id (no link) when the settled roster does not carry the user", async () => {
+  it("falls back to the raw id as plain text (no link) when the settled roster does not carry the user", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
@@ -344,10 +351,11 @@ describe("EntityRef", () => {
     );
     render(<EntityRef kind="lead" id="l-1" />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Jonas Keller" }),
-    );
-    expect(window.location.hash).toBe("#/leads/l-1");
+    expect(
+      (await screen.findByRole("link", { name: "Jonas Keller" })).getAttribute(
+        "href",
+      ),
+    ).toBe("#/leads/l-1");
   });
 
   it("uses a caller-supplied user name without reading the roster at all", async () => {
@@ -372,19 +380,19 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/o-1")) {
+        if (request.url.includes("/companies/o-1")) {
           return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
         }
         return jsonResponse({}, 404);
       }),
     );
-    render(<EntityRef kind="organization" id="o-1" name="   " />);
+    render(<EntityRef kind="company" id="o-1" name="   " />);
 
     // Whitespace is the caller saying it has nothing, exactly as an empty
-    // string is. Taken at face value it becomes a button with no readable
-    // label — a link a reader can neither read nor find.
+    // string is. Taken at face value it becomes a link with no readable
+    // label — one a reader can neither read nor find.
     expect(
-      await screen.findByRole("button", { name: "Brandt GmbH" }),
+      await screen.findByRole("link", { name: "Brandt GmbH" }),
     ).toBeTruthy();
   });
 

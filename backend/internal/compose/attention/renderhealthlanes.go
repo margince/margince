@@ -7,46 +7,12 @@ package attention
 // module, so a broken connector is a single card rather than a flood.
 
 import (
-	"strings"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// syncItem draws one sync concern. The card carries no subject and no verbs:
-// its subject is the CONNECTION, not a record with a page, and fixing it lives
-// on the sync settings screen. `kind` names the condition; `detail` carries
-// that condition's facts in the producer's own vocabulary — the affected
-// object classes, the failure class, or the budget band — and the client
-// writes the sentence in the reader's language.
-//
-// The id is the concern's kind: a concern is a condition, not a row, and the
-// lane carries at most one card per condition.
-func syncItem(concern SyncConcern) crmcontracts.AttentionItem {
-	kind := concern.Kind
-	item := crmcontracts.AttentionItem{
-		Id:      concern.Kind,
-		Source:  crmcontracts.AttentionItemSource("sync_health"),
-		Kind:    &kind,
-		Actions: []crmcontracts.AttentionItemActions{},
-	}
-	switch {
-	case len(concern.Objects) > 0:
-		classes := strings.Join(concern.Objects, ", ")
-		item.Detail = &classes
-	case concern.ErrorClass != "":
-		errorClass := concern.ErrorClass
-		item.Detail = &errorClass
-	case concern.Band != "":
-		band := concern.Band
-		item.Detail = &band
-	}
-	return item
-}
-
-// captureItem draws one capture concern. Like the sync card it carries no
-// subject and no verbs — fixing a mailbox lives on the capture settings
-// screen. `kind` names the condition; `detail` names the mailbox in the
+// captureItem draws one capture concern. It carries no subject and no verbs —
+// fixing a mailbox lives on the capture settings screen. `kind` names the condition; `detail` names the mailbox in the
 // reader's own terms: the account label the connector reported, or the
 // provider where none was.
 func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
@@ -73,6 +39,17 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		// a reader shown the identity reads "capture_health:disconnected:…".
 		label := mailbox
 		item.CauseLabel = &label
+	}
+	// WHEN the condition started, for the conditions that have a start. The
+	// reader's question about a failing mailbox is how long, not whether — a
+	// class alone is the same sentence at one minute and at six hours — and
+	// this is the field every other lane already answers it in. Absent for a
+	// condition that is a state rather than a streak, because a disconnected
+	// mailbox has no duration to report and inventing one from the row's
+	// timestamps would date the newest attempt rather than the outage.
+	if concern.FailingSince != nil {
+		started := *concern.FailingSince
+		item.OccurredAt = &started
 	}
 	return item
 }
@@ -132,7 +109,7 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 // bounceItem draws one hard-bounced send. The subject line is the headline —
 // the name the reader knows the send by — and the receiving side's own reason
 // the supporting line. `open` is offered exactly when the send is filed under
-// a person, because that page is where fixing the address and resending live.
+// a contact, because that page is where fixing the address and resending live.
 func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	kind := "hard"
 	occurred := send.BouncedAt
@@ -150,8 +127,8 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	if detail := bounceDetail(send); detail != "" {
 		item.Detail = &detail
 	}
-	if !send.PersonID.IsZero() {
-		item.Subject = subjectOf("person", send.PersonID)
+	if !send.ContactID.IsZero() {
+		item.Subject = subjectOf("contact", send.ContactID)
 		item.Actions = append(item.Actions, actionOpen)
 	}
 	return item
@@ -192,8 +169,8 @@ func parkedItem(send ParkedSend) crmcontracts.AttentionItem {
 		reason := send.Reason
 		item.Detail = &reason
 	}
-	if !send.PersonID.IsZero() {
-		item.Subject = subjectOf("person", send.PersonID)
+	if !send.ContactID.IsZero() {
+		item.Subject = subjectOf("contact", send.ContactID)
 		item.Actions = append(item.Actions, actionOpen)
 	}
 	return item
@@ -253,17 +230,32 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 // noticeItem draws one unread notice: its own subject as the headline, its
 // body as the supporting line, and acknowledge — the one verb it offers,
 // which routes to the notice's read endpoint and takes it off this lane.
+//
+// The record it is about rides `subject`, which is what makes the row's
+// headline a link. "A deal you own changed stage" is true of every deal a rep
+// owns, so a reader knew something had moved and had to go find it. A notice
+// that names no record — a capture backlog, a coach's word — carries none, and
+// so does one naming a type this feed cannot route to: subjectOf refuses it
+// rather than guessing, because a card pointing at the wrong record is worse
+// than one pointing nowhere.
 func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 	kind := notice.Kind
 	subject := notice.Subject
 	occurred := notice.CreatedAt
+	if notice.Origin != nil {
+		occurred = notice.Origin.OccurredAt
+	}
 	item := crmcontracts.AttentionItem{
-		Id:         notice.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("notice"),
-		Kind:       &kind,
-		Title:      &subject,
-		OccurredAt: &occurred,
-		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
+		Id:           notice.ID.String(),
+		NoticeOrigin: notice.Origin,
+		Source:       crmcontracts.AttentionItemSource("notice"),
+		Kind:         &kind,
+		Title:        &subject,
+		OccurredAt:   &occurred,
+		Actions:      []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
+	}
+	if notice.TargetType != "" {
+		item.Subject = subjectOf(notice.TargetType, notice.TargetID)
 	}
 	if notice.Body != "" {
 		body := notice.Body
@@ -297,7 +289,7 @@ func introductionItem(ask PendingIntroduction) crmcontracts.AttentionItem {
 		OccurredAt: &requested,
 		DueAt:      &due,
 		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("decide")},
-		Subject:    subjectOf("person", ask.PersonID),
+		Subject:    subjectOf("contact", ask.ContactID),
 	}
 	if ask.Reason != "" {
 		reason := ask.Reason

@@ -28,7 +28,7 @@ import (
 // The prose language is resolved HERE rather than in identity, because it is a
 // composition of two settings that belong to different owners: the member's
 // own choice and the installation's base language. identity keeps answering
-// the honest empty for a person who never chose, and this seam turns that into
+// the honest empty for a contact who never chose, and this seam turns that into
 // the answer the agent can act on.
 func actingIdentity(pool *pgxpool.Pool) agents.IdentityReader {
 	service := identity.NewService(pool)
@@ -66,7 +66,7 @@ func proseLanguage(ctx context.Context, pool *pgxpool.Pool, locale string) strin
 //
 // Same posture as actingIdentity above and as identity.SeatNames: a seat is
 // not a record, so there is no object to grant on, and what it discloses — a
-// colleague's name and work address — who_knows and account_coverage already
+// colleague's name and work address — who_knows and company_coverage already
 // answer to any authenticated reader.
 func colleagueLister(pool *pgxpool.Pool) agents.ColleagueLister {
 	service := identity.NewService(pool)

@@ -8,7 +8,7 @@ package gates
 // A remote operator sees one name for this product and decides about it: blocks
 // it, rate-limits it, allow-lists it, or writes a robots.txt group naming it.
 //
-// That makes the name an interface with people outside this codebase, and it is
+// That makes the name an interface with contacts outside this codebase, and it is
 // the only interface here whose other side cannot be asked what it meant. A
 // second spelling means a decision an operator made is silently not in force
 // for the calls their rule did not name — and they have no way to discover that
@@ -37,7 +37,7 @@ import (
 
 // identitySurfaceRoots are the trees that can make an outbound call.
 var identitySurfaceRoots = []string{
-	"internal", "cmd", "tools", "../extensions", "../cli", "../desktop", "../fixtures",
+	"internal", "cmd", "tools", "../extensions", "../desktop", "../fixtures",
 }
 
 func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {

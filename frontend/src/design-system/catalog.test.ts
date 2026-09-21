@@ -13,7 +13,7 @@
 // primitive in the tree.
 //
 // It did not. `richtext.tsx` shipped a rich-text editor with its own stylesheet,
-// story and test, mounted in screens/persondrawers.tsx, and the string
+// story and test, mounted in screens/contactdrawers.tsx, and the string
 // "RichText" appeared nowhere in the catalog's 77KB. That is precisely the
 // component a second author rebuilds: the noun is obvious, the grep comes back
 // empty, and the duplicate looks reasonable in review.
@@ -42,8 +42,8 @@
 // prose would need a second copy of the prose to judge it against, which is the
 // defect this directory exists to avoid.
 //
-// The name may appear in any cell, the `For` column included — `BriefItemCard`
-// documents `BriefItemCardPending` inside its own row, and splitting a variant
+// The name may appear in any cell, the `For` column included — `FilePreview`
+// documents its provider and hook inside its own row, and splitting a variant
 // onto a line of its own would make the table longer without making it findable.
 //
 // ## Why this is a parser and not a shell gate

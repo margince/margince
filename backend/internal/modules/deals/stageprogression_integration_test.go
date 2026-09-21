@@ -213,7 +213,7 @@ func TestTheBuyersOwnWordWinsAmongClaimsForOneCriterion(t *testing.T) {
 }
 
 // A human's own stage move in the window protects the deal: a proposal the day
-// after is the product arguing with the person it works for.
+// after is the product arguing with the contact it works for.
 func TestAHumanStageMoveInTheLastFortnightBlocksAProposal(t *testing.T) {
 	e := setupConfigEnv(t)
 	dealID, fromID, toID := twoStagePipeline(t, e)

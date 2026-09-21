@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,9 +40,9 @@ const restrictionExpiredCause = "restriction_expired"
 // A record under a legal hold reached through ANY of its links is skipped:
 // the hold outranks the subject's request until it is lifted, and the row
 // stays restricted meanwhile, which is the more protective of the two states.
-// The person arm is included here where the erasure's own selectors leave it
+// The contact arm is included here where the erasure's own selectors leave it
 // out — the erasure proved its subject unheld before it ran, but a hold can
-// land on that (now anonymised) person row during the years the window is
+// land on that (now anonymised) contact row during the years the window is
 // open, and the sweep must see it. The predicate is repeated in the lift
 // statement itself so a hold placed between the selection and the write
 // still wins.
@@ -71,18 +72,18 @@ func (s *RetentionService) evaluateRestrictionExpiry(ctx context.Context) error 
 	return nil
 }
 
-// notHeldThroughAnyLink is notTransitivelyHeld plus the person arm.
+// notHeldThroughAnyLink is notTransitivelyHeld plus the contact arm.
 func notHeldThroughAnyLink(activityID string) string {
 	return `
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity_link h
-	    LEFT JOIN person hp ON hp.id = h.person_id
-	    LEFT JOIN organization org ON org.id = h.organization_id
+	    LEFT JOIN contact hp ON hp.id = h.contact_id
+	    LEFT JOIN company company ON company.id = h.company_id
 	    LEFT JOIN deal dl ON dl.id = h.deal_id
 	    LEFT JOIN lead ld ON ld.id = h.lead_id
 	    LEFT JOIN project pj ON pj.id = h.project_id
 	    WHERE h.activity_id = ` + activityID + `
-	      AND (coalesce(hp.legal_hold, false) OR coalesce(org.legal_hold, false) OR coalesce(dl.legal_hold, false)
+	      AND (coalesce(hp.legal_hold, false) OR coalesce(company.legal_hold, false) OR coalesce(dl.legal_hold, false)
 	           OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`
 }
 
@@ -110,7 +111,7 @@ func (s *RetentionService) expireRestriction(ctx context.Context, id ids.UUID) e
 			return err
 		}
 		reason := restrictionExpiredCause
-		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id, retentionAppliedPayload(actionErase, nil, &reason))
+		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
 	})
 }
 
@@ -132,6 +133,7 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		UPDATE activity a
 		   SET restricted_at = NULL, restricted_reason = NULL, restricted_until = NULL,
 		       subject = NULL, body = NULL, raw = NULL, counterparty_email = NULL,
+		       source_author_name = NULL,
 		       redacted_fields = a.redacted_fields || ARRAY(SELECT c FROM unnest(ARRAY[
 		           CASE WHEN a.subject IS NOT NULL THEN 'subject' END,
 		           CASE WHEN a.body IS NOT NULL THEN 'body' END]) AS c
@@ -139,5 +141,8 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		       archived_at = coalesce(a.archived_at, now())
 		 WHERE a.id = $1 AND a.restricted_at IS NOT NULL `+due+`
 		 RETURNING a.retention_class`, id).Scan(&class)
-	return class, err
+	if err != nil {
+		return class, err
+	}
+	return class, nil
 }

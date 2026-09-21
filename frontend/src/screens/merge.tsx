@@ -5,15 +5,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { navigate, type Route } from "../app/router";
 import { Button, Modal, SearchField } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf, useSorMode } from "./common";
+import { problemMessageOf } from "./common";
 import "./candidatepicker.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
 // this record (the source, A) into a picked survivor (B) — A is archived
 // with merged_into_id=B, B keeps the id the rest of the CRM already points
-// at. Person and Company 360s have an identical merge shape (target_id body
-// + If-Match precondition, survivor Person/Organization back), so this stays
+// at. Contact and Company 360s have an identical merge shape (target_id body
+// + If-Match precondition, survivor Contact/Company back), so this stays
 // resource-agnostic: the screen supplies the search transport, the merge
 // transport, and where the survivor's 360 lives.
 
@@ -50,17 +51,12 @@ export function MergeAction<Survivor extends { id: string }>({
   // disabled question by CAUSE — a merge blocked by the source record's
   // STATE, an archived row the server will not fold into anything, stays
   // visible and disabled WITH the reason, because the reason is the
-  // information and hiding the control hides a fact the reader needs. The
-  // overlay refusal below is the other cause and keeps the other answer.
+  // information and hiding the control hides a fact the reader needs.
   disabledReasonId?: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
-  // Merge folds one mirrored record into another — a write the incumbent
-  // mirror refuses (unsupported_by_sor). Render nothing in overlay rather than
-  // a button that can only fail (guarded after the hooks below).
-  const overlay = useSorMode() === "overlay";
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<MergeCandidate[]>([]);
@@ -123,14 +119,9 @@ export function MergeAction<Survivor extends { id: string }>({
     mutation.reset();
   };
 
-  if (overlay) {
-    return null;
-  }
-
   return (
     <>
       <Button
-        small
         reasonId={disabledReasonId}
         onClick={() => setOpen(true)}
         data-testid="merge-record"
@@ -138,10 +129,15 @@ export function MergeAction<Survivor extends { id: string }>({
         {label}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: "var(--space-3)" }}
+        >
           {label}
-        </h2>
-        <p className="t-caption" style={{ marginBottom: 8 }}>
+        </Heading>
+        <p style={{ marginBottom: "var(--space-2)" }}>
           {t("merge.pickTarget")}
         </p>
         <SearchField
@@ -154,11 +150,13 @@ export function MergeAction<Survivor extends { id: string }>({
           }}
         />
         {searchFailure ? (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(searchFailure, t)}
           </p>
         ) : null}
-        <ul style={{ listStyle: "none", margin: "8px 0", padding: 0 }}>
+        <ul
+          style={{ listStyle: "none", margin: "var(--space-2) 0", padding: 0 }}
+        >
           {candidates.map((candidate) => (
             <li key={candidate.id}>
               <Button
@@ -172,21 +170,20 @@ export function MergeAction<Survivor extends { id: string }>({
           ))}
         </ul>
         {target && (
-          <p style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: "var(--space-4)" }}>
             {t("merge.confirm", { source: sourceName, target: target.name })}
           </p>
         )}
         {mutation.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}
         <div className="actions">
-          <Button small onClick={close} disabled={mutation.isPending}>
+          <Button onClick={close} disabled={mutation.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             disabled={!target || mutation.isPending}
             onClick={() => {

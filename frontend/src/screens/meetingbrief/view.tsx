@@ -5,17 +5,17 @@
 // a test and a story. The connected drawer holds the query and hands the
 // answer here.
 
-import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
 import {
-  AccountArc,
   AdvancePanel,
+  CompanyArc,
   LikelyAsks,
   ObjectivePanel,
   Scenarios,
@@ -27,7 +27,7 @@ import {
   BodyPanels,
   GlanceLine,
   GoalPanel,
-  RiskCallout,
+  RisksPanel,
 } from "./sections";
 import "./meetingbrief.css";
 
@@ -65,6 +65,7 @@ export function MeetingBriefView({
   meeting,
   preparedFor,
   onOpenRecord,
+  onOpenEmail,
   titleId,
   onClose,
   scopeSlot,
@@ -75,6 +76,8 @@ export function MeetingBriefView({
   meeting?: MeetingFacts;
   preparedFor?: PreparedFor;
   onOpenRecord: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the host's own email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   titleId: string;
   onClose: () => void;
   // The project picker or the scope line, built by the drawer because only it
@@ -89,15 +92,9 @@ export function MeetingBriefView({
     <>
       <div className="drawer-head">
         <div className="pe-drawer-title">
-          <h2 id={titleId}>{t("person.meeting.title")}</h2>
-          <Button
-            small
-            iconOnly
-            onClick={onClose}
-            aria-label={t("person.drawer.close")}
-          >
-            <X aria-hidden="true" />
-          </Button>
+          <Heading size="large" id={titleId}>
+            {t("contact.meeting.title")}
+          </Heading>
         </div>
         <BriefHeader
           brief={brief}
@@ -111,8 +108,8 @@ export function MeetingBriefView({
           {scopeSlot}
           <SurfaceState
             state={stateOf(state)}
-            emptyLabel={t("person.meeting.empty")}
-            loadingLabel={t("person.meeting.loading")}
+            emptyLabel={t("contact.meeting.empty")}
+            loadingLabel={t("contact.meeting.loading")}
             loadingLines={8}
             detail={
               state.kind === "failed" ? { onRetry: state.onRetry } : undefined
@@ -120,7 +117,11 @@ export function MeetingBriefView({
           >
             {brief && (
               <div className="mb-stack">
-                <GlanceLine brief={brief} onOpenRecord={onOpenRecord} />
+                <GlanceLine
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
                 {/* The plan leads when the server says it is a preparation.
                     An `outline` is added ABOVE the sections rather than in
                     place of them: a half-built plan that hid the risks and
@@ -132,7 +133,10 @@ export function MeetingBriefView({
                       coaching={brief.plan.manager_coaching}
                       writtenByModel={brief.plan.generated_by === "model"}
                     />
-                    <MeetingPaths coaching={brief.plan.manager_coaching} />
+                    <MeetingPaths
+                      coaching={brief.plan.manager_coaching}
+                      writtenByModel={brief.plan.generated_by === "model"}
+                    />
                   </>
                 )}
                 {brief.plan && (
@@ -140,36 +144,63 @@ export function MeetingBriefView({
                     <ObjectivePanel
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
                     />
-                    <TopRisk plan={brief.plan} onOpenRecord={onOpenRecord} />
-                    <LikelyAsks plan={brief.plan} onOpenRecord={onOpenRecord} />
-                    <Scenarios plan={brief.plan} />
-                    <AccountArc
+                    <TopRisk
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
+                    />
+                    <LikelyAsks
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
+                    />
+                    <Scenarios plan={brief.plan} />
+                    <CompanyArc
+                      plan={brief.plan}
+                      onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
                       formatDay={formatDay ?? ((iso) => iso.slice(0, 10))}
                     />
                   </>
                 )}
-                <GoalPanel brief={brief} onOpenRecord={onOpenRecord} />
+                <GoalPanel
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
                 {/* The sections' risk list, unless the plan carried the one
-                    risk that matters with what to do about it — two warn
-                    callouts on one surface is no warning at all, and the
-                    plan's is the one a reader can act on. */}
+                    risk that matters with what to do about it — two warning
+                    panels on one surface is no warning at all, and the plan's
+                    is the one a reader can act on. */}
                 {!brief.plan?.top_risk && (
-                  <RiskCallout brief={brief} onOpenRecord={onOpenRecord} />
+                  <RisksPanel
+                    brief={brief}
+                    onOpenRecord={onOpenRecord}
+                    onOpenEmail={onOpenEmail}
+                  />
                 )}
-                <BodyPanels brief={brief} onOpenRecord={onOpenRecord} />
+                <BodyPanels
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
                 {brief.plan && (
                   <>
                     <AdvancePanel
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
+                      onOpenEmail={onOpenEmail}
                     />
                     <Unknowns plan={brief.plan} />
                   </>
                 )}
-                <Background brief={brief} onOpenRecord={onOpenRecord} />
+                <Background
+                  brief={brief}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
               </div>
             )}
           </SurfaceState>
@@ -184,10 +215,10 @@ export function MeetingBriefView({
         </div>
       </div>
       <div className="drawer-foot">
-        <span className="pe-disclosure">
-          {t("person.meeting.assembledNow")}
+        <span className="pe-disclosure t-caption">
+          {t("contact.meeting.assembledNow")}
         </span>
-        <Button onClick={onClose}>{t("person.drawer.close")}</Button>
+        <Button onClick={onClose}>{t("contact.drawer.close")}</Button>
       </div>
     </>
   );

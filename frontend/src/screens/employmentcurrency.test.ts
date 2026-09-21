@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import currencyCases from "../../../backend/internal/shared/kernel/employment/testdata/currency.json";
 import type { components } from "../api/schema";
 import {
   currentEmployer,
@@ -7,9 +8,9 @@ import {
   today,
 } from "./employmentcurrency";
 
-type Employment = components["schemas"]["Person360Employment"];
+type Employment = components["schemas"]["Contact360Employment"];
 
-// The client twin of people.EmploymentIsCurrentSQL. It exists because the flag is
+// The client twin of contacts.EmploymentIsCurrentSQL. It exists because the flag is
 // written once and never rewritten, so a screen that trusted it would name a
 // company the server's own contact count had already stopped counting — and it is
 // tested directly because the boundary is one day wide and a rendering test would
@@ -23,7 +24,7 @@ const NOON = new Date("2026-08-19T12:00:00");
 function employment(over: Partial<Employment>): Employment {
   return {
     relationship_id: "rel-1",
-    organization_id: "o-1",
+    company_id: "o-1",
     is_current_primary: false,
     ended_at: null,
     ...over,
@@ -150,4 +151,50 @@ describe("formerEmployers", () => {
   it("is empty when there are no employments", () => {
     expect(formerEmployers(undefined)).toEqual([]);
   });
+});
+
+it("keeps undated history out of current employment and respects month precision", () => {
+  expect(stillHeld(employment({ employment_status: "unknown" }))).toBe(false);
+  expect(stillHeld(employment({ employment_status: "former" }))).toBe(false);
+  expect(
+    stillHeld(
+      employment({
+        employment_status: "current",
+        ended_at: "2026-08-01",
+        ended_precision: "month",
+      }),
+    ),
+  ).toBe(true);
+  expect(
+    stillHeld(
+      employment({
+        employment_status: "current",
+        ended_at: "2026-07-01",
+        ended_precision: "month",
+      }),
+    ),
+  ).toBe(false);
+});
+
+it.each(currencyCases)("matches the shared server corpus: $name", (sample) => {
+  vi.setSystemTime(new Date(`${sample.today}T12:00:00`));
+  const status =
+    sample.status === "current" ||
+    sample.status === "former" ||
+    sample.status === "unknown"
+      ? sample.status
+      : undefined;
+  const precision =
+    sample.precision === "month" || sample.precision === "day"
+      ? sample.precision
+      : undefined;
+  expect(
+    stillHeld(
+      employment({
+        ended_at: sample.end,
+        employment_status: status,
+        ended_precision: precision,
+      }),
+    ),
+  ).toBe(sample.current);
 });

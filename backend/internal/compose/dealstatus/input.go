@@ -27,7 +27,7 @@ import (
 // are rendered into, which is Go code and so the half a digest cannot reach. It
 // rides the fingerprint so a card built from the old shape is rewritten rather
 // than served forever.
-const projectionVersion = "deal-status-projection-4"
+const projectionVersion = "deal-status-projection-6"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
@@ -43,11 +43,60 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 	return statusSystemFor(fence, string(textlang.English))
 })
 
+// moveKey is the move as the cache reads it: the verb, the sentence, and the
+// records the verb would act on.
+//
+// THE OPERAND IS PART OF THE KEY, not decoration on it. The digest over this
+// input decides whether a stored card still stands, and a move's prose can stay
+// word-for-word identical while the record it points at changes — swap the
+// champion for another contact who shares a display name and "Book a meeting
+// with Alex Weber" is still true, still the advice, and now files the task onto
+// somebody else. Without the ids here, the cache serves the old link under the
+// new sentence and nothing ever notices.
+//
+// It is rendered rather than hashed so the prompt keeps reading a sentence: the
+// model is shown the verb and the reason it always was, with the operand
+// appended in a form it can ignore.
+func moveKey(move crmcontracts.DealStatusCardMove) string {
+	key := move.Action + ": " + move.Reason
+	if id, ok := operandActivity(move); ok {
+		key += " [activity:" + id.String() + "]"
+	}
+	for _, id := range NamedContacts(move) {
+		key += " [contact:" + id.String() + "]"
+	}
+	return key
+}
+
+// operandActivity is NamedActivity over a move that has NOT been through JSON.
+//
+// NamedActivity reads the stored shape, where every id is a string, and the
+// queue keeps a copy of it that a gate holds to the same answer. This runs on
+// the move decideMove just built, whose ids are still typed, so it cannot use
+// that reader without changing a wire contract two packages agree on.
+func operandActivity(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
+	if id, ok := NamedActivity(move); ok {
+		return id, true
+	}
+	args := move.Arguments
+	if args == nil {
+		return ids.UUID{}, false
+	}
+	raw, present := (*args)["request_activity_id"]
+	if !present {
+		raw, present = (*args)["activity_id"]
+	}
+	if !present {
+		return ids.UUID{}, false
+	}
+	return linkID(raw)
+}
+
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,
 // and a withheld row gives up its words here.
 func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
-	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: move.Action + ": " + move.Reason}
+	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: moveKey(move)}
 	in.Health = healthIn(f.health)
 	for _, a := range f.timeline {
 		if len(in.Timeline) == maxTimelineRows {
@@ -74,6 +123,16 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 	in.Room = roomIn(f)
 	if inbound, ok := unansweredInbound(f); ok {
 		in.ReplyTo = inbound.Id.String()
+		found := false
+		for _, row := range in.Timeline {
+			found = found || row.ID == in.ReplyTo
+		}
+		if !found {
+			if len(in.Timeline) >= maxTimelineRows {
+				in.Timeline = in.Timeline[:maxTimelineRows-1]
+			}
+			in.Timeline = append(in.Timeline, actIn(inbound, f.now))
+		}
 	}
 	return in
 }
@@ -156,6 +215,14 @@ func taskIn(t activities.OpenTask, now time.Time) TaskIn {
 	return out
 }
 
+// The two room vocabularies this file reads. Both are plain strings in the
+// contract (DealRoomAuthor.Side, DealRoomThread.State), so they are spelled
+// here rather than imported from dealrooms, which keeps them private.
+const (
+	sideBuyer           = "buyer"
+	threadStateResolved = "resolved"
+)
+
 // roomIn carries the room's state and its conversation. A required-change
 // thread still open is the clearest risk signal a room holds, so it is named
 // rather than left for the model to infer from an opener's wording.
@@ -164,7 +231,31 @@ func roomIn(f facts) *RoomIn {
 		return nil
 	}
 	out := &RoomIn{State: string(f.room.State)}
+	// Counted over EVERY thread, before the cap: how much the buyer has said is
+	// a fact about the room, and taking it from the six threads that fit would
+	// make it a fact about the truncation instead.
 	for _, th := range f.threads {
+		for _, c := range th.Comments {
+			if c.Author.Side == sideBuyer {
+				out.BuyerPosts++
+			}
+		}
+	}
+	// Open threads first. The cap is what the model sees, so filling it with
+	// settled conversation while a live one waits outside would hide the
+	// only thread anybody still has to act on.
+	ordered := make([]crmcontracts.DealRoomThread, 0, len(f.threads))
+	for _, th := range f.threads {
+		if string(th.State) != threadStateResolved {
+			ordered = append(ordered, th)
+		}
+	}
+	for _, th := range f.threads {
+		if string(th.State) == threadStateResolved {
+			ordered = append(ordered, th)
+		}
+	}
+	for _, th := range ordered {
 		if len(out.Threads) == maxThreadRows {
 			break
 		}
@@ -178,6 +269,11 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 	out.RequiredChange = th.RequiredChange
 	if len(th.Comments) > 0 {
 		out.Opener = excerpt(th.Comments[0].Body)
+		// The opener's OWN author, not the thread's. They are the same today
+		// and the read costs nothing either way; taking it from the thread
+		// would attribute the words to whoever started the conversation if a
+		// room ever lets somebody else post first.
+		out.OpenerSide = string(th.Comments[0].Author.Side)
 	}
 	return out
 }

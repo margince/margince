@@ -187,7 +187,7 @@ export const ConnectOnly: Story = {
   render: cardStory(CONNECT_ONLY, [connected]),
 };
 
-// The reading stays — a rep's explanation for a dated value on a person record
+// The reading stays — a rep's explanation for a dated value on a contact record
 // — and the card says once why nothing here is writable.
 export const ReadOnlySeat: Story = {
   render: cardStory(READER, [connected]),
@@ -197,7 +197,7 @@ export const ReadOnlySeat: Story = {
 // the card collapses them into one honest no-provider state rather than a
 // failure — which is why there is ONE story and not two: the second was the
 // same picture under a second name. The 501 path is drawn where it differs, in
-// the person record's own provider section.
+// the contact record's own provider section.
 export const NoProvider: Story = {
   render: cardStory(OPERATOR, []),
 };
@@ -208,7 +208,7 @@ export const NoProvider: Story = {
 // fill are two greens a step apart; and the spend table separates five columns
 // with nothing but --borderSubtle hairlines. The one to check hardest is
 // .provider-held — a held figure is deliberately quieter than the charge beside
-// it so nobody adds the two together, and "quieter" is a --textSecondary /
+// it so nobody adds the two together, and "quieter" is a --textMeta /
 // --textContent pair that has to stay distinguishable after both re-resolve.
 export const OperatorConnectedDark: Story = {
   globals: { theme: "dark" },

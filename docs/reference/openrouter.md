@@ -90,7 +90,7 @@ It generalizes. `cold_start`, run the same way:
 | wall clock | 463s | **119s** |
 
 The certification record for `draft_reply` also moved: reliability
-`0.963 → 1.0`, `reported_invalid 1 → 0`, `score_p50 75 → 85`. Treat the score
+`0.963 → 1.0`, `reported_invalid 1 → 0`, `judge_score_p50 75 → 85`. Treat the score
 gain as suggestive rather than settled — it is one run of 27 against a record
 from a different day.
 
@@ -213,7 +213,7 @@ return a 400.)
 
 **`reasoning_effort: low` is an operator knob, not a default.** It won every
 latency percentile *and* cost 36% less — and cost **20 points of certification
-score** (`score_p50` 85 → 65) with mean output falling 961 → 259 tokens.
+score** (`judge_score_p50` 85 → 65) with mean output falling 961 → 259 tokens.
 Structural reliability stayed 1.0: the answers still parse, validate and pass
 their caps. They are simply worse answers.
 

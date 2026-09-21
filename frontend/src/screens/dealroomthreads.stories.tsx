@@ -40,14 +40,18 @@ const DOCUMENTS: readonly BoardDocument[] = [
     id: "doc-1",
     groupKey: "commercial",
     title: "Commercial terms v4",
+    filename: "commercial-terms-v4.pdf",
     meta: "commercial-terms-v4.pdf · Commercial",
+    byteSize: 412_000,
     status: <Badge tone="success">Shared</Badge>,
   },
   {
     id: "doc-2",
     groupKey: "technical",
     title: "Implementation plan",
+    filename: "implementation-plan.pdf",
     meta: "implementation-plan.pdf · Technical",
+    byteSize: 1_240_000,
     status: <Badge>Draft</Badge>,
   },
 ];
@@ -95,7 +99,6 @@ function board(
     <StoryProviders>
       <DocumentBoard
         title="Documents"
-        sub="What the buyer can read, and what they have asked about it."
         groups={GROUPS}
         documents={documents}
         threads={threads}
@@ -125,6 +128,19 @@ export const NoDocuments: Story = { render: board([], SELLER_VERBS, []) };
 /** A question about a document, inside that document's card. */
 export const ThreadOnADocument: Story = {
   render: board([thread({ document_id: "doc-1" })]),
+};
+
+/** Documents this side can read in place: the title is the tile's door and the
+ *  Read verb its visible spelling. The buyer's screen supplies `read` for a
+ *  PDF or an image; a spreadsheet keeps the download as its only verb. */
+export const ReadableDocuments: Story = {
+  render: board(
+    [thread({ document_id: "doc-1" })],
+    SELLER_VERBS,
+    DOCUMENTS.map((doc, index) =>
+      index === 0 ? { ...doc, read: () => {} } : doc,
+    ),
+  ),
 };
 
 /** A question about the room rather than any one document, in the room-wide
@@ -230,7 +246,6 @@ export const ManyRoomThreadsGerman: Story = {
     <StoryProviders locale="de">
       <DocumentBoard
         title="Dokumente"
-        sub="Was der Käufer lesen kann — und was er dazu gefragt hat."
         groups={GROUPS}
         documents={DOCUMENTS}
         threads={Array.from({ length: 1204 }, (_, index) =>

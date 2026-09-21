@@ -7,6 +7,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -67,6 +73,18 @@
         "read": true,
         "update": true
       },
+      "communication_exception": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -74,6 +92,12 @@
         "update": false
       },
       "consent_config": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "contact": {
         "create": true,
         "delete": true,
         "read": true,
@@ -217,25 +241,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -354,6 +360,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -414,6 +426,18 @@
         "read": true,
         "update": true
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -425,6 +449,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "contact": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       },
       "contract": {
         "create": true,
@@ -564,25 +594,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -701,6 +713,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -761,6 +779,18 @@
         "read": true,
         "update": true
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -772,6 +802,12 @@
         "delete": false,
         "read": false,
         "update": false
+      },
+      "contact": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       },
       "contract": {
         "create": true,
@@ -911,25 +947,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1048,6 +1066,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -1108,6 +1132,18 @@
         "read": true,
         "update": true
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "company": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1115,6 +1151,12 @@
         "update": false
       },
       "consent_config": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "contact": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1258,25 +1300,7 @@
         "read": true,
         "update": true
       },
-      "organization": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "partner": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "person": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1395,6 +1419,12 @@
         "read": true,
         "update": false
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -1455,6 +1485,18 @@
         "read": true,
         "update": false
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "company": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1465,6 +1507,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "contact": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "contract": {
@@ -1605,25 +1653,7 @@
         "read": true,
         "update": false
       },
-      "organization": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "partner": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
-      "person": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1742,6 +1772,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -1802,6 +1838,18 @@
         "read": true,
         "update": false
       },
+      "communication_exception": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "company": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "computed_field": {
         "create": false,
         "delete": false,
@@ -1813,6 +1861,12 @@
         "delete": false,
         "read": false,
         "update": false
+      },
+      "contact": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "contract": {
         "create": true,
@@ -1952,29 +2006,11 @@
         "read": true,
         "update": true
       },
-      "organization": {
-        "create": true,
-        "delete": false,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "partner": {
         "create": false,
         "delete": false,
         "read": true,
         "update": false
-      },
-      "person": {
-        "create": true,
-        "delete": false,
-        "read": true,
-        "update": true
       },
       "pipeline": {
         "create": false,

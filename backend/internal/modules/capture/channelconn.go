@@ -42,7 +42,7 @@ import (
 // surface (identity/internal/policy coreObjects). Connecting a bot is
 // destructive workspace-wide config — every seat's inbound Telegram traffic
 // arrives through it — so create/update/delete are admin/ops-only while every
-// role may read the status, the same posture overlay_connection holds.
+// role may read the status.
 const channelConnectionObject = "channel_connection"
 
 // ProviderTelegram is the only channel provider implemented, and the only
@@ -232,7 +232,7 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 }
 
 // channelUniquenessRefusal answers the ONE live-row uniqueness rule a connect or
-// a replacement can lose to: uq_channel_connection_ws permits a single live
+// a replacement can lose to: uq_channel_connection_provider permits a single live
 // binding per provider, so the remedy is always to disconnect what is bound —
 // never to pick a different bot. The refusal says so, because "already
 // connected" would send an admin looking for a binding of a bot they have never
@@ -241,18 +241,22 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 // It still takes the constraint name rather than assuming: any OTHER unique
 // index this table grows must not be answered as if it were this rule.
 func channelUniquenessRefusal(constraint string) error {
-	if constraint == channelWorkspaceUniqueIndex {
+	if constraint == channelOneLiveBotIndex {
 		return fmt.Errorf("another bot is already connected to this installation; disconnect it first: %w",
 			ErrChannelWorkspaceBotAlreadyBound)
 	}
 	return fmt.Errorf("this bot is already connected: %w", apperrors.ErrConflict)
 }
 
-// channelWorkspaceUniqueIndex is the partial unique index that permits ONE live
+// channelOneLiveBotIndex is the partial unique index that permits ONE live
 // bot per installation (0151). Named here because the refusal above branches on
 // it, and a rename in the migration must break this compile-time-invisible link
 // loudly — which the connect suite's refusal assertion is what enforces.
-const channelWorkspaceUniqueIndex = "uq_channel_connection_ws"
+//
+// The index used to be named for a workspace column no table has. The Go name
+// followed it, which is how a stale schema word reaches code that never touches
+// the schema: it is the ONE live bot the index is about, not a tenant.
+const channelOneLiveBotIndex = "uq_channel_connection_provider"
 
 // requireConnectWiring refuses a connect this deployment cannot honestly
 // complete: an unimplemented provider, or a missing vault (nothing could seal the

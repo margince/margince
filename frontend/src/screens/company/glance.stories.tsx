@@ -2,169 +2,128 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { StoryProviders } from "../story-utils";
-import { PeopleChips } from "./glance";
+import { Panel } from "../../design-system/panel";
+import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
+import { ThreadFold } from "./glance";
 
-// The glance's key people. The card is what a reader decides from — who they
-// are to the account and how to write to them — so the states worth seeing
-// side by side are the ones where that answer is partial: a contact with no
-// title, one with no address, and a roster longer than the glance draws.
-const meta: Meta<typeof PeopleChips> = {
-  title: "Records/Company 360/Key people",
-  component: PeopleChips,
+// The thread folded inside the account's 360.
+//
+// It arrives CLOSED, so the row itself is the thing to judge: it has to say
+// what is inside — how many exchanges, and the newest one — well enough that a
+// reader can decide whether opening it is worth the half-page it costs. The
+// second frame is that page, which is the only way to see that the teaser and
+// the first row of the list say the same thing rather than two things.
+//
+// It folds inside the 360's lead card, so it is drawn here inside a panel: on
+// its own it would float with no band above it and the summary's measure would
+// be nobody's.
+
+type Company360 = components["schemas"]["Company360"];
+type Activity = components["schemas"]["Activity"];
+
+const EMAIL_ID = "01a05500-0000-7000-8000-00000000dd01";
+
+const inboundEmail: Activity = {
+  id: EMAIL_ID,
+  kind: "email",
+  occurred_at: "2026-08-29T09:15:00Z",
+  subject: "Re: the renewal quote",
+  body: "Can you hold the price until Friday?",
+  direction: "inbound",
+  content_state: "available",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-08-29T09:15:00Z",
+  updated_at: "2026-08-29T09:15:00Z",
+  version: 4,
+  is_done: false,
+};
+
+const loggedCall: Activity = {
+  id: "01a05500-0000-7000-8000-00000000dd02",
+  kind: "call",
+  occurred_at: "2026-08-26T13:40:00Z",
+  subject: "Walked through the retrofit scope",
+  direction: "outbound",
+  content_state: "available",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-08-26T13:40:00Z",
+  updated_at: "2026-08-26T13:40:00Z",
+  version: 1,
+  is_done: false,
+};
+
+function view(activities: Activity[]): Company360 {
+  return {
+    as_of: "2026-08-29T10:00:00Z",
+    company: {
+      id: "o-1",
+      display_name: "Nordwind Logistik",
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-01-05T09:00:00Z",
+      updated_at: "2026-08-29T09:15:00Z",
+    },
+    sections_omitted: [],
+    activities: { data: activities, page: { has_more: false } },
+  };
+}
+
+function Fold({ data }: Readonly<{ data: Company360 }>) {
+  installFetchStub({ "GET /me": meRoute({ company: ["read"] }) });
+  return (
+    <StoryProviders>
+      <div style={{ maxWidth: 640 }}>
+        <Panel title="Nordwind Logistik">
+          <ThreadFold
+            view={data}
+            loading={false}
+            onOpenHistory={() => {}}
+            onOpenRecord={() => {}}
+          />
+        </Panel>
+      </div>
+    </StoryProviders>
+  );
+}
+
+const meta: Meta = {
+  title: "Records/Company record/Thread fold",
   parameters: { layout: "padded" },
-  decorators: [
-    (Story) => (
-      <StoryProviders>
-        <div style={{ maxWidth: 420 }}>
-          <Story />
-        </div>
-      </StoryProviders>
-    ),
-  ],
 };
 export default meta;
 
-type Story = StoryObj<typeof PeopleChips>;
-type View = components["schemas"]["Organization360"];
+type Story = StoryObj;
 
-const strength = {
-  score: 71,
-  bucket: "strong" as const,
-  factors: { recency: 0.9, frequency: 0.6, reciprocity: 0.8, direction: 0.8 },
+// Closed, which is how a reader meets it: the count, the newest exchange and
+// its day, with the way to the History tab outside the toggle.
+export const Teased: Story = {
+  render: () => <Fold data={view([inboundEmail, loggedCall])} />,
 };
 
-function view(people: View["people"], omitted: string[] = []): View {
-  return {
-    as_of: "2026-07-13T09:00:00Z",
-    organization: {
-      id: "o-1",
-      display_name: "Brandt Automotive GmbH",
-      captured_by: "human:u1",
-      source: "manual",
-      created_at: "2026-06-01T08:00:00Z",
-      updated_at: "2026-06-01T08:00:00Z",
-    },
-    sections_omitted: omitted,
-    people,
-  } as View;
-}
+// The toggle is the `<summary>` of a `<details>`, which carries no button role
+// of its own — the whole row is the control, so the name it wears is what a
+// reader presses and what these plays reach for.
+const openTheFold =
+  (name: string): NonNullable<Story["play"]> =>
+  async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText(name));
+  };
 
-const page = { has_more: false, next_cursor: null };
-
-/**
- * What the card is for: each person's standing on the account and the address
- * that reaches them, so which of the three to write to is decided here rather
- * than after three round trips.
- */
-export const Populated: Story = {
-  render: () => (
-    <PeopleChips
-      loading={false}
-      view={view({
-        data: [
-          {
-            person_id: "p-1",
-            full_name: "Dana Buyer",
-            title: "Head of Fleet",
-            primary_email: "dana@brandt.example",
-            deal_roles: [],
-            consent: {},
-            strength,
-          },
-          {
-            person_id: "p-2",
-            full_name: "Kim Ops",
-            title: "Operations",
-            deal_roles: [],
-            consent: {},
-            strength,
-          },
-          {
-            person_id: "p-3",
-            full_name: "Maximilian von Hohenlohe-Schillingsfürst",
-            title: "Geschäftsführer Einkauf und Logistik",
-            primary_email: "maximilian.von.hohenlohe@brandt-automotive.example",
-            deal_roles: [],
-            consent: {},
-            strength,
-          },
-        ],
-        page,
-      })}
-      onOpenTab={() => {}}
-    />
-  ),
+// Opened. The teaser's exchange is the list's first row, and the reading it
+// teased is now the message itself.
+export const Opened: Story = {
+  render: () => <Fold data={view([inboundEmail, loggedCall])} />,
+  play: openTheFold("What happened · 2"),
 };
 
-/**
- * A title the installation did not type: it came from a provider, and it wears
- * its receipt — the dotted underline — where it stands rather than passing as
- * the company's own record. Long enough to wrap, which a title does and the
- * name and the address above and below it do not.
- */
-export const ProvidedTitle: Story = {
-  render: () => (
-    <PeopleChips
-      loading={false}
-      view={view({
-        data: [
-          {
-            person_id: "p-1",
-            full_name: "Dana Buyer",
-            title: null,
-            provider_title: "Vice President, Fleet Operations and Aftersales",
-            title_source: "provider",
-            primary_email: "dana@brandt.example",
-            deal_roles: [],
-            consent: {},
-            strength,
-          },
-        ],
-        page,
-      })}
-      onOpenTab={() => {}}
-    />
-  ),
-};
-
-/**
- * More people than the glance draws. The remainder is a line and not a card:
- * it names no record, and a card with nothing to open in it reads as one that
- * failed to load.
- */
-export const MoreThanShown: Story = {
-  render: () => (
-    <PeopleChips
-      loading={false}
-      view={view({
-        data: [
-          "Dana Buyer",
-          "Kim Ops",
-          "Rafael Ortiz",
-          "Ines Weber",
-          "Tomas Halle",
-        ].map((full_name, i) => ({
-          person_id: `p-${i}`,
-          full_name,
-          deal_roles: [],
-          consent: {},
-          strength,
-        })),
-        page,
-      })}
-      onOpenTab={() => {}}
-    />
-  ),
-};
-
-/**
- * The section the reader's grants do not cover. It says so rather than drawing
- * an account that nobody works at.
- */
-export const Withheld: Story = {
-  render: () => (
-    <PeopleChips loading={false} view={view(undefined, ["people"])} />
-  ),
+// An account nothing has been filed against: the fold opens on the section's
+// own empty state rather than teasing an exchange it cannot promise.
+export const NothingLogged: Story = {
+  render: () => <Fold data={view([])} />,
+  play: openTheFold("What happened"),
 };

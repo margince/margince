@@ -17,8 +17,8 @@ import {
 // The three states below are the three the page's own query has — still asking,
 // answered with nothing, answered with a room — and the reason all three are
 // stories is the page gutter. `.wrap` sits OUTSIDE the query states, so the
-// skeleton, the "no room" callout and a loaded room have to be judged against
-// the same left edge; two of them are invisible to any story that only renders
+// skeleton, the "no room" empty state and a loaded room have to be judged
+// against the same left edge; two are invisible to any story that only renders
 // the happy one.
 
 type DealRoom = components["schemas"]["DealRoom"];
@@ -108,7 +108,7 @@ export const NoRoom: Story = { render: served([]) };
  *  first, and the buyer's own row beside it. */
 export const Live: Story = { render: served([ROOM]) };
 
-/** A room a rep has stopped. The same head, with the chip in the warn tone and
+/** A room a rep has stopped. The same head, with the chip in the warning tone and
  *  no dot — the state is something the room recorded, not something happening
  *  now — and the banner saying what a buyer arriving would meet. */
 export const Paused: Story = {

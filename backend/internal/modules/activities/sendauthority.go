@@ -8,7 +8,7 @@ package activities
 //
 // It lives apart from either send path because it belongs to BOTH, and because
 // the question is one question: authority over transmission is the delivery
-// path's, and this only moves an already-knowable no forward to where the person
+// path's, and this only moves an already-knowable no forward to where the contact
 // who can fix it is still looking at the screen. The two refusals differ only in
 // whose problem it is — the rep's own mailbox, or the workspace's bot.
 
@@ -61,7 +61,7 @@ func (e *MailboxNotSendCapableError) Error() string {
 
 // MessageFault names the condition and no field: no send contract takes a
 // `from` argument, so naming one would hand the caller an input it cannot
-// change. Reconnecting the mailbox is the remedy, and a person has to do it.
+// change. Reconnecting the mailbox is the remedy, and a contact has to do it.
 func (e *MailboxNotSendCapableError) MessageFault() (code, message string) {
 	return "mailbox_not_send_capable", e.Error()
 }
@@ -81,7 +81,7 @@ func (e *NoRecipientsError) Error() string {
 // in: `to` is what the caller actually sent, on both transports, and an error
 // naming a field no request body has is an error nobody can act on.
 func (e *NoRecipientsError) FieldFault() (field, code, message string) {
-	return "to", "required", e.Error()
+	return "to", codeRequired, e.Error()
 }
 
 // ChannelNotSendCapableError refuses a channel send this installation already

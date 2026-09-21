@@ -7,23 +7,18 @@ import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
-import { Badge, Button, SegmentedControl } from "../design-system/atoms";
+import { Badge, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStrip } from "../design-system/listtable";
 import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  ProblemError,
-  QueryGate,
-  throwProblem,
-  useMe,
-  useSorMode,
-} from "./common";
+import { useAssignableUserOptions } from "./assigneepicker";
+import { ProblemError, QueryGate, throwProblem, useMe } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
-import { useRoster } from "./entityref";
 import { LeadBulkBar } from "./leadbulk";
 import {
   LEAD_STATUS_FILTER_OPTIONS,
@@ -32,7 +27,6 @@ import {
   StatusBadge,
   scoreFactorLabel,
   scoreTone,
-  terminalBadge,
 } from "./leadpresentation";
 import {
   sourceFilterOptions,
@@ -41,6 +35,7 @@ import {
   useLeadSettings,
   useLeadSources,
 } from "./leadsources";
+import { terminalBadge } from "./leadstanding";
 import {
   type ListPage,
   type ListQuery,
@@ -88,6 +83,7 @@ async function fetchLeadsPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }
@@ -121,7 +117,7 @@ const leadCreateFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
   { key: "email", label: "create.email", type: "email" },
   { key: "linkedin_url", label: "create.linkedinUrl" },
-  { key: "title", label: "create.personTitle" },
+  { key: "title", label: "create.contactTitle" },
   { key: "company_name", label: "create.companyName" },
 ];
 
@@ -240,11 +236,10 @@ function LeadsWorkbench({
   const ownerChips = useOwnerChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
-  const roster = useRoster("user", true);
+  const assignable = useAssignableUserOptions();
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const overlay = useSorMode() === "overlay";
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
   // Bulk selection, by lead id; cleared after any bulk run, since the rows
@@ -275,8 +270,6 @@ function LeadsWorkbench({
   // an invisible selection nobody can clear.
   const selectedRows = state.rows.filter((lead) => selected.has(lead.id));
   const liveSelection = new Set(selectedRows.map((lead) => lead.id));
-  // The board writes status, which the mirror refuses (a lead's lifecycle is
-  // not a field write-back), so overlay gets the table and no toggle.
   // The board/table choice is a dial like the filters beside it, so it lives in
   // the address: a reader can link to the board, and it survives a reload. It
   // is the screen's OWN name rather than a wire one, because which of the two
@@ -298,14 +291,7 @@ function LeadsWorkbench({
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
     { value: UNASSIGNED_OWNER, label: t("lead.unassigned") },
-    ...(roster.data ?? [])
-      .filter((entry) => !("is_agent" in entry && entry.is_agent))
-      .filter((entry) => entry.id !== viewerId)
-      .map((entry) => ({
-        value: entry.id,
-        label:
-          ("display_name" in entry ? entry.display_name : null) ?? entry.id,
-      })),
+    ...assignable.filter((option) => option.value !== viewerId),
   ];
 
   return (
@@ -314,18 +300,18 @@ function LeadsWorkbench({
     // and the `.lt` whose full height depends on being its direct child.
     <>
       {!noteDismissed && (
-        <Callout tone="info">
-          {t("lead.segregation")}{" "}
-          <Button
-            small
-            data-testid="lead-segregation-dismiss"
-            onClick={() => {
+        <Callout
+          kind="standing"
+          title={t("lead.segregationTitle")}
+          dismiss={{
+            label: t("lead.segregationDismiss"),
+            onDismiss: () => {
               window.localStorage.setItem(SEGREGATION_NOTE_KEY, "1");
               setNoteDismissed(true);
-            }}
-          >
-            {t("lead.segregationDismiss")}
-          </Button>
+            },
+          }}
+        >
+          {t("lead.segregation")}
         </Callout>
       )}
       <ListTable
@@ -336,7 +322,7 @@ function LeadsWorkbench({
         // took the filter bar with it, leaving the reader looking at a
         // narrowed answer with no way to see or change what narrowed it.
         body={
-          view === "board" && !overlay ? (
+          view === "board" ? (
             <LeadBoard
               rows={state.rows}
               onMoved={() => state.refetch()}
@@ -345,7 +331,7 @@ function LeadsWorkbench({
             />
           ) : undefined
         }
-        bodyOwnsPaging={view === "board" && !overlay}
+        bodyOwnsPaging={view === "board"}
         state={state}
         unit="unit.leads"
         action={
@@ -380,9 +366,9 @@ function LeadsWorkbench({
         columns={[
           {
             key: "name",
-            header: t("people.name"),
+            header: t("contacts.name"),
             cell: (lead: Lead) => {
-              const terminal = terminalBadge(lead.status);
+              const terminal = terminalBadge(lead);
               return (
                 <span>
                   <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
@@ -406,13 +392,7 @@ function LeadsWorkbench({
             key: "score",
             header: t("lead.score"),
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "flex",
-                  gap: "var(--space-1)",
-                  flexWrap: "wrap",
-                }}
-              >
+              <CellStrip>
                 <Badge tone={scoreTone(lead.score)}>
                   {formatNumber(lead.score, locale)}
                 </Badge>
@@ -421,7 +401,7 @@ function LeadsWorkbench({
                     ? scoreFactorLabel(lead.score_reason, t)
                     : t("lead.scoreNoSignals")}
                 </span>
-              </span>
+              </CellStrip>
             ),
             sort: "score",
             numeric: true,
@@ -429,6 +409,7 @@ function LeadsWorkbench({
           {
             key: "status",
             header: t("lead.status"),
+            sort: "status",
             cell: (lead: Lead) => (
               <span
                 style={{
@@ -445,8 +426,10 @@ function LeadsWorkbench({
           {
             key: "nextTask",
             header: t("lead.nextTask"),
+            sort: "next_task_due_at", // the deadline, not the title
+
             cell: (lead: Lead) => (
-              <span className="t-caption">
+              <span>
                 {lead.next_task_subject ?? t("lead.noNextTask")}
                 {lead.open_task_count
                   ? ` · ${t("lead.openTaskCount", {
@@ -459,14 +442,15 @@ function LeadsWorkbench({
               </span>
             ),
           },
+          // The shared column, now that this header can offer a sort.
           lastActivityColumn<Lead>(t, locale, recordZone),
           {
             key: "source",
             header: t("lead.source"),
+            sort: "source", // the catalog's label, which is what the cell prints
+
             cell: (lead: Lead) => (
-              <span className="t-caption">
-                {sourceLabelFor(lead, sources.data?.data, t)}
-              </span>
+              <span>{sourceLabelFor(lead, sources.data?.data, t)}</span>
             ),
           },
           ownerColumn<Lead>(t),
@@ -575,6 +559,25 @@ function LeadsWorkbench({
         dataChips={ownerChips}
         views={[
           ...standardViews(viewerId, { sort: "", mineFirst: !opensOnAll }),
+          // The unassigned queue as a VIEW, not only a chip. It was reachable
+          // by opening the owner dial and picking a value, which is a thing
+          // you find if you already know it is there; a lead nobody owns is
+          // the one a queue exists to surface.
+          //
+          // Oldest first, deliberately against the other views' work-queue
+          // order: what makes an unassigned lead urgent is how long it has sat
+          // there with nobody answering it, and the newest arrival is the one
+          // that can wait.
+          {
+            label: "lead.viewUnassigned",
+            sort: "created_at",
+            filters: { unassigned: "true" },
+          },
+          {
+            label: "lead.viewNewUnassigned",
+            sort: "created_at",
+            filters: { status: "new", unassigned: "true" },
+          },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
             label: "lead.viewNeedsFollowUp",
@@ -612,20 +615,16 @@ function LeadsWorkbench({
           <>
             {/* Board or table is how the SAME rows are drawn, so it belongs
                 with the drawing dials rather than above the surface — the
-                slot the deals screen's pipeline picker already uses. The
-                mirror refuses the board's status write, so overlay gets the
-                table and no toggle. */}
-            {!overlay && (
-              <SegmentedControl
-                options={["table", "board"] as const}
-                value={view}
-                onChange={setView}
-                labels={{
-                  table: t("deals.viewTable"),
-                  board: t("deals.viewBoard"),
-                }}
-              />
-            )}
+                slot the deals screen's pipeline picker already uses. */}
+            <SegmentedControl
+              options={["table", "board"] as const}
+              value={view}
+              onChange={setView}
+              labels={{
+                table: t("deals.viewTable"),
+                board: t("deals.viewBoard"),
+              }}
+            />
             <SaveViewAction resource="leads" query={state.query} />
           </>
         }

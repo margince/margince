@@ -9,6 +9,7 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -41,7 +42,7 @@ export type CitedRecord = {
 
 /**
  * EvidenceModal is the receipt behind one cited record: where the value came
- * from, when it was read, whether a person has confirmed it — and what could
+ * from, when it was read, whether a contact has confirmed it — and what could
  * not be filled in.
  *
  * The gaps are shown, not hidden. A claim the reader was told is checkable,
@@ -50,12 +51,12 @@ export type CitedRecord = {
  * add.
  */
 export function EvidenceModal({
-  orgId,
+  companyId,
   cited,
   onClose,
   onStep,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   cited: CitedRecord;
   onClose: () => void;
   // Move to the neighbouring claim in the list that opened this. The ORDER is
@@ -67,14 +68,14 @@ export function EvidenceModal({
   const t = useT();
   const { locale } = useLocale();
   const receipt = useQuery({
-    queryKey: ["claim-evidence", orgId, cited.entityType, cited.entityId],
+    queryKey: ["claim-evidence", companyId, cited.entityType, cited.entityId],
     queryFn: async () => {
       const { data, error } = await api.GET(
-        "/organizations/{id}/evidence/{entityType}/{entityId}",
+        "/companies/{id}/evidence/{entityType}/{entityId}",
         {
           params: {
             path: {
-              id: orgId,
+              id: companyId,
               entityType: cited.entityType,
               entityId: cited.entityId,
             },
@@ -99,14 +100,16 @@ export function EvidenceModal({
       labelledBy="co-evidence-title"
       placement="right"
     >
-      <h2 id="co-evidence-title">{t("co.evidence.title")}</h2>
+      <Heading size="large" id="co-evidence-title">
+        {t("co.evidence.title")}
+      </Heading>
       {receipt.isPending ? (
         <Skeleton width="100%" height={120} />
       ) : !shown?.source_kind ? (
         <EmptyState>{t("co.evidence.unavailable")}</EmptyState>
       ) : (
-        <div className="co-evidence">
-          <p className="co-evidence-value">
+        <div>
+          <p>
             {shown.label ? `${shown.label}: ` : ""}
             {shown.value}
           </p>
@@ -151,12 +154,12 @@ export function EvidenceModal({
 }
 
 // "AI extracted · not yet confirmed", derived rather than stored: a MODEL read
-// it out of something, and no person has verified it since. The predicate is
+// it out of something, and no contact has verified it since. The predicate is
 // stated here rather than left implicit, because the badge makes a claim about
 // a claim and a reader deserves to know what earned it.
 //
 // `site_read` alone. The other four are not model extractions and the badge
-// would be false of each: a person typed a `human` value, an older system
+// would be false of each: a human typed a `human` value, an older system
 // holds a `migration` one, a `connector` value came out of an API verbatim,
 // and a `rule` value was computed by code somebody wrote. Calling any of them
 // AI-extracted is exactly the mislabelling this badge exists to prevent.
@@ -182,12 +185,8 @@ function EvidenceSteps({
   }
   return (
     <div className="co-evidence-steps">
-      <Button small onClick={() => onStep(-1)}>
-        {t("co.evidence.previous")}
-      </Button>
-      <Button small onClick={() => onStep(1)}>
-        {t("co.evidence.next")}
-      </Button>
+      <Button onClick={() => onStep(-1)}>{t("co.evidence.previous")}</Button>
+      <Button onClick={() => onStep(1)}>{t("co.evidence.next")}</Button>
     </div>
   );
 }
@@ -250,7 +249,7 @@ function EvidenceIdentity({
 /**
  * Read and confirmed are shown as two lines, never merged. They are different
  * assurances: one says a machine fetched this and it still said so, the other
- * says a person looked at it and agreed.
+ * says a contact looked at it and agreed.
  */
 function EvidenceTimes({
   retrievedAt,

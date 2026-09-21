@@ -26,7 +26,6 @@
 
 .tagadmin-usage {
   flex: 1;
-  color: var(--textMeta);
 }
 
 .tagadmin-verbs {
@@ -40,7 +39,6 @@
 }
 
 .tagadmin-note {
-  color: var(--textMeta);
   margin: 0;
 }
 

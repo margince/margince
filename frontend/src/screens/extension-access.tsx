@@ -2,14 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Info,
-  KeyRound,
-  Route,
-  Timer,
-} from "lucide-react";
+import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -299,7 +292,7 @@ export function ExtensionAccessCard() {
   return (
     <div className="ext-stack">
       {/* tone="accent" — the one lead on this tab. Everything else here reports
-          or manages PEOPLE; this is the only surface in the product that can
+          or manages CONTACTS; this is the only surface in the product that can
           grant an extension's RBAC objects at all, and until somebody does, a
           shipped and enabled unit renders "you do not hold access" for every
           seat. It used to be a bare <div> below the roster, with no card and
@@ -307,7 +300,7 @@ export function ExtensionAccessCard() {
           this is it. */}
       <Panel tone="accent" title={t("extAccess.title")}>
         <PanelBody>
-          <p className="t-caption ext-lead-sub">{t("extAccess.sub")}</p>
+          <p className="ext-lead-sub">{t("extAccess.sub")}</p>
           {/* Gate on the /me probe itself so the withheld notice appears only
               once it has answered — never as a flash while it loads. */}
           <QueryGate query={me} pendingLabel={t("extAccess.title")}>
@@ -414,18 +407,18 @@ function UnitCard({
         <div className="ext-unit-actions">
           <Badge>{t("extAccess.version", { version: unit.version })}</Badge>
           {page ? (
-            // The unit's name is IN the link text, not only in the heading
-            // beside it: several of these sit on one page, and "Open" repeated
-            // five times names nothing to anyone reading the links out of
-            // context. The hash is built through routeHash and the exported
-            // screen token rather than spelled here, so this link and the
-            // router cannot drift apart.
+            // The unit's name is IN the link text: several units share the
+            // page, and "Open" five times names nothing out of context. The
+            // hash comes from routeHash and the exported screen token, so
+            // link and router cannot drift apart.
             <a
-              className="t-caption ext-unit-link"
+              className="ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
               <ArrowUpRight aria-hidden size={15} />
-              {t("extAccess.openUnit", { name: page.name })}
+              <span className="ext-unit-link-text">
+                {t("extAccess.openUnit", { name: page.name })}
+              </span>
             </a>
           ) : null}
         </div>
@@ -438,14 +431,14 @@ function UnitCard({
             everything else because it is what an operator deciding whether to
             grant the switches below is actually missing: the unit name alone
             leaves "de" meaning nothing. */}
-        <p className="t-caption ext-unit-description">{unit.description}</p>
+        <p className="t-caption">{unit.description}</p>
         {/* Said, not silently omitted, and only where the two registries
             DISAGREE: a unit the running binary composed whose descriptor this
             bundle does not carry is a version skew an operator has to be able
             to tell apart from a unit that simply has no page. A unit with a
             descriptor and nothing to show is neither, and says nothing. */}
         {descriptor ? null : (
-          <p className="t-caption ext-note ext-unit-nopage">
+          <p className="ext-note ext-unit-nopage">
             <Info aria-hidden size={15} />
             {t("extAccess.noPage", { name: unit.name })}
           </p>
@@ -462,12 +455,15 @@ function UnitCard({
               toggle: every switch below also carries it as its `reason`, which
               is what puts it in the accessibility tree beside the control. */}
           {!canManage && unit.rbac_objects.length > 0 ? (
-            <Callout tone="info" className="ext-readonly">
-              {t("extAccess.readOnly")}
-            </Callout>
+            // The wrapper carries the air: a notice owns no layout of its own.
+            <div className="ext-readonly">
+              <Callout kind="standing" title={t("extAccess.readOnlyTitle")}>
+                {t("extAccess.readOnly")}
+              </Callout>
+            </div>
           ) : null}
           {unit.rbac_objects.length === 0 ? (
-            <p className="t-caption ext-note">{t("extAccess.noObjects")}</p>
+            <p className="ext-note">{t("extAccess.noObjects")}</p>
           ) : (
             unit.rbac_objects.map((object) => (
               <SettingRow
@@ -533,7 +529,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           content: (
             <>
               <span className="ext-method">{route.method}</span>
-              <span className="ext-route-path">{route.path}</span>
+              <span>{route.path}</span>
             </>
           ),
         }))}
@@ -568,14 +564,12 @@ function BringsRow({
       </dt>
       <dd className="ext-brings-def">
         {items.length === 0 ? (
-          <span className="t-caption ext-none">
-            {t("extAccess.brings.none")}
-          </span>
+          <span>{t("extAccess.brings.none")}</span>
         ) : (
           <ul className="ext-chips">
             {items.map((item) => (
-              <li key={item.id} className="ext-chip t-mono">
-                {item.content}
+              <li key={item.id}>
+                <Badge>{item.content}</Badge>
               </li>
             ))}
           </ul>
@@ -730,23 +724,27 @@ function ObjectMatrix({
         </table>
       </TableScroll>
       {nobodyReads ? (
-        // `warn` is exactly the claim: nothing is broken, and something will go
+        // `warning` is exactly the claim: nothing is broken, and something will go
         // wrong if nobody acts — every screen this unit ships renders "you do
-        // not hold access" until a read grant exists. live="status" because the
-        // sentence appears and disappears as the last read grant is toggled,
-        // and a change nobody is told about is the silence this screen exists
-        // to break.
+        // not hold access" until a read grant exists. Standing, and yet spoken
+        // deliberately: the sentence appears and disappears as the last read
+        // grant is toggled, and a change nobody is told about is the silence
+        // this screen exists to break.
         <Callout
-          tone="warn"
+          tone="warning"
+          kind="standing"
           live="status"
-          icon={AlertTriangle}
-          className="ext-matrix-note"
+          title={t("extAccess.nobodyReadsTitle")}
         >
           {t("extAccess.nobodyReads", { object })}
         </Callout>
       ) : null}
       {setGrant.isError ? (
-        <Callout tone="danger" live="alert" className="ext-matrix-note">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("extAccess.grantFailed")}
+        >
           {/* A version skew is not a failure to phrase generically: the
               operator's flip did not apply, someone else's did, and the matrix
               above has just been repainted with theirs. Saying "couldn't save"

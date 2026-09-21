@@ -41,12 +41,13 @@ type FieldKind string
 // The seven kinds. Each maps onto one operator set below, and a field's kind
 // is derived from its declared type — never chosen.
 const (
-	KindText      FieldKind = "text"
-	KindNumber    FieldKind = "number"
-	KindBoolean   FieldKind = "boolean"
-	KindDate      FieldKind = "date"
-	KindTimestamp FieldKind = "timestamp"
-	KindID        FieldKind = "id"
+	KindText        FieldKind = "text"
+	KindMultiselect FieldKind = "multiselect"
+	KindNumber      FieldKind = "number"
+	KindBoolean     FieldKind = "boolean"
+	KindDate        FieldKind = "date"
+	KindTimestamp   FieldKind = "timestamp"
+	KindID          FieldKind = "id"
 	// KindGeo is a place rather than a value: the operand `within_radius`
 	// measures from. It admits no exact operator — a place does not compare
 	// equal to anything — and its component values are askable as ordinary
@@ -72,13 +73,14 @@ const (
 // `eq false`, and offering both invites a plan that says the same thing two
 // ways); a place admits only the radius operator.
 var operatorsByKind = map[FieldKind][]string{
-	KindText:      {OpEq, OpNeq, OpIn},
-	KindID:        {OpEq, OpNeq, OpIn},
-	KindBoolean:   {OpEq},
-	KindNumber:    {OpEq, OpNeq, OpIn, OpLt, OpLte, OpGt, OpGte},
-	KindDate:      {OpEq, OpNeq, OpIn, OpLt, OpLte, OpGt, OpGte},
-	KindTimestamp: {OpEq, OpNeq, OpIn, OpLt, OpLte, OpGt, OpGte},
-	KindGeo:       {OpWithinRadius},
+	KindMultiselect: {OpEq, OpNeq, OpIn},
+	KindText:        {OpEq, OpNeq, OpIn},
+	KindID:          {OpEq, OpNeq, OpIn},
+	KindBoolean:     {OpEq},
+	KindNumber:      {OpEq, OpNeq, OpIn, OpLt, OpLte, OpGt, OpGte},
+	KindDate:        {OpEq, OpNeq, OpIn, OpLt, OpLte, OpGt, OpGte},
+	KindTimestamp:   {OpEq, OpNeq, OpIn, OpLt, OpLte, OpGt, OpGte},
+	KindGeo:         {OpWithinRadius},
 }
 
 // Field is one member of the resolved vocabulary.
@@ -113,8 +115,8 @@ type Relation struct {
 	// caller can see WHY a hop exists.
 	//
 	// For a SCALAR edge it is also what E2 executes the join on, in two
-	// spellings newHopBinding reads apart: bare (`organization_id`, the
-	// target's own column) or qualified (`deal.organization_id`, the referring
+	// spellings newHopBinding reads apart: bare (`company_id`, the
+	// target's own column) or qualified (`deal.company_id`, the referring
 	// record's). For a join edge it is prose only — Join below carries what
 	// executes.
 	Via string
@@ -318,7 +320,7 @@ func storedInverseRelations(ctx context.Context, schema *schemaReads, entity str
 
 // admittedRelations drops the hops that land on a record type this caller may
 // not read. A hop is a read of the record it lands on, so admitting it would
-// let a plan filter deals by an organization the caller cannot see — and the
+// let a plan filter deals by a company the caller cannot see — and the
 // result count would disclose what the row scope hides.
 func (r *VocabularyResolver) admittedRelations(ctx context.Context, relations []Relation) []Relation {
 	return slices.DeleteFunc(relations, func(rel Relation) bool {
@@ -359,10 +361,11 @@ func (r *VocabularyResolver) customFields(ctx context.Context, entity string) ([
 // extend: a seventh custom-field type arrives with its own entry, and the
 // fitness function fails until it has one.
 var customFieldKinds = map[string]FieldKind{
-	fieldcatalog.TypeText:     KindText,
-	fieldcatalog.TypeNumber:   KindNumber,
-	fieldcatalog.TypeDate:     KindDate,
-	fieldcatalog.TypeCurrency: KindNumber,
-	fieldcatalog.TypePicklist: KindText,
-	fieldcatalog.TypeBoolean:  KindBoolean,
+	fieldcatalog.TypeText:        KindText,
+	fieldcatalog.TypeNumber:      KindNumber,
+	fieldcatalog.TypeDate:        KindDate,
+	fieldcatalog.TypeCurrency:    KindNumber,
+	fieldcatalog.TypeMultiselect: KindMultiselect,
+	fieldcatalog.TypePicklist:    KindText,
+	fieldcatalog.TypeBoolean:     KindBoolean,
 }

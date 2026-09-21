@@ -8,17 +8,15 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
-import {
-  type ContractDraft,
-  ContractTermsFields,
-  contractTermsBody,
-  draftProblem,
-  pricedIn,
-} from "./contractform";
+import { RefusalLine, throwProblem } from "./common";
+import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
+import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
+import { ContractTermsFields } from "./contracttermsfields";
 
 // margince#3286: the three transitions a signed agreement actually goes
 // through after it is first recorded — renew, assert a status, record a
@@ -28,7 +26,6 @@ import {
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
-type ValueBasis = ContractDraft["valueBasis"];
 
 // A status a contract can only ARRIVE at through renewal — the server sets it
 // on the predecessor, in the same transaction that creates the successor
@@ -49,38 +46,15 @@ const STATUS_LABEL_KEY: Record<ContractStatus, MessageKey> = {
   superseded: "contracts.status.superseded",
 };
 
-// A terminal status has no valid transition out of it other than a
-// same-status no-op (refuseInvalidTransition, contract_lifecycle.go), so
-// offering "change status" from one would be a control that can only refuse —
-// the reasoning #3573/#3700 already apply to the plan's write controls.
-// Cancel is NOT gated on this (companycontracts.tsx): Store.Cancel is a plain
-// column patch with no status check at all.
+// A terminal status has no valid transition out of it but a same-status no-op
+// (refuseInvalidTransition, contract_lifecycle.go), so offering "change status"
+// there is a control that can only refuse — #3573/#3700's reasoning already
+// applies to the plan's write controls. Cancel is NOT gated on it: Store.Cancel
+// (companycontracts.tsx) is a plain column patch with no status check.
 export function isTerminalContractStatus(status: Contract["status"]): boolean {
   return (
     status === "expired" || status === "cancelled" || status === "superseded"
   );
-}
-
-function renewDraftOf(predecessor: Contract): ContractDraft {
-  return {
-    // Title and basis are the two fields the successor is likeliest to keep,
-    // and both are required by the wire request — prefilled so renewing an
-    // unchanged agreement does not mean retyping what it was already called.
-    // Everything else the predecessor does NOT hand down: RenewContractRequest
-    // inherits only the counterparty (the server derives that), because a
-    // renewal is usually a fresh negotiation and an inherited amount or term
-    // would be a number nobody actually agreed to this time.
-    title: predecessor.title,
-    contractNumber: "",
-    valueMinor: 0,
-    currency: "",
-    valueBasis: (predecessor.value_basis as ValueBasis) ?? "total",
-    startsOn: "",
-    endsOn: "",
-    renewalOn: "",
-    noticePeriodDays: "",
-    signedOn: "",
-  };
 }
 
 function renewalBody(
@@ -106,11 +80,10 @@ function renewalBody(
   };
 }
 
-// The successor's terms, created in the same transaction that supersedes the
-// predecessor — the id and version this call takes are the predecessor's, and
-// they never come from a closure: a click that lands after the modal has
-// re-rendered for a different row would otherwise renew whichever contract the
-// previous render held.
+// The successor's terms, created in the transaction that supersedes the
+// predecessor — the id and version this call takes are the predecessor's, never
+// from a closure: a click landing after the modal re-rendered for a different
+// row would otherwise renew whichever contract the previous render held.
 async function renewContract(
   predecessor: Contract,
   draft: ContractDraft,
@@ -129,16 +102,16 @@ async function renewContract(
   return data?.id ?? "";
 }
 
-// The organization's own deals, for the picker below — every status, not only
+// The company's own deals, for the picker below — every status, not only
 // `open`: a renewal is usually recorded after the opportunity that won it has
 // already closed, so filtering to `open` would hide the one deal a renewal is
 // most often actually tied to.
-function dealsForOrg(organizationId: string) {
+function dealsForCompany(companyId: string) {
   return {
-    queryKey: ["orgDeals", organizationId],
+    queryKey: ["companyDeals", companyId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals", {
-        params: { query: { organization_id: organizationId, limit: 100 } },
+        params: { query: { company_id: companyId, limit: 100 } },
       });
       if (error) {
         throwProblem(error);
@@ -166,9 +139,15 @@ export function ContractRenewModal({
   const [dealId, setDealId] = useState("");
   const baseCurrency = useInstallationSettings().data?.base_currency;
   const contractCurrency = draft.currency || baseCurrency || "";
+  // The counterparty is withheld from a reader admitted through the DEAL who
+  // cannot open the company (masked_fields names it). They may still renew —
+  // write authority follows the deal — so the modal keeps working and the deal
+  // picker, which can only be filled by listing that company's deals, says why
+  // it is not there rather than showing an empty list that reads as "no deals".
+  const anchor = contract.company_id;
   const deals = useQuery({
-    ...dealsForOrg(contract.organization_id),
-    enabled: open,
+    ...dealsForCompany(anchor ?? ""),
+    enabled: open && anchor != null,
   });
 
   // Re-seed on open, and when a different row's renewal is what just opened:
@@ -195,10 +174,10 @@ export function ContractRenewModal({
       renewContract(submitted.predecessor, submitted.draft, submitted.dealId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -208,8 +187,10 @@ export function ContractRenewModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("contracts.renew.title")}</h2>
-      <p className="t-caption">{t("contracts.renew.hint")}</p>
+      <Heading size="large" id={titleId}>
+        {t("contracts.renew.title")}
+      </Heading>
+      <p>{t("contracts.renew.hint")}</p>
 
       <ContractTermsFields
         draft={draft}
@@ -220,32 +201,34 @@ export function ContractRenewModal({
       {/* Never required: the API path this mirrors has always accepted a
           renewal with no deal, and a picker that refused to submit without
           one would refuse an agreement the server has always allowed. */}
-      <Field
-        label={t("contracts.renew.deal")}
-        hint={t("contracts.renew.dealHint")}
-      >
-        {(props) => (
-          <Select
-            {...props}
-            value={dealId}
-            onChange={setDealId}
-            disabled={deals.isPending}
-            options={[
-              { value: "", label: t("contracts.renew.dealNone") },
-              ...(deals.data ?? []).map((deal) => ({
-                value: deal.id,
-                label: deal.name,
-              })),
-            ]}
-          />
-        )}
-      </Field>
-
-      {renew.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(renew.error, t)}
-        </p>
+      {anchor == null ? (
+        <Callout kind="standing" title={t("contracts.renew.dealWithheldTitle")}>
+          {t("contracts.renew.dealWithheldCompany")}
+        </Callout>
+      ) : (
+        <Field
+          label={t("contracts.renew.deal")}
+          hint={t("contracts.renew.dealHint")}
+        >
+          {(props) => (
+            <Select
+              {...props}
+              value={dealId}
+              onChange={setDealId}
+              disabled={deals.isPending}
+              options={[
+                { value: "", label: t("contracts.renew.dealNone") },
+                ...(deals.data ?? []).map((deal) => ({
+                  value: deal.id,
+                  label: deal.name,
+                })),
+              ]}
+            />
+          )}
+        </Field>
       )}
+
+      {renew.error && <RefusalLine error={renew.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -269,7 +252,7 @@ export function ContractRenewModal({
 }
 
 // A status is a fact a human asserted, never inferred from a date — the same
-// invariant contract_lifecycle.go's own comment states. This is that assertion's
+// invariant contract_lifecycle.go states. This is that assertion's
 // only door: one Select, one submit, and the version the row was read at.
 async function changeContractStatus(
   contract: Contract,
@@ -321,10 +304,10 @@ export function ContractStatusModal({
     }) => changeContractStatus(submitted.contract, submitted.status),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -332,7 +315,9 @@ export function ContractStatusModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("contracts.statusChange.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("contracts.statusChange.title")}
+      </Heading>
 
       <Field label={t("contracts.statusChange.label")}>
         {(props) => (
@@ -348,11 +333,7 @@ export function ContractStatusModal({
         )}
       </Field>
 
-      {assert.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(assert.error, t)}
-        </p>
-      )}
+      {assert.error && <RefusalLine error={assert.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -440,10 +421,10 @@ export function ContractCancelModal({
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -464,8 +445,10 @@ export function ContractCancelModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("contracts.cancel.title")}</h2>
-      <p className="t-caption">{t("contracts.cancel.hint")}</p>
+      <Heading size="large" id={titleId}>
+        {t("contracts.cancel.title")}
+      </Heading>
+      <p>{t("contracts.cancel.hint")}</p>
 
       <Field label={t("contracts.cancel.noticeOn")} required>
         {(props) => (
@@ -493,11 +476,7 @@ export function ContractCancelModal({
         )}
       </Field>
 
-      {cancel.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(cancel.error, t)}
-        </p>
-      )}
+      {cancel.error && <RefusalLine error={cancel.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

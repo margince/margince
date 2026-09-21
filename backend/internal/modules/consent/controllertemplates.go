@@ -23,16 +23,35 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // Template keys. Each names one thing the installation may say for itself.
 const (
-	// TemplateRecordConfirmation asks a person to check what is held about them.
+	// TemplateRecordConfirmation asks a contact to check what is held about them.
 	TemplateRecordConfirmation = "record_confirmation"
 	// TemplateConsentConfirmation carries the double-opt-in link.
 	TemplateConsentConfirmation = "consent_confirmation"
+	// TemplatePrivacyNotice tells a contact what is held about them and asks
+	// for nothing.
+	//
+	// Separate from the record confirmation because the two do different jobs
+	// and only one of them is owed: Art. 14 requires telling somebody, not
+	// asking them anything. It also reaches contacts the record confirmation
+	// cannot — a contact who asked us to stop is still owed their disclosure,
+	// and only CategoryPrivacyNotice survives that stop.
+	TemplatePrivacyNotice = "privacy_notice"
+	// TemplateOptOutAcknowledgement confirms that a refusal of advertising was
+	// received. Decree 91/2020/ND-CP Art. 16 owes a Vietnamese recipient one
+	// within twenty-four hours.
+	//
+	// THE ONE TEMPLATE THAT CARRIES NO LINK. It goes to somebody who has just
+	// told the product to stop, so anything beyond "we heard you" is the thing
+	// they asked not to receive — and a link asking them to do something more
+	// would read as a message that did not take the first answer.
+	TemplateOptOutAcknowledgement = "optout_acknowledgement"
 )
 
 // Rendered is one template resolved into the words that will be sent.
@@ -45,7 +64,7 @@ type Rendered struct {
 
 // ConfirmationSend is one confirmation message, ready to stage.
 type ConfirmationSend struct {
-	PersonID  ids.PersonID
+	ContactID ids.ContactID
 	Recipient string
 	// Category is what the engine is asked about. It is set from the template
 	// rather than by a caller: the whole point of the lane is that these
@@ -70,11 +89,25 @@ type ConfirmationSender interface {
 type controllerTemplate struct {
 	version  int
 	category commsauthz.Category
-	subject  string
-	// body carries the link placeholder exactly once. comms checks that against
-	// the material it is staged with and refuses a disagreement, which is what
-	// stops a message that was meant to carry a link from going out without one.
-	body string
+	// The three parts of the message, each read from the installation's own
+	// catalog rather than held as a literal here.
+	//
+	// The wording moved to platform/mailcopy because these were the last mail
+	// the product sent in hard-coded English. An installation whose screens are
+	// German asked a stranger, in English, whether it might keep writing to
+	// them — and that is the one message where being understood is the point,
+	// since an unanswered opt-in withholds the permission.
+	//
+	// The rendered body still carries the link placeholder exactly once. comms
+	// checks that against the material it is staged with and refuses a
+	// disagreement, which is what stops a message that was meant to carry a
+	// link from going out without one.
+	subject func(mailcopy.Copy) string
+	intro   func(mailcopy.Copy) string
+	closing func(mailcopy.Copy) string
+	// linkless says this template carries no one-time link, so the renderer
+	// writes no placeholder and comms stages it with no material.
+	linkless bool
 }
 
 // controllerTemplates is the closed catalog.
@@ -85,24 +118,38 @@ type controllerTemplate struct {
 // — which is both a deliverability problem and a fair reaction.
 var controllerTemplates = map[string]controllerTemplate{
 	TemplateRecordConfirmation: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryRecordConfirmation,
-		subject:  "Your details, and whether we may stay in touch",
-		body: "You can see what we have on file about you, correct anything that is wrong,\n" +
-			"and tell us whether you want to hear from us.\n\n" +
-			"  " + linkPlaceholder + "\n\n" +
-			"This link is personal to you.\n\n" +
-			"You do not have to do anything. Ignoring this changes nothing.\n",
+		subject:  func(w mailcopy.Copy) string { return w.ConfirmRecordSubject },
+		intro:    func(w mailcopy.Copy) string { return w.ConfirmRecordBody },
+		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordIgnore },
 	},
 	TemplateConsentConfirmation: {
-		version:  1,
+		version:  2,
 		category: commsauthz.CategoryConsentConfirmation,
-		subject:  "Please confirm you want to hear from us",
-		body: "You asked to hear from us. Confirming below is what turns that into a\n" +
-			"permission we will act on — until you do, we will not write to you about it.\n\n" +
-			"  " + linkPlaceholder + "\n\n" +
-			"This link is personal to you.\n\n" +
-			"If you did not ask for this, ignore it. Nothing happens until you confirm.\n",
+		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
+		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
+		closing:  func(w mailcopy.Copy) string { return w.ConfirmConsentIgnore },
+	},
+	// Version 1, because this wording has never shipped. The two above are at 2
+	// for changes made after they had.
+	TemplatePrivacyNotice: {
+		version:  1,
+		category: commsauthz.CategoryPrivacyNotice,
+		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
+		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
+		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
+	},
+	TemplateOptOutAcknowledgement: {
+		version:  1,
+		category: commsauthz.CategoryOptoutConfirmation,
+		subject:  func(w mailcopy.Copy) string { return w.OptOutAckSubject },
+		intro:    func(w mailcopy.Copy) string { return w.OptOutAckBody },
+		closing:  func(w mailcopy.Copy) string { return w.OptOutAckIgnore },
+		// The one template with nothing to click. comms refuses a body whose
+		// placeholder count disagrees with the material it was staged with, and
+		// this is staged with none.
+		linkless: true,
 	},
 }
 
@@ -135,15 +182,31 @@ func (templateRegistry) Registered(key string, version int) bool {
 // function. The body carries a placeholder, the material rides the vault, and
 // the two meet in memory at dispatch — so the link is absent from the delivery
 // row, the timeline, the audit entry and the outbox event alike.
-func RenderControllerTemplate(key string, expiresAt time.Time) (Rendered, commsauthz.Category, error) {
+func RenderControllerTemplate(key string, expiresAt time.Time, language string) (Rendered, commsauthz.Category, error) {
 	t, ok := controllerTemplates[key]
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
 	}
-	body := t.body
-	if !expiresAt.IsZero() {
-		body = strings.Replace(body, "This link is personal to you.",
-			"This link is personal to you and works until "+expiresAt.Format("2 January 2006")+".", 1)
+	words := mailcopy.For(language)
+	var body strings.Builder
+	if t.linkless {
+		// NOTHING TO CLICK and nothing about a link's life, so the personal-link
+		// sentence and the expiry line are both absent rather than rendered
+		// about a link that does not exist.
+		body.WriteString(t.intro(words) + "\n\n" + t.closing(words) + "\n")
+		return Rendered{
+			Key: key, Version: t.version, Subject: t.subject(words),
+			Body: body.String(),
+		}, t.category, nil
 	}
-	return Rendered{Key: key, Version: t.version, Subject: t.subject, Body: body}, t.category, nil
+	body.WriteString(t.intro(words) + "\n\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
+	if !expiresAt.IsZero() {
+		// Appended to the personal-link sentence rather than substituted into
+		// it: the shipped English replaced a phrase inside its own body text,
+		// which stops working the moment a language spells that sentence
+		// differently.
+		fmt.Fprintf(&body, words.ConfirmExpiry, expiresAt.Format(mailcopy.DateLayout))
+	}
+	body.WriteString("\n\n" + t.closing(words) + "\n")
+	return Rendered{Key: key, Version: t.version, Subject: t.subject(words), Body: body.String()}, t.category, nil
 }

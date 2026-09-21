@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly reports removal of the Strategic Account tag from Vorort Systeme KG using the verb 'removed', stating it as a completed action.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record.",
+  "answer": "Vorort Systeme KG: Strategic Account, which I removed. There are no retired tags on this record.\n\nStrategic Account remains in use on the other accounts. K5 Conference 2025 never came up.\n\nOne limitation: I cannot remove a tag from a person record the same way."
+}

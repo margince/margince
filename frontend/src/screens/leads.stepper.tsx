@@ -51,7 +51,7 @@ export function LeadStepper({
 }: Readonly<{
   lead: Lead;
   pending: boolean;
-  // Why no step may be taken — a terminal lead, or an overlay mirror.
+  // Why no step may be taken — a terminal lead, say.
   readOnlyReason?: string;
   onStep: (status: LadderOpenStep) => void;
   onQualify: () => void;

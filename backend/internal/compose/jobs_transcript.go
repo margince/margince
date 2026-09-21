@@ -72,7 +72,7 @@ func transcriptProposeInsertOpts() *river.InsertOpts {
 //
 // It does NOT reuse deep read's withClaimedRequester, which names agent:deepread.
 // Borrowing it stamped every transcript proposal as proposed by the site
-// crawler — so the inbox told the person deciding a proposal that something
+// crawler — so the inbox told the contact deciding a proposal that something
 // which never ran had read it. Provenance is written once and never
 // re-derived, which is exactly why it cannot be borrowed from a neighbour.
 func withTranscriptReader(ctx context.Context, requestedBy string, readID ids.UUID) context.Context {

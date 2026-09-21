@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -103,7 +103,7 @@ const TIER_FIELD: VocabularyField = {
 
 function preview(rows: readonly Record<string, unknown>[]): FilterPreview {
   return {
-    resource: "person",
+    resource: "contact",
     match_count: rows.length,
     columns: ["id", "full_name", "cf_loyalty_tier"],
     rows: rows as FilterPreview["rows"],

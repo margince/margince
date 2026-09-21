@@ -23,7 +23,7 @@ import (
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
 
-	// The composed extension set (ADR-0069): the generated module under
+	// The composed extension set (ADR-0120): the generated module under
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 func main() {
@@ -63,7 +64,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	// Register the composed extension set before anything serves; a
-	// failing registration aborts the boot (ADR-0069 EXT-P4). ONE
+	// failing registration aborts the boot (ADR-0120 EXT-P4). ONE
 	// snapshot serves registration and the boot inventory below, so both
 	// observe the same declarations.
 	extensions := composition.Extensions()
@@ -101,7 +102,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, vault, logger, stdout, license)
+	// AllowTestMailbox is an operations.* kill switch (deployconfig.Operations),
+	// not a capture.* tuning knob, so it is set here rather than folded into
+	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
+	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
+	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
 	}
@@ -109,6 +115,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	rdb, closeRedis := sharedRedisClient(cfg, logger)
 	defer closeRedis()
+
+	// Every ceiling this role serves counts in that one Redis from here on, so
+	// N replicas enforce ONE limit rather than N. Before the surfaces are
+	// built, not because construction order matters — the registry reaches
+	// limiters made either side of this line — but because the line belongs
+	// where the client it shares is opened.
+	ratelimit.ShareProcess(rdb)
 
 	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
@@ -122,11 +135,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the role that serves agent principals, so leaving it fail-closed would
 	// refuse every agent read an api with Redis configured could count.
 	volumeMeter := agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow)
-	overlayOpts, err := overlayOptions(cfg, deployCfg, rdb, volumeMeter, pool, logger, stdout)
-	if err != nil {
-		return err
-	}
-	opts = append(opts, overlayOpts...)
+	opts = append(opts, agentVolumeOptions(volumeMeter)...)
 
 	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, logger, stdout)
 	if err != nil {
@@ -275,15 +284,21 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// registry rebuilds in WithKeyvault/WithGraphCapture apply it too — not just
 	// the Gmail path WithGmailCapture threads it into (ADR-0072).
 	opts = append(opts, compose.WithCaptureConfig(capCfg))
-	// Always applied, including the empty default — which SERVES the
-	// exposition, so the posture is said out loud here rather than left for
-	// somebody to infer from an absent variable. The same reason the two
-	// unset-base-URL warnings exist: an installation whose /metrics is
-	// reachable from further away than its operator assumes needs to see that
-	// in the boot log, not discover it from who is scraping it.
+	// Always applied, including the empty default — which REFUSES every
+	// scrape — so the posture is said out loud here rather than left for
+	// somebody to infer from an absent variable. An open endpoint is warned
+	// about for the reason the two unset-base-URL warnings exist: an
+	// installation whose /metrics is reachable from further away than its
+	// operator assumes needs to see that in the boot log, not discover it from
+	// who is scraping it. A closed one without a token is said once too,
+	// because a scraper answered 401 is otherwise a mystery.
 	opts = append(opts, compose.WithMetricsToken(cfg.metricsToken))
-	if cfg.metricsToken == "" {
-		logger.Warn("api: MARGINCE_METRICS_TOKEN is unset — /metrics is served to anything that reaches this port, and its exposition carries workspace ids; set the variable to require a Bearer credential")
+	switch {
+	case cfg.metricsAccess == metricsAccessOpen:
+		opts = append(opts, compose.WithOpenMetrics())
+		logger.Warn("api: MARGINCE_METRICS_ACCESS=open — /metrics is served to anything that reaches this port, and its exposition names every route and carries workspace ids; keep the port contained")
+	case cfg.metricsToken == "":
+		logger.Info("api: /metrics refuses every scrape — set MARGINCE_METRICS_TOKEN to require a Bearer credential, or MARGINCE_METRICS_ACCESS=open where the port is already contained")
 	}
 	if cfg.publicBaseURL != "" {
 		opts = append(opts, compose.WithPublicBaseURL(cfg.publicBaseURL))
@@ -314,16 +329,14 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	}
 	opts = append(opts, blobOpts...)
 
-	// Validate the overlay backfill cap unconditionally: an invalid
-	// MARGINCE_OVERLAY_BACKFILL_LIMIT is a boot error whether or not a vault
-	// is configured (the value is only USED when a vault wires the overlay
-	// surface, but "invalid → boot error, never a silent default" must not
-	// hinge on that).
-	overlayBackfillLimit, err := overlayBackfillLimitFromEnv()
-	if err != nil {
+	// The refusal half of the auto-enrich daily cap: this role spends it too
+	// (an approval accept can queue a domain-triage read), so a typo fails the
+	// boot here; compose resolves the value where it is spent, from the same
+	// process environment, which is fixed at exec.
+	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return nil, nil, nil, fmt.Errorf("api: %w", err)
 	}
-	kvOpts, err := keyvaultOptions(pool, vault, stdout, overlayBackfillLimit)
+	kvOpts, err := keyvaultOptions(pool, vault, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -437,29 +450,13 @@ func schemaPoolOptions(ctx context.Context, schemaDSN string, stdout io.Writer) 
 	// more than one DDL statement per table at a time; a handful of
 	// connections is a deliberately small footprint for a rare admin path,
 	// next to the app pool's MaxConns=16 default (database.NewPool).
-	pool, err := database.NewPool(ctx, withPoolMaxConns(schemaDSN, 3))
+	// No request ceiling: this pool runs ALTERs, and an index or constraint
+	// added to a populated table is not request-shaped work.
+	pool, err := database.NewPool(ctx,
+		database.WithoutRequestCeilings(database.WithDSNParam(schemaDSN, "pool_max_conns", "3")))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("api: schema pool: %w", err)
 	}
 	_, _ = fmt.Fprintln(stdout, "api custom-field schema changes enabled (schema pool configured)")
 	return []compose.Option{compose.WithSchemaPool(pool)}, pool, pool.Close, nil
-}
-
-// withPoolMaxConns appends a pool_max_conns limit to dsn unless the
-// operator already sized the pool themselves (database.NewPool's own
-// DSN-wins-over-default rule) — the URL and keyword/value DSN forms take
-// the query-parameter and space-separated keyword spellings respectively.
-func withPoolMaxConns(dsn string, n int) string {
-	if strings.Contains(dsn, "pool_max_conns") {
-		return dsn
-	}
-	param := fmt.Sprintf("pool_max_conns=%d", n)
-	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
-		sep := "?"
-		if strings.Contains(dsn, "?") {
-			sep = "&"
-		}
-		return dsn + sep + param
-	}
-	return dsn + " " + param
 }

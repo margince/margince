@@ -15,7 +15,7 @@ import (
 
 // Handlers is the notices transport: settle one, and raise one for a teammate.
 // There is no listing — a notice's content reaches its reader on the Worklist's
-// notices lane, and a person reads only their own.
+// notices lane, and a reader reads only their own.
 type Handlers struct {
 	store *Store
 	mates Teammates
@@ -27,7 +27,7 @@ func NewHandlers(store *Store, mates Teammates) Handlers {
 	return Handlers{store: store, mates: mates}
 }
 
-// RaiseNotice records one person's coaching nudge to a teammate.
+// RaiseNotice records one colleague's coaching nudge to a teammate.
 func (h Handlers) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.RaiseNoticeRequest
 	if !httperr.Decode(w, r, &req) {
@@ -63,7 +63,7 @@ func noticeWire(n Notice) crmcontracts.Notice {
 	return out
 }
 
-// MarkNoticeRead settles one notice for the acting person.
+// MarkNoticeRead settles one notice for the acting contact.
 func (h Handlers) MarkNoticeRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	if err := h.store.MarkRead(r.Context(), ids.UUID(id)); err != nil {
 		httperr.Write(w, r, err)

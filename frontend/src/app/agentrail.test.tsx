@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,13 +26,14 @@ import {
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   AGENT_EDGE_STILL,
   clearAgentEdge,
   currentAgentEdge,
 } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { LABELS, TASK_SAID, VOCABULARY } from "./agentrail-copy";
+import { VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
@@ -75,7 +76,7 @@ const CONNECTED: Connector = {
 
 const CANDIDATE = (id: string): Candidate => ({
   id,
-  entity_type: "organization",
+  entity_type: "company",
   left_id: "o-1",
   right_id: "o-2",
   confidence: 0.91,
@@ -169,9 +170,9 @@ const EMPTY_USAGE = {
   budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" as const },
 };
 
-const ORG_360_VIEW = {
+const COMPANY_360_VIEW = {
   as_of: "2026-08-01T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     captured_by: "human:u1",
@@ -181,7 +182,7 @@ const ORG_360_VIEW = {
     updated_at: "2026-06-01T08:00:00Z",
   },
   sections_omitted: [],
-  people: { data: [], page: emptyPage },
+  contacts: { data: [], page: emptyPage },
   deals: {
     data: [],
     page: emptyPage,
@@ -270,7 +271,7 @@ function stubAgentRailApi(routes: FetchRoutes = {}) {
       return routes.license ? routes.license() : jsonResponse(LICENSE("valid"));
     }
     if (pathname.endsWith("/360")) {
-      return jsonResponse({ state: "ready", view: ORG_360_VIEW });
+      return jsonResponse({ state: "ready", view: COMPANY_360_VIEW });
     }
     return jsonResponse({ data: [], page: emptyPage });
   });
@@ -386,7 +387,7 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("idle"),
     );
-    await settlesOnLine(container, LABELS.allClear);
+    await settlesOnLine(container, en["agent.line.allClear"]);
   });
 
   it("goes to error and names the source when a connector cannot reach it", async () => {
@@ -421,7 +422,7 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
-    await settlesOnLine(container, LABELS.noModel);
+    await settlesOnLine(container, en["agent.fact.noModel"]);
   });
 
   // Development is not a fault — the runtime answers, every answer it gives
@@ -549,7 +550,7 @@ describe("AgentRail", () => {
     // in the markup from the first render, so waiting for the element alone
     // would let this pass before the 500 ever reached React Query, which is the
     // one moment the assertion is supposed to be about.
-    await settlesOnLine(container, LABELS.allClear);
+    await settlesOnLine(container, en["agent.line.allClear"]);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
@@ -595,7 +596,10 @@ describe("AgentRail", () => {
         }),
     });
     const { container } = render(ROUTE);
-    await settlesOnLine(container, `3 ${LABELS.waiting}`);
+    await settlesOnLine(
+      container,
+      en["agent.line.waiting_other"].replace("{count}", "3"),
+    );
     expect(block(container).querySelector(".arbadge")).toBeNull();
   });
 
@@ -612,7 +616,7 @@ describe("AgentRail", () => {
         jsonResponse({ data: [CANDIDATE("d-1"), CANDIDATE("d-2")] }),
     });
     const { container } = render(ROUTE);
-    await settlesOnLine(container, LABELS.allClear);
+    await settlesOnLine(container, en["agent.line.allClear"]);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
 
     await openPanel(user, container);
@@ -633,7 +637,9 @@ describe("AgentRail", () => {
     await openPanel(user, container);
     expect(container.querySelector(".arbadge")).toBeNull();
     expect(
-      screen.queryByRole("link", { name: new RegExp(`^${LABELS.approvals}`) }),
+      screen.queryByRole("link", {
+        name: new RegExp(`^${en["agent.panel.decisions"]}`),
+      }),
     ).toBeNull();
   });
 
@@ -649,9 +655,11 @@ describe("AgentRail", () => {
     // unread count is reported by saying nothing, never by an all-clear the
     // panel never read. (The resting LINE above it is a different reading with
     // its own rules and is not what this asserts.)
-    expect(panel().textContent).not.toContain(LABELS.acrossWorkspace);
+    expect(panel().textContent).not.toContain(en["agent.panel.needsYou"]);
     expect(
-      screen.queryByRole("link", { name: new RegExp(`^${LABELS.approvals}`) }),
+      screen.queryByRole("link", {
+        name: new RegExp(`^${en["agent.panel.decisions"]}`),
+      }),
     ).toBeNull();
   });
 
@@ -660,22 +668,21 @@ describe("AgentRail", () => {
     stubAgentRailApi();
     const { container } = render(ROUTE);
     await openPanel(user, container);
-    // Scoped to the workspace section on purpose: the resting LINE in the
-    // header reads all-clear too, so a whole-panel match would still pass with
-    // this paragraph gone and prove nothing about the answered zero.
+    // The section's OWN sentence. This used to be scoped to the workspace
+    // section by hand, because the resting line in the head said "Nothing needs
+    // you" too and a whole-panel match would have passed with the paragraph
+    // gone; the two no longer share a sentence, so matching one matches it.
     await waitFor(() =>
-      expect(
-        [...panel().querySelectorAll(".arsect")]
-          .find((section) =>
-            section.textContent?.includes(LABELS.acrossWorkspace),
-          )
-          ?.querySelector(".arnone")?.textContent,
-      ).toBe(LABELS.allClear),
+      expect(panel().querySelector(".arnone")?.textContent).toBe(
+        en["agent.panel.nothingWaiting"],
+      ),
     );
     // A real zero is an answer, not a tile: "0 Decisions waiting" is a number
     // nobody has to act on dressed as one somebody does.
     expect(
-      screen.queryByRole("link", { name: new RegExp(`^${LABELS.approvals}`) }),
+      screen.queryByRole("link", {
+        name: new RegExp(`^${en["agent.panel.decisions"]}`),
+      }),
     ).toBeNull();
   });
 
@@ -695,7 +702,7 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(
         screen.queryByRole("link", {
-          name: new RegExp(`^${LABELS.approvals}`),
+          name: new RegExp(`^${en["agent.panel.decisions"]}`),
         }),
       ).toBeNull(),
     );
@@ -800,7 +807,7 @@ describe("AgentRail", () => {
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
-        LABELS.unreadable,
+        en["agent.fact.hidden"],
       ),
     );
   });
@@ -812,7 +819,7 @@ describe("AgentRail", () => {
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
-        LABELS.noCallsYet,
+        en["agent.fact.noCalls"],
       ),
     );
   });
@@ -847,10 +854,13 @@ describe("AgentRail", () => {
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
-        LABELS.noCallsYet,
+        en["agent.fact.noCalls"],
       ),
     );
     expect(container.querySelector(".arspend")).toBeNull();
+    // Whether the panel is open is a fact about the block rather than about the
+    // money, so the line the two share outlives the figure on it.
+    expect(container.querySelector(".arlast > .archev")).not.toBeNull();
   });
 
   // The exact figure, not merely a figure: 120 minor units of the budget's
@@ -864,6 +874,11 @@ describe("AgentRail", () => {
         "$1.20",
       ),
     );
+    // And on the same line as the disclosure: one row of chrome, not a figure
+    // with a chevron half a line below it.
+    const foot = container.querySelector(".arlast");
+    expect(foot?.querySelector(".arspend")).not.toBeNull();
+    expect(foot?.querySelector(".archev")).not.toBeNull();
   });
 
   // The server serves the figure on `ai_diagnostics:read`, which the ops seat
@@ -880,17 +895,17 @@ describe("AgentRail", () => {
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
-        LABELS.noCallsYet,
+        en["agent.fact.noCalls"],
       ),
     );
     expect(container.querySelector(".arspend")).toBeNull();
     expect(panel().querySelector(".arpmoney")).toBeNull();
     expect(panel().querySelector(".armeta")?.textContent).not.toContain(
-      LABELS.spend,
+      en["agent.rail.spend"],
     );
     expect(
       container.querySelector(".artoggle")?.getAttribute("aria-label"),
-    ).not.toContain(LABELS.spend);
+    ).not.toContain(en["agent.rail.spend"]);
     // Withheld at the source, not only at the paint: a figure the seat may not
     // see is a figure the client never asks for.
     expect(
@@ -898,52 +913,6 @@ describe("AgentRail", () => {
         new URL(request.url).pathname.endsWith("/ai/usage"),
       ),
     ).toBe(false);
-  });
-
-  // The wire carries the invocation-site token (`capture_classify`); the
-  // recap owes the reader the plain-language line, never the token itself —
-  // a recap that leaked the token would tell a salesperson something ran five
-  // times and nothing about what.
-  it("recaps a call in plain words, not the raw task token", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [AI_CALL],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: [AI_CALL.task],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(screen.getByText(TASK_SAID.capture_classify)).toBeTruthy(),
-    );
-    expect(panel().textContent).not.toContain("capture_classify");
-    expect(
-      screen.getByRole("link", { name: LABELS.fullLog }).getAttribute("href"),
-    ).toBe("#/settings/ai");
-  });
-
-  // A task named `constructor` is a plain string off the wire, but a bare
-  // lookup into an object answers it from `Object.prototype` with a function
-  // React then tries to render — `saidFor` guards with `Object.hasOwn`
-  // precisely so the recap still shows the humanised token.
-  it("shows the humanised token, not a function, for a task named constructor", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [{ ...AI_CALL, task: "constructor" }],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: ["constructor"],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() => expect(screen.getByText("constructor")).toBeTruthy());
   });
 
   // Only a company record serves a 360 read; every other screen must not ask
@@ -972,7 +941,10 @@ describe("AgentRail", () => {
     // its count. It is not published to the margins: a contour standing for as
     // long as the queue does is a ring around the window on any installation
     // with work in it.
-    await settlesOnLine(view.container, `1 ${LABELS.waiting}`);
+    await settlesOnLine(
+      view.container,
+      en["agent.line.waiting_one"].replace("{count}", "1"),
+    );
     expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
 
     // Sign out mid-read and the login screen would otherwise inherit a lit
@@ -1011,7 +983,8 @@ describe("AgentRail", () => {
     id: "019f7e65-fbf7-7114-b114-40af4af63a01",
     kind: "morning_brief",
     state: "running",
-    started_at: "2026-08-21T05:00:00Z",
+    // Relative: the resting line ages a settled run out (agentrail-resting.ts).
+    started_at: new Date(Date.now() - 60_000).toISOString(),
     ...over,
   });
 
@@ -1048,12 +1021,12 @@ describe("AgentRail", () => {
         jsonResponse({ running: [], recent: settled, faults: [fault] }),
     });
 
-  const BRIEF_RUNNING = "I'm putting your morning brief together.";
+  const BRIEF_RUNNING = "I'm writing your morning brief.";
 
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
 
-  // The work a person ASKS for, which is the case the rail was silent on until
+  // The work a contact ASKS for, which is the case the rail was silent on until
   // the router could say `running`. Asserted at RENDER and not against the map:
   // the copy existing is not the claim — the claim is that a live summarize
   // reaches the reader's own line, in their own words, through the same feed
@@ -1062,23 +1035,20 @@ describe("AgentRail", () => {
   // NAMED, because that is the line that answers the reader: the server sends
   // the record the summary is about as `subject_label`, and the rail says
   // "about Acme" rather than "about this company" — which was wrong for a
-  // person or a meeting and told a rep nothing for a company.
+  // contact or a meeting and told a rep nothing for a company.
   it("names the record a summary is about while it is still being written", async () => {
     withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render(ROUTE);
-    await settlesOnLine(
-      container,
-      "I'm pulling together what I know about Acme.",
-    );
+    await settlesOnLine(container, "I'm summarising Acme.");
   });
 
   // The name is the way to the record. A company's name goes to the company,
-  // a person's to the contact, through the same address every other link in
+  // a contact's to the contact, through the same address every other link in
   // the app uses for that record — and following it is leaving for the
   // record, not opening the panel.
   it.each([
-    ["organization", "Acme", "#/companies/"],
-    ["person", "Ana Roth", "#/contacts/"],
+    ["company", "Acme", "#/companies/"],
+    ["contact", "Ana Roth", "#/contacts/"],
   ])(
     "links the %s a summary is about to its record",
     async (subjectType, name, page) => {
@@ -1093,10 +1063,7 @@ describe("AgentRail", () => {
       );
       const user = userEvent.setup();
       const { container } = render(ROUTE);
-      await settlesOnLine(
-        container,
-        `I'm pulling together what I know about ${name}.`,
-      );
+      await settlesOnLine(container, `I'm summarising ${name}.`);
       const link = container.querySelector(".arline a");
       expect(link?.textContent).toBe(name);
       expect(link?.getAttribute("href")).toBe(`${page}${id}`);
@@ -1124,10 +1091,7 @@ describe("AgentRail", () => {
       }),
     );
     const { container } = render(ROUTE);
-    await settlesOnLine(
-      container,
-      "I'm pulling together what I know about the cutover review.",
-    );
+    await settlesOnLine(container, "I'm summarising the cutover review.");
     expect(container.querySelector(".arline a")).toBeNull();
   });
 
@@ -1140,16 +1104,13 @@ describe("AgentRail", () => {
       RUN({
         kind: "account_scan",
         subject_label: "Brandt Automotive",
-        subject_type: "organization",
+        subject_type: "company",
         subject_id: id,
       }),
     );
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    await settlesOnLine(
-      container,
-      "I'm reading Brandt Automotive's exchanges and deals.",
-    );
+    await settlesOnLine(container, "I'm reading Brandt Automotive's history.");
     await openPanel(user, container);
     const links = [...panel().querySelectorAll("a")].filter(
       (a) => a.getAttribute("href") === `#/companies/${id}`,
@@ -1166,7 +1127,7 @@ describe("AgentRail", () => {
   it("names no record for a summary that carried no name", async () => {
     withRuns(RUN({ kind: "summarize" }));
     const { container } = render(ROUTE);
-    await settlesOnLine(container, "I'm pulling a summary together.");
+    await settlesOnLine(container, "I'm writing a summary.");
   });
 
   it("moves the Core to working when a server run is live and this tab is idle", async () => {
@@ -1278,7 +1239,7 @@ describe("AgentRail", () => {
   // grace keeps running its agent, so amber-for-the-licence and a live run are
   // true at once — and the licence outranks the run, which means the run's
   // sentence must not caption it. Captioning an amber orb "I'm putting your
-  // morning brief together" tells a reader the brief is the fault.
+  // morning brief" tells a reader the brief is the fault.
   it("never captions a state with a run that did not cause it", async () => {
     stubAgentRailApi({
       license: () =>
@@ -1331,7 +1292,7 @@ describe("AgentRail", () => {
     );
   });
 
-  // The crawl a person starts from a company page, reported by the dossier row
+  // The crawl a contact starts from a company page, reported by the dossier row
   // itself rather than by the settled model calls it makes — which is what lets
   // the orb hold `ingest` for the whole read instead of resting between calls.
   // The line names the company, because the source sent its name.
@@ -1357,7 +1318,7 @@ describe("AgentRail", () => {
   });
 
   // The overnight case, which is the whole reason a fault is acknowledged rather
-  // than decayed: a run fails at four in the morning and the person it ran for
+  // than decayed: a run fails at four in the morning and the contact it ran for
   // is asleep, so whatever the orb does at 04:12 is seen by nobody. It holds
   // until the panel has actually been opened.
   it("holds a failed run on the Core until the panel has been opened", async () => {
@@ -1418,11 +1379,11 @@ describe("AgentRail", () => {
     const { container } = render(ROUTE);
     await openPanel(user, container);
     await waitFor(() => expect(runLines()).toEqual([BRIEF_RUNNING]));
-    const headings = [...panel().querySelectorAll(".arsect h2")].map(
+    const headings = [...panel().querySelectorAll(".arsect h3")].map(
       (el) => el.textContent,
     );
     expect(headings[0]).toBe("Running now");
-    expect(headings).toContain(LABELS.acrossWorkspace);
+    expect(headings).toContain(en["agent.panel.needsYou"]);
   });
 
   // `degrade_reason` is server-authored operator vocabulary and untranslated.
@@ -1430,7 +1391,7 @@ describe("AgentRail", () => {
   // raw token reaches no surface at all.
   it("keeps the degrade reason out of the line and out of the panel", async () => {
     const reason = "brief_partial: crm_read_timeout";
-    const stopped = "I got partway through your morning brief and stopped.";
+    const stopped = "I stopped partway through your morning brief.";
     withSettled(RUN({ state: "degraded", degrade_reason: reason }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
@@ -1459,22 +1420,21 @@ describe("AgentRail", () => {
     expect(panel().textContent).not.toContain("telepathic_prospecting");
   });
 
-  // A settled run reaches the reader through the RESTING ROTATION on the card
-  // and nowhere else: the panel lists live work only, so a day of finished
-  // runs draws no list there. `recent` is bounded to today, so the rotation
-  // never pins a "ready" that would still be announcing this morning at six
-  // in the evening.
-  it("reads a run that finished today in the resting line, not as a panel list", async () => {
+  // A settled run reaches the reader twice: the resting rotation says what the
+  // agent has just got done, the recap lists the day's. It reaches the RUNNING
+  // section in neither case. The two bounds differ — agentrail.resting.test.tsx
+  // holds the rotation's.
+  it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    // Nothing is live, so the orb rests — and the line is the settled run,
-    // which is the only true thing this installation has to say.
     await settlesOnLine(container, "Your morning brief is ready.");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);
     expect(runLines()).toEqual([]);
-    expect(panel().textContent).not.toContain("Finished today");
     expect(panel().textContent).not.toContain("Running now");
+    expect(
+      panel().querySelector(".aritem:not(.arempty)")?.textContent,
+    ).toContain("Your morning brief is ready.");
   });
 });

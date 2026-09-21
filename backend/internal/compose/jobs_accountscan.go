@@ -16,13 +16,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/compose/org360"
-	"github.com/margince/margince/backend/internal/compose/orgscan"
+	"github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,10 +33,10 @@ import (
 // The row is the authority on all four; the args are what lets the worker
 // find it.
 type AccountScanArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
-	ScanID         ids.UUID `json:"scan_id"`
-	ViewerID       ids.UUID `json:"viewer_id"`
+	Workspace ids.UUID `json:"workspace_id"`
+	CompanyID ids.UUID `json:"company_id"`
+	ScanID    ids.UUID `json:"scan_id"`
+	ViewerID  ids.UUID `json:"viewer_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -70,36 +70,42 @@ func accountScanInsertOpts() *river.InsertOpts {
 // every ensure rather than queueing reads nothing works.
 func WithAccountScan(inserter *jobs.Runner, brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		var enqueue orgscan.Enqueue
+		var enqueue companyscan.Enqueue
 		if inserter != nil {
-			enqueue = func(ctx context.Context, tx pgx.Tx, scan orgscan.Queued) error {
+			enqueue = func(ctx context.Context, tx pgx.Tx, scan companyscan.Queued) error {
 				return inserter.EnqueueTx(ctx, tx, AccountScanArgs{
-					Workspace: storekit.MustWorkspace(ctx), OrganizationID: scan.OrgID.UUID,
+					Workspace: storekit.MustWorkspace(ctx), CompanyID: scan.CompanyID.UUID,
 					ScanID: scan.ScanID, ViewerID: scan.ViewerID.UUID,
 				}, accountScanInsertOpts())
 			}
 		}
-		s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, brain, enqueue, routingVersion, time.Now, s.log)
-		s.orgScanHandlers = orgscan.NewHandlers(s.orgScanSvc, s.sorDispatch.isOverlay)
-		s.org360Svc.RecogniseScanFindings(s.orgScanSvc)
+		s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, brain, enqueue, routingVersion, time.Now, s.log).
+			WithEmailSummaries(emailRows(pool))
+		s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc)
+		s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
 	}
 }
 
 // accountScanWorker reads one queued scan.
 type accountScanWorker struct {
-	svc   *orgscan.Service
+	svc   *companyscan.Service
 	users *identity.Service
 	log   *slog.Logger
 }
 
 // newAccountScanWorker builds the worker role's scan service over its own
 // composite read: the worker never queues, so it carries no enqueuer.
+//
+// It carries no email-summary reader either, and that is not an omission. The
+// worker only ever calls Run, which writes findings; the summaries are attached
+// by wire, on the reader's side, out of the reader's own grants. A reader here
+// would be wired to a code path that never asks it anything.
 func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion func() string, log *slog.Logger) *accountScanWorker {
-	view := org360.NewService(pool, people.NewStore(InstallationDB(pool)),
+	view := company360.NewService(pool, contacts.NewStore(InstallationDB(pool)),
 		deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
 		approvals.NewService(InstallationDB(pool)), time.Now)
 	return &accountScanWorker{
-		svc:   orgscan.NewService(pool, view, view, brain, nil, routingVersion, time.Now, log),
+		svc:   companyscan.NewService(pool, view, view, brain, nil, routingVersion, time.Now, log),
 		users: identity.NewService(pool),
 		log:   log,
 	}
@@ -113,11 +119,11 @@ func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScan
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	runCtx, err := orgscan.WorkerContext(wsCtx, w.users, ids.From[ids.UserKind](job.Args.ViewerID), job.Args.ScanID)
+	runCtx, err := companyscan.WorkerContext(wsCtx, w.users, ids.From[ids.UserKind](job.Args.ViewerID), job.Args.ScanID)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	err = w.svc.Run(runCtx, job.Args.ScanID, ids.From[ids.OrganizationKind](job.Args.OrganizationID))
+	err = w.svc.Run(runCtx, job.Args.ScanID, ids.From[ids.CompanyKind](job.Args.CompanyID))
 	var deferral *ai.BudgetDeferralError
 	if !errors.As(err, &deferral) {
 		return jobs.FaultContext(ctx, err)

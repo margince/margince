@@ -207,7 +207,7 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
 	RegisterGeoProbeTool(r)
-	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
+	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
@@ -218,6 +218,15 @@ func fullRegistry(t *testing.T) *Registry {
 	// where the production renderer belongs and the encoding walk would be
 	// checking the double's schema.
 	RegisterReportVocabularyTool(r, NewReportVocabularyResource(probeReportCatalog))
+	// The real resource again, and for the same reason: the write vocabulary is
+	// composed from the contract shapes alone — no pool, no seam — so a stub
+	// would put a double where the production renderer belongs.
+	RegisterRecordFieldsTool(r, RecordFieldsResource{})
+	// The analytics vocabulary's production renderer lives with the derived
+	// schema in the composition root, which this module cannot import — so the
+	// encoding walk checks the tool over a stub document. The schema it
+	// verifies is the tool's own, which restates nothing about the document.
+	RegisterAnalyticsVocabularyTool(r, &fakeAnalyticsVocabulary{doc: "pipeline-current\n"})
 	RegisterContextSearchTool(r, nil, inertRetriever{})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, nil
@@ -250,7 +259,11 @@ func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.
 	return nil, nil
 }
 
-func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
+func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
 

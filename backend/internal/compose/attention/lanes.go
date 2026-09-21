@@ -11,33 +11,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// What each lane READS, and the shape it reads it into.
+// What each lane READS, and the shape it reads it into. Every one is an
+// interface a compose seam binds to the owning module, which is what lets this
+// package assemble a day without importing one. Apart from the assembly in
+// feed.go because this is the surface another package implements.
 //
-// Every one is an interface a compose seam binds to the owning module, which is
-// what lets this package assemble a day without importing a single module. They
-// sit apart from the assembly in feed.go because they are the surface another
-// package implements: a reader adding a lane needs this file and not the rest.
-//
-// The optional lanes are nil when the installation binds no reader for them,
-// and a nil lane is ABSENT from the feed rather than empty — "this feed does
-// not do commitments" is a different fact from "you owe nobody anything".
+// A nil lane is ABSENT from the feed rather than empty: "this feed does not do
+// commitments" is a different fact from "you owe nobody anything".
 
 // Approvals is the staged-proposal queue, read through its owning service.
-//
-// CountPending is separate from the page because the lane is bounded and the
-// count is not: a reader with forty decisions must be told forty, then shown
-// the nine worth one sitting.
+// CountPending is separate because the lane is bounded and the count is not: a
+// reader with forty decisions is told forty, then shown the nine worth a sitting.
 type Approvals interface {
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
 	CountPending(ctx context.Context) (int, error)
 }
 
 // MachineSender answers whether an address belongs to a sending system rather
-// than a person.
-//
-// Injected rather than imported: this package reaches no module, and the rule
-// belongs to capture, which owns what a machine sender IS. A feed given none
-// treats every address as a person's, which under-groups rather than hiding
+// than a contact. Injected rather than imported, because the rule belongs to
+// capture. A feed given none treats every address as a contact's, which
+// under-groups rather than hiding
 // anything.
 type MachineSender func(address string) bool
 
@@ -46,7 +39,7 @@ type MachineSender func(address string) bool
 // right group without reading the payload twice.
 type StagedFacts struct {
 	// MachineSender is set when the address the decision is about belongs to a
-	// sending system rather than a person.
+	// sending system rather than a contact.
 	MachineSender bool
 	// KnownCompany is set when its domain already names a company here.
 	KnownCompany bool
@@ -60,7 +53,7 @@ type ApprovalQuery struct {
 	Limit  int
 }
 
-// Duplicates is the dedupe queue, read through the people module. Every method
+// Duplicates is the dedupe queue, read through the contacts module. Every method
 // carries that module's both-sides-visible rule; nothing here re-derives it.
 //
 // DescribeMany names records of ONE entity type. It is separate from
@@ -71,6 +64,12 @@ type ApprovalQuery struct {
 // naming them one by one is twenty scoped reads on the surface a rep opens first
 // every morning. An id the reader may not see is simply ABSENT from the answer,
 // which is what its refusal meant.
+//
+// OpenCandidates answers UP TO its limit and says nothing about what it left:
+// the dedupe queue pages, and its own page maximum is smaller than the census
+// this lane reads to. So CountOpen is what says whether the lane finished, and
+// unseen.go reads the two together — a page judged by its own length reported a
+// complete day over every pair past the first one.
 //
 // DecidableSubset asks the OTHER question about the same records: not whether
 // this reader may see them, but whether they could change them. Settling a pair
@@ -132,7 +131,7 @@ const (
 	TasksMine
 	// TasksUnassigned is the open tasks assigned to nobody.
 	TasksUnassigned
-	// TasksOwnedBy is the open tasks assigned to one NAMED person — a manager
+	// TasksOwnedBy is the open tasks assigned to one NAMED contact — a manager
 	// opening the queue of the rep an exception named. The name rides beside
 	// the scope, because a scope value cannot carry one.
 	TasksOwnedBy
@@ -151,13 +150,22 @@ type Tasks interface {
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
 	CountOpenForViewer(ctx context.Context, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
+	// UpcomingForViewer answers the work due AFTER the day's end, up to a
+	// horizon, under the same narrowing.
+	//
+	// A second read rather than a wider one, because the two allocations must
+	// not compete: a full day's backlog would fill a shared limit before a
+	// single upcoming row was reached, and the reader who most needs next
+	// week's deadline is exactly the one who would never see it.
+	UpcomingForViewer(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
 type Task struct {
-	ID      ids.UUID
-	Subject string
-	DueAt   *time.Time
+	LeadResponseEscalation bool
+	ID                     ids.UUID
+	Subject                string
+	DueAt                  *time.Time
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead
@@ -176,7 +184,7 @@ type Task struct {
 	AssigneeID *ids.UUID
 	// Version is the task row's version, for the If-Match the lane's own verbs
 	// send. The lane offers `complete` and `snooze`, so a row that arrived
-	// without it can be acted on and cannot be acted on SAFELY: two people
+	// without it can be acted on and cannot be acted on SAFELY: two contacts
 	// ticking one task each overwrite the other, and neither is told.
 	Version *int64
 }
@@ -188,10 +196,12 @@ type Receipts interface {
 
 // Receipt is one completed autonomous act, reported rather than asked about.
 type Receipt struct {
-	ID         ids.UUID
-	Kind       string
-	Summary    string
-	OccurredAt time.Time
+	CloseDateChange *crmcontracts.CloseDateChange
+	Review          *crmcontracts.AppliedDealChangeReview
+	ID              ids.UUID
+	Kind            string
+	Summary         string
+	OccurredAt      time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the
 	// account it went to, and the card offers `open` only when this names one.
@@ -200,6 +210,25 @@ type Receipt struct {
 	// state: not every approval is about one.
 	TargetType string
 	TargetID   ids.UUID
+	// Undo names the audit row the record-history restore route puts back, on
+	// a receipt for work that was APPLIED rather than approved.
+	//
+	// Absent means there is nothing to offer: an approval the system decided is
+	// already a decision somebody can revisit through the record, and a
+	// correction somebody has already reversed has no second undo in it.
+	Undo *ReceiptUndo
+}
+
+// ReceiptUndo is what a receipt needs to offer a way back.
+type ReceiptUndo struct {
+	AuditLogID ids.UUID
+	// Version of the record the restore route compares against, so two contacts
+	// undoing the same change do not overwrite each other silently.
+	Version int64
+	// Reversed says somebody already put this back. The row stays and says so
+	// rather than vanishing, which would leave a reader unsure their Undo
+	// landed.
+	Reversed bool
 }
 
 // FailedEffects reads the decisions the acting rep approved whose released
@@ -242,7 +271,7 @@ type DSRCase struct {
 // deadline first, bounded. Gated exactly as DSRs is — the same
 // privacy_request object — and the lane renders that refusal as withheld.
 type NoticeCases interface {
-	OpenDueSoonest(ctx context.Context, limit int) ([]NoticeCase, error)
+	OpenDueSoonest(ctx context.Context, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]NoticeCase, error)
 }
 
 // NoticeCase is one disclosure still owed: which article obliges it, and by
@@ -254,15 +283,16 @@ type NoticeCases interface {
 // the wire does not publish, which is how a reader comes to believe a lane
 // filters on something it never sees.
 type NoticeCase struct {
-	ID   ids.UUID
-	Rule string
-	// PersonID is whose duty this is. Carried where the DSR case carries no
+	OwnerID *ids.UUID
+	ID      ids.UUID
+	Rule    string
+	// ContactID is whose duty this is. Carried where the DSR case carries no
 	// subject at all, and the difference is the reason: a subject request has
 	// its own queue screen to route to, and a notice case has none — the
-	// disclosure is sent from the person's own page. A card without the person
+	// disclosure is sent from the contact's own page. A card without the contact
 	// would prompt a reader with nowhere to go.
-	PersonID ids.UUID
-	DueAt    time.Time
+	ContactID ids.UUID
+	DueAt     time.Time
 }
 
 // Briefing is the overnight brief's queue for the acting rep, best-ranked
@@ -314,6 +344,11 @@ type BriefEntry struct {
 	// (briefs.AnnotateCurrentRun refuses one that cites outside the run), which
 	// is what makes it usable as a standing line where no deal card is cached.
 	Finding string
+	// Signal is WHY the night picked this deal — closing_soon, stalled, moved
+	// or opportunity — derived from the same factor vector the composite
+	// folded. Empty from a run stored before the signal existed, which the
+	// classifier reads as the old blanket answer rather than guessing.
+	Signal string
 }
 
 // Commitments is the rep's own outstanding promises, soonest-due first.
@@ -340,7 +375,7 @@ type Commitments interface {
 // paraphrase would be asking the reader to trust the extractor.
 type Commitment struct {
 	ID          ids.UUID
-	PersonID    ids.UUID
+	ContactID   ids.UUID
 	Body        string
 	Quote       string
 	SourceLabel string
@@ -373,11 +408,13 @@ type DealFacts interface {
 // DealFigures is what a card needs to state a deal's commercial case: what it
 // is worth, when it was meant to land, and who answers for it.
 type DealFigures struct {
-	StageID           ids.UUID
-	OwnerID           ids.UUID
-	AmountMinor       *int64
-	Currency          string
-	ExpectedCloseDate *time.Time
+	CloseDateProvisional *bool
+	ForecastCategory     *string
+	StageID              ids.UUID
+	OwnerID              ids.UUID
+	AmountMinor          *int64
+	Currency             string
+	ExpectedCloseDate    *time.Time
 	// CloseOverdue is the SAME calendar-date, workspace-zone verdict
 	// deals.CloseIsOverdue gives the at-risk lane's identical deal. Meaningless
 	// where ExpectedCloseDate is nil — a deal with no close date is not late by
@@ -385,7 +422,7 @@ type DealFigures struct {
 	CloseOverdue bool
 }
 
-// Notices is the acting person's own unread notices — the durable
+// Notices is the acting contact's own unread notices — the durable
 // informational line a system flow needed them to see. Per-user like the
 // health lanes: the read refuses a principal with no human behind it, and
 // the lane renders that refusal as withheld.
@@ -395,11 +432,18 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	ID        ids.UUID
-	Kind      string
-	Subject   string
-	Body      string
-	CreatedAt time.Time
+	Origin  *crmcontracts.NoticeOrigin
+	ID      ids.UUID
+	Kind    string
+	Subject string
+	Body    string
+	// Target names the record the notice is about, when it names one. Empty
+	// type means it names none — a capture backlog, a coach's word — and the
+	// row then carries no subject, which is what it carried before any notice
+	// stored a target at all.
+	TargetType string
+	TargetID   ids.UUID
+	CreatedAt  time.Time
 }
 
 // Introductions is the asks waiting on THIS reader to answer — a colleague
@@ -421,12 +465,12 @@ type Introductions interface {
 //
 // It names the CONTACT the introduction would be to, which is what the
 // colleague is deciding about. No display name travels: resolving one is a read
-// of that person's record, and fillSubjectLabels already makes it under the
+// of that contact's record, and fillSubjectLabels already makes it under the
 // reader's own grants (labels.go). A name carried here would be a second,
 // ungated answer to the question that pass exists to ask.
 type PendingIntroduction struct {
-	ID       ids.UUID
-	PersonID ids.UUID
+	ID        ids.UUID
+	ContactID ids.UUID
 	// Reason is the requester's own sentence for why the ask is worth making,
 	// written by them at the time. Never composed here: this queue puts no
 	// words in a colleague's mouth.

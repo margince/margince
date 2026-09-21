@@ -51,12 +51,40 @@ var ceilings = map[string]int{
 	// paragraph is a running SAVING rather than a running cost: without it the
 	// rulebook names only `make check`, so every iteration of every session pays
 	// the whole gate to learn about one lane.
-	"AGENTS.md": 330,
+	//
+	// +10 for the red-`main` claim rule. It is a running SAVING for the same
+	// reason: `main` is red often here by design, every open pull request
+	// inherits it, and without this rule each session pays a rebase and a local
+	// lane to learn that a failure is not its own — then several of them
+	// diagnose the same one at once. Nine lines here replace that. It cannot
+	// live only in `docs/`: a session that has not read the rule has no reason
+	// to go looking for the page, and by the time it would, it has already spent
+	// what the rule saves.
+	//
+	// +2 more for the collision tie-break. Listing claims and then creating one
+	// is not atomic, and two sessions reaching the same red within the same few
+	// seconds both find nothing and both claim it — which is the race the rule
+	// exists to end, arriving through the rule itself. The tie-break has to be
+	// in the rulebook rather than only in the how-to, because the session that
+	// has to stand down is the one that never opened the page.
+	//
+	// +9 for the comment budget. It is a running SAVING: the rulebook already
+	// exempts comment lines from the function ceiling and T1 asks only that a
+	// change match the surrounding file's density, which at 0.43 ratifies the
+	// drift rather than correcting it. Nine lines here are what every session
+	// otherwise pays back as prose nobody asked for — and the bar has to be in
+	// the rulebook, because a session writing the comment is the one that never
+	// opened the page.
+	"AGENTS.md": 351,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve
 	// lines a caller has to obey.
-	"frontend/AGENTS.md": 172,
+	//
+	// +4 for the one-Badge rule: a second spelling of a pill is invisible to a
+	// reviewer who has not read that there is one, and the gate that refuses it
+	// names itself only here.
+	"frontend/AGENTS.md": 176,
 }
 
 func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {

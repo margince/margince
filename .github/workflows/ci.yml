@@ -7,10 +7,11 @@
 # an erasure that misses a PII table, a vulnerable dependency, a swallowed
 # error, or a UI regression fails the merge instead of shipping.
 #
-# Job names follow the craftsmanship wiring (ADR-0045,
-# cli/craft/wiring): external/fork PRs hit the same deterministic-gates
-# + craftsmanship + craft-residue jobs as internal work, and craftsmanship
-# runs only after the deterministic gates are green.
+# Job names are load-bearing (ADR-0045), and two gates in backend/gates hold
+# them: contributorwiring_test.go asserts external/fork PRs hit the same
+# deterministic-gates + craftsmanship + craft-residue jobs as internal work, and
+# laneordering_test.go asserts craftsmanship runs only after the deterministic
+# gates are green.
 name: ci
 
 on:
@@ -53,20 +54,29 @@ defaults:
   run:
     working-directory: backend
 
+# A module the proxy cannot serve is not a broken build: the PIPE falls through
+# to the source on any error, where Go's default comma falls through only on a
+# 404. Why that distinction reached `main` as a product break:
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
   # frontend-only PR skips the Go build/gate + the integration shard fleet, a
   # backend-only PR skips the frontend + UAT lanes, and a docs-only PR skips
   # everything. Draft PRs run nothing until marked ready (the swarm pushes many
   # WIP commits). A required job skipped this way counts as passing.
-  #   backend  = Go/DB + the gate inputs (backend, infra, go.work, Makefile,
-  #              scripts, this workflow, AGENTS.md) — gates the Go build/gate,
-  #              craft, integration, vuln. A gate input earns its place by
-  #              being able to change what a gate DOES; prose that merely
-  #              describes one does not, hence the two extglobs below.
+  #   backend  = Go/DB + the gate inputs (backend, the dev compose stack,
+  #              go.work, Makefile, scripts, this workflow, AGENTS.md, docs)
+  #              — gates the Go build/gate, craft, integration, vuln. A gate
+  #              input earns its place by being able to change what a gate
+  #              DOES, which is why the compose stack is in the narrower
+  #              backend_db below and the prose about it is not.
   #   frontend = frontend/ + backend/api (the contract drives FE types) —
   #              gates the frontend lane + UAT
-  #   e2e      = backend/ + frontend/ + infra — gates the full-stack live-boot
+  #   e2e      = backend/ + frontend/ + the dev compose stack — gates the
+  #              full-stack live-boot
   changes:
     name: changes
     timeout-minutes: 20
@@ -105,8 +115,9 @@ jobs:
       # change can break one without touching these — but a three-role bake on
       # every backend PR is most of the cost the release-trigger cleanup was
       # removing, and the compile that would catch nearly all of it already runs
-      # in deterministic-gates. The trade is written down in infra/ci-pipeline.md
-      # rather than left to be inferred from this filter.
+      # in deterministic-gates. The trade is written down in
+      # docs/explanation/ci-pipeline.md rather than left to be inferred from
+      # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -125,9 +136,9 @@ jobs:
             #
             # The split exists because one flag was driving two unrelated
             # things: run the Go unit gates, and boot the Postgres shards.
-            # A rulebook edit needs the first and cannot affect the second —
-            # the same reasoning already applied to `infra/**/!(*.md)` below,
-            # applied to the last two entries as well.
+            # A rulebook edit needs the first and cannot affect the second, so
+            # it belongs in `backend` and not here — the same cut `docs/**`
+            # sits on, the prose documenting this classifier included.
             backend_db: &backend_db
               - 'backend/**'
               # The MCP App admission vocabulary is AUTHORED under frontend/ and
@@ -138,14 +149,8 @@ jobs:
               # "two validators that disagree" outage the shared file exists to
               # make impossible.
               - 'frontend/src/mcp-apps/forbidden.json'
-              # The dev compose stack the DB-backed lanes boot — but not the
-              # prose beside it. Editing infra/ci-pipeline.md, the file that
-              # DOCUMENTS this classifier, must not boot the Postgres
-              # shards. The extglob is one positive pattern on purpose: the
-              # action ORs its patterns, so a `!infra/**/*.md` entry would
-              # match every path OUTSIDE infra/ and fire the filter on
-              # everything.
-              - 'infra/**/!(*.md)'
+              # The dev compose stack the DB-backed lanes boot.
+              - 'docker-compose.dev.yml'
               - 'go.work'
               - 'go.work.sum'
               - 'Makefile'
@@ -192,7 +197,7 @@ jobs:
             frontend:
               - 'frontend/**'
               - 'backend/api/**'
-              # The frontend job runs BOTH SPA lanes (ADR-0069), and the
+              # The frontend job runs BOTH SPA lanes (ADR-0120), and the
               # composed one is derived from inputs that live nowhere near
               # frontend/. A unit's api/ fragment is the ONLY thing that changes
               # the composed registry and the merged contract the typed client
@@ -234,9 +239,9 @@ jobs:
             e2e:
               - 'backend/**'
               - 'frontend/**'
-              # Same cut as the backend scope: the compose stack, not the prose.
-              - 'infra/**/!(*.md)'
-              # live-boot boots COMPOSED (ADR-0069): the enabled extension
+              # The dev compose stack the live boot runs against.
+              - 'docker-compose.dev.yml'
+              # live-boot boots COMPOSED (ADR-0120): the enabled extension
               # tree and the composition inputs shape the binary under test.
               - 'extensions/**'
               - 'fixtures/**'
@@ -311,8 +316,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The contract-breaking gate and the strict lint's
-          # new-from-merge-base both diff against origin/main — a shallow
+          # The contract-breaking gate, the citation gate and the strict
+          # lint's new-from-merge-base all diff against origin/main — a shallow
           # checkout has no base ref and would silently disarm them.
           fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -392,6 +397,7 @@ jobs:
           # In CI a missing base ref is a broken checkout, never a skip.
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
+          CITATION_SCOPE_REQUIRE_BASE: "1"
           # A migration baseline consolidation reuses a namespace's lowest
           # versions under new names, which check-migration-versions.sh cannot
           # tell from the collision outage it exists to report. This declares
@@ -404,8 +410,28 @@ jobs:
           # rather than waiting for somebody to remember to delete this line.
           MIGRATION_VERSIONS_BASELINE_RESET: "1"
         run: make check-backend
+      # The launcher's own coverage profile, from the lane `make check-backend`
+      # just ran. It is a SECOND run of that module's suite — under a second
+      # and about a hundred tests — rather than a flag on the gate itself,
+      # because the gate must fail on the test result and not on whether a
+      # profile could be written.
+      #
+      # The product profile cannot contain a launcher line: that one is
+      # `go test -coverpkg=./...` over the backend module, and this module sits
+      # outside go.work on purpose. So without this the figure for shipped code
+      # a user runs is 0% however thoroughly it is tested, which is why it was
+      # excluded from the measurement rather than measured.
+      - name: Launcher coverage
+        working-directory: .
+        run: make test-desktop-launcher LAUNCHER_COVER_OUT=desktop/launcher/coverage.out
+      - name: Upload launcher coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: go-coverage-launcher
+          path: desktop/launcher/coverage.out
+          if-no-files-found: ignore
 
-  # The composed-build lane (ADR-0069): materialize the walking-skeleton
+  # The composed-build lane (ADR-0120): materialize the walking-skeleton
   # reference extension into extensions/, compose, and run the backend
   # build + unit lane against the composed workspace — the continuous
   # proof that an enabled extension composes without touching an
@@ -486,6 +512,10 @@ jobs:
 
   # The code-craftsmanship gate (ADR-0045) runs only after the deterministic
   # gates are green — a red build must never be judged on style.
+  #
+  # No Go toolchain: the gate is a pinned binary fetched by
+  # scripts/craft-pin.sh, not source in this tree. No secret either, which is
+  # what keeps this job covering a pull request from a fork.
   craftsmanship:
     name: craftsmanship
     timeout-minutes: 20
@@ -498,13 +528,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
       - name: craft static (strict — blocker + major)
         working-directory: .
         run: make craft-static
+      # AGENTS.md is one of this job's path-filter inputs, so the rulebook is
+      # held against the standard exactly when either one changes.
+      - name: craft prose (rulebook agrees with the standard)
+        working-directory: .
+        run: make craft-prose
 
   # No unresolved review-loop markers (CRAFT-FIX / CRAFT-DISPUTE) reach main.
   craft-residue:
@@ -520,10 +551,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
       - name: craft residue
         working-directory: .
         run: make craft-residue
@@ -548,11 +575,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # No install step: scripts/gitleaks-pin.sh fetches the version- and
-      # checksum-pinned binary itself, so this job runs the scanner an engineer
-      # runs, resolved by the same code. The official gitleaks action is
-      # deliberately not used — it needs a paid licence key for organization
-      # repositories, and this gate must stay free of one.
+      # The SCANNER needs no install step: scripts/gitleaks-pin.sh fetches the
+      # version- and checksum-pinned binary itself, so this job runs the scanner
+      # an engineer runs, resolved by the same code. The official gitleaks
+      # action is deliberately not used — its licence is free only for a
+      # personal account's repositories, and this one is not, so it would cost a
+      # key this gate must not need.
+      #
+      # The suite that PROVES the policy is narrow does need Go: it derives its
+      # plants by decoding .gitleaks.toml (tools/gitleakspolicy) rather
+      # than hand-parsing it, because a hand parser reads only the shapes it was
+      # taught and an allowlist it cannot see owes no planted token. Declared
+      # here rather than inherited from the runner's ambient toolchain, which is
+      # the same dependency with nothing stating it.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: tools/gitleakspolicy/go.sum
       - name: secret scan
         working-directory: .
         run: make secret-scan
@@ -561,6 +600,13 @@ jobs:
       - name: the gate still catches
         working-directory: .
         run: make test-secret-scan
+      # And again, one lane over: a re-run that signs an already-signed SBOM
+      # writes a second permanent Rekor entry and leaves the first corroborating
+      # nothing. It reports "signed" either way, so nothing but this says which
+      # happened.
+      - name: signing an already-signed SBOM mints no second Rekor entry
+        working-directory: .
+        run: make test-sbom-sign
       # Beside the secret gate because it is the same class of failure: a
       # bootstrap credential written onto a provisioned installation is
       # invisible, and the entrypoint runs where nobody is watching.
@@ -807,7 +853,7 @@ jobs:
       # skipped area uploaded nothing); if-no-files-found tolerates the gap so
       # the scan still posts. The paths match sonar-project.properties
       # (backend/coverage.out, backend/coverage-extensions.out,
-      # frontend/coverage/lcov.info).
+      # desktop/launcher/coverage.out, frontend/coverage/lcov.info).
       - name: Download Go coverage
         if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -820,6 +866,12 @@ jobs:
         with:
           name: go-coverage-extensions
           path: backend
+      - name: Download launcher coverage
+        if: ${{ env.SONAR_TOKEN != '' && needs.deterministic-gates.result == 'success' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: go-coverage-launcher
+          path: desktop/launcher
       - name: Download FE coverage
         if: ${{ env.SONAR_TOKEN != '' && needs.frontend.result == 'success' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -856,7 +908,7 @@ jobs:
         # download, which fetches SonarSource's key from a public keyserver. On
         # run 32687876395 keyserver.ubuntu.com simply stopped answering, and the
         # step sat silent for 30 minutes until the JOB timeout killed it — a
-        # runner slot spent for nothing inside a 20-concurrent org ceiling every
+        # runner slot spent for nothing inside the 20-concurrent runner ceiling every
         # pull-request lane also queues in. A rerun of the same commit finished
         # in 95 seconds. margince/margince#2543.
         #
@@ -947,8 +999,8 @@ jobs:
           flavor: plain
       - name: Boot the dev stack and migrate
         run: make db-up && make migrate
-      # The deployment configuration (A107/ADR-0061): the api bootstraps the
-      # demo organization itself at boot; the credentials match seed-dev.sh's
+      # The deployment configuration (ADR-0061): the api bootstraps the
+      # demo workspace itself at boot; the credentials match seed-dev.sh's
       # demo defaults (admin@demo.test / demo-password-123 — throwaway CI-only
       # values, same posture as the compose stack's dev DSNs).
       #
@@ -963,7 +1015,7 @@ jobs:
           chmod 600 "$RUNNER_TEMP/admin-password"
           cat > "$RUNNER_TEMP/margince.yaml" <<EOF
           version: 1
-          organization:
+          workspace:
             name: Demo Workspace
             base_currency: EUR
             timezone: Europe/Berlin
@@ -977,7 +1029,7 @@ jobs:
         env:
           MARGINCE_ENV: dev
         run: |
-          # Composed boot (ADR-0069): a plain `go run` would resolve the
+          # Composed boot (ADR-0120): a plain `go run` would resolve the
           # vanilla composition stub and this lane would never boot with
           # the enabled extensions (extensions/de ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own
@@ -1050,13 +1102,20 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - name: Install deps and the Playwright Chromium browser
+      - name: Install deps
         working-directory: frontend
         # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
         # install; esbuild ships prebuilt platform binaries as optional deps.
-        run: |
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm exec playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      # SEPARATE from the install above, and bounded, because `--with-deps`
+      # shells out to apt inside the runner: an unresponsive mirror hangs with
+      # no output, and a hang folded into the previous step reaches a reader as
+      # "the lane timed out" rather than "the package repository did".
+      - name: Install the Playwright Chromium browser
+        working-directory: frontend
+        timeout-minutes: 6
+        run: pnpm exec playwright install --with-deps chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e
 
@@ -1115,8 +1174,8 @@ jobs:
   # main, so that build was the de-facto gate and a break surfaced within a
   # commit of landing — a Dockerfile-only PR matching no scope was an accepted
   # trade against that net. release.yml then became dispatch-only, to stop ~400
-  # release runs a week competing for the org-wide runner ceiling. Right on its
-  # own terms, and it removed the net the trade depended on: the first person to
+  # release runs a week competing for the same 20-concurrent runner ceiling. Right on its
+  # own terms, and it removed the net the trade depended on: the first contact to
   # notice a broken image became whoever cut the next release, with the offending
   # commit arbitrarily far back.
   #

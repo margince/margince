@@ -24,7 +24,7 @@ package migrations
 // Split across two migrations it is real, and this gate says nothing about
 // that: 1787968162 adds a currency CHECK NOT VALID and 1787968163 validates it,
 // two files, two transactions, and the writers between them go through. That is
-// what the pattern is for, and it is the shape a person reaching for it should
+// what the pattern is for, and it is the shape a contact reaching for it should
 // find.
 
 import (

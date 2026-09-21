@@ -18,8 +18,12 @@ package gatekit
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"testing"
 )
 
 // StringFold says what a reading does with a part it cannot resolve.
@@ -134,4 +138,61 @@ func concatString(expr *ast.BinaryExpr, consts map[string]string, fold StringFol
 		return "", false
 	}
 	return left + right, true
+}
+
+// PackageStringConstants reads every string constant one package declares, as
+// the table StringExpr folds identifiers against.
+//
+// It lives here rather than in a gate because two censuses in different BUILDS
+// need it: the list-sort parity gate is `//go:build !integration` and the
+// object-half censuses are not, so a copy in either is a copy the other cannot
+// reach. A second reading of "what does this package call that string" is also
+// exactly the drift StringExpr exists to prevent one level down.
+//
+// Non-test sources only, and single-name single-value specs only: a grouped
+// `const ( a, b = …)` or an iota block is not a string table, and guessing at
+// one would fold a name onto a value the package never gave it.
+func PackageStringConstants(t testing.TB, dir string) map[string]string {
+	t.Helper()
+	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil {
+		t.Fatalf("listing %s for its string constants: %v", dir, err)
+	}
+	out := map[string]string{}
+	for _, source := range sources {
+		if strings.HasSuffix(source, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s for its string constants: %v", source, err)
+		}
+		collectFileStringConstants(t, source, file, out)
+	}
+	return out
+}
+
+func collectFileStringConstants(t testing.TB, source string, file *ast.File, into map[string]string) {
+	t.Helper()
+	for _, decl := range file.Decls {
+		general, isGeneral := decl.(*ast.GenDecl)
+		if !isGeneral || general.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range general.Specs {
+			value, isValue := spec.(*ast.ValueSpec)
+			if !isValue || len(value.Names) != 1 || len(value.Values) != 1 {
+				continue
+			}
+			lit, isLit := value.Values[0].(*ast.BasicLit)
+			if !isLit || lit.Kind != token.STRING {
+				continue
+			}
+			unquoted, err := strconv.Unquote(lit.Value)
+			if err != nil {
+				t.Fatalf("unquoting %s in %s: %v", lit.Value, source, err)
+			}
+			into[value.Names[0].Name] = unquoted
+		}
+	}
 }

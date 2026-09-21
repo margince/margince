@@ -5,7 +5,7 @@ package compose
 
 // The day's surface, wired to the modules that own what it shows.
 //
-// attention is a compose subpackage and approvals, people and activities are
+// attention is a compose subpackage and approvals, contacts and activities are
 // modules, so every edge between them is bound here like any other cross-module
 // edge. What crosses is four READS. No verb does: a card's approve, complete or
 // merge goes to the endpoint that already owns it, so this surface can never
@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,13 +30,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -84,11 +85,11 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 // also names the company it came from, so the lead is what the reader wants to
 // open. A rank absent here is a record kind this surface does not route to.
 var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
-	flipObjectLead: 1,
-	flipObjectDeal: 2,
+	entityLead: 1,
+	entityDeal: 2,
 	crmcontracts.ActivityLinkEntityTypeProject: 3,
-	flipObjectPerson:       4,
-	flipObjectOrganization: 5,
+	entityContact: 4,
+	entityCompany: 5,
 }
 
 // primaryLink picks the one record a task row points at.
@@ -119,88 +120,6 @@ func primaryLink(row crmcontracts.Activity) (string, ids.UUID) {
 		}
 	}
 	return bestType, bestID
-}
-
-// approvalStatusApproved is the decided status a receipt is read from. Spelled
-// once here because the receipt lane asks for it by name and a typo would
-// quietly return an empty lane rather than an error.
-const approvalStatusApproved = "approved"
-
-// attentionReceipts reads what ran without asking.
-//
-// The test is the decision's own decided_by_system marker. It used to be
-// decided_by IS NULL, inferring "nobody decided" from an empty column, and that
-// read the wrong thing twice over: no writer produces approved-with-no-decider,
-// and deleting an app_user empties decided_by on every approval that person
-// decided — which would move their decisions into a lane headed "Done for you".
-// Filtering on status alone would do the same thing to every reader's own
-// approvals, which is the one claim this lane exists to make.
-type attentionReceipts struct{ svc *approvals.Service }
-
-func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
-	return recentReceipts(since, limit, func(scan int) ([]crmcontracts.Approval, error) {
-		status := approvalStatusApproved
-		bySystem := true
-		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{
-			Status: &status, DecidedBySystem: &bySystem, DecidedAfter: &since, Limit: scan,
-		})
-		return rows, err
-	})
-}
-
-// recentReceipts turns the store's rows into the lane's cards.
-//
-// The read is bounded by the lane rather than widened past it: the store answers
-// "approved, decided by the system, decided since" itself, so the limit applies
-// to rows that qualify. The window belongs in SQL with the rest — the page is
-// ordered by created_at while the window is about decided_at, so a window
-// applied afterwards can discard a whole page and hide a decision made minutes
-// ago beneath approvals staged more recently.
-//
-// The re-check below is not a second filter. It is what makes the deref of
-// DecidedAt safe in this package, where the SQL guaranteeing it is elsewhere.
-//
-// The page reader is a parameter so a test can answer exactly the width it was
-// asked for; nothing else varies it.
-func recentReceipts(
-	since time.Time, limit int, page func(scan int) ([]crmcontracts.Approval, error),
-) ([]attention.Receipt, error) {
-	rows, err := page(limit)
-	if err != nil {
-		return nil, err
-	}
-	return receiptsWithin(rows, since), nil
-}
-
-// receiptsWithin keeps the decided rows inside the lane's window.
-func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.Receipt {
-	out := make([]attention.Receipt, 0, len(rows))
-	for _, row := range rows {
-		// Inside the window, not before it: `since` is the receipt lane's own
-		// horizon, and the same authority answers "is this behind that" here as
-		// answers it for a task's due date.
-		if row.DecidedAt == nil || deadline.Passed(row.DecidedAt, since) {
-			continue
-		}
-		summary := ""
-		if row.Summary != nil {
-			summary = *row.Summary
-		}
-		receipt := attention.Receipt{
-			ID:         ids.UUID(row.Id),
-			Kind:       row.Kind,
-			Summary:    summary,
-			OccurredAt: *row.DecidedAt,
-		}
-		// Both or neither: a type with no id names nothing, and an id with no
-		// type says where to look without saying at what.
-		if row.TargetEntityType != nil && row.TargetEntityId != nil {
-			receipt.TargetType = *row.TargetEntityType
-			receipt.TargetID = ids.UUID(*row.TargetEntityId)
-		}
-		out = append(out, receipt)
-	}
-	return out
 }
 
 // attentionFailedEffects reads the decisions this rep approved whose released
@@ -238,11 +157,9 @@ func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attent
 	return out, nil
 }
 
-// newAttentionHandlers assembles the surface for the API role. meter is the
-// Server's shared OVB meter (rebindable; overlay.go), which the sync-health
-// lane's budget concern reads.
-func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter) attention.Handlers {
-	return attention.NewHandlers(newAttentionService(pool, svc, meter, func() time.Time { return time.Now().UTC() }))
+// newAttentionHandlers assembles the surface for the API role.
+func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
+	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
 }
 
 // newAttentionService binds every lane to the module that owns what it shows.
@@ -252,7 +169,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *ove
 // keep passing while the shipped feed lost one — which is the failure the feed's
 // stub-driven unit tests already have, and the reason its producers went so long
 // without a test that reads them end to end.
-func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter, now attention.Clock) *attention.Service {
+func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
 	// ONE deal-status service for both seams below: the move and the standing
 	// are two reads of the same cached card, and a second service value would
@@ -260,11 +177,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 	cards := newDealStatusService(pool)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
-		attentionDuplicates{store: people.NewStore(db)},
+		attentionDuplicates{store: contacts.NewStore(db)},
 		attentionTasks{store: activities.NewStore(db)},
-		attentionReceipts{svc: svc},
+		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine: briefs.NewBriefEngine(pool, people.NewStore(db)),
+			engine: briefs.NewBriefEngine(pool, contacts.NewStore(db)),
 			// The same reader WithDealFacts binds below, so the lane keeps an
 			// entry exactly when the figures pass can state its deal.
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
@@ -276,26 +193,19 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// dressed as a feature, and absent is the honest rendering of "this
 		// feed does not do commitments".
 		//
-		// That is no longer true. POST /people/{id}/claims writes through
-		// people.RecordConversationClaim, and the transcript reader files what
+		// That is no longer true. POST /contacts/{id}/claims writes through
+		// contacts.RecordConversationClaim, and the transcript reader files what
 		// a reader accepts from a meeting. A promise a rep made is then real
 		// data the queue was still refusing to show.
-		attentionCommitments{store: people.NewStore(db)},
+		attentionCommitments{store: contacts.NewStore(db)},
 		attentionAtRisk{lister: quietDealScan(pool, deals.QuietThresholdDays), pool: pool},
-		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
+		attentionDecay{pool: pool, store: contacts.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
 		// The compliance clock: the open DSR cases, due-soonest first, served
 		// exactly as far as consent's own DSR-admin gate reaches — the store
 		// refuses everyone else and the lane renders that as withheld.
 		attentionDSRs{store: consent.NewStore(db)},
-		// The sync's own health, read through the module that owns the
-		// mirror. Built without a vault on purpose: the health read never
-		// touches a credential, and binding it here (rather than inside the
-		// vault-gated overlay wiring) keeps the lane alive on every role
-		// that serves the feed. A workspace not in overlay mode answers
-		// ErrModeNotOverlay and the lane stays absent.
-		attentionSyncHealth{svc: overlayReadService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{}), meter)},
 		// The reader's own mailbox connections, through the capture module's
 		// registry over the same rows the settings screen lists. Built bare —
 		// no sink, no authority, no vault — so the lane lives on every role
@@ -312,7 +222,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// store's own gate.
 		attentionAutomations{store: automation.NewAutomationStore(db)},
 		// The reader's own unread notices — the durable informational line.
-		attentionNotices{store: notices.NewStore(db)},
+		attentionNotices{store: notices.NewStore(db), users: identity.NewService(db.Pool())},
 		// The label resolver: every card that names a record gets that
 		// record's display name under the reader's own grants, one gated get
 		// per distinct subject (attentionnames.go).
@@ -348,6 +258,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// still paging and a row crossing the page boundary is served twice or
 		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
+		// The whole page as ONE unit of work. Every lane reader below opens its
+		// own transaction by default, which cost this surface ~40 of them and
+		// as many instants per assembled day; bound, they join one read-only
+		// snapshot. margince#4912 has the measurements.
+		WithSnapshots(attentionSnapshots{pool: pool}).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
 		// contact's Network tab, so an ask nobody went looking for expired
@@ -359,10 +274,19 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
+		// The reader's OWN undecided domains. Bound to the contacts store the
+		// rest of this seam already reads: the question is opened by capture and
+		// answered against the same disposition ledger the admin list shows, so
+		// a second store over the same pool would be a second answer to "what is
+		// still open".
+		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// When the contact a row names last wrote to us and when we last wrote
+		// to them, from the same reader the contact's own page uses.
+		WithContactTouch(attentionContactTouch{pool: pool}).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page
@@ -381,16 +305,16 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// The base-currency conversion the ranked queue's money comparisons
 		// run in — the same engine every other money surface prices with.
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
-		// Whether a team-scoped reader may open a named person's queue. Bound
+		// Whether a team-scoped reader may open a named contact's queue. Bound
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
-		WithTeammates(newTeammatesSeam(pool)).
+		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).
 		// The inbound leads still owed a first reply. The store answers the
 		// ordering and the state; this lane only ranks them against the rest of
 		// the day.
 		WithLeadResponses(attentionLeadResponses{
-			store:     people.NewStore(db),
+			store:     contacts.NewStore(db),
 			teammates: newTeammatesSeam(pool),
 		}).
 		// How many promises each teammate has already missed, for the team
@@ -398,7 +322,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// at a dozen and a board built from it would call every loaded rep
 		// equally loaded.
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)}).
-		WithPromiseLoad(attentionPromiseLoad{store: people.NewStore(db)})
+		WithPromiseLoad(attentionPromiseLoad{store: contacts.NewStore(db)})
 }
 
 // attentionZone binds the feed's day boundary to the installation's timezone,
@@ -422,6 +346,31 @@ func attentionZone(pool *pgxpool.Pool) attention.Zone {
 // queue's seam is declared over a type it owns. A shared type would be a
 // sibling-module import in one direction or the other, which is the edge every
 // seam in this file exists to avoid.
+// attentionDomainQuestions binds the reader's own undecided domains to the
+// contacts store that owns the triage ledger.
+type attentionDomainQuestions struct{ store *contacts.Store }
+
+// OpenDomainQuestions answers the acting human's own open questions.
+//
+// The port takes no owner argument on purpose: the store reads the acting
+// human's id itself, which is what lets the queue row claim the reader as its
+// owner without a second field restating it.
+func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]attention.DomainQuestion, error) {
+	rows, err := a.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.DomainQuestion, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, attention.DomainQuestion{
+			Domain:  row.Domain,
+			Reason:  row.Reason,
+			AskedAt: row.AskedAt,
+		})
+	}
+	return out, nil
+}
+
 type attentionDealStandings struct {
 	cards *dealstatus.Service
 }
@@ -431,6 +380,20 @@ func (a attentionDealStandings) CachedStandings(
 	ctx context.Context, dealIDs []ids.UUID,
 ) (map[ids.UUID]attention.DealStanding, error) {
 	cards, err := a.cards.CachedCards(ctx, dealIDs)
+	// A standing is an ENRICHMENT of a queue row, not the row itself, so a
+	// caller who may not read deals loses the standing and keeps the page —
+	// the same answer attentionNames.Labels gives for a type it may not read.
+	//
+	// The two grants come apart: a role holding activity but not deal is a
+	// grant an administrator can write, and the activity lane puts a task
+	// linked to a deal on that member's queue. Propagating the refusal would
+	// turn their perfectly legitimate worklist into a 403.
+	//
+	// Any other error still propagates: a database that will not answer must
+	// not read as a queue whose rows simply have no standing.
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return map[ids.UUID]attention.DealStanding{}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -444,4 +407,19 @@ func (a attentionDealStandings) CachedStandings(
 		}
 	}
 	return out, nil
+}
+
+// attentionSnapshots binds the feed's composed reads to the database seam.
+//
+// The adapter exists because attention takes readers and never a driver: this
+// is the one place the pool and that package meet, which is the same shape
+// every other seam in this file has.
+type attentionSnapshots struct{ pool *pgxpool.Pool }
+
+func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
+	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
+}
+
+func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
+	return database.Detached(ctx)
 }

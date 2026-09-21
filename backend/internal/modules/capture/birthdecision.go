@@ -227,6 +227,23 @@ func decideBirthTx(
 	if err != nil {
 		return birthDecision{}, err
 	}
+	if posture == PostureClassified {
+		// `classified` holds a message until something judges its sender, and for
+		// this sender something already has. Holding it anyway would record a
+		// question that is answered — and nothing later re-asks it, so the message
+		// would stay limited for good.
+		//
+		// Only this rung is affected. Steps 1 to 4 have already run and any hold
+		// they placed survives, because they set decision.posture and this does
+		// not clear it.
+		cleared, err := senderClearedContactTx(ctx, tx, rec.Counterparty.Email)
+		if err != nil {
+			return birthDecision{}, err
+		}
+		if cleared {
+			posture = PostureShared
+		}
+	}
 	if posture != PostureShared {
 		// The mailbox's own standing answer, recorded even when something
 		// stricter already decided. It outlives any one counterparty hold, so a
@@ -279,11 +296,30 @@ func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 		// posture from.
 		return PostureHeld, nil
 	}
+	return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
+}
+
+// mailboxPostureForTx reads one named mailbox's posture.
+//
+// Split out from the ambient reader above because a caller that is not the
+// capture principal — an alias claim under the seat's own principal, or a
+// reconcile sweep under the system's — cannot derive the seat and provider from
+// the actor, and would silently get `held` for every mailbox instead. That is
+// the failure worth naming: `held` is a real posture, so the wrong answer looks
+// exactly like a correct one.
+//
+// A mailbox with no live connection is `held`. It is the safe answer and the
+// honest one: mail whose connection is gone has nobody asking for it to be
+// opened.
+func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider string) (string, error) {
+	if user == ids.Nil || provider == "" {
+		return PostureHeld, nil
+	}
 	var posture string
 	err := tx.QueryRow(ctx, `
 		SELECT mail_posture FROM capture_connection
 		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`,
-		actor.UserID, provider).Scan(&posture)
+		user, provider).Scan(&posture)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return PostureHeld, nil
@@ -297,7 +333,7 @@ func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 //
 // The SQL shape excludedTx uses, and for the same reason: a domain rule covers
 // its subdomains, so holding studiolegal.de holds mail.studiolegal.de too.
-// Scoped to THIS seat — a hold is one person's decision about their own
+// Scoped to THIS seat — a hold is one colleague's decision about their own
 // correspondence, and a workspace-wide one would let anyone hold a colleague's
 // customer out of the shared CRM.
 func heldCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {

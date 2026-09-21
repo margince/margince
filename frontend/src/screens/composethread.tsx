@@ -1,30 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/**
- * The conversation a reply is answering, beside the reply.
- *
- * The composer used to say what it was answering in one sentence and leave the
- * messages themselves on the page behind — which the dialog was covering. A rep
- * checking what was actually promised had to send or discard first. This puts
- * the thread in the drawer, so the reply is written next to the words it
- * answers rather than over them.
- *
- * It renders through the timeline's own row: the conversation IS the record's
- * chronology narrowed to one thread, and a second message row would be a second
- * answer to "how does a message look" — including how a message nobody in this
- * audience may read looks, which the timeline already draws.
- */
-
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Button, PendingBody } from "../design-system/atoms";
 import { TimelineRow } from "../design-system/composed";
+import { EmailDetail } from "../design-system/emaildetail";
+import { EmailEntry } from "../design-system/emailentry";
+import { EmailText } from "../design-system/emailtext";
+import { Heading } from "../design-system/heading";
 import type { NameOf } from "../design-system/participants";
+import { Popover } from "../design-system/popover";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDate, formatNumber } from "../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -76,7 +67,7 @@ export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
   const retry = () => {
     void query.refetch();
   };
-  if (!anchor) {
+  if (!anchor?.id) {
     return { messages: [], pending: false, failed: false, retry };
   }
   if (!threadKey) {
@@ -88,7 +79,12 @@ export function useThreadMessages(anchor: Activity | undefined): ThreadRead {
   // render as a thread of none: an empty list is a settled answer too, and the
   // pane would then claim the conversation is a single message it cannot show.
   return {
-    messages: query.data?.data ?? [],
+    // An older selected anchor may sit outside the newest-message page.
+    messages: query.data?.data
+      ? query.data.data.some((message) => message.id === anchor.id)
+        ? query.data.data
+        : [...query.data.data, anchor]
+      : [],
     pending: query.isPending,
     failed: query.isError,
     retry,
@@ -117,10 +113,13 @@ export function ThreadPane({
   pending,
   failed,
   onRetry,
+  named,
   viewerUserId,
   nameOf,
-  named,
   onLeave,
+  selectedId,
+  onSelect,
+  disabled,
 }: Readonly<{
   messages: readonly Activity[];
   pending: boolean;
@@ -150,25 +149,26 @@ export function ThreadPane({
    * typed to reach the other four.
    */
   onLeave?: () => void;
+  selectedId?: string;
+  onSelect?: (id: string) => void;
+  disabled?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  // No `renderActions`: every row's affordance here would be Reply, inside the
-  // reply. The rows are the reading, not a place to act from.
-  const entries = activityTimeline([...messages], viewerUserId, undefined, {
-    nameOf,
-    t,
-    locale,
-  });
+  const [reading, setReading] = useState<string | null>(null);
   return (
     <section className="compose-thread" aria-labelledby="compose-thread-head">
       <div className="compose-thread-head">
-        <h3 id="compose-thread-head" className="t-eyebrow">
+        <Heading size="medium" id="compose-thread-head" className="t-eyebrow">
           {t(named ? "compose.threadHeading" : "compose.threadContinuing")}
-        </h3>
+        </Heading>
         {onLeave && (
-          <Button small className="compose-thread-leave" onClick={onLeave}>
+          <Button
+            className="compose-thread-leave"
+            onClick={onLeave}
+            disabled={disabled}
+          >
             {t("compose.threadLeave")}
           </Button>
         )}
@@ -184,13 +184,76 @@ export function ThreadPane({
             detail={{ onRetry }}
           >
             <ul className="timeline compose-thread-list">
-              {entries.map((entry) => (
-                <TimelineRow key={entry.id} entry={entry} zone={zone} />
-              ))}
+              {messages.map((message) => {
+                if (!message.email_summary) {
+                  return activityTimeline([message], viewerUserId, undefined, {
+                    nameOf,
+                    t,
+                    locale,
+                  }).map((entry) => (
+                    <TimelineRow key={entry.id} entry={entry} zone={zone} />
+                  ));
+                }
+                return (
+                  <li
+                    key={message.id}
+                    className="compose-message"
+                    aria-label={`${message.subject || t("email.noSubject")} · ${formatDateTime(message.occurred_at, locale, zone)}`}
+                  >
+                    {message.content_state === "withheld" ||
+                    message.email_summary.display_status === "withheld" ? (
+                      <EmailEntry
+                        summary={message.email_summary}
+                        timestamp={formatDateTime(
+                          message.occurred_at,
+                          locale,
+                          zone,
+                        )}
+                        whyNotOpenable="withheld"
+                      />
+                    ) : (
+                      <EmailEntry
+                        summary={message.email_summary}
+                        timestamp={formatDateTime(
+                          message.occurred_at,
+                          locale,
+                          zone,
+                        )}
+                        onSelect={() => onSelect?.(message.id)}
+                        selected={message.id === selectedId}
+                        disabled={disabled || !onSelect}
+                      />
+                    )}
+                    {message.content_state !== "withheld" &&
+                      message.email_summary?.display_status !== "withheld" && (
+                        <div className="compose-message-actions">
+                          <Popover label={t("compose.previewEmail")} onHover>
+                            <EmailText body={message.body ?? ""} />
+                          </Popover>
+                          <Button
+                            variant="link"
+                            onClick={() => setReading(message.id)}
+                          >
+                            {t("compose.readEmail")}
+                          </Button>
+                        </div>
+                      )}
+                  </li>
+                );
+              })}
             </ul>
           </SurfaceState>
         )}
       </div>
+      {/* This reading-only view omits record editing and Reply actions so
+          opening evidence cannot retarget or replace the draft underneath. */}
+      {reading && (
+        <EmailDetail
+          activityId={reading}
+          onClose={() => setReading(null)}
+          formatWhen={(iso) => formatDateTime(iso, locale, zone)}
+        />
+      )}
     </section>
   );
 }
@@ -252,7 +315,7 @@ export function useRecentConversations(
   );
   const entries = activityTimeline(readable, undefined, undefined, who);
   // A bulk send is not a conversation. It is one message the sender addressed
-  // to several people and has no thread of its own, so "continuing" it would
+  // to several contacts and has no thread of its own, so "continuing" it would
   // anchor a reply to a mailing nobody wrote back to. Threads and single
   // messages are the ways in; the bulk groups are left where the History tab
   // draws them.
@@ -315,9 +378,13 @@ export function ConversationChoices({
   const zone = viewerZone();
   return (
     <section className="compose-thread" aria-labelledby="compose-choices-head">
-      <h3 id="compose-choices-head" className="compose-thread-head t-eyebrow">
+      <Heading
+        size="medium"
+        id="compose-choices-head"
+        className="compose-thread-head t-eyebrow"
+      >
         {t("compose.continueHeading")}
-      </h3>
+      </Heading>
       <div className="compose-thread-scroll">
         {pending ? (
           <PendingBody label={t("compose.threadPending")} lines={3} />
@@ -338,7 +405,7 @@ export function ConversationChoices({
                     <span className="compose-choice-subject">
                       {conversation.subject}
                     </span>
-                    <span className="compose-choice-meta t-caption">
+                    <span className="t-caption">
                       {[
                         conversation.counterparts,
                         formatDate(conversation.atIso, locale, zone),

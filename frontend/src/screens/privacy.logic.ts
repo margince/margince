@@ -42,13 +42,13 @@ export function isOverdue(
   return Date.parse(dueAtIso) < nowMs;
 }
 
-// Erasure reads danger, a rectification reads warn, other DSR kinds neutral.
-export function dsrKindTone(kind: string): "danger" | "warn" | undefined {
+// Erasure reads danger, a rectification reads warning, other DSR kinds neutral.
+export function dsrKindTone(kind: string): "danger" | "warning" | undefined {
   if (kind === "erasure") {
     return "danger";
   }
   if (kind === "rectify") {
-    return "warn";
+    return "warning";
   }
   return undefined;
 }

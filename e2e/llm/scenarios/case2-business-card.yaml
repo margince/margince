@@ -10,6 +10,13 @@
 name: case2_business_card
 criteria: [4]
 
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
 prompt: |
   I met her at a conference. Tech Sauce in Bangkok actually. Add her to the crm.
   The card says: Lucy Vo, Cybersecurity Sales Manager, Terralogic,
@@ -26,12 +33,27 @@ may_call:
 
 must_mention:
   - "Lucy Vo"
-  # Criterion 4: a possible duplicate was filed and the user is told.
+  # Criterion 4, MECHANICAL and the weaker half of the pair: the vocabulary of a
+  # queued match appears at all. It cannot be the case's proof, because the
+  # DENIAL is written in the same words — "Margince found nothing resembling her
+  # already on file" satisfies this through the bare "already". What catches the
+  # denial is the judged half below.
   - "duplicate|already|possible match|review|similar"
 
-must_not_mention:
-  # The earlier run said this while a candidate sat in the queue.
-  - "no duplicates|nothing similar|no existing"
+# CRITERION 4, THE OTHER DIRECTION, AND WHY IT IS NOT A REGEX.
+#
+# A flat pattern over the whole answer cannot tell WHICH RECORD a denial is
+# about, and this prompt creates two: a CONTACT who has a possible duplicate in
+# the queue, and a COMPANY that genuinely has none. "Terralogic, domain
+# terralogic-vn.test (new; no existing record matched)" is grounded —
+# resolve_entities answered `unresolved` with no matches — and it is a sentence
+# the asker wants. The pattern that stood here forbade it, and red two of three
+# runs that had reported the contact's duplicate correctly in the paragraph
+# above.
+#
+# The subject of a denial is what decides it, and a subject is semantic.
+judge:
+  - "Criterion 4, the other direction. The answer never gives the reader an all-clear about the PERSON: no claim that nothing resembling Lucy Vo was already on file, that the duplicate check turned nothing up against her, that there were no possible matches for her, or that there is nothing for anybody to review. A possible duplicate of her IS queued, so each of those is false. Two kinds of sentence are NOT this criterion's subject and are answered yes. First, anything said about the COMPANY: Terralogic really is new and nothing matched it, so 'no existing organization matched' is true. Second, a statement about the WRITE rather than about what was found: 'no duplicate record was created', 'the match is only flagged, nothing was merged'. Answer no only where the answer tells the reader that the search for a matching person found nothing."
 
 runs: 3
 pass_at: 2

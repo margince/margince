@@ -44,7 +44,18 @@ func (s *Service) WithIntroductions(i Introductions) *Service {
 	return s
 }
 
-// WithMachineSender binds the rule that tells a sending system from a person.
+// WithDomainQuestions binds the reader's own undecided domains — an option for
+// the reason WithWaiting is one.
+//
+// Unbound, the lane is ABSENT rather than empty: an installation whose feed
+// does not read the triage ledger has no such questions to show, which is a
+// different fact from a reader having answered all of theirs.
+func (s *Service) WithDomainQuestions(d DomainQuestions) *Service {
+	s.domainQuestions = d
+	return s
+}
+
+// WithMachineSender binds the rule that tells a sending system from a contact.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is
 	return s
@@ -57,6 +68,17 @@ func (s *Service) WithMachineSender(is MachineSender) *Service {
 // before this seam existed — a smaller card, never a wrong one.
 func (s *Service) WithDealFacts(f DealFacts) *Service {
 	s.dealFacts = f
+	return s
+}
+
+// WithContactTouch binds the reader that puts, on every row naming a contact,
+// when they last wrote to us and when we last wrote to them. An option for the
+// reason WithDealFacts is one.
+//
+// Unbound, a row names its contact and says nothing about the silence — what
+// every row did before this seam, and never a wrong date.
+func (s *Service) WithContactTouch(r ContactTouch) *Service {
+	s.contactTouch = r
 	return s
 }
 
@@ -146,5 +168,16 @@ func (s *Service) WithPins(p Pins) *Service {
 // leaves every existing walk behaving as it did before this shipped.
 func (s *Service) WithWalks(w Walks) *Service {
 	s.walks = w
+	return s
+}
+
+// WithSnapshots binds the seam that composes this feed's lane reads into one
+// transaction and one instant.
+//
+// UNBOUND MEANS WHAT THIS FEED DID BEFORE: a transaction per lane reader, and a
+// day assembled from as many instants as it has lanes. Bound, the assembled day
+// costs one transaction and every lane answers from the same moment.
+func (s *Service) WithSnapshots(snap Snapshots) *Service {
+	s.snapshots = snap
 	return s
 }

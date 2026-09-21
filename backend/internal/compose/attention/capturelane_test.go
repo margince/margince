@@ -28,7 +28,7 @@ func (s *stubCaptureHealth) CaptureConcerns(context.Context) ([]CaptureConcern, 
 func captureLaneService(health CaptureHealth) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, health, nil, nil, nil, nil, nil, fixedClock)
 }
 
 func TestACaptureConcernNamesTheConditionAndTheMailbox(t *testing.T) {
@@ -38,7 +38,7 @@ func TestACaptureConcernNamesTheConditionAndTheMailbox(t *testing.T) {
 		{ConnectionID: labelled, Kind: "reauth_required", Provider: "gmail", AccountLabel: "rep@example.com"},
 		{ConnectionID: unlabelled, Kind: "sync_failing", Provider: "imap"},
 	}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestACaptureConcernNamesTheConditionAndTheMailbox(t *testing.T) {
 
 func TestARefusedCaptureHealthReadIsNamedAsWithheld(t *testing.T) {
 	svc := captureLaneService(&stubCaptureHealth{err: apperrors.ErrPermissionDenied})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestARefusedCaptureHealthReadIsNamedAsWithheld(t *testing.T) {
 // broken, which the absent lane never promises.
 func TestHealthyMailboxesReadAsAnEmptyLane(t *testing.T) {
 	svc := captureLaneService(&stubCaptureHealth{})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

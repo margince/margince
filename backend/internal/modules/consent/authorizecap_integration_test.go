@@ -55,23 +55,23 @@ type capEnv struct {
 	decisionDelivery ids.UUID
 }
 
-// seedMarketingSubject gives the address a person with a live marketing grant,
+// seedMarketingSubject gives the address a contact with a live marketing grant,
 // so the engine reaches an allow and the cap is what refuses. Without the grant
 // every message would be denied for want of consent and the ceiling would never
 // be the reason.
 func (e *capEnv) seedMarketingSubject(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
-	personID := ids.New[ids.PersonKind]()
+	contactID := ids.New[ids.ContactKind]()
 	purposeID := ids.New[ids.PurposeKind]()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Cap Subject', 'manual', 'human:x')`, personID); err != nil {
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Cap Subject', 'manual', 'human:x')`, contactID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'manual', 'human:x')`, personID, e.address); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x')`, contactID, e.address); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
@@ -81,8 +81,8 @@ func (e *capEnv) seedMarketingSubject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
-		VALUES ($1, $2, 'granted', 'consent', now(), 'test')`, personID, purposeID); err != nil {
+		INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
+		VALUES ($1, $2, 'granted', 'consent', now(), 'test')`, contactID, purposeID); err != nil {
 		t.Fatal(err)
 	}
 	// The delivery each authorization under test attaches its decision to. It
@@ -157,7 +157,7 @@ func setupCap(t *testing.T) *capEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -520,5 +520,47 @@ func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
 				t.Fatalf("refused with %q, want the message left alone", out.ReasonCode)
 			}
 		})
+	}
+}
+
+// A MESSAGE THAT WENT OUT UNDER A RECORDED EXCEPTION COUNTS, because the
+// recipient received it.
+//
+// This is the shape a standing communication exception produces: the engine
+// refuses, comms/gates.go answers outcomeUndecided rather than parking the
+// delivery, the provider is called, and the row reaches 'sent' with its
+// decision still reading deny. Counting only allows meant Decree 91/2020's
+// three-per-day ceiling could be filled by three ordinary sends and then
+// exceeded without limit by exception, while the installation's own count
+// still read three.
+//
+// The verdict says whether the message should have gone. The ceiling is about
+// whether it arrived.
+func TestAnExceptionDirectedSendCountsTowardTheCap(t *testing.T) {
+	e := setupCap(t)
+	sent := time.Now().Add(-time.Hour)
+	e.plant(t, plantSpec{
+		status: "sent", sentAt: &sent, phase: "transmit",
+		verdict: "deny", category: string(commsauthz.CategoryMarketing),
+		mode: "enforce",
+	})
+	if got := e.received(t, 24*time.Hour); got != 1 {
+		t.Fatalf("counted %d, want 1 — a refused message that shipped anyway still reached the mailbox", got)
+	}
+}
+
+// The other direction, and the reason the verdict filter looked load-bearing: a
+// refusal that actually STOPPED the message must not consume the allowance.
+// What separates the two is the delivery, not the decision — `parked` is its
+// own status and matches neither half of the count.
+func TestARefusedMessageThatWasParkedCountsForNothing(t *testing.T) {
+	e := setupCap(t)
+	e.plant(t, plantSpec{
+		status: "parked", phase: "transmit",
+		verdict: "deny", category: string(commsauthz.CategoryMarketing),
+		mode: "enforce",
+	})
+	if got := e.received(t, 24*time.Hour); got != 0 {
+		t.Fatalf("counted %d, want 0 — a parked message reached nobody and must return its allowance", got)
 	}
 }

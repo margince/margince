@@ -4,12 +4,12 @@
 # The dev tooling used to address that database two ways with nothing tying
 # them together:
 #
-#   - by COMPOSE PROJECT — `docker compose -f infra/docker-compose.dev.yml exec
+#   - by COMPOSE PROJECT — `docker compose -f docker-compose.dev.yml exec
 #     postgres psql …`, which every ad-hoc statement went through;
 #   - by PUBLISHED HOST PORT — the DSN in scripts/dev.sh, which is what the api,
 #     the worker and the migrator actually connect to.
 #
-# infra/docker-compose.dev.yml pins `name: margince`, so every checkout of this
+# docker-compose.dev.yml pins `name: margince`, so every checkout of this
 # repository on one machine resolves to the SAME compose project. The two paths
 # therefore select the same container only while one checkout is the only one
 # that has ever brought the stack up, and when they diverge nothing says so.

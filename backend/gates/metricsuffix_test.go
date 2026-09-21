@@ -43,6 +43,14 @@ var typeLine = regexp.MustCompile(`# TYPE (margince_[a-z0-9_]+) (counter|gauge|h
 // what makes the call site's literal name judgeable here.
 var familyHeader = regexp.MustCompile(`writeFamilyHeader\((?:[a-zA-Z0-9_.]+), "(margince_[a-z0-9_]+)"`)
 
+// typedHeader matches the AI renderer's header helpers, which take the name as
+// a PARAMETER like writeFamilyHeader above but — unlike it — serve two kinds.
+// The kind is in the helper's own name, so it is judgeable from the call site.
+// The family name must be a literal there, or the families it renders are
+// invisible to this census and `_total` stops meaning counter for exactly the
+// ones nobody can see.
+var typedHeader = regexp.MustCompile(`(counter|histogram)Header\((?:[a-zA-Z0-9_.]+), "(margince_[a-z0-9_]+)"`)
+
 // minFamilies is a floor, not a count. A census that finds nothing passes while
 // checking nothing, and these regexes are exactly the kind that stop matching
 // when a writer is refactored into a helper. Set well below what the tree
@@ -65,6 +73,9 @@ func TestOnlyACounterCarriesTheTotalSuffix(t *testing.T) {
 		}
 		for _, m := range familyHeader.FindAllStringSubmatch(string(body), -1) {
 			families[m[1]] = "gauge"
+		}
+		for _, m := range typedHeader.FindAllStringSubmatch(string(body), -1) {
+			families[m[2]] = m[1]
 		}
 		return nil
 	})

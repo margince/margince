@@ -59,7 +59,7 @@ func (f *fakeVault) Delete(context.Context, string) error {
 func controllerDelivery() Delivery {
 	return Delivery{
 		ID: ids.NewV7(), SenderKind: SenderController, Provider: ProviderOperatorRelay,
-		MessageID: "confirm-abc@margince.invalid", Recipients: []string{"person@example.com"},
+		MessageID: "confirm-abc@margince.invalid", Recipients: []string{"contact@example.com"},
 		Subject:     "Your details, and whether we may stay in touch",
 		Body:        "Check what we hold:\n\n  " + LinkPlaceholder + "\n",
 		TemplateKey: "record_confirmation", TemplateVersion: 1,
@@ -69,7 +69,7 @@ func controllerDelivery() Delivery {
 }
 
 // TestTheLinkReachesTheWireAndNeverTheRow is the lane's central claim: the
-// message a person receives carries a working link, and the row it was built
+// message a contact receives carries a working link, and the row it was built
 // from never held one.
 func TestTheLinkReachesTheWireAndNeverTheRow(t *testing.T) {
 	store := &fakeStore{delivery: controllerDelivery()}
@@ -145,7 +145,7 @@ func TestAFailedRetirementDoesNotResendTheMessage(t *testing.T) {
 }
 
 // TestAnUnconfiguredRelayParksRatherThanRetries holds the disposition for a
-// deployment fact. Retrying would leave a person's link expiring in a queue.
+// deployment fact. Retrying would leave a contact's link expiring in a queue.
 func TestAnUnconfiguredRelayParksRatherThanRetries(t *testing.T) {
 	store := &fakeStore{delivery: controllerDelivery()}
 	d := newTestDispatcher(store, fakeResolver{}, &stubConsent{})

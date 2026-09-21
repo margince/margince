@@ -70,12 +70,14 @@ type aiUsageTask = struct {
 	CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 	// Task capture_classify, enrich, summarize, …
-	Task string `json:"task"`
+	Task            string  `json:"task"`
+	TaskDisplayName *string `json:"task_display_name,omitempty"`
 
 	// Tier local_small, cheap_cloud, premium, frontier, local_large.
-	Tier      string `json:"tier"`
-	TokensIn  int    `json:"tokens_in"`
-	TokensOut int    `json:"tokens_out"`
+	Tier          string `json:"tier"`
+	TokensIn      int    `json:"tokens_in"`
+	TokensOut     int    `json:"tokens_out"`
+	UnpricedCalls *int   `json:"unpriced_calls,omitempty"`
 }
 
 // microUSDPerMinor converts ADR-0067's micro-USD price grain to wire
@@ -91,13 +93,18 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 		}
 		for _, task := range day.Tasks {
 			cached := task.CachedHits
+			name := DisplayName(Task(task.Task))
+			if name == "" {
+				name = task.Task
+			}
 			wireTask := aiUsageTask{
-				Task:       task.Task,
-				Tier:       task.Tier,
-				Calls:      task.Calls,
-				CachedHits: &cached,
-				TokensIn:   task.TokensIn,
-				TokensOut:  task.TokensOut,
+				Task:            task.Task,
+				TaskDisplayName: &name,
+				Tier:            task.Tier,
+				Calls:           task.Calls,
+				CachedHits:      &cached,
+				TokensIn:        task.TokensIn,
+				TokensOut:       task.TokensOut,
 			}
 			// A task line that is ENTIRELY unpriced (every window call
 			// lacking a rate row, so the summed cost is exactly 0 with no
@@ -110,6 +117,15 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 			if task.CostEstMicroUSD > 0 || task.UnpricedCalls == 0 {
 				minor := int(task.CostEstMicroUSD / microUSDPerMinor)
 				wireTask.CostEstMinor = &minor
+			}
+			// The count travels with the figure it qualifies. Without it a
+			// reader cannot tell a whole dollar total from one that is short
+			// by some number of calls, and the two look identical: both are a
+			// number, and the partial one is always the smaller. Under-reported
+			// spend is the direction nobody investigates.
+			if task.UnpricedCalls > 0 {
+				unpriced := int(task.UnpricedCalls)
+				wireTask.UnpricedCalls = &unpriced
 			}
 			wireDay.Tasks = append(wireDay.Tasks, wireTask)
 		}

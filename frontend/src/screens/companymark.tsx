@@ -22,7 +22,7 @@ const ACCEPTED_IMAGES =
   "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
 
 /**
- * The installation's own marks: what they are now, and what a person can do
+ * The installation's own marks: what they are now, and what a contact can do
  * about each.
  *
  * TWO of them, because the sidebar shows the company at two widths. The wide
@@ -35,7 +35,7 @@ const ACCEPTED_IMAGES =
  * The wide mark is normally the one the website read resolved from the
  * company's own site. This is the other door — for an installation whose site
  * declares no icon, and for the read that resolved the wrong picture. Uploading
- * takes the field: while a person's own mark stands, a later read leaves it
+ * takes the field: while a contact's own mark stands, a later read leaves it
  * alone. Removing gives it back, so the record returns to its monogram and the
  * next read may resolve one again. Nothing but an upload ever fills the square
  * slot, so it has no read to hold off.
@@ -60,7 +60,7 @@ export function CompanyMark({
     <div className="company-mark">
       <div className="company-mark-body">
         <b>{t("settings.companyMark")}</b>
-        <p className="t-caption">{t("settings.companyMarkIntro")}</p>
+        <p>{t("settings.companyMarkIntro")}</p>
         <div className="company-mark-slots">
           <MarkSlot
             profile={profile}
@@ -215,7 +215,6 @@ function MarkSlot({
   // press — so a double press or a held Enter cannot start a second request
   // whose answer would race the first, nor open a second picker whose file
   // would then be dropped.
-  const failure = upload.error ?? remove.error;
   const removeMark = () => {
     // A picker left open under a removal is a second writer: a file dropped
     // while the DELETE is out lands in whichever order the two answer.
@@ -229,16 +228,13 @@ function MarkSlot({
 
   return (
     <section className="company-mark-slot" aria-labelledby={headingId}>
-      <b className="t-caption" id={headingId}>
-        {name}
-      </b>
+      <b id={headingId}>{name}</b>
       <p className="t-caption">{status}</p>
       {!picking && <p className="t-caption">{hint}</p>}
       <MarkPreview profile={profile} src={src} square={square} />
       {canEdit && (
         <div className="company-mark-actions">
           <Button
-            small
             aria-label={src ? verbs.replace : verbs.add}
             onClick={() => setPicking((open) => !open)}
             disabled={remove.isPending}
@@ -250,7 +246,6 @@ function MarkSlot({
           </Button>
           {src && (
             <Button
-              small
               variant="ghost"
               aria-label={verbs.remove}
               onClick={removeMark}
@@ -271,9 +266,24 @@ function MarkSlot({
           onPick={uploadMark}
         />
       )}
-      {failure && (
-        <Callout tone="danger" live="alert">
-          {problemMessageOf(failure, t)}
+      {/* One notice per verb: a single heading over `upload.error ?? remove.error`
+          left the reader unable to tell which of the two the server refused. */}
+      {upload.error !== null && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("settings.companyMarkUploadFailed")}
+        >
+          {problemMessageOf(upload.error, t)}
+        </Callout>
+      )}
+      {remove.error !== null && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("settings.companyMarkRemoveFailed")}
+        >
+          {problemMessageOf(remove.error, t)}
         </Callout>
       )}
     </section>
@@ -293,9 +303,9 @@ function MarkPreview({
 }>) {
   const monogram = (
     <Avatar
-      identity={profile.organization_id}
+      identity={profile.company_id}
       name={profile.display_name}
-      shape="organization"
+      shape="company"
       size="xl"
     />
   );

@@ -39,6 +39,11 @@ import (
 // declares the version, title and description that used to sit in Go.
 const mcpToolExtension = "x-mcp-tool"
 
+// agentAccessExtension names the extension spelling of x-agent-access — core's
+// own vocabulary for an operation that is served but never agent-reachable,
+// restated for extension fragments (extension.Verb.HumanOnly).
+const agentAccessExtension = "x-agent-access"
+
 // declaredVerb is one governed extension operation plus the provenance the
 // manifest digest covers but the running process has no use for.
 type declaredVerb struct {
@@ -202,6 +207,7 @@ func verbsInPathItem(base, unit, route string, item *yaml.Node) ([]declaredVerb,
 type operationDoc struct {
 	OperationID string    `yaml:"operationId"`
 	Tool        yaml.Node `yaml:"x-mcp-tool"`
+	AgentAccess yaml.Node `yaml:"x-agent-access"`
 	RbacObject  string    `yaml:"x-rbac-object"` // key spelled once in rbacObjectExtension
 	RbacAction  string    `yaml:"x-rbac-action"` // key spelled once in rbacActionExtension
 	RequestBody yaml.Node `yaml:"requestBody"`
@@ -236,6 +242,23 @@ type toolAnnotation struct {
 	Subject *subjectAnnotation `yaml:"subject"`
 }
 
+// agentAccessAnnotation is the extension spelling of x-agent-access. It
+// carries the same shape x-mcp-tool does minus the tier/scope/subject
+// governance fields it has no use for — extension.Verb refuses either being
+// set on a HumanOnly verb.
+type agentAccessAnnotation struct {
+	Access      string `yaml:"access"`
+	Verb        string `yaml:"verb"`
+	Version     string `yaml:"version"`
+	Title       string `yaml:"title"`
+	Description string `yaml:"description"`
+}
+
+// humanOnlyAccess is the one value an extension may declare for
+// x-agent-access.access — core's other value, auth-bootstrap, is
+// session/login machinery core alone owns.
+const humanOnlyAccess = "human-only"
+
 // subjectAnnotation is the extension spelling of the staged subject, read
 // strictly for the same reason the annotation around it is: a typo'd `table`
 // would fall back to nothing and be refused, but a typo'd `arg` on a unit that
@@ -254,18 +277,17 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 	if err := checkExtensionKeys(node); err != nil {
 		return declaredVerb{}, err
 	}
-	if op.Tool.IsZero() {
-		// Fail closed. An extension operation with no x-mcp-tool would publish
+	if op.Tool.IsZero() && op.AgentAccess.IsZero() {
+		// Fail closed. An extension operation declaring neither would publish
 		// a route this tier has no way to serve — routes are mounted onto tool
 		// invocations (compose/extroutes.go) — so it would be a documented
-		// endpoint answering 404 forever. When a non-tool extension route
-		// becomes a thing, it needs a registration seam first, and this is
-		// where the author is told so.
-		return declaredVerb{}, fmt.Errorf("the operation declares no %s — an extension operation is served as a governed tool invocation, so a route with no tool verb can be registered by nothing", mcpToolExtension)
+		// endpoint answering 404 forever. Every operation is either a governed
+		// agent tool or explicitly human-only, the same invariant crm.yaml's
+		// own header states for core.
+		return declaredVerb{}, fmt.Errorf("the operation declares neither %s nor %s — every extension operation is either a governed agent tool or explicitly human-only", mcpToolExtension, agentAccessExtension)
 	}
-	ann, err := decodeStrict[toolAnnotation](&op.Tool)
-	if err != nil {
-		return declaredVerb{}, fmt.Errorf("%s: %w", mcpToolExtension, err)
+	if !op.Tool.IsZero() && !op.AgentAccess.IsZero() {
+		return declaredVerb{}, fmt.Errorf("the operation declares both %s and %s — exactly one", mcpToolExtension, agentAccessExtension)
 	}
 	input, err := argumentSchema(strings.ToUpper(method), &op.RequestBody, &op.Parameters)
 	if err != nil {
@@ -275,23 +297,54 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 	if err != nil {
 		return declaredVerb{}, err
 	}
-	v := extension.Verb{
-		Unit:           extension.Name(unit),
-		Contract:       base,
-		OperationID:    op.OperationID,
-		Route:          route,
-		Method:         strings.ToUpper(method),
-		Tool:           ann.Verb,
-		Title:          ann.Title,
-		Description:    strings.TrimSpace(ann.Description),
-		Version:        ann.Version,
-		Tier:           extension.Tier(ann.Tier),
-		RequestedScope: extension.Scope(ann.Scope),
-		InputSchema:    input,
-		OutputSchema:   output,
-		RbacObject:     op.RbacObject,
-		RbacAction:     extension.RbacAction(op.RbacAction),
-		Subject:        subjectOf(ann.Subject),
+	var v extension.Verb
+	if !op.AgentAccess.IsZero() {
+		aa, err := decodeStrict[agentAccessAnnotation](&op.AgentAccess)
+		if err != nil {
+			return declaredVerb{}, fmt.Errorf("%s: %w", agentAccessExtension, err)
+		}
+		if aa.Access != humanOnlyAccess {
+			return declaredVerb{}, fmt.Errorf("%s.access %q is not one an extension may declare (%s)", agentAccessExtension, aa.Access, humanOnlyAccess)
+		}
+		v = extension.Verb{
+			Unit:         extension.Name(unit),
+			Contract:     base,
+			OperationID:  op.OperationID,
+			Route:        route,
+			Method:       strings.ToUpper(method),
+			Tool:         aa.Verb,
+			Title:        aa.Title,
+			Description:  strings.TrimSpace(aa.Description),
+			Version:      aa.Version,
+			HumanOnly:    true,
+			InputSchema:  input,
+			OutputSchema: output,
+			RbacObject:   op.RbacObject,
+			RbacAction:   extension.RbacAction(op.RbacAction),
+		}
+	} else {
+		ann, err := decodeStrict[toolAnnotation](&op.Tool)
+		if err != nil {
+			return declaredVerb{}, fmt.Errorf("%s: %w", mcpToolExtension, err)
+		}
+		v = extension.Verb{
+			Unit:           extension.Name(unit),
+			Contract:       base,
+			OperationID:    op.OperationID,
+			Route:          route,
+			Method:         strings.ToUpper(method),
+			Tool:           ann.Verb,
+			Title:          ann.Title,
+			Description:    strings.TrimSpace(ann.Description),
+			Version:        ann.Version,
+			Tier:           extension.Tier(ann.Tier),
+			RequestedScope: extension.Scope(ann.Scope),
+			InputSchema:    input,
+			OutputSchema:   output,
+			RbacObject:     op.RbacObject,
+			RbacAction:     extension.RbacAction(op.RbacAction),
+			Subject:        subjectOf(ann.Subject),
+		}
 	}
 	// The SAME Validate the boot runs, so a fragment this generator accepts
 	// can never be one the composed process then refuses to serve.
@@ -307,7 +360,7 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 
 // readExtensionKeys are the x- annotations an extension operation may carry.
 // The set is closed and short on purpose; see checkExtensionKeys.
-var readExtensionKeys = []string{mcpToolExtension, rbacObjectExtension, rbacActionExtension}
+var readExtensionKeys = []string{mcpToolExtension, agentAccessExtension, rbacObjectExtension, rbacActionExtension}
 
 // rbacObjectExtension names the RBAC object an extension operation gates on.
 const rbacObjectExtension = "x-rbac-object"
@@ -328,12 +381,12 @@ const rbacActionExtension = "x-rbac-action"
 // a stored role document granting the object makes policy.Parse reject the
 // document, which fails that user's ENTIRE identity resolution — not the one
 // screen the unit shipped. A typo in a fragment must not be able to lock a
-// person out of the product.
+// contact out of the product.
 //
-// Closed rather than "check the ones we know": an operation carrying, say,
-// x-agent-access would be stating an authority posture this tier does not read,
-// and silently publishing it is the same class of lie. When a unit needs another
-// annotation, this list gains a reviewed line.
+// Closed rather than "check the ones we know": an operation carrying an
+// annotation this tier does not read would be stating an authority posture
+// nothing acts on, and silently publishing it is the same class of lie. When
+// a unit needs another annotation, this list gains a reviewed line.
 func checkExtensionKeys(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
 		return fmt.Errorf("the operation is not a mapping")

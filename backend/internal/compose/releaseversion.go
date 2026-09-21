@@ -52,12 +52,18 @@ package compose
 // the record, the roles that disagree with it refuse, so no mixed set serves.
 // Closing either bound is a design change rather than a fix — a monotonic record
 // would cost rollback — so both are tracked rather than worked around here.
+//
+// The second bound costs DIAGNOSIS rather than correctness, and that part is not
+// left to be rediscovered: refuseMixedRelease names the backwards move as one of
+// the two shapes that produce a refusal, so an operator whose deploy was clean is
+// not sent to audit it.
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -82,7 +88,7 @@ const releaseLedgerFact = "release-version"
 //
 // It carries no scope, because ADR-0091 §8 phase D took the tenant column off
 // system_log and there is nothing left to scope by: one installation serves one
-// organization (ADR-0061), and this ledger records that installation's releases.
+// company (ADR-0061), and this ledger records that installation's releases.
 //
 // The residue this DOES admit, named because it is not hypothetical: an
 // installation that merged an ARCHIVED predecessor still holds that
@@ -93,16 +99,35 @@ const releaseLedgerFact = "release-version"
 // ledger, so the api's own row is the newest as soon as it boots. The window is
 // a worker booting against residue before that api boot, which is #2196.
 //
-// occurred_at leads the ordering, with id as the deterministic tiebreak, for the
-// reason extensioninventory spells out: uuidv7 ids are monotonic only within one
-// process, and concurrently booting replicas mint theirs independently. COALESCE
-// because an absent key must read as the empty string — the same value "no
+// THE ORDERING KEY OBSERVES THE LOCK, which occurred_at does not.
+//
+// system_log.occurred_at defaults to now(), the TRANSACTION timestamp, and the
+// advisory lock above is taken inside the transaction. So a replica that begins
+// first, is descheduled, and commits second carries the OLDER stamp — and this
+// read would return the other replica's row although this one committed last.
+// The lock serialises the write correctly; the key simply did not observe that.
+//
+// `observed_at` is clock_timestamp() read after the lock is held, so it orders
+// by the moment the writer actually got its turn. Rows written before it exists
+// fall back to occurred_at, which is what they were ordered by anyway: the
+// coalesce makes this a strict improvement rather than a cliff at the deploy
+// that introduces it.
+//
+// Cast rather than compared as text. A timestamp rendered one way sorts
+// lexicographically and rendered another does not, and nothing here would say
+// which it got.
+//
+// id stays the deterministic tiebreak, for the reason extensioninventory spells
+// out: uuidv7 ids are monotonic only within one process, and concurrently
+// booting replicas mint theirs independently. The outer COALESCE is a different
+// one — an absent release key must read as the empty string, the same value "no
 // record at all" produces, since both mean there is nothing to compare.
 const lastObservedReleaseQuery = `
 	SELECT COALESCE(detail->>'release_version', '')
 	  FROM system_log
 	 WHERE action = $1 AND detail->>'installation' = $2
-	 ORDER BY occurred_at DESC, id DESC LIMIT 1`
+	 ORDER BY COALESCE((detail->>'observed_at')::timestamptz, occurred_at) DESC, id DESC
+	 LIMIT 1`
 
 // RecordInstallationRelease records the release this api was built from as the
 // installation's release, when it differs from the last one recorded.
@@ -151,9 +176,19 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 		if last == version {
 			return nil
 		}
+		// The instant this writer got its turn, read from the database AFTER the
+		// lock is held. It is what the read above orders by, and taking it here
+		// rather than at transaction start is the whole of the fix: a replica
+		// descheduled between BEGIN and the lock would otherwise stamp a moment
+		// earlier than a replica that started later and finished first.
+		var observedAt time.Time
+		if err := tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&observedAt); err != nil {
+			return fmt.Errorf("compose: reading the instant this release observation got its turn: %w", err)
+		}
 		if _, err := storekit.LogSystem(ctx, tx, installationReleaseObserved, map[string]any{
 			"release_version": version,
 			"installation":    installationMarker(ctx),
+			"observed_at":     observedAt.UTC().Format(time.RFC3339Nano),
 		}); err != nil {
 			return err
 		}
@@ -222,9 +257,26 @@ func AssertInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 // a different release than the role was built from, or nil when there is nothing
 // to refuse.
 //
-// The message gives both release versions and the one action that corrects it. It
-// names no internals: an operator reading a role's log needs the two versions and
-// what to do, and needs nothing about the ledger the answer came from.
+// THE MESSAGE IS THE DELIVERABLE, and it has to end the investigation rather than
+// start one. What an operator sees is a crash-looping role beside an api serving
+// happily, and there are TWO ways to arrive there — the message used to state
+// only the first as though it were the only one:
+//
+//   - The deployment genuinely supplied two releases. Redeploy at one.
+//   - The deployment supplied ONE release, and the installation's record moved
+//     backwards underneath it. The record is last writer wins (see the file
+//     comment), so an api replica from the previous release restarting after the
+//     new one recorded puts the older release back — and every correctly deployed
+//     role then refuses exactly like this. An operator who knows their deploy was
+//     clean and reads a message blaming the deploy has been sent to look at the
+//     one thing that is right.
+//
+// The second is why the refusal names the api's restart as a shape rather than
+// leaving it to be rediscovered: the bound is deliberate and tracked, and what it
+// costs is diagnosis, so the diagnosis is what this pays back.
+//
+// It names no internals: an operator reading a role's log needs the two versions
+// and what to do, and needs nothing about the ledger the answer came from.
 //
 // IT NAMES NO DEPLOYMENT MECHANISM EITHER. Container images and a registry are
 // how the release reaches most installations, but they are not the only way — this
@@ -239,10 +291,17 @@ func refuseMixedRelease(mine, installation string) error {
 	}
 	return fmt.Errorf(
 		"this role is release %q but this installation runs release %q: "+
-			"the deployment supplied two different releases. "+
-			"Deploy every role (api, web, worker) at one release and restart; "+
-			"this role will not run half of one release beside half of another",
-		mine, installation)
+			"every role has to be at one release, and this one will not run half of "+
+			"one release beside half of another. "+
+			"Deploy every role (api, web, worker) at one release and restart. "+
+			"If the set WAS deployed at one release, the other shape that produces "+
+			"this is a rollout: the installation's release is whichever one its api "+
+			"recorded LAST, so an api still on the previous release restarting after "+
+			"the new one recorded puts the older release back on the record, and every "+
+			"correctly deployed role then refuses exactly like this. Restarting the "+
+			"api at the intended release restores the record",
+		mine, installation,
+	)
 }
 
 // lastObservedRelease reads the release THIS installation's api recorded most

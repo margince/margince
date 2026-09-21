@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -93,7 +93,7 @@ function agentToolsBackend() {
             name: "search_records",
             title: "Search records",
             description:
-              'Find people, organizations, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+              'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
             required_scope: "read",
             tier: "auto_execute",
             egress: false,
@@ -102,7 +102,7 @@ function agentToolsBackend() {
             name: "send_email",
             title: "Send an email",
             description:
-              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
             tier: "confirmation_required",
             egress: true,
@@ -137,9 +137,9 @@ describe("AgentToolsCard (IT-1)", () => {
     expect(sendRow).toBeTruthy();
     // The egress "reaches out" badge shows only on the tool that reaches
     // outside the workspace (send_email), never on the pure-read tool.
-    expect(sendRow && within(sendRow).getByText("reaches out")).toBeTruthy();
+    expect(sendRow && within(sendRow).getByText("Reaches out")).toBeTruthy();
     expect(
-      searchRow && within(searchRow).queryByText("reaches out"),
+      searchRow && within(searchRow).queryByText("Reaches out"),
     ).toBeNull();
   });
 
@@ -163,7 +163,7 @@ describe("AgentToolsCard (IT-1)", () => {
     ).toBeTruthy();
     expect(
       searchRow &&
-        within(searchRow).getByText(/Find people, organizations, deals/),
+        within(searchRow).getByText(/Find contacts, companies, deals/),
     ).toBeTruthy();
     // Governance travels with it, because the server appends it to the same
     // string — the console must not show a shortened reading of what an agent
@@ -185,7 +185,7 @@ describe("AgentToolsCard (IT-1)", () => {
     ).toBeTruthy();
     expect(
       sendRow &&
-        within(sendRow).getByText(/Governance: a person approves every call/),
+        within(sendRow).getByText(/Governance: a human approves every call/),
     ).toBeTruthy();
     expect(sendRow && within(sendRow).getByText("send")).toBeTruthy();
   });
@@ -244,7 +244,7 @@ function agentToolsWithPassportsBackend() {
             name: "send_email",
             title: "Send an email",
             description:
-              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
             tier: "confirmation_required",
             egress: true,
@@ -335,7 +335,7 @@ describe("AgentToolsCard passport scoping", () => {
     ).toBeNull();
     // And the answer column still carries the governance it is there for.
     expect(answer && within(answer).getByText("send")).toBeTruthy();
-    expect(answer && within(answer).getByText("reaches out")).toBeTruthy();
+    expect(answer && within(answer).getByText("Reaches out")).toBeTruthy();
   });
 
   // A human who only ever connected an agent through the OAuth consent screen
@@ -446,7 +446,7 @@ function revocablePassportsBackend() {
             name: "send_email",
             title: "Send an email",
             description:
-              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
             tier: "confirmation_required",
             egress: true,

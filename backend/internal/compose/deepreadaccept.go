@@ -6,7 +6,7 @@ package compose
 // The deep-read ACCEPT executor (R4): a human approval of a staged
 // "deepread" proposal lands the whole read in one transaction — profile
 // fields fill-empty like a quick scrape, category facts into
-// organization_fact — with human-set values taking precedence on both.
+// company_fact — with human-set values taking precedence on both.
 // Redeem-then-execute like every 🟡 executor: the single-use redemption
 // is the exactly-once claim, so a replayed or re-driven decision applies
 // nothing twice.
@@ -19,16 +19,16 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // deepReadAcceptEffect builds the approvals.ApprovedEffect compose
 // injects for kind "deepread".
-func deepReadAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func deepReadAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		proposal, err := people.UnmarshalDeepRead(proposedChange)
+		proposal, err := contacts.UnmarshalDeepRead(proposedChange)
 		if err != nil {
 			return err
 		}

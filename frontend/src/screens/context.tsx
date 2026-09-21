@@ -5,17 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY_KINDS, type EntityKind } from "../app/entity";
-import { Card, EmptyState } from "../design-system/atoms";
+import { EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
+import { Panel, PanelBody } from "../design-system/panel";
 import { EvidenceChip, toEvidence } from "../design-system/trust";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  OverlayUnavailable,
-  QueryGate,
-  type QueryLike,
-  throwProblem,
-  useSorMode,
-} from "./common";
+import { QueryGate, type QueryLike, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./context.css";
 
@@ -29,8 +25,8 @@ type ContextResponse = components["schemas"]["ContextResponse"];
 const SECTION_LABELS: Readonly<Record<string, MessageKey>> = {
   recent_touches: "context.recentTouches",
   open_tasks: "context.openTasks",
-  related_people: "context.relatedPeople",
-  related_organizations: "context.relatedCompanies",
+  related_contacts: "context.relatedContacts",
+  related_companies: "context.relatedCompanies",
   related_deals: "context.relatedDeals",
   related_projects: "context.relatedProjects",
   who_knows: "context.whoKnows",
@@ -60,13 +56,8 @@ export function RecordContextPanel({
   id,
 }: Readonly<{ entityType: EntityKind; id: string }>) {
   const t = useT();
-  // The context walk is assembled from the context graph / embeddings, which
-  // branch 1 builds no nodes for over mirror content (the endpoint 404s in
-  // overlay) — an honest unavailable state, not an error, and no doomed fetch.
-  const overlay = useSorMode() === "overlay";
   const query = useQuery({
     queryKey: ["record-context", entityType, id],
-    enabled: !overlay,
     queryFn: async () => {
       const { data, error } = await api.GET(
         "/records/{entity_type}/{id}/context",
@@ -84,91 +75,85 @@ export function RecordContextPanel({
     },
   });
 
-  if (overlay) {
-    return (
-      <Card className="record-context" title={t("context.title")}>
-        <OverlayUnavailable />
-      </Card>
-    );
-  }
-
   return (
-    <Card className="record-context" title={t("context.title")}>
-      <QueryGate
-        query={query as QueryLike<ContextResponse>}
-        pendingLabel={t("context.title")}
-      >
-        {(data) => {
-          const sections = neighbourhood(
-            data.sections ?? [],
-            `${entityType}:${id}`,
-          );
-          return sections.length === 0 ? (
-            <EmptyState>{t("context.empty")}</EmptyState>
-          ) : (
-            <div className="context-sections">
-              {sections.map((section) => (
-                <div key={section.name} className="context-section">
-                  <h3 className="t-label">
-                    {SECTION_LABELS[section.name]
-                      ? t(SECTION_LABELS[section.name])
-                      : section.name.replaceAll("_", " ")}
-                  </h3>
-                  <ul className="context-items">
-                    {section.items.map((item) => {
-                      const self = `${item.ref.type}:${item.ref.id}`;
-                      const evidenceList = (item.evidence ?? [])
-                        .map((entry) => toEvidence(entry))
-                        .filter((entry) => entry != null)
-                        // A record is not evidence for itself. The walk cites
-                        // every item by its own ref, which the model needs — an
-                        // item with no citation trips its no-guess gate — and a
-                        // reader does not: a chip proving "Anna Weber" with
-                        // "Anna Weber" is the same claim twice.
-                        .filter((entry) => entry.source !== self);
-                      return (
-                        <li
-                          key={`${item.ref.type}:${item.ref.id}`}
-                          className="context-item"
-                        >
-                          {LINKABLE.has(item.ref.type as EntityKind) ? (
-                            <>
-                              <EntityRef
-                                kind={item.ref.type as EntityKind}
-                                id={item.ref.id}
+    <Panel title={t("context.title")}>
+      <PanelBody>
+        <QueryGate
+          query={query as QueryLike<ContextResponse>}
+          pendingLabel={t("context.title")}
+        >
+          {(data) => {
+            const sections = neighbourhood(
+              data.sections ?? [],
+              `${entityType}:${id}`,
+            );
+            return sections.length === 0 ? (
+              <EmptyState>{t("context.empty")}</EmptyState>
+            ) : (
+              <div className="context-sections">
+                {sections.map((section) => (
+                  <div key={section.name} className="context-section">
+                    <Heading size="small" as="h3">
+                      {SECTION_LABELS[section.name]
+                        ? t(SECTION_LABELS[section.name])
+                        : section.name.replaceAll("_", " ")}
+                    </Heading>
+                    <ul className="context-items">
+                      {section.items.map((item) => {
+                        const self = `${item.ref.type}:${item.ref.id}`;
+                        const evidenceList = (item.evidence ?? [])
+                          .map((entry) => toEvidence(entry))
+                          .filter((entry) => entry != null)
+                          // A record is not evidence for itself. The walk cites
+                          // every item by its own ref, which the model needs — an
+                          // item with no citation trips its no-guess gate — and a
+                          // reader does not: a chip proving "Anna Weber" with
+                          // "Anna Weber" is the same claim twice.
+                          .filter((entry) => entry.source !== self);
+                        return (
+                          <li
+                            key={`${item.ref.type}:${item.ref.id}`}
+                            className="context-item"
+                          >
+                            {LINKABLE.has(item.ref.type as EntityKind) ? (
+                              <>
+                                <EntityRef
+                                  kind={item.ref.type as EntityKind}
+                                  id={item.ref.id}
+                                />
+                                {item.summary && (
+                                  <span className="t-caption">
+                                    {item.summary}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              // A kind with no record page of its own has
+                              // nothing to link to, and its id is not a reading:
+                              // it names the kind, which is what a reader can
+                              // actually do something with. The ref stays on
+                              // `title` for whoever is debugging a walk.
+                              <span title={`${item.ref.type}:${item.ref.id}`}>
+                                {item.summary ?? item.ref.type}
+                              </span>
+                            )}
+                            {evidenceList.map((evidence) => (
+                              <EvidenceChip
+                                key={`${evidence.source}:${evidence.snippet}`}
+                                evidence={evidence}
                               />
-                              {item.summary && (
-                                <span className="t-caption">
-                                  {item.summary}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            // A kind with no record page of its own has
-                            // nothing to link to, and its id is not a reading:
-                            // it names the kind, which is what a reader can
-                            // actually do something with. The ref stays on
-                            // `title` for whoever is debugging a walk.
-                            <span title={`${item.ref.type}:${item.ref.id}`}>
-                              {item.summary ?? item.ref.type}
-                            </span>
-                          )}
-                          {evidenceList.map((evidence) => (
-                            <EvidenceChip
-                              key={`${evidence.source}:${evidence.snippet}`}
-                              evidence={evidence}
-                            />
-                          ))}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          );
-        }}
-      </QueryGate>
-    </Card>
+                            ))}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            );
+          }}
+        </QueryGate>
+      </PanelBody>
+    </Panel>
   );
 }

@@ -9,7 +9,6 @@ package attention
 // object where it has none.
 
 import (
-	"context"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -19,9 +18,8 @@ import (
 // assembleMorning builds the feed around one briefing stub and returns the day.
 func assembleMorning(t *testing.T, briefing stubBriefing) crmcontracts.Attention {
 	t.Helper()
-	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{},
-		stubReceipts{}, briefing, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, briefing, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -38,11 +36,11 @@ func TestTheMorningStateSeparatesNoRunFromAllAnswered(t *testing.T) {
 		briefing stubBriefing
 		want     crmcontracts.AttentionThisMorningState
 	}{
-		{"no run produced overnight", stubBriefing{}, crmcontracts.NoRunToday},
-		{"a run whose every item is answered", stubBriefing{ran: true}, crmcontracts.AllAnswered},
+		{"no run produced overnight", stubBriefing{}, crmcontracts.AttentionThisMorningStateNoRunToday},
+		{"a run whose every item is answered", stubBriefing{ran: true}, crmcontracts.AttentionThisMorningStateAllAnswered},
 		{"items still waiting", stubBriefing{rows: []BriefEntry{
 			{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1},
-		}}, crmcontracts.ItemsWaiting},
+		}}, crmcontracts.AttentionThisMorningStateItemsWaiting},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			out := assembleMorning(t, tc.briefing)
@@ -68,9 +66,9 @@ func TestARiskCardCarriesTheDealsFacts(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{
 			DealID: ids.NewV7(), Name: "Fleet retrofit", QuietDays: 19,
 			StageID: &stage, OwnerID: &owner, AmountMinor: &amount, Currency: &currency,
-		}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -101,9 +99,9 @@ func TestARiskCardWithNoFactsSendsNoFactsObject(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: ids.NewV7(), Name: "Bare deal", QuietDays: 5}}},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

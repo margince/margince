@@ -5,11 +5,10 @@ more usefully — how they connect, and which connections are required.
 
 ## The five, in one line each
 
-**Contact** — a person. In the app's navigation this is **Contacts**; on a few
-screens the underlying word "person" shows through.
+**Contact** — an individual you do business with. Navigation calls this
+**Contacts**, and so does everything behind it.
 
-**Company** — an organization you deal with. Navigation calls this
-**Companies**.
+**Company** — a company you deal with. Navigation calls this **Companies**.
 
 **Lead** — a prospect you have not qualified yet. Deliberately kept apart from
 your contacts.
@@ -34,15 +33,18 @@ most CRMs, on purpose.
 | Lead → Company | **There is none.** A lead carries a company *name* as free text. |
 | Deal → Pipeline and stage | **Required.** |
 | Deal → Company | **Optional.** |
-| Deal → Contact | **Optional.** People sit on a deal as stakeholders. |
+| Deal → Contact | **Optional.** Contacts sit on a deal as stakeholders. |
 | Deal → Project | Optional, at most one, and both must name the same company. |
 | Project → Company | **Required — at least one, always.** |
-| Activity → any record | Optional. An activity with no links is shared with everyone. |
+| Activity → any record | Optional. One you log with no links is shared with everyone; a captured one with no links stays held. |
 
-Two of these catch people out.
+Two of these catch readers out.
 
-**A deal does not need a company.** Deal name, currency and stage are required.
-Value, company and expected close date are optional. Qualifying a lead creates a
+**A deal does not need a company.** Name, pipeline, stage and source are
+required. Value, company and expected close date are optional. Currency is not
+required on its own — it is atomic with the amount: a figure with no currency is
+refused, and a currency with no figure is refused. A deal carrying no value
+carries no currency either. Qualifying a lead creates a
 deal with no company attached at all, because a lead has no company to attach.
 
 **A lead has no company record behind it.** That free-text name is not a
@@ -54,7 +56,14 @@ not get to create half-formed companies in your CRM.
 A contact needs a name and a source. Everything else is optional.
 
 Emails are typed **work, personal or other**. Phones are **work, mobile, home or
-other**.
+other**. You add, remove and reorder both on the record itself, not only when
+you create it. One number may appear twice under two types — a switchboard that
+is both work and mobile — and editing the list keeps the two rows apart rather
+than collapsing them.
+
+The header says **who can see this contact**: private to its owner, or everyone
+in the company. A company header says the same about itself. See
+[Seats, roles and who can see what](seats-roles-and-access.md).
 
 A contact's job title appears in two places and they are not the same thing. The
 title on the contact record is a convenience copy; the authoritative one lives on
@@ -107,14 +116,14 @@ Five statuses. The first three are open, the last two are terminal.
 | **New** | Nothing has happened yet |
 | **Contacted** | We reached out |
 | **Engaged** | They answered, or a meeting is booked or held |
-| **Qualified** | A contact now exists for this person |
+| **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
 Contacted and engaged are set automatically from captured activity, and can also
 be set by hand. The record tells you which: "set automatically from captured
 activity" or "set by hand".
 
-A person may move an open lead to any open step, forwards or back. The system
+You may move an open lead to any open step, forwards or back. The system
 only ever moves it forwards.
 
 ### Qualifying a lead
@@ -137,7 +146,7 @@ and the lead is marked qualified and archived. You can preview which of the two
 will happen before you confirm.
 
 One caution on that preview: if the matching contact is one you are not allowed
-to see, the preview still says "merge" but does not show you the person. **An
+to see, the preview still says "merge" but does not show you the contact. **An
 absent contact never means "no match".**
 
 You can open a deal in the same step. The deal takes the lead's owner and is left
@@ -153,8 +162,11 @@ A qualification can be reversed, with a reason that is recorded.
 - If it **merged** into an existing contact: that contact is untouched. Only the
   lineage pointers are cleared. A field-level un-merge is never attempted,
   because it is lossy and ambiguous.
-- **If the contact owns a deal, it cannot be reversed at all.** The product
-  blocks rather than orphaning the deal.
+- **If the contact is a stakeholder on a live deal, it cannot be reversed at
+  all.** The product blocks rather than orphaning the deal. Note the test is
+  stakeholder, not owner.
+- If other records have come to depend on the contact, a reversal that would
+  have archived it quietly narrows to clearing the lineage pointers instead.
 
 ### Disqualifying
 
@@ -162,7 +174,8 @@ Disqualifying archives the lead, records a reason from an administrator-managed
 list, and an optional note. The record stays fetchable. It becomes read-only:
 "This lead is closed and takes no changes."
 
-There is no reverse-disqualify action.
+A disqualified lead can be **reopened**, which restores the status it held
+before. Only the bulk path has no one-step undo — reopen those one at a time.
 
 ### Scoring
 
@@ -199,7 +212,7 @@ project is never silently reopened by a win. Reopening is a human move with a
 reason.
 
 Every phase move is recorded, including the automatic one, which is attributed to
-the person whose action caused it.
+the colleague whose action caused it.
 
 ### The key
 
@@ -207,7 +220,8 @@ Every project gets a short key, minted by the server. You cannot choose it.
 
 It comes from the project's name — initials for a multi-word name, the first
 eight letters for a single-word one — plus the lowest free number. So "Nordwind
-ERP rollout" becomes `NER-1`, and a second "ERP rollout Acme" becomes `ERA-2`.
+ERP rollout" becomes `NER-1`, and "ERP rollout Acme" becomes `ERA-1` — the
+number counts within its own stem, not across all projects.
 
 The key is what files email automatically. Any subject carrying it **in square
 brackets** goes under that project. See [Capture](capture.md).
@@ -224,12 +238,15 @@ Companies on a project are offered three roles — **Customer, Partner,
 Subcontractor** — but these are descriptive labels, not an enforced list. Two
 companies can both be Customer, or none can be.
 
-Stakeholders on a project use five roles: **Sponsor, Project lead, Delivery lead,
-Subject-matter expert, User.**
+Stakeholders on a project use nine roles: **Champion, Economic buyer, Blocker,
+Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter
+expert.**
 
-One thing that trips people up: **you seat someone on a project from the
-contact's page, not the project's.** The project's Stakeholders card shows the
-result and is read-only.
+You can seat someone from either end — the project's own Stakeholders card adds,
+removes and re-roles, and so does the contact's page. The contact page offers
+the five delivery-flavoured roles; the project card offers all nine. The card
+goes read-only when the project is archived, or where your grant withholds
+seating.
 
 ### Who may do what
 
@@ -251,11 +268,13 @@ not.
 There is no separate "notes" feature. A note is an activity, and activities come
 in six kinds: **email, call, meeting, note, task, message.**
 
-Use **Log activity** to add a note or a task straight onto a timeline.
+Use **Log activity** to add a note, a task, a call or a meeting straight onto a
+timeline.
 
 One activity can link to several records at once — a contact and a deal, for
-example. An activity with no links at all is visible to everyone in the
-organization.
+example. An activity you log yourself with no links at all is visible to
+everyone in the company. A *captured* message with nothing to link to is the
+opposite: it stays held, because nothing has judged who it belongs to.
 
 A meeting carries a status: **booked, held, no-show, canceled.**
 
@@ -263,12 +282,12 @@ A meeting carries a status: **booked, held, no-show, canceled.**
 filed against the wrong record, the fix is **Relink**, not delete.
 
 On top of visibility inherited from linked records, an activity carries an
-audience: everyone in the organization, the participants, or a named few. That
+audience: everyone in the company, the participants, or a named few. That
 audience is not overridden by seniority — someone who can see every record still
 does not read a message they were not an audience for.
 
 Where the audience comes from depends on how the row arrived. A note or a call
-you log is shared with the organization unless you say otherwise. **A message
+you log is shared with the company unless you say otherwise. **A message
 captured from a mailbox is not**: its audience is derived from what each
 importing mailbox asks for, and a new mailbox holds its mail until a classifier
 judges the thread ordinary. You change a captured message's audience by sharing
@@ -280,13 +299,19 @@ Every record keeps a history of what changed, who changed it and when. From that
 history you can put a single change back — one entry, not the whole record to a
 point in time.
 
+What goes back is that **entry**, whole. There is no per-field undo: if one
+change touched four fields, all four return together, and the screen says so —
+"{count} fields go back to what they were before this change."
+
 Putting a change back is an ordinary edit, not a special power. It re-applies
-what the field held before that entry, goes through the same rules as if you had
+what those fields held before that entry, goes through the same rules as if you had
 typed the old value yourself, and appears in the history as its own entry naming
 the change it reversed. So an undo is visible, and an undo can itself be undone.
 
 Not every entry can be put back, and the history says which and why before you
-press anything:
+press anything. There are several reasons an entry is not replayable; these
+three are the ones you will actually meet, because they are the ones that can
+still change between reading the screen and pressing the button:
 
 - **The field moved again since.** Putting the entry back would silently discard
   whatever was written after it. The reason names the field, so you can look at
@@ -303,9 +328,46 @@ edited the record in between. When that happens the change is refused and
 nothing is written, rather than being applied to a record that has moved. Read
 the reason, look at the record again, and decide from what is there now.
 
-**An agent cannot put a change back.** It is a person's authority on purpose:
+**An agent cannot put a change back.** It is a human's authority on purpose:
 otherwise an agent could reach a change it was never allowed to make directly by
 making it, and then undoing the undo.
+
+## Custom fields
+
+Beyond the columns every installation has, your company can add its own. Seven
+types — **text, number, date, currency, picklist, multiple choice, yes/no** — on
+six record types: contacts, companies, deals, leads, projects and contracts. A
+multiple-choice field holds several answers at once, and a filter finds the
+record by any one of them.
+
+**Activities cannot carry one**, and that is deliberate rather than an oversight:
+a custom field on an activity could be created and never read back, so the
+product refuses to offer what it could not serve.
+
+An administrator names the field; what sits behind it is derived from that name
+once and never changes, so renaming moves the label and leaves your reporting
+intact. They are set up at **Settings → Fields**.
+
+## Tags
+
+A tag is a shared word this company files records under. **Anyone can apply one;
+only admin and ops seats add, rename or retire them.**
+
+Every tag has its own page listing the records carrying it, grouped by type.
+
+Renaming a tag renames it everywhere — there is one word, not a copy per record.
+
+Two administrator actions are worth knowing:
+
+- **Retire** takes a tag out of use without touching the records that carry it,
+  and **Restore** brings it back.
+- **Merge** folds one tag into another and **cannot be undone**: "Records
+  carrying {name} will carry the other tag instead, and the name is released for
+  anyone to use again." Afterwards it reports what actually moved — "{moved}
+  records moved to the surviving tag. {collapsed} already carried both, so their
+  duplicate was dropped."
+
+An agent may not merge tags on its own; a merge is staged for a human.
 
 ## Money
 

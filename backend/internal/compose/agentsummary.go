@@ -120,7 +120,7 @@ func actPhrase(pol agentPolicy, method, path string) string {
 }
 
 // recordNoun is the record type as a reader says it: the wire spells
-// `deal_room`, a person says "deal room".
+// `deal_room`, a contact says "deal room".
 func recordNoun(record agentRecordType) string {
 	return strings.ReplaceAll(string(record), "_", " ")
 }
@@ -162,6 +162,16 @@ const (
 	opRetireCustomField        = "retireCustomField"
 	opUpdateCustomFieldOptions = "updateCustomFieldOptions"
 	opMergeTags                = "mergeTags"
+)
+
+// The backing MCP tool verbs (agentPolicy.Tool values) of the record-write
+// operations this summary reasons about. Named as constants because the
+// strings recur across the generated policy table.
+const (
+	toolCreateRecord  = "create_record"
+	toolUpdateRecord  = "update_record"
+	toolArchiveRecord = "archive_record"
+	toolMergeRecords  = "merge_records"
 )
 
 // genericVerbs are the tools whose name carries no record: they act on

@@ -45,7 +45,13 @@
     "vite.mcp-apps.config.ts",
     "vitest.budget.ts",
     "scripts/**/*.ts",
-    "src"
+    "src",
+    // The browser suite's record corpus, and only that file: it is the list of
+    // record pages the Playwright specs sweep, and `src/app/recordcensus.test.ts`
+    // holds it against the set the shell caps — a src test cannot import a file
+    // no project lists. The specs themselves stay out; they are typed by no
+    // project today, and pulling them in is its own change.
+    "e2e/records.ts"
   ],
   // src/screens/ext/ is the COMPOSED lane's program — its screens call routes
   // that are in `paths` only under the merged contract — so it cannot be typed

@@ -1,0 +1,944 @@
+/* The contact record page (ADR-0096, concept contact-record-page-v2 §5).
+
+   Namespaced `pe-` throughout, the way the company page owns `co-`. The two
+   pages share the RecordView shell and the design system beneath it; what is
+   here is only what the contact's own anatomy needs. */
+
+/* The relationship state strip (§5.3) is the design system's `StatStrip` — one
+   plate of ruled slots, the same shape and the same type scale the company
+   record's readings row draws. Nothing about it is the contact page's own, so
+   nothing about it is styled here.
+
+   ---------------------------------------------------------------------------
+   The identity line under the name — how to reach this contact, and who holds
+   the relationship — is the design system's `IdentityLine`, which every record
+   now draws. Only the LINK inside it is this page's: the address, the number
+   and the profile are each a way to act, and a link is what says so.
+   --------------------------------------------------------------------------- */
+/* A company is a record of its own, so its name in the header is a link and
+   reads as one: no button chrome, the page's own link colour. */
+/* The brief, when the standing chip scrolls to it, stops under the stuck
+   strip rather than behind it: the top bar and the strip together. */
+.pe-brief-anchor {
+  scroll-margin-top: calc(var(--topbarH) + 4.5rem);
+}
+
+/* The standing chip is a button that looks like the badge it holds: no
+   chrome of its own, the focus ring on the pill. */
+.pe-standing-chip {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.pe-standing-chip:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+/* One sentence behind a reading, at a reading measure. */
+.pe-brief-gloss {
+  margin: 0;
+  max-width: 32ch;
+}
+
+.pe-meta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accentText);
+  cursor: pointer;
+}
+
+.pe-meta-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------------
+   Today with {first name} (§5.5): the panel the page opens on — the lead.
+
+   It leads the stack rather than sharing a row: the moment is the page's
+   answer, and an answer beside two other cards is one of three things to read
+   rather than the thing to do. Its shape and its tint are both the design
+   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warning"` for
+   State B, where the finding itself is the bad news — so only the lead's
+   two-column interior lives here.
+   --------------------------------------------------------------------------- */
+/* The ask and the verbs that answer it, side by side: the buttons sit with the
+   moment they act on rather than under everything it says. */
+.pe-today-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.pe-today-headline {
+  margin: 0 0 var(--space-4);
+  color: var(--textPrimary);
+}
+
+/* Sources and freshness ride the panel's own footer band, quiet: they qualify
+   the whole reading rather than any one line of it. */
+.pe-today-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .pe-today-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Cards. The contact page's panels are the design system's `Panel` — the
+   record page's titled-card shape, which is why there is no `.pe-card` here.
+   What remains is the anatomy INSIDE a panel that is the contact's own.
+   --------------------------------------------------------------------------- */
+
+/* A row of labelled facts — "what matters", the consent card. It is a
+   `PanelRow`, so the hairline, the hover and the panel's own gutters come from
+   there; what is the contact's own is the fixed label column, which lines the
+   values up down the card while a value that wraps pushes only its own row
+   taller. */
+.pe-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.pe-row-value {
+  color: var(--textPrimary);
+  min-width: 0;
+}
+
+/* The profile row's two halves: the address as a value somebody can correct,
+   and the verb that visits it. They wrap as a pair rather than the link being
+   pushed onto a line of its own, where it would read as a row of its own. */
+.pe-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* The prose card (the relationship brief): sentences, not rows. */
+.pe-prose {
+  margin: 0 0 var(--space-3);
+}
+
+/* The sources under the brief (where its sentences were read from) as one
+   quiet line: a caption naming the row, then each source as a plain link,
+   above a hairline that closes the prose. Drawn as chips with envelopes and
+   dates they were the loudest thing in the card; the sentences are the
+   reading, and the sources are the footnote a reader follows when they doubt
+   one. */
+/* The brief's readings: four cells in a row, caption over value, on the same
+   grid step the rest of the card keeps. They fold to two columns before the
+   values start breaking mid-word. */
+.pe-brief-readings {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: var(--space-4) 0 0;
+}
+.pe-brief-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.pe-brief-reading dd {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+/* A reading that opens on hover says so: the dotted rule under the value is
+   the one mark for "there is more behind this word", the same one the
+   glossary terms in the product wear. The panel is prose, so the trigger
+   keeps the value's own ink. */
+.pe-brief-reading .popover-trigger {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--borderStrong);
+  text-underline-offset: 0.2em;
+  font: inherit;
+  color: inherit;
+}
+.pe-brief-reading .popover-panel .emailentry {
+  min-width: 22rem;
+}
+/* The trend's glyph sits before its word, in the trend's tone. */
+.pe-brief-reading dd:has(> .pe-brief-trend) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.pe-brief-trend-warming {
+  color: var(--successText);
+}
+.pe-brief-trend-cooling {
+  color: var(--warningText);
+}
+.pe-brief-trend-none {
+  color: var(--textSecondary);
+}
+/* The verdict leads the row and wears its tone at the heading rung: it is
+   the one word a reader glances for, and the four readings after it are
+   what it was read from. The selectors carry the `dd` so they outweigh the
+   value rule above, which names the element too. */
+.pe-brief-reading dd.pe-brief-reading-verdict {
+  font: var(--fontHeadingSmall);
+}
+.pe-brief-reading dd.pe-brief-reading-success {
+  color: var(--successText);
+}
+.pe-brief-reading dd.pe-brief-reading-danger {
+  color: var(--dangerText);
+}
+@media (max-width: 720px) {
+  .pe-brief-readings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pe-chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  /* Centred, not on the baseline: the sources lead with a glyph, and a
+     caption sat on the glyph's baseline hung under the words beside it. */
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  margin-block-start: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.pe-chiprow > .t-caption {
+  /* ds:ignore the label sits closer to its first chip than the chips sit to
+     each other, and the row's one column gap cannot say both */
+  margin-inline-end: calc(var(--space-2) - var(--space-4));
+}
+
+/* The three-column state band under the brief's prose: a hairline reads as a
+   band closing the prose above it, rather than more prose running on. */
+.pe-brief-state {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.pe-brief-label {
+  margin-top: 0;
+  margin-bottom: var(--space-1);
+}
+
+.pe-brief-line {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .pe-brief-state {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The deal card and its buying committee (§5.8).
+   --------------------------------------------------------------------------- */
+.pe-deal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pe-deal-title {
+  color: var(--textPrimary);
+}
+
+.pe-deal-figures {
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.pe-committee-label {
+  margin-bottom: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.pe-committee-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.pe-committee-contact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Commitments and open loops (§5.9): ours, theirs, questions — one list,
+   status on the right.
+   --------------------------------------------------------------------------- */
+.pe-loop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.pe-loop-body {
+  color: var(--textPrimary);
+  min-width: 0;
+}
+
+.pe-loop-due {
+  color: var(--warningText);
+  white-space: nowrap;
+}
+
+.pe-loop-overdue {
+  color: var(--dangerText);
+}
+
+/* ---------------------------------------------------------------------------
+   Conversation memory (§5.10): the last panel in the stack. Threads as
+   entities, not transport events.
+   --------------------------------------------------------------------------- */
+/* A thread as one row draws `.meta-row` (design-system/composed.css), the grid
+   the facts card reads its own rows in too: the counterparty's face, what was
+   said, when. Its rule cancelling the dot before `.pe-memory-standing` lives
+   there beside the grid it depends on, not here beside the badge. */
+
+/* Shared with the contact drawer and the timeline tab's own channel pill, so
+   the same transport reads as the same shape everywhere it is named. */
+.pe-memory-channel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2); /* ds:ignore a pill's optical vertical padding */
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  white-space: nowrap;
+}
+
+.pe-memory-title {
+  display: block;
+  color: var(--textPrimary);
+}
+
+.pe-memory-summary {
+  display: block;
+  margin-top: 2px; /* ds:ignore optical, below the 4px scale's floor */
+}
+
+/* ---------------------------------------------------------------------------
+   The right rail (§5.11): one continuous panel, its six slices told apart by
+   a hairline rather than by a gap between cards — the company record's rail
+   anatomy (company360.css `.co-rail .co-sect`), mirrored here rather than
+   reinvented. It never becomes a grid — a rail that re-columns is a second
+   body rather than a margin.
+   --------------------------------------------------------------------------- */
+/* A row's overflow menu is positioned against the row, so it opens INSIDE the
+   panel's box — and the panel clips its own overflow to keep full-bleed rows
+   inside its rounded corners. The menu would be sliced by that edge, so the
+   rail's panel lets its children out; its rows draw no fill at the corners
+   that would spill in return. */
+.pe-rail > .panel {
+  overflow: visible;
+}
+
+/* One question per panel, in the page's own rhythm: the gap is the account
+   rail's, so a rep who reads both records reads the same column. */
+.pe-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pe-rail .pe-sect {
+  border-top: 1px solid var(--borderSubtle);
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.pe-rail .pe-sect > summary {
+  padding: var(--space-3) var(--space-5);
+  transition: background 0.15s;
+}
+.pe-rail .pe-sect > summary:hover {
+  background: var(--bgHover);
+}
+/* The rail's own sections carry the padding their summaries do, so a section
+   verb lines up with the name beside it rather than with the panel's edge. */
+.pe-rail .disclosure-action {
+  top: var(--space-2);
+  right: var(--space-5);
+}
+.pe-rail .pe-sect > .disclosure-body {
+  margin-top: 0;
+  padding: 0 var(--padPanel) var(--padPanel);
+}
+
+/* A rail row is one action or one reading: label left, value right. */
+/* The reading is a few words and holds one line; the label takes the rest and
+   wraps when it is long. The other way round — label on a floor, reading on
+   the rest — a long label ("Quarterly review with Demo GmbH") left the reading
+   a column one letter wide. */
+.pe-rail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+}
+
+.pe-rail-row + .pe-rail-row {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.pe-rail-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pe-rail-value {
+  color: var(--textPrimary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pe-rail-value-good {
+  color: var(--successText);
+}
+
+.pe-rail-value-warning {
+  color: var(--warningText);
+}
+
+/* The pulse card's overall reading sits under a rule: it summarizes the rows
+   above it rather than joining them. */
+
+/* Who knows them: a contact, their strength, and the proof under it. */
+.pe-colleagues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.pe-colleague {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+/* Name over proof, not name beside proof: they are two spans in one column,
+   so the name needs to be a block or the two run together. */
+.pe-colleague-name {
+  display: block;
+  color: var(--textPrimary);
+}
+
+.pe-colleague-proof {
+  display: block;
+}
+
+/* Employers: the same name-over-proof anatomy as `.pe-colleague`, ruled
+   between entries the way `.pe-rail-row` rules between readings — a list
+   of edges, not a single fact, so it needs the same separator the rail's
+   other lists already use. The row is also the hover/focus scope for its
+   own overflow menu below. */
+/* The connection on the left, its verbs at the far right — the trigger sits at
+   the row's end because its menu opens back towards the record it belongs to.
+   Anchored under the company name instead, the menu would open away from the page
+   and off the edge of the column. */
+/* One employer is one card, and the whole card opens the company: the name
+   is the link, and its hit area is stretched over the card (the ::after
+   below), so a reader who presses the logo or the counts lands on the same
+   page as one who presses the name. The row's own controls (the role's
+   inline edit, the verbs) sit above the stretched link so they keep their
+   own press. */
+.pe-employment {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--padCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.pe-employment:hover {
+  background: var(--bgHover);
+}
+.pe-employment + .pe-employment {
+  margin-top: var(--space-2);
+}
+.pe-employment-company > .pe-meta-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.pe-employment-role,
+.pe-employment-actions {
+  position: relative;
+  z-index: 1;
+}
+
+/* The employer's mark, sized by this wrapper rather than by CompanyLogo
+   itself: "the caller owns the slot's dimensions" is that component's own
+   rule (design-system/companylogo.css). Empty and unrendered for a second
+   row naming the same company (`showCompany` false): the grid still gets
+   this column so every row's name and role line up under one another
+   whether or not that row carries a mark. */
+.pe-employment-logo {
+  width: 32px;
+  height: 32px;
+}
+
+/* `.company-logo`'s own rule is that its caller owns the slot's dimensions
+   (design-system/companylogo.css); it does not size itself, so without this
+   the mark and its monogram fallback collapse to their own content box
+   rather than filling the 32px this wrapper reserves, and a resolved logo's
+   absolutely-positioned image sizes against a zero-height box and never
+   paints at all. The same pairing `.company-logo-preview .company-logo`
+   uses for its own sized slot. */
+.pe-employment-logo .company-logo {
+  width: 100%;
+  height: 100%;
+}
+
+.pe-employment-company {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Contacts and open deals, under the company name: a fact about the
+   employer rather than about this edge, so it sits above the role rather
+   than beside it. */
+.pe-employment-facts {
+  display: block;
+}
+
+/* The role sits under the company name, on its own line — it is the ONE thing
+   in this row that is a control (InlineText), so it gets its own line
+   rather than fighting the company name and its badge for space. */
+.pe-employment-role {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* The row's own verbs, folded behind an overflow trigger — this row already
+   holds a focusable inline-edit control, so a rarely-used "mark as ended" or
+   "remove" sitting in plain view beside it competes for attention the role
+   edit deserves more. Hidden until the row is hovered or something inside it
+   (the role field, the trigger itself) has focus — the same reveal
+   company360.css's `.co-task-verbs` uses for its own row verbs. */
+.pe-employment-body {
+  display: block;
+  min-width: 0;
+}
+
+.pe-employment-actions {
+  opacity: 0;
+}
+.pe-employment:hover .pe-employment-actions,
+.pe-employment:focus-within .pe-employment-actions {
+  opacity: 1;
+}
+/* A coarse pointer has no hover to reveal the trigger with, and nothing else
+   on the row asks for keyboard focus first — so it stays on. */
+@media (hover: none) {
+  .pe-employment-actions {
+    opacity: 1;
+  }
+}
+
+/* Signals: a coloured dot the row's tone comes from, then the finding. */
+.pe-signal {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-2) 0;
+}
+
+.pe-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--borderStrong);
+}
+
+.pe-dot-good {
+  background: var(--success);
+}
+
+.pe-dot-warning {
+  background: var(--warning);
+}
+
+.pe-dot-bad {
+  background: var(--danger);
+}
+
+/* A footer link that leaves the card — "View all activity". */
+.pe-rail-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  color: var(--accentText);
+}
+
+/* ---------------------------------------------------------------------------
+   The drawers: composer, research, meeting brief (concept §6.2–6.4).
+
+   All three are the design system's WIDE drawer. What is here is only their
+   own content rhythm — the frame, the sticky header and the sticky footer come
+   from the drawer variant itself.
+   --------------------------------------------------------------------------- */
+/* A block's heading INSIDE a drawer, under the dialog's own title. It carries
+   the panel heading's weight without the design system's `SectionHeader`,
+   which draws an h2 — the level the dialog title already occupies. */
+.pe-section-title {
+  margin: 0 0 var(--space-3);
+  color: var(--textPrimary);
+}
+
+.pe-drawer-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  /* Room at the end for the dialog's own close, which is drawn over this
+     corner. Without it the title runs under the glyph. The rule in atoms.css
+     that reserves this cannot reach here: it names a dialog's first HEADING,
+     and the heading in this row is a level down inside it. */
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
+}
+
+.pe-drawer-title h2 {
+  margin: 0;
+  color: var(--textPrimary);
+}
+
+/* The consent verdict leads the composer: a rep about to write needs to know
+   whether they may send BEFORE they spend words on it. */
+.pe-consent-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  color: var(--successText);
+}
+
+.pe-consent-line-blocked {
+  color: var(--warningText);
+}
+
+/* The way out of a refused send. It sits under the verdict rather than beside
+   it: the verdict says what is true and this says what to do about it, and a
+   reader needs them in that order. */
+.pe-consent-wayout {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--danger);
+  background: var(--dangerBg);
+}
+
+.pe-consent-moves {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The steering field and the button that uses it, on one line: typing what the
+   mail should be about and asking for it are one action, and splitting them
+   down the drawer would read as two unrelated controls. */
+.pe-draft-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.pe-draft-row > :first-child {
+  flex: 1;
+}
+
+/* A refusal the rep has to act on — a consent gate, an unsendable mailbox —
+   sits beside the control that produced it rather than replacing the drawer. */
+.pe-send-error {
+  margin: var(--space-2) 0 0;
+  color: var(--dangerText);
+}
+
+/* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
+   A body that explained itself is a body the rep has to edit before sending. */
+.pe-why {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--bgCard);
+  border-radius: var(--r-sm);
+}
+
+.pe-why-list {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.pe-disclosure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+}
+
+.pe-confirm-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--warningText);
+}
+
+.pe-drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* Research: the staged notice is the whole promise of the drawer — nothing
+   here has touched the record — so it reads as a statement, not a hint. */
+.pe-staged-notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--accentLight);
+  border-radius: var(--r-sm);
+}
+
+/* A numbered claim: the ordinal is what a conversation angle cites back. */
+.pe-claim {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.pe-claim-ordinal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+
+.pe-claim-body {
+  margin: 0 0 var(--space-2);
+  color: var(--textPrimary);
+}
+
+/* The mapping controls sit under the claim and its sources: the reader reads
+ * the prose and the evidence, then says which field it fills. A quiet stack so
+ * the claims stay the surface and the inputs read as the answer to one. */
+.pe-claim-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pe-brief-section {
+  margin-bottom: var(--space-5);
+}
+
+/* The pulse card's facts sit under the relationship line, which is prose —
+ * the gap is what separates a reading from the sentence explaining it. */
+.contact-pulse-facts {
+  margin-top: var(--space-3);
+}
+
+/* The one move the thin-record surface offers, spaced off the sentence that
+   explains why it is the move. It carried an inline `marginTop` before, which
+   is a spacing decision hidden where no stylesheet can see it. */
+.thin-log-first {
+  margin-top: var(--space-3);
+}
+
+/* The bought-data panel's heading: the vendor's mark beside its name. Aligned
+   on the text baseline rather than centred, so the logo sits with the word
+   instead of floating above a heading that wraps on a narrow column. */
+.pe-provider-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The buy row: one offer per priced detail, wrapping rather than truncating
+   so a price is never cut off. */
+.pe-buy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* One offer: the button, and under it the note saying what the press buys a
+   second time. Stacked so the note reads as belonging to that button rather
+   than to the row — with two offers side by side, a note in the row's own flow
+   would sit under whichever one wrapped last. */
+.pe-buy-offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+  max-width: 22rem;
+}
+
+/* One meeting, as a dated card: the date tile in its own column, the room and
+   what to do about it in the one beside it. Both the booked meeting and every
+   one already held share this shape, so a reader learns it once rather than
+   reading a different card for "next" and "already happened". */
+.pe-meeting {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+
+.pe-meeting + .pe-meeting {
+  margin-top: var(--space-2);
+}
+
+/* Weekday over day over month, centred rather than left-set: a date read as a
+   small calendar page rather than three lines of running text. */
+.pe-meeting-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.25rem;
+  text-align: center;
+}
+
+.pe-meeting-day {
+  font: var(--fontHeadingMedium);
+}
+
+.pe-meeting-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pe-meeting-title {
+  margin: 0;
+}
+
+.pe-meeting-meta {
+  margin: 0;
+}
+
+/* The prep chip: Margince's own line about why this meeting is worth reading
+   ahead of, in the indigo the product reserves for its own work rather than
+   the reader's. */
+.pe-meeting-note {
+  margin: 0;
+  background: var(--aiLight);
+  border-radius: var(--r-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.pe-meeting-note-by {
+  color: var(--aiText);
+  font-weight: var(--fontWeightMedium);
+}
+
+.pe-meeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+
+/* One deal on the Deals tab, in the employer card's own family (`.pe-employment`
+   above): a bordered plate rather than a bare row, because this card now
+   carries more than a title and a stage: the money, the stage, the close
+   date and the company, fetched per card. */
+.pe-deal-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--padCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.pe-deal-card:hover {
+  background: var(--bgHover);
+}
+.pe-deal-card + .pe-deal-card {
+  margin-top: var(--space-2);
+}
+
+.pe-deal-card-title {
+  min-width: 0;
+  font-weight: var(--fontWeightMedium);
+}
+
+/* The stretched-link pattern `.pe-employment` already uses: the title's own
+   link grows to cover the whole card, so the seat and the figures beside it
+   are reachable from anywhere on the plate rather than from one line of text. */
+.pe-deal-card-title > .pe-meta-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.pe-deal-card-meta {
+  min-width: 0;
+}
+
+.pe-deal-card-committee {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pe-deal-card-committee-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

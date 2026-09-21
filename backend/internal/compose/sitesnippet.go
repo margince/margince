@@ -159,6 +159,13 @@ func newSnippetIndex(pages excerptPages) snippetIndex {
 	var idx snippetIndex
 	for _, page := range pages {
 		for _, passage := range segmentPassages(page.Text) {
+			// Stripped HERE, where the passage becomes the thing a snippet is
+			// cut from, so what is stored and shown is what a reader would have
+			// seen. normalizeEvidence drops the same runes, but only for the
+			// comparison — an evidence_snippet is rendered verbatim in a
+			// blockquote, and a bidi override there makes the quotation
+			// somebody approves differ from the quotation on file.
+			passage = withoutFormatRunes(passage)
 			idx.refs = append(idx.refs, snippetRef{
 				pageURL: page.URL,
 				passage: passage,

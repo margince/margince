@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStack } from "../design-system/cellstack";
 import { EmailReference } from "../design-system/emailreference";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -15,6 +16,7 @@ import type { MessageKey } from "../i18n/en";
 import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { useOpenEmail } from "./openemail";
+import { VerdictPassNote } from "./verdictpass";
 
 // What this mailbox is holding back from the team, and the one press that
 // releases a thread.
@@ -69,6 +71,16 @@ export function HeldThreadsCard() {
             ) : (
               <>
                 <BacklogCallout rows={list.data} />
+                {/* Only where a row is actually waiting on the pass. A thread
+                    held because the model judged it personnel is not waiting
+                    for anything, and telling its owner when the next pass runs
+                    would promise a change that is not coming. */}
+                {list.data.some((row) => row.pending) && (
+                  <VerdictPassNote
+                    clock={list.thread_verdict}
+                    subject="threads"
+                  />
+                )}
                 <HeldThreadTable rows={list.data} />
               </>
             )
@@ -139,7 +151,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.has_message ? (
                 <ThreadSubject row={row} onOpen={setOpenEmail} />
               ) : (
-                <span className="t-caption">{t("heldThreads.noSubject")}</span>
+                <span>{t("heldThreads.noSubject")}</span>
               ),
           },
           {
@@ -154,7 +166,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.occurred_at ? (
                 formatDateTime(row.occurred_at, locale, zone)
               ) : (
-                <span className="t-caption">—</span>
+                <span>—</span>
               ),
           },
           {
@@ -162,7 +174,6 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             header: t("heldThreads.colActions"),
             render: (row) => (
               <Button
-                small
                 // A verdict outlives the message it was raised about, and the
                 // release endpoint works on the seat's MESSAGES on the thread —
                 // with none left it answers not-found. Offering the verb anyway
@@ -187,17 +198,29 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
         ]}
       />
       {release.isError && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("heldThreads.releaseFailed")}
+        >
           {problemMessageOf(release.error, t)}
         </Callout>
       )}
-      {stillHeld.map(([threadKey, owners]) => (
-        <Callout key={threadKey} tone="info">
-          {t("heldThreads.heldByOthers", {
-            count: formatNumber(owners, locale),
-          })}
+      {/* One notice with a line per thread, not a notice per thread: a reader
+          working down the table grew a stack of identical bands under it. */}
+      {stillHeld.length > 0 && (
+        <Callout kind="outcome" title={t("heldThreads.stillHeldTitle")}>
+          <ul>
+            {stillHeld.map(([threadKey, owners]) => (
+              <li key={threadKey}>
+                {t("heldThreads.heldByOthers", {
+                  count: formatNumber(owners, locale),
+                })}
+              </li>
+            ))}
+          </ul>
         </Callout>
-      ))}
+      )}
       {/* One drawer over the table, at its level rather than inside a row:
           two mounted dialogs would be two `aria-modal` elements. */}
       <OpenEmailDrawer
@@ -242,7 +265,11 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
     return null;
   }
   return (
-    <Callout tone="warn" live="status">
+    <Callout
+      tone="warning"
+      kind="event"
+      title={t("heldThreads.backlogStalledTitle")}
+    >
       {t("heldThreads.backlogStalled", {
         count: formatNumber(stalled.length, locale),
       })}
@@ -261,22 +288,21 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   const { locale } = useLocale();
   if (row.pending) {
     return (
-      <span className="cell-stack">
-        <Badge tone="warn">{t("heldThreads.pending")}</Badge>
+      <CellStack>
+        {/* `info`: pending below the ceiling is ordinary latency — the same
+            reading the stalled-backlog callout above refuses to cry wolf
+            about — so amber told a reader to act on a queue that is moving. */}
+        <Badge tone="info">{t("heldThreads.pending")}</Badge>
         <span className="t-caption">
           {t("heldThreads.attempts", {
             count: formatNumber(row.attempts, locale),
           })}
         </span>
-      </span>
+      </CellStack>
     );
   }
   const kindKey = row.kind ? kindLabel[row.kind] : undefined;
-  return (
-    <span className="cell-stack">
-      <Badge>{kindKey ? t(kindKey) : (row.kind ?? row.status)}</Badge>
-    </span>
-  );
+  return <Badge>{kindKey ? t(kindKey) : (row.kind ?? row.status)}</Badge>;
 }
 
 /**

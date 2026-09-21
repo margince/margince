@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Modal, Skeleton } from "../design-system/atoms";
 import { EmailReference } from "../design-system/emailreference";
+import { Heading } from "../design-system/heading";
 import { PipelineLadder } from "../design-system/pipelineladder";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
@@ -71,7 +72,9 @@ export function CaptureActivityDrawer({
       labelledBy="capture-pipeline-title"
       placement="right"
     >
-      <h2 id="capture-pipeline-title">{t("pipeline.title")}</h2>
+      <Heading size="large" id="capture-pipeline-title">
+        {t("pipeline.title")}
+      </Heading>
       <p className="capture-activity__drawer-sub t-sub">{t("pipeline.sub")}</p>
       {/* WHICH message this ladder is about, named the way every other citation
           of a message in the product names one. The reader arrived here from a

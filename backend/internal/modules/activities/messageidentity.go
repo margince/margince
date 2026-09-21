@@ -254,7 +254,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 	//     theoretical: the send takes its FIRST To (primaryCounterparty), while
 	//     capture takes the first NON-OWNER address (mailmap). A human who
 	//     addresses themselves ahead of the recipient therefore produces two
-	//     rows naming different people, and this absorb declines — one duplicate
+	//     rows naming different contacts, and this absorb declines — one duplicate
 	//     row, which is the defect this whole path removes, in the one shape it
 	//     does not. One spelling of "who was this message with" would close it,
 	//     and that is an ADR-0072 correspondence-semantics decision rather than
@@ -306,11 +306,19 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 	if err := repointEchoReviews(ctx, tx, survivorID, echoID); err != nil {
 		return err
 	}
+	// The external identities the folded-in row answered to MOVE, like the work
+	// items above and unlike the evidence. An identity names one message, and
+	// the message is now the survivor: leaving a claim on a row about to be
+	// archived would send the next arrival of that message to a record nobody
+	// can reach.
+	if err := TransferIdentities(ctx, tx, echoID, survivorID); err != nil {
+		return err
+	}
 	return archiveAbsorbedEcho(ctx, tx, survivorID, echoID, stamped)
 }
 
 // copyEchoLinks gives the survivor the echo's timeline placements — the sent
-// mail's presence on an auto-created person's record, which is most of what the
+// mail's presence on an auto-created contact's record, which is most of what the
 // echo's row was worth — and LEAVES the echo's own copies where they are.
 //
 // Copying rather than moving is load-bearing, and it follows from the echo
@@ -318,7 +326,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 // every timeline read, so its links cannot show the message twice; moving them
 // would only have been necessary while the row was being deleted out from under
 // them. What moving them WOULD cost is reach: the subject-scoped Art. 17
-// erasure walks from a person to an activity's attachments, provenance and
+// erasure walks from a contact to an activity's attachments, provenance and
 // embeddings through activity_link, so an archived row with no links left is a
 // row whose derived evidence that walk no longer finds. Releasing the natural
 // key instead of deleting the echo exists precisely to keep that evidence
@@ -345,9 +353,9 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID, stamp StampProject) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_link
-		  (activity_id, entity_type, person_id, organization_id, deal_id, lead_id, project_id)
+		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id)
 		SELECT $1, echo_link.entity_type,
-		       echo_link.person_id, echo_link.organization_id, echo_link.deal_id,
+		       echo_link.contact_id, echo_link.company_id, echo_link.deal_id,
 		       echo_link.lead_id, echo_link.project_id
 		  FROM activity_link echo_link
 		 WHERE echo_link.activity_id = $2
@@ -355,8 +363,8 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1
 		          AND held.entity_type = echo_link.entity_type
-		          AND coalesce(held.person_id, held.organization_id, held.deal_id, held.lead_id, held.project_id)
-		            = coalesce(echo_link.person_id, echo_link.organization_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
+		          AND coalesce(held.contact_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
+		            = coalesce(echo_link.contact_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
 		   AND NOT (echo_link.entity_type = 'project' AND EXISTS (
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1 AND held.entity_type = 'project'))`,
@@ -394,23 +402,6 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 // the package function directly — which is what lets a test prove the call
 // happens instead of proving the database ended up right for some other reason.
 type StampProject func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error
-
-// repointEchoReviews MOVES the echo's queued counterparty dispositions onto the
-// survivor — the one thing here that is moved rather than copied, because it is
-// a work item and not evidence. What those rows hold is a queued HUMAN review,
-// and an ensure-retry cursor, that the survivor does not re-queue: left on the
-// row this absorb archives, the question "who is this stranger?" would be asked
-// about a message the workspace can no longer see, and copied it would be asked
-// twice. Their live-row uniqueness keys on (email), which this
-// write does not touch, so a re-point can collide with nothing.
-func repointEchoReviews(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE capture_pending_counterparty SET activity_id = $1 WHERE activity_id = $2`,
-		survivorID, echoID); err != nil {
-		return fmt.Errorf("activities: re-pointing the absorbed echo's queued counterparty reviews: %w", err)
-	}
-	return nil
-}
 
 // archiveAbsorbedEcho releases the natural key the folded-in row was holding
 // and takes that row off the timeline.
@@ -469,10 +460,17 @@ func archiveAbsorbedEcho(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.
 	//
 	// archived_at is coalesced: a row a noise disposition already hid keeps the
 	// moment it was hidden, which is the fact its undo window is measured from.
+	//
+	// source_id alone is cleared, and source_system deliberately stays. The key
+	// this row is giving up is uq_activity_source, which is PARTIAL on both
+	// columns being non-null — so nulling either one releases it, and the
+	// audit images below already name source_id as the thing surrendered.
+	// Keeping source_system also keeps the row's answer to "where did this come
+	// from", which an absorbed echo still has: it was captured from somewhere,
+	// and only its claim on the natural key was wrong.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity
-		   SET source_system = NULL,
-		       source_id     = NULL,
+		   SET source_id     = NULL,
 		       archived_at   = coalesce(archived_at, now())
 		 WHERE id = $1 AND source_id = $2`, echoID, stamped)
 	if err != nil {

@@ -8,7 +8,7 @@ package activities
 //
 // A model call takes seconds and can fail, so it cannot run inside the request
 // that asks for it: the POST answers 202 with a read id and the client polls
-// this row until it is terminal. Deep read (people/siteread.go) is the same
+// this row until it is terminal. Deep read (contacts/siteread.go) is the same
 // shape for the same reason, and this mirrors it deliberately rather than
 // inventing a second vocabulary for the same idea.
 //
@@ -84,6 +84,15 @@ type TranscriptRead struct {
 	StartedAt   *time.Time
 	FinishedAt  *time.Time
 	CreatedAt   time.Time
+	// Attempt counts the times this reading has been handed to a worker. The
+	// AI-activity projection guards on it: a re-arm that announced the same
+	// attempt as the failure it recovers from would lose to that failure, and
+	// the rail would show a dead reading while a live one runs.
+	Attempt int
+	// AttemptAt is when THIS attempt was enqueued, not the reading's first. The
+	// projection ages a live row from it, so a reading re-armed an hour after
+	// it was created would otherwise be past its lease before a worker saw it.
+	AttemptAt time.Time
 }
 
 // Live reports whether the reading is still expected to move on its own — the
@@ -93,12 +102,13 @@ func (r TranscriptRead) Live() bool {
 }
 
 const transcriptReadColumns = `id, activity_id, status, status_detail, line_count,
-	proposal_ids, requested_by, started_at, finished_at, created_at`
+	proposal_ids, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanTranscriptRead(r pgx.Row) (TranscriptRead, error) {
 	var read TranscriptRead
 	err := r.Scan(&read.ID, &read.ActivityID, &read.Status, &read.StatusDetail, &read.LineCount,
-		&read.ProposalIDs, &read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt)
+		&read.ProposalIDs, &read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt,
+		&read.Attempt, &read.AttemptAt)
 	return read, err
 }
 
@@ -190,7 +200,11 @@ func startTranscriptReadInTx(
 			}); err != nil {
 				return fmt.Errorf("audit transcript read start: %w", err)
 			}
-			return nil
+			// The rail's first sight of the reading. A JOIN does not announce:
+			// the occurrence already exists and the joiner changed nothing
+			// about it, so re-announcing would restate a state at the same
+			// attempt for the sake of a second button press.
+			return logTranscriptActivity(ctx, tx, out)
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("start transcript read: %w", err)
@@ -337,7 +351,7 @@ func (s *Store) BeginTranscriptRead(ctx context.Context, readID ids.UUID, reclai
 		if err != nil {
 			return fmt.Errorf("claim transcript read: %w", err)
 		}
-		return nil
+		return logTranscriptActivity(ctx, tx, out)
 	})
 	return out, err
 }
@@ -359,60 +373,6 @@ type TranscriptReadOutcome struct {
 	// edited in between would otherwise leave "line 3 of 48" describing a
 	// transcript that no longer has 48 lines.
 	LineCount int
-}
-
-// FinishTranscriptRead records what the reading produced and closes it.
-func (s *Store) FinishTranscriptRead(ctx context.Context, readID ids.UUID, outcome TranscriptReadOutcome) error {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return err
-	}
-	if outcome.Status != TranscriptReadDone && outcome.Status != TranscriptReadFailed {
-		return fmt.Errorf("activities: a transcript read finishes done or failed, not %q", outcome.Status)
-	}
-	if outcome.Detail == "" && (outcome.Status == TranscriptReadFailed || len(outcome.ProposalIDs) == 0) {
-		return errors.New("activities: a failed or empty transcript read must say why, or its result cannot be told from a broken one")
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		proposals := outcome.ProposalIDs
-		if proposals == nil {
-			proposals = []ids.UUID{}
-		}
-		var detail *string
-		if outcome.Detail != "" {
-			detail = &outcome.Detail
-		}
-		tag, err := tx.Exec(ctx, `
-			UPDATE transcript_read
-			   SET status = $2, status_detail = $3, proposal_ids = $4, finished_at = now(),
-			       line_count = COALESCE($5, line_count)
-			 WHERE id = $1 AND status = 'running'`,
-			readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount))
-		if err != nil {
-			return fmt.Errorf("finish transcript read: %w", err)
-		}
-		if tag.RowsAffected() != 1 {
-			return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
-		}
-		// AuditEvent, not Audit: the compare-and-set above proves the row was
-		// running, so a prior state exists — it is simply a run record's own
-		// progress rather than a field a person edited, and nothing would ever
-		// be restored to it.
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
-			"status": outcome.Status, "proposals": len(proposals),
-		}); err != nil {
-			return fmt.Errorf("audit transcript read finish: %w", err)
-		}
-		return nil
-	})
-}
-
-// readLineCount keeps the door's own count when the outcome names none — a
-// reading that failed before it split the body has nothing truer to say.
-func readLineCount(count int) *int {
-	if count <= 0 {
-		return nil
-	}
-	return &count
 }
 
 // GetTranscriptRead answers the client's poll. It is a read of a record, so it

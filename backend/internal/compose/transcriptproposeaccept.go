@@ -83,6 +83,11 @@ func transcriptProposalEffect(
 				SourceID:     &sourceID,
 				Source:       transcriptProposalSourceSystem,
 				Links:        proposal.Links,
+				// The meeting itself, beside the sentence naming it. The body
+				// tells a rep the promise came from a transcript and the id is
+				// what lets them go and read it — without which the only route
+				// back is the record's history and an exact-subject search.
+				SourceActivityID: &proposal.ActivityID,
 			}
 			if err := stampTranscriptDue(ctx, tx, &in, proposal.DueDate); err != nil {
 				return err
@@ -170,7 +175,7 @@ func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivi
 // UNASSIGNED rather than guessing, because a promise given to the wrong
 // colleague is worse than one given to nobody — the wrong colleague does not do
 // it, and the right one never learns it was theirs. The body still names who
-// promised, so an unassigned task can be routed by the person reading it.
+// promised, so an unassigned task can be routed by the reader reading it.
 //
 // It never falls back to the approver. Approving a proposal is answering a
 // question about somebody else's commitment, not volunteering for it.

@@ -5,7 +5,7 @@
 
 package gates
 
-// Extension-tier fitness functions (ADR-0069 §3): the compiler already
+// Extension-tier fitness functions (ADR-0120 §3): the compiler already
 // walls extensions off from internal/** (their module paths sit outside
 // the backend module), these tests hold the rest of the import contract
 // from the tree — every extension source dir (enabled or fixture) is
@@ -104,7 +104,7 @@ func goImports(t *testing.T, dir string) map[string][]string {
 	return out
 }
 
-// extensionSurfaceMarker is the allowlist directive (ADR-0069 §3):
+// extensionSurfaceMarker is the allowlist directive (ADR-0120 §3):
 // membership in backend/pkg alone grants nothing — a package is
 // extension surface only when its package clause carries this line.
 const extensionSurfaceMarker = "//margince:extension-surface"
@@ -208,7 +208,7 @@ func TestSurfaceMarkerLivesOnlyUnderPkg(t *testing.T) {
 // and `required` marks the mains that MUST wire it: a role silently
 // dropping the import would serve without the enabled extensions.
 // migrate is required too: the extension migration namespace has landed
-// (ADR-0069 §9), so a migrate that drops the import applies ZERO
+// (ADR-0120 §9), so a migrate that drops the import applies ZERO
 // extension migrations while still reporting "schema is at head".
 var compositionWiringFiles = map[string]bool{
 	"cmd/api/main.go":     true,
@@ -220,7 +220,7 @@ var compositionWiringFiles = map[string]bool{
 // extension set exactly at the four role mains — anywhere else would be
 // a second composition path — and never imports an extension module
 // directly (extensions reach the backend only through the generated
-// compose file, ADR-0069 §3).
+// compose file, ADR-0120 §3).
 func TestCompositionWiredOnlyFromCmd(t *testing.T) {
 	t.Parallel()
 	extMods := extensionModulePaths(t, extensionTrees(t))

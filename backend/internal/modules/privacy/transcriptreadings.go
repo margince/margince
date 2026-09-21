@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,7 +32,7 @@ import (
 // activity ON DELETE CASCADE (core 0245). That cascade has never once fired,
 // because neither engine ever DELETES an activity — Art. 17 redacts the row in
 // place and retention nulls its body, both because a timeline row is other
-// people's record too. So the obligation the schema states has to be performed
+// contacts's record too. So the obligation the schema states has to be performed
 // by statement, in the same transaction that empties the body.
 //
 // Deleted rather than emptied, unlike the activity itself: nobody else's record
@@ -39,6 +40,17 @@ import (
 func purgeTranscriptReadings(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
 	if len(activities) == 0 {
 		return nil
+	}
+	// The interlock, taken HERE rather than at each of the five callers: a
+	// reading that is out at the model has not staged its quotations yet, so a
+	// destructive pass that deleted the reading and committed would certify
+	// words destroyed that the worker then wrote into the approvals inbox — and
+	// nothing revisits them (see LockTranscriptBody). Every engine that empties
+	// a transcript reaches the readings through this function, so taking it
+	// here is what makes "both sides take the lock" true by construction rather
+	// than by five authors remembering.
+	if err := storekit.LockTranscriptBody(ctx, tx, activities); err != nil {
+		return err
 	}
 	_, err := tx.Exec(ctx,
 		`DELETE FROM transcript_read WHERE activity_id = ANY($1)`, activities)

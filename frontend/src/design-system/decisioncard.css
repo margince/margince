@@ -4,9 +4,10 @@
  * The ground is the staged one: an AI-tinted, dashed edge, because what is on
  * this card is NOT real yet and the reader has to be able to tell it apart from
  * a card of persisted facts before reading a word of it (design-language §5c).
- * `.staging-card` in trust.css already draws exactly that, so this sheet does
- * not redraw it — it declares only what a DECISION adds to a staged surface:
- * the deadline's pressure, the proposal's own content, and the two layouts.
+ * `.staging-card`, the panel-ai family's staged member in panel.css, already
+ * draws exactly that, so this sheet does not redraw it — it declares only what
+ * a DECISION adds to a staged surface: the deadline's pressure, the proposal's
+ * own content, and the two layouts.
  *
  * Every colour is a token or a `color-mix()` over one. The urgency band is a
  * mix rather than three new tokens on purpose: amber-at-6-hours and red-at-one
@@ -15,7 +16,7 @@
  */
 
 /* The ground, the dashed edge and the radius come from `.staging-card`
-   (trust.css), which every one of these carries. What is declared here is only
+   (panel.css), which every one of these carries. What is declared here is only
    what a DECISION adds to a staged surface. */
 .dcard {
   position: relative;
@@ -25,7 +26,7 @@
  * The deadline, as a band down the card's leading edge. Three steps rather than
  * a gradient: a reader has to be able to name which one they are looking at, and
  * "somewhere between amber and red" is not a reading. The escalation is in the
- * COLOUR and not in the opacity: a faded warn band beside a solid danger one is
+ * COLOUR and not in the opacity: a faded warning band beside a solid danger one is
  * a weaker statement for no reason a reader could name.
  *
  * An INSET SHADOW rather than a border, and the reason is `.staging-card`: its
@@ -36,7 +37,7 @@
  * deadline starts to matter.
  */
 .dcard[data-urgency="soon"] {
-  box-shadow: inset 3px 0 0 0 var(--warn);
+  box-shadow: inset 3px 0 0 0 var(--warning);
 }
 
 /* Urgent takes the outline as well as the band. Not the GROUND: the staged card
@@ -60,10 +61,13 @@
   background: var(--bgCard);
 }
 
+/* The window closed without a decision. The same reading VERDICT_TONE gives
+   `expired` in decisioncard.tsx, so the sentence and the badge that reports it
+   agree — it was body ink, which is the one thing on this card that says
+   nothing at all. */
 .dcard-lapsed {
   margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
+  color: var(--warningText);
 }
 
 /* The chips line. Wraps, because a provenance tag, a kind label and a countdown
@@ -124,9 +128,6 @@
      mail, and the deck card clips to its own radius — so an unbroken token
      would be cut off rather than wrapped, with no scrollbar to reach it. */
   overflow-wrap: anywhere;
-  color: var(--textContent);
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
 }
 
 /* The clamp. A card that grows with its content stops being a card: one long
@@ -142,14 +143,11 @@
 }
 
 /* Why this decision is in front of somebody, in the words the server wrote for
-   a person. First in the body and unlabelled: an explanation under a caption
+   a contact. First in the body and unlabelled: an explanation under a caption
    reads as one more data point, and the reason has to arrive before the values
    it explains or the reader has to work the question out from the answer. */
 .dcard-lead {
   margin-bottom: var(--space-3);
-  color: var(--textContent);
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
 }
 
 .dcard-diff {
@@ -161,20 +159,11 @@
 }
 
 /* A payload value, wrapped because a jsonb document has no length a card can
-   rely on.
-
-   Mono only where the value is a RAW one — a kind that declared no display
-   policy, whose keys and values are shown as the wire spells them. A declared
-   field carries a name and a date somebody typed, and setting those in mono
-   would dress a business fact as machine output, which is the thing this
-   whole reading exists to stop. */
+   rely on. In the body face whether the kind declared its fields or not: a raw
+   value is still a business fact someone is being asked to agree to, and the
+   code face would dress it as machine output. */
 .dcard-fact {
-  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
-}
-
-.dcard-rest-raw .dcard-fact {
-  font-family: var(--f-mono);
 }
 
 .dcard-evidence {
@@ -191,6 +180,10 @@
   margin-top: 0;
 }
 
+/* Only the air above the verbs. Their layout — the two groups, the wrap and the
+   action gap — belongs to `ActionRow`, which this class is passed to as the
+   deck band's hook. `.approval-gate` supplied it here before, and its margin was
+   this same rung, so the row lost nothing when it stopped carrying both. */
 .dcard-verbs {
   margin-top: var(--space-3);
 }
@@ -205,8 +198,8 @@
 /*
  * The deck card wears PANEL CHROME, in the AI hue.
  *
- * It is the same shape as the "Today with …" card on a person record (which is
- * `Panel tone="accent"`, person360.css): a card on the page's own ground, a
+ * It is the same shape as the "Today with …" card on a contact record (which is
+ * `Panel tone="accent"`, contact360.css): a card on the page's own ground, a
  * tinted header band carrying the chips, the headline at reading size under it,
  * and a footer band the verbs stand in. Tinted end to end it read as a
  * lavender slab — the tint was doing the work of a header band across 300px of
@@ -234,24 +227,18 @@
    negative inline margins are how a band inside a padded card reaches the
    card's edges — the same distinction `panel.css` draws, where a rule dividing
    the CARD from its content runs edge to edge and a rule inside the content
-   stops at the padding. */
+   stops at the padding.
+
+   The band's two tokens are `.panel-ai > .panel-head`'s, spelled here because
+   this is a band the CARD carves out of its own padding rather than a panel's
+   header element — and because a lapsed card takes both of them back, which is
+   the pair of rules below. */
 .dcard[data-layout="deck"] > .dcard-meta {
   margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
   padding: var(--space-3) var(--space-5);
   min-height: 48px;
   background: var(--aiLight);
   border-bottom: 1px solid var(--aiMed);
-}
-
-/* The headline at the same size and weight the person record's moment card sets
-   it — 20px at 650, one notch above `.t-h2` — because both cards exist to be
-   landed on and read rather than scanned past. Stated here rather than shared:
-   the two live in different tiers (a design-system primitive and a screen), and
-   a token for "the moment headline" would be a third place to look. */
-.dcard[data-layout="deck"] .approval-headline {
-  font-size: var(--fs-h2);
-  font-weight: 650;
-  line-height: var(--lh-snug);
 }
 
 /*
@@ -315,11 +302,96 @@
    row was already that shape, and re-spelling the number here would move all of
    them for no reason anybody could name. */
 
-.dcard[data-layout="row"] .approval-headline {
-  font-size: var(--fs-h3);
-}
-
 .dcard[data-layout="row"] .dcard-draft-body[data-clamped] {
   -webkit-line-clamp: 3;
   line-clamp: 3;
+}
+
+/*
+ * The COMPACT row: one decision, one line.
+ *
+ * It is the density a dense list is read at — the question, its chips and its
+ * verbs at one x down the column, so a reader scanning twenty of them reads
+ * twenty questions rather than twenty cards. Everything a reader has to WEIGH
+ * is behind the line's own popover, which is why this is a density and not a
+ * third layout: the anatomy is the row's, and what changes is how much of it
+ * stands open.
+ *
+ * The block inset comes down a rung from `.staging-card`'s, which is what puts
+ * the line inside a list row's measure rather than a card's. The side inset
+ * stays: it is the dashed edge's own clearance, and a row that lost it would
+ * read as a different box from every other staged surface.
+ */
+.dcard[data-density="compact"] {
+  padding-block: var(--space-2);
+}
+
+/* IT WRAPS, and that is not a fallback — it is the only honest answer when the
+   question, its chips and three verbs together want more room than the panel
+   has. Unwrapped, the row ran past the panel's edge and clipped Accept, which
+   is the one control on it a reader came for. */
+.dcard-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  row-gap: var(--space-2);
+}
+
+/* The question TAKES the room and gives it back first. It is the one string on
+   this line of unbounded length, so it is the only thing that may be clipped —
+   a chip squeezed to buy it space loses its word, which is the signal.
+
+   Its BASIS is what decides where the line breaks. `min(100%, 20rem)` means:
+   claim the whole first line on a pane too narrow to carry anything beside the
+   question, and otherwise take 20rem and grow into whatever the chips and the
+   verbs leave. At `auto` an unbounded string put the line into negative free
+   space at every width and every shrinkable item collapsed together; at `0` the
+   question shared its line with the chips at a phone's width and was clipped to
+   a dozen characters with the verbs pushed off the pane. */
+.dcard[data-density="compact"] .approval-headline {
+  flex: 1 1 min(100%, 20rem);
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The chips give way SECOND, and by wrapping rather than by clipping: they keep
+   `.dcard-meta`'s own wrap (above) because a countdown cut in half is a
+   deadline a reader cannot read, and a dropped chip is one they never learn
+   about. `min-width: 0` is what lets the block narrow at all before the line
+   breaks under it. */
+.dcard[data-density="compact"] .dcard-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* The way to the proposal, as quiet as the chips beside it — it reveals and
+   decides nothing, so it is not competing with the verbs at the end. */
+.dcard-detail {
+  flex: none;
+}
+
+/* The verbs end the line. `ActionRow` owns the gap between them and the push
+   that holds Accept on the trailing edge; what is declared here is only that
+   the group does not stretch, and that it takes no air above it — the air
+   belongs above a band, and on this row there is no band. */
+.dcard[data-density="compact"] .dcard-verbs {
+  flex: none;
+  margin-top: 0;
+  /* WHERE THEY LAND WHEN THEY WRAP. On the trailing edge of whichever line
+     they end up on, which `margin-inline-start: auto` gives on both and
+     `justify-content` on neither — the same reasoning `ActionRow` states for
+     its own trail. A primary that wrapped to the LEADING edge would land
+     exactly where the reader's thumb had been pressing the verb beside it. */
+  margin-inline-start: auto;
+}
+
+/* A lapsed compact row says so where its verbs would have been, on the line
+   rather than under it. */
+.dcard[data-density="compact"] .dcard-lapsed {
+  flex: 0 0 auto;
+  margin-top: 0;
 }

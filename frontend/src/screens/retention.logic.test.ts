@@ -54,7 +54,7 @@ describe("policyEffect", () => {
     expect(effectReasonKey("suppressed")).toBe("retention.suppressedWhy");
     expect(effectReasonKey("disabled")).toBe("retention.disabledWhy");
     expect(effectTone("acting")).toBe("success");
-    expect(effectTone("suppressed")).toBe("warn");
+    expect(effectTone("suppressed")).toBe("warning");
     expect(effectTone("disabled")).toBeUndefined();
   });
 });
@@ -64,7 +64,7 @@ describe("the authorable vocabulary", () => {
   // whose option has no words — the catalogue keys are exhaustive by type, so
   // this proves the mapping is total at runtime too.
   it("labels every scope and every action", () => {
-    expect(RETENTION_SCOPES).toHaveLength(7);
+    expect(RETENTION_SCOPES).toHaveLength(8);
     for (const scope of RETENTION_SCOPES) {
       expect(scopeLabelKey(scope)).toMatch(/^retention\.scope/);
     }

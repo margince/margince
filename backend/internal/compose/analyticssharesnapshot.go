@@ -3,7 +3,7 @@
 
 package compose
 
-// Serving a frozen snapshot to somebody narrower than the person who froze it.
+// Serving a frozen snapshot to somebody narrower than the contact who froze it.
 //
 // The stored headline is the sum over every deal the ISSUER could see. Handing
 // that number to a recipient who cannot see all of them discloses a total
@@ -90,7 +90,17 @@ func ReadSharedSnapshot(
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_open AND %[1]s), 0),
 		  COALESCE(sum(c.weighted_minor) FILTER (WHERE c.in_open AND %[1]s), 0),
 		  count(*) FILTER (WHERE %[1]s),
-		  count(*) FILTER (WHERE c.base_minor IS NOT NULL AND %[1]s),
+		  -- PRICED is amount_minor. CONVERTED is base_minor, and the deal priced
+		  -- in a currency no rate reached is the one population they differ on —
+		  -- the population fx_missing_count names two lines below. Counting
+		  -- conversion here reports that single gap twice.
+		  --
+		  -- SECOND WRITER, and it cannot be one helper: forecasting.Compute
+		  -- decides this in Go over rows it already holds, while this is an
+		  -- aggregate under a per-recipient FILTER that never loads them. The two
+		  -- are held equal by TestASharedSnapshotCountsPricingRatherThanConversion,
+		  -- which asserts this recompute against the row Compute stored.
+		  count(*) FILTER (WHERE c.amount_minor IS NOT NULL AND %[1]s),
 		  count(*) FILTER (WHERE NOT c.close_provisional AND %[1]s),
 		  count(*) FILTER (WHERE c.exclusion_reason = 'fx_missing' AND %[1]s),
 		  -- Whether anything was kept back, asked of THIS snapshot rather than
@@ -142,7 +152,10 @@ func sharedVisibilityClause(ctx context.Context, tx pgx.Tx, arg func(any) int) (
 	//
 	// Requested is deliberately EMPTY: the recipient asked for nothing, so this
 	// resolves to their own default, which is the most they may see.
-	_, population, err := AnalyticsPopulationClause(ctx, tx, RequestedScope{}, "d", arg)
+	// Excludes unowned rows even from the recipient's own default — a shared
+	// snapshot is a forecast commitment number, the same reasoning
+	// forecastseam.go's ForecastDeals carries.
+	_, population, err := AnalyticsPopulationClause(ctx, tx, RequestedScope{}, "d", arg, unownedIsExcluded)
 	if err != nil {
 		return "", err
 	}

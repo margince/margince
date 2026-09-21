@@ -4,7 +4,6 @@
 
 .confirm-intro {
   margin: var(--space-2) 0 var(--space-6);
-  color: var(--textSecondary);
 }
 
 .confirm-fields {
@@ -23,7 +22,6 @@
 }
 
 .confirm-readonly {
-  color: var(--textSecondary);
   padding: var(--space-2) 0;
 }
 
@@ -42,10 +40,8 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--textTertiary);
   text-decoration: underline;
   cursor: pointer;
-  font: inherit;
 }
 
 .confirm-decline[aria-pressed="true"],
@@ -55,7 +51,6 @@
 
 .confirm-provenance {
   margin: var(--space-6) 0;
-  color: var(--textSecondary);
 }
 
 .confirm-provenance ul {
@@ -72,5 +67,30 @@
 }
 
 .confirm-error {
-  color: var(--danger);
+  color: var(--dangerText);
+}
+
+/* The receipt block on the done state: the references a subject quotes when
+   asking after a request. Set apart from the thank-you above it, because it is
+   the part they may need to copy down. */
+.confirm-receipts {
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+
+.confirm-receipts-list {
+  margin-block-start: var(--space-2);
+  padding-inline-start: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.confirm-receipt-ref {
+  margin-inline-start: var(--space-2);
+  background: var(--bgChip);
+  border-radius: var(--r-sm);
+  padding: 0 var(--space-1);
 }

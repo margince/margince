@@ -76,18 +76,10 @@ func (w attentionWaiting) Hidden(
 func (w attentionWaiting) Unanswered(
 	ctx context.Context, asOf time.Time,
 ) ([]attention.WaitingCustomer, bool, error) {
-	rows, err := w.store.WaitingReplies(ctx, asOf)
+	kept, cut, err := w.waitingPages(ctx, asOf)
 	if err != nil {
 		return nil, false, err
 	}
-	// Asked of what the STORE returned, before keepWaitingCustomers runs.
-	//
-	// That filter drops machine senders and folds duplicate threads, so what it
-	// returns is smaller than what was read — and a caller comparing the
-	// SURVIVORS against the scan bound would read a full scan whose survivors
-	// are few as a complete one. This is the only place both numbers exist.
-	cut := len(rows) >= activities.WaitingScanCap
-	kept := keepWaitingCustomers(rows)
 	summaries, err := w.emailRows(ctx, kept)
 	if err != nil {
 		return nil, false, err
@@ -103,55 +95,97 @@ func (w attentionWaiting) Unanswered(
 			summary = &got
 		}
 		out = append(out, attention.WaitingCustomer{
-			ActivityID:     row.ActivityID,
-			EmailSummary:   summary,
-			Subject:        row.Subject,
-			Since:          row.OccurredAt,
-			PersonID:       row.PersonID,
-			OrganizationID: row.OrganizationID,
-			DealID:         row.DealID,
-			HasOpenDeal:    row.HasOpenDeal,
-			Engaged:        row.Engaged,
+			ActivityID:         row.ActivityID,
+			EmailSummary:       summary,
+			Subject:            row.Subject,
+			Since:              row.OccurredAt,
+			ContactID:          row.ContactID,
+			CompanyID:          row.CompanyID,
+			DealID:             row.DealID,
+			HasOpenDeal:        row.HasOpenDeal,
+			Engaged:            row.Engaged,
+			Threaded:           row.Threaded,
+			AddressedElsewhere: row.AddressedElsewhere,
 			// Translated here, at the one boundary that already crosses from
 			// the module's vocabulary to the queue's. Only "informs us" changes
 			// a ranking; unjudged and "asks us" both leave it alone, so the
 			// queue never needs the word.
-			AsksNothing: row.OwedVerdict == activities.OwedVerdictInformsUs,
-			OwnerID:     row.OwnerID,
+			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
+			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
+			ActionUnconfirmed: row.OwedVerdict == "",
+			OwnerID:           row.OwnerID,
 		})
 	}
 	return out, cut, nil
 }
 
-// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
+// waitingRefillRounds bounds how many pages one assembly will read.
 //
-// Two rules, both learned from the live page.
+// Three, not "until enough": each page is a full scan of the waiting predicate,
+// and a workspace whose recent mail is ENTIRELY machine would otherwise walk
+// its whole history to fill a queue that has nothing to show. Three pages is
+// six hundred rows, which is past any flood a real installation produces and
+// still one read of bounded cost.
+const waitingRefillRounds = 3
+
+// waitingPages reads waiting rows until enough survive the filter, the scan
+// runs out, or the round ceiling is reached. It answers what survived and
+// whether anything was left unread.
 //
-// A machine is not a customer. Judged by capture's own address rule rather than
-// a second one spelled here: an e-signature notification, a shared-folder
-// notice and a booking confirmation opened a rep's day, and a queue that asks
-// somebody to answer a no-reply address teaches them to stop reading it.
+// The refill exists because the filter runs AFTER the scan cap. The store's own
+// machine rule is a coarse subset — six patterns against an address — while
+// keepWaitingCustomers asks capture.IsMachineAddress, which reads a registrable
+// domain against the transactional baseline. An address like hello@sendgrid.net
+// matches none of the six, fills a slot under the cap, and is discarded here.
+// Two hundred of those and a genuinely waiting customer never appears at all.
 //
-// One subject FROM ONE SENDER is one row. A notification service sends the same
-// request on several threads, and two rows reading identically are two
-// obligations to somebody scanning the page.
-//
-// Keyed on sender AND subject, never subject alone: two customers both writing
-// "Re: proposal" are two people waiting, and folding them would drop the second
-// one silently — the worst failure this queue has, because nothing on the page
-// would say a customer had been hidden.
-//
-// An UNTITLED message is never folded, because several untitled waits are
-// several customers and collapsing them would hide all but one behind an empty
-// string.
+// `cut` still means what it meant: something was left unread. It is now true
+// only when the LAST page was also full, so a refill that reached the end of
+// the matching rows reports a complete scan rather than inheriting the first
+// page's truncation.
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]activities.WaitingReply, bool, error) {
+	var kept []activities.WaitingReply
+	var before time.Time
+	cut := false
+	for round := 0; round < waitingRefillRounds; round++ {
+		rows, err := w.store.WaitingRepliesBefore(ctx, asOf, before)
+		if err != nil {
+			return nil, false, err
+		}
+		// Asked of what the STORE returned, before keepWaitingCustomers runs.
+		//
+		// That filter drops machine senders and folds duplicate threads, so
+		// what it returns is smaller than what was read — and a caller
+		// comparing the SURVIVORS against the scan bound would read a full
+		// scan whose survivors are few as a complete one. This is the only
+		// place both numbers exist.
+		cut = len(rows) >= activities.WaitingScanCap
+		kept = append(kept, keepWaitingCustomers(rows)...)
+		if !cut || len(kept) >= activities.WaitingScanCap {
+			break
+		}
+		// The page is ordered newest first, so the oldest row on it is where
+		// the next page starts.
+		before = rows[len(rows)-1].OccurredAt
+	}
+	// Folded across pages as well as within one: two mails with the same sender
+	// and subject are one conversation whichever page each arrived on, and a
+	// per-page fold would let the refill reintroduce what the first page
+	// already collapsed.
+	return keepWaitingCustomers(kept), cut, nil
+}
+
+// keepWaitingCustomers removes repetitive incidental mail. Confirmed requests
+// retain their source identities: matching subjects, including within a thread,
+// do not prove that two asks describe the same unfinished work.
 func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
 	kept := make([]activities.WaitingReply, 0, len(rows))
 	seen := make(map[string]bool, len(rows))
 	for _, row := range rows {
-		if capture.IsMachineAddress(row.Sender) {
+		if capture.IsMachineAddress(row.Sender) && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			continue
 		}
-		if row.Subject != "" {
+		if row.Subject != "" && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			key := row.Sender + "\x00" + row.Subject
 			if seen[key] {
 				continue

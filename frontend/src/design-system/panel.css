@@ -1,20 +1,29 @@
 /* Panel — the ZONE PANE: one zone of a record on translucent ground over the
- * lit page, with a hairline edge and the pane's corner. Its whole elevation
- * is the ground and the edge; nothing at rest casts a shadow. The blur is
- * what makes the ground read as glass rather than as a grey box when the
- * page's glow runs under it. */
+ * lit page, with a hairline edge and the pane's corner. The ground and the
+ * edge still carry the separation; --shadow-rest only gives the pane a top
+ * side, and it is the same one layer every resting surface in the product
+ * wears. The blur is what makes the ground read as glass rather than as a
+ * grey box when the page's glow runs under it. */
 .panel {
   background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
   backdrop-filter: blur(12px);
   overflow: hidden;
 }
 
-/* One height for every header, whether it carries a title alone or a title
- * with a badge or a button beside it — a fixed min-height with centred
- * content, so the row does not grow by exactly the button's height. */
 /* The header band, and its rule runs the full width of the card.
+ *
+ * ONE height, and it is fixed: --panel-head-h, whatever the head carries. The
+ * head is a title and, optionally, the verbs that act on it — never a
+ * description — so a title alone and a title beside a badge or a button draw
+ * the same band, and a reader scanning a page of panels reads a column of
+ * titles at one interval instead of a ragged one. A floor is what this used
+ * to be, and a floor is an invitation: a description raised the band here, two
+ * screens then re-spaced it there, and the same card stood at three heights.
+ * What does not fit on one band is not header content — a toolbar row or a
+ * `PanelBody` under the head is where it belongs.
  *
  * That is the one distinction that decides every rule in this file: a rule
  * dividing the CARD from its content runs edge to edge, and a rule dividing two
@@ -27,54 +36,46 @@
 .panel-head {
   display: flex;
   align-items: center;
+  /* The band is one row. Wrapping is what a head reached for when its content
+     stopped fitting, and a second row is a second height — the thing this band
+     exists to refuse. */
+  flex-wrap: nowrap;
   gap: var(--space-3);
-  min-height: 52px;
+  height: var(--panel-head-h);
   padding: 0 var(--padPanel);
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* The zone's title in the display face: the one word a reader finds a zone
- * by, so it is set as a heading rather than as a label on a card. */
+ * by, so it is set as a heading rather than as a label on a card.
+ *
+ * It absorbs the row's free space, so whatever comes after it (a badge, a
+ * button, two of them) sits at the far end rather than crowding it. The push is
+ * anchored on the title rather than on the row's last child: `:last-child` can
+ * only move ONE node, so a pair of actions splits with one of them still
+ * crowding the title.
+ *
+ * It ends in an ellipsis rather than in a second row: the band's height is
+ * fixed, so a title long enough to wrap would otherwise be clipped mid-letter
+ * with nothing to say it had been. A record named by a legal entity is the case
+ * — the ellipsis is what tells a reader the name goes on, and the full string is
+ * still the element's text for a screen reader and for the pointer. */
 .panel-head .panel-title {
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
-}
-/* The title and its description are one stacked item, and that item absorbs the
- * row's free space — so whatever comes after it (a badge, a button, two of
- * them) sits at the far end rather than crowding the title.
- *
- * The push is anchored on the title block rather than on the row's last child.
- * `:last-child` can only move ONE node, so a pair of actions splits with one of
- * them still crowding the title, and it identifies an action by NOT being an
- * `h2` — a test that stops being true the moment the title carries a
- * description of its own. */
-.panel-head-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  min-width: 0;
   margin-right: auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* The description reads UNDER the title, not beside it at the same volume: the
- * title is what a reader scans a page of panels for, and the line under it is
- * what they read once they have found the one they want. */
-.panel-head-sub {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
-/* A header carrying a description pays for its own vertical interval, and only
- * then: `min-height` is a floor, so two lines of type otherwise sit against the
- * hairline above the panel and the border below it, while a title alone — and a
- * title beside a button — keep the one height the band promises.
- *
- * Presence-based rather than a modifier class the component remembers to set,
- * so the markup and the spacing cannot disagree about whether there is a
- * description, which is the same reason the seam rule below is adjacency. */
-.panel-head:has(.panel-head-sub) {
-  padding-block: var(--space-3);
+/* Only the title gives way. A badge, a button or a count is sized by its own
+ * words, and a shrunken one reads as a different control — or loses its label
+ * to the ellipsis above. `:where()` carries no specificity, so a caller whose
+ * action genuinely can give way (a wrapping action strip) says so with an
+ * ordinary class of its own and wins without depending on sheet order. */
+.panel-head > :where(:not(.panel-title)) {
+  flex-shrink: 0;
 }
 
 .panel-body {
@@ -157,10 +158,50 @@
   background: var(--bgHover);
 }
 
+/* A state arm standing where full-bleed rows will stand pays the PANE's inset,
+ * because it has no body to pay it. `QueryStates`' ready arm is a list of
+ * `PanelRow`s, which draw to the panel's own edges — so a `PanelBody` around
+ * the read would inset the rows it must not, and the pending and error arms
+ * that share that place printed their sentence hard against the pane's edge.
+ * Named by the pane's role rather than by a rung, so a skeleton reserves the
+ * space at exactly the x the rows it stands in for will use. */
+.panel > .pending,
+.panel > .empty {
+  padding: var(--padPanel);
+}
+
+/* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
+ * summary is one line among `PanelRow`s and pays the row's own interval and the
+ * pane's gutter, and its body is whatever rows or bodies the caller put there,
+ * each already paying its own. The atom ships free-standing — a hairline over
+ * itself, its own top interval, air under it for whatever follows — because
+ * that is what a fold in a column of prose needs, and in a panel every one of
+ * those is paid twice: under the head, the hairline doubled the band's own
+ * rule and the caret sat hard against the card's edge, a gutter left of the
+ * text it opens. Three rails had each written this correction in their own
+ * sheet; it is the panel's to make once. `:where` on the summary keeps a rail
+ * that shapes its own (a heading, a badge pushed to the far end) ahead of this
+ * by specificity rather than by sheet order; the body's rule is spelt plainly
+ * because `disclosure-inset.test.ts` reads the combinator, and every rail's
+ * own body rule agrees with it. */
+.panel > .disclosure {
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.panel-head + .disclosure {
+  border-top: 0;
+}
+.panel > .disclosure > :where(.disclosure-summary) {
+  padding: var(--space-3) var(--padPanel);
+}
+.panel > .disclosure > .disclosure-body {
+  margin-top: 0;
+}
+
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
  * followed by a level-3 heading measured 45px from line to text on the
- * connections tab, 41px on general and 8px on people — three distances for one
+ * connections tab, 41px on general and 8px on contacts — three distances for one
  * relationship, none of them chosen. `.card` has carried this reset since it
  * was written; `.panel` never got it. */
 .panel-body > .section-header:first-child {
@@ -221,8 +262,6 @@
   flex-wrap: wrap;
   padding: var(--space-3) var(--padPanel);
   border-top: 1px solid var(--borderSubtle);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* Verbs under the content they change: spaced off it so they read as an action
@@ -253,85 +292,131 @@
 
 /* The lead panel — the one card on a page asking for a move rather than
  * reporting state. Tinted, not shouted: the border and the header band carry
- * it, and the title comes up to reading size because it is the sentence a
- * reader is meant to land on first.
+ * it, and the title carries it in ink alone.
  *
- * The geometry is the lead's, not the tone's, so it is stated once for both
- * families and only the four tinted properties differ below. A lead that
- * changed size when its finding turned bad would read as a different card. */
+ * A TONE ONLY TINTS. The band's height, its padding and its alignment belong to
+ * `.panel-head` above. What is left for a tone is the ground, the hairline's
+ * colour and the title's colour; the icon alignment below is the tone's own,
+ * because only a toned head leads its title with a mark.
+ *
+ * ONE ANATOMY, and each tone names three tokens into it rather than restating
+ * the four rules. Seven copies of the same block is seven places for a hairline
+ * to drift from a band, which is what the first two tones had already started
+ * doing. `PANEL_TONES` in panel.tsx is the list; a tone added there with no
+ * `--panelTone*` triple here draws an untinted panel, and panel.test.tsx walks
+ * the list to catch it. */
+.panel-accent,
+.panel-info,
+.panel-success,
+.panel-warning,
+.panel-danger,
+.panel-discovery {
+  border-color: var(--panelToneEdge);
+}
 .panel-accent > .panel-head,
-.panel-warn > .panel-head {
+.panel-info > .panel-head,
+.panel-success > .panel-head,
+.panel-warning > .panel-head,
+.panel-danger > .panel-head,
+.panel-discovery > .panel-head {
   gap: var(--space-2);
+  background: var(--panelToneBand);
+  border-bottom: 1px solid var(--panelToneEdge);
 }
 .panel-accent > .panel-head .panel-title,
-.panel-warn > .panel-head .panel-title {
+.panel-info > .panel-head .panel-title,
+.panel-success > .panel-head .panel-title,
+.panel-warning > .panel-head .panel-title,
+.panel-danger > .panel-head .panel-title,
+.panel-discovery > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
+  color: var(--panelToneInk);
+}
+.panel-accent > .panel-foot,
+.panel-info > .panel-foot,
+.panel-success > .panel-foot,
+.panel-warning > .panel-foot,
+.panel-danger > .panel-foot,
+.panel-discovery > .panel-foot {
+  border-top-color: var(--panelToneEdge);
 }
 
-/* tone="accent": the ordinary ask. */
+/* tone="accent": the ordinary ask. The one lead with no FINDING behind it — the
+ * brand asking for a move rather than the account reporting one. */
 .panel-accent {
-  border-color: var(--accentMed);
-}
-.panel-accent > .panel-head {
-  background: var(--accentLight);
-  border-bottom: 1px solid var(--accentMed);
-}
-.panel-accent > .panel-head .panel-title {
-  color: var(--accentText);
-}
-.panel-accent > .panel-foot {
-  border-top-color: var(--accentMed);
+  --panelToneEdge: var(--accentMed);
+  --panelToneBand: var(--accentLight);
+  --panelToneInk: var(--accentText);
 }
 
-/* tone="warn": the lead whose FINDING is the bad news. The warn family's own
- * three tokens, the same pairing `Callout` draws — a title in `--warn` over
- * `--warnBg` — so the two surfaces that say "this is the bad news" say it in
- * one colour rather than each picking its own amber. */
-.panel-warn {
-  border-color: var(--warnBorder);
+/* The five states, each on its own family's three tokens — the same pairing
+ * `Callout` and `Badge` draw, so the surfaces that say "this is the bad news"
+ * or "this went well" say it in one colour rather than each picking its own.
+ *
+ * tone="info": the neutral report, and the lead whose work is still running. */
+.panel-info {
+  --panelToneEdge: var(--infoBorder);
+  --panelToneBand: var(--infoBg);
+  --panelToneInk: var(--infoText);
 }
-.panel-warn > .panel-head {
-  background: var(--warnBg);
-  border-bottom: 1px solid var(--warnBorder);
+
+/* tone="success": the lead whose FINDING is that the thing landed. */
+.panel-success {
+  --panelToneEdge: var(--successBorder);
+  --panelToneBand: var(--successBg);
+  --panelToneInk: var(--successText);
 }
-.panel-warn > .panel-head .panel-title {
-  color: var(--warn);
+
+/* tone="warning": the lead whose FINDING is the bad news that can still be
+ * stopped — a relationship gone quiet, a promise going late. */
+.panel-warning {
+  --panelToneEdge: var(--warningBorder);
+  --panelToneBand: var(--warningBg);
+  --panelToneInk: var(--warningText);
 }
-.panel-warn > .panel-foot {
-  border-top-color: var(--warnBorder);
+
+/* tone="danger": the finding that cannot be stopped — the write that failed,
+ * the record that cannot be brought back. */
+.panel-danger {
+  --panelToneEdge: var(--dangerBorder);
+  --panelToneBand: var(--dangerBg);
+  --panelToneInk: var(--dangerText);
+}
+
+/* tone="discovery": a capability this reader has not met. The one lead that
+ * reports no verdict on the account — it says how long a thing has been here,
+ * not how it is going. */
+.panel-discovery {
+  --panelToneEdge: var(--discoveryBorder);
+  --panelToneBand: var(--discoveryBg);
+  --panelToneInk: var(--discoveryText);
 }
 
 /* tone="ai": the panel a MACHINE wrote or read. Indigo is the product's one
  * mark of machine authorship (tokens.css --ai), so this is a claim about who
  * produced the panel rather than about how the account is doing — which is why
- * it sits beside "accent" and "warn" rather than replacing either. A reader
+ * it sits beside "accent" and "warning" rather than replacing either. A reader
  * seeing indigo anywhere knows the same thing: Margince did this. */
-.panel-ai > .panel-head,
-.panel-ai > .panel-head .panel-title {
-  gap: var(--space-2);
-}
-/* The band hugs its two lines instead of centring them in a row sized for one.
-   This head carries who read the record OVER what they read, and a 48px row
-   built for a single title left the pair floating with more air under them
-   than the band is tall. Its verb rides the first line rather than the middle
-   of the stack. */
 .panel-ai > .panel-head {
-  align-items: flex-start;
-  min-height: 0;
-  padding-block: var(--space-3);
+  gap: var(--space-2);
 }
 .panel-ai > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
 }
-.panel-ai {
+/* The family's edge, and the members that are not panels read it here: a box
+   whose indigo drifted off the panel's would tell a reader the two were
+   different claims about who wrote what. `.staging-card` is trust.tsx's
+   StagingCard and the ground every DecisionCard carries; `.deal-card.staged`
+   is one deal on the board drawn as one. They live in this rule rather than in
+   their own sheets so the family has ONE declaration site — the sheets that
+   draw the rest of those boxes point here. */
+.panel-ai,
+.staging-card,
+.deal-card.staged {
   border-color: var(--aiMed);
 }
 .panel-ai > .panel-head {
@@ -343,4 +428,26 @@
 }
 .panel-ai > .panel-foot {
   border-top-color: var(--aiMed);
+}
+
+/* The STAGED modifier, and it is the only thing that separates these two from
+ * the panel above: `1.5px dashed` means an agent has proposed this and nobody
+ * has accepted it yet, and the dashes going solid is what acceptance looks
+ * like. So a panel a machine WROTE keeps the hairline it inherits from
+ * `.panel`, and a card a machine has only PROPOSED wears the dash until a
+ * contact answers it.
+ *
+ * The tint goes under the TEXT rather than into a head band, because neither
+ * box has a head to put it in and the reader has to be able to tell a proposal
+ * from a recorded fact before reading a word of either. What that ground costs
+ * the ink over it is recorded in trust.css, on `.approval-why`. */
+.staging-card,
+.deal-card.staged {
+  border-width: 1.5px;
+  border-style: dashed;
+  background: var(--aiLight);
+}
+.staging-card {
+  border-radius: var(--r-md);
+  padding: var(--space-4) var(--space-5);
 }

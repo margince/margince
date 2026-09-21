@@ -17,7 +17,7 @@ import (
 // uuidArgs widens a repeated uuid query parameter to the store's own shape.
 // An absent parameter and an empty list are the same thing: no filter.
 //
-// A twin of the people module's own — a module never imports a sibling, and a
+// A twin of the contacts module's own — a module never imports a sibling, and a
 // four-line widening is not worth a platform seam of its own.
 func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
 	if in == nil {
@@ -48,9 +48,9 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 	in.PipelineID = idArg[ids.PipelineKind](params.PipelineId)
 	in.StageID = idArg[ids.StageKind](params.StageId)
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
-	in.OrganizationID = idArg[ids.OrganizationKind](params.OrganizationId)
+	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	in.ProjectID = idArg[ids.ProjectKind](params.ProjectId)
-	in.PartnerOrgID = idArg[ids.OrganizationKind](params.PartnerOrgId)
+	in.PartnerCompanyID = idArg[ids.CompanyKind](params.PartnerCompanyId)
 	in.PartnerSourced = params.PartnerSourced
 	if params.PartnerAttribution != nil {
 		a := string(*params.PartnerAttribution)
@@ -65,6 +65,15 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		category := string(*params.ForecastCategory)
 		in.ForecastCategory = &category
 	}
+	if params.CommercialMotion != nil {
+		motion := string(*params.CommercialMotion)
+		in.CommercialMotion = &motion
+	}
+	if params.Priority != nil {
+		priority := string(*params.Priority)
+		in.Priority = &priority
+	}
+	in.AcquisitionSource = params.AcquisitionSource
 
 	deals, page, err := h.store.ListDeals(r.Context(), in)
 	if err != nil {

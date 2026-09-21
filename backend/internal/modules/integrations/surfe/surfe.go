@@ -10,10 +10,10 @@
 // database — everything it knows about a subject arrives in the Request the
 // caller built.
 //
-// One person per request, though the endpoint accepts up to ten thousand.
+// One contact per request, though the endpoint accepts up to ten thousand.
 // The platform's unit of spend, of consent and of erasure is the RUN, and a
 // run is one subject: batching would tie several subjects' fates together, so
-// one refusal or one ambiguous answer would put every person in the batch
+// one refusal or one ambiguous answer would put every contact in the batch
 // into the same unknown state.
 package surfe
 
@@ -44,7 +44,7 @@ const (
 	// which holds the reservation rather than retrying a possible charge.
 	requestTimeout = 10 * time.Second
 	// maxResponseBytes caps how much of a response is read. The bodies are
-	// small and bounded by construction (one person), so a stream that keeps
+	// small and bounded by construction (one contact), so a stream that keeps
 	// going is a fault, not a large answer.
 	maxResponseBytes = 1 << 20
 )

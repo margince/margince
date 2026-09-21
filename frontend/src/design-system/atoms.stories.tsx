@@ -4,12 +4,12 @@ import {
   type CSSProperties,
   type ReactNode,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
 import {
   Avatar,
+  BADGE_TONES,
   Badge,
   Button,
   Card,
@@ -19,27 +19,21 @@ import {
   EmptyState,
   Field,
   Kbd,
-  Modal,
   OverflowMenu,
   Radio,
   SearchField,
   SectionHeader,
   SegmentedControl,
   Skeleton,
-  StatCard,
   Textarea,
   TextInput,
 } from "./atoms";
 import { AvatarStack } from "./avatarstack";
-import { FactList } from "./factlist";
+import { Heading } from "./heading";
 import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
 
-// Stories are the render surface the change-scoped fe-uat capture gate drives
-// (frontend/scripts/fe-uat.mjs): a change to atoms.tsx re-renders these in a
-// headless browser and fails on an unclean render. One story file per
-// component module — fe-uat maps atoms.tsx → atoms.stories.tsx.
 const meta: Meta = {
   title: "Design System/Atoms",
   parameters: { layout: "padded" },
@@ -48,8 +42,6 @@ export default meta;
 
 type Story = StoryObj;
 
-// The two shapes the stories below arrange things in: a wrapping row for
-// atoms that sit side by side, and a column for surfaces that stack.
 const row: CSSProperties = {
   display: "flex",
   gap: "0.75rem",
@@ -62,31 +54,28 @@ const stack: CSSProperties = {
   gap: "1rem",
 };
 
-// Every axis of the button on one screen, because each of the four defects this
-// story was rewritten to expose was invisible while the variants were reviewed
-// one at a time: a ghost 2px taller than the primary beside it, an icon at
-// lucide's 24px default next to a 13.5px label, a two-letter label shrunk to a
-// pill nobody reads as a button, and no focus ring at all. The rows below are
-// the comparisons that make each of those visible in one look — same-row height,
-// same-row icon size, same-row width floor.
+// Every axis of the button on one screen. A ghost taller than the primary, an
+// icon at lucide's own 24px beside the label, a two-letter label shrunk to a
+// pill and a missing focus ring each look fine one variant at a time; same-row
+// height, icon size and width floor show them in one look. There is no size
+// axis: one height, and the row beside a field is where that is visible.
 export const Buttons: Story = {
   render: () => (
     <div style={stack}>
       <div style={stack}>
-        <span className="t-label">Variants, default size</span>
+        <span className="t-label">Variants</span>
         <div style={row}>
           <Button variant="primary">Save</Button>
           <Button variant="ghost">Cancel</Button>
           <Button variant="danger">Delete</Button>
+          <Button variant="ai">Draft a reply</Button>
+          <Button variant="aiQuiet">Shorter</Button>
         </div>
       </div>
-      {/* The text affordance, beside a real Button so the thing it must not
-          out-shout is in the same picture. Applied as a CLASS to an `<a>` or a
-          plain `<button>`, and as `variant="link"` where the verb needs
-          Button's refusal and busy contracts too. Its focus ring is a SOLID outline,
-          not the low-alpha shadow the filled controls use: with no fill of its
-          own there is nothing for that ring to read against, and on an
-          elevated surface it disappears. Tab through this row to see it. */}
+      {/* The text affordance beside a real Button it must not out-shout: a
+          CLASS on an `<a>` or `<button>`, or `variant="link"` for Button's
+          refusal and busy contracts. Its focus ring is a SOLID outline — with
+          no fill, a low-alpha shadow has nothing to read against. Tab to it. */}
       <div style={stack}>
         <span className="t-label">The secondary text affordance</span>
         <div style={row}>
@@ -97,10 +86,8 @@ export const Buttons: Story = {
           <button type="button" className="link-button">
             View existing
           </button>
-          {/* With an icon: lucide hands over a 24px glyph, so without a size
-              rule on the class this label wrapped underneath its own icon.
-              Compare the glyph here with the one in the buttons above — one
-              size, owned by the control rather than by the call site. */}
+          {/* With an icon: lucide hands over a 24px glyph, so the BUTTON sizes
+              it — this label wrapped under its own icon until it did. */}
           <button type="button" className="link-button">
             <Plus aria-hidden />
             Add another
@@ -116,31 +103,13 @@ export const Buttons: Story = {
         </div>
       </div>
       <div style={stack}>
-        <span className="t-label">Variants, small</span>
-        <div style={row}>
-          <Button variant="primary" small>
-            Save
-          </Button>
-          <Button variant="ghost" small>
-            Cancel
-          </Button>
-          <Button variant="danger" small>
-            Delete
-          </Button>
-        </div>
-      </div>
-      <div style={stack}>
         <span className="t-label">With an icon</span>
         <div style={row}>
           <Button variant="primary">
             <Plus aria-hidden />
-            Add person
+            Add contact
           </Button>
           <Button variant="ghost">
-            <RefreshCw aria-hidden />
-            Reconnect
-          </Button>
-          <Button variant="ghost" small>
             <RefreshCw aria-hidden />
             Reconnect
           </Button>
@@ -151,13 +120,10 @@ export const Buttons: Story = {
           Icon only — square, and named for a reader
         </span>
         <div style={row}>
-          <Button variant="primary" iconOnly aria-label="Add person">
+          <Button variant="primary" iconOnly aria-label="Add contact">
             <Plus aria-hidden />
           </Button>
           <Button variant="ghost" iconOnly aria-label="Reconnect">
-            <RefreshCw aria-hidden />
-          </Button>
-          <Button variant="ghost" iconOnly small aria-label="Reconnect">
             <RefreshCw aria-hidden />
           </Button>
         </div>
@@ -198,13 +164,10 @@ export const Buttons: Story = {
           </button>
         </div>
       </div>
-      {/* The row this story exists for. Working and refused are opposite
-          facts, and the product drew both as `disabled` — dimmed, barred,
-          focus dropped — so a reader could not tell a request in flight from
-          one their seat is not allowed to make. Side by side is the only way
-          to see that they now differ: full ink and a turning mark against a
-          dimmed pill. The label does not change, which is the other half; a
-          "Saving…" here would rename a control the reader is standing on. */}
+      {/* Working and refused are opposite facts: full ink and a turning mark
+          against a dimmed, barred pill, side by side so the difference shows.
+          The label does not change — a "Saving…" here would rename a control
+          the reader is standing on. */}
       <div style={stack}>
         <span className="t-label">
           Working — which must not read as refused
@@ -216,7 +179,7 @@ export const Buttons: Story = {
           <Button variant="ghost" pending>
             Reconnect
           </Button>
-          <Button variant="primary" small pending>
+          <Button variant="primary" pending>
             Save
           </Button>
           <Button variant="ghost" iconOnly pending aria-label="Reconnect">
@@ -234,11 +197,8 @@ export const Buttons: Story = {
           </Button>
         </div>
       </div>
-      {/* Refusal outranks busy in both its spellings, and this row is here to
-          prove it visually: neither of these draws a mark. A control nobody
-          may press cannot also be mid-press, and an earlier cut of this
-          feature rendered a natively disabled button — focus already gone —
-          with a spinner turning inside it. */}
+      {/* Refusal outranks busy in both its spellings, so neither draws a
+          mark: a control nobody may press cannot also be mid-press. */}
       <div style={stack}>
         <span className="t-label">Refused wins over busy, both ways round</span>
         <div style={row}>
@@ -250,17 +210,11 @@ export const Buttons: Story = {
           </Button>
         </div>
       </div>
-      {/* The federated variant, in the column it is shaped for: full width is
-          the whole point of it, and a wrapping row of them would hide that. All
-          three states the sign-in surface draws, one under the other, because
-          the pair of dims is only legible as a comparison — a live door, one
-          dimmed while the password form beside it is writing and coming back,
-          and one the installation advertises with nothing behind it yet.
-
-          Each mark keeps its own company's colours. That is the one place in
-          this product where a colour is not a token, and it is also why neither
-          dim state grayscales anything: fading a control is ours to do,
-          recolouring somebody else's logo is not. */}
+      {/* The federated variant at the full width it is shaped for, in the
+          three states sign-in draws: live, dimmed while the password form
+          writes, and advertised with nothing behind it. Each mark keeps its
+          company's colours — the one non-token colour in the product — so no
+          dim state grayscales it: recolouring somebody's logo is not ours. */}
       <div style={stack}>
         <span className="t-label">
           Federated sign-in — offered, in flight, unavailable
@@ -284,51 +238,116 @@ export const Buttons: Story = {
   ),
 };
 
-export const Badges: Story = {
+const BADGE_VARIANTS = ["soft", "primary"] as const;
+// The tinted tones, walked from the component's own vocabulary: `default` is
+// drawn on its own at the head of each row, and a grid that listed the rest
+// again would stop showing the newest tone on the day it was added.
+const BADGE_TINTS = BADGE_TONES.filter((tone) => tone !== "default");
+const badgeDocs = (story: string) => ({ docs: { description: { story } } });
+
+export const BadgeVariants: Story = {
+  parameters: badgeDocs(`A badge states one status or label fact beside a name.
+- **Soft** is the default. **Primary** is for the one status a reader must
+  not miss, and for counts. One variant per context, never mixed in a column.
+- An icon sits LEFT of the label, never right; a badge has no trailing slot.
+- Soft has a tone hairline, primary none; add no border, caps or pill class.
+- Don't make a badge interactive: a pressable fact is \`Chip\`, a filter is
+  \`FilterPills\`, a verb is \`Button\`.
+- No new colours. \`ai\` (always with Sparkles) means an agent proposed it, and
+  \`discovery\` means something new rather than something going well.`),
   render: () => (
-    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-      <Badge tone="success">Active</Badge>
-      <Badge tone="warn">Pending</Badge>
-      <Badge tone="danger">Overdue</Badge>
-      <Badge tone="ai">AI</Badge>
-      <Badge tone="accent">Rep</Badge>
-      {/* The quiet spelling, for a column of statuses where filled pills read
-          as decoration. Same tone vocabulary, no fill. */}
-      <Badge quiet>Open</Badge>
-      <Badge tone="danger" quiet>
-        16 days overdue
-      </Badge>
-      <Badge tone="success" quiet>
-        Paid 22 days late
-      </Badge>
-      {/* The live spelling: a status that is true as the page is read, marked
-          by a dot that breathes. Filled and quiet both carry it. */}
+    <div style={stack}>
+      {BADGE_VARIANTS.map((variant) => (
+        <div key={variant} style={row}>
+          <Badge variant={variant}>default</Badge>
+          {BADGE_TINTS.map((tone) => (
+            <Badge key={tone} variant={variant} tone={tone}>
+              {tone}
+            </Badge>
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const BadgeWithIcon: Story = {
+  parameters: badgeDocs("A glyph names the kind of status; ai's is Sparkles."),
+  render: () => (
+    <div style={stack}>
+      {BADGE_VARIANTS.map((variant) => (
+        <div key={variant} style={row}>
+          <Badge variant={variant} tone="success" icon={Mail}>
+            Replied
+          </Badge>
+          <Badge variant={variant} tone="danger" icon={Lock}>
+            Restricted
+          </Badge>
+          <Badge variant={variant} tone="ai">
+            Drafted
+          </Badge>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const BadgeLive: Story = {
+  parameters: badgeDocs("Happening now; the dot stops under reduced motion."),
+  render: () => (
+    <div style={row}>
       <Badge tone="success" live>
         Live
       </Badge>
-      <Badge tone="accent" quiet live>
+      <Badge variant="primary" tone="accent" live>
         Publishing
       </Badge>
     </div>
   ),
 };
 
+export const BadgeLongLabel: Story = {
+  parameters: badgeDocs("At 200px, alone and beside a sibling: an ellipsis."),
+  render: () => (
+    <div style={{ ...stack, alignItems: "flex-start", inlineSize: 200 }}>
+      <Badge tone="warning">
+        extensions/acme/routes/partner-portal/settings
+      </Badge>
+      <div style={{ ...row, flexWrap: "nowrap", inlineSize: "100%" }}>
+        <span>Route</span>
+        <Badge icon={Lock}>extensions/acme/routes/partner-portal</Badge>
+      </div>
+    </div>
+  ),
+};
+
+export const BadgeInsideUppercaseParent: Story = {
+  parameters: badgeDocs("A parent's case, tracking and face stop at its edge."),
+  render: () => (
+    <div style={stack}>
+      <Heading size="medium" className="t-eyebrow">
+        Pipeline <Badge tone="accent">Three open</Badge>
+      </Heading>
+      <code>
+        run 4f2a <Badge tone="success">Passed</Badge>
+      </code>
+    </div>
+  ),
+};
+
 // The chip is an IDENTIFIER, so the states that matter are the ones where two
-// chips have to be told apart or recognised as the same record. The old story
-// was three default-size untinted chips, which showed neither: it could not
-// have caught that four sizes existed for a two-value prop, that the tint was
-// opt-in so a company changed colour between its list row and its own page, or
-// that a name with no space in it produced a single letter.
+// chips must be told apart or recognised as one record: every size, the tint a
+// record keeps on every page, and a name with no space in it.
 export const Avatars: Story = {
   render: () => (
     <div style={stack}>
       <div style={stack}>
         <span className="t-label">The four sizes</span>
         <div style={row}>
-          <Avatar name="Alice Müller" size="xs" />
           <Avatar name="Alice Müller" size="sm" />
           <Avatar name="Alice Müller" size="md" />
           <Avatar name="Alice Müller" size="lg" />
+          <Avatar name="Alice Müller" size="xl" />
         </div>
       </div>
       <div style={stack}>
@@ -362,8 +381,8 @@ export const Avatars: Story = {
           it
         </span>
         <div style={row}>
-          <Avatar identity="org_7f3" name="Voltaq Systems" />
-          <Avatar identity="org_7f3" name="Voltaq Systems GmbH" size="md" />
+          <Avatar identity="company_7f3" name="Voltaq Systems" />
+          <Avatar identity="company_7f3" name="Voltaq Systems GmbH" size="md" />
         </div>
       </div>
       <div style={stack}>
@@ -395,7 +414,7 @@ export const Avatars: Story = {
         </span>
         <div style={row}>
           <AvatarStack
-            people={[
+            contacts={[
               { name: "Alice Müller" },
               { name: "Bob Schmidt" },
               { name: "Carol Wagner" },
@@ -411,13 +430,9 @@ export const Avatars: Story = {
   ),
 };
 
-// The field controls in one column, which is the point of the story: a text
-// input, a dropdown and a textarea stacked the way a form stacks them is the
-// only way to see that their type size, padding, height and focus ring actually
-// agree. Reviewed one at a time they always look fine.
-//
-// The dropdown is the Select from select.tsx, and it is here for exactly that
-// comparison — its own states live in select.stories.tsx.
+// The field controls stacked the way a form stacks them, the only way to see
+// that type size, padding, height and focus ring agree. The dropdown is the
+// Select from select.tsx; its own states live in select.stories.tsx.
 export const Fields: Story = {
   render: () => <FieldsRow />,
 };
@@ -456,17 +471,10 @@ function FieldsRow() {
   );
 }
 
-// The three slots a field grew for the sign-in screens, which had forked their
-// own field component to get them. A leading glyph and a trailing control both
-// sit INSIDE one outline — that is the whole point, and the reason a second
-// component existed: `.input-icon` could carry a glyph on the left and nothing
-// on the right, so a reveal button had no way into the ring.
-//
-// The refusal is the other half. `error` is its own slot rather than a message
-// pushed through `hint`, because the two say different things and were being
-// spelled identically: a refused password rendered in the same meta-grey as the
-// rule it broke, and on the change-password card in the same grey as the
-// success line four elements above it.
+// A field's three slots: a leading glyph and a trailing control both sit INSIDE
+// one outline, so a reveal button is in the ring. `error` is its own slot
+// rather than a message through `hint`, because a refusal and the rule it broke
+// say different things and must not share one meta-grey.
 export const FieldStates: Story = {
   name: "Fields — affordances and refusal",
   render: () => <FieldStatesColumn />,
@@ -564,14 +572,9 @@ export const Toggles: Story = {
   ),
 };
 
-// The card surfaces plus the reading tile, together because the tile is
-// what a card usually holds first and because the three tones only read as a
-// system next to each other: the tile stays neutral and the VALUE takes the
-// tone, which is invisible when a tinted tile is shown on its own.
-//
-// The third card is the shape most screens want and the reason the header is
-// props rather than a hand-placed child: one title, one description under it,
-// and the section's actions beside them.
+// The card surfaces side by side. The third is the shape most screens want and
+// why the header is props rather than a hand-placed child: one title, one
+// description under it, and the section's actions beside them.
 export const Cards: Story = {
   render: () => (
     <div style={stack}>
@@ -586,156 +589,18 @@ export const Cards: Story = {
           of stacking a second raised edge on the first.
         </p>
       </Card>
-      <Card
-        title="Passports"
-        sub="Credentials you minted for an agent. Every call re-authenticates, so a revoked passport stops working mid-session."
-        actions={<Button small>Mint</Button>}
-      >
+      <Card title="Passports" actions={<Button>Mint</Button>}>
         <p className="t-caption">
           The header comes from props: title over description across the full
           width, actions beside the pair.
         </p>
       </Card>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
-        <StatCard
-          label="Account"
-          value="Customer"
-          detail="Renewal · Reseller"
-        />
-        <StatCard
-          label="Engagement"
-          value="Cooling"
-          tone="warn"
-          detail="Last inbound 12 Jun · last outbound 3 Jul"
-        />
-        <StatCard
-          label="Commercial"
-          value="4 open deals"
-          tone="danger"
-          detail="2 stalled for over 30 days"
-        />
-        <StatCard label="Owner" value="Carol Wagner" />
-        {/* `numeric`: a money reading draws in the mono face, so the digits
-            share one width and a column of figures lines up. The flag lives
-            here rather than a wrapped node in the value, which would make the
-            screen the author of type this tier owns. */}
-        <StatCard
-          label="Won lifetime"
-          value="€1,284,500.00"
-          numeric
-          detail="Across 14 closed deals"
-        />
-        {/* `basis`: the rows the reading was computed from, folded away until
-            asked for. A native details, so it opens to a click and to Enter —
-            a reading a keyboard cannot reach is a reading half the readers do
-            not have. The detail line still carries the one-line basis, so a
-            reader who never opens this does not meet a bare number. */}
-        <StatCard
-          label="Health"
-          value="At risk"
-          tone="warn"
-          dot
-          detail="1 of 3 at risk"
-          basis={
-            <FactList
-              facts={[
-                {
-                  key: "relationship",
-                  term: "Relationship",
-                  value: "Good",
-                  note: "Two people here have replied this month.",
-                },
-                {
-                  key: "commercial",
-                  term: "Commercial",
-                  value: "Strong",
-                  note: "Three deals open, none stalled.",
-                },
-                {
-                  key: "payment",
-                  term: "Payment",
-                  value: "At risk",
-                  note: "Three invoices past due, oldest by 18 days.",
-                },
-              ]}
-            />
-          }
-        />
-      </div>
     </div>
   ),
 };
 
-// The reading that OPENS something, beside the one that does not. The three
-// tiles are the whole of the door's contract and only read as one system side
-// by side: with a door the entire tile is the press target, so the pointer has
-// to underline the foot's words from anywhere on the card and a keyboard Tab
-// has to ring the CARD rather than the two words at the bottom of it; without
-// one the tile is inert and must show neither.
-//
-// The first tile is the case the layering exists for. Its receipt chip sits
-// over the door's stretched target: pressing the chip has to open the working
-// and leave the page where it is, and only a card carrying both can show that.
-export const ReadingsWithADoor: Story = {
-  name: "Readings — with a door and without",
-  render: () => (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
-        gap: "0.75rem",
-      }}
-    >
-      <StatCard
-        label="The people"
-        value="1 of 3 engaged"
-        detail="a champion is named"
-        meter={{ filled: 1, total: 3 }}
-        openLabel="Open people"
-        onOpen={() => {}}
-        basis={
-          <FactList
-            facts={[
-              {
-                key: "champion",
-                term: "Champion",
-                value: "Carol Wagner",
-                note: "Replied twice this month.",
-              },
-              {
-                key: "silent",
-                term: "Unengaged",
-                value: "Two of three",
-                note: "Neither has answered since April.",
-              },
-            ]}
-          />
-        }
-      />
-      <StatCard
-        label="Urgent"
-        value="7"
-        numeric
-        tone="warn"
-        detail="across every lane this morning"
-        openLabel="Open these"
-        onOpen={() => {}}
-      />
-      <StatCard label="Owner" value="Carol Wagner" detail="since 14 March" />
-    </div>
-  ),
-};
-
-// Loading and empty in one story: they are the same moment of a screen's life
-// seen twice, and the pair is where the honest failure shows up — a skeleton
-// that outlives the request and an empty state that says nothing useful both
-// read as "broken" to the person waiting.
+// Loading and empty, the same moment of a screen seen twice: a skeleton that
+// outlives the request and an empty state that says nothing both read broken.
 export const Placeholders: Story = {
   render: () => (
     <div style={stack}>
@@ -752,11 +617,7 @@ export const Placeholders: Story = {
       <EmptyState>No deals match these filters yet.</EmptyState>
       <EmptyState
         title="No projects yet"
-        action={
-          <Button small variant="primary">
-            New project
-          </Button>
-        }
+        action={<Button variant="primary">New project</Button>}
       >
         <p>
           A project is the body of work a deal is about. It starts during the
@@ -774,36 +635,21 @@ export const Placeholders: Story = {
   ),
 };
 
-// The section-level structure: a header that names a block, and a disclosure
-// that hides one until asked for. Both states of the disclosure are here
-// because the chevron is its only state indicator — a summary that looks the
-// same open and closed is the defect this catalog has to make visible.
 export const Sections: Story = {
   render: () => (
     <div style={stack}>
       <SectionHeader title="Pipeline" />
-      <SectionHeader title="Pipeline" sub="Six open deals · 1.2M weighted" />
-      {/* The description is a line of its own, so length is a reading matter
-          rather than a layout one — beside the title this sentence used to push
-          the heading around and then run out of room. */}
+      <SectionHeader title="Pipeline" />
       <SectionHeader
         title="Reporting currency"
-        sub="Every aggregate on this installation converts to it at the day's rate, and the rate that was used stays on the figure."
-        actions={<Button small>Change</Button>}
+        actions={<Button>Change</Button>}
       />
       <Card>
-        {/* As the card's first child, which is the pairing atoms.css styles.
-            Equivalent to passing title/sub to Card — that is what it renders. */}
-        <SectionHeader title="Contacts" sub="Three people at this company" />
+        <SectionHeader title="Contacts" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
-      {/* level={3} is a section INSIDE a section — a group of fields under the
-          page's own h2. The type steps down with the outline: an inner heading
-          drawn at its parent's size tells the eye they are peers while the
-          document says they are not, and the eye is the one a reader
-          believes. */}
       <Card>
-        <SectionHeader title="Delivery" sub="Where webhooks are sent" />
+        <SectionHeader title="Delivery" />
         <SectionHeader title="Endpoints" level={3} />
         <p className="t-caption">Two subscriptions, both healthy.</p>
         <SectionHeader title="Dead-lettered" level={3} />
@@ -811,15 +657,11 @@ export const Sections: Story = {
       </Card>
       <Disclosure summary="Matching rules">
         <p className="t-caption">
-          Closed by default: the reader pays one line for a surface they rarely
-          open.
+          Closed by default for details the reader rarely needs.
         </p>
       </Disclosure>
       <Disclosure summary="Import log" open>
-        <p className="t-caption">
-          Forced open for a state the reader must not miss — a run in progress,
-          or a result that just arrived.
-        </p>
+        <p className="t-caption">Open for a run or a new result.</p>
       </Disclosure>
     </div>
   ),
@@ -837,8 +679,7 @@ const SIDES = ["owner", "team"] as const;
 type Side = (typeof SIDES)[number];
 const SIDE_LABELS: Record<Side, string> = { owner: "Owner", team: "Team" };
 
-// SegmentedControl is fully controlled, so the catalog has to own the state or
-// the buttons never move.
+// SegmentedControl is controlled: without state here the buttons never move.
 function ToolbarDemo() {
   const [range, setRange] = useState<Range>("quarter");
   const [side, setSide] = useState<Side>("owner");
@@ -874,18 +715,18 @@ function ToolbarDemo() {
         value={tab}
         onChange={setTab}
         labels={TAB_LABELS}
-        counts={{ people: 6, deals: 0 }}
+        counts={{ contacts: 6, deals: 0 }}
         label="Record section"
       />
     </div>
   );
 }
 
-const TABS = ["overview", "people", "deals"] as const;
+const TABS = ["overview", "contacts", "deals"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABELS: Record<Tab, string> = {
   overview: "360",
-  people: "People",
+  contacts: "Contacts",
   deals: "Deals",
 };
 
@@ -919,10 +760,8 @@ function MarkedTabsDemo() {
   );
 }
 
-// A dot on an option says something waits behind it — a record tab whose
-// surface holds an action nobody has taken. It is `aria-hidden` and never the
-// only carrier of the fact: the surface it points at states it in words, or a
-// screen reader and a reader who cannot see the colour both learn nothing.
+// A dot on an option says something waits behind it. It is `aria-hidden` and
+// never the only carrier: the surface it points at states the fact in words.
 export const MarkedOption: Story = {
   render: () => <MarkedTabsDemo />,
 };
@@ -965,7 +804,7 @@ const DEAL_COLUMNS = [
   {
     key: "weighted",
     header: "Weighted",
-    render: (deal: DemoDeal) => <span className="t-mono">{deal.weighted}</span>,
+    render: (deal: DemoDeal) => <span className="t-num">{deal.weighted}</span>,
   },
 ];
 
@@ -998,7 +837,7 @@ export const Tables: Story = {
   render: () => (
     <div style={stack}>
       <DealTableDemo />
-      <SectionHeader title="No rows" sub="The same table with rows={[]}" />
+      <SectionHeader title="No rows" />
       <DataTable
         label={"Deals"}
         columns={DEAL_COLUMNS}
@@ -1010,47 +849,8 @@ export const Tables: Story = {
   ),
 };
 
-// Open on mount, because a dialog rendered closed screenshots as an empty
-// canvas. The trigger stays so the reader can reopen it after dismissing.
-function ModalDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the dialog
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <h2
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          Merge these companies?
-        </h2>
-        <p className="t-caption">
-          Globex GmbH keeps its record; the duplicate's activities, deals and
-          people move onto it. This cannot be undone.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="danger" onClick={() => setOpen(false)}>
-            Merge
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Dialog: Story = {
-  render: () => <ModalDemo />,
-};
-
-// OverflowMenu owns its open state and mounts its items only after the first
-// open, so a story that merely renders it is a lone button in the canvas.
-// Pressing the trigger on mount is the only way to catalog the panel without
-// giving the component a prop it does not have.
+// OverflowMenu mounts its items only once opened, so the story presses the
+// trigger on mount rather than giving the component a prop it does not have.
 function OverflowMenuDemo({
   openOnMount,
   children,
@@ -1071,10 +871,9 @@ function OverflowMenuDemo({
       ?.click();
   }, [openOnMount]);
   return (
-    // The panel is anchored to its trigger and hangs off the trigger's END, the
-    // way a record header carries it — so the story puts the trigger at the
-    // right edge (the panel opens inward, not off the page) and reserves the
-    // height it drops into.
+    // The panel is anchored to its trigger and hangs off its END, as a record
+    // header carries it — so the story puts the trigger at the right edge (it
+    // opens inward, not off the page) and reserves the height it drops into.
     <div
       ref={wrap}
       style={{
@@ -1100,20 +899,12 @@ export const OverflowClosed: Story = {
   ),
 };
 
-// The open panel, carrying every item shape one menu can hold at once, because
-// each of these was a separate defect and every one of them was invisible while
-// the panel was reviewed with three tidy verbs in it:
-//
-//   - a row whose label LEADS WITH A GLYPH, beside rows that do not — the words
-//     have to start on one x or the menu reads as two ragged columns;
-//   - a label longer than the panel's ceiling, which wraps rather than being
-//     clipped: an item a reader cannot finish reading is one they cannot choose;
-//   - a row that is SET rather than pressed — the one item a menu must not
-//     close under, since the control that drew a region open is the only one
-//     that closes it — drawn in the accent rather than the filled bar;
-//   - a refused row, which stays listed because the refusal is information;
-//   - the destructive verb, which keeps its red and loses its fill, and sits
-//     below the seam that separates it from the routine ones.
+// The open panel with every item shape one menu can hold, each invisible with
+// three tidy verbs in it: a label LEADING WITH A GLYPH (the words start on one
+// x); a label past the ceiling, which wraps, since an item nobody can finish
+// reading cannot be chosen; a SET row, drawn in the accent, that the menu does
+// not close under; a refused row, listed because the refusal is information;
+// and the destructive verb, red without its fill, below the seam.
 export const Overflow: Story = {
   render: () => (
     <OverflowMenuDemo openOnMount>
@@ -1138,72 +929,33 @@ export const Overflow: Story = {
   ),
 };
 
-// placement="right" is the drawer form of the SAME Modal — full height on the
-// right edge, with the record behind it still legible. Catalogued because the
-// centred dialog above is what everyone pictures when they read "Modal", and
-// the two are one component with one prop between them.
-function DrawerDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      {/* Something behind the drawer, because "the record stays legible" is
-          the whole claim the placement makes and an empty canvas cannot show
-          it being kept. */}
-      <SectionHeader title="Globex GmbH" sub="Enterprise · Munich" />
-      <p className="t-body">
-        Anna Brandt replied on Tuesday and is waiting on pricing. Nobody has
-        written since.
-      </p>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the drawer
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy={titleId}
-        placement="right"
-      >
-        <h2
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          Write to Anna Brandt
-        </h2>
-        <p className="t-caption">
-          The draft sits beside the record it is about, so a rep can read the
-          history while writing rather than remembering it.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Discard</Button>
-          <Button variant="primary" onClick={() => setOpen(false)}>
-            Send
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Drawer: Story = {
-  render: () => <DrawerDemo />,
-};
-
-// SearchField had no node of its own: it appeared only inside RecordPicker's
-// story, where it reads as part of that composite rather than as the one
-// spelling of a search input. Both states are here because the affordance is
-// the icon and the type="search" clear control, and a filled field is the only
-// way to see the second.
+// The one spelling of a search input, empty and filled: the affordance is the
+// icon and the type="search" clear control, and only a filled field shows it.
 export const Search: Story = {
   render: () => (
     <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: "22rem" }}>
       <Field label="Find a company">
         {(control) => <SearchField {...control} placeholder="Search…" />}
       </Field>
-      <Field label="Find a person">
+      <Field label="Find a contact">
         {(control) => <SearchField {...control} defaultValue="Anna Brandt" />}
       </Field>
     </div>
   ),
+};
+
+function ControlledDisclosureExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open details</Button>
+      <Disclosure summary="Editable details" open={open} onToggle={setOpen}>
+        <p>The reader can close and reopen this section.</p>
+      </Disclosure>
+    </>
+  );
+}
+
+export const ControlledDisclosure: Story = {
+  render: () => <ControlledDisclosureExample />,
 };

@@ -6,7 +6,7 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import { Check, ChevronDown, Columns3, Rows3 } from "lucide-react";
+import { ChevronDown, Columns3, Rows3 } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -172,6 +172,24 @@ function IdentityCell<Row>({
       )}
     </span>
   );
+}
+
+/**
+ * Several pills in one cell, on the row's one line.
+ *
+ * It does NOT wrap, which is the whole of why it exists: a cell that grows a
+ * second line pushes every row below it down, and a page of fifty rows stops
+ * being a scannable grid — the reasoning `RowTags` already states for a tag
+ * strip. What does not fit ends in an ellipsis, text before badges (why, in
+ * listtable.css): the reader's answer to a strip cut short is to widen the
+ * column, and every other answer costs the rows their rhythm.
+ *
+ * A `<span>`, so a column renderer can return it wherever it returns text.
+ * Offered rather than applied: the table wraps the identity cell and nothing
+ * else, so a column that carries one value keeps whatever layout it returns.
+ */
+export function CellStrip({ children }: Readonly<{ children: ReactNode }>) {
+  return <span className="lt-strip">{children}</span>;
 }
 
 /** The bulk bar over the grid, while anything is selected. */
@@ -430,10 +448,10 @@ export function ListTable<Row>({
   scopeKey = "",
   action,
   caption,
-  note,
   footer,
   hasMore = false,
   onLoadMore,
+  total: serverTotal,
   perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
@@ -505,16 +523,14 @@ export function ListTable<Row>({
    * a reader who owns nothing is the case this was written for and is a
    * narrowed list, so a note shown only over the unnarrowed one never appeared.
    * A caller whose note would blame the data source for what the reader's own
-   * dial did passes none — the overlay owner hint goes quiet under a live
-   * search for exactly that reason.
+   * dial did passes none.
    */
   emptyNote?: ReactNode;
   /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
   search?: { value: string; onChange: (next: string) => void };
   /**
-   * Omit when the data source refuses to sort. The overlay mirror 422s the
-   * dial, so its screens pass nothing and the headers render inert — the
-   * table never offers a control the server would reject.
+   * Omit when the data source refuses to sort: the headers then render inert,
+   * so the table never offers a control the server would reject.
    */
   sort?: SortControl;
   chips?: readonly ListChip[];
@@ -554,18 +570,21 @@ export function ListTable<Row>({
    * and repeating it here would title the surface twice.
    */
   caption?: ReactNode;
-  /** Says why the dials are missing, when they are. */
-  note?: ReactNode;
   /** An aggregate row under the table, e.g. a count and a total value. */
   footer?: ReactNode;
   /**
    * Whether the server holds rows beyond the ones passed in. Paging is a keyset
-   * cursor, so there is no total and no way to jump to an arbitrary page: the
-   * pager walks the pages it has, and stepping past the last one fetches the
-   * next cursor page rather than pretending a page count it cannot know.
+   * cursor, so there is no jumping to an arbitrary page: the pager walks the
+   * pages it has, and stepping past the last one fetches the next cursor page.
    */
   hasMore?: boolean;
   onLoadMore?: () => void;
+  /**
+   * How many rows match on the server, when it counts them — the difference
+   * between "1-25 of 8,372" and "1-25 of 200 loaded so far". Undefined means
+   * it does not count, NOT zero, so the line falls back to the rows in hand.
+   */
+  total?: number;
   /**
    * Rows per RENDERED page. The caller fetches a whole multiple of it, so the
    * table divides the rows it holds on boundaries the fetch already respects.
@@ -1004,8 +1023,10 @@ export function ListTable<Row>({
                 unit={unit}
                 first={from + 1}
                 last={from + pageRows.length}
-                total={rows.length}
-                more={hasMore}
+                total={serverTotal ?? rows.length}
+                // "Loaded so far" is the caveat for a number the client
+                // counted itself; an exact total needs none.
+                more={hasMore && serverTotal === undefined}
                 narrowed={narrowed}
                 sortedBy={sorted?.header}
               />
@@ -1013,7 +1034,6 @@ export function ListTable<Row>({
       }
       action={action}
       caption={caption}
-      note={note}
       search={search}
       sort={sort}
       sortOptions={sortOptions}
@@ -1232,18 +1252,11 @@ export function ListTable<Row>({
                         was written for never appeared at all: a "Mine" view
                         for a reader who owns nothing is a NARROWED list. A
                         caller whose note would blame the data source for what
-                        the reader's own dial did passes none — the overlay
-                        owner hint goes quiet under a live search for exactly
-                        that reason. The generic line stays above it either
-                        way: "clear filters" undoes every narrowing, and a
+                        the reader's own dial did passes none. The generic line
+                        stays above it either way: "clear filters" undoes every narrowing, and a
                         screen's own way back usually undoes one. */}
                     {emptyNote && (
-                      <p
-                        className="t-caption"
-                        style={{ marginTop: "var(--space-2)" }}
-                      >
-                        {emptyNote}
-                      </p>
+                      <p style={{ marginTop: "var(--space-2)" }}>{emptyNote}</p>
                     )}
                   </td>
                 </tr>
@@ -1360,7 +1373,7 @@ function HeaderCell<Row>({
  * Deliberately hidden from assistive technology. A labelled control inside a
  * `th` joins that header's accessible name, so every column would announce as
  * "Value, resize the Value column" — the price of a keyboard affordance here is
- * making every header read worse for the people who rely on the name most. The
+ * making every header read worse for the contacts who rely on the name most. The
  * column picker already gives keyboard users control over what a table shows,
  * and a width is presentation rather than content.
  */
@@ -1470,23 +1483,20 @@ function TableTools<Row>({
             aria-expanded={open}
             onClick={() => setOpen(!open)}
           >
-            <Columns3 size={13} strokeWidth={1.5} aria-hidden="true" />
+            <Columns3 strokeWidth={1.5} aria-hidden="true" />
             {t("table.columns")}
           </button>
           <Menu open={open} head={t("table.shownColumns")} align="right">
+            {/* Which columns are shown is a set, so each row is a `Checkbox` and
+                the menu stays open while the reader builds it. */}
             {optional.map((column) => (
-              <button
-                type="button"
+              <Checkbox
                 key={column.key}
-                className={`lt-mi${hidden.has(column.key) ? "" : " on"}`}
-                aria-pressed={!hidden.has(column.key)}
-                onClick={() => onToggleColumn(column.key)}
-              >
-                <span className="lt-cb">
-                  <Check size={10} strokeWidth={3} aria-hidden="true" />
-                </span>
-                {column.header}
-              </button>
+                className="lt-mi"
+                checked={!hidden.has(column.key)}
+                label={column.header}
+                onChange={() => onToggleColumn(column.key)}
+              />
             ))}
           </Menu>
         </span>
@@ -1498,7 +1508,7 @@ function TableTools<Row>({
         aria-pressed={dense}
         onClick={onDense}
       >
-        <Rows3 size={13} strokeWidth={1.5} aria-hidden="true" />
+        <Rows3 strokeWidth={1.5} aria-hidden="true" />
         {t("table.compact")}
       </button>
     </>

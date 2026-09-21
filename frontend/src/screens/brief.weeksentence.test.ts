@@ -48,13 +48,17 @@ const ZERO_COUNTS = {
 
 function week(
   counts: Partial<typeof ZERO_COUNTS>,
-  pipeline?: { won_minor: number; currency: string },
+  pipeline?: NonNullable<WeeklyReview["pipeline"]>,
 ): WeeklyReview {
   return {
+    id: "22222222-2222-2222-2222-222222222222",
     local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    deals: [],
     counts: { ...ZERO_COUNTS, ...counts },
     ...(pipeline === undefined ? {} : { pipeline }),
-  } as unknown as WeeklyReview;
+  };
 }
 
 describe("weekSentence — what the closed week says about itself", () => {
@@ -81,7 +85,15 @@ describe("weekSentence — what the closed week says about itself", () => {
   // page twice and a reader has two places to reconcile.
   it("never prices the wins, even when the week recorded the money", () => {
     const priced = say(
-      week({ deals_won: 2 }, { won_minor: 4200000, currency: "EUR" }),
+      week(
+        { deals_won: 2 },
+        {
+          created_minor: 0,
+          won_minor: 4200000,
+          lost_minor: 0,
+          currency: "EUR",
+        },
+      ),
     );
     expect(priced).toBe(say(week({ deals_won: 2 })));
     expect(priced).not.toContain("42");
@@ -131,7 +143,19 @@ describe("weekSentence — what the closed week says about itself", () => {
   // would read as a page that failed to load.
   it("calls a week with nothing in it quiet, and still names its debt", () => {
     expect(say(week({}))).toBe(en["brief.week.quiet"]);
-    expect(say(week({ tasks_carried_over: 2 }))).toContain("quiet");
+    expect(say(week({ tasks_carried_over: 2 }))).toContain("No completed work");
     expect(say(week({ tasks_carried_over: 2 }))).toContain("2 tasks");
   });
+});
+
+it("recognizes completed undated work in the weekly headline", () => {
+  const review = week({});
+  review.counts.tasks_completed = 1;
+  expect(say(review)).toBe(en["brief.week.workRecorded"]);
+});
+
+it("recognizes obligations delivered early even without an in-week completion", () => {
+  const review = week({ tasks_due: 3, tasks_done: 3 });
+  review.counts.tasks_completed = 0;
+  expect(say(review)).toBe(en["brief.week.workRecorded"]);
 });

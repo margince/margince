@@ -8,7 +8,7 @@ package attention
 //
 // The clock is not this file's to invent. `sla_state` and `sla_deadline_at`
 // are derived on every lead read (formulas §18.1), so what happens here is
-// ranking an answer the people module already gave — a second opinion about
+// ranking an answer the contacts module already gave — a second opinion about
 // when a reply is late would be one the lead screen could disagree with.
 
 import (
@@ -30,9 +30,9 @@ import (
 // while the queue that claims to be "what should I do next" said nothing about
 // it.
 //
-// `tracked` is the installation's first-response policy, and false is not an
-// empty list: with the target switched off no lead owes a reply at a stated
-// time, so the lane renders ABSENT rather than empty. Saying "no leads are
+// `tracked` is the installation's first-response policy. It decides whether a
+// row can carry a DEADLINE, not whether the row exists: a lead owes a reply
+// either way. Saying "no leads are
 // overdue" where nothing measures overdue would be a claim the product cannot
 // support.
 type LeadResponses interface {
@@ -41,8 +41,9 @@ type LeadResponses interface {
 
 // OwedLead is one inbound lead nobody has replied to yet.
 type OwedLead struct {
-	ID   ids.UUID
-	Name string
+	Facts *crmcontracts.WorklistLeadFacts
+	ID    ids.UUID
+	Name  string
 	// OwnerID is zero when the lead is assigned to nobody, which is its own
 	// kind of urgency rather than a missing field.
 	OwnerID ids.UUID
@@ -84,7 +85,11 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 		Consequence: "buyer_waits",
 		Because:     because,
 		Subject:     subjectOf(string(subjectLead), lead.ID),
+		Lead:        lead.Facts,
 		Actions:     []crmcontracts.WorklistItemActions{crmcontracts.WorklistItemActions(actionOpen)},
+	}
+	if lead.State == "" {
+		row.Consequence = valueNone
 	}
 	if name != "" {
 		row.Title = &name
@@ -113,7 +118,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 	}
 }
 
-// leadStanding reads the state the people module derived, and says what it
+// leadStanding reads the state the contacts module derived, and says what it
 // means for the day's order.
 //
 // An unrecognised state ranks as agreed work rather than being dropped: the
@@ -122,7 +127,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 // could see.
 func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistReason) {
 	switch lead.State {
-	case string(crmcontracts.LeadSlaStateBreached):
+	case string(crmcontracts.LeadSlaStateLeadSlaStateBreached):
 		because := []crmcontracts.WorklistReason{reason("response_overdue", nil)}
 		if !lead.DeadlineAt.IsZero() {
 			days := daysSince(lead.DeadlineAt, asOf)
@@ -131,7 +136,7 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 			}
 		}
 		return levelWaiting, because
-	case string(crmcontracts.LeadSlaStateAtRisk):
+	case string(crmcontracts.LeadSlaStateLeadSlaStateAtRisk):
 		// The deadline travels with the reason, because "reply due soon" alone
 		// asks the rep to guess how soon. Its breached sibling above already
 		// carries a figure (the days it has been overdue); this is the same
@@ -164,10 +169,12 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 // task filed under this lead, while the lead is on the page owing a reply, is
 // about that reply. The notice is left alone — it is read-once and personal,
 // and it names no lead to match on.
+// Fold only when the lead exposes the deadline the task would otherwise carry.
+// Disabling a response policy does not cancel an existing dated activity.
 func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	owed := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == sourceLeadResponse && row.item.Subject != nil {
+		if row.item.Source == sourceLeadResponse && row.item.Subject != nil && row.item.DueAt != nil {
 			owed[row.item.Subject.Id.String()] = true
 		}
 	}
@@ -176,7 +183,8 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Source == sourceTask && row.item.Subject != nil &&
+		if row.item.Source == sourceTask && row.item.Kind != nil &&
+			*row.item.Kind == "lead_response_escalation" && row.item.Subject != nil &&
 			row.item.Subject.Type == subjectLead && owed[row.item.Subject.Id.String()] {
 			continue
 		}
@@ -195,8 +203,10 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 // row for a source the page never consulted.
 type leadRead struct {
 	rows []OwedLead
-	// read is false when no lead source is bound, when the installation
-	// measures no first response, or when the read was refused or failed.
+	// read is false when no lead source is bound, or when the read was refused
+	// or failed — never because the installation measures no first response,
+	// which is a fact about deadlines rather than about whether leads owe
+	// replies.
 	read bool
 }
 
@@ -209,17 +219,20 @@ func (l leadRead) bounded() bool {
 
 // owedLeads reads the leads still owed a first reply, or names why it could not.
 //
-// An installation with no first-response target has no leads that are LATE, so
-// the source is absent from the page entirely. Reporting zero overdue leads
-// where nothing measures overdue would be a number the product cannot stand
-// behind.
+// A lead owing a reply is a fact about the LEAD; whether that reply is LATE is a
+// fact about the installation's policy. So the lane reports the rows whether or
+// not a first-response target exists, and a row carries a deadline only where
+// one is set.
 func (s *Service) owedLeads(
 	ctx context.Context,
 ) (leadRead, *crmcontracts.WorklistSourceUnavailable) {
 	if s.leads == nil {
 		return leadRead{}, nil
 	}
-	owed, tracked, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
+	// The policy answer is deliberately unused: a deadline belongs on the row
+	// that has one, and every row already carries its own. Reading it here
+	// would be a second place deciding what the lane may say.
+	owed, _, err := s.leads.Owed(ctx, s.taskScope, s.taskOwner, leadResponseBound)
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
@@ -230,8 +243,6 @@ func (s *Service) owedLeads(
 		return leadRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceLeadResponse, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
-	case !tracked:
-		return leadRead{}, nil
 	default:
 		return leadRead{rows: owed, read: true}, nil
 	}

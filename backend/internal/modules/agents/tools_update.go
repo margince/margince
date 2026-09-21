@@ -48,9 +48,9 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		Description:   updateRecordCopy.render(),
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierAutoExecute,
-		OpenAPIOp:     "updatePerson/updateOrganization/updateDeal/updateLead/updateActivity/updateProject/updateRelationship",
+		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
-			"record_type":{"type":"string","enum":["person","organization","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
 			"id":{"type":"string","format":"uuid"},
 			"fields":{"type":"object","description":` + jsonString("Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
@@ -80,7 +80,7 @@ type stagedApprovalNote struct {
 //
 // It stages the WHOLE call, not the per-field residue Handle's precedence split
 // stages. The two answer different questions and both are real: the split asks
-// "may a machine overwrite what a person typed", and applies everything else
+// "may a machine overwrite what a human typed", and applies everything else
 // meanwhile; the floor says this operation is confirm-first whatever the fields
 // hold, so nothing may apply until a human releases it. The floor is resolved
 // before admission, so a call that reaches here has already been judged the
@@ -103,13 +103,13 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 // Handle is the per-field human-edit-precedence split (interfaces.md
 // §2.1): fields a human last wrote are staged 🟡 for approval, the rest
 // of the patch applies 🟢 in the same call — a machine does not silently
-// undo a person, and a person does not block the machine's own fields.
+// undo a contact, and a contact does not block the machine's own fields.
 func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args updateRecordArgs
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	if err := rejectUnknownFields(updateShapes, args.RecordType, args.Fields); err != nil {
+	if err := rejectUnknownFields(updateWriteShapes, args.RecordType, args.Fields); err != nil {
 		return nil, err
 	}
 	if ApprovalRedeemed(ctx) {
@@ -135,11 +135,13 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		if err != nil {
 			return nil, err
 		}
-		id, alreadyApproved, err := t.stageConflicts(ctx, args, split, canonical, hash)
+		id, alreadyApproved, summary, err := t.stageConflicts(ctx, args, split, canonical, hash)
 		if err != nil {
 			return nil, err
 		}
-		return nil, &workflow.StagedApprovalError{ApprovalID: id, AlreadyApproved: alreadyApproved}
+		return nil, &workflow.StagedApprovalError{
+			ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: summary,
+		}
 	}
 	return t.applySplit(ctx, args, split)
 }
@@ -167,7 +169,9 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 	if err != nil {
 		return nil, err
 	}
-	id, alreadyApproved, err := t.stageConflicts(ctx, args, split, canonical, hash)
+	// The summary is dropped here and not repeated: this path answers with a
+	// structured note that already names the staged fields.
+	id, alreadyApproved, _, err := t.stageConflicts(ctx, args, split, canonical, hash)
 	if err != nil {
 		return nil, fmt.Errorf("the other fields were updated, but staging the human-edited fields (%s) failed: %w",
 			strings.Join(split.Conflicts, ", "), err)
@@ -205,24 +209,29 @@ func splitStagingNote(conflicts []string, id ids.ApprovalID, alreadyApproved boo
 // here runs AFTER any auto-execute remainder landed, so the pinned version
 // (ADR-0036 §2) is the state the approving human will actually judge —
 // this call's own auto-execute half cannot invalidate its staged half.
-func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (ids.ApprovalID, bool, error) {
+func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (ids.ApprovalID, bool, string, error) {
 	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
 	if err != nil {
-		return ids.ApprovalID{}, false, err
+		return ids.ApprovalID{}, false, "", err
 	}
 	if err := refuseStagingElsewhere(rec); err != nil {
-		return ids.ApprovalID{}, false, err
+		return ids.ApprovalID{}, false, "", err
 	}
-	return t.staging.StageCall(ctx, StageRequest{
+	// Composed once and answered twice: the human's card and the caller's
+	// refusal describe one staged change, and a second wording of it would let
+	// the contact and the agent wait on two different descriptions.
+	summary := fmt.Sprintf("Update %s %s: overwrite human-edited %s",
+		args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", "))
+	id, alreadyApproved, err := t.staging.StageCall(ctx, StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,
 		DiffHash:       hash,
 		TargetType:     args.RecordType,
 		TargetID:       args.ID,
 		TargetVersion:  &rec.Version,
-		Summary: fmt.Sprintf("Update %s %s: overwrite human-edited %s",
-			args.RecordType, recordLabel(rec), strings.Join(split.Conflicts, ", ")),
+		Summary:        summary,
 	})
+	return id, alreadyApproved, summary, err
 }
 
 // apply writes the patch and answers with the post-write record.
@@ -238,11 +247,22 @@ func (t updateRecord) apply(ctx context.Context, args updateRecordArgs, patch js
 // needs the post-write state (server-derived fields, bumped version)
 // whether it answers with the record alone or splices staging info in.
 func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, patch json.RawMessage) (wireRecord, error) {
+	// Through pinForWrite, not the raw argument. A redeemed retry that supplied
+	// no if_version would otherwise write unconditioned: redemption commits its
+	// own transaction and this one opens a fresh one, so the skew check inside
+	// redemption proves the row was right when the approval was CONSUMED, not
+	// when the effect lands — and the agent controls both sides of that window.
+	// The REST door forwards the released pin as If-Match, so every operation
+	// behind it is already carried; this is the same guarantee on this door.
+	pin, err := pinForWrite(ctx, args.IfVersion)
+	if err != nil {
+		return wireRecord{}, err
+	}
 	ref, err := t.p.Update(ctx, datasource.UpdateInput{
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID},
 		Patch:     patch,
 		Source:    ToolSource,
-		IfVersion: args.IfVersion,
+		IfVersion: pin,
 	})
 	if err != nil {
 		return wireRecord{}, err

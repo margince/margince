@@ -9,7 +9,7 @@ import (
 )
 
 // What an HTML-only mail has to read like once stored. Every case here was a
-// way the previous tag-strip produced text a person could not read: entities
+// way the previous tag-strip produced text a contact could not read: entities
 // left spelled out, paragraphs run together, and stylesheet rules delivered as
 // if the sender had written them.
 func TestHTMLToText(t *testing.T) {

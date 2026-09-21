@@ -21,27 +21,16 @@
    never mistakes a permission boundary for an empty account. */
 .surfacestate-empty {
   margin-top: 6px;
-  font-size: var(--fs-body);
-  color: var(--textSecondary);
 }
 /* What would be here, under the line saying there is none. Not italic: it is a
    fact about the RECORD — what puts a row here — where the italic voice below
-   is the surface talking about itself.
-
-   --textMeta, the AA small-text role. It is set below the sentence it hangs
-   from, and small plus muted is a sentence a reader has to lean in for, so it
-   takes the step down from body rather than two. */
+   is the surface talking about itself. */
 .surfacestate-empty-detail {
   margin-top: var(--space-1);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
-  color: var(--textMeta);
   text-wrap: pretty;
 }
-/* Reads --textMeta, the canonical AA small-text role: this text says a
-   permission boundary or a failed read, which is exactly the text a reader
-   must not have to squint at. Italic carries the "this is about the page,
-   not the record" tone without leaning on colour.
+/* Italic carries the "this is about the page, not the record" tone without
+   leaning on colour.
 
    Shared by withheld, unavailable, unsupported and the sentence inside
    failed — four causes, one voice, because what they have in common is that
@@ -49,8 +38,6 @@
    tells them apart is the words, which is where that belongs. */
 .surfacestate-withheld {
   margin-top: 6px;
-  font-size: var(--fs-body);
-  color: var(--textMeta);
   font-style: italic;
 }
 
@@ -64,13 +51,31 @@
   margin-top: var(--space-2);
 }
 
-/* Stale values are SHOWN, with the caveat above them rather than below: a
+/* THE FOUR STATES THAT ARE A VERDICT CARRY A STATE COLOUR; THE REST DO NOT.
+   `SECTION_STATE_TONES` in surfacestate.tsx is the list and the reasoning — an
+   empty section, a withheld one and a section missing for a reason nobody
+   stated are facts about the surface, and a red line on a version skew would
+   tell a reader something broke.
+
+   Stale values are SHOWN, with the caveat above them rather than below: a
    caveat under a figure arrives after the reader has already taken it as
-   current. The warn tone marks it as a caveat and not as prose. */
+   current. The warning tone marks it as a caveat and not as prose. */
 .surfacestate-stale {
   margin-bottom: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--warn);
+  color: var(--warningText);
+}
+
+/* A read that did not land, in the danger ink its retry button sits beside. It
+   keeps the italic voice of the sentences around it — the voice says the
+   surface is talking about itself, the colour says this one is a fault. */
+.surfacestate-danger {
+  color: var(--dangerText);
+}
+
+/* A truncation the surface NAMES. The info ink rather than a warning: the read
+   answered, and the remainder is a report with a way to the rest of it. */
+.surfacestate-info {
+  color: var(--infoText);
 }
 
 /* A surface holding two independently-governed parts labels each one, so a

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -195,10 +196,10 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	var version int64
 	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`INSERT INTO person (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
+			`INSERT INTO contact (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
 		).Scan(&id, &version)
 	}); err != nil {
-		t.Fatalf("inserting person: %v", err)
+		t.Fatalf("inserting contact: %v", err)
 	}
 	if version != 1 {
 		t.Fatalf("fresh row version = %d, want 1", version)
@@ -207,9 +208,9 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	// The trigger bumps version on every UPDATE (data-model §1.3a).
 	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`UPDATE person SET title = 'CTO' WHERE id = $1 RETURNING version`, id).Scan(&version)
+			`UPDATE contact SET title = 'CTO' WHERE id = $1 RETURNING version`, id).Scan(&version)
 	}); err != nil {
-		t.Fatalf("updating person: %v", err)
+		t.Fatalf("updating contact: %v", err)
 	}
 	if version != 2 {
 		t.Fatalf("version after update = %d, want 2", version)
@@ -218,7 +219,7 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	// The If-Match write shape: a stale version matches zero rows.
 	if err := inTx(t, app, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
-			`UPDATE person SET title = 'CEO' WHERE id = $1 AND version = $2`, id, int64(1))
+			`UPDATE contact SET title = 'CEO' WHERE id = $1 AND version = $2`, id, int64(1))
 		if err != nil {
 			t.Fatalf("stale update: %v", err)
 		}
@@ -247,7 +248,7 @@ func TestAuditLogIsAppendOnly(t *testing.T) {
 		return tx.QueryRow(ctx,
 			// entity_id is NOT NULL since 0075 (audit_log is record-mutations-only).
 			`INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
-			 VALUES ('human', 'human:test', 'create', 'person', uuidv7()) RETURNING id`).Scan(&id)
+			 VALUES ('human', 'human:test', 'create', 'contact', uuidv7()) RETURNING id`).Scan(&id)
 	}); err != nil {
 		t.Fatalf("seeding an audit row: %v", err)
 	}
@@ -292,5 +293,123 @@ func seedLedgerRowsForReversal(t *testing.T, conn *pgx.Conn) {
 		INSERT INTO system_log (actor_type, actor_id, action)
 		VALUES ('system', 'system:reversal-fixture', 'reversal_fixture')`); err != nil {
 		t.Fatalf("seeding the system_log row this reversal must survive: %v", err)
+	}
+}
+
+// Down REFUSES a version whose applied content is not the content this binary
+// holds — driven through dbmigrate.Down rather than against the predicate, so
+// it proves the production revert path actually consults the digest.
+//
+// Up records a content_digest and, before this, nothing read it: the column
+// held the evidence and no code acted on it (#2141). The down half is the
+// sharper one. Running the CURRENT rollback against a schema the OLD
+// up-migration built is a schema CHANGE made on a false premise — it drops
+// what the source names rather than what the database has, then deletes the row
+// that was the only record of what it did apply.
+func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	resetSchema(t, conn)
+	ctx := context.Background()
+
+	core, err := migrations.Core()
+	if err != nil {
+		t.Fatalf("loading core: %v", err)
+	}
+	if _, err := dbmigrate.Up(ctx, conn, core); err != nil {
+		t.Fatalf("up: %v", err)
+	}
+
+	// The edit a contributor would make: the newest migration's rollback,
+	// changed after this database applied it. Its UP is untouched, so the
+	// database looks current by every other measure the ledger keeps.
+	edited := core
+	edited.Migrations = append([]dbmigrate.Migration(nil), core.Migrations...)
+	last := len(edited.Migrations) - 1
+	edited.Migrations[last].DownSQL += "\n-- an edit made after this was applied\n"
+
+	reverted, err := dbmigrate.Down(ctx, conn, edited, 1)
+	if err == nil {
+		t.Fatal("the revert ran against a database that applied different content — it would drop " +
+			"what the source names rather than what the database has, and then delete the only " +
+			"record of what it applied")
+	}
+	if reverted != 0 {
+		t.Errorf("reverted %d migration(s) before refusing, want 0", reverted)
+	}
+	if !strings.Contains(err.Error(), "applied content does not match the source") {
+		t.Errorf("the revert was refused by something else: %v", err)
+	}
+
+	// And the UNEDITED revert still runs, so the guard refuses an edit rather
+	// than refusing rollbacks.
+	if _, err := dbmigrate.Down(ctx, conn, core, 1); err != nil {
+		t.Errorf("the revert of the content that was applied refused: %v", err)
+	}
+}
+
+// Up REFUSES to migrate past a version whose applied content is not the content
+// this binary holds, and refuses before applying ANY of the namespace.
+//
+// The refusal is the decision #2141 asked for. An edited migration is skipped as
+// done, so the edit is absent on this database and present on every fresh
+// installation, and every later migration is then applied on top of a schema
+// the source cannot describe — the divergence compounds a boot at a time and
+// nothing says so. Warning instead would leave that silent, and the same defect
+// arriving as a RENUMBER is already refused here (assertLedgerMatches), so
+// warning about one and refusing the other would be two answers to one
+// question.
+//
+// Driven through dbmigrate.Up rather than against the predicate, because the
+// predicate was already right and unread: what this pins is that the production
+// migrate path consults it.
+func TestMigrations_upRefusesAnEditedMigrationBeforeApplyingAny(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	resetSchema(t, conn)
+	ctx := context.Background()
+
+	core, err := migrations.Core()
+	if err != nil {
+		t.Fatalf("loading core: %v", err)
+	}
+
+	// Applied WITHOUT the newest migration, so the run under test has real work
+	// to do. A namespace with nothing left to apply would refuse on an empty
+	// loop and prove nothing about the ordering below.
+	head := len(core.Migrations) - 1
+	partial := core
+	partial.Migrations = core.Migrations[:head]
+	if _, err := dbmigrate.Up(ctx, conn, partial); err != nil {
+		t.Fatalf("up to the penultimate migration: %v", err)
+	}
+
+	// The edit a contributor would make, to a migration this database has
+	// ALREADY applied — the first one, so the pending work sits after it.
+	edited := core
+	edited.Migrations = append([]dbmigrate.Migration(nil), core.Migrations...)
+	edited.Migrations[0].UpSQL += "\n-- an edit made after this was applied\n"
+
+	applied, err := dbmigrate.Up(ctx, conn, edited)
+	if err == nil {
+		t.Fatal("the migration ran past a version whose applied content differs from the source — " +
+			"the edit is absent here and present on every fresh installation, and nothing says so")
+	}
+	if !strings.Contains(err.Error(), "applied content does not match the source") {
+		t.Fatalf("the run was refused by something else: %v", err)
+	}
+	// BEFORE any of them. Judged inside the apply loop, the edit on migration
+	// one would be caught before anything ran; judged there with the edit on a
+	// LATER version, the run would move the database somewhere new and then
+	// refuse, and the operator would learn one defect per boot.
+	if applied != 0 {
+		t.Errorf("applied %d migration(s) before refusing, want 0 — a run that half-migrates and "+
+			"then stops leaves the database at a version neither source describes as current", applied)
+	}
+
+	// The unedited run still completes, so the guard refuses an edit rather
+	// than refusing migration.
+	if _, err := dbmigrate.Up(ctx, conn, core); err != nil {
+		t.Errorf("the run of the content that was applied refused: %v", err)
 	}
 }

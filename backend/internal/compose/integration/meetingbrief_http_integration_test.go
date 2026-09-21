@@ -28,12 +28,12 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Brief E2E", "brief@fable.test", "Admin")
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people",
-		AnyMap{"full_name": "Ana Roth"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := e.Call(t, "POST", "/v1/contacts",
+		AnyMap{"full_name": "Ana Roth"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	// Logged through the product's own writer rather than inserted: a fixture
 	// the real writer never produces proves nothing about what the real writer
@@ -43,7 +43,7 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Retrofit review",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &meeting); status != http.StatusCreated {
 		t.Fatalf("log meeting → %d", status)
 	}
@@ -63,7 +63,7 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 				Value      *string `json:"value"`
 				Confidence *string `json:"confidence"`
 			} `json:"meeting_type"`
-			AccountArc *[]json.RawMessage `json:"account_arc"`
+			CompanyArc *[]json.RawMessage `json:"company_arc"`
 			Questions  *[]json.RawMessage `json:"questions"`
 			Unknowns   *[]json.RawMessage `json:"unknowns"`
 			Advance    *struct {
@@ -90,8 +90,8 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 	if body.Plan.Unknowns == nil {
 		t.Error("`unknowns` is absent rather than an empty array; a client cannot tell 'no gaps' from 'not answered'")
 	}
-	if body.Plan.AccountArc == nil {
-		t.Error("`account_arc` is absent rather than an empty array")
+	if body.Plan.CompanyArc == nil {
+		t.Error("`company_arc` is absent rather than an empty array")
 	}
 	// The advance is required in full: a meeting with two ways to close and no
 	// third is not a plan a rep can act on.

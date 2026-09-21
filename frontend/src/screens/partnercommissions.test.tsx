@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -10,7 +10,9 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 
 type CommissionEntry = components["schemas"]["CommissionEntry"];
 
@@ -86,7 +88,7 @@ function stubCommissions(entries: unknown[], mayDecide = true) {
 const accrued: CommissionEntry = {
   id: "c-1",
   deal_id: "d-1",
-  partner_org_id: "o-1",
+  partner_company_id: "o-1",
   status: "accrued",
   attribution_at_accrual: "sourced",
   margin_tier_at_accrual: "tier2_20",
@@ -104,10 +106,10 @@ describe("the commission panel", () => {
   it("reads only this partner's entries", async () => {
     const urls = stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
-    expect(new URL(urls[0] ?? "").searchParams.get("partner_org_id")).toBe(
+    expect(new URL(urls[0] ?? "").searchParams.get("partner_company_id")).toBe(
       "o-1",
     );
   });
@@ -115,7 +117,7 @@ describe("the commission panel", () => {
   it("shows what was earned, on what, and at which rate", async () => {
     stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
     const cells = [...ledger.querySelectorAll("tbody tr td")].map(
       (c) => c.textContent,
@@ -149,11 +151,12 @@ describe("the commission panel", () => {
       }),
     );
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
 
-    // The control the design system routes with is a button, not an anchor.
-    const link = await within(ledger).findByRole("button", {
+    // A cross-record reference is an anchor, so the deal opens the ways a link
+    // does — a new tab, a bookmark, the keyboard.
+    const link = await within(ledger).findByRole("link", {
       name: "Northgate rollout",
     });
     expect(link).toBeTruthy();
@@ -173,7 +176,7 @@ describe("the commission panel", () => {
       },
     ]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
     const rows = [...ledger.querySelectorAll("tbody tr")];
 
@@ -203,7 +206,7 @@ describe("the commission panel", () => {
       }),
     );
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const ledger = await screen.findByTestId("commission-ledger");
     const rows = [...ledger.querySelectorAll("tbody tr")];
 
@@ -214,7 +217,7 @@ describe("the commission panel", () => {
   it("says nothing is earned rather than showing an empty table", async () => {
     stubCommissions([]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
 
     expect(await screen.findByText("Nothing earned yet")).toBeTruthy();
     expect(screen.queryByTestId("commission-ledger")).toBeNull();
@@ -264,7 +267,7 @@ describe("deciding a commission entry", () => {
   it("puts the approve control on an accrued row", async () => {
     stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
     // The seat snapshot is its own query, so the verbs appear a tick after
     // the rows do.
@@ -279,7 +282,7 @@ describe("deciding a commission entry", () => {
   it("draws no decision control on a reversed row", async () => {
     stubCommissions([{ ...accrued, status: "void" }]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
     expect(screen.queryByTestId("commission-approve")).toBeNull();
@@ -289,7 +292,7 @@ describe("deciding a commission entry", () => {
   it("confirms before it writes — a money decision never fires on one click", async () => {
     const urls = stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
     await screen.findByTestId("commission-approve");
     const before = urls.length;
@@ -314,7 +317,11 @@ describe("the outstanding figure", () => {
       { ...accrued, id: "c-4", status: "void", amount_minor: 99900 },
     ]);
 
-    expect(owed).toEqual([{ currency: "EUR", amountMinor: 25000 }]);
+    // The entry count travels with the sum, because the card states both and a
+    // second pass over the same rows would be a second answer to one question.
+    expect(owed).toEqual([
+      { currency: "EUR", amountMinor: 25000, entryCount: 2 },
+    ]);
   });
 
   it("keeps currencies apart rather than adding them", () => {
@@ -325,15 +332,15 @@ describe("the outstanding figure", () => {
 
     // Two slots, not one sum: EUR 200 plus USD 30 is not 230 of anything.
     expect(owed).toEqual([
-      { currency: "EUR", amountMinor: 20000 },
-      { currency: "USD", amountMinor: 3000 },
+      { currency: "EUR", amountMinor: 20000, entryCount: 1 },
+      { currency: "USD", amountMinor: 3000, entryCount: 1 },
     ]);
   });
 
   it("draws nothing when every entry is settled", async () => {
     stubCommissions([{ ...accrued, status: "paid" }]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
     // A slot reading "0" spends a slot saying there is nothing to say.
@@ -343,10 +350,46 @@ describe("the outstanding figure", () => {
   it("shows what is owed when something is", async () => {
     stubCommissions([accrued]);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     const strip = await screen.findByTestId("commission-outstanding");
 
-    expect(strip.textContent).toContain("€200.00");
+    // To the cent. This is money somebody is OWED, so it keeps every digit —
+    // the compact form carries no fraction below ten thousand, and forty cents
+    // outstanding would read "€0".
+    expect(strip.textContent).toContain(formatMoney(20000, "EUR", "en"));
+  });
+
+  // The defect the compact form caused: a balance under €100 lost its cents,
+  // and forty cents owed read "€0" — a partner told they are owed nothing.
+  it("keeps the cents on a balance the compact form would round to zero", async () => {
+    stubCommissions([{ ...accrued, amount_minor: 40 }]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const strip = await screen.findByTestId("commission-outstanding");
+
+    expect(strip.textContent).toContain(formatMoney(40, "EUR", "en"));
+    expect(strip.textContent).not.toContain("€0 ");
+  });
+
+  it("says what the total is made of rather than where paying happens", async () => {
+    stubCommissions([
+      { ...accrued, amount_minor: 20000 },
+      { ...accrued, id: "c-2", status: "approved", amount_minor: 5000 },
+    ]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const strip = await screen.findByTestId("commission-outstanding");
+
+    // The detail counts the entries behind the figure. Where the money
+    // actually leaves is true of the whole ledger, so it is said once above it
+    // and not on every currency's slot.
+    expect(strip.textContent).toContain(
+      en["commission.outstandingDetail_other"].replace("{count}", "2"),
+    );
+    expect(strip.textContent).not.toContain("finance system");
+    expect(
+      screen.getByText(en["commission.decide.settledElsewhere"]),
+    ).toBeTruthy();
   });
 });
 
@@ -358,7 +401,7 @@ describe("a reader who may not decide", () => {
   it("is told the decision is withheld rather than shown controls that 403", async () => {
     stubCommissions([accrued], false);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
     await screen.findByTestId("commission-withheld");
 
@@ -372,7 +415,7 @@ describe("a reader who may not decide", () => {
     // entry's state and not the reader's grant.
     stubCommissions([{ ...accrued, status: "void" }], false);
 
-    render(<PartnerCommissions organizationId="o-1" />);
+    render(<PartnerCommissions companyId="o-1" />);
     await screen.findByTestId("commission-ledger");
 
     expect(screen.queryByTestId("commission-withheld")).toBeNull();

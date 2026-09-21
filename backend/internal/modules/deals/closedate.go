@@ -11,7 +11,10 @@ package deals
 // or a downgrade of a deal that has gone quiet (🔻). Pure over its
 // inputs + clock, so a fixed test clock reproduces every branch.
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // §11 tunables (spec parameter-registry names).
 const (
@@ -24,8 +27,15 @@ const (
 	// CloseDateMinHistory is CLOSE_DATE_MIN_HISTORY: won deals required
 	// before the workspace's observed stage velocity outranks the fallback.
 	CloseDateMinHistory = 20
-	// CloseDateAutoApplyEnabled is CLOSE_DATE_AUTOAPPLY, the master enable
-	// for the 🟢 tier; off routes every correction 🟡 provisional-confirm.
+	// CloseDateAutoApplyEnabled is CLOSE_DATE_AUTOAPPLY, which selects whether
+	// a clearly-overdue early-stage date is replaced on the spot (🟢) or left
+	// for the human to correct on the 🟡 card.
+	//
+	// It no longer decides whether the replacement is FINAL. Both tiers write a
+	// provisional date and raise the confirm, because both write the same
+	// stage-velocity estimate — see CloseDateActionAutoApply in the sweep. The
+	// operational stop is deals.MaintenanceWritesEnabled, which is a live
+	// setting rather than this compile-time constant.
 	CloseDateAutoApplyEnabled = true
 
 	// unrealisticSoonMaxProb bounds the §11 unrealistic_soon flag: at or
@@ -86,7 +96,7 @@ type CloseDateInput struct {
 type CloseDateHygiene struct {
 	Flags   []CloseDateFlag
 	Flagged bool
-	// ProposedClose is the activity/velocity-informed replacement date;
+	// ProposedClose retains a valid date or estimates a missing/overdue one;
 	// nil when nothing is flagged.
 	ProposedClose *time.Time
 	Action        CloseDateAction
@@ -144,14 +154,15 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 	}
 
 	proposed := proposedCloseDate(today, in.RemainingOpenStages, in.StageVelocityDays)
+	// Quietness changes confidence, not an already recorded future date.
+	if in.ExpectedClose != nil && !findings.overdue {
+		proposed = dateOnly(*in.ExpectedClose)
+	}
 	out.ProposedClose = &proposed
 	out.Action = closeDateAction(findings, in, CloseDateAutoApplyEnabled)
 	out.Downgrade = out.Action == CloseDateActionDowngradeAndReview
-	// A 🟡 date is a guess by definition; a 🔻 deal only gets a guessed
-	// date when the invariant forces one (past or missing) — it is never
-	// re-dated optimistically on top of the downgrade.
-	out.Provisional = out.Action == CloseDateActionProvisionalConfirm ||
-		(out.Downgrade && (findings.overdue || findings.missing))
+	// Only a replacement is an estimate; retaining a human date cannot make it provisional.
+	out.Provisional = findings.overdue || findings.missing
 	return out
 }
 
@@ -183,13 +194,14 @@ func closeDateAction(f closeDateFindings, in CloseDateInput, autoApply bool) Clo
 	return CloseDateActionProvisionalConfirm
 }
 
-// proposedCloseDate is §11's computed correction: today plus at least one
-// stage-worth of the workspace's observed (or fallback) velocity.
+// A missing or overdue date gets whole weeks of observed remaining-stage pace,
+// with a seven-day minimum. Thin history uses fourteen days per stage.
 func proposedCloseDate(today time.Time, remainingOpenStages int, velocityDays float64) time.Time {
 	if velocityDays <= 0 {
 		velocityDays = CloseDateStageDays
 	}
-	return today.AddDate(0, 0, int(float64(StagesToGo(remainingOpenStages))*velocityDays))
+	days := math.Ceil(float64(StagesToGo(remainingOpenStages))*velocityDays/7) * 7
+	return today.AddDate(0, 0, max(7, int(days)))
 }
 
 // StagesToGo is how many stage-worths of pace the guess is built from: the

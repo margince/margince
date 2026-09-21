@@ -22,7 +22,7 @@ const LABELS: RelationshipMapLabels = {
   emptyTitle: "No route recorded yet",
   emptyBody:
     "Start by assigning the buying roles, or import the interactions this account already has.",
-  nothingSelected: "Select a person to see the best route into them.",
+  nothingSelected: "Select a contact to see the best route into them.",
 };
 
 const FULL: RelationshipMapModel = {
@@ -42,14 +42,14 @@ const FULL: RelationshipMapModel = {
     { id: "u-3", kind: "user", label: "Mei Kato", sublabel: "1 contact here" },
     {
       id: "o-1",
-      kind: "organization",
+      kind: "company",
       label: "Brandt GmbH",
       sublabel: "Account",
     },
     { id: "d-1", kind: "deal", label: "Retrofit 2026", sublabel: "Proposal" },
     {
       id: "p-1",
-      kind: "person",
+      kind: "contact",
       label: "Philipp Königs",
       sublabel: "CFO",
       engagement: "untried",
@@ -61,7 +61,7 @@ const FULL: RelationshipMapModel = {
     },
     {
       id: "p-2",
-      kind: "person",
+      kind: "contact",
       label: "Anne Wiegert",
       sublabel: "Head of Operations",
       engagement: "answered",
@@ -69,7 +69,7 @@ const FULL: RelationshipMapModel = {
     },
     {
       id: "p-3",
-      kind: "person",
+      kind: "contact",
       label: "Jan Roth",
       sublabel: "Workshop lead",
       engagement: "no_reply",
@@ -77,7 +77,7 @@ const FULL: RelationshipMapModel = {
     },
     {
       id: "p-4",
-      kind: "person",
+      kind: "contact",
       label: "Sabine Vogel",
       sublabel: "Head of Partnerships",
       engagement: "waiting",
@@ -227,7 +227,7 @@ export const LargeAccount: Story = {
         { id: "u-1", kind: "user", label: "Sofia Meier" },
         ...Array.from({ length: 14 }, (_, i) => ({
           id: `p-${i}`,
-          kind: "person" as const,
+          kind: "contact" as const,
           label: `Contact ${i + 1}`,
           engagement: "untried" as const,
           engagementLabel: "Not approached",

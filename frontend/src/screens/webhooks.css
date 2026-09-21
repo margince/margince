@@ -9,11 +9,10 @@
  * between them come from settingrow.css — this sheet keeps only what is this
  * card's own content and nothing about where a row sits. */
 
-/* A target URL is one unbroken token with nothing to break on, and `.t-mono`
- * sets a family and nothing else. Left alone it is what makes a 390px page
- * scroll sideways: `min-width: 0` lets the flex item shrink below its content,
- * and `overflow-wrap` gives the URL somewhere to break — the same pair
- * `.code-block` already carries in base.css. */
+/* A target URL is one unbroken token with nothing to break on. Left alone it
+ * is what makes a 390px page scroll sideways: `min-width: 0` lets the flex
+ * item shrink below its content, and `overflow-wrap` gives the URL somewhere
+ * to break — the same pair `.code-block` already carries in base.css. */
 .webhook-target {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -62,5 +61,5 @@
  * not — the caution below states that in words as well. */
 .webhook-secret-caution {
   margin-top: var(--space-2);
-  color: var(--danger);
+  color: var(--dangerText);
 }

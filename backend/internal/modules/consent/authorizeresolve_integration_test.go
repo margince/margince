@@ -35,7 +35,7 @@ type resolveEnv struct {
 	ctx      context.Context
 	owner    *pgx.Conn
 	ws, user ids.UUID
-	person   ids.PersonID
+	contact  ids.ContactID
 	address  string
 	// A deal needs a pipeline and a stage, so the env carries one of each
 	// rather than every deal fixture making its own.
@@ -68,7 +68,7 @@ func setupResolve(t *testing.T) *resolveEnv {
 
 	e := &resolveEnv{
 		ws: ids.NewV7(), user: ids.NewV7(),
-		person: ids.New[ids.PersonKind](), address: "dana@buyer.test",
+		contact: ids.New[ids.ContactKind](), address: "dana@buyer.test",
 		owner: owner,
 	}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -80,13 +80,13 @@ func setupResolve(t *testing.T) *resolveEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Dana Buyer', 'manual', 'human:x')`, e.person); err != nil {
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Dana Buyer', 'manual', 'human:x')`, e.contact); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'manual', 'human:x')`, e.person, e.address); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x')`, e.contact, e.address); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,7 +121,7 @@ func setupResolve(t *testing.T) *resolveEnv {
 			// before it reads one, so a fixture without these is testing the
 			// refusal rather than the validator.
 			Objects: map[string]principal.ObjectGrant{
-				"person":   {Read: true},
+				"contact":  {Read: true},
 				"finance":  {Read: true},
 				"contract": {Read: true},
 				// The installation's own settings, which is what the
@@ -160,8 +160,8 @@ func (e *resolveEnv) activityWithoutThread(t *testing.T, direction, address, rol
 		t.Fatalf("planting the unthreaded activity: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, person_id, address, role)
-		VALUES ($1, $2, $3, $4)`, id, e.person, address, role); err != nil {
+		INSERT INTO activity_participant (activity_id, contact_id, address, role)
+		VALUES ($1, $2, $3, $4)`, id, e.contact, address, role); err != nil {
 		t.Fatalf("planting the participant: %v", err)
 	}
 	return id
@@ -178,13 +178,13 @@ func (e *resolveEnv) activity(t *testing.T, threadKey, direction string, when ti
 		t.Fatalf("planting the activity: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, person_id, address, role)
-		VALUES ($1, $2, $3, $4)`, id, e.person, address, role); err != nil {
+		INSERT INTO activity_participant (activity_id, contact_id, address, role)
+		VALUES ($1, $2, $3, $4)`, id, e.contact, address, role); err != nil {
 		t.Fatalf("planting the participant: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, id, e.person); err != nil {
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, id, e.contact); err != nil {
 		t.Fatalf("linking the activity: %v", err)
 	}
 	return id
@@ -209,8 +209,8 @@ func (e *resolveEnv) openDeal(t *testing.T, status string, stakeholder bool) ids
 	}
 	if stakeholder {
 		if _, err := e.owner.Exec(ctx, `
-			INSERT INTO relationship (kind, deal_id, person_id, source, captured_by)
-			VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, dealID, e.person); err != nil {
+			INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by)
+			VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, dealID, e.contact); err != nil {
 			t.Fatalf("planting the stakeholder: %v", err)
 		}
 	}
@@ -252,7 +252,7 @@ func (e *resolveEnv) resolve(t *testing.T, req commsauthz.Request) resolution {
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = e.gate.resolveCategory(e.ctx, tx, req, subjectRef{
-			Kind: entityPerson, ID: e.person.String(), Address: e.address,
+			Kind: entityContact, ID: e.contact.String(), Address: e.address,
 		})
 		return err
 	}); err != nil {
@@ -313,6 +313,77 @@ func TestBeingCopiedOnAThreadIsNotWritingIntoIt(t *testing.T) {
 
 	if got.Supported && got.Category == commsauthz.CategoryReplyToInbound {
 		t.Fatal("a recipient who was merely copied resolved as a reply, want no thread support")
+	}
+}
+
+// A channel counterparty carries no address (connector.Counterparty's own
+// doc explains why), so authorIsTheSubject's account branch is what a
+// customer's own inbound message on a channel is evidence through — the
+// same claim TestAReplyToAThreadTheSubjectStartedIsAReply holds for mail's
+// address branch.
+//
+// Mutation: drop the account-matching OR arm from authorIsTheSubject and
+// this fails — the address arm alone never matches a row with no address.
+func TestAChannelParticipantAnswersTheThreadArm(t *testing.T) {
+	e := setupResolve(t)
+	ctx := context.Background()
+	anchor := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, channel_provider, direction, thread_key, occurred_at, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'inbound', 'chan-thread-1', now(), 'connector:telegram', 'connector:telegram')`,
+		anchor); err != nil {
+		t.Fatalf("planting the channel activity: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, channel_user_id, role)
+		VALUES ($1, 'acct-9', 'from')`, anchor); err != nil {
+		t.Fatalf("planting the channel participant: %v", err)
+	}
+
+	subject := subjectRef{Kind: entityContact, ID: e.contact.String(), ChannelProvider: "telegram", ChannelUserID: "acct-9"}
+	var found bool
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		found, err = repliesToTheSubject(ctx, tx, anchor, subject)
+		return err
+	}); err != nil {
+		t.Fatalf("asking the thread arm: %v", err)
+	}
+	if !found {
+		t.Fatal("a channel customer's own inbound message did not answer for their own reply")
+	}
+}
+
+// The account branch matches by ACCOUNT, not merely by provider: a different
+// account on the same provider, on the same thread, is a different human and
+// answers for nobody's reply.
+func TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject(t *testing.T) {
+	e := setupResolve(t)
+	ctx := context.Background()
+	anchor := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, channel_provider, direction, thread_key, occurred_at, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'inbound', 'chan-thread-2', now(), 'connector:telegram', 'connector:telegram')`,
+		anchor); err != nil {
+		t.Fatalf("planting the channel activity: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, channel_user_id, role)
+		VALUES ($1, 'acct-9', 'from')`, anchor); err != nil {
+		t.Fatalf("planting the channel participant: %v", err)
+	}
+
+	subject := subjectRef{Kind: entityContact, ID: e.contact.String(), ChannelProvider: "telegram", ChannelUserID: "acct-77"}
+	var found bool
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		found, err = repliesToTheSubject(ctx, tx, anchor, subject)
+		return err
+	}); err != nil {
+		t.Fatalf("asking the thread arm: %v", err)
+	}
+	if found {
+		t.Fatal("a stranger's account on the same provider answered for this subject's reply")
 	}
 }
 
@@ -471,6 +542,42 @@ func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
 	}
 }
 
+// AND THE VERDICT AGREES WITH THE RESOLUTION.
+//
+// The resolution above has said "not supported, and here is why" since the
+// escape hatch was closed, but the DECISION went on allowing: decideResolved
+// handed an unsupported transactional claim to legacyVerdictFor, which asked
+// VerdictForContact, whose ClassTransactional arm allows unconditionally. So the
+// engine recorded its objection and sent the mail anyway, on nothing but the
+// purpose key — which is the hole the resolution change was supposed to close.
+//
+// The contact here has an address, a seeded transactional purpose, and NO
+// invoice, contract, thread or deal. The only thing saying this message is
+// operational is the caller's own purpose key.
+//
+// The lead arm closed this already (TestALeadTakesNoAuthorityFromATransactionalPurpose
+// in leadconsent_integration_test.go); contacts were the remaining half.
+func TestTheLegacyTransactionalPurposeDoesNotAllowTheSend(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "transactional", "transactional")
+
+	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "transactional"})
+
+	if got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s): the transactional key authorized a send on its own, "+
+			"with no invoice, contract, thread or deal behind it", got.ReasonCode)
+	}
+	if got.ReasonCode != commsauthz.ReasonLegacyTransactionalUnevidenced {
+		t.Errorf("reason = %q, want legacy_transactional_unevidenced — the refusal should name "+
+			"the missing evidence, not a generic denial", got.ReasonCode)
+	}
+	// Resolved still names what the engine worked out, so the row reads as an
+	// account notice that could not be evidenced rather than as a mystery.
+	if got.Resolved != commsauthz.CategoryAccountNotice {
+		t.Errorf("resolved %q, want account_notice", got.Resolved)
+	}
+}
+
 // A recipient the engine can say nothing about resolves to marketing and is
 // unsupported — the strictest reading, because an unknown purpose is not a
 // reason to assume an operational one.
@@ -487,9 +594,9 @@ func TestAnUnknownPurposeResolvesStrictly(t *testing.T) {
 	}
 }
 
-// The engine's answer is still per recipient. Two people on one message, one on
+// The engine's answer is still per recipient. Two contacts on one message, one on
 // the thread and one not, get different answers — which is what makes a refusal
-// explainable to the person it is about.
+// explainable to the contact it is about.
 func TestTwoRecipientsOnOneMessageGetTheirOwnAnswers(t *testing.T) {
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
@@ -504,7 +611,7 @@ func TestTwoRecipientsOnOneMessageGetTheirOwnAnswers(t *testing.T) {
 		var err error
 		stranger, err = e.gate.resolveCategory(e.ctx, tx,
 			commsauthz.Request{AnchorActivityID: anchor}, subjectRef{
-				Kind: entityPerson, ID: ids.New[ids.PersonKind]().String(),
+				Kind: entityContact, ID: ids.New[ids.ContactKind]().String(),
 				Address: "stranger@elsewhere.test",
 			})
 		return err
@@ -592,17 +699,17 @@ func TestARemovedStakeholderSupportsNoFollowUp(t *testing.T) {
 
 // A ROLE MAILBOX THAT MOVED does not carry its previous holder's thread. The
 // bare-address arm exists for a participant capture never resolved to a record;
-// without a person_id IS NULL guard it matches ANY row carrying the address, so
-// info@ re-pointed from one contact to another would let the first person's
+// without a contact_id IS NULL guard it matches ANY row carrying the address, so
+// info@ re-pointed from one contact to another would let the first contact's
 // messages support writing to the second — past their own withdrawal.
 //
-// Mutation: drop `p.person_id IS NULL` from the address arm and this fails.
+// Mutation: drop `p.contact_id IS NULL` from the address arm and this fails.
 func TestAReassignedAddressDoesNotInheritTheThread(t *testing.T) {
 	e := setupResolve(t)
 	// Somebody ELSE wrote into the thread from the address our subject now holds.
-	previous := ids.New[ids.PersonKind]()
+	previous := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO person (id, full_name, source, captured_by)
+		INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Previous Holder', 'manual', 'human:x')`, previous); err != nil {
 		t.Fatal(err)
 	}
@@ -614,7 +721,7 @@ func TestAReassignedAddressDoesNotInheritTheThread(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, person_id, address, role)
+		INSERT INTO activity_participant (activity_id, contact_id, address, role)
 		VALUES ($1, $2, $3, 'from')`, id, previous, e.address); err != nil {
 		t.Fatal(err)
 	}
@@ -677,7 +784,7 @@ func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
 	}
 
 	req := stagedRequestFor(commsauthz.TransmitRequest{PurposeKey: "newsletter"},
-		connector.Recipient{Email: "nobody@corp.test"}, claims, "")
+		connector.Recipient{Email: "nobody@corp.test"}, claims, "", nil)
 	if req.Context != "" {
 		t.Fatalf("an unstaged recipient inherited the claim %q", req.Context)
 	}
@@ -740,9 +847,9 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO confirm_token (id, person_id, token_hash, delivered_to, expires_at, consumed_at, kind)
+		INSERT INTO confirm_token (id, contact_id, token_hash, delivered_to, expires_at, consumed_at, kind)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		id, e.person, "hash-"+id.String(), e.address, expires, consumed, kind); err != nil {
+		id, e.contact, "hash-"+id.String(), e.address, expires, consumed, kind); err != nil {
 		t.Fatal(err)
 	}
 	return id

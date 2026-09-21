@@ -78,6 +78,23 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 // while these depend on different things and several on nothing at all. The
 // two analysis passes that register without a model lane each say below why a
 // missing lane is not a reason to leave their work undone.
+// addStoredObjectJobs registers the orphaned-object reap, and only for a role
+// that composed an object store.
+//
+// Nil is the honest answer rather than a degraded one: a pass that cannot reach
+// the bytes would retire ledger rows for objects still sitting in the bucket,
+// which turns a recoverable orphan into one nothing can find. It sits in this
+// file because the reap is the same kind of thing the capture purge is — bytes
+// a row no longer speaks for — and both need the one collaborator the
+// database-only sweeps deliberately do not take.
+func addStoredObjectJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
+	reaper := storedObjectReaperFor(pool, cfg.Blobstore, log)
+	if reaper == nil {
+		return
+	}
+	addDeclaredWorker[StoredObjectReapArgs](reg, reaper)
+}
+
 func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	// The Telegram ingest job is not periodic — a poll enqueues one per accepted
 	// update in the same transaction as the raw capture row; the worker role only
@@ -86,7 +103,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	// The captured-organization auto-enrich sweep (ADR-0072/A118): always
+	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)
 	addDeclaredWorker[CaptureAutoEnrichSweepArgs](reg, autoEnrich)
@@ -100,7 +117,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// machinery exists — a role that cannot send cannot fire either.
 		if cfg.SendDelivery != nil {
 			addDeclaredWorker[ScheduledSendArgs](reg,
-				newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing))
+				newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing, cfg.SendOrigin))
 		}
 	}
 
@@ -111,12 +128,19 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		})
 	}
 
-	if cfg.OwedBrain != nil {
-		addDeclaredWorker[OwedVerdictArgs](reg, &owedVerdictWorker{
-			pool:       pool,
-			classifier: NewOwedClassifier(pool, cfg.OwedBrain, nil, log),
-		})
-	}
+	// Existing request verdicts remain actionable when no model is configured.
+	//
+	// The settler rides the same worker rather than a job of its own: it asks
+	// the second half of one question, over candidates the first half produced,
+	// and a separate hourly job would read the same rows minutes apart and
+	// judge a request the owed pass had not yet recognised. Nil without a model
+	// configured for it, and then the pass does what it did before — recognise
+	// requests and settle none.
+	addDeclaredWorker[OwedVerdictArgs](reg, &owedVerdictWorker{
+		pool:       pool,
+		classifier: NewOwedClassifier(pool, cfg.OwedBrain, nil, log),
+		settler:    NewRequestSettler(pool, cfg.SettlementBrain, nil, log),
+	})
 
 	if cfg.EnrichBrain != nil {
 		addDeclaredWorker[CaptureEnrichArgs](reg, &captureEnrichWorker{
@@ -126,11 +150,11 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		})
 	}
 
-	// Registered unconditionally: the org-name promotion weighs evidence rows
+	// Registered unconditionally: the company-name promotion weighs evidence rows
 	// the enrich pass already wrote, so it needs no model. Gating it on a brain
 	// would leave an AI-less deployment unable to act on signatures it had
 	// already collected.
-	addDeclaredWorker[OrgNamePromotionArgs](reg, &orgNamePromotionWorker{pool: pool, promoter: NewOrgNamePromoter(pool, log)})
+	addDeclaredWorker[CompanyNamePromotionArgs](reg, &companyNamePromotionWorker{pool: pool, promoter: NewCompanyNamePromoter(pool, log)})
 
 	// Registered unconditionally for a different reason: only the counterparty
 	// verdict's JUDGING stage needs a model, and the worker skips that stage
@@ -138,8 +162,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// AI-less deployment never staged a review for an existing unsure row and
 	// never redacted mail it had already hidden.
 	addDeclaredWorker[CounterpartyVerdictArgs](reg, &counterpartyVerdictWorker{
-		pool:   pool,
-		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, log),
+		pool: pool,
+		// The capture list config is the SAME value the sink is composed from, so
+		// the tier ladder and the verdict lane read one operator allowlist.
+		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, cfg.CaptureConfig, log),
 		// The personal-mail purge, and only when an object store is bound. A
 		// nil store means no purger and the stage is skipped: destroying the
 		// rows that name an attachment while its bytes stay in a bucket would

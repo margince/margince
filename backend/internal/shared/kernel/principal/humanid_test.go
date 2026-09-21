@@ -3,9 +3,9 @@
 
 package principal
 
-// The one spelling of "which person is this". Three callers parsed it
+// The one spelling of "which contact is this". Three callers parsed it
 // separately before it lived here, and the failure they each had to avoid is
-// the same one: reading a uuid out of a namespace that is not a person's.
+// the same one: reading a uuid out of a namespace that is not a contact's.
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestHumanUserIDReadsAPersonAndOnlyAPerson(t *testing.T) {
+func TestHumanUserIDReadsAContactAndOnlyAContact(t *testing.T) {
 	user := ids.NewV7()
 	cases := []struct {
 		name string
@@ -21,7 +21,7 @@ func TestHumanUserIDReadsAPersonAndOnlyAPerson(t *testing.T) {
 		want ids.UUID
 		ok   bool
 	}{
-		{"a person", HumanIDPrefix + user.String(), user, true},
+		{"a contact", HumanIDPrefix + user.String(), user, true},
 		// A system namespace carrying a uuid is the case that matters: read
 		// loosely, it files the system's work under whoever that uuid is.
 		{"a system id that happens to carry a uuid", "system:" + user.String(), ids.Nil, false},
@@ -35,6 +35,32 @@ func TestHumanUserIDReadsAPersonAndOnlyAPerson(t *testing.T) {
 			got, ok := HumanUserID(tc.id)
 			if ok != tc.ok || got != tc.want {
 				t.Fatalf("HumanUserID(%q) = %v/%t, want %v/%t", tc.id, got, ok, tc.want, tc.ok)
+			}
+		})
+	}
+}
+
+func TestSystemMintedIDMatchesTheNamespaceAndNothingBesideIt(t *testing.T) {
+	cases := []struct {
+		name string
+		id   string
+		want bool
+	}{
+		{"the bus's bare id", "system", true},
+		{"a job's namespaced id", "system:time-scan", true},
+		// A prefix without the ':' separator is a different word, not a
+		// namespace member: a connector or workspace named "systematic"
+		// must not have its rows read as the product's own.
+		{"a word that merely starts with system", "systematic", false},
+		{"a human", "human:2b0d7b3d-0000-7000-8000-000000000000", false},
+		{"an agent", "agent:deepread", false},
+		{"a connector", "connector:gmail", false},
+		{"an empty id", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := SystemMintedID(tc.id); got != tc.want {
+				t.Fatalf("SystemMintedID(%q) = %t, want %t", tc.id, got, tc.want)
 			}
 		})
 	}

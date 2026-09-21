@@ -3,10 +3,10 @@
 
 package compose
 
-// The lead lane's seam over the people store's own work queue.
+// The lead lane's seam over the contacts store's own work queue.
 //
 // A binding rather than an implementation, and deliberately so: the first-
-// response clock, its target, and the state a lead is in are the people
+// response clock, its target, and the state a lead is in are the contacts
 // module's to derive — sla_state and sla_deadline_at come back on every lead
 // read. Re-deriving any of it here would be a second opinion about when a reply
 // is late, and the lead screen and the Worklist would eventually disagree in
@@ -18,17 +18,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type attentionLeadResponses struct {
-	store *people.Store
+	store *contacts.Store
 	// teammates answers whether a lead's owner shares a live team with the
 	// reader. Required rather than optional: a lead is workspace-readable, so
 	// without this the team scope cannot be narrowed at all and would show the
-	// whole organization's inbound under a page headed `team`.
+	// whole company's inbound under a page headed `team`.
 	teammates attention.Teammates
 }
 
@@ -42,8 +42,9 @@ func (l attentionLeadResponses) Owed(
 	ctx context.Context, scope attention.TaskScope, owner ids.UUID, limit int,
 ) ([]attention.OwedLead, bool, error) {
 	// Asked FIRST, and the answer is not a filter. With no target set no lead
-	// owes a reply at a stated time, so the lane is absent rather than empty —
-	// the difference between "nothing is late" and "nothing measures late".
+	// owes a reply at a stated TIME, which is why the answer rides back to the
+	// caller rather than filtering here: it decides whether a row can carry a
+	// deadline, not whether the row exists.
 	//
 	// It is asked WITHOUT the lead grant, deliberately. Whether this
 	// installation measures first response is a property of the installation,
@@ -54,11 +55,12 @@ func (l attentionLeadResponses) Owed(
 	if err != nil {
 		return nil, false, err
 	}
-	if !tracked {
-		return nil, false, nil
-	}
 
-	in := people.ListLeadsInput{Limit: &limit}
+	// Narrowed in the QUERY, for the reason stated below about the task lane:
+	// the page is bounded, so cutting answered leads out of it afterwards loses
+	// the unanswered ones behind them and reports the shortfall as none owed.
+	owed := true
+	in := contacts.ListLeadsInput{Limit: &limit, OwedAReply: &owed}
 	// Narrowed in the QUERY, the way the task lane is: filtering afterwards
 	// would let a colleague's leads fill the bound and hide the reader's own
 	// overdue one behind a cut that had already happened.
@@ -85,7 +87,7 @@ func (l attentionLeadResponses) Owed(
 		// not have. A lead is an IDENTITY record, so its read predicate is TRUE
 		// for every seat holding the grant (auth.identityTables): the store
 		// hands back every lead in the workspace, and a page headed `team`
-		// would be the whole organization's inbound.
+		// would be the whole company's inbound.
 		//
 		// The store's own dial cannot express it either — OwnerTeamID names ONE
 		// team and a reader may be in several — so the narrowing happens on the
@@ -106,23 +108,31 @@ func (l attentionLeadResponses) Owed(
 	if err != nil {
 		return nil, false, err
 	}
-	owed := make([]attention.OwedLead, 0, len(keep))
+	owedLeads := make([]attention.OwedLead, 0, len(keep))
 	for _, row := range keep {
-		// A lead that has been answered, or that never owed a reply, is not
-		// this lane's work. The store ranks those last rather than dropping
-		// them, because the same queue answers other questions.
-		if row.SlaState == nil {
-			continue
+		lead := attention.OwedLead{
+			ID:      ids.UUID(row.Id),
+			Name:    leadDisplayName(row),
+			OwnerID: ownerOfLead(row),
+			Facts: &crmcontracts.WorklistLeadFacts{
+				CompanyName:           row.CompanyName,
+				Status:                leadStatus(row.Status),
+				Source:                row.SourceLabel,
+				LastActivityAt:        row.LastActivityAt,
+				ResponseTargetTracked: &tracked,
+			},
 		}
-		owed = append(owed, attention.OwedLead{
-			ID:         ids.UUID(row.Id),
-			Name:       leadDisplayName(row),
-			OwnerID:    ownerOfLead(row),
-			DeadlineAt: deadlineOfLead(row),
-			State:      string(*row.SlaState),
-		})
+		// A deadline and its state exist only where a policy states one: with
+		// the target off leadSLAFields returns nil for every lead. Left zero
+		// and empty, which OwedLead declares as that case — a reply is owed,
+		// and nothing measures by when.
+		if row.SlaState != nil {
+			lead.DeadlineAt = deadlineOfLead(row)
+			lead.State = string(*row.SlaState)
+		}
+		owedLeads = append(owedLeads, lead)
 	}
-	return owed, tracked, nil
+	return owedLeads, tracked, nil
 }
 
 // leadDisplayName is what the row calls the lead, or NOTHING.
@@ -214,4 +224,9 @@ func (l attentionLeadResponses) narrowToTeam(
 		}
 	}
 	return kept, nil
+}
+
+func leadStatus(status crmcontracts.LeadStatus) *string {
+	value := string(status)
+	return &value
 }

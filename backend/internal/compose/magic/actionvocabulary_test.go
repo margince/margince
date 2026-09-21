@@ -53,7 +53,7 @@ func TestWhatCannotBeTakenBackSaysSo(t *testing.T) {
 }
 
 // Human actors never appear. This surface reports what ran WITHOUT being asked,
-// and handing a person their own change back as machinery is a lie about who
+// and handing a contact their own change back as machinery is a lie about who
 // did it.
 func TestAHumansOwnChangeIsNeverReportedAsMachinery(t *testing.T) {
 	for _, actor := range machineActors() {

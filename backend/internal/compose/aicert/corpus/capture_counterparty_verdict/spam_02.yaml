@@ -59,7 +59,7 @@ expect:
     evidence of a relationship when the OTHER side is in it, and here every
     quoted block is the same sender.
     A kind of "spam" scores high. "newsletter" is a near miss: less precise, but
-    it resolves to noise too, so no record is made either way. "person" scores
+    it resolves to noise too, so no record is made either way. "contact" scores
     zero — it is the answer that shipped a junk contact, and the reason a
     self-chased thread must not be read as a conversation.
   bands:

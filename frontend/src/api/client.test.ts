@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   api,
   CACHE_ANSWER_GRACE_MS,
+  MODEL_ROUTE_TIMEOUT_MS,
   REQUEST_TIMEOUT_MS,
   RequestTimeoutError,
 } from "./client";
@@ -92,6 +93,28 @@ describe("the api client's request deadline", () => {
     // and keep the page awake for the whole deadline after every answered request.
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  // The regression this deadline split exists to fix: a model route used to
+  // give up at REQUEST_TIMEOUT_MS, 24.5 minutes before the server's own
+  // deadline, so a slow-but-live model answer reached the reader as a stall.
+  it("still waits on a model route past REQUEST_TIMEOUT_MS", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", neverAnswers());
+    const draft = api.POST("/contacts/{id}/draft-email", {
+      params: { path: { id: "01a0-4cd2" } },
+      body: {},
+    });
+    const settled = vi.fn();
+    draft.then(settled, settled);
+
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    expect(settled).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(
+      MODEL_ROUTE_TIMEOUT_MS - REQUEST_TIMEOUT_MS,
+    );
+    await expect(draft).rejects.toBeInstanceOf(RequestTimeoutError);
+  });
 });
 
 describe("a gateway that gave up on the app behind it", () => {
@@ -109,7 +132,7 @@ describe("a gateway that gave up on the app behind it", () => {
       ),
     );
 
-    const { error, response } = await api.GET("/organizations/{id}/dossier", {
+    const { error, response } = await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -137,7 +160,7 @@ describe("a gateway that gave up on the app behind it", () => {
       ),
     );
 
-    const { error } = await api.GET("/organizations/{id}/dossier", {
+    const { error } = await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -157,7 +180,7 @@ describe("a gateway that gave up on the app behind it", () => {
       ),
     );
 
-    const { error } = await api.GET("/organizations/{id}/dossier", {
+    const { error } = await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -200,7 +223,7 @@ describe("the api client's model-call count", () => {
       }),
     );
 
-    await api.POST("/people/{id}/draft-email", {
+    await api.POST("/contacts/{id}/draft-email", {
       params: { path: { id: "01a0-4cd2" } },
       body: {},
     });
@@ -209,7 +232,7 @@ describe("the api client's model-call count", () => {
     expect(modelCallsInFlight()).toBe(0);
   });
 
-  // The draft is not the only route a person presses and then waits on. This
+  // The draft is not the only route a contact presses and then waits on. This
   // one is here because the list read three routes while the contract had
   // nine, and a route missing from it fails the only way that cannot be seen:
   // the chrome reports an agent at rest, which is exactly what it would report
@@ -254,7 +277,7 @@ describe("the api client's model-call count", () => {
       }),
     );
 
-    await api.POST("/people/{id}/draft-email", {
+    await api.POST("/contacts/{id}/draft-email", {
       params: { path: { id: "01a0-4cd2" } },
       body: {},
     });
@@ -265,7 +288,7 @@ describe("the api client's model-call count", () => {
 
   // The meeting brief is assembled fresh on every open — nothing is stored, so
   // every GET is two model calls — and it is a READ. The count used to admit
-  // POST only, so a person opened the brief, waited on the agent for the whole
+  // POST only, so a contact opened the brief, waited on the agent for the whole
   // of it, and the chrome reported an agent at rest: the failure this file
   // exists for, arriving through the verb rather than the path.
   it("counts a read whose handler generates on every call", async () => {
@@ -307,7 +330,7 @@ describe("the api client's model-call count", () => {
       }),
     );
 
-    await api.GET("/organizations/{id}/dossier", {
+    await api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
 
@@ -315,7 +338,7 @@ describe("the api client's model-call count", () => {
     expect(modelCallsInFlight()).toBe(0);
   });
 
-  // The same read with no reading stored is a generation the person waits on,
+  // The same read with no reading stored is a generation the contact waits on,
   // and the only thing that tells the two apart from here is time: a stored
   // answer is back in a few hundred milliseconds, a model's in many seconds. So
   // the count begins once the request has outlived a stored answer, and ends
@@ -335,7 +358,7 @@ describe("the api client's model-call count", () => {
       ),
     );
 
-    const pending = api.GET("/organizations/{id}/dossier", {
+    const pending = api.GET("/companies/{id}/dossier", {
       params: { path: { id: "01a0-4cd2" } },
     });
     expect(modelCallsInFlight()).toBe(0);

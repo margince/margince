@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -31,7 +31,10 @@ function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
     level: 6,
     consequence: "data_drifts",
     because: [],
-    actions: ["merge"],
+    // BOTH verbs, which is what the lane sends a reader who may write both
+    // records over an ordinary pair. The unmergeable pair below is the case
+    // where they come apart.
+    actions: ["merge", "dismiss"],
     pair: {
       left: {
         id: LEFT,
@@ -304,7 +307,7 @@ describe("deciding a duplicate pair on the row", () => {
   // The pair is still SHOWN — a reader who cannot settle it still needs to know
   // a duplicate is waiting — but nothing is offered, because every press would
   // refuse.
-  it("shows the pair without verbs when the server offered no merge", () => {
+  it("shows the pair without verbs when the server offered nothing", () => {
     draw(pairRow({ actions: [] }));
 
     expect(screen.getByText("Acme GmbH")).toBeTruthy();
@@ -322,5 +325,58 @@ describe("deciding a duplicate pair on the row", () => {
 
     expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not the same" })).toBeTruthy();
+  });
+
+  // THE PAIR NOBODY CAN MERGE, which is the case the two above cannot see.
+  //
+  // Two companies each running live projects do not combine, whoever
+  // presses — so the lane sends `dismiss` alone. It is a real false positive
+  // and the reader is entitled to clear it; guarding this verb on `merge` left
+  // the pair on the page as a question nobody could answer here.
+  it("offers only the dismissal when the merge is off the table", () => {
+    draw(pairRow({ actions: ["dismiss"] }));
+
+    expect(screen.queryByRole("button", { name: "Keep Acme GmbH" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Keep ACME Gmbh" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Not the same" })).toBeTruthy();
+    // And NOT the steward sentence: this reader is the one who can act.
+    expect(
+      screen.queryByText(/Only somebody who can change both records/),
+    ).toBeNull();
+  });
+
+  // The lead line is the question the verbs answer, so it changes with them.
+  // "Which record should survive?" over a card with no Keep button asks for an
+  // answer the page will not take.
+  it("asks whether they are the same at all when neither can survive", () => {
+    draw(pairRow({ actions: ["dismiss"] }));
+
+    expect(screen.getByText(/cannot be combined/)).toBeTruthy();
+    expect(screen.queryByText("Which record should survive?")).toBeNull();
+  });
+
+  // And the ordinary pair still asks its own question, or the case above is
+  // satisfied by a card that stopped asking it to anybody.
+  it("asks which record survives when the merge is on offer", () => {
+    draw(pairRow());
+
+    expect(screen.getByText("Which record should survive?")).toBeTruthy();
+    expect(screen.queryByText(/cannot be combined/)).toBeNull();
+  });
+
+  // The dismissal posts the same disposition from the unmergeable pair as from
+  // an ordinary one — the server's not-a-duplicate arm takes write authority
+  // and applies no project rule, which is the whole reason the verb is offered
+  // here. A control that drew and posted nothing would pass the case above.
+  it("settles an unmergeable pair as not a duplicate", async () => {
+    const fetched = stubOk();
+    draw(pairRow({ actions: ["dismiss"] }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Not the same" }));
+
+    await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
+    const body = await bodyOf(fetched);
+    expect(body.disposition).toBe("not_a_duplicate");
+    expect(Object.hasOwn(body, "winner_id")).toBe(false);
   });
 });

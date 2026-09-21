@@ -14,7 +14,8 @@ import (
 	"testing"
 )
 
-// Every setting read through settings.ApplyTx is declared MachineryApplied.
+// Every setting read through an ungated machinery reader — settings.ApplyTx or
+// settings.ApplyManyTx — is declared MachineryApplied.
 //
 // The store enforces this already — ApplyTx refuses an undeclared entry — but it
 // refuses at RUNTIME, inside whatever machinery was applying the posture. That
@@ -94,21 +95,31 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 					}
 				}
 			case *ast.CallExpr:
-				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
+				// BOTH ungated readers. ApplyManyTx takes the same admission
+				// over a variadic list, so an entry read only through the batch
+				// would otherwise be invisible here — and invisible means the
+				// gate agrees with dropping its declaration while the store
+				// refuses it at runtime, which is the failure this exists to
+				// move forward in time.
+				args := machineryEntryArgs(node)
+				if args == nil {
 					return true
 				}
-				entry := entryName(node.Args[2], pkg, aliases, shadowed[enclosingFunc(file, node.Pos())])
-				if entry == "" {
-					// The other half of the same rule. An entry whose EXPRESSION
-					// this walk cannot name — one handed through a call, an
-					// index, a conversion — was dropped here, and a dropped
-					// entry is one the gate agrees with while ApplyTx refuses it
-					// at runtime. Aliases are resolved above; this is what is
-					// left when the shape itself is unreadable.
-					unreadable = append(unreadable, fset.Position(node.Pos()).String())
-					return true
+				for _, arg := range args {
+					entry := entryName(arg, pkg, aliases, shadowed[enclosingFunc(file, node.Pos())])
+					if entry == "" {
+						// The other half of the same rule. An entry whose
+						// EXPRESSION this walk cannot name — one handed through
+						// a call, an index, a conversion — was dropped here, and
+						// a dropped entry is one the gate agrees with while the
+						// store refuses it at runtime. Aliases are resolved
+						// above; this is what is left when the shape itself is
+						// unreadable.
+						unreadable = append(unreadable, fset.Position(node.Pos()).String())
+						continue
+					}
+					read[entry] = fset.Position(node.Pos()).String()
 				}
-				read[entry] = fset.Position(node.Pos()).String()
 			}
 			return true
 		})
@@ -120,7 +131,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	// one.
 	const readFloor = 4
 	if len(read) < readFloor {
-		t.Fatalf("found %d settings.ApplyTx call site(s), fewer than the %d this gate assumes — "+
+		t.Fatalf("found %d ungated setting read(s), fewer than the %d this gate assumes — "+
 			"the walk stopped matching rather than the tree stopping doing it", len(read), readFloor)
 	}
 	if len(declared) == 0 {
@@ -128,7 +139,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	}
 
 	for _, where := range unreadable {
-		t.Errorf("%s: this gate cannot name the entry passed to settings.ApplyTx here, so it cannot "+
+		t.Errorf("%s: this gate cannot name an entry passed to an ungated machinery reader here, so it cannot "+
 			"check that entry's declaration — and one it cannot check is one it agrees with. Pass "+
 			"the entry as a plain identifier or a qualified one.", where)
 	}
@@ -141,12 +152,12 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 			// this walk cannot place is one the gate genuinely cannot see —
 			// and accepting it would mean the one shape that hides a missing
 			// declaration is the one shape that passes.
-			t.Errorf("%s reads %s through settings.ApplyTx and this gate cannot find its "+
+			t.Errorf("%s reads %s through an ungated machinery reader and this gate cannot find its "+
 				"declaration. Either the entry is declared outside internal/, or the walk "+
 				"stopped recognising a declaration shape — both leave a MachineryApplied "+
 				"omission unable to fail here, which is what this gate is for.", where, entry)
 		case !isDeclared:
-			t.Errorf("%s reads %s through settings.ApplyTx, which refuses an entry not declared "+
+			t.Errorf("%s reads %s through an ungated machinery reader, which refuses an entry not declared "+
 				"MachineryApplied — at runtime, inside the machinery. Declare it where it is defined, "+
 				"or read it through Get/GetTx and its gate.", where, entry)
 		}
@@ -360,4 +371,23 @@ func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.Fil
 		}
 	}
 	return nil, false
+}
+
+// machineryEntryArgs answers the ENTRY arguments of an ungated setting read, or
+// nil when this call is not one.
+//
+// Two readers, one admission. ApplyTx takes a single entry as its third
+// argument; ApplyManyTx takes a variadic list from the third onward, and asks
+// the same MachineryApplied question of every one of them. A census that knew
+// only the first would let an entry read solely through the batch lose its
+// declaration without failing anything here — the runtime refusal would still
+// fire, in production, which is exactly the lateness this gate exists to fix.
+func machineryEntryArgs(call *ast.CallExpr) []ast.Expr {
+	switch {
+	case calleeName(call) == "ApplyTx" && len(call.Args) == 3:
+		return call.Args[2:]
+	case calleeName(call) == "ApplyManyTx" && len(call.Args) > 2:
+		return call.Args[2:]
+	}
+	return nil
 }

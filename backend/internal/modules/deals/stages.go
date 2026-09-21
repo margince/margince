@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type UpdatePipelineInput struct {
@@ -271,6 +272,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if err := refuseTerminalWithCriteria(ctx, tx, id, current.semantic, in.Semantic); err != nil {
 			return err
 		}
+		if err := refuseTerminalWithOpenDeals(ctx, tx, id, current.semantic, in.Semantic); err != nil {
+			return err
+		}
 		// An update naming no field changes nothing, and an audit row for it
 		// would record a transition that never happened.
 		if patch := stageUpdatePatch(current, in); !patch.Empty() {
@@ -366,4 +370,62 @@ func readStage(ctx context.Context, tx pgx.Tx, id ids.StageID, archived storekit
 	out.Id = openapi_types.UUID(stageID)
 	out.PipelineId = openapi_types.UUID(pipelineID)
 	return out, nil
+}
+
+// codeTerminalStageHoldsOpenDeals is what a semantic flip answers when the
+// stage still holds deals nobody has decided.
+const codeTerminalStageHoldsOpenDeals = "terminal_stage_holds_open_deals"
+
+// refuseTerminalWithOpenDeals stops a stage becoming won or lost while deals
+// are still sitting in it, undecided.
+//
+// THE BYPASS. Moving a deal into an OPEN stage is ungated — it is an ordinary
+// pipeline step. Closing one as won is not: it passes the evidence gate, which
+// is what makes `deal.status = 'won'` a claim somebody stood behind. A caller
+// holding pipeline:update could take the first route and then flip the stage's
+// semantic, and the deals already in it would sit in a won stage having passed
+// nothing. Their own `status` stays `open` with a NULL reason, so the column
+// report and the deal_won_without_contract_only_when_won CHECK both stay
+// consistent — which is exactly why nothing notices. Any reader deriving "won"
+// from the stage rather than from the deal counts wins that never happened.
+//
+// REFUSE rather than re-run the evidence question. The alternative — closing
+// those deals as part of the flip — decides an unbounded number of deals on a
+// write that named none of them, each needing its own reason, from an admin
+// editing pipeline configuration who is not looking at any deal. A refusal
+// leaves every deal where it is and says what to do.
+//
+// LIVE and OPEN only. An archived deal is out of the pipeline's story, and one
+// already won or lost carries its own decided status — the flip cannot make it
+// unevidenced, because it was never resting on the stage's semantic. This is
+// the sibling of refuseTerminalWithCriteria and takes the same shape: the flip
+// is refused while something in the stage still contradicts it, and the way
+// forward is stated rather than taken silently.
+//
+// It runs under the stage's row lock, so a deal arriving between this count and
+// the write queues behind it — the same unit the version check relies on.
+func refuseTerminalWithOpenDeals(
+	ctx context.Context, tx pgx.Tx, stageID ids.StageID, currentSemantic string, wanted *string,
+) error {
+	if wanted == nil || !StageSemantic(*wanted).Terminal() || StageSemantic(currentSemantic).Terminal() {
+		return nil
+	}
+	var open int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM deal
+		 WHERE stage_id = $1 AND archived_at IS NULL AND status = $2`,
+		stageID, string(DealOpen)).Scan(&open); err != nil {
+		return fmt.Errorf("count the stage's open deals: %w", err)
+	}
+	if open == 0 {
+		return nil
+	}
+	// NO COUNT in the message. How many deals an admin cannot see the pipeline
+	// through is a fact about the estate, and this refusal is read by whoever
+	// holds pipeline:update — not necessarily by somebody entitled to every
+	// deal in it. The way forward does not need the number.
+	return &values.ParseError{
+		Field: stageSemanticField, Code: codeTerminalStageHoldsOpenDeals,
+		Message: "this stage still holds open deals; decide or move them before closing it as won or lost",
+	}
 }

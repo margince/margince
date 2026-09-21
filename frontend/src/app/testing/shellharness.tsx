@@ -1,5 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render as rtlRender } from "@testing-library/react";
+import {
+  type RenderResult,
+  render as rtlRender,
+  within,
+} from "@testing-library/react";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
@@ -112,4 +116,29 @@ export function fixtureSection(activeId?: string): NavSection {
       },
     ],
   };
+}
+
+/**
+ * The names the rail publishes over its groups, in the order it draws them.
+ *
+ * Read as GROUPS, not as headings: a rail group is a `role="group"` named
+ * through `aria-labelledby`, because words over a set of navigation links name
+ * that set rather than a place in the document outline. The name is taken the
+ * way the accessibility tree takes it — from the element the group points at —
+ * so a group that lost its wiring comes back `undefined` and fails the
+ * comparison, where reading the class would have returned the words anyway.
+ *
+ * Shared because three chrome suites ask the same question of the same panel:
+ * the rail's own, and the two that walk the settings level through it.
+ */
+export function navGroupNames(
+  scope: HTMLElement = document.body,
+): (string | undefined)[] {
+  return within(scope)
+    .getAllByRole("group")
+    .map((group) => {
+      const labelId = group.getAttribute("aria-labelledby");
+      const label = labelId ? document.getElementById(labelId) : null;
+      return label?.textContent ?? undefined;
+    });
 }

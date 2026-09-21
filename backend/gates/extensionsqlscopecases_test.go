@@ -47,14 +47,14 @@ type extSQLGateCase struct {
 var extSQLGateCases = []extSQLGateCase{
 	{
 		name:   "a core table named inline",
-		body:   `tx.Exec(ctx, "SELECT id FROM person WHERE id = $1")`,
-		want:   `"person": the unit probe addresses ext.ext_probe_…`,
+		body:   `tx.Exec(ctx, "SELECT id FROM contact WHERE id = $1")`,
+		want:   `"contact": the unit probe addresses ext.ext_probe_…`,
 		tables: 1,
 	},
 	{
 		name:   "a core table named through the public schema",
-		body:   `tx.Exec(ctx, "DELETE FROM public.person WHERE id = $1")`,
-		want:   `"public.person"`,
+		body:   `tx.Exec(ctx, "DELETE FROM public.contact WHERE id = $1")`,
+		want:   `"public.contact"`,
 		tables: 1,
 	},
 	{
@@ -62,7 +62,7 @@ var extSQLGateCases = []extSQLGateCase{
 		body: `tx.Exec(ctx, "SELECT id FROM "+subject+" WHERE id = $1")`,
 		// The spelling the one unit shipping SQL uses for its OWN table. A gate
 		// blind to the concatenation reads the whole tier green.
-		want:   `"person"`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
@@ -73,14 +73,14 @@ var extSQLGateCases = []extSQLGateCase{
 	},
 	{
 		name:   "a core table joined onto the unit's own",
-		body:   `tx.Exec(ctx, "SELECT n.id FROM ext.ext_probe_note n JOIN person p ON p.id = n.subject_id")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "SELECT n.id FROM ext.ext_probe_note n JOIN contact p ON p.id = n.subject_id")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
 		name:   "a core table reached around a DELETE … USING",
-		body:   `tx.Exec(ctx, "DELETE FROM ext.ext_probe_note USING person WHERE person.id = ext_probe_note.subject_id")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "DELETE FROM ext.ext_probe_note USING contact WHERE contact.id = ext_probe_note.subject_id")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
@@ -91,8 +91,8 @@ var extSQLGateCases = []extSQLGateCase{
 	},
 	{
 		name:   "a core table rewritten by an UPDATE",
-		body:   `tx.Exec(ctx, "UPDATE person SET full_name = $1 WHERE id = $2")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "UPDATE contact SET full_name = $1 WHERE id = $2")`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
@@ -103,8 +103,8 @@ var extSQLGateCases = []extSQLGateCase{
 	},
 	{
 		name:   "a scratch table created over a core name",
-		body:   `tx.Exec(ctx, "CREATE TABLE IF NOT EXISTS person (id uuid)")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "CREATE TABLE IF NOT EXISTS contact (id uuid)")`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
@@ -145,14 +145,14 @@ var extSQLGateCases = []extSQLGateCase{
 	},
 	{
 		name:   "a core table updated from a WITH clause",
-		body:   `tx.Exec(ctx, "WITH chosen AS (SELECT id FROM "+noteTable+") UPDATE person SET full_name = $1 WHERE id IN (SELECT id FROM chosen)")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "WITH chosen AS (SELECT id FROM "+noteTable+") UPDATE contact SET full_name = $1 WHERE id IN (SELECT id FROM chosen)")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
 		name:   "a core table in an old-style comma join",
-		body:   `tx.Exec(ctx, "SELECT n.id FROM "+noteTable+" n, person p WHERE p.id = n.subject_id")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "SELECT n.id FROM "+noteTable+" n, contact p WHERE p.id = n.subject_id")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
@@ -163,14 +163,14 @@ var extSQLGateCases = []extSQLGateCase{
 		// position is a two-token way past the whole gate — and the unit's own
 		// table, read inside the CTE body, keeps the reference count looking
 		// honest while it happens.
-		body:   `tx.Exec(ctx, "WITH person AS (SELECT id FROM "+noteTable+") UPDATE person SET full_name = $1")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "WITH contact AS (SELECT id FROM "+noteTable+") UPDATE contact SET full_name = $1")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
 		name:   "a core table DELETED behind a CTE of its own name",
-		body:   `tx.Exec(ctx, "WITH person AS (SELECT id FROM "+noteTable+") DELETE FROM person WHERE id = $1")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "WITH contact AS (SELECT id FROM "+noteTable+") DELETE FROM contact WHERE id = $1")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
@@ -178,35 +178,35 @@ var extSQLGateCases = []extSQLGateCase{
 		// The one statement whose quoted body IS the statement. Everywhere else
 		// a dollar-quoted body is a value and gets stripped; here stripping it
 		// would delete the only place the DML is written.
-		body:   "tx.Exec(ctx, `DO $$ BEGIN DELETE FROM person; END $$`)",
-		want:   `"person"`,
+		body:   "tx.Exec(ctx, `DO $$ BEGIN DELETE FROM contact; END $$`)",
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
 		name:   "a core table inside a quoted DO body",
-		body:   `tx.Exec(ctx, "DO 'DELETE FROM person'")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "DO 'DELETE FROM contact'")`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
 		name: "a core table read out by COPY",
 		// COPY … TO STDOUT needs only SELECT, which the shared runtime role
 		// holds on every core table, so this is a read of the whole table.
-		body:   `tx.Exec(ctx, "COPY person TO STDOUT")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "COPY contact TO STDOUT")`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
 		name: "a core table behind a set-returning function in a FROM list",
 		// One non-table entry must not shield the rest of the list.
-		body:   `tx.Exec(ctx, "SELECT * FROM generate_series(1,1) g, person p, "+noteTable+" n WHERE true")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "SELECT * FROM generate_series(1,1) g, contact p, "+noteTable+" n WHERE true")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
 		name:   "a core table second in a DELETE … USING list",
-		body:   `tx.Exec(ctx, "DELETE FROM "+noteTable+" USING "+noteTable+" x, person WHERE true")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "DELETE FROM "+noteTable+" USING "+noteTable+" x, contact WHERE true")`,
+		want:   `"contact"`,
 		tables: 3,
 	},
 	{
@@ -227,7 +227,7 @@ var extSQLGateCases = []extSQLGateCase{
 		// The stated half of the trade the shape list makes: reading this
 		// spelling means reading every sentence that opens with the word. The
 		// prose case below is its other half, and both move together.
-		body:   `tx.Exec(ctx, "TRUNCATE person")`,
+		body:   `tx.Exec(ctx, "TRUNCATE contact")`,
 		tables: 0,
 	},
 	{
@@ -235,22 +235,22 @@ var extSQLGateCases = []extSQLGateCase{
 		// TRUNCATE reaches the first name past the qualifier, and TABLE reaches
 		// it as a keyword of its own: one mistake, and it must be reported once.
 		// The list is what carries the second name.
-		body:   `tx.Exec(ctx, "TRUNCATE TABLE "+noteTable+", person")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "TRUNCATE TABLE "+noteTable+", contact")`,
+		want:   `"contact"`,
 		tables: 2,
 	},
 	{
 		name:   "a core table behind the statement's own comment",
-		body:   "tx.Exec(ctx, `-- the stale rows\nDELETE FROM person WHERE id = $1`)",
-		want:   `"person"`,
+		body:   "tx.Exec(ctx, `-- the stale rows\nDELETE FROM contact WHERE id = $1`)",
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
 		name: "a core table shadowed by a CTE of the same name",
 		// The CTE's own body still reads the core table; only what follows the
 		// body is the CTE. Exempting the name everywhere is a one-line evasion.
-		body:   `tx.Exec(ctx, "WITH person AS (SELECT id FROM person) SELECT id FROM person")`,
-		want:   `"person"`,
+		body:   `tx.Exec(ctx, "WITH contact AS (SELECT id FROM contact) SELECT id FROM contact")`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
@@ -288,7 +288,7 @@ var extSQLGateCases = []extSQLGateCase{
 	},
 	{
 		name:   "a dollar-quoted body that reads like a statement",
-		body:   `tx.Exec(ctx, "SELECT $$FROM person$$ AS example FROM "+noteTable)`,
+		body:   `tx.Exec(ctx, "SELECT $$FROM contact$$ AS example FROM "+noteTable)`,
 		tables: 1,
 	},
 	{
@@ -304,8 +304,8 @@ const upper = "SE"
 const lower = "LECT"
 const body = columns + source
 const columns = "id "
-const source = "FROM person LIMIT 1"`,
-		want:   `"person"`,
+const source = "FROM contact LIMIT 1"`,
+		want:   `"contact"`,
 		tables: 1,
 	},
 	{
@@ -345,8 +345,8 @@ func probeSource(body, decls string) string {
 	return `package probe
 
 const noteTable = "ext.ext_probe_note"
-const subject = "person"
-const where = "person"
+const subject = "contact"
+const where = "contact"
 
 func pick() string { return subject }
 

@@ -11,12 +11,12 @@ import {
   useT,
 } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthExperience } from "./auth-core";
+import { AuthCardTitle, AuthExperience } from "./auth-core";
 import { isTooShort } from "./passwordrule";
 import "./auth.css";
 
 // The first-run claim (ADR-0105). An installation whose deployment file names no
-// bootstrap_admin holds no organization, so /v1/me answers 503 and the boundary
+// bootstrap_admin holds no company, so /v1/me answers 503 and the boundary
 // would otherwise render "installation not ready" — true, but a dead end. When
 // the installation is instead WAITING to be claimed, this screen is what stands
 // there.
@@ -94,7 +94,7 @@ export async function fetchSetupStatus(): Promise<SetupStatus> {
 }
 
 type ClaimFields = {
-  organizationName: string;
+  companyName: string;
   adminName: string;
   adminEmail: string;
   adminPassword: string;
@@ -115,7 +115,7 @@ type ClaimFields = {
 // shown, which is the whole difference.
 function claimDefaults(): ClaimFields {
   return {
-    organizationName: "",
+    companyName: "",
     adminName: "",
     adminEmail: "",
     adminPassword: "",
@@ -157,7 +157,7 @@ export function SetupClaimScreen({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           setup_token: fields.setupToken.trim(),
-          organization_name: fields.organizationName.trim(),
+          company_name: fields.companyName.trim(),
           timezone: fields.timezone.trim(),
           // Upper-cased on the way out: the server takes ISO-4217 exactly, and
           // refusing "chf" for its case would be a rule about typing rather
@@ -173,7 +173,7 @@ export function SetupClaimScreen({
         onClaimed();
         return;
       }
-      // Each refusal means something different to the person reading it, and
+      // Each refusal means something different to the reader reading it, and
       // each implies a different next action: find the right token, sign in
       // instead, fix a field, or wait and try again. Collapsing them would
       // leave three of the four telling someone to correct a form that is
@@ -207,7 +207,7 @@ export function SetupClaimScreen({
     !/^[A-Za-z]{3}$/.test(fields.baseCurrency.trim());
   const complete =
     fields.setupToken.trim() !== "" &&
-    fields.organizationName.trim() !== "" &&
+    fields.companyName.trim() !== "" &&
     fields.adminName.trim() !== "" &&
     fields.adminEmail.trim() !== "" &&
     fields.timezone.trim() !== "" &&
@@ -220,8 +220,8 @@ export function SetupClaimScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <form className="auth-card" onSubmit={submit}>
-        <h1>{t("setup.title")}</h1>
-        <p className="card-sub">{t("setup.body")}</p>
+        <AuthCardTitle>{t("setup.title")}</AuthCardTitle>
+        <p>{t("setup.body")}</p>
         {error && (
           <p className="auth-error" role="alert">
             {error}
@@ -242,15 +242,13 @@ export function SetupClaimScreen({
               />
             )}
           </Field>
-          <Field label={t("setup.organization")} required>
+          <Field label={t("setup.company")} required>
             {(control) => (
               <TextInput
                 {...control}
-                name="organization"
-                value={fields.organizationName}
-                onChange={(event) =>
-                  set("organizationName")(event.target.value)
-                }
+                name="company"
+                value={fields.companyName}
+                onChange={(event) => set("companyName")(event.target.value)}
               />
             )}
           </Field>
@@ -375,7 +373,7 @@ export function SetupClaimScreen({
             )}
           </Field>
         </div>
-        <p className="card-sub">{t("setup.rootWarning")}</p>
+        <p>{t("setup.rootWarning")}</p>
         <div className="auth-actions">
           <Button
             type="submit"

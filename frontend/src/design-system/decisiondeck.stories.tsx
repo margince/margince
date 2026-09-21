@@ -17,9 +17,10 @@ import {
   type DecisionSharedFacts,
   type StagedDecision,
 } from "./decisiondeck";
+import { Panel, PanelBody } from "./panel";
 import { AutonomyDot } from "./trust";
 
-// The morning queue. Every frame here is about the same question: can a person
+// The morning queue. Every frame here is about the same question: can a contact
 // answer a stack of irreversible decisions quickly WITHOUT the speed being what
 // makes them irreversible. The tray is the answer — a verdict is staged, and the
 // commit is a separate, deliberate press.
@@ -73,7 +74,10 @@ const LABELS: DecisionDeckLabels = {
   behind: (count) => `${count} more behind`,
   staged: (count) =>
     count === 1 ? "1 decision staged" : `${count} decisions staged`,
+  edited: (count: number) => `${count} being edited`,
+  skipped: (count) => (count === 1 ? "1 skipped" : `${count} skipped`),
   commit: "Commit",
+  commitNothingToSend: "Clear skipped",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) =>
@@ -134,7 +138,7 @@ const BUNDLE: DecisionDeckItem = {
   bundleId: "0198c3aa-7f10-7bbb-9999-000000000001",
   members: Array.from({ length: 12 }, (_, index) =>
     approval(40 + index, {
-      summary: `Introduce ourselves to person ${index + 1} found on the site.`,
+      summary: `Introduce ourselves to contact ${index + 1} found on the site.`,
       kind: "site_lead",
     }),
   ),
@@ -164,7 +168,7 @@ const CHIPS = (
           <AutonomyDot tier="confirm" />
           <span className="t-caption">
             {shared.kind === "site_lead"
-              ? "Add a person found on the site"
+              ? "Add a contact found on the site"
               : "Send an email"}
           </span>
         </>
@@ -288,7 +292,7 @@ export const Committing: Story = {
 };
 
 // The commit came back refused, and the tray STILL HOLDS the verdicts. They are
-// the only copy of a person's answers; clearing them on failure would ask for
+// the only copy of a contact's answers; clearing them on failure would ask for
 // all of them again.
 export const CommitFailed: Story = {
   args: {
@@ -296,9 +300,12 @@ export const CommitFailed: Story = {
     items: MANY,
     commitState: "failed",
     notice: (
-      <Callout tone="danger">
-        Those decisions were not recorded. Nothing was sent — press commit
-        again.
+      <Callout
+        tone="danger"
+        kind="outcome"
+        title="Those decisions were not recorded"
+      >
+        Nothing was sent — press commit again.
       </Callout>
     ),
   },
@@ -334,6 +341,74 @@ export const ListView: Story = {
     const user = userEvent.setup();
     await user.click(canvas.getByRole("button", { name: "List" }));
   },
+};
+
+// FRAMED BY A PANEL, at list density and capped — the shape Brief's morning
+// draws. Three things to look at: the toggle in the panel's own header band
+// rather than in a heading row of the deck's, one LINE per decision with the
+// proposal behind the line's own control, and the way to the rest under the
+// rows the cap cut.
+export const FramedCompactList: Story = {
+  args: {
+    ...BASE,
+    items: MANY,
+    labels: {
+      ...LABELS,
+      compactRow: { detail: "What is being proposed", more: "Other answers" },
+    },
+    listCap: 3,
+    // The count goes through the formatter like every other magnitude drawn
+    // for a contact, on the locale this catalog is pinned to.
+    listRest: (hidden: number) => (
+      <p className="ddeck-list-rest">
+        <a className="entity-link" href="#/worklist?filter=decisions">
+          {`${formatNumber(hidden, "en")} more decisions on the worklist`}
+        </a>
+      </p>
+    ),
+    // THE THREE PARTS, each in the band that is for it: the toggle in the
+    // header, the queue in a body that pays the panel's inset, and the tray in
+    // the foot — edge to edge under a hairline, which is where a line that
+    // belongs to the whole zone goes.
+    frame: ({ toggle, content, tray }) => (
+      <Panel title="Waiting on you" titleAction={toggle} footer={tray}>
+        {content === null ? null : <PanelBody>{content}</PanelBody>}
+      </Panel>
+    ),
+  },
+};
+
+// THE DECK inside the same frame, which is the other half of what `frame` has
+// to get right: the plate pays the panel's inset like the rows do, and the
+// count of what is behind and the keyboard legend sit under it at the body's
+// own interval rather than hanging off the pane's edge.
+export const FramedDeck: Story = {
+  args: FramedCompactList.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Deck" }));
+  },
+};
+
+// THE TRAY IN THE FOOT. One band, the panel's own chrome, a hairline over it —
+// and the body above it draws NOTHING, because with every card staged "nothing
+// is waiting on you" would contradict the count one line below.
+export const FramedTrayInTheFoot: Story = {
+  args: { ...FramedCompactList.args, items: [single(1)] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Accept" }),
+    );
+  },
+};
+
+// The same frame with the queue clear. The toggle goes with the rows it
+// switched between — a control with nothing behind it is noise on the one
+// surface whose whole point is that there is nothing left to do — and the
+// panel's band stands at the same height it did full.
+export const FramedEmpty: Story = {
+  args: { ...FramedCompactList.args, items: [] },
 };
 
 // A live queue: the deck, and a parent that removes what it was handed. This is

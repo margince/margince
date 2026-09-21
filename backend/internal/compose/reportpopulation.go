@@ -31,13 +31,12 @@ const (
 	// measureEveryReadableRow measures every row the caller may READ, with no
 	// narrowing of its own.
 	//
-	// The ad-hoc datasource plan is the one surface that takes it. A tool
-	// asking "how many projects are in delivery" is asking about the
-	// installation, not about the asker: a project is read by every seat
-	// holding the object grant, and an aggregate that narrowed it to the
-	// caller's team would tell a delivery lead their department has no
-	// projects running. Row scope still applies — this widens the POPULATION,
-	// never the reader's authority.
+	// For a surface with no "my work" framing: a tool asking "how many
+	// projects are in delivery" is asking about the installation, not about
+	// the asker, and an aggregate that narrowed it to the caller's team would
+	// tell a delivery lead their department has no projects running. Row
+	// scope still applies — this widens the POPULATION, never the reader's
+	// authority.
 	measureEveryReadableRow
 )
 
@@ -65,6 +64,6 @@ func callersOwnPopulation() RequestedScope { return RequestedScope{} }
 func reportPopulationClause(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope, arg func(any) int,
 ) (string, error) {
-	_, clause, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg)
+	_, clause, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg, unownedIsPartOfDefault)
 	return clause, err
 }

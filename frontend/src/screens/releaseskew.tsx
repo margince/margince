@@ -3,7 +3,7 @@ import { releaseSkew } from "../app/release";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthExperience } from "./auth-core";
+import { AuthCardTitle, AuthExperience } from "./auth-core";
 
 /**
  * The gate that stops this bundle rendering against an api from another release.
@@ -44,7 +44,7 @@ export function useSkewedApiRelease(mine: string): string | null {
  * ReleaseSkewScreen is what a reader sees instead of the app.
  *
  * It names both releases. Most readers cannot act on the numbers, but this
- * screen exists only for a broken deployment, and the one person who can fix it
+ * screen exists only for a broken deployment, and the one contact who can fix it
  * needs to know which of the two images is the odd one out — asking them to open
  * a console for it would be withholding the only fact on the page that matters.
  *
@@ -63,9 +63,9 @@ export function ReleaseSkewScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
-        <h1>{t("release.skewTitle")}</h1>
-        <p className="card-sub">{t("release.skewBody")}</p>
-        <p className="card-sub">{t("release.skewVersions", { app, server })}</p>
+        <AuthCardTitle>{t("release.skewTitle")}</AuthCardTitle>
+        <p>{t("release.skewBody")}</p>
+        <p>{t("release.skewVersions", { app, server })}</p>
         <div className="auth-actions">
           <Button variant="primary" onClick={() => window.location.reload()}>
             {t("release.skewReload")}

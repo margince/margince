@@ -49,18 +49,18 @@ var quietSince = eligibilityScanNow.AddDate(0, 0, -30)
 // creation grace never decides a test that is about something else.
 var longEstablished = eligibilityScanNow.AddDate(0, 0, -60)
 
-func TestQuietOrganizationWithNoOpenDealIsNotRemindedAbout(t *testing.T) {
+func TestQuietCompanyWithNoOpenDealIsNotRemindedAbout(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 
-	org := e.SeedOrg(t, "Dormant Account", nil)
-	backdateCreatedAt(t, owner, "organization", org, longEstablished)
-	linkQuietTouch(t, owner, e.WS, "organization", org)
+	company := e.SeedCompany(t, "Dormant Account", nil)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
+	linkQuietTouch(t, owner, e.WS, "company", company)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
 
-	if got := taskCountOn(t, e, "organization", org); got != 0 {
+	if got := taskCountOn(t, e, "company", company); got != 0 {
 		t.Fatalf("reminder tasks on an account with no open deal = %d, want 0 — nobody is working this company", got)
 	}
 	if got := runCountForHandler(t, e, "no_activity_reminder"); got != 0 {
@@ -68,28 +68,28 @@ func TestQuietOrganizationWithNoOpenDealIsNotRemindedAbout(t *testing.T) {
 	}
 }
 
-func TestQuietOrganizationWithAnOpenDealFiresOnceAndStaysClaimed(t *testing.T) {
+func TestQuietCompanyWithAnOpenDealFiresOnceAndStaysClaimed(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Live Account", nil)
+	company := e.SeedCompany(t, "Live Account", nil)
 	deal := e.SeedDeal(t, "Live Account Renewal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
-	// Linked to the ACCOUNT only, so this suite is about the organization
+	// Linked to the ACCOUNT only, so this suite is about the company
 	// arm of the eligibility rule and not about the deal's own arm.
-	linkQuietTouch(t, owner, e.WS, "organization", org)
+	linkQuietTouch(t, owner, e.WS, "company", company)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
-	if got := taskCountOn(t, e, "organization", org); got != 1 {
+	if got := taskCountOn(t, e, "company", company); got != 1 {
 		t.Fatalf("reminder tasks after the first pass = %d, want exactly 1 — an account with an open deal is worth a reminder", got)
 	}
 
 	runEligibilityScan(t, e)
-	if got := taskCountOn(t, e, "organization", org); got != 1 {
+	if got := taskCountOn(t, e, "company", company); got != 1 {
 		t.Fatalf("reminder tasks after the second pass = %d, want still exactly 1 — the unchanged anchor must hold its claim", got)
 	}
 }
@@ -105,12 +105,12 @@ func TestAPlantedSystemSourceRowStillCountsAsEngagement(t *testing.T) {
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Planted Account", nil)
+	company := e.SeedCompany(t, "Planted Account", nil)
 	deal := e.SeedDeal(t, "Planted Account Renewal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
-	linkQuietTouch(t, owner, e.WS, "organization", org)
+	linkQuietTouch(t, owner, e.WS, "company", company)
 
 	// The planted row: recent, source claims the system, captured_by names
 	// the human who actually wrote it. It IS this account's latest touch.
@@ -121,11 +121,11 @@ func TestAPlantedSystemSourceRowStillCountsAsEngagement(t *testing.T) {
 		planted, eligibilityScanNow.AddDate(0, 0, -1)); err != nil {
 		t.Fatalf("seeding the planted row: %v", err)
 	}
-	linkTouch(t, owner, e.WS, planted, "organization", org)
+	linkTouch(t, owner, e.WS, planted, "company", company)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
-	if got := taskCountOn(t, e, "organization", org); got != 0 {
+	if got := taskCountOn(t, e, "company", company); got != 0 {
 		t.Fatalf("reminder tasks = %d, want 0 — the planted row is a real recent touch, and excluding it on its source alone would let a caller steer the scan", got)
 	}
 }
@@ -138,12 +138,12 @@ func TestTheEnginesOwnRowStillDoesNotCountAsEngagement(t *testing.T) {
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Reminded Account", nil)
+	company := e.SeedCompany(t, "Reminded Account", nil)
 	deal := e.SeedDeal(t, "Reminded Account Renewal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
-	linkQuietTouch(t, owner, e.WS, "organization", org)
+	linkQuietTouch(t, owner, e.WS, "company", company)
 
 	// captured_by is the NAMESPACED principal the time scan actually binds,
 	// not the bare "system" the bus path uses. A case planting the bare form
@@ -157,11 +157,11 @@ func TestTheEnginesOwnRowStillDoesNotCountAsEngagement(t *testing.T) {
 		engineRow, eligibilityScanNow.AddDate(0, 0, -1)); err != nil {
 		t.Fatalf("seeding the engine row: %v", err)
 	}
-	linkTouch(t, owner, e.WS, engineRow, "organization", org)
+	linkTouch(t, owner, e.WS, engineRow, "company", company)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
-	if got := taskCountOn(t, e, "organization", org); got == 0 {
+	if got := taskCountOn(t, e, "company", company); got == 0 {
 		t.Fatal("no reminder fired — the engine's own output counted as engagement and reset the clock it fires off")
 	}
 }
@@ -171,15 +171,15 @@ func TestTwoRecordsSharingOneLastTouchInstantEachGetTheirOwnReminder(t *testing.
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Shared Anchor Account", nil)
+	company := e.SeedCompany(t, "Shared Anchor Account", nil)
 	deal := e.SeedDeal(t, "Shared Anchor Deal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	person := e.SeedPerson(t, "Champion", nil)
-	seedStakeholderSeat(t, owner, person, deal)
+	attachDealToCompany(t, owner, deal, company)
+	contact := e.SeedContact(t, "Champion", nil)
+	seedStakeholderSeat(t, owner, contact, deal)
 	for _, row := range []struct {
 		table string
 		id    ids.UUID
-	}{{"organization", org}, {"deal", deal}, {"person", person}} {
+	}{{"company", company}, {"deal", deal}, {"contact", contact}} {
 		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
 	}
 
@@ -187,16 +187,16 @@ func TestTwoRecordsSharingOneLastTouchInstantEachGetTheirOwnReminder(t *testing.
 	// champion's — which is exactly how two records come to share a single
 	// last-touch instant.
 	touch := seedQuietTouch(t, owner, e.WS)
-	linkTouch(t, owner, e.WS, touch, "organization", org)
-	linkTouch(t, owner, e.WS, touch, "person", person)
+	linkTouch(t, owner, e.WS, touch, "company", company)
+	linkTouch(t, owner, e.WS, touch, "contact", contact)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
 
-	if got := taskCountOn(t, e, "organization", org); got != 1 {
+	if got := taskCountOn(t, e, "company", company); got != 1 {
 		t.Errorf("reminder tasks on the account = %d, want exactly 1", got)
 	}
-	if got := taskCountOn(t, e, "person", person); got != 1 {
+	if got := taskCountOn(t, e, "contact", contact); got != 1 {
 		t.Errorf("reminder tasks on the champion = %d, want exactly 1 — one record's claim must not absorb the other's", got)
 	}
 	if got := runCountForHandler(t, e, "no_activity_reminder"); got != 2 {
@@ -209,54 +209,54 @@ func TestARecordYoungerThanTheCutoffIsNotStale(t *testing.T) {
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Imported Yesterday", nil)
+	company := e.SeedCompany(t, "Imported Yesterday", nil)
 	deal := e.SeedDeal(t, "Imported Yesterday Deal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
+	attachDealToCompany(t, owner, deal, company)
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
 	// The account itself arrived one day before the scan; the mail history
 	// imported with it is weeks old. Age of the CONTENT is not neglect.
-	backdateCreatedAt(t, owner, "organization", org, eligibilityScanNow.AddDate(0, 0, -1))
-	linkQuietTouch(t, owner, e.WS, "organization", org)
+	backdateCreatedAt(t, owner, "company", company, eligibilityScanNow.AddDate(0, 0, -1))
+	linkQuietTouch(t, owner, e.WS, "company", company)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
 
-	if got := taskCountOn(t, e, "organization", org); got != 0 {
+	if got := taskCountOn(t, e, "company", company); got != 0 {
 		t.Fatalf("reminder tasks on an account created yesterday = %d, want 0 — backfilled history is not a quiet spell", got)
 	}
 }
 
-func TestOnlyAStakeholderSeatMakesAPersonACandidate(t *testing.T) {
+func TestOnlyAStakeholderSeatMakesAContactACandidate(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Busy Account", nil)
+	company := e.SeedCompany(t, "Busy Account", nil)
 	deal := e.SeedDeal(t, "Busy Account Deal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	stakeholder := e.SeedPerson(t, "Champion", nil)
+	attachDealToCompany(t, owner, deal, company)
+	stakeholder := e.SeedContact(t, "Champion", nil)
 	seedStakeholderSeat(t, owner, stakeholder, deal)
 	// An employee of the same busy account with no seat on the deal. If
 	// employment alone made a candidate, every colleague would earn a
 	// reminder duplicating the account's own.
-	colleague := e.SeedPerson(t, "Colleague", nil)
-	seedEmployment(t, owner, colleague, org)
+	colleague := e.SeedContact(t, "Colleague", nil)
+	seedEmployment(t, owner, colleague, company)
 	for _, row := range []struct {
 		table string
 		id    ids.UUID
-	}{{"organization", org}, {"deal", deal}, {"person", stakeholder}, {"person", colleague}} {
+	}{{"company", company}, {"deal", deal}, {"contact", stakeholder}, {"contact", colleague}} {
 		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
 	}
-	linkQuietTouch(t, owner, e.WS, "person", stakeholder)
-	linkQuietTouch(t, owner, e.WS, "person", colleague)
+	linkQuietTouch(t, owner, e.WS, "contact", stakeholder)
+	linkQuietTouch(t, owner, e.WS, "contact", colleague)
 	seedNoActivityReminder(t, owner, e.WS)
 
 	runEligibilityScan(t, e)
 
-	if got := taskCountOn(t, e, "person", stakeholder); got != 1 {
+	if got := taskCountOn(t, e, "contact", stakeholder); got != 1 {
 		t.Errorf("reminder tasks on the deal's champion = %d, want exactly 1", got)
 	}
-	if got := taskCountOn(t, e, "person", colleague); got != 0 {
+	if got := taskCountOn(t, e, "contact", colleague); got != 0 {
 		t.Errorf("reminder tasks on a colleague with no seat on the deal = %d, want 0", got)
 	}
 }
@@ -314,12 +314,46 @@ func linkQuietTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType strin
 	linkTouch(t, owner, ws, seedQuietTouch(t, owner, ws), entityType, entity)
 }
 
+// workedRecently is a touch INSIDE the staleness window, derived from the same
+// frozen instant the scan reads. Seeding it against the DATABASE clock instead
+// would be a second clock, and the distance between the two grows by a day for
+// every day the suite is not run (gates/fixtureclock_integration_test.go).
+var workedRecently = eligibilityScanNow.AddDate(0, 0, -1)
+
+// linkFreshTouch attaches a RECENT genuine touch, so the entity's anchor is
+// inside the staleness threshold and it is not a candidate. The counterpart to
+// linkQuietTouch, for a fixture that needs one record quiet beside another that
+// is being worked.
+func linkFreshTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType string, entity ids.UUID) {
+	t.Helper()
+	linkTouch(t, owner, ws, seedTouchAt(t, owner, workedRecently), entityType, entity)
+}
+
+// linkFreshTouchReturningID is linkFreshTouch that hands back the activity id,
+// for a fixture that later ages that same touch out to make the record quiet.
+func linkFreshTouchReturningID(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType string, entity ids.UUID) ids.UUID {
+	t.Helper()
+	id := seedTouchAt(t, owner, workedRecently)
+	linkTouch(t, owner, ws, id, entityType, entity)
+	return id
+}
+
+// backdateActivity ages one touch out of the staleness window, so a record that
+// was being worked goes quiet without deleting its history.
+func backdateActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, at time.Time) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE activity SET occurred_at = $2 WHERE id = $1`, activity, at); err != nil {
+		t.Fatalf("backdating the touch: %v", err)
+	}
+}
+
 // linkTouch attaches an activity to any of the record types the candidate
-// query knows — the harness's own LinkActivity only spans person and deal.
+// query knows — the harness's own LinkActivity only spans contact and deal.
 func linkTouch(t *testing.T, owner *pgx.Conn, ws, activity ids.UUID, entityType string, entity ids.UUID) {
 	t.Helper()
 	column, ok := map[string]string{
-		"person": "person_id", "organization": "organization_id",
+		"contact": "contact_id", "company": "company_id",
 		"deal": "deal_id", "lead": "lead_id",
 	}[entityType]
 	if !ok {
@@ -338,7 +372,7 @@ func taskCountOn(t *testing.T, e *Env, entityType string, entity ids.UUID) int {
 		SELECT count(*) FROM activity a
 		JOIN activity_link al ON al.activity_id = a.id
 		WHERE al.entity_type = $1
-		  AND coalesce(al.person_id, al.organization_id, al.deal_id, al.lead_id) = $2
+		  AND coalesce(al.contact_id, al.company_id, al.deal_id, al.lead_id) = $2
 		  AND a.kind = 'task' AND a.archived_at IS NULL`, entityType, entity)
 }
 
@@ -348,7 +382,7 @@ func taskCountOn(t *testing.T, e *Env, entityType string, entity ids.UUID) int {
 func backdateCreatedAt(t *testing.T, owner *pgx.Conn, table string, id ids.UUID, at time.Time) {
 	t.Helper()
 	if _, ok := map[string]struct{}{
-		"person": {}, "organization": {}, "deal": {}, "lead": {},
+		"contact": {}, "company": {}, "deal": {}, "lead": {},
 	}[table]; !ok {
 		t.Fatalf("backdating %q is not part of this fixture's vocabulary", table)
 	}
@@ -358,34 +392,34 @@ func backdateCreatedAt(t *testing.T, owner *pgx.Conn, table string, id ids.UUID,
 	}
 }
 
-// attachDealToOrg puts the deal on the account, which is what makes the
+// attachDealToCompany puts the deal on the account, which is what makes the
 // account itself worth reminding about.
-func attachDealToOrg(t *testing.T, owner *pgx.Conn, deal, org ids.UUID) {
+func attachDealToCompany(t *testing.T, owner *pgx.Conn, deal, company ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
-		`UPDATE deal SET organization_id = $1 WHERE id = $2`, org, deal); err != nil {
-		t.Fatalf("attaching deal %s to organization %s: %v", deal, org, err)
+		`UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal); err != nil {
+		t.Fatalf("attaching deal %s to company %s: %v", deal, company, err)
 	}
 }
 
-// seedStakeholderSeat gives a person a live seat on a deal.
-func seedStakeholderSeat(t *testing.T, owner *pgx.Conn, person, deal ids.UUID) {
+// seedStakeholderSeat gives a contact a live seat on a deal.
+func seedStakeholderSeat(t *testing.T, owner *pgx.Conn, contact, deal ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
-		 VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, person, deal); err != nil {
+		`INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
+		 VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, contact, deal); err != nil {
 		t.Fatalf("seeding the stakeholder seat: %v", err)
 	}
 }
 
-// seedEmployment employs a person at an organization — a relationship the
+// seedEmployment employs a contact at a company — a relationship the
 // candidate query deliberately does NOT treat as live work.
-func seedEmployment(t *testing.T, owner *pgx.Conn, person, org ids.UUID) {
+func seedEmployment(t *testing.T, owner *pgx.Conn, contact, company ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
+		`INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		 VALUES ('employment', $1, $2, 'manual', 'human:x')`,
-		person, org); err != nil {
+		contact, company); err != nil {
 		t.Fatalf("seeding the employment edge: %v", err)
 	}
 }
@@ -426,7 +460,7 @@ func seedTouchAt(t *testing.T, owner *pgx.Conn, at time.Time) ids.UUID {
 }
 
 // An account is reached by mail filed against its CONTACT, which is how
-// capture files it — the message names the person it was with, never the
+// capture files it — the message names the contact it was with, never the
 // company. Counting only the account's own links, this account looks untouched
 // since the old direct mail and earns a reminder about a relationship a rep
 // worked yesterday.
@@ -435,27 +469,27 @@ func TestAnAccountWorkedThroughItsContactIsNotRemindedAbout(t *testing.T) {
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Worked Through Its People", nil)
+	company := e.SeedCompany(t, "Worked Through Its Contacts", nil)
 	deal := e.SeedDeal(t, "Renewal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
 
 	// The account's own last direct mail is old.
-	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, quietSince), "organization", org)
+	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, quietSince), "company", company)
 
 	// Yesterday a rep mailed the contact. Capture files that against the
-	// PERSON, so it carries no organization link of its own.
-	contact := e.SeedPerson(t, "Ingrid Sattler", nil)
-	seedEmployment(t, owner, contact, org)
-	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, recentlyWorked), "person", contact)
+	// CONTACT, so it carries no company link of its own.
+	contact := e.SeedContact(t, "Ingrid Sattler", nil)
+	seedEmployment(t, owner, contact, company)
+	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, recentlyWorked), "contact", contact)
 
 	seedNoActivityReminder(t, owner, e.WS)
 	runEligibilityScan(t, e)
 
-	if got := taskCountOn(t, e, "organization", org); got != 0 {
+	if got := taskCountOn(t, e, "company", company); got != 0 {
 		t.Fatalf("reminder tasks on an account mailed through its contact yesterday = %d, want 0 — "+
-			"the account is being worked, and the mail reaches it through the person it was with", got)
+			"the account is being worked, and the mail reaches it through the contact it was with", got)
 	}
 }
 
@@ -469,23 +503,212 @@ func TestAnAccountWhoseOnlyMailIsItsContactsIsStillDrawnWhenItGoesQuiet(t *testi
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
-	org := e.SeedOrg(t, "Quiet Through Its People", nil)
+	company := e.SeedCompany(t, "Quiet Through Its Contacts", nil)
 	deal := e.SeedDeal(t, "Renewal", pipeline, open, nil)
-	attachDealToOrg(t, owner, deal, org)
-	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
 	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
 
 	// Every message this account ever had is filed against its contact, and
 	// the last of them is long past the cutoff. No direct link, ever.
-	contact := e.SeedPerson(t, "Ingrid Sattler", nil)
-	seedEmployment(t, owner, contact, org)
-	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, quietSince), "person", contact)
+	contact := e.SeedContact(t, "Ingrid Sattler", nil)
+	seedEmployment(t, owner, contact, company)
+	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, quietSince), "contact", contact)
 
 	seedNoActivityReminder(t, owner, e.WS)
 	runEligibilityScan(t, e)
 
-	if got := taskCountOn(t, e, "organization", org); got != 1 {
+	if got := taskCountOn(t, e, "company", company); got != 1 {
 		t.Fatalf("reminder tasks on a quiet account reached only through its contact = %d, want 1 — "+
 			"an account with no direct link is still an account somebody stopped talking to", got)
+	}
+}
+
+// One silence on a live account is ONE question, asked on the account.
+//
+// Before the collapse this seeded five tasks for one quiet spell — one on the
+// company, one on its open deal, one on each employed stakeholder — and a rep
+// opening the queue could not tell they were all the same silence. The deal and
+// the stakeholders fold into the account because CompanyReachSet already folds
+// their touches into its anchor: the account's reminder names the same date
+// their own would have.
+func TestOneQuietAccountAsksForOneCheckIn(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Quiet Account", nil)
+	deal := e.SeedDeal(t, "Quiet Account Renewal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, company)
+	backdateCreatedAt(t, owner, "company", company, longEstablished)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+
+	stakeholders := make([]ids.UUID, 0, 3)
+	for _, name := range []string{"Champion", "Economic Buyer", "Technical Lead"} {
+		c := e.SeedContact(t, name, nil)
+		seedStakeholderSeat(t, owner, c, deal)
+		seedEmployment(t, owner, c, company)
+		backdateCreatedAt(t, owner, "contact", c, longEstablished)
+		linkQuietTouch(t, owner, e.WS, "contact", c)
+		stakeholders = append(stakeholders, c)
+	}
+	linkQuietTouch(t, owner, e.WS, "company", company)
+	linkQuietTouch(t, owner, e.WS, "deal", deal)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "company", company); got != 1 {
+		t.Errorf("reminder tasks on the quiet account = %d, want exactly 1", got)
+	}
+	if got := taskCountOn(t, e, "deal", deal); got != 0 {
+		t.Errorf("reminder tasks on the account's own open deal = %d, want 0 — it folds into the account", got)
+	}
+	for i, c := range stakeholders {
+		if got := taskCountOn(t, e, "contact", c); got != 0 {
+			t.Errorf("reminder tasks on employed stakeholder %d = %d, want 0 — they fold into their employer", i, got)
+		}
+	}
+}
+
+// A deal nobody filed under an account has no account to fold into, so it keeps
+// its own reminder: collapsing it would silence the only question anyone asks
+// about that deal.
+func TestADealWithNoAccountKeepsItsOwnCheckIn(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	deal := e.SeedDeal(t, "Unattached Deal", pipeline, open, nil)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+	linkQuietTouch(t, owner, e.WS, "deal", deal)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "deal", deal); got != 1 {
+		t.Errorf("reminder tasks on a deal with no account = %d, want exactly 1", got)
+	}
+}
+
+// A stakeholder employed SOMEWHERE ELSE is not covered by the account whose
+// deal they sit on: that account's anchor never sees their mail, because the
+// fold runs through employment. Collapsing on the seat would silence them.
+func TestAStakeholderEmployedElsewhereKeepsTheirOwnCheckIn(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	account := e.SeedCompany(t, "Buying Account", nil)
+	deal := e.SeedDeal(t, "Buying Account Deal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, account)
+	elsewhere := e.SeedCompany(t, "Consultancy", nil)
+	advisor := e.SeedContact(t, "External Advisor", nil)
+	seedStakeholderSeat(t, owner, advisor, deal)
+	seedEmployment(t, owner, advisor, elsewhere)
+	for _, row := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", account}, {"company", elsewhere}, {"deal", deal}, {"contact", advisor}} {
+		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
+	}
+	linkQuietTouch(t, owner, e.WS, "contact", advisor)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "contact", advisor); got != 1 {
+		t.Errorf("reminder tasks on a stakeholder employed elsewhere = %d, want exactly 1 — no account's anchor covers them", got)
+	}
+}
+
+// The collapse must not SILENCE a record nobody else speaks for.
+//
+// A stakeholder employed by a live account whose own touches are stale, while
+// the ACCOUNT has been worked recently: the contact folds into an account that
+// is not itself quiet, so the account is never drawn. If the contact is dropped
+// too, one real silence is reported by nobody — the collapse would have turned
+// five reminders into none, which is the worse bug.
+func TestAQuietStakeholderAtABusyAccountIsStillAskedAbout(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Busy But Neglecting", nil)
+	deal := e.SeedDeal(t, "Busy Account Deal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, company)
+	stakeholder := e.SeedContact(t, "Forgotten Champion", nil)
+	seedStakeholderSeat(t, owner, stakeholder, deal)
+	seedEmployment(t, owner, stakeholder, company)
+	for _, row := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", company}, {"deal", deal}, {"contact", stakeholder}} {
+		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
+	}
+	// The contact has gone quiet. The account has NOT — a fresh touch on the
+	// company keeps its own anchor recent, so it is not a candidate.
+	linkQuietTouch(t, owner, e.WS, "contact", stakeholder)
+	linkFreshTouch(t, owner, e.WS, "company", company)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	onContact := taskCountOn(t, e, "contact", stakeholder)
+	onCompany := taskCountOn(t, e, "company", company)
+	if onContact+onCompany == 0 {
+		t.Errorf("a quiet stakeholder at a busy account got no reminder anywhere "+
+			"(contact=%d, company=%d) — the collapse folded them into an account that is never drawn",
+			onContact, onCompany)
+	}
+}
+
+// A child reminder already open must not be joined by a second one on the
+// account once the account itself goes quiet.
+//
+// The hold is keyed on the entity the task is linked to, so a task on the
+// CONTACT is invisible to the company's own hold. The sequence: the contact
+// goes quiet while the account is worked, and earns its own reminder; later the
+// account goes quiet too and absorbs the contact. Nothing has answered the
+// first question, so the rep now holds two open tasks about one silence —
+// exactly the duplication this change exists to end.
+func TestAnOpenChildReminderIsNotJoinedByAnAccountReminder(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Account Going Quiet", nil)
+	deal := e.SeedDeal(t, "Account Deal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, company)
+	stakeholder := e.SeedContact(t, "Champion", nil)
+	seedStakeholderSeat(t, owner, stakeholder, deal)
+	seedEmployment(t, owner, stakeholder, company)
+	for _, row := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", company}, {"deal", deal}, {"contact", stakeholder}} {
+		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
+	}
+	// Pass 1: the contact is quiet, the account is not — so the contact earns
+	// its own reminder and nothing absorbs it.
+	linkQuietTouch(t, owner, e.WS, "contact", stakeholder)
+	freshOnCompany := linkFreshTouchReturningID(t, owner, e.WS, "company", company)
+	seedNoActivityReminder(t, owner, e.WS)
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "contact", stakeholder); got != 1 {
+		t.Fatalf("reminder tasks on the quiet contact after pass 1 = %d, want exactly 1", got)
+	}
+
+	// The account now goes quiet too: its only recent touch ages out.
+	backdateActivity(t, owner, freshOnCompany, quietSince)
+	runEligibilityScan(t, e)
+
+	onContact := taskCountOn(t, e, "contact", stakeholder)
+	onCompany := taskCountOn(t, e, "company", company)
+	if onContact+onCompany != 1 {
+		t.Errorf("open reminders about one silence = %d (contact=%d, company=%d), want exactly 1 — "+
+			"an unanswered child reminder must not be joined by an account reminder",
+			onContact+onCompany, onContact, onCompany)
 	}
 }

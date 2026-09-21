@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -51,7 +51,7 @@ function builder(
   wrap(
     <ToastProvider>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={onSubmit}
         onCancel={onCancel}
@@ -68,7 +68,7 @@ describe("FieldBuilder", () => {
     builder();
     await userEvent.type(screen.getByLabelText(/Label/i), "Contract end date");
     const key = screen.getByLabelText(/API key/i) as HTMLInputElement;
-    expect(key.value).toBe("organization.cf_contract_end_date");
+    expect(key.value).toBe("company.cf_contract_end_date");
     expect(key).toBeDisabled();
   });
 
@@ -78,7 +78,7 @@ describe("FieldBuilder", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Date$/i }));
     expect(
       screen.getByText(
-        /ALTER organization ADD COLUMN cf_contract_end_date \(date\)/,
+        /ALTER company ADD COLUMN cf_contract_end_date \(date\)/,
       ),
     ).toBeInTheDocument();
   });
@@ -123,9 +123,10 @@ describe("FieldBuilder", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "A picklist needs at least one option",
     );
-    // And unmarked: this is a refusal, and the completion dot beside it said the
-    // opposite of what the sentence says.
-    expect(document.body.querySelector(".dot-auto")).toBeNull();
+    // And marked as a refusal: the completion dot beside it said the opposite
+    // of what the sentence says, so the message wears the danger one.
+    expect(document.body.querySelector(".toast-dot-success")).toBeNull();
+    expect(document.body.querySelector(".toast-dot-danger")).not.toBeNull();
     expect(view.onSubmit).not.toHaveBeenCalled();
   });
 
@@ -138,7 +139,7 @@ describe("FieldBuilder", () => {
     );
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
-        object: "organization",
+        object: "company",
         label: "Renewal date",
         type: "date",
       }),
@@ -208,7 +209,7 @@ describe("FieldTable", () => {
   it("renders an honest empty state for an object with no fields", () => {
     wrap(
       <FieldTable
-        object="person"
+        object="contact"
         fields={[]}
         canEdit
         meUserId="u1"
@@ -217,7 +218,7 @@ describe("FieldTable", () => {
       />,
     );
     expect(
-      screen.getByText(/No custom fields on Person yet/i),
+      screen.getByText(/No custom fields on Contact yet/i),
     ).toBeInTheDocument();
   });
 
@@ -271,7 +272,7 @@ const FIELD_MANAGER: GrantSpec = { custom_field: ["create", "update"] };
 
 function customFieldsBackend(
   dealFields: CustomField[],
-  orgFields: CustomField[],
+  companyFields: CustomField[],
   calls: Recorded[],
   allow: GrantSpec = FIELD_MANAGER,
   opts: { failCreate?: boolean } = {},
@@ -323,7 +324,7 @@ function customFieldsBackend(
     if (url.includes("/custom-fields")) {
       const object = new URL(url).searchParams.get("object");
       calls.push({ method, url, body: null });
-      const data = object === "organization" ? orgFields : dealFields;
+      const data = object === "company" ? companyFields : dealFields;
       return jsonResponse({ data, page: { next_cursor: null } });
     }
     return jsonResponse({ data: [], page: { next_cursor: null } });
@@ -373,14 +374,14 @@ describe("CustomFieldsAdmin", () => {
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
     expect(container.querySelector(".wrap")).toBeNull();
-    expect(container.querySelector(".cf-screen")).not.toBeNull();
+    expect(container.querySelector(".panel")).not.toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(
       screen.getByRole("heading", { level: 2, name: "Custom fields" }),
     ).toBeInTheDocument();
   });
 
-  it("renders the four object chips and the selected object's fields", async () => {
+  it("renders every object chip and the selected object's fields", async () => {
     vi.stubGlobal(
       "fetch",
       customFieldsBackend([field({ id: "d1", label: "Renewal date" })], [], []),
@@ -389,12 +390,19 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    for (const name of [/Deal/, /Company/, /Person/, /Lead/]) {
+    for (const name of [
+      /Deal/,
+      /Company/,
+      /Contact/,
+      /Lead/,
+      /Project/,
+      /Contract/,
+    ]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
   });
 
-  it("swaps to the organization fields when the Company chip is clicked", async () => {
+  it("swaps to the company fields when the Company chip is clicked", async () => {
     const calls: Recorded[] = [];
     vi.stubGlobal(
       "fetch",
@@ -403,7 +411,7 @@ describe("CustomFieldsAdmin", () => {
         [
           field({
             id: "o1",
-            object: "organization",
+            object: "company",
             label: "Industry code",
             column_name: "cf_industry_code",
             type: "text",
@@ -421,7 +429,7 @@ describe("CustomFieldsAdmin", () => {
       expect(screen.getByText("Industry code")).toBeInTheDocument(),
     );
     expect(screen.queryByText("Renewal date")).toBeNull();
-    expect(calls.some((call) => call.url.includes("object=organization"))).toBe(
+    expect(calls.some((call) => call.url.includes("object=company"))).toBe(
       true,
     );
   });

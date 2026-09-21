@@ -40,12 +40,12 @@ func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
 	// nothing reads all_answered too: "nothing worth your first hour" and
 	// "you answered everything" are the same message to a reader — nothing
 	// to do here — while no_run_today is the one that must not wear a tick.
-	state := crmcontracts.ItemsWaiting
+	state := crmcontracts.AttentionThisMorningStateItemsWaiting
 	switch {
 	case !ran:
-		state = crmcontracts.NoRunToday
+		state = crmcontracts.AttentionThisMorningStateNoRunToday
 	case len(items) == 0:
-		state = crmcontracts.AllAnswered
+		state = crmcontracts.AttentionThisMorningStateAllAnswered
 	}
 	return theNight{
 		items:    items,

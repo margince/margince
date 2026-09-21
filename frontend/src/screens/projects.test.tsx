@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -87,7 +87,7 @@ describe("ProjectsScreen", () => {
       ),
     );
     await user.click(
-      within(screen.getByRole("group", { name: "Phase" })).getByRole("button", {
+      within(screen.getByRole("group", { name: "Phase" })).getByRole("radio", {
         name: "Delivering",
       }),
     );
@@ -200,6 +200,37 @@ describe("ProjectsScreen", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
+  // The table carries the page's name in its own header, so the shell prints
+  // none on this screen — and the first-run plate replaces that table. Without a
+  // heading of its own this arm left the route with no h1 at all, on the one
+  // screen a reader most needs to be told where they are. Exactly one, at level
+  // 1: the plate's own title reads a level below it.
+  it("names the page at heading level on the first run too", async () => {
+    projectsBackend({ projects: [] });
+    render(<ProjectsScreen />);
+    await screen.findByText("No projects yet");
+    expect(
+      screen
+        .getAllByRole("heading", { level: 1 })
+        .map((one) => one.textContent),
+    ).toEqual(["Projects"]);
+  });
+
+  // The same name, in the arm that draws the table — so creating the first
+  // project does not rename the page under the reader who created it.
+  it("names the page at heading level with rows too", async () => {
+    projectsBackend({
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<ProjectsScreen />);
+    await screen.findByText("CRM rollout");
+    expect(
+      screen
+        .getAllByRole("heading", { level: 1 })
+        .map((one) => one.textContent),
+    ).toEqual(["Projects"]);
+  });
+
   it("posts a create with no key, because the server mints it", async () => {
     const user = userEvent.setup();
     let posted: unknown = null;
@@ -231,7 +262,7 @@ describe("ProjectsScreen", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({
       name: "CRM rollout",
-      organization_id: "o-1",
+      company_id: "o-1",
       owner_id: null,
       description: null,
       target_end_date: null,

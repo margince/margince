@@ -1,6 +1,6 @@
 # Custom fields — the governed add-field engine
 
-How a workspace admin adds a field to `person` at runtime without anyone shipping code, and why that
+How a workspace admin adds a field to `contact` at runtime without anyone shipping code, and why that
 power is fenced in as tightly as it is. `customfields` is the **single chokepoint in the system
 allowed to run a runtime `ALTER TABLE`** — every other module is forbidden it. A custom field is a
 real, typed, physical column (`cf_<slug>`) on the core object's own table; the `custom_field` catalog
@@ -20,8 +20,8 @@ jsonb column — that is field *metadata*, not a value store.
 
 ## What a custom field may be — the closed sets
 
-Six types (`text`, `number`, `date`, `currency`, `picklist`, `boolean`) on five objects (`person`,
-`organization`, `deal`, `lead`, `activity`). **No cap on how many, no widening of what** — the
+Six types (`text`, `number`, `date`, `currency`, `picklist`, `boolean`) on five objects (`contact`,
+`company`, `deal`, `lead`, `activity`). **No cap on how many, no widening of what** — the
 surface itself is the knob. Each type maps to one storage type: `number` → `numeric` (round-tripped
 as a string, never a float, so precision survives), `currency` → `bigint` minor units with the
 ISO-4217 code held in the catalog row rather than the column, `picklist` → `text` plus a generated
@@ -131,7 +131,7 @@ from inside a store's own gated `Get`/`List`/`Create`/`Update`. What it exposes 
 schema shape — the same thing the admin list already answers — not row data. The store's row-level
 gate is what protects the values.
 
-One rule surprises people: custom-field values convert **drop-on-mismatch**. A request body's
+One rule surprises contacts: custom-field values convert **drop-on-mismatch**. A request body's
 `additionalProperties` carries no per-key shape contract, so a value whose shape does not match its
 column's type is silently excluded rather than answered with a 422.
 
@@ -153,8 +153,8 @@ as a core column", names "static schema → real indexes → correct, fast repor
 honesty bet, and its worked example creates one alongside the column:
 
 ```sql
-CREATE INDEX idx_org_renewal_risk
-  ON organization (workspace_id, renewal_risk)
+CREATE INDEX idx_company_renewal_risk
+  ON company (workspace_id, renewal_risk)
   WHERE renewal_risk IS NOT NULL AND archived_at IS NULL;
 ```
 
@@ -190,3 +190,28 @@ choice belongs upstream in the spec, not to whoever implements it next.
 The owner-pool flag and its `/readyz` probe: [reference/configuration.md](../reference/configuration.md).
 The write shape these mutations still ride: [write-backbone.md](write-backbone.md). The role matrix
 behind the admin/ops posture: [rbac-roles-and-teams.md](rbac-roles-and-teams.md).
+
+### Multiple-choice fields
+
+`multiselect` is a governed custom-field type alongside `picklist`. Its values
+are JSON arrays of strings, stored in a nullable `text[]` column. Administrators
+provide the allowed choices when creating the field; the product ships no
+installation-specific field definitions or vocabularies. The generated CHECK
+refuses unknown choices. Editing the vocabulary refuses removal of any choice
+still stored on a record, including retired records.
+
+Create and edit forms offer independent checkboxes. Labels containing commas
+remain single choices. Omitting a key on PATCH preserves its value; `null` clears
+the field, and `[]` stores an explicitly empty selection. Duplicate selections
+are normalized on record writes.
+
+The collections filter vocabulary and query plans use `eq`/`neq` for exact
+membership and its negation, and `in` for overlap with any listed choice. These compare complete, case-sensitive
+choices rather than substrings of a flattened label.
+
+Outcome-review questions can separately use `multiselect`. Administrators edit
+the questions in Settings with `custom_field:update`; template versions prevent
+concurrent overwrites. Text answers retain the existing `answers` map, while
+`choice_answers` carries arrays keyed by question key. Each submitted review
+freezes its questions and allowed choices, so a later template edit never
+rewrites a previous closing's review.

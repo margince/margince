@@ -32,7 +32,8 @@ func rearmIfAbandoned(
 	}
 	rearmed, err := scanTranscriptRead(tx.QueryRow(ctx, `
 		UPDATE transcript_read
-		   SET status = 'queued', started_at = NULL, status_detail = NULL
+		   SET status = 'queued', started_at = NULL, status_detail = NULL,
+		       attempt = attempt + 1, attempt_at = now()
 		 WHERE id = $1
 		   AND status = 'running'
 		   AND started_at < now() - ($2 * interval '1 microsecond')
@@ -45,6 +46,13 @@ func rearmIfAbandoned(
 		return fmt.Errorf("re-arm abandoned transcript read: %w", err)
 	}
 	*read = rearmed
+	// The re-arm is the transition the attempt column exists for: it announces
+	// `queued` at a HIGHER attempt than the dead claim it replaces, which is
+	// what lets the projection prefer it over a row that would otherwise read
+	// as running until its lease expired.
+	if err := logTranscriptActivity(ctx, tx, rearmed); err != nil {
+		return err
+	}
 	if enqueue == nil {
 		return nil
 	}

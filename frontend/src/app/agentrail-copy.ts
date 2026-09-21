@@ -2,119 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MarginceCoreState } from "../design-system/margince-core";
+import type { MessageKey } from "../i18n/en";
+import type { Screen } from "./router";
 
 /**
- * The agent section's own copy.
+ * The agent section's own tables.
  *
  * Everything the section reports about the installation is read from the API
  * (`agentrail.tsx`): approvals waiting, which sources are unreachable, the model
- * the last call actually ran on, the account's own suggestions. What is left
- * here is the words those readings are said in.
+ * the last call actually ran on, the account's own suggestions. What the
+ * readings are SAID in lives in the message catalogs under `agent.*` — it used
+ * to be an English-only table here, which is how a German reader met "Across
+ * the workspace" over a translated sentence. What is left here is the tables
+ * that are not copy: the state vocabulary, the rotation's order, and the two
+ * maps from a cache key to the words for the work behind it.
  */
-
-/**
- * The agent's tasks, in words a person who does not work on this product can
- * read.
- *
- * The wire carries `growth_fit` and `site_fact_extract`, which are the names of
- * INVOCATION SITES — correct for a trace, and meaningless to the salesperson
- * whose company page they ran on. A recap that prints them is a log with a
- * friendlier heading: the reader learns that something happened five times and
- * nothing about what.
- *
- * Each line says what the agent DID, in the past tense, from the reader's side
- * rather than the pipeline's. A task with no entry falls back to its token with
- * the underscores opened up, so a task added upstream degrades to something
- * readable instead of disappearing.
- */
-export const TASK_SAID: Readonly<Record<string, string>> = {
-  account_scan: "Read what an account needs",
-  agent_loop: "Worked through a request",
-  brief_ranking: "Ranked your morning brief",
-  capture_classify: "Sorted captured mail",
-  owed_verdict: "Read which messages are waiting on you",
-  capture_counterparty_verdict: "Decided who a message was with",
-  cert_judge: "Checked its own answer",
-  cold_start: "Set up your workspace",
-  corpus_ask: "Answered from your documents",
-  deal_health: "Read the health of a deal",
-  document_extract: "Pulled fields out of a document",
-  draft_reply: "Drafted a reply",
-  embeddings: "Indexed records for search",
-  enrich: "Filled in contact details",
-  growth_fit: "Scored how well a company fits",
-  nl_search: "Answered a search",
-  offer_draft: "Drafted an offer",
-  rate_extract: "Read pricing off a page",
-  signal_extract: "Found signals in a thread",
-  stage_evidence_extract: "Checked what a deal still needs",
-  site_extract: "Read a company website",
-  site_fact_extract: "Pulled facts off a web page",
-  site_triage: "Picked which pages to read",
-  summarize: "Wrote a summary",
-  transcript: "Processed a call transcript",
-  propose_roles: "Read the buying roles from their messages",
-  transcript_propose: "Proposed next steps from a call",
-  voice_build: "Learned your writing voice",
-};
-
-export const LABELS = {
-  /** The month's estimated spend, and it says estimated by saying "so far":
-   *  the server prices on read, so the figure moves as rates change. */
-  spend: "Cost this month",
-  /** The same fact in the width a collapsed rail has: the figure leads and
-   *  this names it. One word rather than the panel's sentence, because the
-   *  rail is 235px wide and the figure must not be what gets shortened. */
-  spendScope: "this month",
-  /** Under the figure in the panel head, where the label is the second line. */
-  thisMonth: "this month",
-  /** The panel's own name. It is portalled to the body, so it is not inside the
-   *  region that would otherwise have named it. */
-  panel: "Margince agent detail",
-  acrossWorkspace: "Across the workspace",
-  runtime: "Runtime",
-  recap: "What it has done",
-  justNow: "just now",
-  fullLog: "Full log",
-  logUnreadable: "The call log is not readable on this seat",
-  model: "model",
-  sources: "sources",
-  tools: "tools",
-  approvals: "Decisions waiting",
-  offline: "offline",
-  idle: "Idle",
-  reading: "Loading",
-  working: "Working",
-  unreachable: "Cannot reach Margince",
-  /** A broken run whose kind this build writes no sentence for. The feed is
-   *  asked only for the kinds the rail narrates, so these two are the words for
-   *  a server that answered with more than it was asked, never the daily case. */
-  runFailed: "A run failed",
-  runStopped: "A run stopped early",
-  waiting: "waiting for you",
-  cannotReach: "Cannot reach",
-  reconnect: "Reconnect",
-  configure: "Set up",
-  noModel: "No AI model is configured",
-  devModel: "development (offline fake)",
-  devLine: "Running on the offline model",
-  duplicatesRow: "Duplicate pairs open",
-  expand: "Expand the agent panel",
-  collapse: "Collapse the agent panel",
-  region: "Margince agent",
-  unreadable: "not readable on this seat",
-  noCallsYet: "nothing has run yet",
-  /** The resting line when every read came back with nothing to report. */
-  allClear: "Nothing needs you",
-  /** The shape of the month's spend, for the reader who cannot see the line. */
-  spendShape: "What the agent has cost, day by day",
-  /** The panel's one setting: whether the window's own margins light while the
-   *  agent works. Named for what a reader SEES rather than for the surface that
-   *  draws it — nobody outside this tree calls it the edge. */
-  edgeLight: "Screen edge light",
-  nothingPriced: "nothing priced yet",
-  runningOn: "running on",
-} as const;
 
 /**
  * The whole vocabulary the Core is drawn in, in lifecycle order.
@@ -138,21 +40,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 ]);
 
 /**
- * What a read in flight is CALLED, keyed by the first segment of its cache key.
- *
- * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
- * this is the vocabulary it names them in: the words a salesperson uses about
- * their own day, not the words the cache uses about itself. "Reading this
- * company" is a sentence; "fetching organization360" is a key.
- *
- * A key with no entry here produces NO LINE. That is the point of a table rather
- * than a fallback that opens up the key: half of what a session fetches is
- * plumbing (the session, the feature flags, the custom-field catalog), and a
- * status line that narrated those would bury the two or three events a reader
- * actually cares about.
- */
-/**
- * The lines the section rotates through while the agent is at rest.
+ * The READINGS the section rotates through while the agent is at rest.
  *
  * All three are the AGENT's own facts, and that is the whole selection rule.
  * This rotation used to carry six, and the other three were about the
@@ -169,12 +57,14 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  *
  * Each entry is a function of what was read, and one that has nothing to report
  * returns null and is skipped, so the rotation is only ever as long as the facts
- * are.
+ * are. `finished` is the one that can contribute SEVERAL lines: a day settles
+ * more than one run, and the newest of them being the only one ever said is what
+ * left this surface announcing one summary from breakfast until the evening.
  */
 export const IDLE_ORDER = [
   "waiting",
   // Second: what the scheduled runner finished while nobody was looking is news
-  // rather than a task, so it does not push the queue a person has to answer
+  // rather than a task, so it does not push the queue a contact has to answer
   // down the rotation.
   "finished",
   // Last, and standing rather than daily: an installation on the development
@@ -184,6 +74,68 @@ export const IDLE_ORDER = [
 ] as const;
 
 export type IdleKind = (typeof IDLE_ORDER)[number];
+
+/** One thing that is true of the product, and where it is true of. */
+export type Tip = Readonly<{
+  /** The sentence, in the reader's own locale. */
+  key: MessageKey;
+  /**
+   * The destination the sentence's `{name}` slot names, drawn as the way there.
+   * Null for a tip about no place in particular — and a tip is SUPPRESSED on
+   * the screen it names, because telling somebody to go where they already are
+   * is the surface admitting it is not reading the room.
+   */
+  to: Readonly<{ screen: Screen; labelKey: MessageKey }> | null;
+}>;
+
+/**
+ * What the section says between readings, in the order it says them.
+ *
+ * NOT readings, and the distinction is what keeps this list honest. Every line
+ * in `IDLE_ORDER` is something the installation was asked and answered. Every
+ * line here is something that is true of the PRODUCT, whoever is looking and
+ * whenever they look — so none of them claims the agent did anything, and the
+ * rule that this surface never invents activity is untouched.
+ *
+ * They exist because the readings run out, and the rotation was built as though
+ * they would not. An installation with a clean queue, a bound model and a quiet
+ * afternoon has exactly one true reading — "Nothing needs you" — and one that
+ * ran a summary this morning has that summary and nothing else, all day. A line
+ * at the edge of every screen that has said the same sentence since breakfast is
+ * not a status light any more; it is furniture, and a reader stops seeing it
+ * long before they stop believing it.
+ *
+ * ONE of these shows per pass through the readings, and the next pass shows the
+ * next (`agentrail-resting.ts`). That cadence is the point: a tip is the thing
+ * the rail says once it has run out of news, never a sixth voice competing with
+ * the queue a contact has to answer.
+ *
+ * The bar for a line being here is that it is CHECKABLE. Each one is about a
+ * part of the product a reader can go and find, so a tip that stops being true
+ * is a tip somebody notices — which is what stops this list from drifting into
+ * the cheerful nothing the readings are so careful not to be.
+ */
+export const TIPS: readonly Tip[] = [
+  // What Home is FOR, which is the thing a new reader most often has not
+  // worked out: the decisions, the tasks and the duplicate pairs are lanes
+  // inside it rather than three queues to go looking for.
+  {
+    key: "agent.tip.day",
+    to: { screen: "home", labelKey: "nav.brief" },
+  },
+  // The palette is the ask surface, and nothing in the chrome says so: the
+  // hint lives on one screen (`ai.paletteHint`), which is the screen a reader
+  // reaches by already knowing.
+  { key: "agent.tip.ask", to: null },
+  // The panel this block opens. A reader who has never opened it has no idea
+  // the agent keeps a log of its own, and the recap is the answer to the
+  // question the orb raises.
+  { key: "agent.tip.recap", to: null },
+  // The lit margins. Ambient light nobody explained is ambient light somebody
+  // assumes is a fault, and the setting that turns it off is inside the panel
+  // above.
+  { key: "agent.tip.edge", to: null },
+];
 
 /**
  * The named line, per cache key, with `%s` where the record's name goes.
@@ -239,19 +191,35 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
 export const NAMED: Readonly<Record<string, string>> = {
   deal: "Reading the %s deal",
   lead: "Reading %s",
-  organization: "Reading %s",
-  organization360: "Reading everything about %s",
-  person: "Reading %s",
-  person360: "Reading everything about %s",
-  personBrief: "Summarising %s",
+  company: "Reading %s",
+  company360: "Reading everything about %s",
+  contact: "Reading %s",
+  contact360: "Reading everything about %s",
+  contactBrief: "Summarising %s",
 };
 
+/**
+ * What a read in flight is CALLED, keyed by the first segment of its cache key.
+ *
+ * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
+ * this is the vocabulary it names them in: the words a salesperson uses about
+ * their own day, not the words the cache uses about itself. "Reading this
+ * company" is a sentence; "fetching company360" is a key.
+ *
+ * A key with no entry here produces NO LINE. That is the point of a table rather
+ * than a fallback that opens up the key: half of what a session fetches is
+ * plumbing (the session, the feature flags, the custom-field catalog), and a
+ * status line that narrated those would bury the two or three events a reader
+ * actually cares about.
+ */
 export const SAID: Readonly<Record<string, string>> = {
   activities: "Reading the activity trail",
   approvals: "Checking what needs you",
   "ai-calls": "Reading its own log",
   "ai-usage": "Adding up what it spent",
   companies: "Reading companies",
+  company: "Reading a company",
+  company360: "Reading everything about this company",
   connectors: "Checking its sources",
   deal: "Reading a deal",
   "deal-offers": "Reading the offers on a deal",
@@ -259,14 +227,10 @@ export const SAID: Readonly<Record<string, string>> = {
   dsrs: "Checking privacy requests",
   lead: "Reading a lead",
   leads: "Reading leads",
-  organization: "Reading a company",
-  organization360: "Reading everything about this company",
-  organizations: "Reading companies",
-  overlay: "Reading what it wrote here",
-  people: "Reading contacts",
-  person: "Reading a contact",
-  person360: "Reading everything about this contact",
-  personBrief: "Summarising a contact",
+  contacts: "Reading contacts",
+  contact: "Reading a contact",
+  contact360: "Reading everything about this contact",
+  contactBrief: "Summarising a contact",
   pipelines: "Reading the pipeline",
   // The brief is written on every open, from the reader's own records, and the
   // rail's own line follows on its next poll: this is the sentence for the

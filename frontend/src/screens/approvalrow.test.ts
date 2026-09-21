@@ -10,11 +10,11 @@ import { recordRoute } from "./approvalrow";
 describe("recordRoute", () => {
   it("routes each record kind to the screen that holds its history", () => {
     expect(recordRoute("deal", "d1")).toEqual({ screen: "deals", id: "d1" });
-    expect(recordRoute("organization", "o1")).toEqual({
+    expect(recordRoute("company", "o1")).toEqual({
       screen: "companies",
       id: "o1",
     });
-    expect(recordRoute("person", "p1")).toEqual({
+    expect(recordRoute("contact", "p1")).toEqual({
       screen: "contacts",
       id: "p1",
     });

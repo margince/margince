@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -134,7 +134,7 @@ function stubBackend(opts: {
         teams: [],
       });
     }
-    if (url.includes("/organizations")) {
+    if (url.includes("/companies")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
     if (url.includes("/deals")) {

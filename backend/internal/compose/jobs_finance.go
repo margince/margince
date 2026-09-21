@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -60,7 +61,7 @@ func (w *financeSyncSweepWorker) Work(ctx context.Context, _ *river.Job[FinanceS
 //
 // The connector is the acting principal: every mirrored row carries
 // `connector:` provenance, so a reader can tell an imported invoice from
-// anything a person typed.
+// anything a human typed.
 //
 // PrincipalConnector and not PrincipalSystem, and the two have to agree: the
 // audit row stamps actor_type from the TYPE and actor_id from the ID, so a
@@ -157,15 +158,21 @@ func (w *financeSyncSweepWorker) providerFor(
 ) (finance.Provider, bool, error) {
 	var (
 		name      string
+		createdAt time.Time
 		customers []finance.SourceCustomer
 	)
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		// created_at rides the read because it is the offline generator's
+		// ANCHOR: the demonstration ledger is measured back from the moment
+		// this connection was made, so it is fixed for a given installation
+		// and positioned freshly for a new one. A constant in the generator
+		// would leave the card's rolling windows behind as the calendar moved.
 		row := tx.QueryRow(ctx, `
-			SELECT provider FROM finance_connection
+			SELECT provider, created_at FROM finance_connection
 			 WHERE archived_at IS NULL AND status <> 'disconnected'
 			 ORDER BY created_at DESC
 			 LIMIT 1`)
-		if err := row.Scan(&name); err != nil {
+		if err := row.Scan(&name, &createdAt); err != nil {
 			// pgx.ErrNoRows lands here and is answered as "not configured" by
 			// the caller below; anything else is a real read failure.
 			return err
@@ -185,7 +192,7 @@ func (w *financeSyncSweepWorker) providerFor(
 			"finance: no reader for provider %q — this build ships only %q",
 			name, finance.OfflineProviderName)
 	}
-	return finance.NewOfflineProvider(workspace.String(), customers), true, nil
+	return finance.NewOfflineProvider(workspace.String(), customers, createdAt), true, nil
 }
 
 // linkedCustomers is the directory the offline provider generates for.
@@ -198,7 +205,7 @@ func linkedCustomers(ctx context.Context, tx pgx.Tx) ([]finance.SourceCustomer, 
 	rows, err := tx.Query(ctx, `
 		SELECT l.external_customer_id, coalesce(o.display_name, l.external_customer_id)
 		  FROM finance_customer_link l
-		  JOIN organization o ON o.id = l.organization_id
+		  JOIN company o ON o.id = l.company_id
 		 WHERE l.archived_at IS NULL
 		 ORDER BY l.external_customer_id`)
 	if err != nil {

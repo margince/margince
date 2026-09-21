@@ -11,24 +11,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// The engine's source kinds, as stored in import_run.connector. The
-// migrate-in connectors (csv/hubspot/salesforce) are in the column's
-// CHECK — the DDL is the chapter's pinned arrival shape — but they get
-// their Go constants when their connectors land (UC-E11-03), not before.
-const (
-	// ConnectorMirror is the overlay→native flip: the frozen mirror snapshot.
-	ConnectorMirror = "mirror"
-	// ConnectorBundle is reconstruction from a pre-flip export bundle.
-	ConnectorBundle = "bundle"
-)
-
 // pageSize bounds one Source.Rows read: large enough to amortize the
 // round-trip, small enough that a resumed run re-reads at most one page.
 const pageSize = 200
 
-// Row is one source record: the incumbent/external id, the canonical
-// field map (keys are native column names — the mirror ingest projector
-// already speaks this shape), and the record's last sync instant.
+// Row is one source record: the source's own external id, the canonical
+// field map (keys are native column names), and the record's last sync
+// instant.
 type Row struct {
 	ExternalID string
 	Fields     map[string]any
@@ -111,7 +100,7 @@ type AssocResult struct {
 }
 
 // Writers is the native-record seam: compose implements it over the
-// people/deals/activities stores so this module never imports a sibling.
+// contacts/deals/activities stores so this module never imports a sibling.
 // Every method must be idempotent on the row's provenance key — the
 // checkpointed run loop may replay the row after a crash, and a re-run
 // of the whole source must converge (IEM-FORM-1's upsert-by-key).

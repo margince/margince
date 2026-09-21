@@ -5,7 +5,7 @@
  *  - the scope region and the progress line hold their own height, so an
  *    arriving estimate or an incremented count never moves the button someone
  *    is about to press;
- *  - every number is mono and tabular, so a tally counting upward changes its
+ *  - every number sets tabular figures, so a tally counting upward changes its
  *    digits without changing its width.
  *
  * Copy never lives here (conformance gate) and no colour is a literal: literals
@@ -30,45 +30,15 @@
 }
 
 .ob-backread-h {
-  line-height: var(--lh-snug);
-  letter-spacing: var(--tracking-display);
   text-wrap: balance;
-}
-
-/* ---- the window pick --------------------------------------------------- */
-
-.ob-backread-windows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  padding: var(--space-2);
-}
-
-.ob-backread-window {
-  /* A finger target, not a text line. */
-  min-height: 44px;
-  padding: 0 var(--space-2);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--textContent);
-}
-
-.ob-backread-window:hover {
-  background: var(--bgHover);
-}
-
-.ob-backread-window:has(input:checked) {
-  color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 
 /* ---- the scope before the spend ---------------------------------------- */
 
 /* Reserves the estimate's own two lines: the panel is laid out before the
-   preview answers, and the answer must not push the actions down the page. */
+   preview answers, and the answer must not push the actions down the page. It
+   is never empty while it waits — the counting line stands where the number
+   will land, so the arriving estimate replaces a sentence rather than a gap. */
 .ob-backread-scope {
   display: flex;
   flex-direction: column;
@@ -80,27 +50,19 @@
 }
 
 .ob-backread-estimate {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
 /* The cost of a machine's work reads in the AI family, never the brand accent:
    green means the user acts, indigo means the machine cost something. */
 .ob-backread-cost {
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   color: var(--aiText);
 }
 
-.ob-backread-note {
-  line-height: var(--lh-relaxed);
-}
-
 .ob-backread-problem {
-  font-size: var(--fs-meta);
-  line-height: var(--lh-relaxed);
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* ---- the running read -------------------------------------------------- */
@@ -113,8 +75,7 @@
 }
 
 .ob-backread-scanned {
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
@@ -125,16 +86,19 @@
   height: 4px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   overflow: hidden;
 }
 
+/* Determinate progress of a read still running: the info family, which is what
+   "work still in flight" is for. The brand accent made a wait look like the
+   page's primary action. */
 .ob-backread-bar > span {
   display: block;
   height: 100%;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--accent);
+  background: var(--info);
   transition: width 0.18s ease;
 }
 
@@ -145,7 +109,7 @@
 }
 
 /* Value above label on screen, label first in the DOM: a description list read
-   aloud as "people found, 47" means something, "47, people found" does not. */
+   aloud as "contacts found, 47" means something, "47, contacts found" does not. */
 .ob-backread-tally {
   display: flex;
   flex-direction: column-reverse;
@@ -157,20 +121,13 @@
 }
 
 .ob-backread-tally-value {
-  font-family: var(--f-body);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
 
 .ob-backread-tally-label {
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textTertiary);
+  font-family: var(--fontFamilyBody);
 }
 
 /* ---- leaving ----------------------------------------------------------- */
@@ -186,7 +143,7 @@
 /* Widths are the PANE's, not the window's — see the container note at the top
    of the file. */
 
-/* Two tallies of ~96px leave an uppercase label ("people found") three lines
+/* Two tallies of ~96px leave an uppercase label ("contacts found") three lines
    under a one-line number, which is a tile that is mostly label. One column
    instead, and a lone column of tiles is really a list: the label takes the
    left of the line and its number the right, where a reader scanning a column
@@ -206,14 +163,8 @@
   }
 }
 
-/* Narrower still, and the frame around the window pick costs more width than
-   the labels inside it, while the two closing actions stop sitting side by
-   side without one of them losing its verb to an ellipsis. */
+/* At narrow widths the closing actions each need a row to keep their labels. */
 @container (max-width: 280px) {
-  .ob-backread-windows {
-    padding: var(--space-1);
-  }
-
   .ob-backread-acts > * {
     flex: 1 1 100%;
   }

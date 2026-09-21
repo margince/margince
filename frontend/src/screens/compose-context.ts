@@ -16,6 +16,8 @@
  */
 
 import type { components } from "../api/schema";
+import type { SelectOption } from "../design-system/select";
+import type { Translator } from "../i18n";
 
 export type CommunicationContext =
   components["schemas"]["CommunicationContext"];
@@ -70,10 +72,33 @@ export function contextFor(args: {
  *
  * Only where nothing else answers it. A reply derives, so asking would be
  * asking a reader to restate what the thread in front of them already says —
- * and a question with an obvious answer trains people to answer without
+ * and a question with an obvious answer trains contacts to answer without
  * reading, which is how the purpose dropdown this replaces came to be set to
  * whatever was first in the list.
  */
 export function asksWhy(anchor: Anchor | undefined): boolean {
   return !repliesToTheSubject(anchor);
+}
+
+// The categories a rep may claim, in the order a first message is usually
+// about. The unset entry is a real OPTION rather than the select's placeholder:
+// a placeholder is only a face for an unset value, and a rep who picked one has
+// to be able to come back to none before sending.
+//
+// The five subject-serving categories are absent, and not by omission — the
+// contract's enum excludes them, because a caller who could claim one could
+// dress marketing as a security warning and reach somebody who has objected.
+// They are the installation's own controller mail and nothing a rep composes.
+export function contextOptions(t: Translator): SelectOption[] {
+  return [
+    { value: "", label: "—" },
+    { value: "requested_followup", label: t("compose.why.requestedFollowup") },
+    { value: "active_deal_followup", label: t("compose.why.activeDeal") },
+    { value: "precontract_quote", label: t("compose.why.quote") },
+    { value: "customer_service", label: t("compose.why.service") },
+    { value: "invoice_or_payment", label: t("compose.why.invoice") },
+    { value: "contract_notice", label: t("compose.why.contract") },
+    { value: "account_notice", label: t("compose.why.account") },
+    { value: "marketing", label: t("compose.why.marketing") },
+  ];
 }

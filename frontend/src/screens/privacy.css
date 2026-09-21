@@ -12,12 +12,8 @@
   flex-wrap: wrap;
 }
 
-.purpose-form-warning {
-  color: var(--textMeta);
-}
-
 .purpose-form-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The queue inside its stacked row: the facet bar, the rows and the pager are
@@ -42,7 +38,7 @@
   flex-direction: column;
 }
 
-/* The summary toggle carries a kind badge, a mono subject reference, a status
+/* The summary toggle carries a kind badge, a subject reference, a status
  * badge, a due date and (sometimes) an overdue badge — five nowrap children in
  * one flex line. Without wrapping, that line has no width it can shrink to: it
  * pushed the card's own scroll width past the viewport on a phone, so the whole
@@ -78,7 +74,7 @@
 }
 
 .dsr-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The typed-ERASE field, one gap-step below the modal's lead paragraph —
@@ -89,9 +85,13 @@
 
 /* A legal hold is a documented, lawful refusal (Art. 17(3)(b)), not a mistake
  * the operator made — and neither is a request that another officer already
- * decided. Both are drawn by `Callout` now, which owns the border, the tint and
- * the padding; the only thing left for this screen to say is where the notice
- * sits relative to the confirm's own lead paragraph. */
+ * decided. Both are drawn by `Callout`, which owns the border, the ink and the
+ * padding; the band is what this screen still owns — where the notices sit
+ * relative to the confirm's own lead paragraph, and the interval between them
+ * when both stand at once. */
 .dsr-refusal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   margin-top: var(--space-3);
 }

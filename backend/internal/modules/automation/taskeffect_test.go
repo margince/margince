@@ -16,7 +16,7 @@ import (
 
 func TestATaskForADisappearedTargetIsSkipped(t *testing.T) {
 	ex := Executors{Provider: &fakeReadProvider{err: apperrors.ErrNotFound}}
-	effect, err := ownedTaskEffect(context.Background(), ex, workflow.Event{}, "Follow up", time.Time{})
+	effect, err := ownedTaskEffect(context.Background(), ex, workflow.Event{}, "Follow up", time.Time{}, nil)
 	var declined declinedFiring
 	if !errors.As(err, &declined) || len(effect.Actions) != 0 {
 		t.Fatalf("stale target planned work: %+v, %v", effect, err)
@@ -29,7 +29,7 @@ func TestAnUnreadableTaskOwnerIsNotTreatedAsUnassigned(t *testing.T) {
 		"malformed record":  {record: datasource.Record{Fields: []byte("not json")}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			effect, err := ownedTaskEffect(context.Background(), Executors{Provider: provider}, workflow.Event{}, "Follow up", time.Time{})
+			effect, err := ownedTaskEffect(context.Background(), Executors{Provider: provider}, workflow.Event{}, "Follow up", time.Time{}, nil)
 			if err == nil || len(effect.Actions) != 0 {
 				t.Fatalf("unreadable owner planned an unassigned task: %+v, %v", effect, err)
 			}

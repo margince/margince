@@ -12,7 +12,7 @@ package gates
 // The class this closes is the reference held across time. A read model, a link
 // row and a graph edge all store somebody else's record id, and the scope was
 // checked when the id was WRITTEN — by which point the deal can be reassigned,
-// the person merged, the org's owner moved teams. The read that hands the id
+// the contact merged, the company's owner moved teams. The read that hands the id
 // back inherits nothing from that write, and the failure is quiet: the caller
 // gets a well-formed answer naming a record whose own read path refuses them.
 //
@@ -48,6 +48,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -58,7 +59,8 @@ import (
 )
 
 const (
-	// composeTier is the subtree this gate judges.
+	// composeTier is the subtree this gate judged first, and still the only one
+	// covered whole.
 	composeTier = "internal/compose"
 
 	// rowScopeVocabularyPkg holds ownerScopedTables — the closed set of tables
@@ -78,19 +80,48 @@ const (
 // record's id without applying that record's row scope. Keyed
 // "package-dir:FuncName", each entry stating what stands in for the clause.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	// --- The module tier, one package at a time (censusedModules). ---
+	//
+	// These are the FIRST kind of read the widening has to tell apart, and the
+	// distinction is the reason this could not be one change: a store that OWNS
+	// its table answers "which of my rows may you see", while a read model
+	// pointing at somebody else's answers "may you still see the thing I am
+	// naming". Every entry below is the first kind, and each says how its own
+	// admission was already made.
+	"internal/modules/commissions:summaryTx":             "the partner totals, grouped under the COMMISSION's own visibility clause (VisibleClause, applied in this statement). A caller admitted to an entry is admitted to what the entry is about, and the partner is what it is about — no company content is read, only the id it groups by. The cost is that a total confirms a partner company exists on a commission the caller may already open",
+	"internal/modules/contracts:ensureLinksShareCompany": "the cross-company guard on a contract WRITE, and scoping it would defeat it. Its own doc says why: the predicate deciding who may READ a contract judges a deal-anchored one by its deal alone, so pairing company A's contract with company B's deal publishes A's agreement to everyone who can see B. The company this cannot see is exactly the one the rule protects, and what leaves the function is a refusal rather than an id",
+	"internal/modules/projects:lockedDealProject":        "the project pointer read off a deal row the caller's transaction ALREADY HOLDS — the win path calls it only after its patch applied, and applying is what took the lock. The caller is past the deal's own write gate to be here, and the pointer is used to attach, never served. The cost is that a deal write learns which project the deal names",
+	"internal/modules/forecasting:SnapshotSide":          "one snapshot's frozen per-deal rows, behind the snapshot's own read gate — reading a snapshot IS reading the forecast, which is what that gate governs. The deal ids are the record of what the workspace expected when it was taken, not a live pointer: scoping them to today's visibility would rewrite history to match the reader. The cost is that a snapshot reader learns which deals were in it, including ones they could not open now",
+	"internal/modules/dealrooms:liveRoomForBuyerWrite":   "a BUYER session's write precondition. Row scope over deals is the seller side's model — it narrows to a seat's own rows — and a buyer holds no seat for it to narrow to. The authority here is the room being live and the capability admitting the write, which this function is entirely about; the deal it names is the room's own subject",
+	"internal/modules/dealrooms:reissueFor":              "the resend, whose authority its own doc states: the participant row IS the authority, and it was found by the address the mail will go to. The deal is that participant's room, so a scope clause would ask whether the SELLER may see a deal on a path that has no seller session at all",
+	"internal/modules/signals:matchCandidates":           "the resolver matching an inbound signal to a company, on the capture path under the system principal — the same ground the edge census ratifies signals/resolver.go on. The company is what the signal is ABOUT, it goes to RecordDerived, and no reader sees it until the signal is served under their own signal row scope. The cost is that resolution reads companies with no per-caller gate",
+
 	// Signal producers. Both run inside signalScanWorkspaceWorker, which binds
 	// PrincipalSystem "agent:signal-scan" before either read (jobs_signals.go),
-	// so there is no human actor for a row scope to narrow to and the org id
+	// so there is no human actor for a row scope to narrow to and the company id
 	// goes to the signal being written rather than to any caller. What a REP may
 	// then see of those signals is decided on the read side, by
 	// auth.SignalScopeClause.
-	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the organization it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
-	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the organization it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
-	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single organization a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
+	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the company it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
+	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
+	"internal/compose:conversationCTE":    "the signal extractor's conversation fold, read by the sweep under the system principal and by the pipeline trace for the message whose ladder is already gated: the single company a thread resolves to is what an extraction is filed against, and the rows go to the model lane or to a rung that names no company",
+
+	// The company rollup's tree walk, found by the aliased-column pass:
+	// `parent_company_id` is an FK to company named for its role, so the
+	// name-derived extractor could not see it at all.
+	//
+	// The reference IS scoped, one call up rather than inside this one. CompanyRollup
+	// takes auth.EnsureVisible on the root in the same transaction, and every
+	// node this walk returns then passes through companyReadablePredicate's
+	// auth.ScopeClauseFor over company — a node the caller cannot read is
+	// pruned before a figure is summed, and a root that fails it answers
+	// ErrNotFound. Scoping the walk itself would ask the same question twice and
+	// lose the tree's shape, which the pruning needs whole.
+	"internal/compose:loadCompanyTree": "the rollup's recursive tree walk, whose parent_company_id reference is bounded by the caller: EnsureVisible on the root in this transaction, then companyReadablePredicate's ScopeClauseFor over every node before any figure is summed",
 
 	// The weekly retrospective's frozen deal lines. The id is served beside a
 	// label written when the review was, and NOTHING live is read: the query
-	// joins no deal, no stage and no organization, so there is no current row
+	// joins no deal, no stage and no company, so there is no current row
 	// for a scope to narrow. Freezing is the point — a past week that changed
 	// when a deal was renamed, archived or deleted would not be a record of
 	// that week. The review itself is already the acting rep's own
@@ -117,25 +148,25 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// seat would SECOND an answer somebody has already given, and a seat the
 	// caller cannot see is still an answer — so scoping it would let the
 	// reading overwrite exactly the seats its author was not allowed to know
-	// about. Nothing leaves the function: no person id, no role, only the
+	// about. Nothing leaves the function: no contact id, no role, only the
 	// decision not to write.
-	"internal/compose/org360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
+	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
-	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
+	"internal/compose:employerOf": "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by
 	// referenceScopeClauses (reportsql.go), which renders
-	// auth.ScopeClauseFor("organization") around every expression the spec
+	// auth.ScopeClauseFor("company") around every expression the spec
 	// declares in referenceScopes, and both of these are declared there. This
 	// gate reads SQL text and cannot follow a clause built from a map at query
 	// time; reportreferencescope_test.go is what holds the declaration honest,
 	// by failing when a company-bearing dimension has no entry.
-	"internal/compose:projectRowDimensions":   "the project report's dimension set: its company expressions are declared in referenceScopes, and referenceScopeClauses wraps each in the organization row scope before the query runs",
+	"internal/compose:projectRowDimensions":   "the project report's dimension set: its company expressions are declared in referenceScopes, and referenceScopeClauses wraps each in the company row scope before the query runs",
 	"internal/compose:projectsByPhaseSpec":    "the same declaration on the projects-by-phase spec, applied the same way at query time",
 	"internal/compose:projectCommitmentsSpec": "the same declaration on the project-commitments spec, applied the same way at query time",
 	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
-	"internal/compose/network:readDealFacts": "the coverage view's deal row: the organization id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
+	"internal/compose/network:readDealFacts": "the coverage view's deal row: the company id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
 
 	// The reply consumer's sender lookup. Scoping it would be the defect, not
 	// the fix: an introduction is between two colleagues, and the contact who
@@ -148,7 +179,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// Nothing escapes: the id chooses which asks to test and never leaves the
 	// consumer. Who may READ the resulting ask is decided on the read side, by
 	// introductions' own requester-or-introducer predicate.
-	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the person id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForPerson on its own terms",
+	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
 })
 
 // rowScopeSpellings are the platform/auth entry points that APPLY a row scope.
@@ -162,7 +193,8 @@ var rowScopeSpellings = map[string]bool{
 	"ScopeClause": true, "ScopeClauseFor": true,
 	"OwnerPredicate": true, "VisiblePredicate": true,
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleForSubjectRights": true,
-	"EnsureLinkTarget": true, "VisibleTo": true, "LinkTargetVisibleClause": true,
+	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
+	"VisibleTo": true, "LinkTargetVisibleClause": true,
 	"ActivityDiscoverClause": true, "ActivityContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
@@ -181,6 +213,19 @@ var rowScopeSpellings = map[string]bool{
 	// includes the row half, while backend/gates/edgereaders_test.go refuses the row
 	// half alone. Neither gate accepts the object half on its own.
 	"EdgeReadScope": true,
+	// The write-authority family, for the same reason EdgeReadScope is here:
+	// each OPENS with a member of the EnsureVisible family and then narrows
+	// further. EnsureWritable calls EnsureVisible, EnsureWritableLive calls
+	// EnsureVisibleLive, and HoldWritableLive is EnsureWritableLive followed by
+	// the subject lock — so a read reaching any of them has applied the row
+	// bound as surely as one calling the visible half directly, and strictly
+	// more besides.
+	//
+	// Their absence was a gap rather than a policy, and it pushed in the wrong
+	// direction: a writer that correctly took the STRONGER probe reported as
+	// unscoped, and the fix a reader would reach for from that message is a
+	// second, weaker call over the same row.
+	"EnsureWritable": true, "EnsureWritableLive": true, "HoldWritableLive": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a
@@ -191,19 +236,71 @@ type referenceSite struct {
 	table         string
 }
 
+// censusedModules are the module packages this census reaches, admitted ONE AT
+// A TIME as their sites are read and ratified.
+//
+// A list, and it is the honest shape for the state this is in rather than a
+// permanent one. `internal/modules` holds 96 sites of this shape, and widening
+// to the tier in one step would mean 96 waivers written in one sitting — a
+// waiver list nobody read is worse than no gate, because it reads as handled.
+// So the roots grow one package at a time, each with its sites actually read,
+// and this slice is the visible measure of how far that has got: what is not in
+// it is not claimed.
+//
+// It is NOT the end state. What the census wants is gatekit.Scope over the whole
+// tier, where a site outside every root FAILS rather than being invisible — a
+// negative sweep is what makes a root a proof instead of a claim. That needs
+// every module ratified first, which is what this list is for getting to.
+//
+// Issue 799 carries the per-module counts, so the next slice can be picked by
+// size rather than by grepping.
+var censusedModules = []string{
+	"internal/modules/commissions",
+	"internal/modules/contracts",
+	"internal/modules/dealrooms",
+	"internal/modules/forecasting",
+	"internal/modules/projects",
+	"internal/modules/signals",
+}
+
 func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
 	t.Parallel()
 	defer unscopedReferenceReads.AssertAllMatched(t)
 
 	tables := rowScopedTables(t)
-	pkgs, sites := referenceSites(t, tables)
+	pkgs, sites := referenceSites(t, referenceVocabulary{
+		tables:  tables,
+		columns: referenceColumns(t, tables),
+		edge:    relationshipEndpointTables(t),
+	})
 	if len(sites) < wantMinimumScopedSites {
 		t.Fatalf("only %d record-reference reads found in %s, want at least %d — the SQL extractor lost its source",
 			len(sites), composeTier, wantMinimumScopedSites)
 	}
+	// PER ROOT, not a total. An aggregate floor cannot see ONE root going dark:
+	// six roots contributing about one site each stay above any floor low enough
+	// not to be brittle, so the root the extractor stopped reading reports PASS —
+	// which is the failure this is here to catch, wearing the shape of the guard
+	// against it.
+	inModules := map[string]int{}
+	for _, site := range sites {
+		for _, root := range censusedModules {
+			if site.dir == root || strings.HasPrefix(site.dir, root+"/") {
+				inModules[root]++
+			}
+		}
+	}
+	for _, root := range censusedModules {
+		if inModules[root] == 0 {
+			t.Errorf("%s is a censused root and the extractor found no record-reference read in it — "+
+				"either its sites were removed, in which case drop the root and its waivers, or the "+
+				"extractor has stopped reading it and this root is being reported clean without being read",
+				root)
+		}
+	}
 
 	for _, site := range sites {
-		if reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, map[string]bool{}) {
+		if reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
 			continue
 		}
 		if unscopedReferenceReads.Waived(t, site.dir+":"+site.fn) {
@@ -330,7 +427,12 @@ func stringConst(expr ast.Expr) (string, bool) {
 // rowScopeFnInfo is what this gate needs about one function: whether its body
 // applies a row scope, and the names it mentions (the resolution edges).
 type rowScopeFnInfo struct {
-	scoped bool
+	// scopes are the tables this function bounds directly, anyTable among them
+	// when a spelling names none. A SET rather than a flag: a function that
+	// probes a deal has not bounded the company it also projects, and
+	// counting probes instead of matching them is what would have read green
+	// over #1876.
+	scopes map[string]bool
 	calls  map[string]bool
 }
 
@@ -351,7 +453,13 @@ func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 			// Two same-named functions the index cannot tell apart at a call
 			// site: union them into a third value rather than folding one into
 			// the other, which would leak this receiver's edges into the next.
-			merged := &rowScopeFnInfo{scoped: pkgLevel.scoped || info.scoped, calls: map[string]bool{}}
+			merged := &rowScopeFnInfo{scopes: map[string]bool{}, calls: map[string]bool{}}
+			for table := range pkgLevel.scopes {
+				merged.scopes[table] = true
+			}
+			for table := range info.scopes {
+				merged.scopes[table] = true
+			}
 			for _, src := range []*rowScopeFnInfo{pkgLevel, info} {
 				for call := range src.calls {
 					merged.calls[call] = true
@@ -367,7 +475,13 @@ func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 
 // reachesRowScope resolves the obligation transitively over same-package calls;
 // seen breaks recursion cycles.
-func reachesRowScope(fns map[string]*rowScopeFnInfo, name string, seen map[string]bool) bool {
+//
+// The obligation is PER TABLE. A read that projects a company satisfies
+// nothing by probing a deal — that is #1876 exactly, and a gate that counted
+// probes would have gone green over it and then certified it, because the
+// obvious way to quiet such a gate is to add a probe over whatever table the
+// function already had in hand.
+func reachesRowScope(fns map[string]*rowScopeFnInfo, name, table string, seen map[string]bool) bool {
 	if seen[name] {
 		return false
 	}
@@ -376,11 +490,11 @@ func reachesRowScope(fns map[string]*rowScopeFnInfo, name string, seen map[strin
 	if !indexed {
 		return false
 	}
-	if info.scoped {
+	if info.scopes[table] || info.scopes[anyTable] {
 		return true
 	}
 	for call := range info.calls {
-		if _, indexed := fns[call]; indexed && reachesRowScope(fns, call, seen) {
+		if _, indexed := fns[call]; indexed && reachesRowScope(fns, call, table, seen) {
 			return true
 		}
 	}
@@ -392,12 +506,24 @@ func reachesRowScope(fns map[string]*rowScopeFnInfo, name string, seen map[strin
 //
 // SQL lives in two places, and both are read. A literal inside a function body
 // attributes to that function directly. A query grown long enough to move to a
-// package-level var (signalextractread.go's dueThreadsQuery is the standing
+// package-level var (signalextractrule.go's dueThreadsQuery is the standing
 // example) attributes to every function that mentions the var's name: leaving
 // declarations unread would let any query walk out of this census by being
 // promoted, which is the quiet narrowing the extractor floor below exists to
 // refuse.
-func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePkg, []referenceSite) {
+func referenceSites(t *testing.T, vocab referenceVocabulary) (map[string]rowScopePkg, []referenceSite) {
+	pkgs, sites := referenceSitesIn(t, composeTier, vocab)
+	for _, root := range censusedModules {
+		morePkgs, moreSites := referenceSitesIn(t, root, vocab)
+		maps.Copy(pkgs, morePkgs)
+		sites = append(sites, moreSites...)
+	}
+	return pkgs, sites
+}
+
+// referenceSitesIn is referenceSites over one named tier, so a second tier can
+// be judged by the same index rather than by a copy of it.
+func referenceSitesIn(t *testing.T, tier string, vocab referenceVocabulary) (map[string]rowScopePkg, []referenceSite) {
 	t.Helper()
 	pkgs := map[string]rowScopePkg{}
 	queryVars := map[string]map[string][]referenceSite{}
@@ -407,14 +533,14 @@ func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePk
 	}
 	var uses []funcUse
 	var sites []referenceSite
-	for _, src := range tierFiles(t, composeTier) {
+	for _, src := range tierFiles(t, tier) {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
 		if pkgs[dir] == nil {
 			pkgs[dir] = rowScopePkg{}
 		}
 		for _, decl := range src.File.Decls {
 			if gen, ok := decl.(*ast.GenDecl); ok {
-				collectQueryVars(gen, tables, dir, src, queryVars)
+				collectQueryVars(gen, vocab, dir, src, queryVars)
 				continue
 			}
 			fn, ok := decl.(*ast.FuncDecl)
@@ -427,14 +553,14 @@ func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePk
 			}
 			info := pkgs[dir][recv][fn.Name.Name]
 			if info == nil {
-				info = &rowScopeFnInfo{calls: map[string]bool{}}
+				info = &rowScopeFnInfo{scopes: map[string]bool{}, calls: map[string]bool{}}
 				pkgs[dir][recv][fn.Name.Name] = info
 			}
 			// Seeded without a line: every site reports the line of the SQL that
 			// holds the reference, which is what a reader has to go and look at.
 			at := referenceSite{dir: dir, recv: recv, fn: fn.Name.Name}
 			idents := map[string]bool{}
-			sites = append(sites, indexFuncBody(fn, info, tables, at, src, idents)...)
+			sites = append(sites, indexFuncBody(fn, info, vocab, at, src, idents)...)
 			uses = append(uses, funcUse{at: at, idents: idents})
 		}
 	}
@@ -455,7 +581,7 @@ func referenceSites(t *testing.T, tables map[string]bool) (map[string]rowScopePk
 // collectQueryVars records the reference sites held by a package-level string
 // declaration — a query var or const, including one assembled by `+`. The line
 // points into the declaration itself, where the SQL is.
-func collectQueryVars(gen *ast.GenDecl, tables map[string]bool, dir string, src tierFile, into map[string]map[string][]referenceSite) {
+func collectQueryVars(gen *ast.GenDecl, vocab referenceVocabulary, dir string, src tierFile, into map[string]map[string][]referenceSite) {
 	if gen.Tok != token.VAR && gen.Tok != token.CONST {
 		return
 	}
@@ -468,7 +594,7 @@ func collectQueryVars(gen *ast.GenDecl, tables map[string]bool, dir string, src 
 		if !holdsLiteral {
 			continue
 		}
-		for _, ref := range referencedTables(sql, tables) {
+		for _, ref := range referencedTables(sql, vocab) {
 			if into[dir] == nil {
 				into[dir] = map[string][]referenceSite{}
 			}
@@ -481,7 +607,7 @@ func collectQueryVars(gen *ast.GenDecl, tables map[string]bool, dir string, src 
 
 // indexFuncBody records one function's row-scope calls and edges, and returns
 // the reference sites its SQL holds.
-func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, tables map[string]bool, at referenceSite, src tierFile, idents map[string]bool) []referenceSite {
+func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, vocab referenceVocabulary, at referenceSite, src tierFile, idents map[string]bool) []referenceSite {
 	var sites []referenceSite
 	// A statement assembled by `+` is read as ONE query, and its parts are not
 	// read again on their own. Half a statement is the shape that reads green
@@ -489,7 +615,7 @@ func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, tables map[string]boo
 	// predicate that bounds it in the last, so each half alone looks unbounded.
 	joined := map[ast.Node]bool{}
 	record := func(sql string, pos token.Pos) {
-		for _, ref := range referencedTables(sql, tables) {
+		for _, ref := range referencedTables(sql, vocab) {
 			site := at
 			site.table, site.line = ref.table, src.Line(pos)+ref.lineOffset
 			sites = append(sites, site)
@@ -510,7 +636,9 @@ func indexFuncBody(fn *ast.FuncDecl, info *rowScopeFnInfo, tables map[string]boo
 			case *ast.SelectorExpr:
 				if pkg, isPkg := fun.X.(*ast.Ident); isPkg && pkg.Name == "auth" {
 					if rowScopeSpellings[fun.Sel.Name] {
-						info.scoped = true
+						for _, table := range vocab.scopedBy(fun.Sel.Name, node.Args) {
+							info.scopes[table] = true
+						}
 					}
 					return true
 				}
@@ -580,19 +708,116 @@ var fkColumn = regexp.MustCompile(`\b(?:[A-Za-z_][\w]*\.)?([a-z_]+)_id\b`)
 // LISTS hand back. The list, not the whole statement: a `<table>_id` in a WHERE
 // or a JOIN condition is how a query NARROWS, and reading those as disclosures
 // would flag the row-scope clauses themselves.
-func referencedTables(sql string, tables map[string]bool) []tableReference {
+// referenceVocabulary is what a reference IS: the row-scoped tables, and the
+// columns that point at one. The two travel together because neither answers
+// the question alone — a column is a reference because of the table it names,
+// and a table is reachable through columns that do not carry its name.
+type referenceVocabulary struct {
+	tables  map[string]bool
+	columns map[string]string
+	// edge is what the endpoint conjunction bounds — the relationship and every
+	// endpoint table it names — read out of platform/auth rather than restated.
+	edge map[string]bool
+}
+
+// scopedBy is the tables one row-scope call bounds.
+func (v referenceVocabulary) scopedBy(spelling string, args []ast.Expr) []string {
+	table := scopedTable(spelling, args)
+	if table != edgeEndpoints {
+		return []string{table}
+	}
+	tables := make([]string, 0, len(v.edge))
+	for endpoint := range v.edge {
+		tables = append(tables, endpoint)
+	}
+	return tables
+}
+
+func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 	projected := projectedBytes(sql)
 	var found []tableReference
 	seen := map[string]bool{}
-	for _, at := range fkColumn.FindAllStringSubmatchIndex(sql, -1) {
-		table := sql[at[2]:at[3]]
-		if !projected[at[0]] || !tables[table] || seen[table] || boundToCallerArgument(sql, table) {
-			continue
+	add := func(table string, at int) {
+		if seen[table] {
+			return
 		}
 		seen[table] = true
-		found = append(found, tableReference{table: table, lineOffset: strings.Count(sql[:at[0]], "\n")})
+		found = append(found, tableReference{table: table, lineOffset: strings.Count(sql[:at], "\n")})
+	}
+	counted := countedBytes(sql)
+	for _, at := range fkColumn.FindAllStringSubmatchIndex(sql, -1) {
+		table := sql[at[2]:at[3]]
+		if !projected[at[0]] || counted[at[0]] || !vocab.tables[table] || boundToCallerArgument(sql, table+"_id") {
+			continue
+		}
+		add(table, at[0])
+	}
+	// The columns the name-derived pass above cannot see: an FK named for its
+	// ROLE. The schema says which table each one points at, so a reference is
+	// found by what it REFERS TO rather than by what it is called.
+	for column, table := range vocab.columns {
+		if column == table+"_id" || !vocab.tables[table] || boundToCallerArgument(sql, column) {
+			continue
+		}
+		at := namedColumn(column).FindStringIndex(sql)
+		if at == nil || !projected[at[0]] || counted[at[0]] {
+			continue
+		}
+		add(table, at[0])
 	}
 	return found
+}
+
+// namedColumn matches one column by name, optionally qualified by an alias.
+// Compiled per call rather than cached: the map is small, this runs once per
+// statement, and a cache keyed by column is a second place for the pattern to
+// be wrong.
+func namedColumn(column string) *regexp.Regexp {
+	return regexp.MustCompile(`\b(?:[A-Za-z_][\w]*\.)?` + column + `\b`)
+}
+
+// countedBytes marks the bytes inside a count(), which hands back a NUMBER.
+//
+// count is the whole list, and one entry is the honest length of it. sum and
+// avg over an id are nonsense nobody writes, while min and max over a uuid
+// return an id — so widening this to "aggregates" would start dropping real
+// references. array_agg and json_agg are the case that proves the rule: they
+// wrap ids and hand every one of them back, so they must stay visible here.
+//
+// It exists because an account's stakeholder TOTAL is deliberately counted past
+// the caller's contact scope — the difference between that total and the visible
+// set is what "contacts you cannot see" means on the coverage card, and a scope
+// clause there would collapse it to zero and report every account complete.
+func countedBytes(sql string) []bool {
+	counted := make([]bool, len(sql)+1)
+	// Both spellings: the tree writes count() lower-case today, and a mask that
+	// saw one of them would report the other's references and be argued with
+	// rather than read.
+	starts := append(keywordOffsets(sql, "count"), keywordOffsets(sql, "COUNT")...)
+	for _, start := range starts {
+		depth, from := 0, -1
+		for i := start; i < len(sql); i++ {
+			switch sql[i] {
+			case '(':
+				if depth == 0 {
+					from = i
+				}
+				depth++
+			case ')':
+				depth--
+				if depth == 0 {
+					for j := from; j <= i; j++ {
+						counted[j] = true
+					}
+					i = len(sql)
+				}
+			}
+			if depth == 0 && from >= 0 {
+				break
+			}
+		}
+	}
+	return counted
 }
 
 // projectedBytes marks which bytes of a statement sit in a SELECT's projection.
@@ -600,7 +825,7 @@ func referencedTables(sql string, tables map[string]bool) []tableReference {
 // It is a two-pass mask because the two are not the same set. A subquery inside
 // a projection is projected — a scalar subselect hands its column back through
 // the outer row — but only up to its OWN from: everything after that is the
-// subquery's own reading, and a correlated `WHERE e.person_id = p.id` there is
+// subquery's own reading, and a correlated `WHERE e.contact_id = p.id` there is
 // a join condition wearing the outer projection's clothes. So: unmask every
 // projection, then re-mask every select's from-onwards region.
 func projectedBytes(sql string) []bool {
@@ -620,12 +845,12 @@ func projectedBytes(sql string) []bool {
 }
 
 // boundToCallerArgument reports whether the statement also FILTERS on the same
-// id column against a query argument — `person_id = ANY($1)`, `deal_id = $2`.
+// id column against a query argument — `contact_id = ANY($1)`, `deal_id = $2`.
 //
 // Such a read answers a subset of the ids it was handed, so it discloses no
 // reference the caller did not already hold; the row scope belongs on the read
 // that produced that list, one level up, and probing again here would be a
-// second enforcement of one rule with its own way of being wrong. org360's
+// second enforcement of one rule with its own way of being wrong. company360's
 // contact sections and network's departure test are both written that way and
 // say so in their own comments.
 //
@@ -633,9 +858,9 @@ func projectedBytes(sql string) []bool {
 // CALLER to have scoped the ids it passes down. What it still catches is what
 // both halves of #632 were — a query that DISCOVERS references, keyed on
 // something other than the referenced record itself.
-func boundToCallerArgument(sql, table string) bool {
+func boundToCallerArgument(sql, column string) bool {
 	return regexp.MustCompile(
-		`\b(?:[A-Za-z_][\w]*\.)?` + table + `_id\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
+		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
 }
 
 // selectSpan locates one SELECT: [from, to) is its projection, and [to, stop)

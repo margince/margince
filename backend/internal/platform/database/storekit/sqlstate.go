@@ -18,6 +18,24 @@ const (
 	pgExclusionViolation  = "23P01"
 	pgQueryCanceled       = "57014"
 	pgLockNotAvailable    = "55P03"
+	pgProgramLimitExceed  = "54000"
+
+	// 0A000 is "the server will not do that", and almost every member of it is
+	// a defect in the statement WE sent — an unsupported clause, a write to a
+	// view with no rule. Nothing branches on the class; the one member a caller
+	// can be told to retry is picked out by IsStaleStatementCache.
+	pgFeatureNotSupported = "0A000"
+
+	// The representation errors: a value the caller supplied is not of the type
+	// the column it was compared against holds. Listed rather than matched on
+	// the whole "22" class, which also carries arithmetic — a division by zero
+	// is a server's sum, not a caller's spelling — and substring faults that
+	// say nothing about the request.
+	pgInvalidTextRepresentation = "22P02"
+	pgNumericValueOutOfRange    = "22003"
+	pgStringDataRightTruncation = "22001"
+	pgInvalidDatetimeFormat     = "22007"
+	pgDatetimeFieldOverflow     = "22008"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -69,8 +87,8 @@ func ForeignKeyViolation(err error) (constraint string, ok bool) {
 //
 // It reads the column off the constraint name by removing the TABLE name
 // Postgres reports alongside it — exactly, not by splitting on underscores.
-// Both halves contain them, so `organization_parent_org_id_fkey` splits as
-// `organization` + `parent_org_id` and no guess at the boundary gets that
+// Both halves contain them, so `company_parent_company_id_fkey` splits as
+// `company` + `parent_company_id` and no guess at the boundary gets that
 // right. A hand-named constraint yields nothing rather than a wrong name.
 func ForeignKeyColumn(err error) (column string, ok bool) {
 	var pgErr *pgconn.PgError
@@ -113,4 +131,80 @@ func CheckViolation(err error) (constraint string, ok bool) {
 func IsQueryCanceled(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgQueryCanceled
+}
+
+// IsProgramLimitExceeded detects a 54000: a value the database accepted as
+// input but cannot store or index at that size.
+//
+// The case that earned it is `activity.search_tsv`, a GENERATED column whose
+// to_tsvector output has a hard 1,048,575-byte ceiling. Output runs about
+// 1.10x input for word-dense text, so a body around 950 KB overflows it —
+// comfortably inside the HTTP chassis's 1 MiB request cap, which means a
+// legal-sized request produced an unexplained server fault.
+//
+// It is a CLASS rather than that one limit, and it is named that way on
+// purpose: 54000 also covers a row too wide for an index and a statement with
+// too many arguments. What every member has in common is the only thing a
+// caller can act on — the value they sent is too large — and none of them is a
+// server fault to retry.
+func IsProgramLimitExceeded(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgProgramLimitExceed
+}
+
+// IsInvalidValueForType detects a value the database could not read as the type
+// it was compared against: a malformed uuid, a number where a numeric column
+// was expected, a date that is not one.
+//
+// It is the caller's spelling, not a server fault. The report engine binds a
+// caller's own `filters` and derivation predicates straight onto typed columns,
+// so `{"stage_id": "not-a-uuid"}` reached the transport as an opaque 500 whose
+// advice was to retry — advice that can never work, since the same text is the
+// same non-uuid forever.
+func IsInvalidValueForType(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	switch pgErr.Code {
+	case pgInvalidTextRepresentation, pgNumericValueOutOfRange,
+		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow:
+		return true
+	default:
+		return false
+	}
+}
+
+// staleStatementCacheRoutine is the backend function that raises the one 0A000
+// a retry clears (plancache.c). The routine travels on the wire beside the
+// SQLSTATE and is a C identifier, so unlike the message it is the same in every
+// lc_messages the server may be running under.
+const staleStatementCacheRoutine = "RevalidateCachedQuery"
+
+// staleStatementCacheMessage is that same refusal read off its English text,
+// for a connection whose routine did not survive the hop — a pooler between us
+// and Postgres relays the fields it chooses to.
+//
+// Matched as well as the routine and never instead of it: missing this error
+// is what costs a caller a false 500, and a 0A000 carrying that sentence is no
+// other fault.
+const staleStatementCacheMessage = "cached plan must not change result type"
+
+// IsStaleStatementCache detects a prepared statement that a schema change
+// invalidated: the connection planned a query against columns a migration has
+// since altered, and Postgres refuses the cached plan rather than answering
+// with the old result shape.
+//
+// It is nobody's input to fix and it is not a fault of the moment it happened
+// in — it is a deployment crossing a live connection, and the very next attempt
+// on that connection re-plans and succeeds. pgx does not absorb it (its own
+// suite asserts the error surfaces), so a caller sees it unless something maps
+// it, which makes it the rare database refusal whose honest advice IS to retry.
+func IsStaleStatementCache(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != pgFeatureNotSupported {
+		return false
+	}
+	return pgErr.Routine == staleStatementCacheRoutine ||
+		strings.Contains(pgErr.Message, staleStatementCacheMessage)
 }

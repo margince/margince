@@ -124,7 +124,7 @@ func (s *Store) SetContract(ctx context.Context, now time.Time, in ContractEdit)
 	// own tables and the seam reads other modules'. Without this a successful
 	// save answers with no capacity at all, which a client reads as "no
 	// calendar composed" moments after a GET told it otherwise.
-	out.Capacity, err = s.capacityFor(ctx, owner, now)
+	out.Capacity, err = s.capacityFor(ctx, owner, out.LocalWeekStart)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -200,9 +200,14 @@ func boundedOptional(field string, value *string) (*string, error) {
 // composed no calendar has an UNKNOWN week ahead, and drawing that as "no
 // meetings booked" would tell a rep their week is free when nothing has looked.
 type Capacity interface {
-	// NextWeek reports how much of the coming week is already committed, for
-	// the given rep, in the installation's reporting zone.
-	NextWeek(ctx context.Context, owner ids.UUID, now time.Time) (Committed, error)
+	// ForWeek reports how much of ONE week is already committed, for the given
+	// rep, in the installation's reporting zone.
+	//
+	// The week is named by the caller rather than derived here, and that is the
+	// whole point: the plan's own local_week_start is the week being planned,
+	// and a seam that computed "next week" for itself described a different
+	// seven days from the ones the plan was stored against.
+	ForWeek(ctx context.Context, owner ids.UUID, weekStart time.Time) (Committed, error)
 }
 
 // Committed is the count behind the capacity line.
@@ -226,19 +231,26 @@ func (s *Store) WithCapacity(c Capacity) *Store {
 	return s
 }
 
-// capacityFor reads next week's load, or reports it unknown.
+// capacityFor reads the load of the week the PLAN is about, or reports it
+// unknown.
+//
+// The week comes from the plan rather than from the clock. Read as "next week"
+// instead, the heading, the stored row and the capacity line answered about
+// three different sets of seven days: a plan created on Tuesday was stored
+// against the current week, called "next week" on the page, and priced against
+// the week after it.
 //
 // An unbound seam answers nil, and every caller must carry that through as
 // absent. This is the one place that decides it, so a surface cannot
 // accidentally substitute a zero.
-func (s *Store) capacityFor(ctx context.Context, owner ids.UUID, now time.Time) (*Committed, error) {
+func (s *Store) capacityFor(ctx context.Context, owner ids.UUID, weekStart time.Time) (*Committed, error) {
 	if s.capacity == nil {
-		//nolint:nilnil // no capacity seam composed means the week ahead is UNKNOWN, which a zero would misreport as free.
+		//nolint:nilnil // no capacity seam composed means the week is UNKNOWN, which a zero would misreport as free.
 		return nil, nil
 	}
-	committed, err := s.capacity.NextWeek(ctx, owner, now)
+	committed, err := s.capacity.ForWeek(ctx, owner, weekStart)
 	if err != nil {
-		return nil, fmt.Errorf("weeklyplan: reading next week's capacity: %w", err)
+		return nil, fmt.Errorf("weeklyplan: reading the planned week's capacity: %w", err)
 	}
 	return &committed, nil
 }

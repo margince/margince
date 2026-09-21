@@ -8,7 +8,7 @@ package attention
 //
 // Split from the other classifiers on the file-length ceiling, and it is the
 // right seam: everything here answers one question the rest do not — whether a
-// decision holds up a person, or is the routine tidying that groups.
+// decision holds up a contact, or is the routine tidying that groups.
 
 import (
 	"time"
@@ -39,7 +39,7 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		item: row,
 		// NOBODY, until somebody takes it. A duplicate pair and a staged
 		// approval are read under the caller's ROW SCOPE — a team-scoped reader
-		// sees their whole team's — so the read is not bound to one person and
+		// sees their whole team's — so the read is not bound to one contact and
 		// "whoever is reading" would be the very inference this field exists to
 		// refuse: it would name a manager as the owner of every pair on their
 		// team, and each rep as the owner of the same pair when they looked.
@@ -88,9 +88,12 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 		return false
 	}
 	switch *item.Kind {
-	case "send_email", "send_account_email", "send_message",
+	// site_lead is deliberately absent: a contact scraped off the company's own
+	// site has nobody outside waiting on the decision, so it is hygiene however
+	// fresh the page is.
+	case "send_email", "send_company_email", "send_message",
 		"book_meeting",
-		"deal_follow_up", "transcript_proposal", "site_lead":
+		"deal_follow_up", "transcript_proposal":
 		return true
 	case kindScheduledSend:
 		// A message the rep already MEANT to send, stopped at send time. The

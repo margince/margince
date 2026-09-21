@@ -22,7 +22,7 @@ export default meta;
 type Story = StoryObj;
 
 const answer = {
-  organization_id: "o-1",
+  company_id: "o-1",
   question: "whats_open",
   generated_at: "2026-06-01T09:00:00Z",
   generated_by: "model",
@@ -34,17 +34,25 @@ const answer = {
   ],
 };
 
+// The panel and every question in it are the agent's, so the head is indigo
+// and the chips are its quiet variant rather than the neutral outline they
+// used to wear. Both themes: the tint stays put on dark and its ink lifts.
 export const Default: Story = {
   render: () => {
     installFetchStub({
-      "POST /organizations/o-1/ask": () => jsonResponse(answer),
+      "POST /companies/o-1/ask": () => jsonResponse(answer),
     });
     return (
       <StoryProviders>
         <div style={{ maxWidth: 640 }}>
-          <AssistantPanel orgId="o-1" enabled onOpenRecord={() => {}} />
+          <AssistantPanel companyId="o-1" onOpenRecord={() => {}} />
         </div>
       </StoryProviders>
     );
   },
+};
+
+export const DefaultDark: Story = {
+  ...Default,
+  globals: { theme: "dark" },
 };

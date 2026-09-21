@@ -50,7 +50,7 @@ const READ_DISABLED: Capabilities = {
 // human provenance (typed once and never revisited), others site_read (the
 // confirmed refresh left its source URL behind so a reviewer can re-check it).
 const POPULATED_PROFILE: CompanyProfile = {
-  organization_id: "o-1",
+  company_id: "o-1",
   display_name: "Nordlicht Logistics GmbH",
   website: "nordlicht-logistics.example",
   legal_name: "Nordlicht Logistics GmbH",
@@ -103,7 +103,7 @@ const POPULATED_PROFILE: CompanyProfile = {
 // badges, every optional group blank. This is what a brand-new workspace's
 // card looks like the first time a reviewer opens Settings.
 const EMPTY_PROFILE: CompanyProfile = {
-  organization_id: "o-2",
+  company_id: "o-2",
   display_name: "Havbris AS",
   offer_summary: "Coastal ferry maintenance contracts.",
   icp: "Municipal ferry operators in the Norwegian fjords.",
@@ -162,7 +162,7 @@ export const ManualSetupSaveFailed: Story = {
 // the company is one standing record, and every story here opens on a workspace
 // that already has it, so nothing on these screens ever mints one. The read sits
 // beside it because that is the grant the settings entry leading here opens on.
-const EDITOR = { organization: ["read", "update"] } as const;
+const EDITOR = { company: ["read", "update"] } as const;
 
 function Card() {
   return (
@@ -244,14 +244,14 @@ export const CapabilityDenied: Story = {
 // profile never had), `machine_change` (the site now disagrees with a
 // site_read-sourced field, so no human ever asserted the old value),
 // `human_conflict` (the site disagrees with a HUMAN-sourced field, which
-// only a person may resolve), and `unchanged` (confirms the read actually
+// only a contact may resolve), and `unchanged` (confirms the read actually
 // looked, not just proposed). The pending resolution on the conflict row is
 // what keeps "Apply selected changes" disabled: the honest state for a read
 // nobody has finished reviewing yet.
 const REVIEW_READ: SiteRead = {
   id: "sr-1",
   target_kind: "onboarding",
-  organization_id: "o-1",
+  company_id: "o-1",
   root_url: "https://nordlicht-logistics.example",
   status: "ready",
   status_code: null,
@@ -290,7 +290,7 @@ const REVIEW_READ: SiteRead = {
       field: "employee_range",
       value: "51-200",
       value_key: "fact/employee_range",
-      evidence_snippet: "Our team of over 120 people spans three ports.",
+      evidence_snippet: "Our team of over 120 contacts spans three ports.",
       evidence_url: "https://nordlicht-logistics.example/about",
       confidence: 0.82,
     },
@@ -332,7 +332,7 @@ const REVIEW_READ: SiteRead = {
       proposed_value: "Nordlicht Logistics GmbH",
     },
   ],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,

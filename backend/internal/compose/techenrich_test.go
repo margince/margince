@@ -7,11 +7,12 @@ import (
 	"context"
 	"errors"
 	"net"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -79,12 +80,12 @@ func newRecordingCache() *recordingCache {
 	return &recordingCache{stored: map[string][]string{}}
 }
 
-func (c *recordingCache) LookupTechnical(_ context.Context, query, kind string) (people.CachedLookup, bool, error) {
+func (c *recordingCache) LookupTechnical(_ context.Context, query, kind string) (contacts.CachedLookup, bool, error) {
 	answer, hit := c.stored[kind+"|"+query]
-	return people.CachedLookup{Answer: answer, Found: len(answer) > 0}, hit, nil
+	return contacts.CachedLookup{Answer: answer, Found: len(answer) > 0}, hit, nil
 }
 
-func (c *recordingCache) RememberTechnical(_ context.Context, query, kind string, answer people.CachedLookup) error {
+func (c *recordingCache) RememberTechnical(_ context.Context, query, kind string, answer contacts.CachedLookup) error {
 	c.stored[kind+"|"+query] = answer.Answer
 	return nil
 }
@@ -113,7 +114,7 @@ func TestReadGathersEveryLane(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	got, outcomes := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
+	got, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
 
 	// TWO, not three: the homepage lane belongs to the site read now, which
 	// matches every page it crawled rather than fetching one here.
@@ -124,11 +125,11 @@ func TestReadGathersEveryLane(t *testing.T) {
 		t.Errorf("stamped %s, want the injected clock's %s", got.ObservedAt, observedAt)
 	}
 	for _, want := range []struct{ field, key string }{
-		{people.FactMailProvider, "microsoft365"},
-		{people.FactEmailSecurity, "dmarc_reject"},
-		{people.FactHostingProvider, "hetzner"},
-		{people.FactOperatedService, "webshop"},
-		{people.FactOperatedService, "careers"},
+		{contacts.FactMailProvider, "microsoft365"},
+		{contacts.FactEmailSecurity, "dmarc_reject"},
+		{contacts.FactHostingProvider, "hetzner"},
+		{contacts.FactOperatedService, "webshop"},
+		{contacts.FactOperatedService, "careers"},
 	} {
 		if !observed(got, want.field, want.key) {
 			t.Errorf("did not read %s=%s; read %v", want.field, want.key, got.Observations)
@@ -152,10 +153,10 @@ func TestACertificateLogOutageCompletesNoLane(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	got, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
+	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
 
 	for _, lane := range got.Completed {
-		if lane == people.LaneCertLog {
+		if lane == contacts.LaneCertLog {
 			t.Fatal("the certificate lane completed on a query that failed; its rows would be wiped")
 		}
 	}
@@ -172,10 +173,33 @@ func TestAnAbsentReaderCompletesNoLane(t *testing.T) {
 	t.Parallel()
 	enricher := NewTechnicalEnricher(nil, nil, newRecordingCache(), fixedClock())
 
-	got, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
+	got, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
 
 	if len(got.Completed) != 0 {
 		t.Errorf("completed %v with nothing wired", got.Completed)
+	}
+}
+
+// enricherLanes is a second spelling of the lanes Read asks — it exists so a
+// deployment with no enricher can record an outcome per lane without an engine
+// to ask. Two spellings of one list drift, so this is what holds them equal: a
+// lane added to Read and not to the list would leave the ledger silent about it.
+func TestReadAnswersForExactlyTheDeclaredLanes(t *testing.T) {
+	t.Parallel()
+	enricher := NewTechnicalEnricher(
+		stubResolver{mx: []dnsread.MXHost{{Host: "aspmx.l.google.com"}}},
+		stubCertLog{hostnames: []string{"shop.example.de"}},
+		newRecordingCache(), fixedClock(),
+	)
+
+	_, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+
+	asked := make([]contacts.TechnicalLane, 0, len(outcomes))
+	for _, outcome := range outcomes {
+		asked = append(asked, outcome.Lane)
+	}
+	if !slices.Equal(asked, enricherLanes) {
+		t.Errorf("Read answers for %v, enricherLanes says %v", asked, enricherLanes)
 	}
 }
 
@@ -187,7 +211,7 @@ func TestAnEmptyDomainAsksNobody(t *testing.T) {
 		newRecordingCache(), fixedClock(),
 	)
 
-	got, outcomes := enricher.Read(context.Background(), ids.OrganizationID{}, "   ")
+	got, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "   ")
 
 	if len(got.Completed) != 0 || len(outcomes) != 0 {
 		t.Errorf("looked something up for a record carrying no domain: %v", got)
@@ -209,7 +233,7 @@ func TestTheCacheNeverHoldsARawCertificateHostname(t *testing.T) {
 		cache, fixedClock(),
 	)
 
-	enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
+	enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
 
 	stored := cache.everythingStored()
 	for _, personal := range []string{"jan", "mueller", "anna", "schmidt"} {
@@ -228,13 +252,13 @@ func TestASecondReadIsAnsweredFromTheCache(t *testing.T) {
 	counting := &countingCertLog{inner: stubCertLog{hostnames: []string{"shop.example.de"}}}
 	enricher := NewTechnicalEnricher(stubResolver{}, counting, cache, fixedClock())
 
-	enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
-	second, _ := enricher.Read(context.Background(), ids.OrganizationID{}, "example.de")
+	enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+	second, _ := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
 
 	if counting.calls != 1 {
 		t.Errorf("asked the certificate log %d times for one domain, want 1", counting.calls)
 	}
-	if !observed(second, people.FactOperatedService, "webshop") {
+	if !observed(second, contacts.FactOperatedService, "webshop") {
 		t.Error("the cached read lost the service the first read found")
 	}
 }
@@ -249,7 +273,7 @@ func (c *countingCertLog) Hostnames(ctx context.Context, domain string) ([]strin
 	return c.inner.Hostnames(ctx, domain)
 }
 
-func observed(in people.TechnicalEnrichment, field, key string) bool {
+func observed(in contacts.TechnicalEnrichment, field, key string) bool {
 	for _, observation := range in.Observations {
 		if observation.Field == field && observation.ValueKey == key {
 			return true

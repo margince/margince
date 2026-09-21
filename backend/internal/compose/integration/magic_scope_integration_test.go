@@ -29,7 +29,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -84,7 +87,7 @@ func TestASeatThatCannotReadDealsSeesNoMachineActionOnOne(t *testing.T) {
 
 	// The same rep, one grant fewer.
 	noDeals := RepPerms
-	noDeals.Objects = map[string]principal.ObjectGrant{"person": {Read: true}}
+	noDeals.Objects = map[string]principal.ObjectGrant{"contact": {Read: true}}
 	svc := magic.NewService(e.Pool, nil, time.Now)
 	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, noDeals), &since, 20)
 	if err != nil {
@@ -200,7 +203,7 @@ func seedMachineAction(
 
 // AN ERASED RECORD'S PRE-SCRUB IMAGES STAY BURIED.
 //
-// audit_log is append-only, so a person erased under Art. 17 or anonymized by
+// audit_log is append-only, so a contact erased under Art. 17 or anonymized by
 // retention keeps every image written before the scrub — with their real name,
 // email and phone still in it. The record row survives too: anonymize works IN
 // PLACE and archives rather than deletes, so it still satisfies the scope clause
@@ -215,39 +218,39 @@ func TestAnErasedRecordsImagesAreNotRepublishedByTheReceipt(t *testing.T) {
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-			VALUES ($1, $2, 'Dana Buyer', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Dana Buyer', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
 		}
-		// A machine updated them while they were still a person.
+		// A machine updated them while they were still a contact.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'person', $1,
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1,
 			        '{"full_name":"D. Buyer"}', '{"full_name":"Dana Buyer"}', now() - interval '10 minutes')`,
-			person); err != nil {
+			contact); err != nil {
 			return err
 		}
 		// And then they were erased. The scrub is AFTER the row above.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('human', 'human:dpo', 'erase', 'person', $1, now() - interval '1 minute')`, person)
+			VALUES ('human', 'human:dpo', 'erase', 'contact', $1, now() - interval '1 minute')`, contact)
 		return err
 	})
 	if err != nil {
-		t.Fatalf("seeding the erased person: %v", err)
+		t.Fatalf("seeding the erased contact: %v", err)
 	}
 
 	svc := magic.NewService(e.Pool, nil, time.Now)
-	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &since, 20)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, contactRepPerms()), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
 	}
 
 	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
-			t.Fatalf("an erased person's pre-scrub image came back on the receipt: %+v", line)
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == contact {
+			t.Fatalf("an erased contact's pre-scrub image came back on the receipt: %+v", line)
 		}
 	}
 }
@@ -259,30 +262,30 @@ func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-			VALUES ($1, $2, 'Ines Bauer', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Ines Bauer', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'person', $1, now() - interval '10 minutes')`, person)
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1, now() - interval '10 minutes')`, contact)
 		return err
 	})
 	if err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
 
 	svc := magic.NewService(e.Pool, nil, time.Now)
-	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &since, 20)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, contactRepPerms()), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
 	}
 
 	var found bool
 	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == contact {
 			found = true
 		}
 	}
@@ -301,16 +304,16 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 	ctx := context.Background()
 	ancient := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-			VALUES ($1, $2, 'Long ago', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Long ago', 'manual', 'human:x')`, contact, e.Rep1); err != nil {
 			return err
 		}
 		// Older than any floor this surface would accept.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'person', $1, now() - interval '200 days')`, person)
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1, now() - interval '200 days')`, contact)
 		return err
 	})
 	if err != nil {
@@ -318,7 +321,7 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 	}
 
 	svc := magic.NewService(e.Pool, nil, time.Now)
-	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &ancient, 20)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, contactRepPerms()), &ancient, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)
 	}
@@ -329,14 +332,112 @@ func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
 			receipt.Since)
 	}
 	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == contact {
 			t.Fatal("an action from 200 days ago reached a morning receipt")
 		}
 	}
 }
 
-// personRepPerms is a rep who reads people. RepPerms already does; this names
+// contactRepPerms is a rep who reads contacts. RepPerms already does; this names
 // the grant the cases above depend on rather than leaving it implied.
-func personRepPerms() principal.Permissions {
+func contactRepPerms() principal.Permissions {
 	return RepPerms
+}
+
+// judgeStub answers the undo question without the real evaluator behind it.
+//
+// The wiring is what this proves — that a bound judge's answer reaches the line
+// — not the evaluator's judgment, which has its own suite. A stub keeps the two
+// questions apart: a failure here means the seam is unbound or the answer is
+// dropped, never that some refusal rule moved.
+type judgeStub struct {
+	undoable bool
+	reason   string
+	asked    int
+}
+
+func (j *judgeStub) JudgeUndoPage(
+	_ context.Context, _ pgx.Tx, subjects []magic.UndoSubject,
+) (map[ids.UUID]*crmcontracts.MagicUndo, error) {
+	out := make(map[ids.UUID]*crmcontracts.MagicUndo, len(subjects))
+	for _, subject := range subjects {
+		j.asked++
+		if j.undoable {
+			id := openapi_types.UUID(subject.AuditID)
+			out[subject.AuditID] = &crmcontracts.MagicUndo{Undoable: true, AuditId: &id}
+			continue
+		}
+		reason := j.reason
+		out[subject.AuditID] = &crmcontracts.MagicUndo{Undoable: false, Reason: &reason}
+	}
+	return out, nil
+}
+
+// The done lane used to hardcode Undoable: false on every row, which was true
+// by accident — no path could reverse a sweep's correction, so a blanket no was
+// not wrong. It is wrong now that corrections carry their own undo, and a
+// receipt that says "the machine changed your deal" while greying out the only
+// control answering that is worse than one that never mentioned the change.
+func TestTheReceiptAsksWhetherEachChangeCanBeTakenBack(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	judge := &judgeStub{undoable: true}
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).
+		WithUndoJudge(judge).Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	if len(receipt.Done) == 0 {
+		t.Fatal("the seeded machine action did not reach the done lane")
+	}
+	if judge.asked != len(receipt.Done) {
+		t.Errorf("judged %d lines of %d — every drawn line is asked", judge.asked, len(receipt.Done))
+	}
+	line := receipt.Done[0]
+	if line.Undo == nil || !line.Undo.Undoable {
+		t.Fatalf("undo = %+v, want undoable", line.Undo)
+	}
+	// A client draws the control from audit_id; one without it has nothing to
+	// send, which is the state the contract's own comment forbids.
+	if line.Undo.AuditId == nil {
+		t.Error("an undoable line carries no audit id for the control to name")
+	}
+
+	// A refusal carries its reason rather than a blank: the reason is what the
+	// client renders beside the greyed control.
+	refusing := &judgeStub{undoable: false, reason: "record_archived"}
+	refused, err := magic.NewService(e.Pool, nil, time.Now).
+		WithUndoJudge(refusing).Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := refused.Done[0].Undo
+	if got == nil || got.Undoable || got.Reason == nil || *got.Reason != "record_archived" {
+		t.Errorf("refused undo = %+v, want undoable=false carrying the reason", got)
+	}
+	if got != nil && got.AuditId != nil {
+		t.Error("a refused line carries an audit id, so a client could draw a control that only fails")
+	}
+}
+
+// An installation that has not wired the judge says so, rather than reading as
+// "this cannot be undone" — the product did not look, which is a different
+// thing and must not be presented as the same.
+func TestAnUnwiredUndoJudgeSaysItDidNotLook(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+	receipt, err := magic.NewService(e.Pool, nil, time.Now).Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	undo := receipt.Done[0].Undo
+	if undo == nil || undo.Undoable || undo.Reason == nil || *undo.Reason != "undo_not_evaluated" {
+		t.Errorf("unwired undo = %+v, want a stated not-evaluated reason", undo)
+	}
 }

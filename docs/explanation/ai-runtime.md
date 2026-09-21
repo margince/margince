@@ -121,7 +121,7 @@ Per task:
 | `company_context.scopes` | any of `identity`, `positioning`, `sales`, `offer`, `market`, `proof`, `administrative` | which bounded views of the company profile may be injected. That declaration order is also the wire and fingerprint order, so re-ordering a selection cannot make it hash differently. |
 | `company_context.token_budget` | positive int | what the renderer bounds the block by. Required with any scope — at zero the scopes would ride no prompt — and refused without one, since a budget attached to a policy that selects nothing reads as a deleted scope list. |
 | `company_context.conditional` | `true` (or absent) | inject only when the caller asks, rather than always. |
-| `cost_unit` | rule name, or absent | which pre-flight estimator rule prices this task (`per_message`, `per_person`; `per_entity` for embed). The arithmetic stays in code — naming the rule here is what lets the build prove the mapping is **total** in both directions. Absent means unpriced. |
+| `cost_unit` | rule name, or absent | which pre-flight estimator rule prices this task (`per_message`, `per_contact`; `per_entity` for embed). The arithmetic stays in code — naming the rule here is what lets the build prove the mapping is **total** in both directions. Absent means unpriced. |
 | `doc` | string | carried through into the generated constant's comment. Prose only: nothing may depend on it. |
 
 `make gen` compiles this into `tasks_gen.go` (and the routing shape in `config/margince.schema.json`);
@@ -191,12 +191,143 @@ or pinning a premium Sonnet, never touches code — see
 [connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md)
 and [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md).
 
+## The monthly budget — allowance, deferral, and resume
+
+The budget every call is metered against is itself an admin-configurable
+**setting** (`ai.budget`, `BudgetConfig` in
+`internal/modules/ai/budgetsettings.go`), read the same way as the routing
+binding above — from the database, by every serving role, no restart needed.
+
+```json
+{"tokens_per_full_user": 12000000, "company_monthly_tokens": null}
+```
+
+**Mode 1 — `tokens_per_full_user` × active full users (the default).** The pool
+scales with headcount instead of needing a manual bump on every hire. With no
+eligible user the calculation floors at one.
+
+- *Growing startup*: 20 reps today, hiring 10 more next quarter — the budget
+  grows itself as seats get added, nobody has to remember to bump a number.
+- *Seasonal contractors*: 15 temp reps added for a busy season, deactivated
+  after — the pool expands and contracts with who's actually active, so
+  nobody overpays for AI capacity during the quiet months.
+- *"Fair use" mental model*: leadership wants AI spend to feel proportional —
+  "each seat gets roughly the same allowance" — rather than one shared,
+  unexplained number.
+
+**Mode 2 — `company_monthly_tokens` (a fixed override, headcount-independent).**
+When set, it overrides the calculation outright without discarding the
+per-user value underneath it — clearing it restores what was there before, so
+this is a toggle with memory, not a one-way migration.
+
+- *Finance wants a hard ceiling*: "at most N tokens this month, period" —
+  regardless of whether the team has 5 seats or 50. (Cost is priced read-side,
+  never the gate itself — see Cost, below — so the ceiling is always named in
+  tokens, never dollars.) A fixed total is a budget line item, not a per-seat
+  formula finance has to recompute.
+- *Cost control after a spike*: usage got surprisingly high one month; an
+  admin caps it at a fixed number while investigating, without discarding the
+  per-user rate that was working before.
+- *Small team, heavy AI users*: a 3-seat team running lots of automated
+  scans/voice builds gets a tiny pool under Mode 1 (3 × the per-user rate); a
+  fixed total lets them size the budget to actual usage instead of headcount.
+- *Enterprise contract terms*: a customer's contract names a flat monthly
+  AI-usage cap independent of seats — the fixed total maps directly to that.
+
+Both figures, and their **product**, are bounded by `MaxMonthlyTokens` (10^12).
+The bound on the product is enforced by *refusing*, not clamping: a per-user
+rate that is individually valid can still make `MonthlyTokens` error once
+enough full users exist, and every read this budget gates — including the read
+`ReplaceBudget` itself needs before it can accept a correction — errors with
+it. This is the same "honest gap, not a silent clamp" posture the rate table
+takes with an unpriced call (below, under Cost).
+
+**Bands** — `BudgetBand(spent, monthly)` in `usage.go` — turn spend into one of
+three postures with ONE set of thresholds shared by every consumer that asks
+"how are we doing" (the routing ladder, the admin status screen, the
+cost-estimate preview): `normal` (under 80%), `degraded` (80% up to 100%, an
+`on_budget_exhausted: degrade` task falls to a cheaper rung), `queued` (100% or
+over, or the budget itself is non-positive — misconfiguration fails closed,
+never open). Before saving a change, an admin can **preview** a candidate
+`BudgetConfig` or routing edit against live spend; the preview and the save
+share `Revision()`, a hash of the canonical config, so a save is refused if the
+stored configuration drifted since the preview was drawn — someone else saved
+first — rather than silently overwriting it.
+
+**A queued background task doesn't vanish — it becomes a durable, resumable
+carrier.** Three kinds exist today: a website read (`site_read`), a company
+scan (`company_scan`), and a Voice-DNA build (`voice_build`) — the table each
+lives in; the queue job kind that resumes it is spelled differently for the
+first two (`site_deep_read`, `account_scan`) and identically for the third
+(`voice_build`). Each carrier has its own "budget-deferred" predicate
+(`contacts.BudgetDeferredSiteReads`, `companyscan.BudgetDeferredScans`,
+`ai.BudgetDeferredVoiceBuilds`), and its count is what Settings → AI's
+waiting-work list shows — gated on `ai_diagnostics:read`, separate from the
+`ai_budget:read` needed to see the allowance itself, so a budget-only editor
+can preview an allowance change without gaining an `ai_diagnostics` or
+`ai_routing` grant.
+
+A fleet-wide job, `ai_budget_resume` (`compose/jobs_aibudget.go`), runs once a
+minute per workspace, on worker start, and immediately whenever the budget
+setting is saved (`ai_budget.updated`) — so raising the allowance resumes
+eligible work right away rather than after up to a minute's wait:
+
+```
+ on tick / worker start / ai_budget.updated, per workspace
+   │
+   ▼
+ spend still at BandQueued? ──yes──▶ do nothing, try again next trigger
+   │ no
+   ▼
+ for each deferred carrier (site read / company scan / voice build):
+   1. re-derive the requester from the carrier row itself — a human
+      requester for any carrier; a site read alone may instead carry
+      the capture pipeline's own "system:capture_auto_enrich" identity
+   2. re-check a HUMAN requester's authority NOW (a revoked or
+      deactivated one stays parked; restoring their access is what
+      makes it eligible on a later pass) — the auto-enrich case has no
+      human grant to revoke, so this step is a no-op for it
+   3. lock the underlying queue job. For a site read or company scan,
+      refuse one that is missing, already terminal, or has exhausted
+      its own attempt limit. A voice build differs: only an ACTIVE
+      original goes through that same refusal check — a missing or
+      terminal one instead gets a FRESH job inserted in its place,
+      starting its own attempt count
+   4. put it back on its queue — same requester, same attempt count
+      (except the voice-build fresh-insert case above)
+```
+
+`ResumeScheduledTx` (`platform/jobs/resume.go`) is what steps 3–4 mostly run
+against: it locks the `river_job` row `FOR UPDATE`, no-ops if it is already
+`running`, and returns an error rather than reviving a job whose `attempt` has
+already reached `max_attempts`. A resumed job spends one ordinary River
+attempt like any other retry — recovery grants no extra attempts for having
+waited, except where a voice build's original job is gone and a fresh one
+starts instead.
+
+**The one honest gap:** a site read's requester is re-derived by *identity*,
+not by a general rule — the sweep recognizes a human requester or exactly one
+named system actor (`system:capture_auto_enrich`); company scans and voice
+builds recognize a human requester only. A site read started under a
+*different* system identity — a domain-triage read is the one that exists
+today — has no requester the sweep can resolve, so it fails loudly
+(`"requester cannot be resolved"`) instead of parking quietly. Wiring a new
+system-triggered path into any resumable carrier without teaching the sweep
+its identity reproduces this every tick, for as long
+as one such carrier sits deferred.
+
+RBAC: allowance read/update is its own object, `ai_budget` (`admin` and `ops`
+can update it, `management` can read it, nobody else sees it) — separate from
+`ai_diagnostics` (waiting-work counts, unused-tier detection) and `ai_routing`
+(the provider binding itself), so a custom role can hold any subset of the
+three. Full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
+
 ## The one gate — `ai.Router`
 
 Every call converges on the Router (`internal/modules/ai`). In one pass it:
 
-- **meters** the workspace's monthly model budget — derived from seat count —
-  (and applies `execution_mode` + `on_budget_exhausted` when spent);
+- **meters** the workspace's monthly model budget (above) and applies
+  `execution_mode` + `on_budget_exhausted` when spent;
 - **injects company context** where the task's policy asks for it (below);
 - **strips secrets** from the prompt before the request leaves the process, and
   again from anything it records;
@@ -294,9 +425,9 @@ model-call hot path.
     else its own tier's current binding (so a rebind re-prices instantly), else
     the ladder head if that tier is now unbound.
   - **Expected units** come from the connection's completed backfill yields:
-    messages to classify, people to enrich, entities to embed. A run measures its
+    messages to classify, contacts to enrich, entities to embed. A run measures its
     own yield as it pages — the counterparty resolver reports whether an ensure
-    *minted* a person/organization or merely resolved onto rows that already
+    *minted* a contact/company or merely resolved onto rows that already
     existed, and those counts commit in the same statement as `scanned`/`captured`,
     so a page that fails to commit counts nothing.
   - **When there's nothing to price from, the preview says so instead of
@@ -306,12 +437,12 @@ model-call hot path.
     cost-read failure degrades it to a plain message count — never a block on the
     consent flow.
 
-  *(Two deliberate under-counts. The people/org yields count only what a run's own
+  *(Two deliberate under-counts. The contacts/company yields count only what a run's own
   pages minted: a sender the tier gate defers is resolved by the verdict engine
-  long after that page, and the person it may eventually mint is nobody's page to
+  long after that page, and the contact it may eventually mint is nobody's page to
   claim. So a run that minted nobody reports "ratio unavailable" rather than zero
-  people, floating the enrich line to its `heuristic` floor instead of quoting a
-  confident $0. And the cold-start floor counts message embeds only: person/org
+  contacts, floating the enrich line to its `heuristic` floor instead of quoting a
+  confident $0. And the cold-start floor counts message embeds only: contact/company
   embeds would over-quote at its full-email unit size.)*
 
 ## Certification — proving a binding is good enough
@@ -425,7 +556,9 @@ writing the case that certifies one:
 | Cost rates | `ai_model_rate` (per provider/model, effective-dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |
 | Pre-flight estimate | `internal/compose/costestimate` (backfill preview `estimated_cost_minor` + `estimate_quality`) |
+| Monthly budget setting | `ai.budget` — `BudgetConfig` (`internal/modules/ai/budgetsettings.go`); RBAC object `ai_budget` |
 | Budget deferral | `BudgetDeferralError` / `ErrBudgetDeferred` (`internal/modules/ai/budget.go`) |
+| Deferred carriers & resume | `site_read` / `company_scan` / `voice_build`, each with a `BudgetDeferred*` predicate; resumed by the fleet-wide `ai_budget_resume` job (`internal/compose/jobs_aibudget.go`) via `ResumeScheduledTx` (`internal/platform/jobs/resume.go`) |
 | Company context | `companycontextprompt.go` (compose) · rollout switch `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
 | Boot/ops surface | `/readyz` AI state; per-task unbound-ladder boot warnings |
 | Certification | `internal/compose/aicert` — `make e2e-ai`, `make e2e-ai-report` |
@@ -433,6 +566,8 @@ writing the case that certifies one:
 **Related:** [agent-surface.md](agent-surface.md) (what agents do with a call) ·
 [ai-activity-rail.md](ai-activity-rail.md) (how a call reaches the rail a rep watches) ·
 [authorization.md](authorization.md) (the admission gate) ·
+[handbook/settings.md](../handbook/settings.md) (the admin-facing Monthly AI
+allowance page) ·
 [how-to/connect-a-cloud-model-provider.md](../how-to/connect-a-cloud-model-provider.md) ·
 [how-to/enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md) ·
 [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md) ·

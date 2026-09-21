@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // One mark for who may read a thing. What these hold is the claim the mark
 // makes to a reader: the word is exact, the look says the SHAPE of the audience
@@ -31,6 +31,7 @@ function draw(node: ReactNode) {
 describe("VisibilityBadge", () => {
   it.each<[Visibility, string, string]>([
     ["team", "Team", "visibility-open"],
+    ["workspace", "Shared", "visibility-open"],
     ["participants", "Participants", "visibility-limited"],
     ["selected", "Selected", "visibility-limited"],
     ["private", "Only you", "visibility-limited"],
@@ -40,7 +41,7 @@ describe("VisibilityBadge", () => {
     // The word is the exact one, so a row and the drawer cannot disagree
     // about what to call the same message.
     expect(screen.getByText(word)).toBeInTheDocument();
-    // Three looks for five states: every limit is drawn the same heavier way,
+    // Three looks for six states: every limit is drawn the same heavier way,
     // because the exception in a list is what a reader scans for.
     expect(container.querySelector(".visibility")?.className).toContain(look);
   });

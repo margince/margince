@@ -23,7 +23,7 @@ import (
 
 // asAgent is the caller a step-up is ALWAYS staged by: an agent asserting a
 // passport, acting for the human whose authority it borrows. That human is what
-// the staging stamps as on_behalf_of, and it is the only person who can decide
+// the staging stamps as on_behalf_of, and it is the only contact who can decide
 // the question — staging as a human instead leaves the row with no lender and
 // nobody able to answer it, which is a property the unit suite asserts.
 func (e *stagingEnv) asAgent(t *testing.T) context.Context {

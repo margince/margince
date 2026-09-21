@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
@@ -91,8 +90,8 @@ func moved[T comparable](current, supplied *T) bool {
 }
 
 // dealUpdatePatch folds the caller's sparse update onto the current row
-// as a field patch. Re-pointing the deal at an organization (or partner
-// organization) is a read of that record, so each link target must be
+// as a field patch. Re-pointing the deal at a company (or partner
+// company) is a read of that record, so each link target must be
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
@@ -123,9 +122,44 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if moved(current.Currency, in.Currency) {
 		p.Set(currencyField, current.Currency, *in.Currency)
 	}
+	// ARR moves the forecast the same way the one-off amount does, so it is
+	// assigned under the same "only where it actually moved" rule.
+	if moved(current.ExpectedArrMinor, in.ExpectedArrMinor) {
+		p.Set(arrField, current.ExpectedArrMinor, *in.ExpectedArrMinor)
+	}
 	if err := applyDealLinkPatches(ctx, tx, current, in, p, clearPartner,
 		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
 		return nil, err
+	}
+	if in.Description != nil {
+		p.Set("description", current.Description, *in.Description)
+	}
+	if in.CommercialMotion != nil {
+		p.Set(filterCommercialMotion, motionOf(current), *in.CommercialMotion)
+	}
+	if in.Priority != nil {
+		p.Set(filterPriority, priorityOf(current), *in.Priority)
+	}
+	if in.AcquisitionSource != nil {
+		// Checked against the catalog HERE rather than at the handler, because
+		// only the patch knows the deal's current value — and the rule is about
+		// the change, not the value: a retired key a deal already holds survives
+		// an unrelated edit, and the same key cannot be newly chosen.
+		//
+		// The deal row is locked FIRST, and the current value re-read under that
+		// lock. `current` was read without one, so between that read and this
+		// check another transaction can clear or replace the source — and the
+		// "it already holds this key" exemption would then re-assign a retired
+		// key nobody is allowed to choose any more. Deal before catalog, which
+		// is the order every other writer here takes.
+		held, err := lockedAcquisitionSource(ctx, tx, current)
+		if err != nil {
+			return nil, err
+		}
+		if err := ensureAssignableAcquisitionSource(ctx, tx, *in.AcquisitionSource, held); err != nil {
+			return nil, err
+		}
+		p.Set(filterAcquisitionSource, held, *in.AcquisitionSource)
 	}
 	if in.ExpectedClose != nil {
 		// INV-CLOSE-PAST (formulas §11): an open deal never claims a past
@@ -141,7 +175,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		// A human setting the date IS the §11 confirmation — the machine's
 		// provisional guess stops excluding the deal from Commit. This one turns
 		// on the request, not on the date moving: re-sending the provisional date
-		// unchanged is exactly how a person confirms it.
+		// unchanged is exactly how a human confirms it.
 		if current.CloseDateProvisional != nil && *current.CloseDateProvisional {
 			p.Set("close_date_provisional", true, false)
 		}
@@ -153,41 +187,6 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.SetDate("wait_until", storekit.PlainDate(current.WaitUntil), in.WaitUntil)
 	}
 	return p, nil
-}
-
-// applyDealLinkPatches sets the fields that point at another record. They are
-// grouped because they share an obligation the plain columns do not: a link is
-// only settable to a target the caller may see, so each one gates before it
-// patches (auth.EnsureLinkTarget), and a miss reads as not-found rather than
-// disclosing that the row exists.
-//
-// The project pointer is the exception, and it needs WRITE authority
-// (ensureProjectAttachable). Pointing a deal at a project is not a read of the
-// project: winning that deal advances the project's phase and writes its
-// history (startDeliveryForWonDeal), and that advance deliberately does not
-// re-check the caller's authority over the project — the authority to attach
-// is what stands in for it. A visibility-only gate here would let any seat
-// attach any project in the workspace and then force it into `delivering`.
-func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
-	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
-	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
-) error {
-	if in.OrganizationID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
-			return err
-		}
-		p.Set("organization_id", current.OrganizationId, *in.OrganizationID)
-	}
-	if in.OwnerID != nil {
-		p.Set("owner_id", current.OwnerId, *in.OwnerID)
-	}
-	if in.ProjectID != nil {
-		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {
-			return err
-		}
-		p.Set("project_id", current.ProjectId, *in.ProjectID)
-	}
-	return applyPartnerAttributionPatch(ctx, tx, current, in, p, clearPartner, ensurePartner)
 }
 
 // applyPartnerAttributionPatch writes the partner link and what that partner
@@ -212,7 +211,7 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 		if in.PartnerAttribution != nil {
 			return &PartnerAttributionUnpairedError{}
 		}
-		p.Set("partner_org_id", current.PartnerOrgId, nil)
+		p.Set("partner_company_id", current.PartnerCompanyId, nil)
 		p.Set("partner_attribution", current.PartnerAttribution, nil)
 		return nil
 	}
@@ -221,34 +220,34 @@ func applyPartnerAttributionPatch(ctx context.Context, tx pgx.Tx,
 			return err
 		}
 	}
-	if in.PartnerOrganizationID == nil {
+	if in.PartnerCompanyID == nil {
 		if in.PartnerAttribution == nil {
 			return nil
 		}
 		// An attribution alone is only meaningful when the deal already
 		// names the partner it describes.
-		if current.PartnerOrgId == nil {
+		if current.PartnerCompanyId == nil {
 			return &PartnerAttributionUnpairedError{}
 		}
 		// Re-attributing is a write ABOUT that partner, so it needs the same
 		// permission naming them would: a caller who can no longer open the
-		// organization — it became capture-private after the link was made —
+		// company — it became capture-private after the link was made —
 		// may not change what the deal claims they did.
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", ids.UUID(*current.PartnerOrgId)); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", ids.UUID(*current.PartnerCompanyId)); err != nil {
 			return err
 		}
 		p.Set("partner_attribution", current.PartnerAttribution, *in.PartnerAttribution)
 		return nil
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.PartnerOrganizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
 		return err
 	}
 	// Visible is not enough: it must actually BE a partner, or the deal reads
 	// as credited to somebody the accrual can never price.
-	if err := ensurePartner(ctx, tx, *in.PartnerOrganizationID); err != nil {
+	if err := ensurePartner(ctx, tx, *in.PartnerCompanyID); err != nil {
 		return err
 	}
-	p.Set("partner_org_id", current.PartnerOrgId, *in.PartnerOrganizationID)
+	p.Set("partner_company_id", current.PartnerCompanyId, *in.PartnerCompanyID)
 	p.Set("partner_attribution", current.PartnerAttribution, resolvedAttribution(current, in))
 	return nil
 }
@@ -277,8 +276,8 @@ func resolvedAttribution(current crmcontracts.Deal, in UpdateDealInput) string {
 // samePartner reports whether the update names the partner the deal already
 // carries, rather than pointing it at a different one.
 func samePartner(current crmcontracts.Deal, in UpdateDealInput) bool {
-	return current.PartnerOrgId != nil && in.PartnerOrganizationID != nil &&
-		ids.UUID(*current.PartnerOrgId) == in.PartnerOrganizationID.UUID
+	return current.PartnerCompanyId != nil && in.PartnerCompanyID != nil &&
+		ids.UUID(*current.PartnerCompanyId) == in.PartnerCompanyID.UUID
 }
 
 // validPartnerAttribution keeps the vocabulary refusal in the store, where it
@@ -299,23 +298,23 @@ func validPartnerAttribution(v string) error {
 func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
 ) error {
-	resultingAmount := current.AmountMinor
-	if in.AmountMinor != nil {
-		resultingAmount = in.AmountMinor
-	}
+	// Read off the PATCH, not off the request. A clear writes its null into the
+	// patch before this runs and never appears on the input struct at all, so a
+	// resulting row derived from `in` alone would still hold every figure the
+	// caller just cleared — and the pairing would then be checked against a row
+	// that is not the one about to be written.
+	after := p.After()
+	resultingAmount := patchedMoney(after, amountField, current.AmountMinor)
+	resultingArr := patchedMoney(after, arrField, current.ExpectedArrMinor)
 	resultingCurrency := current.Currency
-	if in.Currency != nil {
-		resultingCurrency = in.Currency
-	}
-	if (resultingAmount == nil) != (resultingCurrency == nil) {
-		return &AmountCurrencyPairError{Missing: missingMoneyHalf(resultingAmount == nil)}
-	}
-	if resultingAmount != nil {
-		// One spelling of "a valid amount+currency" (values.Money), the
-		// same rule the schema CHECKs repeat.
-		if _, err := values.NewMoney(*resultingAmount, string(*resultingCurrency)); err != nil {
-			return err
+	if v, ok := after[currencyField]; ok {
+		resultingCurrency = nil
+		if code, isString := v.(string); isString {
+			resultingCurrency = &code
 		}
+	}
+	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
+		return err
 	}
 
 	// Keyed on what the PATCH carries for the MONEY, not on what the request
@@ -325,6 +324,28 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	// rate is supposed to answer for the close.
 	_, amountMoved := p.After()[amountField]
 	_, currencyMoved := p.After()[currencyField]
+	// Restatement is judged on what the REQUEST carried, not on what the patch
+	// wrote. A caller who sends the same numeral back under a new currency has
+	// restated the figure deliberately — they are saying 5000 is still the
+	// price, now in yen — and the patch records no move for it because the
+	// integer did not change. Judging on the patch would refuse exactly that
+	// caller, who did the one thing this rule asks for.
+	if err := currencyRestatementError(current, resultingCurrency, moneyRestatement{
+		Currency: currencyMoved,
+		Amount:   in.AmountMinor != nil,
+		Arr:      in.ExpectedArrMinor != nil,
+	}); err != nil {
+		return err
+	}
+	// While an accepted offer states the recurring figure, the figure is the
+	// offer's. An ordinary edit that would move or clear it is refused rather
+	// than silently overwriting what the signed document says — accepting
+	// another offer is how it changes, and that path replaces the figure and
+	// its provenance together.
+	_, arrMoved := after[arrField]
+	if err := refuseManualArrEdit(current, resultingArr, arrEditMove{Arr: arrMoved, Currency: currencyMoved}); err != nil {
+		return err
+	}
 	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
 		rateBefore, rateDateBefore := frozenBefore(current)
@@ -406,6 +427,11 @@ const currencyField = "currency"
 // amountField is the other half of a money value.
 const amountField = "amount_minor"
 
+// arrField is the recurring figure. It shares the currency with amountField
+// rather than carrying one of its own: a deal quoting its one-off price in one
+// currency and its subscription in another is not a deal anyone can forecast.
+const arrField = "expected_arr_minor"
+
 // closeDateField names the column a slipped forecast moves.
 const closeDateField = "expected_close_date"
 
@@ -418,32 +444,6 @@ const (
 	fxRateDateColumn = "fx_rate_date"
 	baseAmountColumn = "amount_minor_base"
 )
-
-// missingMoneyHalf names whichever half of the pair was left out.
-func missingMoneyHalf(amountMissing bool) string {
-	if amountMissing {
-		return amountField
-	}
-	return currencyField
-}
-
-// AmountCurrencyPairError refuses a half-specified money value. Missing names
-// the half that was NOT supplied, because that is the input the caller adds —
-// telling someone who sent a currency to fix the currency is no guidance.
-type AmountCurrencyPairError struct{ Missing string }
-
-func (e *AmountCurrencyPairError) Error() string {
-	return "amount_minor and currency come together or not at all"
-}
-
-// FieldFault refuses an amount without its currency (or the reverse) — the pair is atomic.
-func (e *AmountCurrencyPairError) FieldFault() (field, code, message string) {
-	field = e.Missing
-	if field == "" {
-		field = currencyField
-	}
-	return field, "amount_currency_pair", e.Error()
-}
 
 // The two things a partner can have done for a deal. Sourced means they
 // brought it; influenced means they helped one we already had. Commission
@@ -463,7 +463,7 @@ const partnerAttributionField = "partner_attribution"
 type PartnerAttributionUnpairedError struct{}
 
 func (e *PartnerAttributionUnpairedError) Error() string {
-	return "partner_attribution needs a partner_org_id — set the partner in the same request, or clear the attribution"
+	return "partner_attribution needs a partner_company_id — set the partner in the same request, or clear the attribution"
 }
 
 // FieldFault refuses an attribution on a deal that names no partner.

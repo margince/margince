@@ -72,8 +72,14 @@ type InstallationValue func(context.Context, pgx.Tx) (string, error)
 // constructor with four bare functions in a row invites a swapped pair that
 // still compiles — currency and zone are both strings.
 type Installation struct {
-	// Name is the display name an offer's issuer snapshot records.
+	// Name is the installation's own settings name — the fallback an offer
+	// issues under while nobody has confirmed a legal one.
 	Name InstallationValue
+	// IssuerLegalName is the anchor company's legal name when a human has
+	// confirmed it, and the empty string otherwise. `contacts` owns the company
+	// and its provenance sidecar, so the read lives there and the edge is
+	// injected here (ADR-0054).
+	IssuerLegalName InstallationValue
 	// BaseCurrency is the currency amounts are reported in and frozen against.
 	BaseCurrency InstallationValue
 	// Timezone is the IANA zone a "today" is computed in.
@@ -90,16 +96,16 @@ type Installation struct {
 	// StartDeliveryForWonDeal moves a won deal's project into delivery, in the
 	// transaction that recorded the win (projectseam.go).
 	StartDeliveryForWonDeal StartDeliveryForWonDeal
-	// EnsurePartner refuses a partner_org_id that names a company with no
-	// partner programme. `people` owns that table, so the edge is injected
+	// EnsurePartner refuses a partner_company_id that names a company with no
+	// partner programme. `contacts` owns that table, so the edge is injected
 	// here rather than read across the module boundary (ADR-0054).
 	EnsurePartner EnsurePartner
 }
 
-// EnsurePartner answers whether an organization may be named as a deal's
+// EnsurePartner answers whether a company may be named as a deal's
 // partner, inside the caller's own transaction so the answer cannot go stale
 // between the check and the write.
-type EnsurePartner func(ctx context.Context, tx pgx.Tx, organizationID ids.OrganizationID) error
+type EnsurePartner func(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error
 
 // NewStore binds the store to the pool every tenant query runs through, and
 // to the seam that answers the installation's own values.
@@ -122,6 +128,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
 		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
+		"IssuerLegalName": &i.IssuerLegalName,
 	} {
 		if *f == nil {
 			*f = refusing(name)
@@ -146,10 +153,10 @@ func (i Installation) orRefusing() Installation {
 // refuses every attribution rather than admitting every one. A seam that failed
 // OPEN here would silently restore the hole it exists to close.
 func refusingEnsurePartner() EnsurePartner {
-	return func(context.Context, pgx.Tx, ids.OrganizationID) error {
+	return func(context.Context, pgx.Tx, ids.CompanyID) error {
 		return errors.New("deals: the EnsurePartner seam was not injected; " +
-			"construct this store with installseam.Deals(), which binds people's " +
-			"EnsureOrganizationIsPartner")
+			"construct this store with installseam.Deals(), which binds contacts's " +
+			"EnsureCompanyIsPartner")
 	}
 }
 
@@ -157,7 +164,7 @@ func refusing(field string) InstallationValue {
 	return func(context.Context, pgx.Tx) (string, error) {
 		return "", errors.New("deals: the installation " + field + " seam was not injected; " +
 			"construct this store with installseam.Deals(), which binds identity's " +
-			"NameOf/BaseCurrencyOf/TimezoneOf")
+			"NameOf/BaseCurrencyOf/TimezoneOf and contacts's ConfirmedIssuerLegalName")
 	}
 }
 
@@ -230,7 +237,7 @@ var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
 // it is exported only because the caller of a tx-accepting seam is outside
 // this package.
 //
-// Unlike people's twin it takes no grant of its own: its one caller is the
+// Unlike contacts's twin it takes no grant of its own: its one caller is the
 // extraction accept-write, which has already taken deal:update before it
 // reaches the write phase, and deal:read is not what that seat holds this for.
 func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {

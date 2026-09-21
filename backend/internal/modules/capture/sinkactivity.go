@@ -56,9 +56,31 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
-	id, created, err := s.upsertActivity(ctx, tx, rec, fields, birth)
+	// The identity the OTHER door may have filed this message under. Asked
+	// before the insert, because a row already holding it is the row this
+	// capture is about — and asked after decideBirthTx, so a take-over below
+	// carries the same birth decision an ordinary capture would.
+	//
+	// The natural key still gets the first word inside upsertActivity: its own
+	// ON CONFLICT is the more specific answer, and a replay of this
+	// connector's own delivery must stay a replay rather than becoming a
+	// cross-door resolution.
+	known, alreadyFiled, err := s.activityHoldingIdentity(ctx, tx, rec)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	// The row the other door filed IS the row this capture is about, so the
+	// insert is never attempted. Skipping it rather than inserting and
+	// discarding matters: upsertActivity's ON CONFLICT only covers this
+	// connector's own natural key, so a speculative insert under a DIFFERENT
+	// key would succeed and leave the duplicate this whole path exists to
+	// prevent.
+	id, created := known, false
+	if !alreadyFiled {
+		id, created, err = s.upsertActivity(ctx, tx, rec, fields, birth)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 	}
 	ref := datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}
 	if !created {
@@ -75,15 +97,82 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// recompute that ran before this seat's import row landed would derive
 		// an audience from a contributor set missing exactly the seat whose
 		// sync it is.
+		//
+		// Only once the claim is proven: the natural key is a header the sender
+		// types, so a colliding Message-ID says nothing about which message this
+		// mailbox holds (replayClaimIsProvenTx).
+		// An ASSERTED incumbent is the one case where the collision is not a
+		// replay at all: somebody stated this message from an export, and this
+		// connector has now read the message itself. The read copy wins, and
+		// the proof below does not apply — it asks whether two mailboxes hold
+		// one message, where here one side never held a mailbox.
+		//
+		// assertedIncumbent asks only WHAT the incumbent is — stated or observed
+		// — and carries no authority of its own. WHO may rewrite it is
+		// `alreadyFiled`, and that conjunction is load-bearing: this branch is
+		// reached by TWO different producers of !created, and only one of them
+		// vetted the seat.
+		//
+		//   - alreadyFiled: the id came from the identity resolve, which answers
+		//     only for a row the SAME SEAT captured. Theirs to take over.
+		//   - otherwise: the id came from upsertActivity's ON CONFLICT on the
+		//     natural key, gated only by EnsureActivityVisible — a DISCOVER
+		//     check that admits any row this seat can merely see. An outbound
+		//     send writes ('email', <minted Message-ID>) stamped
+		//     `human:<sender>` and claims no identity, so a colleague's mailbox
+		//     syncing that message arrives here with the SENDER's row and no
+		//     seat ever compared. Taking it over would rewrite their subject and
+		//     body and restamp the row to the syncing seat.
+		//
+		// So the take-over runs only for a vetted id, and everything else falls
+		// through to replayClaimIsProvenTx — which is the right question for a
+		// natural-key collision and the gate that covered this case before the
+		// identity resolve existed.
+		wasCapturedBy, asserted, err := assertedIncumbent(ctx, tx, id)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if asserted && alreadyFiled && s.takeOverAsserted != nil {
+			err := s.takeOverAsserted(
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec))
+			// Archived under us between the resolve and here — an erasure racing
+			// this capture. Skipping advances the watermark; propagating would
+			// stall this mailbox on this message on every pass forever.
+			if errors.Is(err, apperrors.ErrNotFound) {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, skipInvisibleIncumbent(rec, "activity")
+			}
+			if err != nil {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, err
+			}
+			if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, err
+			}
+			return ref, false, counterpartyDecision{}, nil
+		}
+		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if !same {
+			// Skipped, and traced, as a replay onto an incumbent outside this
+			// seat's authority: from the seat's side a message in its mailbox
+			// never arrived, and the ref would name somebody else's row.
+			return datasource.EntityRef{}, false, counterpartyDecision{}, skipInvisibleIncumbent(rec, "activity")
+		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
 	}
-	// Everything a NEW row still needs: its links, its files, its people, its
+	// Everything a NEW row still needs: its links, its files, its contacts, its
 	// audit and event, and the ladder's decision about who it is with. Split out
 	// so this function reads as the three answers a capture can have — the row
 	// was already here, the row is new, or the capture failed.
+	// Filed under the cross-door identity before the row is finished, so an
+	// importer arriving later resolves onto it instead of landing a twin.
+	if err := s.claimRecordIdentity(ctx, tx, id, rec); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	decision, err := s.finishNewActivity(ctx, tx, id, rec, fields, birth, memberBound)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
@@ -103,7 +192,7 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	// The files, after the links: the account roll-up a captured file carries is
-	// read from the activity's own organization link, which does not exist until
+	// read from the activity's own company link, which does not exist until
 	// the line above has run.
 	//
 	// Staged HERE, inside the transaction and only once the message is known to
@@ -128,12 +217,12 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	if err := stampCaptureParticipants(ctx, tx, id, actorUserID(ctx), fields.Kind, fields.Direction, rec.Counterparty.Email); err != nil {
+	if err := stampCaptureParticipants(ctx, tx, id, actorUserID(ctx), fields.Kind, fields.Direction, rec.Counterparty); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
 	// attendees. Separate from the two ends above because these are resolved
-	// against our own people here rather than promoted later.
+	// against our own contacts here rather than promoted later.
 	// The party list is OURS to trust only when the PROVIDER stated it — our own
 	// mailbox owner attested as the sender, or a calendar enumerating its
 	// attendees. On anything inbound it is the sender's text.
@@ -144,7 +233,7 @@ func (s *Sink) finishNewActivity(
 	// And the names those rows just recorded, for an attendee who is ALREADY a
 	// contact. A calendar invitation names every attendee in full, and that is
 	// the only full name a contact minted from a bare address ever gets: the
-	// ladder that names people never runs for a meeting, because attendance is
+	// ladder that names contacts never runs for a meeting, because attendance is
 	// a list and the mapper leaves the counterparty unset. The other ordering —
 	// an attendee who becomes a contact later — belongs to the cohort repair.
 	if s.nameParticipants != nil && namesSomebody(rec.Participants) {
@@ -176,7 +265,7 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	// A meeting names no counterparty, so the gate above created nothing and
-	// nothing has filed this row anywhere. The people who were in it are already
+	// nothing has filed this row anywhere. The contacts who were in it are already
 	// resolved on the participant rows, so the links come from there — BEFORE
 	// the audience limiter, which decides what a link-less record is born as.
 	derivedLinks := 0
@@ -196,7 +285,7 @@ func (s *Sink) finishNewActivity(
 	// It answers no count, and derivedLinks is deliberately not grown by it. The
 	// limiter below only ever NARROWS — its single write sets participants — so a
 	// count here could not widen a message a hold was placed on. What it WOULD do
-	// is skip that narrowing for a message filed under nobody but the people
+	// is skip that narrowing for a message filed under nobody but the contacts
 	// copied on it, leaving mail workspace-readable that the limiter exists to
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
@@ -263,7 +352,7 @@ func (s *Sink) upsertActivity(
 		fields.Kind, fields.ChannelProvider, fields.Subject, fields.Body, occurredAt, fields.Direction,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), rec.ThreadKey,
 		// Normalized lowercased at the write (a connector need not lowercase the
-		// header case), matching the person_email normalization, so the T1
+		// header case), matching the contact_email normalization, so the T1
 		// correspondence lookup's index-backed equality matches regardless of
 		// the sender's casing without a runtime case fold.
 		strings.ToLower(strings.TrimSpace(rec.Counterparty.Email)),
@@ -336,9 +425,9 @@ func (s *Sink) upsertActivity(
 func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, links []datasource.EntityRef) error {
 	for _, link := range links {
 		column, ok := map[datasource.EntityType]string{
-			datasource.EntityPerson:       "person_id",
-			datasource.EntityOrganization: "organization_id",
-			datasource.EntityDeal:         "deal_id",
+			datasource.EntityContact: "contact_id",
+			datasource.EntityCompany: "company_id",
+			datasource.EntityDeal:    "deal_id",
 		}[link.Type]
 		if !ok {
 			return fmt.Errorf("capture: activities cannot link a %s", link.Type)

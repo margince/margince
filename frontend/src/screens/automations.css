@@ -65,5 +65,5 @@
 
 .auto-error {
   margin-top: var(--space-2);
-  color: var(--danger);
+  color: var(--dangerText);
 }

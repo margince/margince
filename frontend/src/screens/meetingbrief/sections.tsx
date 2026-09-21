@@ -3,7 +3,7 @@
 // The server sends them in ADR-0097 D5's reading order and this file does not
 // re-sort that order for its own sake — it gives three of them a shape their
 // job earns and leaves the rest as panels. The goal leads because burying the
-// ask is the canonical prep failure. The risks are a callout because a
+// ask is the canonical prep failure. The risks take the warning tint because a
 // watch-out a reader scrolls past is a watch-out they walk in without. The
 // company background collapses because it is the one section that is context
 // rather than preparation.
@@ -12,10 +12,8 @@
 // section had nothing to say, and a heading over an empty space tells a reader
 // to look for something that is not there.
 
-import { AlertTriangle } from "lucide-react";
 import type { components } from "../../api/schema";
-import { Disclosure } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { Badge, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
@@ -38,6 +36,11 @@ const BODY_ORDER: SectionKind[] = [
 
 type OpenRecord = (entityType: string, entityId: string) => void;
 
+// Opens a cited message in the host's own email drawer. Threaded beside
+// onOpenRecord for the same reason: the brief cites the conversations it was
+// written from, and a citation that names a message should open it.
+type OpenEmail = (activityId: string) => void;
+
 function find(
   sections: readonly BriefSection[],
   kind: SectionKind,
@@ -51,14 +54,23 @@ function find(
 export function GlanceLine({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const header = find(brief.sections, "header");
   if (!header) {
     return null;
   }
   return (
-    <section className="mb-glance">
-      <SentenceList sentences={header.sentences} onOpenRecord={onOpenRecord} />
+    <section>
+      <SentenceList
+        sentences={header.sentences}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
     </section>
   );
 }
@@ -70,22 +82,35 @@ export function GlanceLine({
 export function GoalPanel({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const goal = find(brief.sections, "goal");
   if (!goal) {
     return null;
   }
+  const byModel = brief.generated_by === "model";
   return (
     <Panel
-      title={t("person.meeting.goal")}
+      title={t("contact.meeting.goal")}
       titleLevel={3}
-      tone={brief.generated_by === "model" ? "ai" : "accent"}
+      tone={byModel ? "ai" : "accent"}
+      // The disclosure rides the LEAD's band and nowhere else. The panels under
+      // it are the same writer's work and take the same tint, but a badge on
+      // each of them would be the same sentence said six times.
+      titleAction={
+        byModel ? <Badge tone="ai">{t("co.assistant.aiTag")}</Badge> : undefined
+      }
     >
       <PanelBody>
         <SentenceList
           sentences={goal.sentences}
           onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
           leadWithJudgement
         />
       </PanelBody>
@@ -93,29 +118,49 @@ export function GoalPanel({
   );
 }
 
-// The watch-outs. A callout rather than a panel because this is the one
-// section whose cost of being missed is a sentence said in the room that
-// cannot be taken back.
-export function RiskCallout({
+// The watch-outs: a body panel like the rest, tinted because this is the one
+// section whose FINDING is the bad news and whose cost of being missed is a
+// sentence said in the room that cannot be taken back.
+//
+// The tint follows the WRITER first, exactly as the lead's does. Indigo means
+// "Margince wrote this" everywhere in the product, and it is claimed for every
+// panel of a model-written brief rather than for one of them, so a warning tint
+// here would be the one section of that brief not saying who wrote it. A
+// composition has no such claim to make, and there the tint is free to carry
+// the finding.
+//
+// It was a `Callout`, which is what a surface says ABOUT itself and never where
+// its content lives — the brief's risks are a named part of the document a
+// reader navigates to, so the heading had to be bolted on outside the notice
+// and the outline was two things pretending to be one.
+export function RisksPanel({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const risks = find(brief.sections, "risks");
   if (!risks) {
     return null;
   }
-  // The heading is the SECTION's, not the callout's: a Callout titles itself
-  // with a paragraph because it is an inline alert, and the risks are a named
-  // part of the brief a reader navigates to. Putting the h3 outside keeps the
-  // outline honest and still lets the callout draw the warning ground.
   return (
-    <section className="mb-risks">
-      <h3 className="mb-section-title">{t("person.meeting.risks")}</h3>
-      <Callout tone="warn" icon={AlertTriangle}>
-        <SentenceList sentences={risks.sentences} onOpenRecord={onOpenRecord} />
-      </Callout>
-    </section>
+    <Panel
+      title={t("contact.meeting.risks")}
+      titleLevel={3}
+      tone={brief.generated_by === "model" ? "ai" : "warning"}
+    >
+      <PanelBody>
+        <SentenceList
+          sentences={risks.sentences}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+        />
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -124,7 +169,12 @@ export function RiskCallout({
 export function BodyPanels({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   return (
     <>
@@ -134,11 +184,21 @@ export function BodyPanels({
           return null;
         }
         return (
-          <Panel key={kind} title={t(`person.meeting.${kind}`)} titleLevel={3}>
+          <Panel
+            key={kind}
+            title={t(`contact.meeting.${kind}`)}
+            titleLevel={3}
+            // The same writer wrote these as wrote the lead above, so they
+            // carry the same claim. Untinted rather than accent-tinted for a
+            // composition: the lead is the one card on the surface that asks
+            // for a move, and five more tinted panels is no lead at all.
+            tone={brief.generated_by === "model" ? "ai" : undefined}
+          >
             <PanelBody>
               <SentenceList
                 sentences={section.sentences}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             </PanelBody>
           </Panel>
@@ -158,7 +218,12 @@ export function BodyPanels({
 export function Background({
   brief,
   onOpenRecord,
-}: Readonly<{ brief: MeetingBrief; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  brief: MeetingBrief;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const context = find(brief.sections, "company_context");
   const omitted = brief.omitted ?? [];
@@ -166,22 +231,23 @@ export function Background({
     return null;
   }
   return (
-    <Disclosure summary={t("person.meeting.background")}>
+    <Disclosure summary={t("contact.meeting.background")}>
       <div className="mb-background">
         {context && (
           <SentenceList
             sentences={context.sentences}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
           />
         )}
         {omitted.map((omission) => (
           <SurfaceState
-            loadingLabel={t("person.meeting.omittedSource")}
+            loadingLabel={t("contact.meeting.omittedSource")}
             key={omission.source}
             state="withheld"
             labelLevel="h4"
-            label={t("person.meeting.omittedSource")}
-            emptyLabel={t("person.meeting.empty")}
+            label={t("contact.meeting.omittedSource")}
+            emptyLabel={t("contact.meeting.empty")}
             detail={{ withheldReason: omission.reason }}
           >
             {null}

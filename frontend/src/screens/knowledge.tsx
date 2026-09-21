@@ -12,13 +12,23 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  WriteRefused,
+} from "./common";
+import {
+  IngestFailure,
+  ReindexingNotice,
+  type UploadRefusal,
+  UploadRefusals,
+} from "./knowledge.notices";
 
 // The document sets a workspace can be asked questions of.
 //
@@ -264,7 +274,7 @@ export function KnowledgeCard() {
     return (
       <Panel title={t("knowledge.title")}>
         <PanelBody>
-          <p className="t-caption">{t("knowledge.sub")}</p>
+          <p>{t("knowledge.sub")}</p>
           <EmptyState>{t("knowledge.withheld")}</EmptyState>
         </PanelBody>
       </Panel>
@@ -274,7 +284,7 @@ export function KnowledgeCard() {
   return (
     <Panel title={t("knowledge.title")}>
       <PanelBody className="form-stack">
-        <p className="t-caption">{t("knowledge.sub")}</p>
+        <p>{t("knowledge.sub")}</p>
         <QueryGate query={query} pendingLabel={t("knowledge.title")}>
           {(data) => (
             <DocumentSetList sets={data.items} canManage={canManage} />
@@ -323,7 +333,6 @@ function DocumentSetRow({
         <SectionHeader
           level={3}
           title={set.name}
-          sub={set.topic_statement}
           actions={
             canManage ? (
               <Button
@@ -343,18 +352,15 @@ function DocumentSetRow({
             documents: formatNumber(set.coverage.documents_total, locale),
           })}
         </p>
-        {/* A set being re-read has nothing for the reader to do but wait, and
-            saying so is different from saying it is not ready. */}
-        {set.reindexing ? (
-          <Callout tone="info">{t("knowledge.reindexing")}</Callout>
-        ) : null}
+        {set.reindexing ? <ReindexingNotice /> : null}
         <Button variant="ghost" onClick={() => setOpen((was) => !was)}>
           {open ? t("knowledge.hideDocuments") : t("knowledge.showDocuments")}
         </Button>
         {open ? <DocumentList corpusId={set.id} canManage={canManage} /> : null}
-        {archive.isError ? (
-          <Callout tone="danger">{problemMessageOf(archive.error, t)}</Callout>
-        ) : null}
+        <WriteRefused
+          titleKey="knowledge.archiveFailed"
+          error={archive.error}
+        />
       </div>
       <ConfirmModal
         open={confirming}
@@ -366,7 +372,7 @@ function DocumentSetRow({
           setConfirming(false);
         }}
       >
-        <p className="t-caption">{t("knowledge.archiveConfirm.body")}</p>
+        <p>{t("knowledge.archiveConfirm.body")}</p>
       </ConfirmModal>
     </PanelRow>
   );
@@ -434,15 +440,8 @@ function DocumentRow({
       <Badge tone={ingestTone(doc.ingest_status)}>
         {t(ingestLabelKey(doc.ingest_status))}
       </Badge>
-      {/* The reason a failed ingest carries. A set quietly short of a file
-          nobody can name answers worse than an empty one, because it still
-          answers. */}
-      {doc.ingest_detail ? (
-        <Callout tone="danger">{doc.ingest_detail}</Callout>
-      ) : null}
-      {remove.isError ? (
-        <Callout tone="danger">{problemMessageOf(remove.error, t)}</Callout>
-      ) : null}
+      {doc.ingest_detail ? <IngestFailure detail={doc.ingest_detail} /> : null}
+      <WriteRefused titleKey="knowledge.deleteFailed" error={remove.error} />
       <ConfirmModal
         open={confirming}
         title={t("knowledge.deleteConfirm.title")}
@@ -453,23 +452,11 @@ function DocumentRow({
           setConfirming(false);
         }}
       >
-        <p className="t-caption">{t("knowledge.deleteConfirm.body")}</p>
+        <p>{t("knowledge.deleteConfirm.body")}</p>
       </ConfirmModal>
     </div>
   );
 }
-
-// One refused file out of several. Named, because "3 of 10 failed" leaves the
-// reader to work out WHICH three by comparing two lists by eye.
-//
-// `id` is the file's OWN identity, not its position in the batch: two refused
-// files may share a name now that both are kept, and a key that changes when
-// the list is rebuilt would let React reuse the wrong message.
-type UploadRefusal = Readonly<{
-  id: string;
-  filename: string;
-  message: string;
-}>;
 
 // What distinguishes one picked file from another without opening it. Two
 // distinct files agreeing on all three are the same bytes for every purpose
@@ -556,14 +543,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
           })}
         </Button>
       </div>
-      {refusals.map((refusal) => (
-        <Callout key={refusal.id} tone="danger">
-          {t("knowledge.upload.refused", {
-            filename: refusal.filename,
-            message: refusal.message,
-          })}
-        </Callout>
-      ))}
+      <UploadRefusals refusals={refusals} />
     </div>
   );
 }
@@ -588,7 +568,7 @@ function NewDocumentSet() {
         )}
       </Field>
       {/* The topic statement is quoted back verbatim in a refusal, so it is
-          read by a person at their least patient moment. The hint says to write
+          read by a contact at their least patient moment. The hint says to write
           a sentence rather than a label, because "Handbook" tells a reader who
           just got a refusal nothing at all. */}
       <Field
@@ -621,9 +601,7 @@ function NewDocumentSet() {
           {t("knowledge.new.submit")}
         </Button>
       </div>
-      {create.isError ? (
-        <Callout tone="danger">{problemMessageOf(create.error, t)}</Callout>
-      ) : null}
+      <WriteRefused titleKey="knowledge.new.failed" error={create.error} />
     </PanelBody>
   );
 }

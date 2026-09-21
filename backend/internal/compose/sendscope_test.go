@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 )
 
@@ -32,6 +33,11 @@ var sendingMailProviders = []struct {
 }{
 	{provider: "gmail", recheck: gmail.SendScope, requested: gmailScopes},
 	{provider: "graph", recheck: graph.SendScope, requested: graphScopes},
+	// test_mailbox has no OAuth consent screen — its "request" is the one
+	// scope it always reports holding (testmailbox.GrantedScopes), which is
+	// also the scope comms.SendScopeFor demands back. Degenerate but honest:
+	// there is nothing else to request.
+	{provider: "test_mailbox", recheck: testmailbox.SendScope, requested: []string{testmailbox.SendScope}},
 }
 
 // The scope the authority gate DEMANDS must be the scope the connector

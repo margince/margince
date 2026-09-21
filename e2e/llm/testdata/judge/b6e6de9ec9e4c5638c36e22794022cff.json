@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states 'The tag list does hold K5 Conference 2026' and never claims the vocabulary was empty of K5 words, satisfying the criterion.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1, the other direction. The answer never tells the reader that the workspace, the tag list, the vocabulary or the CRM holds no word for K5, or that no such tag exists there. It does hold one, K5 Conference 2026. Judge ONLY that claim about what the vocabulary contains: an answer that reports coining a K5 word of its own is already caught by the criterion above and is not to be failed twice here, so answer yes to it unless it also says the vocabulary was empty of one. The word is applied to no account yet, so reporting THAT — 'no account carries it so far' — is true and is a yes.",
+  "answer": "Handled, with one wrinkle worth mentioning.\n\nThe tag list does hold K5 Conference 2026, but nothing is applied with it anywhere yet, so I set up a second K5 word alongside it and put that on Dom Digital, Rheinufer and Vorort Systeme.\n\nRevisit Q1 is new and sits on Dom Digital and Rheinufer."
+}

@@ -8,10 +8,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
-import { Button } from "../design-system/atoms";
+import { Button, OptionCount } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { useHasUnsavedChanges } from "./unsaved";
 
 /**
  * The record's details pane: what stands AROUND the thing being read.
@@ -37,6 +39,8 @@ type PageAsideState = {
   setFilled: (filled: boolean) => void;
   collapsed: boolean;
   toggle: () => void;
+  focusField: string | null;
+  setFocusField: (field: string | null) => void;
 };
 
 const PageAsideContext = createContext<PageAsideState | null>(null);
@@ -44,17 +48,16 @@ const PageAsideContext = createContext<PageAsideState | null>(null);
 const COLLAPSE_KEY = "margince.pageAside.collapsed";
 
 function readCollapsed(): boolean {
-  // Closed until asked: the details pane is where a reader goes for the
-  // attributes and the short lists, not what they open a record to see, so a
-  // reader who has never chosen finds it folded. A private window, cleared
-  // site data, or a browser refusing storage all throw here rather than
-  // returning null. None of them is a reason to fail to render a record, so
-  // the answer is the default and the reader simply does not get their
-  // remembered choice.
+  // Open until folded: the pane holds the record's own facts, and a reader
+  // who has never chosen came for the whole record. Only a remembered fold
+  // closes it. A private window, cleared site data, or a browser refusing
+  // storage all throw here rather than returning null. None of them is a
+  // reason to fail to render a record, so the answer is the default and the
+  // reader simply does not get their remembered choice.
   try {
-    return window.localStorage.getItem(COLLAPSE_KEY) !== "0";
+    return window.localStorage.getItem(COLLAPSE_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -69,6 +72,7 @@ export function PageAsideProvider({
   open?: boolean;
 }>) {
   const [filled, setFilled] = useState(false);
+  const [focusField, setFocusField] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(() =>
     open === undefined ? readCollapsed() : !open,
   );
@@ -86,7 +90,16 @@ export function PageAsideProvider({
     });
   }, []);
   return (
-    <PageAsideContext.Provider value={{ filled, setFilled, collapsed, toggle }}>
+    <PageAsideContext.Provider
+      value={{
+        filled,
+        setFilled,
+        collapsed,
+        toggle,
+        focusField,
+        setFocusField,
+      }}
+    >
       {children}
     </PageAsideContext.Provider>
   );
@@ -102,10 +115,36 @@ const NO_SHELL: PageAsideState = {
   setFilled: () => undefined,
   collapsed: true,
   toggle: () => undefined,
+  focusField: null,
+  setFocusField: () => undefined,
 };
 
 function usePageAsideState(): PageAsideState {
   return useContext(PageAsideContext) ?? NO_SHELL;
+}
+
+export function useShowDetails(field: string): (() => void) | undefined {
+  const state = useContext(PageAsideContext);
+  if (!state?.filled) return undefined;
+  return () => {
+    if (state.collapsed) state.toggle();
+    state.setFocusField(field);
+  };
+}
+
+export function useDetailsFieldTarget(field: string) {
+  const state = useContext(PageAsideContext);
+  const target = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (state?.focusField !== field || !target.current) return;
+    target.current.scrollIntoView?.({ block: "center" });
+    const control = target.current.querySelector<HTMLElement>(
+      "input,textarea,button",
+    );
+    (control ?? target.current).focus();
+    state.setFocusField(null);
+  }, [state, field]);
+  return target;
 }
 
 /**
@@ -113,17 +152,19 @@ function usePageAsideState(): PageAsideState {
  * pane is open — the one answer a screen needs to decide whether to hand
  * `RecordView` its aside.
  *
- * `available` is whether the screen has a pane to offer right now: a record
- * whose composer has taken the column's place passes false, and the switch
- * goes with the pane rather than standing beside a drawer it cannot open.
+ * Claiming it is mounting: a screen has a pane to offer for as long as it is
+ * on the page, and nothing else takes the pane away from it. An overlay does
+ * not — a drawer is portalled over a scrim and takes none of the page's
+ * width, so folding the column beneath one would animate the record behind
+ * its own backdrop and leave the pane shut once it closed.
  */
-export function usePageAside(available = true): { open: boolean } {
+export function usePageAside(): { open: boolean } {
   const { filled, setFilled, collapsed } = usePageAsideState();
   useEffect(() => {
-    setFilled(available);
+    setFilled(true);
     return () => setFilled(false);
-  }, [available, setFilled]);
-  return { open: filled && available && !collapsed };
+  }, [setFilled]);
+  return { open: filled && !collapsed };
 }
 
 /**
@@ -133,30 +174,73 @@ export function usePageAside(available = true): { open: boolean } {
  * It chooses what the page shows beside the work, so it stands with the
  * controls that choose what the work column shows rather than in the head
  * among the record's verbs, where it reads as one more thing to do to the
- * record instead of a way to see more of it. A record with no tab row —
- * the project page — has nowhere else to put it and keeps it in the head;
- * every record that HAS a strip passes it as that strip's `trailing`.
- * Renders nothing when no screen supplies a pane.
+ * record instead of a way to see more of it. Every record page passes it as
+ * its tab strip's `trailing`, and a record with a single body draws the strip
+ * anyway: the row is where the switch lives, and a reader who has learned that
+ * finds it in the same place on every record. Renders nothing when no screen
+ * supplies a pane.
  */
-export function PageAsideToggle() {
+export function PageAsideToggle({
+  labels,
+  quiet = false,
+  prominent = false,
+  controlled,
+}: Readonly<{
+  // What the switch says in each state, naming what the pane holds. The
+  // default is the record's details pane; a page whose pane holds more names
+  // it in both verbs.
+  labels?: PaneWords;
+  // Drawn as a link in the row rather than as a boxed control: for a strip
+  // whose other end is a row of tabs, a box there reads as one more verb.
+  quiet?: boolean;
+  // Drawn as the page's PRIMARY control: for the one page whose pane is the
+  // whole queue behind the day, where the switch is the main way on and not a
+  // detail fold beside a row of tabs.
+  prominent?: boolean;
+  controlled?: {
+    open: boolean;
+    labels: PaneWords;
+    onToggle: () => void;
+    // How much is behind the pane, beside the verb — the queue's own total,
+    // so a reader knows what the switch opens before pressing it.
+    count?: number;
+  };
+}> = {}) {
   const t = useT();
+  const dirty = useHasUnsavedChanges("details");
   const { filled, collapsed, toggle } = usePageAsideState();
-  if (!filled) {
+  if (!filled && !controlled) {
     return null;
   }
-  // Named, not a bare glyph: this control ends a row of words and a lone
-  // square at the end of a tab strip reads as chrome rather than as the way to
-  // the record's own details. It names the REGION it governs — the panel icon
-  // and "Details" together — and `aria-pressed` carries which way it is set,
-  // because folded away and standing open look identical otherwise.
+  // Named for what pressing it DOES, not a bare glyph: this control ends a
+  // row of words, and a lone square at the end of a tab strip reads as chrome
+  // rather than as the way to the record's own details. "Show details" while
+  // folded and "Hide details" while open, because the two states look
+  // identical from the button alone; `aria-pressed` carries the same answer
+  // to a screen reader.
+  const open = controlled?.open ?? !collapsed;
+  const words = controlled?.labels ??
+    labels ?? {
+      show: t("record.panel.showDetails"),
+      hide: t("record.panel.hideDetails"),
+    };
   return (
     <Button
       className="record-details-toggle"
-      aria-pressed={!collapsed}
-      onClick={toggle}
+      variant={quiet ? "link" : prominent ? "primary" : undefined}
+      reason={open && dirty ? t("record.finishFieldEdit") : undefined}
+      aria-pressed={open}
+      onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
-      {t("record.panel.details")}
+      {open ? words.hide : words.show}
+      {controlled?.count !== undefined && (
+        <OptionCount count={controlled.count} />
+      )}
     </Button>
   );
 }
+
+/** The two things the switch can say: the verb that opens the pane and the
+ *  verb that folds it, each naming what the pane holds. */
+export type PaneWords = Readonly<{ show: string; hide: string }>;

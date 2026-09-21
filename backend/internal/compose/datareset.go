@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -26,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,9 +36,9 @@ import (
 const objectWorkspace = "workspace"
 
 // errResetConfirmationMismatch means the caller's typed confirmation did not
-// match the workspace's organization name — the reset is refused before any
+// match the workspace's company name — the reset is refused before any
 // data is touched.
-var errResetConfirmationMismatch = errors.New("data reset: confirmation does not match the organization name")
+var errResetConfirmationMismatch = errors.New("data reset: confirmation does not match the company name")
 
 // resetDataResponse is the 200 body. The contract declares the shape inline
 // (no generated type), so it is spelled here — and
@@ -75,9 +72,6 @@ type dataResetHandlers struct {
 	// Server.resetRuntime for what a copy would silently cost. nil is the
 	// Postgres-only reset a role that wired no runtime performs.
 	runtime *ResetRuntime
-	// budget is the overlay budget meter whose per-workspace Redis counters
-	// must not survive the install they were spent by.
-	budget *overlaybudget.Meter
 	// blob is the object store holding the bytes the swept rows referenced.
 	blob blobstore.Store
 	// vault holds the sealed credentials the swept connection rows referenced.
@@ -106,9 +100,9 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 	// Read BEFORE anything is paused or purged: a typo must cost the
 	// installation nothing, and quiescing the job fleet is not nothing. The
 	// sweep re-checks inside its own transaction — one row read that closes
-	// the window where the organization is renamed in between.
+	// the window where the company is renamed in between.
 	if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		return confirmResetOrgName(ctx, tx, confirmation)
+		return confirmResetCompanyName(ctx, tx, confirmation)
 	}); err != nil {
 		return resetCounts{}, err
 	}
@@ -120,7 +114,7 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 }
 
 // runQuiesced performs the reset with the job fleet held down: drain the outbox,
-// purge the queue, the bus and the budget counters, sweep + re-seed Postgres in
+// purge the queue and the bus, sweep + re-seed Postgres in
 // one transaction, clear the surfaces no transaction can reach, and announce the
 // reset so every process drops its caches. clearOutbox and sweep are the two
 // Postgres halves the runtime ordering separates, taken as parameters so this
@@ -138,15 +132,31 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	if logger == nil {
 		logger = slog.Default()
 	}
+	// BEFORE the fleet is touched. A second reset must be refused while the
+	// first still holds the pause, and it must be refused without having paused
+	// anything of its own — a refusal that had already quiesced the fleet would
+	// be an outage caused by the check that prevents one.
+	release, err := takeResetLock(ctx, h.pool)
+	if err != nil {
+		return resetCounts{}, err
+	}
+	defer release()
+
 	rt := ResetRuntime{}
 	if h.runtime != nil {
 		rt = *h.runtime
 	}
+	// Registered AFTER the lock, and that ordering is what makes the resume
+	// this reset's own. It still runs on every exit from here — panic included,
+	// and including a Quiesce that failed after its pause already landed,
+	// because a pause with nobody to lift it wedges every queue. What changes
+	// is who reaches this line: a caller that lost the lock returned above,
+	// having paused nothing, so it can no longer lift a pause it never took.
 	defer resumeResetQueues(ctx, logger, rt)
 
-	counts, err := h.runRuntimePhase(ctx, rt, wsID, clearOutbox, sweep)
-	if err != nil {
-		return counts, err
+	counts, runErr := h.runRuntimePhase(ctx, rt, wsID, clearOutbox, sweep)
+	if runErr != nil {
+		return counts, runErr
 	}
 
 	// Everything from here runs detached from the request, under its own bound.
@@ -184,21 +194,21 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 		"tables_cleared", counts.TablesCleared, "jobs_deleted", counts.JobsDeleted,
 		"streams_purged", counts.StreamsPurged, "cache_keys_deleted", counts.CacheKeys,
 		"objects_deleted", counts.ObjectsDeleted, "drain_timed_out", counts.DrainTimedOut,
-		"sor_mode_reverted", counts.SorModeReverted, "secrets_purged", counts.SecretsPurged)
+		"secrets_purged", counts.SecretsPurged)
 	return counts, nil
 }
 
-// confirmResetOrgName refuses the reset unless confirmation is exactly the
-// organization's name.
-func confirmResetOrgName(ctx context.Context, tx pgx.Tx, confirmation string) error {
+// confirmResetCompanyName refuses the reset unless confirmation is exactly the
+// company's name.
+func confirmResetCompanyName(ctx context.Context, tx pgx.Tx, confirmation string) error {
 	// The SETTING, because that is the name the operator is reading off the
 	// screen when they type it — and, since the workspace row's copy was
 	// dropped, the only name there is.
-	orgName, err := identity.NameOf(ctx, tx)
+	companyName, err := identity.NameOf(ctx, tx)
 	if err != nil {
 		return err
 	}
-	if confirmation != orgName {
+	if confirmation != companyName {
 		return errResetConfirmationMismatch
 	}
 	return nil
@@ -211,7 +221,7 @@ func confirmResetOrgName(ctx context.Context, tx pgx.Tx, confirmation string) er
 // nothing staged to ship into streams that were just emptied (clearOutbox).
 func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, confirmation string, counts *resetCounts) error {
 	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		if err := confirmResetOrgName(ctx, tx, confirmation); err != nil {
+		if err := confirmResetCompanyName(ctx, tx, confirmation); err != nil {
 			return err
 		}
 		tables, err := resetTargetTables(ctx, tx)
@@ -239,34 +249,16 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// The provider platform needs no pass of its own any more. It used to:
 		// its five tables carry no workspace_id, so the sweep's old
 		// column-derived list could not see them, and a reset left purchased
-		// personal data about people it had just deleted. The list is derived
+		// personal data about contacts it had just deleted. The list is derived
 		// by exclusion now, so they are ordinary targets.
 		counts.TablesCleared = len(tables)
 
-		// A first-boot installation is native, and everything overlay mode
-		// depends on was just swept: the incumbent connection, the mirror, the
-		// budget counters. Left in overlay mode the workspace would claim to
-		// read from an incumbent it has no connection to, dispatching every
-		// read at an empty mirror — an installation that looks like it works.
-		//
-		// overlay's own function, not a local UPDATE: these are its fork-owned
-		// columns, and Disconnect flips them the same way. This is NOT that
-		// teardown, though — the connection and mirror rows are already gone
-		// with the sweep, the reset carries its own audit row, and
-		// incumbent.disconnected would be staged into an outbox this reset just
-		// drained.
-		reverted, err := overlay.RevertToNative(ctx, tx)
-		if err != nil {
-			return err
-		}
-		counts.SorModeReverted = reverted
-
 		// The workspace row itself carries nothing to reset. ADR-0090 moved its
-		// identity into `setting` and ADR-0091 moved the overlay mode into
-		// overlay_mode, leaving id and the lifecycle timestamps — which a reset
-		// preserves by definition, since it wipes an installation's DATA and does
-		// not re-create the installation. identity.ResetWorkspaceConfig retired
-		// with the last column it had to restore.
+		// identity into `setting`, leaving id and the lifecycle timestamps —
+		// which a reset preserves by definition, since it wipes an
+		// installation's DATA and does not re-create the installation.
+		// identity.ResetWorkspaceConfig retired with the last column it had to
+		// restore.
 
 		// The same obligation for the settings that no longer live on that row
 		// (ADR-0090/A135). `setting` carries no workspace_id, so the table
@@ -286,10 +278,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// Re-seed under a system principal + a fresh correlation id, exactly as
 		// bootstrap does (identity/installation.go), so the seeders' own
 		// audit+outbox writes trace to one originating operation.
-		seedCtx := principal.WithActor(principal.WithWorkspaceID(ctx, wsID), principal.Principal{
-			Type: principal.PrincipalSystem, ID: "system",
-		})
-		seedCtx = principal.WithCorrelationID(seedCtx, ids.NewV7())
+		seedCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID), "system")
 		// The reset's own discard list, reported here rather than dropped. It
 		// is not empty on this path: ai.Routing is installation identity, so
 		// ResetConfig spares its row and a re-seed of the declared binding is
@@ -331,10 +320,6 @@ func resetEvidence(counts resetCounts) map[string]any {
 		"streams_purged":     counts.StreamsPurged,
 		"cache_keys_deleted": counts.CacheKeys,
 		"drain_timed_out":    counts.DrainTimedOut,
-		// Whether this reset also took the installation out of overlay mode.
-		// It belongs in the permanent record because it changes where every
-		// subsequent read is served from, which no other count here does.
-		"sor_mode_reverted": counts.SorModeReverted,
 		// Sealed credentials redeemed from the vault. Like objects_deleted this
 		// is tallied after the commit, so the number this row carries is the
 		// count the sweep COLLECTED — the work the reset committed itself to —
@@ -376,35 +361,6 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 	return h.purgeSealedCredentials(ctx, wsID, counts)
 }
 
-// purgeSealedCredentials redeems the credential handles the sweep collected
-// before it deleted the rows naming them.
-//
-// It runs after the commit because the vault is a seam, not a table: the local
-// provider happens to write Postgres, but a remote one has no transaction to
-// join. The handles were captured inside the transaction instead, which is the
-// half that has to be consistent — a sweep that rolled back leaves refs this
-// never receives.
-//
-// A failure fails the request. The alternative is reporting an installation as
-// reset while its sealed credentials are still resident, which is precisely
-// the state this exists to prevent. Delete is idempotent, so re-running the
-// reset finishes a partial purge.
-func (h dataResetHandlers) purgeSealedCredentials(ctx context.Context, wsID ids.UUID, counts *resetCounts) error {
-	if h.vault == nil {
-		return nil
-	}
-	ws := ids.From[ids.WorkspaceKind](wsID)
-	for _, ref := range counts.secretRefs {
-		// The ref is never logged or returned: it is the address of a secret,
-		// and an error naming it would put that address in every log sink.
-		if err := h.vault.Delete(ctx, ws, keyvault.Ref(ref)); err != nil {
-			return fmt.Errorf("data reset: purging a sealed credential: %w", err)
-		}
-		counts.SecretsPurged++
-	}
-	return nil
-}
-
 // ResetData wipes an installation that has ARMED the capability back to its
 // first-boot state. Gate order, fail-closed: the switch first (an installation
 // that did not arm it has no such endpoint, checked before any auth so a
@@ -435,7 +391,7 @@ func (h dataResetHandlers) ResetData(w http.ResponseWriter, r *http.Request) {
 	counts, err := h.run(ctx, req.Confirmation)
 	if errors.Is(err, errResetConfirmationMismatch) {
 		httperr.Write(w, r, httperr.Validation("confirmation", "confirmation_mismatch",
-			"The typed confirmation does not match the organization name."))
+			"The typed confirmation does not match the company name."))
 		return
 	}
 	if err != nil {

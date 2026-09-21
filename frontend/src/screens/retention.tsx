@@ -13,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -61,7 +62,7 @@ function ScopeCell({ policy }: Readonly<{ policy: RetentionPolicy }>) {
   return (
     <span className="retention-scope">
       <span>{t(scopeLabelKey(policy.scope))}</span>
-      <span className="t-mono t-caption">{policy.scope}</span>
+      <span className="t-caption">{policy.scope}</span>
     </span>
   );
 }
@@ -167,7 +168,7 @@ function PolicyRow({
         // whether the posture is letting it happen.
         value={
           <span className="retention-answer">
-            <span className="t-caption">
+            <span>
               {t("retention.windowDays", {
                 days: formatNumber(policy.retain_days, locale),
               })}
@@ -178,18 +179,16 @@ function PolicyRow({
         }
         control={
           canEdit ? (
-            <Button small onClick={toggleEditor}>
-              {t("retention.edit")}
-            </Button>
+            <Button onClick={toggleEditor}>{t("retention.edit")}</Button>
           ) : null
         }
       />
       <Modal open={editing} onClose={toggleEditor} labelledBy={editorTitleId}>
         {/* The scope names WHICH policy is open, because the dialog covers the
             row that would otherwise have said. */}
-        <h2 id={editorTitleId} className="t-h2 modal-title">
+        <Heading size="large" id={editorTitleId} className="t-h2 modal-title">
           {t(scopeLabelKey(policy.scope))}
-        </h2>
+        </Heading>
         <div className="form-stack">
           <Field
             label={t("retention.window")}
@@ -249,22 +248,20 @@ function PolicyRow({
             label={t("retention.enabled")}
             checked={policy.enabled}
             // `intent` is already on the write for exactly this reason: one
-            // `patch` serves this switch and the row's save form, so without
-            // it a saved edit made the pause switch announce a flip nobody
-            // made.
+            // `patch` serves this switch and the row's save form, so without it
+            // a saved edit made the pause switch announce a flip nobody made.
             pending={patch.isPending && patch.variables?.intent === "switch"}
             onChange={(next) =>
               patch.mutate({ intent: "switch", body: { enabled: next } })
             }
           />
           {patch.isError && (
-            <p className="t-caption retention-error" role="alert">
+            <p className="retention-error" role="alert">
               {problemMessageOf(patch.error, t)}
             </p>
           )}
           <div className="retention-actions">
             <Button
-              small
               variant="primary"
               disabled={days === null || patch.isPending}
               onClick={() =>
@@ -284,16 +281,13 @@ function PolicyRow({
             {/* Closing keeps the draft exactly where the old inline panel
                   left it — the fields are re-seeded on the next open, so a
                   dismissed dialog abandons the edit rather than saving it. */}
-            <Button small onClick={toggleEditor}>
-              {t("deals.cancel")}
-            </Button>
+            <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
             {/* The confirm REPLACES this dialog rather than stacking on top of
                 it: two dialogs at once trap focus in the wrong one and share
                 one Escape key, and the question "delete, or did you mean
                 pause?" has to be the only thing on screen when it is asked. */}
             {canDelete && (
               <Button
-                small
                 variant="danger"
                 onClick={() => {
                   setEditing(false);
@@ -416,7 +410,7 @@ function PostureToggle({
         onChange={(next) => update.mutate(next)}
       />
       {update.isError && (
-        <p className="t-caption retention-error" role="alert">
+        <p className="retention-error" role="alert">
           {problemMessageOf(update.error, t)}
         </p>
       )}
@@ -506,7 +500,7 @@ export function RetentionCard() {
       // once, and withholding it a second time per row is noise.
       titleAction={
         canCreate ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("retention.addPolicy")}
           </Button>
         ) : undefined
@@ -535,7 +529,7 @@ export function RetentionCard() {
                   // percentage of.
                   <Skeleton width={40} height={22} />
                 ) : settings.isError ? (
-                  <p className="t-caption retention-error" role="alert">
+                  <p className="retention-error" role="alert">
                     {problemMessageOf(settings.error, t)}
                   </p>
                 ) : (
@@ -563,9 +557,9 @@ export function RetentionCard() {
             onClose={() => setAdding(false)}
             labelledBy={addTitleId}
           >
-            <h2 id={addTitleId} className="t-h2 modal-title">
+            <Heading size="large" id={addTitleId} className="t-h2 modal-title">
               {t("retention.addPolicy")}
-            </h2>
+            </Heading>
             <RetentionPolicyForm onDone={() => setAdding(false)} />
           </Modal>
 

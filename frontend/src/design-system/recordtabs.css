@@ -17,14 +17,16 @@
      both. Without the `work` container the fallback is the reading column's
      own gutter, which is the narrower, safe answer. */
   margin-inline: calc(-1 * var(--pageGutter));
-  /* AND it may shrink, which is what makes the strip's own scrolling reachable.
+  /* IT MAY SHRINK, which is what makes the strip's own scrolling reachable.
      A flex or grid item is `min-inline-size: auto`, so it refuses to go narrower
      than its content — and this element's content is every tab laid end to end.
      Inside a `work` container that never shows, because the block below pins an
      explicit `inline-size` and the strip scrolls within it. Outside one, on a
      screen whose header is a flex row, the strip's `overflow-x: auto` could
      never engage: the tabs pushed the page sideways instead, which is the one
-     thing this component is built not to do. */
+     thing this component is built not to do. Analytics lays its header out as a
+     flex row and is where the 390px sweep caught it, eleven pixels past the
+     viewport; the record pages place the strip in a block and never saw it. */
   min-inline-size: 0;
 }
 
@@ -131,10 +133,11 @@
   border: 0;
   border-block-end: 2px solid transparent;
   background: none;
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
+  font-family: var(--fontFamilyBody);
+  /* Medium, the weight of text inside a component and of anything that may sit
+     beside a line icon: a tab carries a count and a mark on the same line, and
+     the stroke of the glyph and the stroke of the letter should match. */
+  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -158,14 +161,14 @@
   border-block-end-color: var(--accent);
 }
 
-/* The count is a figure, so it reads in the mono face where digits share one
-   width — a strip of counts lines up instead of shifting tab to tab. Quieter
-   than the label it follows: the word is what a reader is looking for and the
-   number is what they check once they have found it. */
-.recordtabs-count {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-regular);
-  color: var(--textMeta);
+/* A record with ONE body draws it as a label rather than a button: the same
+   box and the same underline, because the row reads the same wherever the
+   reader stands, and no affordance to press — a pointer over a word that
+   answers nothing is a promise the strip cannot keep. */
+.recordtabs-tab[aria-current="page"] {
+  color: var(--textPrimary);
+  border-block-end-color: var(--accent);
+  cursor: default;
 }
 
 /* Something waits behind this tab. An accent dot rather than an indigo one:

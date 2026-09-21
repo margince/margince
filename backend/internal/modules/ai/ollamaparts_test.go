@@ -43,7 +43,7 @@ func TestOllamaImageRidesTheLastUserTurnAsBareBase64(t *testing.T) {
 		{Role: roleUser, Content: "first"},
 		{Role: roleAssistant, Content: "answered"},
 		{Role: roleUser, Content: "read this"},
-	}, []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}})
+	}, []model.Attachment{{MIME: "image/png", Bytes: pngSample}})
 
 	if len(msgs) != 4 {
 		t.Fatalf("want the system turn plus 3, got %d", len(msgs))
@@ -57,7 +57,7 @@ func TestOllamaImageRidesTheLastUserTurnAsBareBase64(t *testing.T) {
 	if last.Content != "read this" {
 		t.Errorf("the turn's text stays its body on this wire, got %q", last.Content)
 	}
-	if len(last.Images) != 1 || last.Images[0] != "UE5H" {
+	if len(last.Images) != 1 || last.Images[0] != pngSampleBase64 {
 		t.Fatalf("want one bare-base64 image, got %v", last.Images)
 	}
 	if strings.Contains(last.Images[0], "data:") {
@@ -69,7 +69,7 @@ func TestOllamaImageRidesTheLastUserTurnAsBareBase64(t *testing.T) {
 // prompt has none, so one is created rather than the image being hung off the
 // system turn, which the chat template renders as instructions.
 func TestOllamaAttachmentWithNoUserTurnGetsOne(t *testing.T) {
-	msgs := ollamaMessages("sys", nil, []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}})
+	msgs := ollamaMessages("sys", nil, []model.Attachment{{MIME: "image/png", Bytes: pngSample}})
 	if len(msgs) != 2 {
 		t.Fatalf("want the system turn plus a created user turn, got %d", len(msgs))
 	}
@@ -90,7 +90,7 @@ func TestOllamaRefusesAnAttachmentGivenByURI(t *testing.T) {
 		t.Errorf("the refusal must not echo the uri, got %q", err)
 	}
 	if err := ollamaRefuseAttachments([]model.Attachment{
-		{MIME: "image/png", Bytes: []byte("PNG")},
+		{MIME: "image/png", Bytes: pngSample},
 	}, carriesImages); err != nil {
 		t.Errorf("inline image bytes are exactly what this wire takes, got %v", err)
 	}
@@ -105,7 +105,7 @@ func TestOllamaSizesTheWindowForCarriedImages(t *testing.T) {
 	wireWith := func(n int) ollamaWire {
 		atts := make([]model.Attachment, n)
 		for i := range atts {
-			atts[i] = model.Attachment{MIME: "image/png", Bytes: []byte("PNG")}
+			atts[i] = model.Attachment{MIME: "image/png", Bytes: pngSample}
 		}
 		return ollamaWire{Messages: ollamaMessages("", turn, atts)}
 	}

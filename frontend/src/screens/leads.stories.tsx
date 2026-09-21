@@ -15,7 +15,7 @@ import {
 } from "./story-utils";
 
 // LeadsScreen (list, accent-tinted "segregated" surface) and LeadScreen (its
-// own 360 — never person.html, per the §3.5 segregation gap) both read
+// own 360 — never contact.html, per the §3.5 segregation gap) both read
 // through the api client on mount; LeadScreen's lifecycle panel also reads
 // GET /me (the session-principal probe every role-aware surface shares).
 const meta: Meta = {
@@ -186,7 +186,7 @@ export const LeadPromotedAfterMerge: Story = {
         jsonResponse({
           ...lead,
           status: "promoted",
-          promoted_person_id: "p-42",
+          promoted_contact_id: "p-42",
           promoted_at: "2026-06-20T08:00:00Z",
           archived_at: "2026-06-20T08:00:00Z",
         }),
@@ -338,8 +338,8 @@ export const SharedRecordViews: Story = {
 };
 
 // A rep sent here to log a call attempt. The address names the verb, so the
-// composer at the foot of the overview opens on Call rather than on a note
-// they would have to change, and the page scrolls to it.
+// header's Log activity drawer opens already showing Call rather than a note
+// they would have to change it to.
 export const LeadArrivedToLogACall: Story = {
   render: () => {
     installFetchStub({
@@ -349,31 +349,6 @@ export const LeadArrivedToLogACall: Story = {
           user: { id: "u-9", display_name: "Me" },
           roles: ["rep"],
           teams: [],
-        }),
-    });
-    globalThis.location.hash = "#/leads/l-1?action=call";
-    return (
-      <StoryProviders>
-        <LeadScreen id="l-1" />
-      </StoryProviders>
-    );
-  },
-};
-
-// The same address on a mirrored lead. Every write the composer makes answers
-// unsupported_by_sor, so it is absent for every reader here — and a reader who
-// followed a link TO it is told why rather than left on a page that looks
-// broken.
-export const LeadCallRefusedInOverlay: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /leads/l-1": () => jsonResponse(lead),
-      "GET /me": () =>
-        jsonResponse({
-          user: { id: "u-9", display_name: "Me" },
-          roles: ["rep"],
-          teams: [],
-          system_of_record: { mode: "overlay" },
         }),
     });
     globalThis.location.hash = "#/leads/l-1?action=call";

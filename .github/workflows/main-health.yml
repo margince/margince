@@ -5,7 +5,7 @@
 # this workflow does nothing to prevent it. What it changes is the DELAY: without
 # it, a breakage on main is discovered when somebody else's unrelated pull request
 # goes red for reasons they did not cause, which is both slow and lands the cost on
-# the wrong person. The nightly lane in scheduled.yml answers the same question
+# the wrong contact. The nightly lane in scheduled.yml answers the same question
 # once a day; at eight merges an hour that is a working day of exposure.
 #
 # So this runs every two hours and, when it finds main broken, files ONE issue per
@@ -17,7 +17,7 @@
 # already landed.
 #
 # The cadence is the one knob. Every two hours costs ~15 jobs a run against a
-# 20-concurrent org ceiling that the pull-request lanes also queue in, and narrows
+# 20-concurrent runner ceiling that the pull-request lanes also queue in, and narrows
 # the suspect range to roughly a dozen commits. Tighten the cron if a dozen is too
 # many to bisect; it is one line.
 name: main-health
@@ -43,6 +43,13 @@ concurrency:
 defaults:
   run:
     working-directory: backend
+
+# A module the proxy cannot serve is not a broken build: the PIPE falls through
+# to the source on any error, where Go's default comma falls through only on a
+# 404. Why that distinction reached `main` as a product break:
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
 
 jobs:
   # The no-database half of the merge gate, run against main's tip unconditionally.
@@ -174,13 +181,20 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - name: Install deps and the Playwright Chromium browser
+      - name: Install deps
         working-directory: frontend
         # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
         # install; esbuild ships prebuilt platform binaries as optional deps.
-        run: |
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm exec playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      # SEPARATE from the install above, and bounded, because `--with-deps`
+      # shells out to apt inside the runner: an unresponsive mirror hangs with
+      # no output, and a hang folded into the previous step reaches a reader as
+      # "the lane timed out" rather than "the package repository did".
+      - name: Install the Playwright Chromium browser
+        working-directory: frontend
+        timeout-minutes: 6
+        run: pnpm exec playwright install --with-deps chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e
 
@@ -273,7 +287,7 @@ jobs:
         # download, which fetches SonarSource's key from a public keyserver. On
         # run 32687876395 keyserver.ubuntu.com simply stopped answering, and the
         # step sat silent for 30 minutes until the JOB timeout killed it — a
-        # runner slot spent for nothing inside a 20-concurrent org ceiling every
+        # runner slot spent for nothing inside the 20-concurrent runner ceiling every
         # pull-request lane also queues in. A rerun of the same commit finished
         # in 95 seconds. margince/margince#2543.
         #
@@ -301,13 +315,19 @@ jobs:
     # to publish main's verdict was the one job whose failure nobody was told
     # about.
     needs: [gates, integration, frontend, uat, sonar]
+    # Every result, not only the failures. The reporter files a finding for a red
+    # lane and RETRACTS one for a green lane, and a job that runs only when
+    # something failed can do the first but never the second: the issue outlives
+    # its fix until somebody closes it by hand, and the tracker reports a red
+    # main over a green tree. Re-adding a `result == 'failure'` clause here
+    # breaks retraction silently — the run is green, the job is skipped, nothing
+    # fails — so scripts/test-scheduled-report.sh asserts this condition names no
+    # lane result at all.
+    #
+    # `!cancelled()` and nothing else: a skipped lane must reach the reporter as
+    # `skipped`, which it reads as neither a red nor a green.
     if: >-
       !cancelled()
-      && (needs.gates.result == 'failure'
-      || needs.integration.result == 'failure'
-      || needs.frontend.result == 'failure'
-      || needs.uat.result == 'failure'
-      || needs.sonar.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
       contents: read

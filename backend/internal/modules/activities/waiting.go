@@ -5,20 +5,16 @@ package activities
 
 // Who is waiting for a reply.
 //
-// The deal page already answers this for ONE deal, by walking that deal's
-// timeline newest-first and stopping at the first outbound. This is the same
-// question asked of the whole workspace at once, and it cannot be the same walk:
-// a per-deal scan cannot find the person with no deal, and it cannot be run
-// once per record on a page that must render in one read.
+// The deal page answers this for ONE deal by walking its timeline newest-first.
+// This asks the whole workspace at once and cannot be the same walk: a per-deal
+// scan cannot find the contact with no deal, nor run once per record on a page
+// that must render in one read. A test feeds both the same timeline and requires
+// the same answer.
 //
-// So it is a query, and the two spellings are held together by a test that
-// feeds both the same timeline and requires the same answer.
-//
-// WHY THIS IS ITS OWN READ rather than a filter over the at-risk deals: a fresh
-// inbound makes a deal LESS quiet, so the deal drops out of the quiet-deal
-// candidate set exactly when somebody starts waiting on it. Deriving "waiting"
-// from "quiet" would therefore lose the newest and most urgent cases, which are
-// the ones a rep most needs.
+// ITS OWN READ rather than a filter over at-risk deals: a fresh inbound makes a
+// deal LESS quiet, so it leaves the quiet-deal candidate set exactly when
+// somebody starts waiting on it. Deriving "waiting" from "quiet" would lose the
+// newest and most urgent cases.
 
 import (
 	"context"
@@ -43,14 +39,14 @@ type WaitingReply struct {
 	Kind    string
 	Subject string
 	// Sender is the address the message came from, so a caller can tell a
-	// person waiting from a machine sending. Empty when no sender was recorded.
+	// contact waiting from a machine sending. Empty when no sender was recorded.
 	Sender string
 	// OccurredAt is when they wrote, which is what the wait is measured from.
 	OccurredAt time.Time
 	// The record the thread is filed under, when it names one.
-	PersonID       ids.UUID
-	OrganizationID ids.UUID
-	DealID         ids.UUID
+	ContactID ids.UUID
+	CompanyID ids.UUID
+	DealID    ids.UUID
 	// HasOpenDeal reports whether an open deal is on this thread. It is what
 	// lets a caller keep an old wait that still has money behind it, and drop
 	// one that does not.
@@ -68,7 +64,20 @@ type WaitingReply struct {
 	// before the column existed, because a classifier that has not run, has run
 	// out of budget or answered below its confidence floor must not change what
 	// a rep sees.
-	OwedVerdict string
+	OwedVerdict  string
+	CaptureLabel string
+	// Threaded reports that this message belongs to a conversation.
+	//
+	// Not every captured message does: a first contact from an address nobody
+	// has written to, or a provider that hands over no chain to root on,
+	// arrives with no thread_key at all and still reaches this queue.
+	//
+	// It travels because two of the three judgements a rep may make about a
+	// waiting row are keyed on the thread, and a row without one can perform
+	// neither. Deciding that here, where the column is read, rather than
+	// letting the caller infer it from a record id that is absent for other
+	// reasons too.
+	Threaded bool
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -79,22 +88,27 @@ type WaitingReply struct {
 	// which is the one failure this queue must not have. A caller demotes an
 	// unengaged wait instead, so being wrong costs a scroll.
 	Engaged bool
+	// AddressedElsewhere reports that the message names header recipients and
+	// none of them is this reader — mail written to a colleague that reached
+	// this mailbox.
+	//
+	// Phrased as the exception so FALSE is the answer whenever there is no
+	// evidence: no header recipients recorded, or the reader's own addresses
+	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
+	// caller demotes what it cannot prove.
+	AddressedElsewhere bool
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
-	// PRECEDENCE, first owner found: deal, lead, person, organization. It is the
-	// order of how specific the claim is — a thread on a deal is that deal
-	// owner's to answer whatever else it touches, and a person outranks their
-	// company because the company owner is answerable for the account rather
-	// than for every conversation inside it.
+	// PRECEDENCE, first owner found: deal, lead, contact, company — the order of
+	// how specific the claim is. A contact outranks their company because the
+	// company owner answers for the account, not for every conversation in it.
 	//
-	// A separate question from the record ids above, which the caller picks a
-	// DISPLAY record from by link priority. The two are allowed to differ: those
-	// answer "what is this about", this one answers "who owes the reply".
+	// A separate question from the record ids above, which answer "what is this
+	// about" while this answers "who owes the reply"; the two may differ.
 	//
 	// Resolved through the SAME visibility-gated links, so an owner appears only
-	// where the reader may see the record naming them. Read off an ungated join
-	// it would publish who owns a record the reader cannot open.
+	// where the reader may see the record naming them.
 	OwnerID ids.UUID
 }
 
@@ -110,21 +124,17 @@ const WaitingScanCap = 200
 
 // waitingHorizonDays is how far back a wait can reach and still be work.
 //
-// Past this, an unanswered message is history rather than an obligation: the
-// conversation it belonged to has ended one way or another, and nobody is
-// sitting at the other end of it. The horizon is coarse on purpose — the bands
-// that separate an urgent wait from a stale one are the caller's, and they
-// judge what survives this.
+// Past this, an unanswered message is history rather than an obligation. Coarse
+// on purpose: the bands separating an urgent wait from a stale one are the
+// caller's.
 //
-// A thread with an open deal on it is exempt. That is the one case where a long
-// silence still costs money, and the caller says the same thing in its own
-// staleness rule; a horizon that outranked it would leave that rule with
-// nothing to act on.
+// A thread with an open deal is exempt — the one case where a long silence still
+// costs money, and a horizon outranking it would leave the caller's own
+// staleness rule nothing to act on.
 //
-// Applied BEFORE the cap for the same reason the machine rule is, and the
-// reason is worth restating because it is the whole shape of this query: a
-// filter after LIMIT lets two hundred rows nobody wants fill the scan and push
-// a real customer past it, and the page then says nobody is waiting.
+// Applied BEFORE the cap, which is the whole shape of this query: a filter after
+// LIMIT lets two hundred rows nobody wants fill the scan and push a real
+// customer past it, and the page then says nobody is waiting.
 const waitingHorizonDays = 90
 
 // What "still live" means, per record type, as one spelling each.
@@ -158,41 +168,56 @@ func liveRecord(predicate, alias string) string {
 	return fmt.Sprintf(predicate, alias)
 }
 
-// Two of the holes are RELAXATIONS, and both default to off.
+// Two of the holes are RELAXATIONS, both defaulting to off. %[12]s and %[13]s
+// widen the not_sales judgement and the sales-link requirement by OR-ing a
+// caller-supplied predicate in front of each clause rather than removing it.
+// Every ordinary caller passes `neverRelaxed`, so the clause is unreachable and
+// Postgres plans it away.
 //
-// %[12]s and %[13]s widen the not_sales judgement and the sales-link
-// requirement respectively, each by OR-ing a caller-supplied predicate in front
-// of the clause rather than by removing it. Every ordinary caller passes
-// `neverRelaxed`, so the statement they run is the statement that was always
-// here — the clause is unreachable and Postgres plans it away.
+// They exist for the hidden-backlog guardrail, which asks what each hiding rule
+// keeps off the queue — a question only the query owning the OTHER rules can
+// answer. A second statement restating the anti-joins and the live-record
+// predicates would be a second answer to "is this contact waiting".
 //
-// They exist for the hidden-backlog guardrail (hiddenbacklog.go), which asks
-// what each hiding rule is keeping off the queue. That question can only be
-// answered by the query that owns the OTHER rules: a second statement restating
-// the anti-joins, the machine-sender exclusion and the live-record predicates
-// would be a second answer to "is this person waiting", and the two would
-// disagree the first time either was edited. Widening one clause of the real
-// query is the version that cannot drift.
-//
-// waitingRepliesSQL is Sprintf'd directly at ALL call sites — WaitingReplies
-// below (entityClause scopeUnbounded, the workspace-wide Worklist read), the
-// entity-scoped list filter (waitingReplyExistsClause) and the guardrail —
-// rather than through a wrapper. A long positional argument list is already the
-// shape the constant settled on for its own eligibility rules; a wrapper over
-// that many arguments would just be the same Sprintf call once removed, with a
-// second place to keep its parameter order in sync with the %[N] indices
-// below. What must not fork between the call sites is the SQL TEXT — the
-// anti-joins, the tie break, the future-dated guard, the horizon, the
-// live-record predicates — and sharing the one constant holds that; a test
-// feeding both callers the same timeline and requiring the same answer holds
-// the rest.
+// Sprintf'd directly at ALL call sites rather than through a wrapper, which over
+// this many positional arguments would be the same call once removed with a
+// second parameter order to keep in sync. What must not fork is the SQL TEXT,
+// and sharing one constant holds that.
 
 // WaitingReplies answers who is waiting on this reader for a reply.
 //
 // One row per thread — the newest inbound in it — because a customer who wrote
 // three times is waiting once, and three rows would read as three obligations.
 // Oldest first: the longest wait is the one most likely to have been forgotten.
+//
+// One PAGE of them, bounded by the scan cap. Read the whole backlog with
+// WaitingRepliesBefore, which continues where a page left off; this spelling
+// asks for the newest page and stops.
+//
+// Paged because the scan's own machine-sender rule is a coarse subset of the
+// real one. The full test reads a registrable domain against a transactional
+// baseline — a public-suffix question, not something a LIKE can answer — so it
+// runs in the caller, AFTER this cap. Two hundred newer messages from one
+// transactional relay could therefore fill the scan and push a genuinely
+// waiting customer out of it, and the caller would discard all two hundred and
+// show nothing. Asking for the next page is how the customer comes back.
+//
+// Not by moving the full rule into SQL: that rule is one capability, and a
+// second copy of it here would be the thing that drifts — the domain baseline
+// and the public-suffix walk are both Go, and compose owns the seam that has
+// them.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
+	return s.WaitingRepliesBefore(ctx, asOf, time.Time{})
+}
+
+// WaitingRepliesBefore is WaitingReplies continued: the next page of the same
+// scan, older than the instant given.
+//
+// One implementation, two names. The unpaged spelling is what almost every
+// caller wants — one page is two hundred rows and more than a queue shows —
+// and it says so by taking no cursor at all, rather than every call site
+// carrying a zero somebody has to recognise as "the beginning".
+func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before time.Time) ([]WaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -226,7 +251,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			return err
 		}
 		// The links come back only where the reader may see what they point at.
-		// One visible person must not expose a colleague's deal, which is the
+		// One visible contact must not expose a colleague's deal, which is the
 		// disclosure the timeline's own link read guards against.
 		//
 		// Aliased `wl`, not `l`: the discover gate composed above renders its
@@ -242,8 +267,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			linkVisible = scopeUnbounded
 		}
 		// WHOSE set-asides apply. The reader comes from the principal rather
-		// than from a parameter, so one person's snooze cannot be asked for on
-		// another's behalf. A caller with no person behind it — a system pass
+		// than from a parameter, so one contact's snooze cannot be asked for on
+		// another's behalf. A caller with no contact behind it — a system pass
 		// reading the same query — matches no reader_state row and therefore
 		// has nothing hidden from it, which is the honest answer: a background
 		// job has set nothing aside.
@@ -261,6 +286,13 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		if err != nil {
 			return err
 		}
+		// The reader's own addresses, read in the SAME transaction as the scan
+		// so a mailbox connected mid-read cannot make one row judge the
+		// envelope differently from the next.
+		readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
@@ -272,7 +304,10 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
-				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent)), args...)
+				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
+				fmt.Sprintf("$%d", arg(readerAddresses)),
+				unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
+				olderThan(before, arg)), args...)
 		if err != nil {
 			return err
 		}
@@ -281,8 +316,9 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		for rows.Next() {
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.Engaged, &row.OwnerID); err != nil {
+				&row.ContactID, &row.CompanyID, &row.DealID,
+				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
+				&row.Engaged, &row.OwnerID, &row.Threaded); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
@@ -295,25 +331,31 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 	return waiting, nil
 }
 
-// OwnDomains reports the email domains this installation's own people write
+// OwnDomains reports the email domains this installation's own contacts write
 // from — the set a message's sender is tested against to tell a colleague from
 // a customer.
 //
-// A seam rather than a query here because the domains are capture's to define:
-// it owns workspace_email_domain and the rule for which entries count as
-// vouched-for, and a module may not read a sibling's tables. What this returns
-// is DATA the queue tests against in SQL, not a Go predicate, because the test
-// has to run before the scan cap — a predicate applied to the rows that came
-// back would let two hundred colleague threads fill the scan and push a real
-// customer past it, which is the failure every other rule in waitingsql.go is
-// ordered to avoid.
+// A seam rather than a query because the domains are capture's to define, and a
+// module may not read a sibling's tables. It returns DATA the queue tests in
+// SQL, not a Go predicate: the test has to run before the scan cap, or two
+// hundred colleague threads fill the scan and push a real customer past it.
 //
-// The domains are read inside the CALLER's transaction, so the strict read and
-// every relaxed read beside it see one snapshot. A seam that opened its own
-// would let the set change between two counts that are meant to differ by
-// exactly one rule.
+// Read inside the CALLER's transaction, so the strict read and every relaxed
+// read beside it see one snapshot — otherwise the set could change between two
+// counts meant to differ by exactly one rule.
 type OwnDomains interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
+	// ReaderAddresses is the reader's OWN addresses, for telling a message
+	// written to them from one written to a colleague that they can see.
+	//
+	// Capture stamps the mailbox owner as a recipient on every inbound message
+	// it stores, so a participant row alone proves nothing about the envelope.
+	// These are the addresses a header has to name.
+	//
+	// Empty admits everyone, like Domains above and for the same reason: a
+	// reader whose addresses cannot be resolved is one whose real waiting mail
+	// must not silently vanish.
+	ReaderAddresses(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error)
 }
 
 // WithOwnDomains wires the colleague-domain reader the waiting queue needs.
@@ -337,6 +379,21 @@ func (h Handlers) WithOwnDomains(own OwnDomains) Handlers {
 
 // ownDomainList reads the colleague domains for one query, or none when no
 // reader is wired.
+// readerAddressList is the reader's own addresses, or none when no seam is
+// wired — which admits every message, the same failure direction ownDomainList
+// takes and for the same reason: a reader whose addresses cannot be resolved
+// must not have their real waiting mail silently demoted.
+func (s *Store) readerAddressList(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error) {
+	if s.ownDomains == nil {
+		return nil, nil
+	}
+	addresses, err := s.ownDomains.ReaderAddresses(ctx, tx, reader)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the reader's own addresses: %w", err)
+	}
+	return addresses, nil
+}
+
 func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if s.ownDomains == nil {
 		return nil, nil

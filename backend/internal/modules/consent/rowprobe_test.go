@@ -67,7 +67,7 @@ func TestAStateWithNoProbeDecisionIsRefused(t *testing.T) {
 	probe, err := rowProbeFor(ConsentState("pondered"))
 	if err == nil {
 		t.Fatal("an undecided state was given a probe: the vocabulary grew and the choice between " +
-			"a lawful-basis claim and a suppression was made by a default rather than by a person")
+			"a lawful-basis claim and a suppression was made by a default rather than by a contact")
 	}
 	if probe != nil {
 		t.Error("the refusal still handed back a probe")

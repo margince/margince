@@ -221,7 +221,7 @@ func TestRuntimeRefusesBeforeTouchingAnUnwiredPool(t *testing.T) {
 
 // TestRuntimeCallerIsTheInvocationsPrincipal walks the four callers a unit can
 // meet. The property is one property said four ways: Caller is READ from the
-// invocation's own principal, so a unit stamping authorship gets the person
+// invocation's own principal, so a unit stamping authorship gets the contact
 // accountable for the row and never an identity a request body could carry.
 //
 // The agent and connector cases pin the "agent ≤ human" half — the id handed
@@ -289,7 +289,7 @@ func TestRuntimeCallerNeverRendersAZeroUserID(t *testing.T) {
 // TestRuntimeCallerOfAJobTickIsTheSystem. A tick's context carries an actor,
 // because the tenant policies and the audit rows need one — but there is no
 // human behind it, and runtime.go promises a tick answers the zero Caller.
-// Without this the unit would be handed a synthetic id as if it were the person
+// Without this the unit would be handed a synthetic id as if it were the contact
 // accountable for the row.
 //
 // The principal here carries a UserID that a real tick's does NOT: the mint is a

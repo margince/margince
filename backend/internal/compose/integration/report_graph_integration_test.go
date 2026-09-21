@@ -22,39 +22,40 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
-// seedDealFixtures plants a pipeline, one open stage, an organization
+// seedDealFixtures plants a pipeline, one open stage, a company
 // and n open deals owned by the given user (nil = ownerless).
 func (e *SearchEnv) seedDealFixtures(t *testing.T, n int, owner *ids.UUID) {
 	t.Helper()
 	pipelineID := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Sales', true, 0)`)
 	stageID := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipelineID)
-	orgID := e.SeedID(t, `INSERT INTO organization (id, display_name, source, captured_by) VALUES ($1, 'Report Org', 'manual', 'human:x')`)
+	companyID := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Report Company', 'manual', 'human:x')`)
 	for i := 0; i < n; i++ {
-		e.SeedID(t, fmt.Sprintf(`INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, owner_id, amount_minor, currency, source, captured_by)
+		e.SeedID(t, fmt.Sprintf(`INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, owner_id, amount_minor, currency, source, captured_by)
 			VALUES ($1, 'Deal %d', $2, $3, $4, $5, 100000, 'EUR', 'manual', 'human:x')`, i),
-			pipelineID, stageID, orgID, owner)
+			pipelineID, stageID, companyID, owner)
 	}
 }
 
 // A deal is readable by every seat holding the deal grant, so the specimen
-// for a count that must not out-see the lists is a capture-private person:
-// the row a person row scope still hides from everyone but its captor.
+// for a count that must not out-see the lists is a capture-private contact:
+// the row a contact row scope still hides from everyone but its captor.
 func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
 	e := SetupSearch(t)
 	for i := 0; i < 3; i++ {
-		e.SeedID(t, fmt.Sprintf(`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+		e.SeedID(t, fmt.Sprintf(`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 			VALUES ($1, 'Private %d', $2, 'owner', 'manual', 'human:x')`, i), e.Rep3)
 	}
 	provider := compose.NewProvider(e.Pool)
 
 	// The captor counts all three.
 	res, err := provider.RunReport(e.AsTeamRep(e.Rep3, e.Team2), datasource.ReportPlan{
-		Entity: datasource.EntityPerson, GroupBy: []string{"source"},
+		Entity: datasource.EntityContact, GroupBy: []string{"source"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -66,7 +67,7 @@ func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
 	// A colleague sees none of the private captures — aggregates cannot
 	// leak what the lists hide.
 	res, err = provider.RunReport(e.AsTeamRep(e.Rep1, e.Team1), datasource.ReportPlan{
-		Entity: datasource.EntityPerson, GroupBy: []string{"source"},
+		Entity: datasource.EntityContact, GroupBy: []string{"source"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -114,11 +115,11 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Reports E2E", "rep@fable.test", "Admin")
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": "Acme"}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create org → %d", status)
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Acme"}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 	var pipelines struct {
 		Data []struct {
@@ -145,7 +146,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 			"name": fmt.Sprintf("Acme Deal %d", i), "pipeline_id": pipelines.Data[0].ID,
-			"stage_id": stageID, "organization_id": org.ID,
+			"stage_id": stageID, "company_id": company.ID,
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("create deal → %d", status)
 		}
@@ -162,7 +163,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	if result.Report != "open-deals-per-company" || len(result.Rows) != 1 {
 		t.Fatalf("report result: %+v", result)
 	}
-	if fmt.Sprint(result.Rows[0]["open_deals"]) != "2" || result.Rows[0]["organization_id"] != org.ID {
+	if fmt.Sprint(result.Rows[0]["open_deals"]) != "2" || result.Rows[0]["company_id"] != company.ID {
 		t.Fatalf("aggregate row wrong: %+v", result.Rows[0])
 	}
 
@@ -201,12 +202,12 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM deal LIMIT 1`).Scan(&dealID); err != nil {
 		t.Fatal(err)
 	}
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Graph Contact', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Graph Contact', 'manual', 'human:x')`)
 	noteID := e.SeedID(t, `INSERT INTO activity (id, kind, subject, source, captured_by) VALUES ($1, 'note', 'Kickoff call', 'manual', 'human:x')`)
 	taskID := e.SeedID(t, `INSERT INTO activity (id, kind, subject, is_done, source, captured_by) VALUES ($1, 'task', 'Send offer', false, 'manual', 'human:x')`)
 	for _, activityID := range []ids.UUID{noteID, taskID} {
 		e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id) VALUES ($1, $2, 'deal', $3)`, activityID, dealID)
-		e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`, activityID, personID)
+		e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, activityID, contactID)
 	}
 
 	// AssembleContext never calls the embedder (it's Search's seam), but
@@ -236,22 +237,65 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	if len(sections["open_tasks"]) != 1 || sections["open_tasks"][0].Summary != "Send offer" {
 		t.Fatalf("open tasks wrong: %+v", sections["open_tasks"])
 	}
-	if len(sections["related_people"]) != 1 || sections["related_people"][0].Ref.ID != personID {
-		t.Fatalf("hop-2 people wrong: %+v", sections["related_people"])
+	if len(sections["related_contacts"]) != 1 || sections["related_contacts"][0].Ref.ID != contactID {
+		t.Fatalf("hop-2 contacts wrong: %+v", sections["related_contacts"])
 	}
-	if len(sections["related_organizations"]) != 0 {
-		// The org is linked to the deal via FK, not via activity_link —
+	if len(sections["related_companies"]) != 0 {
+		// The company is linked to the deal via FK, not via activity_link —
 		// the fixed-depth walk only follows conversation links.
-		t.Logf("note: org appears only when linked through an activity: %+v", sections["related_organizations"])
+		t.Logf("note: company appears only when linked through an activity: %+v", sections["related_companies"])
 	}
 
 	// An anchor outside the caller's row scope assembles nothing. A deal is
 	// readable by every seat with the grant, so the anchor that can be out of
-	// scope is a colleague's capture-private person.
-	privatePerson := e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+	// scope is a colleague's capture-private contact.
+	privateContact := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Private Contact', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	if _, err := retriever.AssembleContext(e.AsTeamRep(e.Rep1, e.Team1),
-		datasource.EntityRef{Type: datasource.EntityPerson, ID: privatePerson}, retrieval.AssembleOptions{}); err == nil {
+		datasource.EntityRef{Type: datasource.EntityContact, ID: privateContact}, retrieval.AssembleOptions{}); err == nil {
 		t.Fatal("foreign anchor must be absent, not assembled")
+	}
+}
+
+// A value the caller spelled wrong is the CALLER's mistake, and the report
+// engine binds one straight onto a typed column.
+//
+// `owner_id` is a uuid, so `"not-a-uuid"` reaches Postgres as text it cannot
+// read: SQLSTATE 22P02, which the classification net did not know, so the
+// caller got an opaque 500 whose advice was to retry a plan that fails the same
+// way forever. Nothing about a client typo is a server fault.
+func TestAWrongTypedFilterIsTheCallersMistakeNotAServerFault(t *testing.T) {
+	e := SetupSearch(t)
+	provider := compose.NewProvider(e.Pool)
+
+	_, err := provider.RunReport(e.AsTeamRep(e.Rep1, e.Team1), datasource.ReportPlan{
+		Entity:  datasource.EntityContact,
+		GroupBy: []string{"source"},
+		Filter:  map[string]string{"owner_id": "not-a-uuid"},
+	})
+	if err == nil {
+		t.Fatal("a filter value no uuid column can read was accepted; either the plan stopped " +
+			"binding it or this fixture no longer reaches the type it is about")
+	}
+
+	fault, ok := httperr.Classify(err)
+	if !ok {
+		t.Fatalf("the refusal reached the unhandled path, which answers 500 internal: %v", err)
+	}
+	if fault.Status != http.StatusUnprocessableEntity {
+		t.Errorf("status = %d, want 422 — retrying the same spelling can never work", fault.Status)
+	}
+	if fault.Code != "value_wrong_type" {
+		t.Errorf("code = %q, want %q", fault.Code, "value_wrong_type")
+	}
+	// Postgres names the type and quotes the value back; the caller gets the
+	// sentence, the operator gets the cause.
+	for _, leak := range []string{"22P02", "uuid", "not-a-uuid"} {
+		if strings.Contains(fault.Detail, leak) {
+			t.Errorf("the refusal leaks %q: %q", leak, fault.Detail)
+		}
+	}
+	if fault.InfraCause == nil {
+		t.Error("the cause reaches no log — withholding a message is not the same as losing it")
 	}
 }

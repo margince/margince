@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -92,7 +92,7 @@ describe("the custom-fields admin, at its address inside settings", () => {
         if (url.endsWith("/v1/company")) {
           return new Response(
             JSON.stringify({
-              organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+              company_id: "018f3a1b-0000-7000-8000-0000000000a1",
               display_name: "Gradion",
               website: "gradion.com",
               offer_summary: "Revenue software for manufacturers",
@@ -276,8 +276,8 @@ describe("locale switch", () => {
       </QueryClientProvider>,
     );
     // English default: once the session resolves, the rail carries English labels
-    expect(await screen.findByRole("link", { name: "People" })).toBeTruthy();
-    // The language is a preference of this person rather than a destination, so
+    expect(await screen.findByRole("link", { name: "Contacts" })).toBeTruthy();
+    // The language is a preference of this contact rather than a destination, so
     // it lives on Settings → Account and reaching it is a navigation. Which is
     // also what makes this an app-level claim: the choice is made on one route
     // and has to hold on the next one, not just inside the card that made it.
@@ -294,11 +294,11 @@ describe("locale switch", () => {
       "Deutsch",
     );
 
-    window.location.hash = "#/brief";
+    window.location.hash = "#/home";
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Personen" })).toBeTruthy(),
+      expect(screen.getByRole("link", { name: "Kontakte" })).toBeTruthy(),
     );
-    expect(screen.queryByRole("link", { name: "People" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Contacts" })).toBeNull();
   });
 });
 
@@ -360,7 +360,7 @@ describe("auth boundary states (login spec §4)", () => {
   });
 
   // ADR-0105: "not ready" is two product states, and only one of them has
-  // something the person in front of the browser can do.
+  // something the contact in front of the browser can do.
   it("offers the claim screen when the unready installation is waiting to be claimed", async () => {
     vi.stubGlobal(
       "fetch",
@@ -618,7 +618,7 @@ describe("password-reset deep link", () => {
         }
         if (url.endsWith("/v1/company")) {
           return new Response(
-            JSON.stringify({ organization_id: "o1", display_name: "Acme" }),
+            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -690,7 +690,7 @@ describe("password-reset deep link", () => {
         }
         if (url.endsWith("/v1/company")) {
           return new Response(
-            JSON.stringify({ organization_id: "o1", display_name: "Acme" }),
+            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -774,7 +774,7 @@ describe("onboarding gate", () => {
           return status === 200
             ? new Response(
                 JSON.stringify({
-                  organization_id: "o1",
+                  company_id: "o1",
                   display_name: "Acme GmbH",
                 }),
                 {
@@ -860,7 +860,7 @@ describe("onboarding gate", () => {
     // into the hash on arrival, so contacts settles at `#/contacts?sort=…` a
     // moment after the shell renders; an equality against the bare address
     // holds only while that write is still pending. Where the gate left the
-    // reader is this test's claim — how the list is sorted is people.tsx's.
+    // reader is this test's claim — how the list is sorted is contacts.tsx's.
     expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
   });
 

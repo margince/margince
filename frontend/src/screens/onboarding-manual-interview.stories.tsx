@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
 import {
@@ -15,7 +16,7 @@ import { StoryProviders } from "./story-utils";
 // The manual path through the company interview: one question at a time, its
 // chapter and its position above it, and a hint under the prompt. It is the
 // route somebody takes when the read found nothing — so every state here is a
-// state of a person typing, not of a server answering.
+// state of a contact typing, not of a server answering.
 //
 // The position pair is what the stories move. `questionIndex` is the
 // component's OWN state and starts at zero, so there is no prop that opens the
@@ -53,16 +54,27 @@ const meta: Meta<typeof ManualCompanyInterview> = {
 export default meta;
 type Story = StoryObj<typeof ManualCompanyInterview>;
 
+// The plate the board actually stands on. The workbench's artifact pane is the
+// ONLY place that renders this interview (onboarding-conversation/artifact.tsx),
+// and that pane is a light panel where the scene backdrop the bare dialog is
+// dressed for is dark glass — so a story without the wrapper shows a surface
+// nobody can reach and hides the one everybody sees.
+function ArtifactPane({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="mw-review ob-conv-artifact">{children}</div>;
+}
+
 function interview(values: CompanyForm) {
   return () => (
     <StoryProviders>
-      <ManualCompanyInterview
-        values={values}
-        setField={() => {}}
-        onPersist={() => {}}
-        onBackToChoice={() => {}}
-        onComplete={() => {}}
-      />
+      <ArtifactPane>
+        <ManualCompanyInterview
+          values={values}
+          setField={() => {}}
+          onPersist={() => {}}
+          onBackToChoice={() => {}}
+          onComplete={() => {}}
+        />
+      </ArtifactPane>
     </StoryProviders>
   );
 }
@@ -173,13 +185,15 @@ export const OptionalQuestion: Story = {
 export const German: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <ManualCompanyInterview
-        values={form(ANSWERS)}
-        setField={() => {}}
-        onPersist={() => {}}
-        onBackToChoice={() => {}}
-        onComplete={() => {}}
-      />
+      <ArtifactPane>
+        <ManualCompanyInterview
+          values={form(ANSWERS)}
+          setField={() => {}}
+          onPersist={() => {}}
+          onBackToChoice={() => {}}
+          onComplete={() => {}}
+        />
+      </ArtifactPane>
     </StoryProviders>
   ),
 };

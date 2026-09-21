@@ -79,7 +79,7 @@ func TestWrite_malformedCursorIsAClientFault(t *testing.T) {
 	if err == nil {
 		t.Fatal("garbage cursor decoded")
 	}
-	status, body := writeAndDecode(t, fmt.Errorf("listing people: %w", err))
+	status, body := writeAndDecode(t, fmt.Errorf("listing contacts: %w", err))
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422", status)
 	}
@@ -186,7 +186,6 @@ func TestClassify_withholdsInfrastructureTextFromEverySurface(t *testing.T) {
 func TestFault_transientMeansRepeatingTheCallCanHelp(t *testing.T) {
 	cases := map[error]bool{
 		apperrors.ErrBudgetExceeded:                      true,
-		apperrors.ErrIncumbentBudgetExhausted:            true,
 		apperrors.ErrConflict:                            false,
 		apperrors.ErrConsentNotGranted:                   false,
 		apperrors.ErrSeatTierInsufficient:                false,
@@ -225,16 +224,16 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 	}{
 		{
 			name:     "a foreign key names the column that pointed nowhere",
-			sqlstate: "23503", table: "organization", constraint: "organization_owner_id_fkey",
-			pgMessage: `insert or update on table "organization" violates foreign key constraint`,
+			sqlstate: "23503", table: "company", constraint: "company_owner_id_fkey",
+			pgMessage: `insert or update on table "company" violates foreign key constraint`,
 			wantCode:  "reference_not_found",
 			wantDetail: "`owner_id` names no record of the kind it references (an owner is a user, a parent " +
-				"an organization). Send an id of the right kind; do not retry unchanged.",
+				"a company). Send an id of the right kind; do not retry unchanged.",
 		},
 		{
 			name:     "a CHECK refuses the value",
-			sqlstate: "23514", table: "organization", constraint: "organization_size_band_check",
-			pgMessage: `new row for relation "organization" violates check constraint`,
+			sqlstate: "23514", table: "company", constraint: "company_size_band_check",
+			pgMessage: `new row for relation "company" violates check constraint`,
 			wantCode:  "value_not_allowed",
 			wantDetail: "a value in this request is outside what its field accepts. Check each value against " +
 				"this operation's schema; do not retry unchanged.",
@@ -246,6 +245,42 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 			wantCode:  "value_not_allowed",
 			wantDetail: "a value in this request is outside what its field accepts. Check each value against " +
 				"this operation's schema; do not retry unchanged.",
+		},
+		{
+			// A GENERATED tsvector column overflows its 1,048,575-byte output
+			// ceiling at roughly 950 KB of word-dense body — comfortably inside
+			// the chassis's 1 MiB request cap, so the request was legal and the
+			// answer was an unexplained 500. It carries no constraint name at
+			// all, which is why the net has to branch on the SQLSTATE.
+			name:     "a value too large to store or index",
+			sqlstate: "54000", table: "activity", constraint: "",
+			pgMessage: "string is too long for tsvector (1099556 bytes, max 1048575 bytes)",
+			wantCode:  "value_too_large",
+			wantDetail: "a value in this request is too large for the database to store or index. " +
+				"Shorten it — most often this is a long text body — and send it again; " +
+				"the same request will fail the same way.",
+		},
+		{
+			// The report engine binds a caller's own `filters` onto typed
+			// columns, so `{"stage_id":"not-a-uuid"}` reaches the database as
+			// text a uuid column cannot read. Nothing about it is a server
+			// fault, and the same text is the same non-uuid forever.
+			name:     "a value that is not of the type its field holds",
+			sqlstate: "22P02", table: "deal", constraint: "",
+			pgMessage: `invalid input syntax for type uuid: "not-a-uuid"`,
+			wantCode:  "value_wrong_type",
+			wantDetail: "a value in this request is not of the type the field it names holds — a " +
+				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"value against this operation's schema; do not retry unchanged.",
+		},
+		{
+			name:     "a number the column cannot hold",
+			sqlstate: "22003", table: "deal", constraint: "",
+			pgMessage: "numeric field overflow",
+			wantCode:  "value_wrong_type",
+			wantDetail: "a value in this request is not of the type the field it names holds — a " +
+				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"value against this operation's schema; do not retry unchanged.",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -271,12 +306,12 @@ func TestClassify_anUntranslatedConstraintIsTheCallersMistakeNotAServerFault(t *
 			// Each row's OWN metadata, so a leak of this SQLSTATE's constraint or
 			// message cannot ride out under another row's assertions.
 			//
-			// The TABLE is not swept: `organization` is both a table name and an
+			// The TABLE is not swept: `company` is both a table name and an
 			// ordinary word this refusal legitimately uses. The exact-detail
 			// assertion above is the stronger guard anyway — it pins the whole
 			// sentence, so anything riding along fails there first.
 			for _, leak := range []string{tc.constraint, tc.sqlstate, tc.pgMessage} {
-				if strings.Contains(fault.Detail, leak) {
+				if leak != "" && strings.Contains(fault.Detail, leak) {
 					t.Errorf("detail leaks %q: %q", leak, fault.Detail)
 				}
 			}
@@ -305,19 +340,19 @@ func TestClassify_aTypedRefusalStillWinsOverTheConstraintNet(t *testing.T) {
 // version named none and told the caller to check their ids "against records
 // this workspace actually has" — advice a UAT agent followed into a dead end,
 // because the field it blamed references a user, which no tool on that surface
-// lists, and a genuinely existing person id came back with byte-identical text.
+// lists, and a genuinely existing contact id came back with byte-identical text.
 func TestClassify_theReferenceRefusalNamesTheFieldWhenTheConstraintYieldsIt(t *testing.T) {
 	for _, tc := range []struct {
 		name, constraint, wantField string
 		wantNamed                   bool
 	}{
-		{"a default-named foreign key yields its column", "organization_owner_id_fkey", "owner_id", true},
-		{"a multi-word column survives whole", "organization_parent_org_id_fkey", "parent_org_id", true},
-		{"a constraint that is not a foreign key names nothing", "organization_display_name_key", "", false},
+		{"a default-named foreign key yields its column", "company_owner_id_fkey", "owner_id", true},
+		{"a multi-word column survives whole", "company_parent_company_id_fkey", "parent_company_id", true},
+		{"a constraint that is not a foreign key names nothing", "company_display_name_key", "", false},
 		{"a hand-named constraint names nothing rather than guessing", "one_primary_domain", "", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := fmt.Errorf("writing: %w", &pgconn.PgError{Code: "23503", TableName: "organization", ConstraintName: tc.constraint})
+			err := fmt.Errorf("writing: %w", &pgconn.PgError{Code: "23503", TableName: "company", ConstraintName: tc.constraint})
 			fault, ok := Classify(err)
 			if !ok || fault.Status != http.StatusUnprocessableEntity {
 				t.Fatalf("fault = %+v, ok = %v, want a 422", fault, ok)
@@ -391,7 +426,7 @@ func TestRetentionHoldIsLockedNotValueNotAllowed(t *testing.T) {
 		t.Error("the constraint name goes to the operator's log, not the client — InfraCause must carry it")
 	}
 	// Any other CHECK is still the caller's value to fix.
-	other, _ := Classify(&pgconn.PgError{Code: "23514", ConstraintName: "organization_size_band_check"})
+	other, _ := Classify(&pgconn.PgError{Code: "23514", ConstraintName: "company_size_band_check"})
 	if other.Status != http.StatusUnprocessableEntity {
 		t.Errorf("an ordinary CHECK became %d", other.Status)
 	}

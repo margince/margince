@@ -116,6 +116,14 @@ func (s *Store) StageCapturedFiles(
 		id := ids.NewV7()
 		key := blobstore.WorkspaceKey(workspace, "attachment", id.String())
 		sum := sha256.Sum256(file.Body)
+		// Declared provisional BEFORE the bytes exist, on its own transaction,
+		// so the declaration survives the failure of the caller's — which is
+		// exactly the failure that leaves an object nothing references, and an
+		// erasure reads storage_key off the attachment row. See
+		// storedobjectintent.go.
+		if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+			return nil, err
+		}
 		if err := s.blob.Put(ctx, key, bytes.NewReader(file.Body),
 			int64(len(file.Body)), file.ContentType); err != nil {
 			return nil, fmt.Errorf("store a captured file: %w", err)
@@ -172,6 +180,11 @@ func (s *Store) RecordCapturedFiles(
 		if err := insertCapturedAttachment(ctx, tx, activityID, rollUp, from, file); err != nil {
 			return err
 		}
+		// On the CALLER's transaction, the one that just gave the key a row:
+		// the pair commits together or neither does.
+		if err := clearStoredObjectIntent(ctx, tx, file.key); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -184,7 +197,7 @@ func insertCapturedAttachment(
 		INSERT INTO attachment (
 			id, entity_type, entity_id, filename, content_type,
 			byte_size, storage_key, checksum, source, captured_by,
-			category, organization_id, activity_id,
+			category, company_id, activity_id,
 			external_source_id, external_part_id, declared_type)
 		VALUES ($1, 'activity', $2, $3, $4,
 		        $5, $6, $7, $8, $9,
@@ -275,18 +288,18 @@ func accountForCapturedActivity(
 	// is later re-parented.
 	var account ids.UUID
 	err := tx.QueryRow(ctx, `
-		SELECT organization_id FROM (
-			SELECT link.organization_id, 0 AS rank
+		SELECT company_id FROM (
+			SELECT link.company_id, 0 AS rank
 			  FROM activity_link link
-			 WHERE link.activity_id = $1 AND link.entity_type = 'organization'
+			 WHERE link.activity_id = $1 AND link.entity_type = 'company'
 			UNION ALL
-			SELECT d.organization_id, 1 AS rank
+			SELECT d.company_id, 1 AS rank
 			  FROM activity_link link
 			  JOIN deal d ON d.id = link.deal_id
 			 WHERE link.activity_id = $1 AND link.entity_type = 'deal'
-			   AND d.organization_id IS NOT NULL
+			   AND d.company_id IS NOT NULL
 		) candidates
-		 ORDER BY rank, organization_id
+		 ORDER BY rank, company_id
 		 LIMIT 1`, activityID).Scan(&account)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -30,13 +30,18 @@ import "./visibility.css";
 // a tone, because it is the one state about the READER rather than the thing.
 
 /**
- * The closed vocabulary. `team` is what a mail row and a shared contact both
- * mean — everyone the linked record already admits, which is why the word is
- * not "everyone". `private` is a captured contact's owner-only state; a message
- * has no such state, because the people on it can always read it.
+ * The closed vocabulary. `team` is what a MAIL row means — everyone the linked
+ * record already admits, which is why the word is not "everyone". `workspace`
+ * is what a shared RECORD means: a company or contact carries no linked record
+ * to narrow its audience, so everyone in the workspace really does read it. The
+ * two are one word apart and a record borrowing `team` told its reader the
+ * account was limited to a team while the tooltip beside it said everyone.
+ * `private` is a captured contact's owner-only state; a message has no such
+ * state, because the contacts on it can always read it.
  */
 export type Visibility =
   | "team"
+  | "workspace"
   | "participants"
   | "selected"
   | "private"
@@ -44,6 +49,7 @@ export type Visibility =
 
 const WORD: Record<Visibility, MessageKey> = {
   team: "visibility.team",
+  workspace: "visibility.workspace",
   participants: "visibility.participants",
   selected: "visibility.selected",
   private: "visibility.private",
@@ -52,21 +58,23 @@ const WORD: Record<Visibility, MessageKey> = {
 
 // `Lock` twice on purpose: "participants" and "private" are both a sealed
 // thing, and the word beside the icon says who holds the key. A different
-// glyph per state would be five shapes to learn for a question with three
-// answers — open, sealed, or not yours.
+// glyph per state would be six shapes to learn for a question with three
+// answers — open, sealed, or not yours. `Users` twice for the same reason:
+// `team` and `workspace` are both open, and the word is what separates them.
 const ICON: Record<Visibility, LucideIcon> = {
   team: Users,
+  workspace: Users,
   participants: Lock,
   selected: UserRoundCheck,
   private: Lock,
   withheld: EyeOff,
 };
 
-// Three looks for five states. Open is outlined and quiet; every limit is
+// Three looks for six states. Open is outlined and quiet; every limit is
 // filled, so a sealed thing is heavier on the page than an open one; withheld
 // is the caution, because it is why the reader sees no content.
 function look(state: Visibility): "open" | "limited" | "withheld" {
-  if (state === "team") {
+  if (state === "team" || state === "workspace") {
     return "open";
   }
   return state === "withheld" ? "withheld" : "limited";

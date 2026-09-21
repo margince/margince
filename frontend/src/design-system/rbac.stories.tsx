@@ -30,7 +30,7 @@ const ROW: CSSProperties = {
 
 /**
  * The six seeded system roles. Each is a translated name, so this is the row a
- * reader compares when they are deciding which of two people can do a thing.
+ * reader compares when they are deciding which of two contacts can do a thing.
  */
 export const SeededRoles: Story = {
   render: () => (

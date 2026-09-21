@@ -168,6 +168,7 @@ func scorecardToWire(card Scorecard) *crmcontracts.WeeklyReviewScorecard {
 			WithNextStep:      d.WithNextStep, Open: d.Open,
 			MultiThreaded: d.MultiThreaded, CloseDateSound: d.CloseDateSound,
 			ForecastUp: d.ForecastUp, ForecastDown: d.ForecastDown,
+			Unreconstructible: d.Unreconstructible,
 		}
 	}
 	return out
@@ -231,7 +232,7 @@ func movementToWire(bars []Movement) []crmcontracts.WeeklyReviewMovement {
 
 func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
 	return crmcontracts.WeeklyReviewCounts{
-		TasksDue: c.TasksDue, TasksDone: c.TasksDone,
+		TasksDue: c.TasksDue, TasksDone: c.TasksDone, TasksCompleted: c.TasksCompleted,
 		TasksCarriedOver: c.TasksCarriedOver,
 		DealsMoved:       c.DealsMoved, DealsWon: c.DealsWon, DealsLost: c.DealsLost,
 		ProposalsAccepted: c.ProposalsAccepted, ProposalsRejected: c.ProposalsRejected,

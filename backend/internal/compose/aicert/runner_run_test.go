@@ -170,7 +170,7 @@ func TestRunRejectsAnEvenRepeatsBeforeTouchingAnything(t *testing.T) {
 
 // TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall proves
 // the "one task fails, its sibling still gets recorded, in the same
-// Run() call" property that TestRunMalformedOverrideJoinsAnErrorPerTaskAndAbortsNone
+// Run() call" property that TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone
 // cannot: a malformed override fails every task identically, so it can
 // never show one task succeeding alongside another failing in one Run.
 // Here both tasks certify cleanly, but a plain FILE pre-created at the
@@ -216,13 +216,13 @@ func TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall(t *testing
 	}
 }
 
-// TestRunMalformedOverrideJoinsAnErrorPerTaskAndAbortsNone proves the
+// TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone proves the
 // "heard, never swallowed" contract on the error path every task
-// actually reaches: a malformed MODEL= override fails identically for
-// every task in the corpus (each task's own certifyTask call refuses
-// it independently), and Run reports every one of them — via
-// errors.Join, not just the first — rather than stopping at the first
-// failure.
+// actually reaches: a cloud vendor under a sovereign profile is refused
+// identically for every task in the corpus (each task's own certifyTask
+// call refuses it independently), and Run reports every one of them —
+// via errors.Join, not just the first — rather than stopping at the
+// first failure.
 func TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone(t *testing.T) {
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")

@@ -23,7 +23,7 @@ expect:
   rubric: >
     A confirmed, reproducible, cross-tenant data exposure with a working
     reproduction attached and the fix not yet deployed. Every hour this is
-    readable by more people than need it is an hour a working exploit for a live
+    readable by more contacts than need it is an hour a working exploit for a live
     hole sits somewhere it can leak.
     "security_incident" scores high. "explicitly_confidential" scores in the
     middle — the message does ask for it not to be circulated, and it holds the

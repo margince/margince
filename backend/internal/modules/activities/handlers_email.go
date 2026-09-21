@@ -76,7 +76,7 @@ func (h Handlers) WithSendAuthority(authority SendAuthority) Handlers {
 }
 
 // WithRecipientDirectory returns handlers whose account-started sends resolve
-// every typed address to a person the sender can read, so a rep is told which
+// every typed address to a contact the sender can read, so a rep is told which
 // address is not on file instead of mailing someone the record cannot name.
 func (h Handlers) WithRecipientDirectory(dir RecipientDirectory) Handlers {
 	h.store = h.store.WithRecipientDirectory(dir)
@@ -265,13 +265,13 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
-// SendAccountEmail starts a NEW conversation from a record rather than
+// SendCompanyEmail starts a NEW conversation from a record rather than
 // answering one. It differs from SendEmail in exactly two places — the origin
 // it builds and the links that origin carries — and shares the send itself,
 // so the consent gate, deliverability and the staging transaction cannot
 // drift between the two surfaces (ADR-0087 §1).
-func (h Handlers) SendAccountEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendAccountEmailParams) {
-	var req crmcontracts.SendAccountEmailRequest
+func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendCompanyEmailParams) {
+	var req crmcontracts.SendCompanyEmailRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}

@@ -19,9 +19,9 @@ package compose
 // and pass for any pair of doors that agreed on nothing.
 //
 // The enrich verb is why the SUMMARY is compared and not only the target. Its
-// two operations are one verb at two depths against one organization, so a
+// two operations are one verb at two depths against one company, so a
 // swapped depth is invisible in every field a door writes: the target is the
-// same organization either way, and the line this door stages is its own
+// same company either way, and the line this door stages is its own
 // path-derived one (restSummary), which still names the route the caller took.
 // The resolver's sentence is the only place the erased command's depth surfaces
 // at all — so comparing it is how a page read that will execute as a whole-site
@@ -145,10 +145,10 @@ func mergeDoors(collection, recordType string) bothDoorsFixture {
 func enrichDoors(path string, depth agents.EnrichDepth) bothDoorsFixture {
 	return bothDoorsFixture{
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/organizations/"+primary.String()+"/"+path, primary, "")
+			return doorRequest(http.MethodPost, "/v1/companies/"+primary.String()+"/"+path, primary, "")
 		},
 		args: func(primary, _ ids.UUID) string {
-			return `{"organization_id":"` + primary.String() + `","depth":"` + string(depth) + `"}`
+			return `{"company_id":"` + primary.String() + `","depth":"` + string(depth) + `"}`
 		},
 	}
 }
@@ -172,33 +172,33 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		},
 	},
 
-	"archivePerson":       archiveDoors("people", "person"),
-	"archiveOrganization": archiveDoors("organizations", "organization"),
+	"archiveContact":      archiveDoors("contacts", "contact"),
+	"archiveCompany":      archiveDoors("companies", "company"),
 	"archiveDeal":         archiveDoors("deals", "deal"),
 	"archiveProject":      archiveDoors("projects", "project"),
 	"archiveRelationship": archiveDoors("relationships", "relationship"),
 	"archiveActivity":     archiveDoors("activities", "activity"),
 
-	"createPerson":       createDoors("people", "person", `{"full_name":"Ada Lovelace"}`),
-	"createOrganization": createDoors("organizations", "organization", `{"display_name":"Acme"}`),
+	"createContact": createDoors("contacts", "contact", `{"full_name":"Ada Lovelace"}`),
+	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),
 	"createDeal": createDoors("deals", "deal", `{"name":"Acme renewal",`+
 		`"pipeline_id":"019ff000-0000-7000-8000-000000000011","stage_id":"019ff000-0000-7000-8000-000000000012"}`),
 	"createLead": createDoors("leads", "lead", `{"full_name":"Grace Hopper","company_name":"Acme"}`),
 	"createProject": createDoors("projects", "project",
-		`{"name":"Acme rollout","organization_id":"019ff000-0000-7000-8000-000000000013"}`),
+		`{"name":"Acme rollout","company_id":"019ff000-0000-7000-8000-000000000013"}`),
 	"createRelationship": createDoors("relationships", "relationship",
-		`{"kind":"employment","person_id":"019ff000-0000-7000-8000-000000000014"}`),
+		`{"kind":"employment","contact_id":"019ff000-0000-7000-8000-000000000014"}`),
 
-	"updatePerson":       updateDoors("people", "person", `{"title":"CTO"}`),
-	"updateOrganization": updateDoors("organizations", "organization", `{"industry":"payments"}`),
+	"updateContact":      updateDoors("contacts", "contact", `{"title":"CTO"}`),
+	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
 	"updateDeal":         updateDoors("deals", "deal", `{"forecast_category":"commit"}`),
 	"updateLead":         updateDoors("leads", "lead", `{"status":"contacted"}`),
 	"updateActivity":     updateDoors("activities", "activity", `{"subject":"Renewal call"}`),
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
 	"updateRelationship": updateDoors("relationships", "relationship", `{"role":"champion"}`),
 
-	"mergePerson":       mergeDoors("people", "person"),
-	"mergeOrganization": mergeDoors("organizations", "organization"),
+	"mergeContact": mergeDoors("contacts", "contact"),
+	"mergeCompany": mergeDoors("companies", "company"),
 
 	// The tag merge does NOT reuse mergeDoors: that one is a record merge typed
 	// by record_type and resolved through the SoR provider, and this one folds a
@@ -234,6 +234,15 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 			return doorRequest(http.MethodDelete, "/v1/leads/"+primary.String(), primary, "")
 		},
 		args: func(primary, _ ids.UUID) string { return `{"lead_id":"` + primary.String() + `"}` },
+	},
+	"demoteLead": {
+		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPost, "/v1/leads/"+primary.String()+"/demote", primary,
+				`{"reason":"promoted by mistake"}`)
+		},
+		args: func(primary, _ ids.UUID) string {
+			return `{"lead_id":"` + primary.String() + `","reason":"promoted by mistake"}`
+		},
 	},
 	"advanceProjectPhase": {
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
@@ -276,16 +285,16 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 				`"consent_purpose":"support"}`
 		},
 	},
-	"sendAccountEmail": {
+	"sendCompanyEmail": {
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
 			return doorRequest(http.MethodPost, "/v1/emails", ids.UUID{},
 				`{"to":["buyer@example.test"],"cc":["cfo@example.test"],"subject":"Introduction",`+
-					`"body":"hi","consent_purpose":"sales","links":[{"entity_type":"organization",`+
+					`"body":"hi","consent_purpose":"sales","links":[{"entity_type":"company",`+
 					`"entity_id":"`+primary.String()+`"}]}`)
 		},
 		args: func(primary, _ ids.UUID) string {
 			return `{"to":["buyer@example.test"],"cc":["cfo@example.test"],"subject":"Introduction",` +
-				`"body":"hi","consent_purpose":"sales","links":[{"entity_type":"organization",` +
+				`"body":"hi","consent_purpose":"sales","links":[{"entity_type":"company",` +
 				`"entity_id":"` + primary.String() + `"}]}`
 		},
 	},
@@ -310,9 +319,9 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 //
 // The OpenAPIOp reading is what keeps this set honest in both directions. Most
 // of the surface shares a verb with operations the verb cannot express —
-// confirmOrganizationFact is an `update_record` operation no update_record call
+// confirmCompanyFact is an `update_record` operation no update_record call
 // can spell — and a set built from the verb alone would demand a tool fixture
-// for an act the tool door has no way to ask for. A composed entry (`getPerson
+// for an act the tool door has no way to ask for. A composed entry (`getContact
 // + listActivities`) matches no operationId and drops out on its own.
 //
 // OpenAPIOp is hand-written prose beside each registration, so what it leaves
@@ -349,22 +358,22 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 // type update_record does not serve at all, so the verb answers for them before
 // any of this is asked.
 var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
-	"confirmOrganizationFact": "the fact key is a path segment, and the confirm carries no body at all — " +
+	"confirmCompanyFact": "the fact key is a path segment, and the confirm carries no body at all — " +
 		"an update_record call has no member to put it in and no fields to send",
-	"updateOrganizationFact": "the fact key is a path segment naming WHICH fact, where update_record's " +
-		"fields name an organization's own columns — the key is not one of them",
-	"createOrganizationFact": "a fact is a category, a field and a value in the fact vocabulary — a row in " +
-		"a sidecar table, not a column of the organization, so update_record's fields cannot name it",
-	"deleteOrganizationFact": "the fact key is a path segment naming WHICH row to remove, and update_record " +
+	"updateCompanyFact": "the fact key is a path segment naming WHICH fact, where update_record's " +
+		"fields name a company's own columns — the key is not one of them",
+	"createCompanyFact": "a fact is a category, a field and a value in the fact vocabulary — a row in " +
+		"a sidecar table, not a column of the company, so update_record's fields cannot name it",
+	"deleteCompanyFact": "the fact key is a path segment naming WHICH row to remove, and update_record " +
 		"writes columns rather than removing sidecar rows — there is no field whose absence deletes one",
-	"confirmOrganizationProfileField": "the profile field name is a path segment, and the confirm sends no " +
+	"confirmCompanyProfileField": "the profile field name is a path segment, and the confirm sends no " +
 		"fields — update_record has no argument that says which field is being confirmed rather than written",
-	"updateOrganizationProfileField": "the path segment selects a CORRECTION of one profile field, and " +
-		"where that field is an organization column an update_record patch of it is the plain write — " +
-		"updateOrganization — with no provenance flip and no sidecar history, which no argument can ask for",
+	"updateCompanyProfileField": "the path segment selects a CORRECTION of one profile field, and " +
+		"where that field is a company column an update_record patch of it is the plain write — " +
+		"updateCompany — with no provenance flip and no sidecar history, which no argument can ask for",
 	"setProjectStakeholder": "the stakeholder is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
-	"removeProjectStakeholder": "the person is a second path parameter naming the edge to drop, and " +
+	"removeProjectStakeholder": "the contact is a second path parameter naming the edge to drop, and " +
 		"update_record has no argument for a record other than the one it patches",
 	"setProjectCompany": "the company is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
@@ -476,7 +485,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		}))
 	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
-	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterImportTools(reg, bothDoorsImports{})
 	agents.RegisterTagTools(reg, bothDoorsTags{})
@@ -497,9 +506,9 @@ type bothDoorsTags struct{ agents.Tags }
 // RecordTagTypes and TaggableTypes are read at REGISTRATION, before any call —
 // they build the apply/remove schemas — so the stub answers them even though
 // this gate never exercises those two verbs.
-func (bothDoorsTags) RecordTagTypes() []string { return []string{"person"} }
+func (bothDoorsTags) RecordTagTypes() []string { return []string{"contact"} }
 
-func (bothDoorsTags) TaggableTypes() []string { return []string{"person"} }
+func (bothDoorsTags) TaggableTypes() []string { return []string{"contact"} }
 
 func (bothDoorsTags) GetTag(_ context.Context, tagID ids.UUID) (agents.TagDetail, error) {
 	return agents.TagDetail{Tag: agents.Tag{TagID: tagID, Name: "tag-" + tagID.String()}}, nil
@@ -573,7 +582,7 @@ func (bothDoorsComms) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "", "", errBothDoorsExecuted
 }
 
-func (bothDoorsComms) DraftAccountEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
+func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
 	return "", "", errBothDoorsExecuted
 }
 
@@ -581,7 +590,7 @@ func (bothDoorsComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs)
 	return agents.SendEmailResult{}, errBothDoorsExecuted
 }
 
-func (bothDoorsComms) SendAccountEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
+func (bothDoorsComms) SendCompanyEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
 	return agents.SendEmailResult{}, errBothDoorsExecuted
 }
 
@@ -654,7 +663,7 @@ var dynamicTierVerbs = gatekit.Waive(map[string]string{
 		"AdvanceDealCommand{DealID, ToStageID} (advanceDealCommand in agentcommandlifecycle.go, " +
 		"advanceDeal.StageInfo in tools.go), which no test compares door-to-door today",
 	"relink_activity": "the tier turns on the DESTINATION TYPE in the arguments, not on any record, so a " +
-		"person relink executes where a project relink stages and this lane's fixture would compare a " +
+		"contact relink executes where a project relink stages and this lane's fixture would compare a " +
 		"staged row only one destination produces. Unlike the deal move, both doors ARE compared, each " +
 		"against the shape it actually receives: TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot " +
 		"(agentgate_dealreopen_test.go) drives the REST door through tierInput, and " +

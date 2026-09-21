@@ -4,7 +4,7 @@
 package weekly
 
 // The movement bridge: how a week got from its opening landing to its closing
-// one, in the six moves a person tells the story in.
+// one, in the six moves a contact tells the story in.
 //
 // SIX, not the eight the waterfall draws. The opening and closing landings are
 // the bridge's two ANCHORS — they are read off the frozen snapshots either side

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Handlers is this module's transport.
@@ -24,8 +25,17 @@ type Handlers struct {
 }
 
 // NewHandlers builds the contract handler set.
-func NewHandlers(db *database.DB, freezeRate FreezeRateFunc) Handlers {
-	return Handlers{store: NewStore(db, freezeRate)}
+func NewHandlers(db *database.DB, freezeRate FreezeRateFunc, timezone TimezoneFunc) Handlers {
+	return Handlers{store: NewStore(db, freezeRate, timezone)}
+}
+
+// WithFieldCatalog wires the workspace custom-field catalog into the
+// transport's store. Compose injects modules/customfields' Service here;
+// without it the seam stays nil and every read and write runs
+// core-columns-only, which is a silent no-op rather than an error.
+func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
+	h.store = h.store.WithFieldCatalog(catalog)
+	return h
 }
 
 // pathID converts a contract path parameter into its typed id.
@@ -41,9 +51,9 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Validation("status", "invalid_status_transition", transition.Error()))
 		return
 	}
-	var crossOrg *CrossOrganizationLinkError
-	if errors.As(err, &crossOrg) {
-		httperr.Write(w, r, httperr.Validation(crossOrg.Field, "cross_organization_link", crossOrg.Error()))
+	var crossCompany *CrossCompanyLinkError
+	if errors.As(err, &crossCompany) {
+		httperr.Write(w, r, httperr.Validation(crossCompany.Field, "cross_company_link", crossCompany.Error()))
 		return
 	}
 	var check *ContractCheckError
@@ -58,12 +68,12 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
-// ListOrganizationContracts serves one account's agreements.
-func (h Handlers) ListOrganizationContracts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListOrganizationContractsParams) {
+// ListCompanyContracts serves one account's agreements.
+func (h Handlers) ListCompanyContracts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListCompanyContractsParams) {
 	in := ListContractsInput{
-		OrganizationID: ids.OrganizationID{UUID: ids.UUID(id)},
-		Cursor:         params.Cursor,
-		Limit:          params.Limit,
+		CompanyID: ids.CompanyID{UUID: ids.UUID(id)},
+		Cursor:    params.Cursor,
+		Limit:     params.Limit,
 	}
 	if params.Status != nil {
 		status := string(*params.Status)
@@ -73,7 +83,7 @@ func (h Handlers) ListOrganizationContracts(w http.ResponseWriter, r *http.Reque
 		in.UnderContractOnly = *params.UnderContractOnly
 	}
 
-	page, err := h.store.ListOrganizationContracts(r.Context(), in)
+	page, err := h.store.ListCompanyContracts(r.Context(), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -198,17 +208,18 @@ func (h Handlers) RenewContract(w http.ResponseWriter, r *http.Request, id crmco
 // here rather than taken from the body: how a record arrived is the server's
 // observation, not the caller's claim.
 func createInput(req crmcontracts.CreateContractRequest) (CreateContractInput, error) {
-	// An absent organization_id decodes to the zero UUID with no error, which
-	// would reach the lookup and answer "no such organization" for a company the
+	// An absent company_id decodes to the zero UUID with no error, which
+	// would reach the lookup and answer "no such company" for a company the
 	// caller never named. Refuse it by name instead.
-	if err := httperr.RequireBodyID("organization_id", ids.UUID(req.OrganizationId)); err != nil {
+	if err := httperr.RequireBodyID("company_id", ids.UUID(req.CompanyId)); err != nil {
 		return CreateContractInput{}, err
 	}
 	in := CreateContractInput{
-		OrganizationID: ids.OrganizationID{UUID: ids.UUID(req.OrganizationId)},
+		CompanyID:      ids.CompanyID{UUID: ids.UUID(req.CompanyId)},
 		ContractNumber: req.ContractNumber,
 		Title:          req.Title,
 		ValueMinor:     req.ValueMinor,
+		ArrMinor:       req.ArrMinor,
 		Currency:       req.Currency,
 		ValueBasis:     BasisTotal,
 		Source:         "manual",
@@ -221,6 +232,8 @@ func createInput(req crmcontracts.CreateContractRequest) (CreateContractInput, e
 		in.AutoRenew = *req.AutoRenew
 	}
 	in.NoticePeriodDays = req.NoticePeriodDays
+	in.PaymentTermDays = req.PaymentTermDays
+	in.CustomFields = req.AdditionalProperties
 	in.StartsOn = timePtr(req.StartsOn)
 	in.EndsOn = timePtr(req.EndsOn)
 	in.RenewalOn = timePtr(req.RenewalOn)
@@ -236,6 +249,7 @@ func renewInput(req crmcontracts.RenewContractRequest) CreateContractInput {
 		ContractNumber: req.ContractNumber,
 		Title:          req.Title,
 		ValueMinor:     req.ValueMinor,
+		ArrMinor:       req.ArrMinor,
 		Currency:       req.Currency,
 		ValueBasis:     string(req.ValueBasis),
 		Source:         "renewal",
@@ -252,6 +266,8 @@ func renewInput(req crmcontracts.RenewContractRequest) CreateContractInput {
 		in.AutoRenew = *req.AutoRenew
 	}
 	in.NoticePeriodDays = req.NoticePeriodDays
+	in.PaymentTermDays = req.PaymentTermDays
+	in.CustomFields = req.AdditionalProperties
 	in.StartsOn = timePtr(req.StartsOn)
 	in.EndsOn = timePtr(req.EndsOn)
 	in.RenewalOn = timePtr(req.RenewalOn)

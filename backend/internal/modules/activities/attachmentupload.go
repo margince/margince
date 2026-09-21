@@ -13,6 +13,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/jackc/pgx/v5"
@@ -47,6 +48,22 @@ type AttachmentInput struct {
 	ContractID *ids.UUID
 }
 
+// EmptyUploadError refuses an upload carrying no bytes. It maps to 422: the
+// caller fixes it by choosing the file they meant.
+//
+// The size is the one COUNTED on the hashing pass, never a declared length —
+// see AttachmentInput.Content for why the two are not allowed to disagree.
+type EmptyUploadError struct{ Filename string }
+
+func (e *EmptyUploadError) Error() string {
+	return fmt.Sprintf("%q is empty, so there is nothing to upload; choose the file again", e.Filename)
+}
+
+// FieldFault names the part of the upload the caller must correct.
+func (e *EmptyUploadError) FieldFault() (field, code, message string) {
+	return "file", "empty_file", e.Error()
+}
+
 // UploadAttachment stores an object and records its metadata row. Authority
 // inherits from the parent entity: the caller must hold Update on the parent
 // object type and be able to see the parent row — both are checked BEFORE any
@@ -54,6 +71,21 @@ type AttachmentInput struct {
 // land an object (no storage abuse). The object is put before the row commits
 // (a committed row always has its bytes; a failed write leaves at worst an
 // orphan object, never a row promising bytes that are not there).
+// storeAttachmentBytes declares the key provisional and then stores the bytes,
+// in that order.
+//
+// THE ORDER IS THE POINT. A transaction that fails after the put leaves an
+// object nothing references, and an erasure reads storage_key off the
+// attachment row — so an object with no row is one it cannot reach. The
+// declaration is what a later pass finds instead, and it has to exist before
+// the bytes do. See storedobjectintent.go.
+func (s *Store) storeAttachmentBytes(ctx context.Context, key string, in AttachmentInput, size int64) error {
+	if err := s.recordStoredObjectIntent(ctx, key); err != nil {
+		return err
+	}
+	return s.blob.Put(ctx, key, in.Content, size, in.ContentType)
+}
+
 func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmcontracts.Attachment, error) {
 	if s.blob == nil {
 		return crmcontracts.Attachment{}, ErrBlobstoreUnconfigured
@@ -93,8 +125,18 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	if err != nil {
 		return crmcontracts.Attachment{}, err
 	}
+	// Refused HERE, where the contact still has the file in front of them and can
+	// pick the one they meant. A file with no content is not a limit one
+	// transport dislikes — no send path anywhere can do anything with it — and
+	// the counted size is the only honest witness: a declared length can
+	// disagree with the bytes, which is why nothing declares one.
+	//
+	// Before the object is stored, so an empty upload leaves nothing behind.
+	if size == 0 {
+		return crmcontracts.Attachment{}, &EmptyUploadError{Filename: in.Filename}
+	}
 
-	if err := s.blob.Put(ctx, key, in.Content, size, in.ContentType); err != nil {
+	if err := s.storeAttachmentBytes(ctx, key, in, size); err != nil {
 		return crmcontracts.Attachment{}, err
 	}
 
@@ -124,7 +166,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO attachment (id, entity_type, entity_id, filename,
 				content_type, byte_size, storage_key, checksum, source, captured_by,
-				organization_id, contract_id)
+				company_id, contract_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 			id, in.EntityType, in.EntityID, in.Filename,
 			nullIfEmpty(in.ContentType), size, key, checksum, attachmentSource, by,
@@ -137,6 +179,13 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 			"filename":      in.Filename,
 			"byte_size":     size,
 		}); err != nil {
+			return err
+		}
+		// The key stops being provisional in the SAME transaction that gave it
+		// a row. A clear that committed separately could land while this
+		// transaction then failed, which is the orphan the ledger exists to
+		// catch, re-created one step along.
+		if err := clearStoredObjectIntent(ctx, tx, key); err != nil {
 			return err
 		}
 		att, err := readAttachment(ctx, tx, id)

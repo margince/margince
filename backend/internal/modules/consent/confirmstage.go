@@ -15,17 +15,19 @@ package consent
 // it" — and a later bounce could not travel back to correct that. Worse, the
 // message existed nowhere: no delivery row, no authorization decision, no
 // timeline entry, so it appeared in no subject-access export and no erasure
-// reached it. A person asking "what have you sent me" was answered with silence
+// reached it. A contact asking "what have you sent me" was answered with silence
 // about the one message the installation had written entirely on its own.
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,7 +45,7 @@ type ConfirmLinkVault interface {
 // where the link should be.
 func (s *Store) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLinkVault, base string) *Store {
 	// ALL THREE or none. A lane with no base URL would mail a link built on an
-	// empty origin — an unusable URL that still spent the one token the person
+	// empty origin — an unusable URL that still spent the one token the contact
 	// was issued, and superseded whatever earlier link they still had.
 	if sender == nil || vault == nil || base == "" {
 		return s
@@ -56,7 +58,7 @@ func (s *Store) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLin
 
 // confirmMailInput is one confirm link, ready to be turned into a message.
 type confirmMailInput struct {
-	personID   ids.PersonID
+	contactID  ids.ContactID
 	recipient  string
 	kind       string
 	tokenRowID ids.UUID
@@ -67,18 +69,22 @@ type confirmMailInput struct {
 // stageConfirmMail renders the registered wording and stages it, on the
 // caller's transaction.
 //
-// It reports FALSE rather than failing when no lane is wired. The token has
+// It reports a ZERO ID rather than failing when no lane is wired. The token has
 // already been minted and audited by the time this runs, and answering with an
 // error would roll that back and invite a retry that mints another — so an
 // installation with no relay gets a link it can see was not sent, which is what
 // the screen tells an operator to fix.
-func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailInput) (bool, error) {
+func (s *Store) stageConfirmMail(
+	ctx context.Context, tx pgx.Tx, in confirmMailInput,
+) (ids.UUID, error) {
 	if s.confirmSender == nil || s.vault == nil {
-		return false, nil
+		// No lane wired: nothing was staged, and a zero id says so.
+		return ids.UUID{}, nil
 	}
-	rendered, category, err := RenderControllerTemplate(templateForLinkKind(in.kind), in.expiresAt)
+	rendered, category, err := RenderControllerTemplate(
+		templateForLinkKind(in.kind), in.expiresAt, s.mailLanguage(ctx, tx))
 	if err != nil {
-		return false, err
+		return ids.UUID{}, err
 	}
 	// The plaintext goes to the vault, never onto the row. What the delivery
 	// carries is a placeholder and a reference; the two meet in memory at
@@ -86,10 +92,10 @@ func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailI
 	// the audit payload and the outbox event alike.
 	ref, err := s.vault.Put(ctx, in.link)
 	if err != nil {
-		return false, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
+		return ids.UUID{}, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
 	}
-	if _, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
-		PersonID:  in.personID,
+	deliveryID, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
+		ContactID: in.contactID,
 		Recipient: in.recipient,
 		Category:  category,
 		LinkID:    in.tokenRowID,
@@ -97,22 +103,31 @@ func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailI
 		ExpiresAt: in.expiresAt,
 		MessageID: confirmMessageID(in.tokenRowID),
 		Rendered:  rendered,
-	}); err != nil {
-		return false, err
+	})
+	if err != nil {
+		return ids.UUID{}, err
 	}
-	return true, nil
+	return deliveryID, nil
 }
 
 // templateForLinkKind maps a token kind to the wording that carries it.
 //
-// Total over the two link kinds, and it returns the record-confirmation wording
-// for anything else rather than an error: every caller passes one of the two
-// Link* constants, and a wrong template would be caught at staging anyway —
-// comms refuses one whose placeholder count disagrees with the material it was
-// staged with.
+// Total over the three link kinds, and the record confirmation is the fallback
+// rather than an error: every caller passes a Link* constant, and comms refuses
+// a template whose placeholder count disagrees with the material it was staged
+// with, so a wrong one cannot go out silently.
+//
+// The PRIVACY NOTICE arm is not a nicety. Falling through to the record
+// confirmation would send a message asking whether the reader wants to hear
+// from us, under a category that a stopped contact's suppression refuses — so
+// the notice would either ask a question it must not ask, or not be sent at
+// all, and both failures are quiet.
 func templateForLinkKind(kind string) string {
-	if kind == LinkConsentConfirmation {
+	switch kind {
+	case LinkConsentConfirmation:
 		return TemplateConsentConfirmation
+	case LinkPrivacyNotice:
+		return TemplatePrivacyNotice
 	}
 	return TemplateRecordConfirmation
 }
@@ -154,4 +169,26 @@ func (s *Store) canSendConfirm() bool {
 func (h Handlers) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLinkVault, base string) Handlers {
 	h.store = h.store.WithConfirmationLane(sender, vault, base)
 	return h
+}
+
+// mailLanguage is the language this installation's controller mail is written
+// in, or the fallback when nothing is wired or nothing is set.
+//
+// An unwired reader answers the FALLBACK rather than failing. Refusing to send
+// a confirm link because a settings read failed trades the whole message for a
+// formatting preference, and for the consent link that is worse than it sounds:
+// the permission stays withheld until the contact answers a mail that never
+// arrived. mailcopy.For treats an unknown answer the same way, so the two
+// agree without either having to know the other's list.
+func (s *Store) mailLanguage(ctx context.Context, tx pgx.Tx) string {
+	if s.language == nil {
+		return string(mailcopy.Fallback)
+	}
+	language, err := s.language.MailLanguageTx(ctx, tx)
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's mail language could not be read; sending in the fallback",
+			"fallback", mailcopy.Fallback, "cause", err)
+		return string(mailcopy.Fallback)
+	}
+	return language
 }

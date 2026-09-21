@@ -93,7 +93,7 @@ export const Healthy: Story = { render: story(HEALTHY) };
 
 // Two of the three readings with nothing to report, which the stacked rows have
 // to say one at a time: no fleet dispatcher is registered and no failure was
-// recorded, while this organization's own queue is busy. The card's own idle
+// recorded, while this company's own queue is busy. The card's own idle
 // state does NOT apply here — something is queued — so the empty branches must
 // stand inside their rows, each naming what it found none of. What to check is
 // that an EmptyState given a row's full width still reads as a finding rather
@@ -130,7 +130,7 @@ export const Withheld: Story = { render: story(HEALTHY, ["ops"]) };
 
 // Dead work in dark, which is the only story that has every tone on screen at
 // once: the danger Callout an operator must not scroll past, the danger `dead`
-// pill and the warn `retrying` one beside it, and — the pairing that actually
+// pill and the warning `retrying` one beside it, and — the pairing that actually
 // needs looking at — the two UNTONED pills for waiting and running. An untoned
 // Badge is filled with --bgCard flat (atoms.css), one step off the card ground it
 // sits on, so in dark a count of zero either still reads as a pill or stops
@@ -148,7 +148,7 @@ export const DeadWorkDark: Story = {
 // 480px (factlist.css) the two columns stop splitting and the term becomes a
 // LABEL above its value. That rule is what this story is here to show landing on
 // real content, because this card is the hardest case for it — the term is a
-// River job kind in mono with underscores and nothing to break on, and the value
+// River job kind with underscores and nothing to break on, and the value
 // is four pills that are always all four drawn, since a zero is a reading an
 // operator came for. What to check is that the pill row wraps inside the width it
 // has just been given, and that a kind and its counts still read as one row once

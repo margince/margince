@@ -107,12 +107,41 @@ fi
 # Per-package go-test timeout and its budget rule — shared with the one-package
 # lane (scripts/lib-testdb.sh resolve_it_timeout), so both cost a package the same.
 resolve_it_timeout
-# A single-shard coverage run is the one case that executes whole packages WITH
-# instrumentation on top, so it alone earns more than the shared budget.
-if [[ -n "${COVERDIR:-}" && -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL == 1 )); then
-  IT_TIMEOUT=900s
+# The BUDGET is the policy number: what a package is allowed to cost before it
+# has to be split. It is reported against, never enforced, and it does not move
+# when the timeout below does.
+IT_BUDGET="$IT_TIMEOUT"
+
+# The TIMEOUT is a hang detector, and it has to fit the work a run actually
+# does. Those were one number until this line, which is why CI was green while
+# the same lane locally was killing a package with every test passing.
+#
+# A sharded run executes a SLICE — CI's matrix gives each shard a sixth of the
+# tree — so the budget is generous headroom for it. An unsharded run executes
+# whole packages, and compose/integration alone is 2284 tests: measured at 886s
+# on an unmodified main, against a 600s bound. go test kills it at the ceiling,
+# so NONE of its tests report, and a real regression in the same push would be
+# invisible behind a timeout.
+#
+# So an unsharded run gets a multiple, and the budget column still prices every
+# package against the 600s policy — "split it before it crosses" keeps being
+# said about a package that is genuinely too big. What stops is a hang detector
+# calibrated for a sixth of the work killing a run doing all of it.
+#
+# An explicit INTEGRATION_TIMEOUT overrides both halves, because a caller naming
+# a bound means it.
+if [[ -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL <= 1 )); then
+  # Three times the budget. The slowest package measures 1.5x it today, so this
+  # is headroom for a slower machine rather than a number chosen to fit — and it
+  # is still far under the CI job limit this bound exists to pre-empt with a
+  # legible message.
+  IT_TIMEOUT=1800s
 fi
-export IT_TIMEOUT
+# A single-shard coverage run adds instrumentation on top of whole packages.
+if [[ -n "${COVERDIR:-}" && -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL == 1 )); then
+  IT_TIMEOUT=2700s
+fi
+export IT_TIMEOUT IT_BUDGET
 
 ncpu() { sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4; }
 JOBS="${INTEGRATION_JOBS:-$(( $(ncpu) < 8 ? $(ncpu) : 8 ))}"
@@ -131,7 +160,7 @@ build_template
 GO_DIRS=(backend)
 
 # Redis logical dbs available to the lane: every db the server serves except 0,
-# which `make dev` owns. Must match --databases in infra/docker-compose.dev.yml.
+# which `make dev` owns. Must match --databases in docker-compose.dev.yml.
 # It is one PER PACKAGE, not per concurrent job — a package's keys must survive
 # the whole package, and a slot freed by a finished package cannot be handed on
 # while its successor is still reading.
@@ -268,7 +297,7 @@ while IFS='|' read -r d rel; do
         '!integration') skip_file=1 ;;
         e2e_llm|livesmoke|voicelive) skip_file=1 ;;
         # `integration && bench` is the benchmark lane (make bench-record,
-        # bench-capture, bench-perf, bench-perf-check). It keeps those suites out
+        # bench-capture, bench-dispatch, bench-perf, bench-perf-check). It keeps those suites out
         # of every MERGE gate, which is what matters here — one of them,
         # bench-perf-check, is run weekly by the scheduled workflow, so "the tag
         # keeps them out of all automation" would be false.
@@ -396,13 +425,13 @@ rm -f "$GROUPED"
 NPKGS=$(wc -l < "$WORK" | tr -d ' ')
 # One Redis logical db per package, and there must be enough of them. Wrapping
 # the mapping instead is what this guard exists to prevent: two packages on one
-# db do not run slowly, they corrupt each other — platform/events and
-# overlaybudget's budgettest both FLUSHDB between tests, so a collision wipes the
+# db do not run slowly, they corrupt each other — platform/events and every
+# suite on platform/redistest FLUSHDB between tests, so a collision wipes the
 # other package's keys mid-test and the failure surfaces in whichever suite was
 # reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
-# databases (infra/docker-compose.dev.yml); db 0 is reserved for `make dev`.
+# databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
 if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in infra/docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
+  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
   exit 1
 fi
 # Say what was left to the unit lane. An unreported exclusion and a broken
@@ -562,10 +591,10 @@ if [[ -s "$TIMING" ]]; then
   # perfectly efficient per test and still be seconds from the timeout simply by
   # having grown. That margin closing is the failure this lane learned the hard
   # way, and it is only visible if the run prints it before it crosses.
-  echo "test-integration-parallel: per-package cost (advisory, budget ${IT_TIMEOUT})"
+  echo "test-integration-parallel: per-package cost (advisory, budget ${IT_BUDGET})"
   awk -F'|' '{ printf "%s|%s|%s|%.4f\n", $1, $2, $3, ($3 ? $2 * 1000 / $3 : 0) }' "$TIMING" \
     | LC_ALL=C sort -t'|' -k4 -rn \
-    | awk -F'|' -v budget="${IT_TIMEOUT%s}" '
+    | awk -F'|' -v budget="${IT_BUDGET%s}" '
         { total += $2; tests += $3
           share = (budget ? $2 * 100 / budget : 0)
           # A package past half its budget is the signal that it needs splitting,

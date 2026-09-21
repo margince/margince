@@ -117,26 +117,28 @@ func TestAllDayEventIsAnchoredAtNoon(t *testing.T) {
 }
 
 // A delta round reports a deletion as a tombstone carrying little but the id.
-// It is a cancellation to a calendar, and the shared rules drop those.
-func TestARemovedEventIsDropped(t *testing.T) {
+// It is a cancellation to a calendar, and the shared rules CLOSE the meeting
+// captured under that id rather than discarding the news of it.
+func TestARemovedEventCancelsTheCapturedMeeting(t *testing.T) {
 	raw := eventJSONWith(t, map[string]any{
 		"id": "evt-gone", "@removed": map[string]string{"reason": "deleted"},
 	})
-	reason, skip := mustParse(t, raw).SkipReason()
-	if !skip || reason != "cancelled" {
-		t.Fatalf("a removed event: got (%q, skip=%v), want it dropped as cancelled", reason, skip)
+	reason, settlement := mustParse(t, raw).Settle()
+	if settlement != meetingmap.SettleCancel || reason != "cancelled" {
+		t.Fatalf("a removed event: got (%q, %v), want it cancelled", reason, settlement)
 	}
 }
 
-func TestACancelledEventIsDropped(t *testing.T) {
+func TestACancelledEventCancelsTheCapturedMeeting(t *testing.T) {
 	raw := eventJSONWith(t, map[string]any{
 		"id": "evt-cx", "subject": "Cancelled call", "isCancelled": true,
 		"start":     map[string]string{"dateTime": "2026-07-16T09:00:00.0000000", "timeZone": "UTC"},
 		"organizer": actorJSON(owner),
 		"attendees": attendeesJSON("client@acme.com"),
 	})
-	if reason, skip := mustParse(t, raw).SkipReason(); !skip || reason != "cancelled" {
-		t.Fatalf("cancelled event: got (%q, skip=%v), want cancelled skip", reason, skip)
+	reason, settlement := mustParse(t, raw).Settle()
+	if settlement != meetingmap.SettleCancel || reason != "cancelled" {
+		t.Fatalf("cancelled event: got (%q, %v), want it cancelled", reason, settlement)
 	}
 }
 
@@ -235,9 +237,48 @@ func activityFields(t *testing.T, rec connector.NormalizedRecord) capture.Activi
 // bytes, then apply the shared meeting rules — so a fixture asserts on the
 // result rather than on either half.
 func classifyRaw(raw []byte, owner string) (meetingmap.Meeting, error) {
-	ev, err := decodeEvent(raw)
+	ev, err := decodeEvent(raw, owner)
 	if err != nil {
 		return meetingmap.Meeting{}, err
 	}
 	return meetingmap.Classify(ev, owner), nil
+}
+
+// Microsoft's iCal UID reaches the neutral event, carrying the SAME series a
+// Google payload states for the same meeting.
+//
+// That agreement is the point: one meeting on two calendars has two provider
+// event ids and one iCal UID, which is what makes the UID a cross-provider
+// identity and the event id useless as one.
+//
+// This does NOT pin the JSON spelling. encoding/json matches field names case
+// insensitively, so `iCalUId` and `iCalUID` both decode either vendor's
+// payload — verified by mutation.
+func TestMicrosoftICalUIDReachesTheNeutralEvent(t *testing.T) {
+	raw, err := json.Marshal(map[string]any{
+		"id":          "graph-evt-1",
+		"iCalUId":     "series-42@google.com",
+		"subject":     "Quarterly review",
+		"isCancelled": false,
+		"start":       map[string]string{"dateTime": "2026-09-23T08:00:00.0000000", "timeZone": "UTC"},
+		"organizer":   map[string]any{"emailAddress": map[string]string{"address": "pat@counterparty.example"}},
+		"attendees": []map[string]any{
+			{"emailAddress": map[string]string{"address": "rep@ws.example"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("building the event: %v", err)
+	}
+	ev, err := decodeEvent(raw, "rep@ws.example")
+	if err != nil {
+		t.Fatalf("decoding the event: %v", err)
+	}
+	if ev.ICalUID != "series-42@google.com" {
+		t.Fatalf("ICalUID is %q, want the series Microsoft stated", ev.ICalUID)
+	}
+	// The two providers state the SAME uid for one meeting — that is what makes
+	// it a cross-provider identity — while their own event ids differ.
+	if ev.ID != "graph-evt-1" {
+		t.Fatalf("ID is %q, want Graph's own event id", ev.ID)
+	}
 }

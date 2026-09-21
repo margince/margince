@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -163,23 +163,23 @@ func TestOwnerReassignmentEmitsOwnerChanged(t *testing.T) {
 // linked only to a capture-private contact of Rep3's.
 func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 	e := Setup(t)
-	foreignPerson := e.SeedPerson(t, "Foreign owner", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", foreignPerson, e.Rep3)
-	myPerson := e.SeedPerson(t, "Mine", &e.Rep1)
+	foreignContact := e.SeedContact(t, "Foreign owner", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", foreignContact, e.Rep3)
+	myContact := e.SeedContact(t, "Mine", &e.Rep1)
 	admin := e.Admin()
 	// Only the private contact's owner can link to it.
 	foreignOwner := e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms)
 
 	secret, _, err := e.Activities.LogActivity(foreignOwner, activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Confidential pricing call"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: foreignPerson}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	visible, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Team call"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: myPerson}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: myContact}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +221,7 @@ func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 	// read owes the existence-hiding not-found rather than an empty page.
 	// An empty page hides the rows but answers "that record has nothing on it",
 	// which is a different sentence and one the caller was not entitled to.
-	entityType, entityID := "person", foreignPerson
+	entityType, entityID := "contact", foreignContact
 	_, _, err = e.Activities.ListActivities(rep, activities.ListActivitiesInput{EntityType: &entityType, EntityID: &entityID})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("entity-filter probe on a private contact = %v, want ErrNotFound", err)
@@ -234,23 +234,23 @@ func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	hidden, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	hidden, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Owned elsewhere", OwnerID: userIDPtr(&e.Rep3), Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "taken@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
+		Emails: []contacts.ContactEmailInput{{Email: "taken@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.MakeCapturePrivate(t, "person", ids.UUID(hidden.Id), e.Rep3)
+	e.MakeCapturePrivate(t, "contact", ids.UUID(hidden.Id), e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	_, err = e.People.CreatePerson(rep, people.CreatePersonInput{
+	_, err = e.Contacts.CreateContact(rep, contacts.CreateContactInput{
 		FullName: "Duplicate attempt", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "taken@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
+		Emails: []contacts.ContactEmailInput{{Email: "taken@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
 	})
-	var dup *people.DuplicateEmailError
+	var dup *contacts.DuplicateEmailError
 	if !errors.As(err, &dup) {
-		t.Fatalf("duplicate create → %v, want people.DuplicateEmailError", err)
+		t.Fatalf("duplicate create → %v, want contacts.DuplicateEmailError", err)
 	}
 	if !dup.ExistingID.IsZero() {
 		t.Errorf("409 disclosed out-of-scope id %s", dup.ExistingID)
@@ -258,34 +258,34 @@ func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 
 	// The same conflict against a row the rep CAN see keeps the id — the
 	// dedupe UX ("open the existing record") survives for legit cases.
-	if _, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	if _, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Teammate's", OwnerID: userIDPtr(&e.Rep2), Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "team@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
+		Emails: []contacts.ContactEmailInput{{Email: "team@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.People.CreatePerson(rep, people.CreatePersonInput{
+	_, err = e.Contacts.CreateContact(rep, contacts.CreateContactInput{
 		FullName: "Duplicate attempt 2", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "team@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
+		Emails: []contacts.ContactEmailInput{{Email: "team@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
 	})
 	if !errors.As(err, &dup) {
-		t.Fatalf("visible duplicate → %v, want people.DuplicateEmailError", err)
+		t.Fatalf("visible duplicate → %v, want contacts.DuplicateEmailError", err)
 	}
 	if dup.ExistingID.IsZero() {
 		t.Error("409 for a visible duplicate should carry the existing id")
 	}
 }
 
-// domainCreateRepPerms is a rep who may CREATE an organization and is bounded
+// domainCreateRepPerms is a rep who may CREATE a company and is bounded
 // to their team. Both halves are load-bearing: without the create grant the
 // probe below never runs and the test reports a permission denial instead of a
-// disclosure verdict, and an unbounded caller can see every org, which makes
+// disclosure verdict, and an unbounded caller can see every company, which makes
 // the withheld case unreachable.
 var domainCreateRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"organization":          {Create: true, Read: true, Update: true},
-		"person":                {Create: true, Read: true, Update: true},
+		"company":               {Create: true, Read: true, Update: true},
+		"contact":               {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
@@ -298,49 +298,49 @@ var domainCreateRepPerms = principal.Permissions{
 // One test for four doors, because they share `claimedDomainOwner`: creating a
 // company, editing its domains, and saving its profile website all reach the
 // same probe, so the rule is held in one place for all of them.
-func TestDuplicateDomain409DoesNotDiscloseAnOrgOutOfScope(t *testing.T) {
+func TestDuplicateDomain409DoesNotDiscloseACompanyOutOfScope(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	hidden, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	hidden, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{
 		DisplayName: "Owned elsewhere GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
+		Domains: []contacts.CompanyDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.MakeCapturePrivate(t, "organization", ids.UUID(hidden.Id), e.Rep3)
+	e.MakeCapturePrivate(t, "company", ids.UUID(hidden.Id), e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, domainCreateRepPerms)
-	_, err = e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	_, err = e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
 		DisplayName: "Duplicate attempt GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
+		Domains: []contacts.CompanyDomainInput{{Domain: "hidden-owner.test", IsPrimary: true}},
 	})
-	var dup *people.DuplicateDomainError
+	var dup *contacts.DuplicateDomainError
 	if !errors.As(err, &dup) {
-		t.Fatalf("duplicate domain → %v, want people.DuplicateDomainError", err)
+		t.Fatalf("duplicate domain → %v, want contacts.DuplicateDomainError", err)
 	}
 	if !dup.ExistingID.IsZero() {
-		t.Errorf("409 disclosed an out-of-scope organization %s", dup.ExistingID)
+		t.Errorf("409 disclosed an out-of-scope company %s", dup.ExistingID)
 	}
 
-	// And the same conflict against an org the rep CAN see keeps the id, so
+	// And the same conflict against a company the rep CAN see keeps the id, so
 	// the "open the existing company" affordance survives for legitimate cases.
-	visible, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	visible, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{
 		DisplayName: "Visible GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
+		Domains: []contacts.CompanyDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	_, err = e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
 		DisplayName: "Duplicate attempt 2 GmbH", Source: "manual",
-		Domains: []people.OrgDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
+		Domains: []contacts.CompanyDomainInput{{Domain: "visible-owner.test", IsPrimary: true}},
 	})
 	if !errors.As(err, &dup) {
-		t.Fatalf("visible duplicate domain → %v, want people.DuplicateDomainError", err)
+		t.Fatalf("visible duplicate domain → %v, want contacts.DuplicateDomainError", err)
 	}
-	if dup.ExistingID != ids.From[ids.OrganizationKind](ids.UUID(visible.Id)) {
+	if dup.ExistingID != ids.From[ids.CompanyKind](ids.UUID(visible.Id)) {
 		t.Errorf("409 for a visible duplicate carries %s, want the owner %s", dup.ExistingID, visible.Id)
 	}
 }
@@ -421,9 +421,13 @@ func TestRepricingAClosedDealRefreezesFx(t *testing.T) {
 		t.Fatal("closed deal gained an amount but no frozen FX — deal_closed_fx would have 500ed before the fix")
 	}
 
-	// Switching the closed deal's currency re-freezes for the NEW pair.
+	// Switching the closed deal's currency re-freezes for the NEW pair. A
+	// currency move must resend every populated figure (currencyRestatementError),
+	// so the amount is restated alongside it — unchanged, since this deal's
+	// price does not move, only its currency.
 	usd := "USD"
-	if _, err := e.Deals.UpdateDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.UpdateDealInput{Currency: &usd}); err != nil {
+	if _, err := e.Deals.UpdateDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)),
+		deals.UpdateDealInput{Currency: &usd, AmountMinor: &amount}); err != nil {
 		t.Fatalf("re-currencying a closed deal: %v", err)
 	}
 	rate, _ = readFx()
@@ -483,8 +487,8 @@ func TestReopeningWithARedundantLostReasonStillCleans(t *testing.T) {
 // the same answer the caller's own replay would get.
 func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 	e := Setup(t)
-	foreignPerson := e.SeedPerson(t, "Foreign", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", foreignPerson, e.Rep3)
+	foreignContact := e.SeedContact(t, "Foreign", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", foreignContact, e.Rep3)
 	admin := e.Admin()
 	foreignOwner := e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms)
 
@@ -492,12 +496,12 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 	if _, _, err := e.Activities.LogActivity(foreignOwner, activities.LogActivityInput{
 		Kind: "email", Subject: strPtr("Confidential thread"), Source: "connector",
 		SourceSystem: &src, SourceID: &key,
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: foreignPerson}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	}); err != nil {
 		t.Fatal(err)
 	}
 	leadSrc, leadKey := "apollo", "lead-9"
-	theirLead, _, err := e.People.CreateLead(admin, people.CreateLeadInput{
+	theirLead, _, err := e.Contacts.CreateLead(admin, contacts.CreateLeadInput{
 		FullName: strPtr("Foreign lead"), OwnerID: userIDPtr(&e.Rep3), Source: "import",
 		SourceSystem: &leadSrc, SourceID: &leadKey,
 	})
@@ -512,7 +516,7 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 	}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("activity replay of a source key on an unreadable record → %v, want bare ErrConflict", err)
 	}
-	replayed, _, err := e.People.CreateLead(rep, people.CreateLeadInput{
+	replayed, _, err := e.Contacts.CreateLead(rep, contacts.CreateLeadInput{
 		FullName: strPtr("Replay attempt"), Source: "import",
 		SourceSystem: &leadSrc, SourceID: &leadKey,
 	})
@@ -527,28 +531,28 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 // so linkable; their capture-private contact is neither.
 func TestActivityLinkTargetsMustBeVisible(t *testing.T) {
 	e := Setup(t)
-	theirContact := e.SeedPerson(t, "Their contact", &e.Rep3)
-	foreignPerson := e.SeedPerson(t, "Foreign", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", foreignPerson, e.Rep3)
+	theirContact := e.SeedContact(t, "Their contact", &e.Rep3)
+	foreignContact := e.SeedContact(t, "Foreign", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", foreignContact, e.Rep3)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCapture())
 
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: theirContact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: theirContact}},
 	}); err != nil {
 		t.Errorf("link to another team's readable contact → %v, want success", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: foreignPerson}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("link to a capture-private person → %v, want ErrNotFound", err)
+		t.Errorf("link to a capture-private contact → %v, want ErrNotFound", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: ids.NewV7()}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.NewV7()}},
 	}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("link to a nonexistent person → %v, want ErrNotFound", err)
+		t.Errorf("link to a nonexistent contact → %v, want ErrNotFound", err)
 	}
 }
 
@@ -577,19 +581,19 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	for _, tc := range []struct {
 		name  string
 		field string
-		in    people.ListOrganizationsInput
+		in    contacts.ListCompaniesInput
 	}{
 		{
 			"a stage outside the vocabulary", "lifecycle",
-			people.ListOrganizationsInput{Lifecycle: strPtr("nearly_a_customer")},
+			contacts.ListCompaniesInput{Lifecycle: strPtr("nearly_a_customer")},
 		},
 		{
 			"a relationship type outside the vocabulary", "relationship_type",
-			people.ListOrganizationsInput{RelationshipType: strPtr("frenemy")},
+			contacts.ListCompaniesInput{RelationshipType: strPtr("frenemy")},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, err := e.People.ListOrganizations(admin, tc.in)
+			_, _, err := e.Contacts.ListCompanies(admin, tc.in)
 			var detailed *httperr.DetailedError
 			if !errors.As(err, &detailed) {
 				t.Fatalf("filter %s=%q → %v, want a validation refusal", tc.field, *strPtrValue(tc.in), err)
@@ -607,18 +611,18 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	// The same dials with values the contract DOES define are selections, and
 	// answer normally — a rule that refused everything would pass the test
 	// above and break the feature.
-	for _, in := range []people.ListOrganizationsInput{
+	for _, in := range []contacts.ListCompaniesInput{
 		{Lifecycle: strPtr("customer")},
 		{RelationshipType: strPtr("partner")},
 	} {
-		if _, _, err := e.People.ListOrganizations(admin, in); err != nil {
+		if _, _, err := e.Contacts.ListCompanies(admin, in); err != nil {
 			t.Errorf("a filter value the contract defines was refused: %v", err)
 		}
 	}
 }
 
 // strPtrValue names whichever of the two dials the case set, for the message.
-func strPtrValue(in people.ListOrganizationsInput) *string {
+func strPtrValue(in contacts.ListCompaniesInput) *string {
 	if in.Lifecycle != nil {
 		return in.Lifecycle
 	}

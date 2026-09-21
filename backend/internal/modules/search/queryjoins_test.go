@@ -14,26 +14,28 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // joinSchema is the two join tables as the real schema declares them, plus the
 // record tables a hop lands on. Written from the DDL rather than from the
 // derivation, so a test cannot agree with the code by construction.
 var joinSchema = map[string][]StoredColumn{
-	"person":       columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
-	"organization": columnsOf("id:uuid", "display_name", "owner_id:uuid", "is_anchor:boolean", "visibility"),
-	"deal":         columnsOf("id:uuid", "name", "owner_id:uuid", "organization_id:uuid", "visibility"),
-	"lead":         columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
-	"project":      columnsOf("id:uuid", "name", "owner_id:uuid", "organization_id:uuid", "visibility"),
-	"activity":     columnsOf("id:uuid", "subject", "kind", "owner_id:uuid", "visibility"),
-	// core 0007 + 0131. counterparty_org_id is deliberately here: it is the
+	"contact":  columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
+	"company":  columnsOf("id:uuid", "display_name", "owner_id:uuid", "is_anchor:boolean", "visibility"),
+	"deal":     columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
+	"lead":     columnsOf("id:uuid", "full_name", "owner_id:uuid", "visibility"),
+	"project":  columnsOf("id:uuid", "name", "owner_id:uuid", "company_id:uuid", "visibility"),
+	"activity": columnsOf("id:uuid", "subject", "kind", "owner_id:uuid", "visibility"),
+	// core 0007 + 0131. counterparty_company_id is deliberately here: it is the
 	// column the derivation must NOT read.
-	"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "organization_id:uuid",
-		"counterparty_org_id:uuid", "deal_id:uuid", "project_id:uuid",
+	"relationship": columnsOf("id:uuid", "kind", "contact_id:uuid", "company_id:uuid",
+		"counterparty_company_id:uuid", "deal_id:uuid", "project_id:uuid",
 		"archived_at:timestamp with time zone", "started_at:date", "ended_at:date"),
 	// core 0008 + 0038 + 0131. Five arms, and no archived_at.
 	"activity_link": columnsOf("id:uuid", "activity_id:uuid", "entity_type",
-		"person_id:uuid", "organization_id:uuid", "deal_id:uuid", "lead_id:uuid",
+		"contact_id:uuid", "company_id:uuid", "deal_id:uuid", "lead_id:uuid",
 		"project_id:uuid"),
 }
 
@@ -80,35 +82,35 @@ func relationsOf(t *testing.T, entity string) map[string]Relation {
 	return byName
 }
 
-// The defect this file exists for, in the direction it was reported: a person's
-// employer lives in `relationship`, so before the join derivation `person` had
+// The defect this file exists for, in the direction it was reported: a contact's
+// employer lives in `relationship`, so before the join derivation `contact` had
 // no hop at all and the question could not be asked.
-func TestAPersonTraversesToTheirEmployerAndAnOrganizationToItsPeople(t *testing.T) {
-	fromPerson := relationsOf(t, entityPerson)
-	employer, ok := fromPerson["organizations"]
+func TestAContactTraversesToTheirEmployerAndACompanyToItsContacts(t *testing.T) {
+	fromContact := relationsOf(t, entityContact)
+	employer, ok := fromContact["companies"]
 	if !ok {
-		t.Fatalf("person has no hop to its employer; it has %v", slices.Sorted(maps.Keys(fromPerson)))
+		t.Fatalf("contact has no hop to its employer; it has %v", slices.Sorted(maps.Keys(fromContact)))
 	}
-	if employer.Target != entityOrganization {
-		t.Errorf("person → organizations lands on %q", employer.Target)
+	if employer.Target != entityCompany {
+		t.Errorf("contact → companies lands on %q", employer.Target)
 	}
 	if employer.Join == nil {
-		t.Fatal("person → organizations is not a join edge, so it was derived from a column person does not have")
+		t.Fatal("contact → companies is not a join edge, so it was derived from a column contact does not have")
 	}
-	if employer.Join.Table != "relationship" || employer.Join.From != "person_id" || employer.Join.To != "organization_id" {
-		t.Errorf("person → organizations runs through %+v, not relationship(person_id → organization_id)", *employer.Join)
+	if employer.Join.Table != "relationship" || employer.Join.From != "contact_id" || employer.Join.To != "company_id" {
+		t.Errorf("contact → companies runs through %+v, not relationship(contact_id → company_id)", *employer.Join)
 	}
 
 	// The inverse is the same edge read the other way, and it must exist for
 	// the same reason: an account's staff is the question the employment table
 	// was built to answer.
-	fromOrg := relationsOf(t, entityOrganization)
-	people, ok := fromOrg["persons"]
+	fromCompany := relationsOf(t, entityCompany)
+	contacts, ok := fromCompany["contacts"]
 	if !ok {
-		t.Fatalf("organization has no hop to its people; it has %v", slices.Sorted(maps.Keys(fromOrg)))
+		t.Fatalf("company has no hop to its contacts; it has %v", slices.Sorted(maps.Keys(fromCompany)))
 	}
-	if people.Join == nil || people.Join.From != "organization_id" || people.Join.To != "person_id" {
-		t.Errorf("organization → persons runs through %+v, not relationship(organization_id → person_id)", people.Join)
+	if contacts.Join == nil || contacts.Join.From != "company_id" || contacts.Join.To != "contact_id" {
+		t.Errorf("company → contacts runs through %+v, not relationship(company_id → contact_id)", contacts.Join)
 	}
 }
 
@@ -117,7 +119,7 @@ func TestAPersonTraversesToTheirEmployerAndAnOrganizationToItsPeople(t *testing.
 // derived vocabulary with a blind spot looks complete while saying so.
 func TestAnActivityTraversesToEveryRecordItLinks(t *testing.T) {
 	relations := relationsOf(t, entityActivity)
-	for _, want := range []string{"persons", "organizations", "deals", "leads", "projects"} {
+	for _, want := range []string{"contacts", "companies", "deals", "leads", "projects"} {
 		relation, ok := relations[want]
 		if !ok {
 			t.Errorf("activity has no hop %q; it has %v", want, slices.Sorted(maps.Keys(relations)))
@@ -154,10 +156,10 @@ func TestAJoinHopIsPublishedOnlyWhenBothColumnsAreThere(t *testing.T) {
 		narrowed[table] = columns
 	}
 	// The employment edge, with the far side taken away.
-	narrowed["relationship"] = columnsOf("id:uuid", "kind", "person_id:uuid",
+	narrowed["relationship"] = columnsOf("id:uuid", "kind", "contact_id:uuid",
 		"archived_at:timestamp with time zone", "ended_at:date")
 	resolver := NewVocabularyResolver().WithColumnReader(stubColumns{tables: narrowed})
-	vocab, err := resolver.Resolve(readerFor(entityPerson, entityOrganization, objectRelationship), entityPerson)
+	vocab, err := resolver.Resolve(readerFor(entityContact, entityCompany, objectRelationship), entityContact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +175,7 @@ func TestAJoinHopIsPublishedOnlyWhenBothColumnsAreThere(t *testing.T) {
 // so an unwired deployment publishes none rather than publishing one nothing
 // confirmed. Narrower than the unwired field vocabulary, and deliberately.
 func TestNoJoinRelationIsPublishedWithoutASchemaToConfirmIt(t *testing.T) {
-	vocab, err := NewVocabularyResolver().Resolve(readerFor(entityPerson, entityOrganization), entityPerson)
+	vocab, err := NewVocabularyResolver().Resolve(readerFor(entityContact, entityCompany), entityContact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,16 +187,16 @@ func TestNoJoinRelationIsPublishedWithoutASchemaToConfirmIt(t *testing.T) {
 }
 
 // Via is prose for a join edge, and the executor must never read it for
-// structure: `relationship(person_id → organization_id)` contains a dot, which
-// the inverse spelling `deal.organization_id` also does. Reading it would bind
+// structure: `relationship(contact_id → company_id)` contains a dot, which
+// the inverse spelling `deal.company_id` also does. Reading it would bind
 // the hop to a column the join table does not have.
 func TestAJoinEdgeIsNeverReadAsAnInverseOne(t *testing.T) {
 	relation := Relation{
-		Name: "organizations", Target: entityOrganization,
-		Via:  joinVia("relationship", "person_id", "organization_id"),
-		Join: &JoinEdge{Table: "relationship", From: "person_id", To: "organization_id"},
+		Name: "companies", Target: entityCompany,
+		Via:  joinVia("relationship", "contact_id", "company_id"),
+		Join: &JoinEdge{Table: "relationship", From: "contact_id", To: "company_id"},
 	}
-	branch, _ := branchFor(entityOrganization)
+	branch, _ := branchFor(entityCompany)
 	hop := newHopBinding(relation, branch, unfilteredStorage())
 	if hop.column != "" || hop.forward {
 		t.Fatalf("a join edge bound as a scalar one: column=%q forward=%v", hop.column, hop.forward)
@@ -204,7 +206,7 @@ func TestAJoinEdgeIsNeverReadAsAnInverseOne(t *testing.T) {
 	if !strings.Contains(condition, "FROM \"relationship\" j") {
 		t.Errorf("the edge does not traverse the join table: %s", condition)
 	}
-	if strings.Contains(condition, "t.organization_id") || strings.Contains(condition, "h.person_id = t.id") {
+	if strings.Contains(condition, "t.company_id") || strings.Contains(condition, "h.contact_id = t.id") {
 		t.Errorf("the edge compiled against a record column instead of the join table: %s", condition)
 	}
 }
@@ -213,27 +215,27 @@ func TestAJoinEdgeIsNeverReadAsAnInverseOne(t *testing.T) {
 // clause is absent where it does not — `activity_link` has no archived_at, and
 // naming one would be a database error on every plan that traversed it.
 func TestAJoinHopReadsItsLifecycleGuardsOffTheTableRatherThanAssumingThem(t *testing.T) {
-	employment := relationsOf(t, entityPerson)["organizations"]
+	employment := relationsOf(t, entityContact)["companies"]
 	if employment.Join == nil || !employment.Join.Archivable || !employment.Join.Ends {
 		t.Fatalf("the employment edge does not know what relationship's lifecycle columns are: %+v",
 			employment.Join)
 	}
 	condition := joinEdgeCondition(*employment.Join)
 	// Deleted, and left. Two questions, and filtering only the first is what
-	// makes a company a person left go on reading as where they work.
+	// makes a company a contact left go on reading as where they work.
 	if !strings.Contains(condition, "j.archived_at IS NULL") {
 		t.Errorf("an archived employment still carries a hop: %s", condition)
 	}
 	if !strings.Contains(condition, "j.ended_at IS NULL OR j.ended_at > current_date") {
-		t.Errorf("a job the person left still carries a hop: %s", condition)
+		t.Errorf("a job the contact left still carries a hop: %s", condition)
 	}
 	// A future ended_at is a notice period and is still current, so the
 	// comparison is against a date rather than a presence check.
 	if strings.Contains(condition, "j.ended_at IS NULL)") {
-		t.Errorf("the hop drops a person serving out their notice: %s", condition)
+		t.Errorf("the hop drops a contact serving out their notice: %s", condition)
 	}
 
-	link := relationsOf(t, entityActivity)["persons"]
+	link := relationsOf(t, entityActivity)["contacts"]
 	if link.Join == nil || link.Join.Archivable || link.Join.Ends {
 		t.Fatalf("the activity link edge invented a lifecycle column: %+v", link.Join)
 	}
@@ -254,10 +256,10 @@ func TestAJoinHopReadsItsLifecycleGuardsOffTheTableRatherThanAssumingThem(t *tes
 // written at the vocabulary level would pass without the merge ever running,
 // and would go on passing if the rule were reversed.
 func TestADirectEdgeWinsAJoinEdgeOfTheSameName(t *testing.T) {
-	direct := []Relation{{Name: "deals", Target: entityDeal, Via: "deal.organization_id"}}
+	direct := []Relation{{Name: "deals", Target: entityDeal, Via: "deal.company_id"}}
 	joined := []Relation{{
-		Name: "deals", Target: entityDeal, Via: joinVia("relationship", "organization_id", "deal_id"),
-		Join: &JoinEdge{Table: "relationship", From: "organization_id", To: "deal_id"},
+		Name: "deals", Target: entityDeal, Via: joinVia("relationship", "company_id", "deal_id"),
+		Join: &JoinEdge{Table: "relationship", From: "company_id", To: "deal_id"},
 	}}
 	merged := mergeRelations(direct, joined)
 	if len(merged) != 1 {
@@ -266,46 +268,46 @@ func TestADirectEdgeWinsAJoinEdgeOfTheSameName(t *testing.T) {
 	if merged[0].Join != nil {
 		t.Errorf("the join edge won the name %q over the record's own reference", merged[0].Name)
 	}
-	if merged[0].Via != "deal.organization_id" {
+	if merged[0].Via != "deal.company_id" {
 		t.Errorf("the surviving hop is derived from %q", merged[0].Via)
 	}
 	// A join edge whose name nothing else claims still reaches the vocabulary —
 	// the merge drops a duplicate, never a hop.
 	free := []Relation{{
-		Name: "persons", Target: entityPerson,
-		Join: &JoinEdge{Table: "relationship", From: "organization_id", To: "person_id"},
+		Name: "contacts", Target: entityContact,
+		Join: &JoinEdge{Table: "relationship", From: "company_id", To: "contact_id"},
 	}}
 	if got := mergeRelations(direct, append(joined, free...)); len(got) != 2 {
 		t.Errorf("the merge dropped an uncontested hop: %+v", got)
 	}
 }
 
-// `relationship.counterparty_org_id` names its ROLE rather than its target, so
+// `relationship.counterparty_company_id` names its ROLE rather than its target, so
 // the same test that keeps `deal.owner_id` out of the vocabulary keeps it out
-// here. Org↔org partner edges are therefore untraversable, and this states it
+// here. Company↔company partner edges are therefore untraversable, and this states it
 // rather than leaving it to be rediscovered: the honest fix is a contract
 // rename, not a special case in the derivation.
 //
-// Asserted against a table whose ONLY organization reference is the role-named
+// Asserted against a table whose ONLY company reference is the role-named
 // one, so the derivation cannot pass by finding the properly named column
-// beside it. A suffix match on `_org_id`, or any other loosening of "strip
+// beside it. A suffix match on `_company_id`, or any other loosening of "strip
 // `_id` and look the name up as a record type", publishes a hop here.
 func TestAReferenceNamedForItsRoleYieldsNoHop(t *testing.T) {
 	roleNamed := map[string][]StoredColumn{
-		"person":       joinSchema["person"],
-		"organization": joinSchema["organization"],
-		"activity":     joinSchema["activity"],
-		"relationship": columnsOf("id:uuid", "kind", "person_id:uuid", "counterparty_org_id:uuid",
+		"contact":  joinSchema["contact"],
+		"company":  joinSchema["company"],
+		"activity": joinSchema["activity"],
+		"relationship": columnsOf("id:uuid", "kind", "contact_id:uuid", "counterparty_company_id:uuid",
 			"archived_at:timestamp with time zone", "ended_at:date"),
 		// The positive control, on the OTHER table: a properly named arm that
 		// MUST yield a hop. Without it this test passes when the derivation
 		// stops working for any reason at all — a renamed hub, a broken
 		// fixture — and an absence proves nothing about the role-named column
 		// it is supposed to be about.
-		"activity_link": columnsOf("id:uuid", "activity_id:uuid", "person_id:uuid"),
+		"activity_link": columnsOf("id:uuid", "activity_id:uuid", "contact_id:uuid"),
 	}
 	schema := newSchemaReads(stubColumns{tables: roleNamed})
-	relations, err := joinRelations(derivingCtx(), schema, entityPerson)
+	relations, err := joinRelations(derivingCtx(), schema, entityContact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +317,7 @@ func TestAReferenceNamedForItsRoleYieldsNoHop(t *testing.T) {
 	}
 	for _, relation := range relations {
 		if relation.Join.Table == objectRelationship {
-			t.Errorf("person → %s was derived from %q, whose stripped name is not a record type",
+			t.Errorf("contact → %s was derived from %q, whose stripped name is not a record type",
 				relation.Name, relation.Join.To)
 		}
 	}
@@ -362,7 +364,7 @@ func TestEveryJoinTableInTheSchemaIsDeclared(t *testing.T) {
 
 // Two declared join tables offering the same hop would make which one ran
 // depend on the order joinTables happens to be written in. `activity_link` and
-// `activity_participant` both reach person from activity, which is exactly the
+// `activity_participant` both reach contact from activity, which is exactly the
 // collision that would arise the day the second were promoted to an edge.
 func TestNoTwoJoinTablesOfferTheSameHop(t *testing.T) {
 	for record := range contractRecords {
@@ -424,7 +426,7 @@ func joinTablesInMigrations(t *testing.T) map[string][]string {
 	alter := regexp.MustCompile(`(?is)ALTER TABLE (?:IF EXISTS )?(\w+)\s(.*?);`)
 	added := regexp.MustCompile(`(?i)ADD COLUMN (?:IF NOT EXISTS )?(\w+)\s+uuid`)
 	// Case-insensitive, like its sibling above: a CREATE TABLE declaring
-	// `person_id UUID` is the same column, and a census that reads only one
+	// `contact_id UUID` is the same column, and a census that reads only one
 	// casing is a census with a spelling in it.
 	reference := regexp.MustCompile(`(?im)^\s*(\w+_id)\s+uuid`)
 	// A line comment may contain a semicolon, and this repository's do — core
@@ -451,7 +453,11 @@ func joinTablesInMigrations(t *testing.T) map[string][]string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}
-		body := comment.ReplaceAllString(string(raw), "")
+		// Through the renames the migrations themselves declare: a column a later
+		// migration moved is otherwise counted under a name no contract record
+		// answers to, and the join table it belongs to goes unseen.
+		body := comment.ReplaceAllString(
+			gatekit.WithCurrentNames(filepath.Join("..", "..", "..", "migrations", "core"), string(raw)), "")
 		for _, m := range create.FindAllStringSubmatch(body, -1) {
 			for _, column := range reference.FindAllStringSubmatch(m[2], -1) {
 				note(m[1], column[1])
@@ -488,23 +494,23 @@ func tableIsARecord(table string) bool {
 	return false
 }
 
-// The end-to-end proof, and the question the issue was filed for: "people at an
-// organization in Stuttgart" is one plan, and before the join derivation it
+// The end-to-end proof, and the question the issue was filed for: "contacts at an
+// company in Stuttgart" is one plan, and before the join derivation it
 // could not be written at all.
 //
 // The hop is a read of the record it lands on, so it carries everything a hop
 // has always carried — its own archived_at, its own discovery narrowing, its
 // own row scope — and the join table contributes only membership.
 func TestAPlanTraversesAJoinEdgeAndTheHopKeepsItsOwnGuards(t *testing.T) {
-	sql, args := compilePlanDoc(readerFor(entityPerson, entityOrganization, objectRelationship), t, `{
-		"version": "v1", "target": "person",
-		"traverse": {"relation": "organizations",
+	sql, args := compilePlanDoc(readerFor(entityContact, entityCompany, objectRelationship), t, `{
+		"version": "v1", "target": "contact",
+		"traverse": {"relation": "companies",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`)
 	for _, want := range []string{
-		`h.id IN (SELECT j."organization_id" FROM "relationship" j WHERE j."person_id" = t.id`,
+		`h.id IN (SELECT j."company_id" FROM "relationship" j WHERE j."contact_id" = t.id`,
 		// The employment itself must be live. Both guards, because the fixture
 		// this compiles against now carries both columns — an archived edge was
-		// recorded in error, an ended one is a job the person left, and the SQL
+		// recorded in error, an ended one is a job the contact left, and the SQL
 		// that filtered only the first read a former employer as current.
 		`j.archived_at IS NULL`,
 		`j.ended_at IS NULL OR j.ended_at > current_date`,
@@ -518,7 +524,7 @@ func TestAPlanTraversesAJoinEdgeAndTheHopKeepsItsOwnGuards(t *testing.T) {
 	}
 	// The join table is membership only. Selecting from it, or letting the hop
 	// predicate bind against it, would make the evidence the hop returns a row
-	// of the edge rather than of the organization.
+	// of the edge rather than of the company.
 	if strings.Contains(sql, `j."address_city"`) || strings.Contains(sql, "j.id AS hop_id") {
 		t.Fatalf("the join table leaked into the hop's own read:\n%s", sql)
 	}
@@ -528,13 +534,13 @@ func TestAPlanTraversesAJoinEdgeAndTheHopKeepsItsOwnGuards(t *testing.T) {
 }
 
 // The other direction and the other table, which is the half nobody had
-// noticed was missing: an activity can name the person it is about.
-func TestAnActivityTraversesToItsPersonThroughTheLinkTable(t *testing.T) {
-	sql, _ := compilePlanDoc(readerFor(entityActivity, entityPerson), t, `{
+// noticed was missing: an activity can name the contact it is about.
+func TestAnActivityTraversesToItsContactThroughTheLinkTable(t *testing.T) {
+	sql, _ := compilePlanDoc(readerFor(entityActivity, entityContact), t, `{
 		"version": "v1", "target": "activity",
-		"traverse": {"relation": "persons",
+		"traverse": {"relation": "contacts",
 		             "where": [{"field": "full_name", "op": "eq", "value": "Ronny"}]}}`)
-	if !strings.Contains(sql, `h.id IN (SELECT j."person_id" FROM "activity_link" j WHERE j."activity_id" = t.id`) {
+	if !strings.Contains(sql, `h.id IN (SELECT j."contact_id" FROM "activity_link" j WHERE j."activity_id" = t.id`) {
 		t.Fatalf("the activity hop does not traverse activity_link:\n%s", sql)
 	}
 	// activity_link has no archived_at, and naming one would be a database
@@ -551,12 +557,12 @@ func TestAnActivityTraversesToItsPersonThroughTheLinkTable(t *testing.T) {
 // cannot read.
 func TestAnUnknownRelationIsRefusedByNameAndNamesTheOnesThatExist(t *testing.T) {
 	validator := NewPlanValidator(NewVocabularyResolver().WithColumnReader(stubColumns{tables: joinSchema}))
-	decoded, err := DecodePlan([]byte(`{"version": "v1", "target": "person",
+	decoded, err := DecodePlan([]byte(`{"version": "v1", "target": "contact",
 		"traverse": {"relation": "employment"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = validator.Validate(readerFor(entityPerson, entityOrganization, objectRelationship), decoded)
+	_, err = validator.Validate(readerFor(entityContact, entityCompany, objectRelationship), decoded)
 	refusal := &PlanRefusal{}
 	if !errors.As(err, &refusal) {
 		t.Fatalf("a plan naming a relationship kind was not refused: %v", err)
@@ -570,7 +576,7 @@ func TestAnUnknownRelationIsRefusedByNameAndNamesTheOnesThatExist(t *testing.T) 
 		t.Errorf("the refusal does not name what it refused: %s", message)
 	}
 	// ...and the hop that answers the question they were asking.
-	if !strings.Contains(message, `"organizations"`) {
+	if !strings.Contains(message, `"companies"`) {
 		t.Errorf("the refusal does not name the hop that exists: %s", message)
 	}
 }
@@ -582,7 +588,7 @@ func TestAnUnknownRelationIsRefusedByNameAndNamesTheOnesThatExist(t *testing.T) 
 // that gets cut. A truncated list that looked complete would be worse than a
 // long one: a caller would read "these are my hops" and stop.
 func TestTheRefusalsListOfHopsIsBoundedAndSaysWhenItTruncates(t *testing.T) {
-	many := TargetVocabulary{Target: entityPerson}
+	many := TargetVocabulary{Target: entityContact}
 	for i := range 20 {
 		many.Relations = append(many.Relations, Relation{Name: fmt.Sprintf("hop%02d", i)})
 	}
@@ -595,7 +601,7 @@ func TestTheRefusalsListOfHopsIsBoundedAndSaysWhenItTruncates(t *testing.T) {
 	}
 	// A record type with no hops at all says so, rather than trailing off after
 	// "it has" — which reads as a rendering fault and not as an answer.
-	none := unknownRelation(TargetVocabulary{Target: entityLead}, "organizations")[0].Message
+	none := unknownRelation(TargetVocabulary{Target: entityLead}, "companies")[0].Message
 	if !strings.Contains(none, "it has none") {
 		t.Errorf("a target with no hops rendered as %q", none)
 	}
@@ -636,7 +642,7 @@ func TestAJoinEdgeIsGatedOnTheObjectThatGovernsTheEdge(t *testing.T) {
 	resolver := NewVocabularyResolver().WithColumnReader(stubColumns{tables: joinSchema})
 	// Every record readable, and the edge object withheld — the exact shape a
 	// `setRoleObjectGrant` call zeroing `relationship` produces.
-	vocab, err := resolver.Resolve(readerFor(recordNames()...), entityPerson, entityActivity)
+	vocab, err := resolver.Resolve(readerFor(recordNames()...), entityContact, entityActivity)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,9 +8,9 @@
 // Tables owned: provider_connection, provider_connection_budget, provider_run,
 // provider_run_reservation.
 //
-// person_provider_claim is NOT owned here. What a purchased value MEANS, and
-// how it renders beside a person's own data, is the domain's judgment —
-// modules/people owns that table and writes it through the WriteClaims
+// contact_provider_claim is NOT owned here. What a purchased value MEANS, and
+// how it renders beside a contact's own data, is the domain's judgment —
+// modules/contacts owns that table and writes it through the WriteClaims
 // callback below.
 //
 // # Why this module holds no domain knowledge
@@ -27,7 +27,7 @@
 // cannot name a transaction.
 //
 // The callbacks that must run INSIDE a caller's transaction therefore live
-// here as func types, and compose supplies them from modules/people:
+// here as func types, and compose supplies them from modules/contacts:
 // WriteClaims, FenceSubject, DuplicateCluster, SubjectIdentifiers. This is the
 // same shape as capture.EnqueueBackfill and privacy.EdgeInvalidator — the
 // module that needs the callback declares it, and the composition layer is the

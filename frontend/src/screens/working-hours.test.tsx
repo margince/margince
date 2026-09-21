@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -90,6 +90,26 @@ describe("WorkingHoursCard", () => {
     // "somebody chose this": a reader who cannot tell them apart does not know
     // whether the hours below are theirs.
     expect(await screen.findByText(/have not chosen yet/i)).not.toBeNull();
+  });
+
+  // A body that LOST the reading. The field is contract-required, so this is a
+  // malformed answer rather than a state the server offers — and the card sits
+  // on the account page, where dereferencing it took the WHOLE PAGE down over
+  // one window nobody could edit.
+  it("says the reading is unavailable rather than taking the page down", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        return url.includes("/me/working-hours")
+          ? jsonResponse({ chosen: false })
+          : jsonResponse(meFixture({}));
+      }),
+    );
+    render(<WorkingHoursCard />);
+
+    expect(await screen.findByText(/could not be loaded/i)).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
   });
 
   it("says nothing about an unset choice once one has been made", async () => {

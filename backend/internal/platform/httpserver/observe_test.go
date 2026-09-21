@@ -43,34 +43,6 @@ func TestBearerTokenReadsOneSchemeForEveryTransport(t *testing.T) {
 	}
 }
 
-// TestWriteOverlayMetricsRendersEveryCounter pins the overlay sync-health
-// section /metrics emits: the per-object-class source lag gauge and all
-// three mirror counters (synced, conflict, deleted). A counter that is
-// wired into OverlayMetrics but not rendered here would be invisible to
-// operators, so each family's line is asserted explicitly.
-func TestWriteOverlayMetricsRendersEveryCounter(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeOverlayMetrics(context.Background(), &exposition{w: rec}, &OverlayMetrics{
-		SourceLag: func(context.Context) (map[string]time.Duration, error) {
-			return map[string]time.Duration{"person": 90 * time.Second}, nil
-		},
-		SyncedTotal:   func() uint64 { return 7 },
-		ConflictTotal: func() uint64 { return 3 },
-		DeletedTotal:  func() uint64 { return 5 },
-	})
-	body := rec.Body.String()
-	for _, want := range []string{
-		`margince_overlay_source_lag_seconds{object_class="person"} 90`,
-		"margince_overlay_mirror_synced_total 7",
-		"margince_overlay_mirror_conflict_total 3",
-		"margince_overlay_mirror_deleted_total 5",
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("overlay metrics body missing %q\n---\n%s", want, body)
-		}
-	}
-}
-
 // Readyz reports the AI runtime's binding posture on the 200 body but
 // never lets it gate readiness: an AI-unconfigured deployment is still a
 // ready deployment (ai-operational-spec §2), so "ai: unconfigured" must
@@ -242,7 +214,7 @@ func TestChassisWrappersPreserveResponseControllerCapabilities(t *testing.T) {
 
 // TestMetricsHandsTheJobSectionItsOwnDeadlineNotTheRequests — the job read
 // queries a table no index covers, so it is the one section that has to
-// stay inside the handler's budget. The overlay section next door is wired
+// stay inside the handler's budget. The job section next door is wired
 // with r.Context() and runs unbounded; a reader who pattern-matched that
 // neighbour would inherit the unbounded query, so the difference is pinned
 // here rather than left to a comment.
@@ -256,7 +228,7 @@ func TestMetricsHandsTheJobSectionItsOwnDeadlineNotTheRequests(t *testing.T) {
 	rec := httptest.NewRecorder()
 	// A request context with NO deadline of its own, so a deadline seen by
 	// the section can only have come from the handler.
-	Metrics(nil, unreadableBacklog, zeroPublished, nil, jobStats, nil)(
+	Metrics(MetricsInput{Backlog: unreadableBacklog, Published: zeroPublished, JobStats: jobStats})(
 		rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if !deadlineSet {
@@ -265,46 +237,50 @@ func TestMetricsHandsTheJobSectionItsOwnDeadlineNotTheRequests(t *testing.T) {
 	}
 }
 
-// TestMetricsStopsWritingWhenTheJobSectionRefusesAWrite — a truncated
-// exposition parses as a smaller fleet rather than as a broken one, so a
-// refused write ends the body instead of being rendered past.
-func TestMetricsStopsWritingWhenTheJobSectionRefusesAWrite(t *testing.T) {
-	// A writer that actually REFUSES, passed through the callback exactly as
-	// the real section receives it. Returning a synthetic error without
-	// touching w would exercise the handler's branch while proving nothing
-	// about the truncated-scrape path this test is named for.
-	refused := errors.New("connection reset")
-	jobStats := func(_ context.Context, w io.Writer) error {
-		if _, err := w.Write([]byte("margince_job_queue_depth{queue=\"q\",workspace_id=\"\"} 1\n")); err != nil {
-			return err
-		}
-		return refused
+// goneScraper is the socket that has already closed: the first write is
+// refused, which is what a scraper that hung up looks like from inside the
+// handler.
+type goneScraper struct{ header http.Header }
+
+func (g *goneScraper) Header() http.Header {
+	if g.header == nil {
+		g.header = http.Header{}
 	}
-	overlayReached := false
+	return g.header
+}
 
-	rec := httptest.NewRecorder()
-	Metrics(nil, unreadableBacklog, zeroPublished, nil, jobStats, &OverlayMetrics{
-		SourceLag: func(context.Context) (map[string]time.Duration, error) {
-			overlayReached = true
-			return nil, errors.New("unreached")
-		},
-		SyncedTotal:   func() uint64 { return 0 },
-		ConflictTotal: func() uint64 { return 0 },
-		DeletedTotal:  func() uint64 { return 0 },
-	})(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+func (g *goneScraper) Write([]byte) (int, error) { return 0, errors.New("connection reset") }
 
-	if overlayReached {
-		t.Error("the handler kept writing after the job section reported the writer was gone")
+func (g *goneScraper) WriteHeader(int) {}
+
+// TestMetricsStopsMeasuringOnceAWriteIsRefused — a truncated exposition parses
+// as a smaller fleet rather than as a broken one, so once the scraper is gone
+// the handler stops rather than rendering past it. The job section is the one
+// that costs a query, so it is the one proven not to run.
+func TestMetricsStopsMeasuringOnceAWriteIsRefused(t *testing.T) {
+	jobsReached := false
+	jobStats := func(context.Context, io.Writer) error {
+		jobsReached = true
+		return nil
+	}
+
+	Metrics(MetricsInput{Backlog: unreadableBacklog, Published: zeroPublished, JobStats: jobStats})(
+		&goneScraper{}, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+
+	if jobsReached {
+		t.Error("the job section queried for a scrape whose writer was already gone")
 	}
 }
 
 // TestMetricsWithNoJobSectionWiredStillServesTheRest — a process role that
-// wires no job read (the same posture nil extra and nil overlay take) must
+// wires no job read (the same posture a nil extra takes) must
 // still serve the families it does have.
 func TestMetricsWithNoJobSectionWiredStillServesTheRest(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Metrics(nil, func(context.Context) (int64, error) { return 7, nil },
-		func() uint64 { return 3 }, nil, nil, nil)(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	Metrics(MetricsInput{
+		Backlog:   func(context.Context) (int64, error) { return 7, nil },
+		Published: func() uint64 { return 3 },
+	})(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if !strings.Contains(rec.Body.String(), "margince_outbox_unpublished 7") {
 		t.Errorf("a nil job section suppressed the rest of the exposition:\n%s", rec.Body.String())
@@ -325,7 +301,7 @@ func zeroPublished() uint64 { return 0 }
 // reported as an idle one.
 func TestMetricsOmitsThePoolGaugesWhenNoPoolIsInjected(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Metrics(nil, unreadableBacklog, zeroPublished, nil, nil, nil)(
+	Metrics(MetricsInput{Backlog: unreadableBacklog, Published: zeroPublished})(
 		rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	if strings.Contains(rec.Body.String(), "margince_pgxpool_conns") {

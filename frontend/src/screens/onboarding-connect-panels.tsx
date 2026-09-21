@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { Button, Disclosure, Field } from "../design-system/atoms";
+import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
@@ -45,7 +45,7 @@ function ConnectWarn({ title, body }: { title: string; body: string }) {
     // the banner: as an inline `margin` shorthand they also reset the top
     // margin the banner declares for itself, so the one block on the surface
     // that says something went wrong was the one with nothing above it.
-    <div className="readfail warn ob-connect-warn">
+    <div className="readfail warning ob-connect-warning">
       <span className="rfi">
         <Circle aria-hidden />
       </span>
@@ -196,7 +196,7 @@ export function OAuthConnectPanel({
       {/* What the grant covers is background: true, and not what the reader is
           deciding at this moment, which is whether to press Connect. */}
       <Disclosure summary={t("ob.s4.accessToggle")}>
-        <p className="spoken-hint">
+        <p className="spoken-hint t-caption">
           <ShieldCheck aria-hidden /> {t(copy.hint)}
         </p>
       </Disclosure>
@@ -205,7 +205,7 @@ export function OAuthConnectPanel({
           that screen without having been told reasonably concludes something
           is wrong with the thing they just pressed. A caution about what a
           button does belongs beside the button, never behind a fold. */}
-      <p className="t-caption ob-google-unverified">{t(copy.unverified)}</p>
+      <p className="ob-google-unverified">{t(copy.unverified)}</p>
       {/* Last thing read before the grant screen, because after it the mailbox
           is connected and the telling is too late. */}
       <CaptureNotice />
@@ -334,9 +334,9 @@ export function OAuthReturnPanel({
       )}
       {live && (
         <>
-          <span className="trustpill">
-            <ShieldCheck aria-hidden /> {t("ob.s4.connectLive")}
-          </span>
+          <Badge tone="success" icon={ShieldCheck}>
+            {t("ob.s4.connectLive")}
+          </Badge>
           {/* Asked BEFORE the backread, because the backread is what reads a
               year of mail: a posture chosen after it has already let every
               captured message in under the previous answer. */}
@@ -582,7 +582,7 @@ export function ImapConnectPanel({
       </div>
 
       <Disclosure summary={t("ob.s4.accessToggle")}>
-        <p className="spoken-hint">
+        <p className="spoken-hint t-caption">
           <ShieldCheck aria-hidden /> {t("ob.s4.imapHint")}
         </p>
       </Disclosure>

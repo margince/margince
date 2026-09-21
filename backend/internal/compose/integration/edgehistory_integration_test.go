@@ -6,8 +6,8 @@
 package integration
 
 // A record's history includes the LINKS made, changed and removed on it, and it
-// includes them from BOTH ends: an employment appears on the person and on the
-// company, a co-sell appears on both organizations.
+// includes them from BOTH ends: an employment appears on the contact and on the
+// company, a co-sell appears on both companies.
 //
 // The read is where an edge's two disclosures meet. An edge names two records,
 // so a line naming the other end has to answer to that record's own gates — the
@@ -22,45 +22,45 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// linkEmployment links a person to an organization through the people store's
+// linkEmployment links a contact to a company through the contacts store's
 // own write path — the one that stamps the audit row this read projects. A
 // hand-rolled INSERT would prove nothing about production: the image, the
 // action and the entity_type on that row are exactly what is under test.
-func linkEmployment(t *testing.T, e *Env, person, org ids.UUID, role string) ids.UUID {
+func linkEmployment(t *testing.T, e *Env, contact, company ids.UUID, role string) ids.UUID {
 	t.Helper()
-	rel, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind:           "employment",
-		PersonID:       ptr(PersonIDOf(person)),
-		OrganizationID: ptr(ids.From[ids.OrganizationKind](org)),
-		Role:           &role,
-		Source:         "manual",
+	rel, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind:      "employment",
+		ContactID: ptr(ContactIDOf(contact)),
+		CompanyID: ptr(ids.From[ids.CompanyKind](company)),
+		Role:      &role,
+		Source:    "manual",
 	})
 	if err != nil {
-		t.Fatalf("linking the person to the organization: %v", err)
+		t.Fatalf("linking the contact to the company: %v", err)
 	}
 	return rel.ID
 }
 
-// seedCoSell links two organizations as co-sellers: the kind whose two ends sit
-// in DIFFERENT columns (organization_id and counterparty_org_id), which is the
+// seedCoSell links two companies as co-sellers: the kind whose two ends sit
+// in DIFFERENT columns (company_id and counterparty_company_id), which is the
 // case a single-anchor read drops silently.
-func seedCoSell(t *testing.T, e *Env, org, counterparty ids.UUID) ids.UUID {
+func seedCoSell(t *testing.T, e *Env, company, counterparty ids.UUID) ids.UUID {
 	t.Helper()
-	rel, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind:              "co_sell_with",
-		OrganizationID:    ptr(ids.From[ids.OrganizationKind](org)),
-		CounterpartyOrgID: ptr(ids.From[ids.OrganizationKind](counterparty)),
-		Source:            "manual",
+	rel, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind:                  "co_sell_with",
+		CompanyID:             ptr(ids.From[ids.CompanyKind](company)),
+		CounterpartyCompanyID: ptr(ids.From[ids.CompanyKind](counterparty)),
+		Source:                "manual",
 	})
 	if err != nil {
-		t.Fatalf("linking the two organizations: %v", err)
+		t.Fatalf("linking the two companies: %v", err)
 	}
 	return rel.ID
 }
@@ -110,16 +110,16 @@ func containsLine(lines []string, want string) bool {
 // not a wrong answer, it is every read of the record failing outright.
 func TestAnEdgelessCallerReadsBothWindowsWithoutAnUnboundPlaceholder(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	linkEmployment(t, e, contact, company, "cto")
 
 	edgeless := e.As(e.Rep1, nil, principal.Permissions{
-		Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
 	page, err := privacy.ListRecordHistory(edgeless, e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: person,
+		EntityType: "contact", EntityID: contact,
 	})
 	if err != nil {
 		t.Fatalf("an edgeless caller reading the history window: %v", err)
@@ -136,97 +136,97 @@ func TestAnEdgelessCallerReadsBothWindowsWithoutAnUnboundPlaceholder(t *testing.
 	// The reversal read-back renders the same CTE into its own statement. No
 	// restore was written here, so not-found is the right answer — and it is an
 	// answer only a statement that actually executed can give.
-	if _, err := privacy.ReadRestoreOf(edgeless, e.DB(), "person", person, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := privacy.ReadRestoreOf(edgeless, e.DB(), "contact", contact, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an edgeless caller reading the reversal line: %v, want the not-found of a statement that ran", err)
 	}
 }
 
 func TestEdgeHistoryShowsAnEmploymentOnBothEnds(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	linkEmployment(t, e, contact, company, "cto")
 
-	// The person's own history names the COMPANY, because the company is the
-	// other end. Naming the person there would say nothing a reader of the
-	// person's page does not already know.
-	onPerson := summaries(edgeHistoryOf(t, e, "person", person, nil))
-	if !containsLine(onPerson, "Rep linked Employer GmbH as cto") {
-		t.Errorf("the person's history = %q, want a line naming the company the link was made to", onPerson)
+	// The contact's own history names the COMPANY, because the company is the
+	// other end. Naming the contact there would say nothing a reader of the
+	// contact's page does not already know.
+	onContact := summaries(edgeHistoryOf(t, e, "contact", contact, nil))
+	if !containsLine(onContact, "Rep linked Employer GmbH as cto") {
+		t.Errorf("the contact's history = %q, want a line naming the company the link was made to", onContact)
 	}
 
-	// The SAME edge, from the other end, naming the person.
-	onOrg := summaries(edgeHistoryOf(t, e, "organization", org, nil))
-	if !containsLine(onOrg, "Rep linked Ada Employed as cto") {
-		t.Errorf("the organization's history = %q, want the same link naming the person", onOrg)
+	// The SAME edge, from the other end, naming the contact.
+	onCompany := summaries(edgeHistoryOf(t, e, "company", company, nil))
+	if !containsLine(onCompany, "Rep linked Ada Employed as cto") {
+		t.Errorf("the company's history = %q, want the same link naming the contact", onCompany)
 	}
 }
 
-func TestEdgeHistoryShowsACoSellEdgeOnBothOrganizations(t *testing.T) {
+func TestEdgeHistoryShowsACoSellEdgeOnBothCompanies(t *testing.T) {
 	e := Setup(t)
-	ours := e.SeedOrg(t, "Our Side GmbH", nil)
-	theirs := e.SeedOrg(t, "Their Side AG", nil)
+	ours := e.SeedCompany(t, "Our Side GmbH", nil)
+	theirs := e.SeedCompany(t, "Their Side AG", nil)
 	seedCoSell(t, e, ours, theirs)
 
-	// One end matches organization_id, the other counterparty_org_id. A read
+	// One end matches company_id, the other counterparty_company_id. A read
 	// that knew only about the anchor column would show this edge on exactly one
 	// of the two companies, and nothing would say which.
-	if lines := summaries(edgeHistoryOf(t, e, "organization", ours, nil)); !containsLine(lines, "Rep linked Their Side AG as co_sell_with") {
-		t.Errorf("organization_id end = %q, want the co-sell naming the counterparty", lines)
+	if lines := summaries(edgeHistoryOf(t, e, "company", ours, nil)); !containsLine(lines, "Rep linked Their Side AG as co_sell_with") {
+		t.Errorf("company_id end = %q, want the co-sell naming the counterparty", lines)
 	}
-	if lines := summaries(edgeHistoryOf(t, e, "organization", theirs, nil)); !containsLine(lines, "Rep linked Our Side GmbH as co_sell_with") {
-		t.Errorf("counterparty_org_id end = %q, want the co-sell naming the other company", lines)
+	if lines := summaries(edgeHistoryOf(t, e, "company", theirs, nil)); !containsLine(lines, "Rep linked Our Side GmbH as co_sell_with") {
+		t.Errorf("counterparty_company_id end = %q, want the co-sell naming the other company", lines)
 	}
 }
 
 func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndIsInvisible(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Secret Holdings GmbH", nil)
-	linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Secret Holdings GmbH", nil)
+	linkEmployment(t, e, contact, company, "cto")
 	// Captured privately by Rep1: capture privacy does not yield to
-	// row_scope=all, so even the admin reading the person cannot see the
+	// row_scope=all, so even the admin reading the contact cannot see the
 	// company.
-	e.MakeCapturePrivate(t, "organization", org, e.Rep1)
+	e.MakeCapturePrivate(t, "company", company, e.Rep1)
 
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: person,
+		EntityType: "contact", EntityID: contact,
 	})
 	// Absent, never refused: a refusal is proof the company exists.
 	if err != nil {
 		t.Fatalf("the read must SUCCEED and omit the row, not refuse: %v", err)
 	}
 	if len(page.Entries) == 0 {
-		t.Fatal("the person's own create row is missing — the withholding took the whole page")
+		t.Fatal("the contact's own create row is missing — the withholding took the whole page")
 	}
 	for _, line := range summaries(page) {
 		if strings.Contains(line, "Secret Holdings") {
-			t.Errorf("the invisible company is named on the person's history: %q", line)
+			t.Errorf("the invisible company is named on the contact's history: %q", line)
 		}
 	}
 }
 
 func TestEdgeHistoryFillsAFullPageDespiteInvisibleEdges(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	// Twenty-five of the person's own rows, dated into the past so the three
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	// Twenty-five of the contact's own rows, dated into the past so the three
 	// invisible edges below are the NEWEST events and fall inside page one.
 	base := time.Now().Add(-2 * time.Hour).UTC().Truncate(time.Microsecond)
 	for i := range 25 {
-		seedRecordAuditRow(t, e, "update", person, "system", "system", nil,
+		seedRecordAuditRow(t, e, "update", contact, "system", "system", nil,
 			nil, map[string]any{"title": "t"}, base.Add(time.Duration(i)*time.Minute))
 	}
 	// Three edges the caller may not see. Filtered AFTER the keyset window they
 	// would eat three of the page's twenty slots; left unfiltered they would name
 	// three companies the caller cannot read.
 	for _, name := range []string{"Hidden One GmbH", "Hidden Two GmbH", "Hidden Three GmbH"} {
-		org := e.SeedOrg(t, name, nil)
-		linkEmployment(t, e, person, org, "advisor")
-		e.MakeCapturePrivate(t, "organization", org, e.Rep1)
+		company := e.SeedCompany(t, name, nil)
+		linkEmployment(t, e, contact, company, "advisor")
+		e.MakeCapturePrivate(t, "company", company, e.Rep1)
 	}
 
 	limit := 20
-	page := edgeHistoryOf(t, e, "person", person, &limit)
+	page := edgeHistoryOf(t, e, "contact", contact, &limit)
 	if len(page.Entries) != limit {
 		t.Fatalf("a full page came back with %d of %d rows — the visibility filter is running AFTER the "+
 			"keyset window, which also makes has_more count rows the caller may not see", len(page.Entries), limit)
@@ -243,20 +243,20 @@ func TestEdgeHistoryFillsAFullPageDespiteInvisibleEdges(t *testing.T) {
 
 func TestEdgeHistoryStopsAtTheAnchorsOwnScrubTombstone(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	linkEmployment(t, e, contact, company, "cto")
 
 	// The tombstone lands on the ANCHOR being read, after the link. Everything
 	// strictly older is the data the scrub certified gone, edge rows included:
 	// the link's image carries the role and the dates.
-	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "company", company, time.Now().Add(time.Hour).UTC())
 
 	// A page that came back EMPTY would satisfy the assertion below without the
 	// withholding being what emptied it, so the record's own rows are the control.
-	page := edgeHistoryOf(t, e, "organization", org, nil)
+	page := edgeHistoryOf(t, e, "company", company, nil)
 	if len(page.Entries) == 0 {
-		t.Fatal("the organization's own rows are missing too — the whole page went, not just the edge")
+		t.Fatal("the company's own rows are missing too — the whole page went, not just the edge")
 	}
 	for _, line := range summaries(page) {
 		if strings.Contains(line, "linked Ada Employed") {
@@ -267,18 +267,18 @@ func TestEdgeHistoryStopsAtTheAnchorsOwnScrubTombstone(t *testing.T) {
 
 func TestEdgeHistoryWithholdsAnErasedSubjectsEdgesFromTheOtherEnd(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Selma Subject", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Selma Subject", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	linkEmployment(t, e, contact, company, "cto")
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "art-17"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
 	// The employment image holds the erased subject's role and dates. Left
 	// readable on the COMPANY's history it would outlive the certificate that
 	// said it was gone.
-	page := edgeHistoryOf(t, e, "organization", org, nil)
+	page := edgeHistoryOf(t, e, "company", company, nil)
 	if len(page.Entries) == 0 {
 		t.Fatal("the company's own rows are missing too — the whole page went, not just the erased subject's edge")
 	}
@@ -291,18 +291,18 @@ func TestEdgeHistoryWithholdsAnErasedSubjectsEdgesFromTheOtherEnd(t *testing.T) 
 
 func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndCarriesAScrubTombstone(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	linkEmployment(t, e, contact, company, "cto")
 
 	// The tombstone is on the OTHER end and that record is still LIVE, so the
 	// endpoint conjunction's own archived arm cannot be what withholds the row.
 	// This is the erasure filter alone.
-	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "company", company, time.Now().Add(time.Hour).UTC())
 
-	page := edgeHistoryOf(t, e, "person", person, nil)
+	page := edgeHistoryOf(t, e, "contact", contact, nil)
 	if len(page.Entries) == 0 {
-		t.Fatal("the person's own rows are missing too — the whole page went, not just the tombstoned end's edge")
+		t.Fatal("the contact's own rows are missing too — the whole page went, not just the tombstoned end's edge")
 	}
 	for _, line := range summaries(page) {
 		if strings.Contains(line, "Employer GmbH") {
@@ -313,22 +313,22 @@ func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndCarriesAScrubTombstone(t *testin
 
 func TestEdgeHistoryStillShowsAnUnlinkedEdge(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := linkEmployment(t, e, person, org, "cto")
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := linkEmployment(t, e, contact, company, "cto")
 
-	if _, err := e.People.UpdateRelationship(e.Admin(), edge, people.UpdateRelationshipInput{
+	if _, err := e.Contacts.UpdateRelationship(e.Admin(), edge, contacts.UpdateRelationshipInput{
 		Role: ptr("coo"),
 	}); err != nil {
 		t.Fatalf("changing the link's role: %v", err)
 	}
-	if _, err := e.People.ArchiveRelationship(e.Admin(), edge, nil); err != nil {
+	if _, err := e.Contacts.ArchiveRelationship(e.Admin(), edge, nil); err != nil {
 		t.Fatalf("unlinking: %v", err)
 	}
 
 	// An unlink ARCHIVES the relationship row, and the unlink is the event a
 	// reader most wants to see — so the lookup must not require a live edge.
-	lines := summaries(edgeHistoryOf(t, e, "person", person, nil))
+	lines := summaries(edgeHistoryOf(t, e, "contact", contact, nil))
 	for _, want := range []string{
 		"Rep linked Employer GmbH as cto",
 		"Rep changed Employer GmbH's role",
@@ -342,28 +342,28 @@ func TestEdgeHistoryStillShowsAnUnlinkedEdge(t *testing.T) {
 
 func TestEdgeHistoryInterleavesWithTheRecordsOwnRowsAcrossPages(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Ada Employed", nil)
-	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := linkEmployment(t, e, person, org, "cto")
-	if _, err := e.People.ArchiveRelationship(e.Admin(), edge, nil); err != nil {
+	contact := e.SeedContact(t, "Ada Employed", nil)
+	company := e.SeedCompany(t, "Employer GmbH", nil)
+	edge := linkEmployment(t, e, contact, company, "cto")
+	if _, err := e.Contacts.ArchiveRelationship(e.Admin(), edge, nil); err != nil {
 		t.Fatalf("unlinking: %v", err)
 	}
 	// Rows on either side of the edge's own two, so the boundary between the two
 	// union branches falls inside a page rather than between them.
 	base := time.Now().Add(-time.Hour).UTC().Truncate(time.Microsecond)
 	for i := range 4 {
-		seedRecordAuditRow(t, e, "update", person, "system", "system", nil,
+		seedRecordAuditRow(t, e, "update", contact, "system", "system", nil,
 			nil, map[string]any{"title": "t"}, base.Add(time.Duration(i)*time.Minute))
 	}
 
 	// Two pages of three over the whole timeline, keyset-walked.
 	limit := 3
-	first := edgeHistoryOf(t, e, "person", person, &limit)
+	first := edgeHistoryOf(t, e, "contact", contact, &limit)
 	if len(first.Entries) != limit || !first.HasMore {
 		t.Fatalf("page one: %d rows, has_more=%v", len(first.Entries), first.HasMore)
 	}
 	second, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: person, Limit: &limit, Cursor: &first.NextCursor,
+		EntityType: "contact", EntityID: contact, Limit: &limit, Cursor: &first.NextCursor,
 	})
 	if err != nil {
 		t.Fatalf("page two: %v", err)
@@ -383,7 +383,7 @@ func TestEdgeHistoryInterleavesWithTheRecordsOwnRowsAcrossPages(t *testing.T) {
 			t.Fatalf("the union is not ordered newest-first at position %d: %v then %v", i, order[i-1], order[i])
 		}
 	}
-	// The person's own create, the four seeded updates and the edge's two rows
+	// The contact's own create, the four seeded updates and the edge's two rows
 	// are seven; six of them fit the two pages, and none may be an edge row's
 	// twin or a record row dropped by the union.
 	if len(seen) != 2*limit {

@@ -52,7 +52,6 @@ var vaultWriters = map[string]string{
 	"internal/modules/capture/registry_grant.go": "audit_log, under the connect/disconnect verbs",
 	"internal/modules/capture/channelconn.go":    "audit_log, under the channel-connection verbs",
 	"internal/modules/integrations/connect.go":   "audit_log, under the integration connect verbs",
-	"internal/modules/overlay/connection.go":     "audit_log, under the overlay connection verbs",
 
 	// Sealed alongside a SETTINGS write, which is what carries the audit row
 	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The two
@@ -63,7 +62,7 @@ var vaultWriters = map[string]string{
 	"internal/modules/capture/connectorappstore.go": "audit_log via the settings write, under capture settings' update verb",
 
 	// Sealed inside the transaction that mints the confirm link, so the token
-	// row's own audit entry IS the record: it names the person, the address the
+	// row's own audit entry IS the record: it names the contact, the address the
 	// link was posted to and the kind, which is the evidence a later reader
 	// needs. The sealed value itself is deliberately absent from it — auditing
 	// the link would put a live credential in the audit log.

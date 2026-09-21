@@ -58,6 +58,26 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// BEFORE ANYTHING IS CREATED, and held until the stack has stopped. Two
+	// launchers on a fresh installation otherwise both decide the database
+	// needs creating and both build it in the same staging directory, which
+	// leaves a half-initialised cluster where a finished one belongs — and
+	// double-clicking the start script twice is enough to do it.
+	//
+	// Around the whole run rather than around initdb: a second launcher that
+	// waited for the cluster and then bound ports and ran migrations against it
+	// is the same collision arriving later.
+	lock, err := lockInstallation(layout)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := lock.release(); err != nil {
+			// Reported, never fatal: the run is over, and the next start reads
+			// an unreleased lock as stale and reclaims it.
+			say("\n%v\n", err)
+		}
+	}()
 	// Before anything is spawned: on macOS a downloaded bundle otherwise puts a
 	// Gatekeeper dialog in front of every one of the six programs below.
 	clearQuarantine(layout)
@@ -195,7 +215,7 @@ func announce(baseURL string, l layout, adminPassword string) {
 	// closed the window on the first run would otherwise have no way to
 	// discover where the credentials went — and the file is the only copy.
 	// From margince.yaml, because that file decides it: it is write-once and the
-	// organization is bootstrapped from it, so an installation whose admin was
+	// company is bootstrapped from it, so an installation whose admin was
 	// named before its first run carries that name for good. A literal here could
 	// only ever agree with the default.
 	say("\n  Sign in as  %s\n", l.configuredAdminEmail())

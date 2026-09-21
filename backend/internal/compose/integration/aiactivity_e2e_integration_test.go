@@ -192,7 +192,7 @@ func (f *readingFixture) projection(t *testing.T) projectedOccurrence {
 
 // A reading a human asked for is that human's, and it is theirs from the
 // moment it is queued — not from the moment a worker picks it up.
-func TestAQueuedReadingIsProjectedAsThePersonsOwnLiveWork(t *testing.T) {
+func TestAQueuedReadingIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
 	f := newReadingFixture(t)
 	f.drain(t)
 

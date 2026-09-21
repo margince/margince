@@ -90,7 +90,7 @@ func Grounded(sentence Sentence, known map[Evidence]string) bool {
 // Ungrounded is Grounded with its reason, which is what a caller logging a drop
 // needs and what a test asserting one reads. Empty means the sentence stands.
 //
-// The reason is a sentence a person can act on — "names 14 August, which the
+// The reason is a sentence a contact can act on — "names 14 August, which the
 // records it cites do not" — because a silent drop is indistinguishable from a
 // model that had nothing to say, and the two want opposite responses.
 func Ungrounded(sentence Sentence, known map[Evidence]string) string {

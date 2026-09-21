@@ -1,6 +1,6 @@
 -- seed-dev.sql — the dev-database seed for demo data that has no public API.
 --
--- Companion to scripts/seed-dev.sh (the API seed for people/orgs/deals). This
+-- Companion to scripts/seed-dev.sh (the API seed for contacts/companies/deals). This
 -- file holds dev/demo data that can only be written directly to the database —
 -- reference tables and config the product intentionally exposes no REST/MCP
 -- endpoint for. It is part of the default dev-env init: `make dev` applies it on
@@ -115,7 +115,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- The API seed (seed-dev.sh) creates people/orgs/deals with NO owner, and an
+  -- The API seed (seed-dev.sh) creates contacts/companies/deals with NO owner, and an
   -- ownerless row is shared — visible at EVERY row scope. That would let the
   -- own-scoped Rep Two (below) see everything and make record sharing
   -- unobservable. Make Demo Admin the owner of every ownerless seeded record so
@@ -131,8 +131,8 @@ BEGIN
   -- anything else. A seed that creates users with a published password was
   -- never safe to point at real data; the tenant predicate narrowed the damage
   -- but was never what made it safe.
-  UPDATE person       SET owner_id = admin_id WHERE owner_id IS NULL;
-  UPDATE organization SET owner_id = admin_id WHERE owner_id IS NULL;
+  UPDATE contact       SET owner_id = admin_id WHERE owner_id IS NULL;
+  UPDATE company SET owner_id = admin_id WHERE owner_id IS NULL;
   UPDATE deal         SET owner_id = admin_id WHERE owner_id IS NULL;
   UPDATE lead         SET owner_id = admin_id WHERE owner_id IS NULL;
 
@@ -210,7 +210,7 @@ BEGIN
         WHERE ra.user_id = rep2_id AND ra.role_id = r.id AND ra.team_id IS NULL
       );
 
-  -- ONE of Demo Admin's people, shared with Rep One at `write`.
+  -- ONE of Demo Admin's contacts, shared with Rep One at `write`.
   --
   -- This is what makes sharing observable now that team membership does not
   -- grant it. Rep One and Rep Two are both own-scoped and own nothing, so they
@@ -221,9 +221,9 @@ BEGIN
   -- granted_by is the admin: a grant is passed on by somebody who could change
   -- the row themselves, which is the rule CreateRecordGrant enforces.
   INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by, reason)
-  SELECT 'person', p.id, 'user', rep_id, 'write', admin_id,
+  SELECT 'contact', p.id, 'user', rep_id, 'write', admin_id,
          'seed-dev: the one record that makes a write share observable'
-    FROM person p
+    FROM contact p
    WHERE p.owner_id = admin_id AND p.archived_at IS NULL
    ORDER BY p.created_at, p.id
    LIMIT 1
@@ -246,7 +246,7 @@ DO $$
 DECLARE
   ws   uuid;
   conn uuid;
-  org  RECORD;
+  company  RECORD;
 BEGIN
   ws := pg_temp.installation_workspace();
   IF ws IS NULL THEN
@@ -266,15 +266,15 @@ BEGIN
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
   -- ledger behind a company we have never billed.
-  FOR org IN
-    SELECT id, display_name FROM organization
+  FOR company IN
+    SELECT id, display_name FROM company
      WHERE archived_at IS NULL
        AND lifecycle = 'customer'
   LOOP
     INSERT INTO finance_customer_link
-           (connection_id, organization_id, external_customer_id,
+           (connection_id, company_id, external_customer_id,
             sync_hash, source, captured_by)
-    VALUES (conn, org.id, 'DEMO-' || left(replace(org.id::text, '-', ''), 8),
+    VALUES (conn, company.id, 'DEMO-' || left(replace(company.id::text, '-', ''), 8),
             'seed', 'system', 'system:seed')
     ON CONFLICT DO NOTHING;
   END LOOP;
@@ -297,14 +297,19 @@ END $$;
 -- wait rather than a stale one past the freshness horizon.
 DO $$
 DECLARE
-  person_row uuid;
+  contact_row uuid;
   activity_row uuid;
   capturer text;
+  -- Alice's own address, spelled once. It is the counterparty of an inbound
+  -- message AND the participant who wrote it, and the two must agree: a reader
+  -- that matches a thread on counterparty_email would otherwise find this row
+  -- has none and silently skip it.
+  counterparty constant text := 'alice@demo.test';
 BEGIN
-  SELECT id INTO person_row FROM person
+  SELECT id INTO contact_row FROM contact
    WHERE full_name = 'Alice Müller' AND archived_at IS NULL
    ORDER BY created_at LIMIT 1;
-  IF person_row IS NULL THEN
+  IF contact_row IS NULL THEN
     RAISE NOTICE 'seed-dev.sql: no Alice Müller yet — run the API seed first; skipping the waiting customer';
     RETURN;
   END IF;
@@ -317,23 +322,28 @@ BEGIN
    WHERE email = 'admin@demo.test' LIMIT 1;
 
   activity_row := uuidv7();
+  -- counterparty_email is what capture stamps for a real inbound message: the
+  -- address it came FROM. Seeding it keeps this row the shape the readers
+  -- expect — a thread match on the counterparty is how they refuse a forged
+  -- References root, and a NULL here reads as "nobody", not as "anybody".
   INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
                         source, captured_by, version, created_at, updated_at,
-                        counterparty_outbound_attested, thread_key, audience)
+                        counterparty_email, counterparty_outbound_attested,
+                        thread_key, audience)
   VALUES (activity_row, 'email', 'inbound',
           'Re: pricing for the retrofit',
           'Could you confirm the implementation cost before Friday?',
           now() - interval '2 days', false, 'system',
-          coalesce(capturer, 'system:seed'), 1, now(), now(), false,
+          coalesce(capturer, 'system:seed'), 1, now(), now(), counterparty, false,
           'seed-retrofit-pricing', 'workspace');
-  -- Filed under a person, which is what makes it SALES mail rather than a rep's
+  -- Filed under a contact, which is what makes it SALES mail rather than a rep's
   -- own correspondence: the lane requires a link to a record the workspace
   -- sells to.
-  INSERT INTO activity_link (activity_id, entity_type, person_id)
-  VALUES (activity_row, 'person', person_row);
-  -- Who wrote, so the lane can tell a person from a notification service.
-  INSERT INTO activity_participant (activity_id, role, address, person_id)
-  VALUES (activity_row, 'from', 'alice@demo.test', person_row);
+  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+  VALUES (activity_row, 'contact', contact_row);
+  -- Who wrote, so the lane can tell a contact from a notification service.
+  INSERT INTO activity_participant (activity_id, role, address, contact_id)
+  VALUES (activity_row, 'from', counterparty, contact_row);
 
   RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
 END $$;

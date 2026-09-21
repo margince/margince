@@ -36,7 +36,7 @@ import (
 // the whole reason this error exists: newCaptureSink attaches the merge stager,
 // the file keeper and — the one that matters — the counterparty ensurer, so a
 // sink assembled here from the pool alone would compile, run, land activities,
-// and silently create no people. A refusal is loud; a half-wired pipeline is
+// and silently create no contacts. A refusal is loud; a half-wired pipeline is
 // not.
 var errIngressUnwired = errors.New("compose: this role composed no capture pipeline, so a unit cannot ingest through it")
 
@@ -82,8 +82,23 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 		return extension.Result{}, err
 	}
 	defer r.endIngest()
+	// A record the grammar refuses is a DISPOSITION, not an error. The unit
+	// moves its cursor past it either way — stopping on one malformed message
+	// parks the whole connection — so answering an error class only put the
+	// distinction it needs most, "the core skipped this" versus "I built
+	// something the core cannot use", somewhere it had to match on. The
+	// complaint still travels: a unit that logs the reason gets the same
+	// sentence it used to read off the error.
 	if err := rec.Validate(); err != nil {
-		return extension.Result{}, fmt.Errorf("%w: %s", extension.ErrInvalid, err.Error())
+		// The breadcrumb the core keeps, before the answer the unit gets: the
+		// unit already knows it dropped this one, and the installation is the
+		// party that could not tell. See extingressrefusal.go.
+		r.noteRefusal(ctx, extension.RefusalOf(err))
+		return extension.Result{
+			Disposition: extension.DispositionUnrepresentable,
+			Refusal:     extension.RefusalOf(err),
+			Reason:      err.Error(),
+		}, nil
 	}
 	if err := refuseUndeclaredTransport(r.unit, rec.Activity.Kind, rec.Activity.ChannelProvider); err != nil {
 		return extension.Result{}, err
@@ -233,7 +248,7 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 // rather than the decision: it is the core's own bound, applied where the core
 // can see it, for a record that reached this function some other way. Said
 // plainly because the alternative is a reader assuming this line is what stops
-// a sixty-person group — it is not, and the refusal a unit reads comes from the
+// a sixty-contact group — it is not, and the refusal a unit reads comes from the
 // door.
 func participantsOf(parties []extension.Participant) []connector.MessageParticipant {
 	if len(parties) == 0 {
@@ -364,10 +379,10 @@ func refuseUndeclaredTransport(unit, kind, provider string) error {
 //
 // It is a second check rather than a reuse of the pairing above because it
 // answers about a different row. The activity's provider decides where a reply
-// would be SENT; this one writes person_channel_identity, which is where the
+// would be SENT; this one writes contact_channel_identity, which is where the
 // core's reply path resolves WHO it is sent to. A unit able to bind an identity
-// under `telegram` could attach an account it controls to somebody else's person
-// record, and the next Telegram reply a rep writes on that person's conversation
+// under `telegram` could attach an account it controls to somebody else's contact
+// record, and the next Telegram reply a rep writes on that contact's conversation
 // would go to the unit's account instead — no message the unit filed involved.
 //
 // An empty provider is a record that identifies its counterparty by address, and
@@ -396,7 +411,7 @@ func (r *callRuntime) naturalKey(rec extension.Record) connector.NaturalKey {
 		// is opaque to the core, and the trace used to guess at it from how the
 		// record named its counterparty — which had one unit's direct messages
 		// hashed and its mentions not, on identical key semantics.
-		SourceIDNamesAPerson: rec.KeyNamesAPerson,
+		SourceIDNamesAContact: rec.KeyNamesAContact,
 	}
 }
 
@@ -440,7 +455,7 @@ func (r *callRuntime) declaredIngress(system string) (extension.IngressSource, e
 //
 // It maps rather than wraps for the reason the core port's equivalent does: the
 // sink's errors carry table names, constraint names and SQL state, and a unit
-// is other people's code. What survives is the class, which is the only part a
+// is other contacts's code. What survives is the class, which is the only part a
 // unit can act on.
 func (r *callRuntime) ingressRefusal(ctx context.Context, err error) error {
 	switch {

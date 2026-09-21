@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { SearchField } from "./atoms";
+import { Field, SearchField } from "./atoms";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
 import {
   ACTIVITY_KINDS,
@@ -45,13 +45,18 @@ function isActivityKind(value: string): value is ActivityKind {
  */
 export function TimelineFilterBar({
   value,
+  kinds = ACTIVITY_KINDS,
   onChange,
 }: Readonly<{
   value: TimelineFilters;
+  // Which kinds this surface can actually draw. Every kind, unless the cut
+  // under the bar is narrower than the list is: the Conversations cut keeps
+  // only mail and messages, and a dial that offered Meetings there would name
+  // a value whose only possible answer is an empty list.
+  kinds?: readonly ActivityKind[];
   onChange: (next: TimelineFilters) => void;
 }>) {
   const t = useT();
-  const id = useId();
   const [draft, setDraft] = useState(value.q ?? "");
   // The draft follows a filter reset from outside (a record change): a box
   // still showing the previous record's word would claim a search that is
@@ -68,7 +73,7 @@ export function TimelineFilterBar({
   };
   const kindOptions = [
     { value: "", label: t("timeline.filters.kind.all") },
-    ...ACTIVITY_KINDS.map((kind) => ({
+    ...kinds.map((kind) => ({
       value: kind,
       label: t(KIND_LABEL[kind]),
     })),
@@ -102,28 +107,30 @@ export function TimelineFilterBar({
           }}
         />
         <span className="timeline-filters-range">
-          <label htmlFor={`${id}-after`} className="t-caption">
-            {t("timeline.filters.from")}
-          </label>
-          <DateInput
-            id={`${id}-after`}
-            value={value.after ?? ""}
-            max={value.before || undefined}
-            onChange={(event) =>
-              onChange({ ...value, after: day(event.target.value) })
-            }
-          />
-          <label htmlFor={`${id}-before`} className="t-caption">
-            {t("timeline.filters.to")}
-          </label>
-          <DateInput
-            id={`${id}-before`}
-            value={value.before ?? ""}
-            min={value.after || undefined}
-            onChange={(event) =>
-              onChange({ ...value, before: day(event.target.value) })
-            }
-          />
+          <Field label={t("timeline.filters.from")}>
+            {(control) => (
+              <DateInput
+                {...control}
+                value={value.after ?? ""}
+                max={value.before || undefined}
+                onChange={(event) =>
+                  onChange({ ...value, after: day(event.target.value) })
+                }
+              />
+            )}
+          </Field>
+          <Field label={t("timeline.filters.to")}>
+            {(control) => (
+              <DateInput
+                {...control}
+                value={value.before ?? ""}
+                min={value.after || undefined}
+                onChange={(event) =>
+                  onChange({ ...value, before: day(event.target.value) })
+                }
+              />
+            )}
+          </Field>
         </span>
       </div>
       {value.q && (

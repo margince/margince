@@ -14,8 +14,7 @@ import (
 
 // The page decides whether to draw a restore button; the write decides whether
 // to honour it. A port the write consults and the page does not is a button
-// drawn enabled over a refusal — the reader presses it and gets a 409, which is
-// exactly what happened to ExternallyGoverned.
+// drawn enabled over a refusal — the reader presses it and gets a 409.
 //
 // Two halves, because the page's evaluator is a COPY of the write's with four
 // ports replaced. Checking only that the copy's fields are non-nil proves
@@ -56,11 +55,11 @@ func TestTheAdvisoryPathAnswersFromThePageFacts(t *testing.T) {
 	advisory := advisoryEvaluator(binding, shared, row, undone)
 
 	ctx := context.Background()
-	archived, err := advisory.Archived(ctx, nil, "person", row.ID)
+	archived, err := advisory.Archived(ctx, nil, "contact", row.ID)
 	if err != nil || !archived {
 		t.Errorf("Archived answered (%v, %v), want the page's own fact (true, nil)", archived, err)
 	}
-	if err := advisory.Writable(ctx, nil, "person", row.ID); !errors.Is(err, errRecordNotWritable) {
+	if err := advisory.Writable(ctx, nil, "contact", row.ID); !errors.Is(err, errRecordNotWritable) {
 		t.Errorf("Writable answered %v, want the page's own fact %v", err, errRecordNotWritable)
 	}
 	behind, err := advisory.BehindErasure(ctx, nil, row.AuditRow)
@@ -81,9 +80,9 @@ func TestTheAdvisoryPathAnswersFromThePageFacts(t *testing.T) {
 	}
 
 	// Whatever the page does NOT derive it inherits, and a port left unbound
-	// is a branch the write asks and the page skips — the ExternallyGoverned
-	// shape. Derived from the struct, so a new port is covered the day it
-	// is added rather than the day someone remembers this test.
+	// is a branch the write asks and the page skips. Derived from the struct,
+	// so a new port is covered the day it is added rather than the day someone
+	// remembers this test.
 	bound := reflect.ValueOf(advisory)
 	for i := range bound.NumField() {
 		if bound.Field(i).IsNil() {

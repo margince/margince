@@ -1,0 +1,51 @@
+/* ActionRow — secondary verbs on the leading edge, one call to action on the
+   trailing one. See actionrow.tsx for when to reach for it. */
+
+/* The gap is on the ROW as well as on each group. Both carry buttons as far as
+   a reader is concerned — the trail is one verb today and two tomorrow — and
+   `actionrow.test.ts` asks whichever container holds them what gap it gets, so
+   a row that declared the role in only one of the three places would be a row
+   the gate could not follow. */
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gapActions);
+}
+
+.action-row-lead,
+.action-row-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* What keeps the call to action on the trailing edge once the row has WRAPPED.
+   `space-between` above only separates the two groups while they share a line;
+   at phone width the trail is alone on the second one, where space-between has
+   nothing to push it against and it would sit under the first verb. */
+.action-row-trail {
+  margin-inline-start: auto;
+}
+
+/* A group whose children all rendered NOTHING leaves the flex line entirely.
+   `display: none` rather than a zero width, because a flex item collects the
+   row's gap either way and the row WRAPS: a group holding nothing takes the
+   first line and leaves the one real button under a line of air.
+
+   This and the `Children.toArray` gate in actionrow.tsx are two halves of one
+   rule and neither covers the other. The gate sees a child that is ABSENT —
+   `{canDiscard && <Button/>}` — and drops the group before it is drawn, which
+   is the common case. It cannot see what a child RENDERS: `<DispositionVerbs/>`
+   is one element that counts, and returns null on a row the server offers no
+   judgements for. `:empty` is the only one of the two asked AFTER the render.
+
+   BOTH groups, because they are one invariant: `primary` is a node the caller
+   computes too, so a row that fixed the leading group alone would grow the same
+   blank line from the trailing one. */
+.action-row-lead:empty,
+.action-row-trail:empty {
+  display: none;
+}

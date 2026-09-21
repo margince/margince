@@ -1,0 +1,235 @@
+import { useEffect, useId, useRef, useState } from "react";
+import {
+  Button,
+  Checkbox,
+  Field,
+  Modal,
+  Textarea,
+} from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
+import { useT } from "../../i18n";
+import { RefusalLine } from "../common";
+import {
+  type ReviewTemplate,
+  useCreateOutcomeReview,
+} from "../outcomereview.queries";
+
+/**
+ * Writing a review of how the deal went.
+ *
+ * The questions come from the TEMPLATE for the outcome the deal recorded — a
+ * win review and a loss review ask different things. They are rendered in the
+ * template's own order, and the answers are filed under each question's stable
+ * key, so rewording a question later never orphans what somebody wrote.
+ */
+export function OutcomeReviewModal({
+  open,
+  onClose,
+  dealId,
+  closingOccurrenceId,
+  template,
+  prefill,
+}: Readonly<{
+  open: boolean;
+  onClose: () => void;
+  dealId: string;
+  // The closing being reviewed. The server refuses a review of any closing but
+  // the one the deal is on now, so passing it is how a reopen that happened
+  // while this modal sat open comes back as a conflict instead of a review
+  // filed against the wrong outcome.
+  closingOccurrenceId: string;
+  template: ReviewTemplate;
+  // Answers already written elsewhere, keyed by question key. The close dialog
+  // asks for a reason before it will close a deal, and that reason answers the
+  // review's own first question in different words — so it arrives here as a
+  // starting point rather than being typed twice. Seeded on the OPENING edge
+  // like every other value in this form, and fully editable afterwards: it is
+  // a draft of the answer, not the answer.
+  prefill?: Readonly<Record<string, string>>;
+}>) {
+  const t = useT();
+  const headingId = useId();
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [choiceAnswers, setChoiceAnswers] = useState<Record<string, string[]>>(
+    {},
+  );
+  const [body, setBody] = useState("");
+  // One id per OPENING of the modal, not one per submission attempt. It is what
+  // makes a retry idempotent: a save that timed out and was pressed again
+  // returns the review that already landed rather than writing a second one.
+  // A deliberate second review means opening the modal again, which is when a
+  // new id is minted.
+  const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
+  // The id as it is RIGHT NOW, readable from a callback that closed over an
+  // older render. State would give submit() the value it captured when the
+  // click happened, which is the one question it must not ask.
+  const submissionIdRef = useRef(submissionId);
+  submissionIdRef.current = submissionId;
+  const create = useCreateOutcomeReview(dealId);
+  // Pulled out because the effect below depends on THIS function rather than on
+  // the mutation object, which is a new object every render: depending on the
+  // object would reset the form under the reader mid-typing.
+  const resetCreate = create.reset;
+
+  // Re-taken on every open. The modal is mounted for the life of the panel
+  // rather than remounted per open, so without this a second review would
+  // reuse the first one's submission id and be answered with the first
+  // review — silently, looking like a successful save.
+  // The closing the draft is ABOUT, captured when the modal opened rather than
+  // read at save time.
+  //
+  // A background refresh can move the deal onto a new closing while this modal
+  // sits open — it was reopened and reclosed elsewhere. Sending whatever the
+  // prop says by then would file answers written about the old outcome against
+  // the new one, and the server would accept them, because the id it was handed
+  // is current. Sending the captured one instead makes the server's own
+  // stale-closing refusal fire, which is the answer the reader needs: these
+  // questions were about a closing that is no longer the one in play.
+  const [draftClosing, setDraftClosing] = useState(closingOccurrenceId);
+  const [draftTemplate, setDraftTemplate] = useState(template);
+  const openingRef = useRef({ template, closingOccurrenceId });
+  openingRef.current = { template, closingOccurrenceId };
+
+  // The prefill as it is RIGHT NOW, readable from the effect WITHOUT the
+  // effect depending on it. Depending on the object would re-seed the form
+  // under a reader mid-edit every time the caller re-rendered, because an
+  // object literal is a new identity each time.
+  const prefillRef = useRef(prefill);
+  prefillRef.current = prefill;
+
+  useEffect(() => {
+    if (open) {
+      setAnswers({ ...prefillRef.current });
+      setBody("");
+      setChoiceAnswers({});
+      setSubmissionId(crypto.randomUUID());
+      setDraftClosing(openingRef.current.closingOccurrenceId);
+      setDraftTemplate(openingRef.current.template);
+      resetCreate();
+    }
+  }, [open, resetCreate]);
+
+  const missing = draftTemplate.questions.filter(
+    (q) =>
+      q.required &&
+      (q.type === "multiselect"
+        ? !choiceAnswers[q.key]?.length
+        : !answers[q.key]?.trim()),
+  );
+
+  function close() {
+    create.reset();
+    onClose();
+  }
+
+  async function submit() {
+    const submitted = submissionId;
+    await create.mutateAsync({
+      closing_occurrence_id: draftClosing,
+      submission_id: submissionId,
+      answers,
+      choice_answers: choiceAnswers,
+      template_version: draftTemplate.version,
+      body: body.trim() ? body : null,
+    });
+    // Only close the submission that actually landed. A save over a slow link
+    // can return AFTER the reader dismissed the modal and opened it again to
+    // write a second review — and an unconditional close there would wipe the
+    // new draft on the strength of the old request finishing. The id is minted
+    // per opening, so comparing it is exactly the question "is this still the
+    // review I was writing".
+    if (submitted === submissionIdRef.current) {
+      close();
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={close} labelledBy={headingId}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
+        {draftTemplate.label}
+      </Heading>
+      <div className="form-stack">
+        {draftTemplate.questions.map((question) =>
+          question.type === "multiselect" ? (
+            <fieldset key={question.key} className="field-multiselect">
+              <legend className="t-label">
+                {question.label}
+                {question.required ? " *" : ""}
+              </legend>
+              {(question.options ?? []).map((option) => (
+                <Checkbox
+                  key={option}
+                  label={option}
+                  disabled={create.isPending}
+                  checked={(choiceAnswers[question.key] ?? []).includes(option)}
+                  onChange={() =>
+                    setChoiceAnswers((prev) => {
+                      const selected = prev[question.key] ?? [];
+                      return {
+                        ...prev,
+                        [question.key]: selected.includes(option)
+                          ? selected.filter((value) => value !== option)
+                          : [...selected, option],
+                      };
+                    })
+                  }
+                />
+              ))}
+            </fieldset>
+          ) : (
+            <Field
+              key={question.key}
+              label={question.label}
+              required={question.required}
+            >
+              {(control) => (
+                <Textarea
+                  {...control}
+                  rows={3}
+                  value={answers[question.key] ?? ""}
+                  disabled={create.isPending}
+                  onChange={(event) =>
+                    setAnswers((prev) => ({
+                      ...prev,
+                      [question.key]: event.target.value,
+                    }))
+                  }
+                />
+              )}
+            </Field>
+          ),
+        )}
+        {/* Prose beside the answers, not instead of them. The review is written
+            as a note on the timeline, and this is that note's own words. */}
+        <Field label={t("outcomeReview.notes")}>
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={3}
+              value={body}
+              disabled={create.isPending}
+              onChange={(event) => setBody(event.target.value)}
+            />
+          )}
+        </Field>
+        {create.isError && <RefusalLine error={create.error} />}
+        <div className="actions">
+          <Button variant="ghost" onClick={close} disabled={create.isPending}>
+            {t("deals.cancel")}
+          </Button>
+          <Button
+            onClick={() => void submit()}
+            disabled={create.isPending || missing.length > 0}
+          >
+            {t("outcomeReview.save")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

@@ -1,0 +1,446 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contact360
+
+// The sections read from the timeline and its neighbours: recent activity,
+// open tasks, the two last-touch directions, who knows this contact, the
+// consent guard, the enrichment evidence, and the visit delta.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	"github.com/margince/margince/backend/internal/compose/network"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// contactReachesActivity is the reachability predicate every contact-360 section
+// uses: an activity this contact is ON.
+//
+// Two arms, because a contact is on a message in two different ways. The LINK is
+// how the message is filed — what the entity-scoped activity list walks, so the
+// 360's recent rows and the full timeline agree about it. The PARTICIPANT row is
+// who was actually in the conversation, and it is the only record of a contact
+// who was CC'd or who attended a meeting: capture files a message under its
+// counterparty, so a thread a contact was copied on is filed under somebody else
+// and their own page never showed it.
+//
+// No deal arm, deliberately, although the COMPANY walk has one. A company's reach is
+// the company's business and a deal belongs to it; a contact's page answers a
+// narrower question — what did I have with THIS human — and pulling in every
+// message on their employer's deals would put colleagues' threads they were
+// never on onto their record.
+//
+// The one %s expression is used by both arms: a bind ("$3") on the page's own
+// reads, a correlated column ("c.id") where a set of contacts is answered in one
+// statement. Every call site passes it exactly once.
+const contactReachesActivity = `(EXISTS (
+	SELECT 1 FROM activity_link l
+	WHERE l.activity_id = a.id AND l.contact_id = %[1]s)
+ OR EXISTS (
+	SELECT 1 FROM activity_participant ap
+	WHERE ap.activity_id = a.id AND ap.contact_id = %[1]s))`
+
+// bind spells one placeholder for the predicates that take the contact as an
+// expression.
+func bind(pos int) string {
+	return fmt.Sprintf("$%d", pos)
+}
+
+// activityScope renders the caller's activity CONTENT gate for the timeline
+// rows this section hands back, defaulting to the permissive clause when the
+// scope adds no predicate of its own.
+func activityScope(ctx context.Context, arg func(any) int) (string, error) {
+	return activityScopeUnder(ctx, arg, auth.ActivityContentClause)
+}
+
+// activityDiscoverScope is the DISCOVER gate for the sections that disclose a
+// date and a direction and nothing else (last touch): a limited conversation
+// still counts as a touch, its content stays withheld.
+func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, error) {
+	return activityScopeUnder(ctx, arg, auth.ActivityDiscoverClause)
+}
+
+func activityScopeUnder(ctx context.Context, arg func(any) int,
+	gate func(context.Context, string, func(any) int) (string, error),
+) (string, error) {
+	clause, err := gate(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	if clause == "" {
+		return "true", nil
+	}
+	return clause, nil
+}
+
+// projectScope renders the body-of-work narrowing as one more WHERE term, or
+// nothing when the page is unscoped. Every timeline section of this page goes
+// through it, so the recent rows, the open tasks, the last-touch dates and the
+// since-last-visit count cannot disagree about which project they describe.
+func projectScope(opts AssembleOptions, arg func(any) int) string {
+	if opts.ProjectID == nil {
+		return ""
+	}
+	return " AND " + activities.ActivityWithinProject(arg(*opts.ProjectID))
+}
+
+// activitiesSection is the recent timeline — a summary, not a paging
+// surface: page two comes from GET /activities with its own cursor.
+func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	if err := requireRead(ctx, "activity"); err != nil {
+		return err
+	}
+	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, "", byRecency)
+	if err != nil {
+		return err
+	}
+	page, err := sectionPage(ctx, rows, hasMore)
+	if err != nil {
+		return err
+	}
+	out.Activities = &struct {
+		Data []crmcontracts.Activity `json:"data"`
+		Page crmcontracts.PageInfo   `json:"page"`
+	}{Data: rows, Page: page}
+	return nil
+}
+
+// nextStepsSection is the open work filed against this contact: tasks not
+// yet done. A task with no due date still counts — it is owed either way.
+//
+// System-minted work stays IN the list: a check-in reminder is real open work
+// and a reader looking at their task list wants to see it. What it must not do
+// is decide the moment above the list — see byUrgencyHumanFirst for why the
+// order carries that difference rather than a second query.
+func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	if err := requireRead(ctx, "activity"); err != nil {
+		return err
+	}
+	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts,
+		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgencyHumanFirst)
+	if err != nil {
+		return err
+	}
+	out.NextSteps = &struct {
+		Data []crmcontracts.Activity `json:"data"`
+		Page crmcontracts.PageInfo   `json:"page"`
+	}{Data: rows, Page: crmcontracts.PageInfo{HasMore: hasMore}}
+	return nil
+}
+
+// How a section's rows are ordered, and why the two differ.
+//
+// byRecency is the timeline's order and the one GET /activities pages by, so
+// a section using it can hand out a keyset cursor that continues the same
+// list. byUrgency is what a TASK list is for: the soonest deadline first,
+// undated work after it, and the oldest of those ahead of the newest — the
+// order a reader would put their own to-do list in. The undated tail is where
+// a transcript's "I'll send it later" lands, and filing order is the only
+// thing that separates two of those.
+//
+// A section ordered by urgency carries NO cursor: the activities list has no
+// such order to continue into, so a cursor minted here would be read against
+// (occurred_at, id) and page into the middle of a different list. It bounds
+// at sectionCap and says has_more instead, which is what every other summary
+// section does when it runs out of room.
+type sectionOrder string
+
+const (
+	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
+	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
+)
+
+// byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
+// the product minted for itself.
+//
+// The order is load-bearing, not cosmetic. The moment above the list asks "has
+// anybody agreed a next step with this contact", and it may only read the page
+// it was given — one capped page, sectionCap rows. Under plain urgency, a
+// contact with a page of check-in reminders due sooner than their one real
+// promise hides that promise on page two, and the moment reports a missing next
+// step that is not missing. An absence read off a capped page is sound only if
+// what it looks for sorts to the front, so the colleague-filed rows sort to the
+// front and the reminders keep their urgency order behind them.
+//
+// The predicate is activities.SystemMintedExpr — the same captured_by namespace
+// test principal.SystemMintedID spells in Go, so this order and the filter the
+// rung applies stay one answer.
+//
+// Held by: TestASystemMintedTaskDoesNotCountAsTheNextStep
+// (internal/compose/contact360/momentnextstep_test.go)
+//
+// A var rather than a const only because it is built from that shared
+// expression: spelling the namespace inline to keep it constant is exactly the
+// second copy the helper exists to prevent.
+var byUrgencyHumanFirst = sectionOrder(
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
+		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
+
+// sectionPage is the section's edge in the activities list's own cursor
+// vocabulary, so the record page continues from this page's last row rather
+// than fetching page one again and showing every row twice.
+//
+// Minted by the LIST rather than here. The token carries the order it was
+// minted under, and the list refuses one minted under another — which is right,
+// and which makes a hand-built token beside this section a page boundary that
+// works until the day the list's order is expressed differently. It was: the
+// timeline is a sort-aware keyset now, and this is the caller that would
+// otherwise have found out through a 422 in front of a reader.
+func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool) (crmcontracts.PageInfo, error) {
+	info := crmcontracts.PageInfo{HasMore: hasMore}
+	if hasMore && len(rows) > 0 {
+		cursor, err := activities.TimelineCursor(ctx, rows[len(rows)-1])
+		if err != nil {
+			return crmcontracts.PageInfo{}, err
+		}
+		info.NextCursor = &cursor
+	}
+	return info, nil
+}
+
+// readActivities is the shared body of the timeline and next-step reads.
+//
+// It selects channel_provider, and that is not decoration: since ADR-0107/A158
+// the kind says only that an interaction was a message, so a row without the
+// provider renders as the bare word "message" and a Telegram thread becomes
+// indistinguishable from a unit's. It also selects version, for the same
+// reason and by the same mistake a second time: AudienceAction sends the
+// row's version as If-Match and refuses to write blind without one, so a row
+// missing it cannot have its audience narrowed from this page at all — the
+// request never leaves the browser, and the error names no cause because
+// there was no request to have one (margince#3249). This SELECT is a
+// hand-written sibling of activities.activityColumns, which is exactly how
+// it came to be missing a column for a whole slice, twice.
+// TestTheContact360TimelineNamesTheTransportThatCarriedAMessage,
+// TestTheContact360TimelineCarriesTheVersionAWriteNeeds and
+// TestTheContact360TimelineSaysAMeetingCameFromATranscript are the guards
+// that say so out loud. The third is the third instance: source_system was
+// missing, so a meeting logged as a transcript reached the contact's history
+// with nothing to say it was one, and the card that offers its reading drew
+// on the company and the deal but not on the contact who was in the room.
+func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	contactPos := arg(contactID)
+	// DISCOVER-gated, like the activities list: a limited conversation on
+	// this contact is still a row on the timeline — date, direction, kind —
+	// with its content withheld (content_state), not a gap the reader
+	// cannot tell from silence.
+	scope, err := activityDiscoverScope(ctx, arg)
+	if err != nil {
+		return nil, false, err
+	}
+	contentArm, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
+		       a.occurred_at, a.due_at, a.is_done, a.assignee_id, a.source, a.captured_by, a.created_at,
+		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
+		       a.source_system, a.version, (%s) AS content_available,
+		       %s,
+		       EXISTS (SELECT 1 FROM activity_link fl
+		                WHERE fl.activity_id = a.id AND fl.contact_id = $%d) AS filed_here
+		FROM activity a
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
+		ORDER BY %s
+		LIMIT %d`,
+		contentArm, sourceAuthorColumns, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	out := make([]crmcontracts.Activity, 0, sectionCap)
+	for rows.Next() {
+		a, err := scanTimelineRow(rows, contactID)
+		if err != nil {
+			return nil, false, err
+		}
+		out = append(out, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	hasMore := len(out) > sectionCap
+	if hasMore {
+		out = out[:sectionCap]
+	}
+	// AFTER the cap, so the statement counts the rows this page returns rather
+	// than the extra one read to detect hasMore. Same reason the summary above
+	// is composed from the shared helper: a contact page whose mail showed no
+	// paperclip while the same rows off /activities showed one is the drift
+	// this twin exists to avoid.
+	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
+	return out, hasMore, nil
+}
+
+// lastTouchSection reads the two directions separately. Folding them into
+// one "last touch" hides the only distinction a reader acts on: a contact
+// we mailed a fortnight ago with no reply and one who wrote to us this
+// morning have the same last-touch date and opposite meanings.
+//
+// The set reader over a set of one: this page and a queue row naming the same
+// contact are answered by the statement in lasttouch.go, under the same
+// scopes. The record read above already admitted the contact, so the set
+// reader's own row scope narrows nothing here.
+func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
+	if err != nil {
+		return err
+	}
+	touch := touched[contactID]
+	out.LastInboundAt = touch.InboundAt
+	out.LastOutboundAt = touch.OutboundAt
+	return nil
+}
+
+// networkSection answers "who here knows them", warmest first — the
+// ordering IS the answer, so it over-fetches and ranks before capping,
+// exactly as GET /contacts/{id}/network does.
+func (s *Service) networkSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, out *crmcontracts.Contact360) error {
+	edges, err := search.EdgesForContact(ctx, tx, contactID.UUID, networkFetch)
+	if err != nil {
+		return err
+	}
+	search.SortByStrength(edges, now)
+	if len(edges) > networkCap {
+		edges = edges[:networkCap]
+	}
+	names, err := network.UserNames(ctx, tx, network.EdgeUsers(edges))
+	if err != nil {
+		return err
+	}
+	colleagues := make([]crmcontracts.ContactNetworkColleague, 0, len(edges))
+	for _, e := range edges {
+		colleagues = append(colleagues, network.WireColleague(e, names[e.UserID], now))
+	}
+	out.Network = &struct {
+		Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
+	}{Colleagues: colleagues}
+	return nil
+}
+
+// networkCap and networkFetch mirror the standalone network endpoint: the
+// record page must not name a different strongest colleague than the card.
+const (
+	networkCap   = 10
+	networkFetch = 100
+)
+
+// consentSection is the outbound guard, not the ledger: per-purpose state
+// only. The append-only proof log stays at GET /contacts/{id}/consent.
+func (s *Service) consentSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *crmcontracts.Contact360) error {
+	states, _, err := s.consent.ContactConsentTx(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	wire := make([]crmcontracts.ContactConsentState, 0, len(states))
+	for _, st := range states {
+		s := crmcontracts.ContactConsentState{
+			PurposeId:              openapi_types.UUID(st.PurposeID.UUID),
+			State:                  crmcontracts.ContactConsentStateState(st.State),
+			LawfulBasis:            st.LawfulBasis,
+			DoubleOptInConfirmedAt: st.DoubleOptInConfirmedAt,
+			UpdatedAt:              st.UpdatedAt,
+		}
+		if st.PurposeKey != "" {
+			key := st.PurposeKey
+			s.PurposeKey = &key
+		}
+		wire = append(wire, s)
+	}
+	out.Consent = &struct {
+		State []crmcontracts.ContactConsentState `json:"state"`
+	}{State: wire}
+	return nil
+}
+
+// sinceLastVisitSection counts what arrived since the caller's own
+// baseline. READ-ONLY: nothing here advances the mark — only view-ack does,
+// because a GET that moved it would destroy the answer the caller opened
+// the page to read.
+func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	if err := requireRead(ctx, "activity"); err != nil {
+		return err
+	}
+	var view crmcontracts.Contact360SinceLastVisit
+	since, visited, err := s.baselineFor(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if visited {
+		view.BaselineAt = &since
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	contactPos, sincePos := arg(contactID), arg(since)
+	scope, err := activityScope(ctx, arg)
+	if err != nil {
+		return err
+	}
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT count(*)
+		FROM activity a
+		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
+		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg)), args...).
+		Scan(&view.NewActivities); err != nil {
+		return fmt.Errorf("count new activities: %w", err)
+	}
+	out.SinceLastVisit = &view
+	return nil
+}
+
+// actingUser resolves the user a baseline belongs to. It answers for agents
+// too — an agent's UserID is the granting human's — so it is a lookup, not
+// a gate: Acknowledge's auth.RequireHuman is what keeps an agent from
+// writing that human's mark.
+func actingUser(ctx context.Context) (ids.UserID, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok || p.UserID == (ids.UUID{}) {
+		return ids.UserID{}, fmt.Errorf(
+			"the visit baseline is per-user and this call carries no user: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	return ids.From[ids.UserKind](p.UserID), nil
+}
+
+// baselineFor reads the caller's own mark. The user_id predicate is the
+// whole scope and has to be written out: without it one rep would read
+// another rep's reading history. It is also sufficient — core 0225
+// collapsed user_record_view's unique key to (user_id, entity_type,
+// entity_id).
+func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (at time.Time, visited bool, err error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
+		SELECT last_viewed_at FROM user_record_view
+		WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3`,
+		userID, entityTypeContact, contactID).Scan(&at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, false, nil
+	}
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return at, true, nil
+}
+
+func ptr[T any](v T) *T { return &v }

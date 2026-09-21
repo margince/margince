@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
-// seedTracedActivity writes an activity LINKED to a person somebody else
+// seedTracedActivity writes an activity LINKED to a contact somebody else
 // captured privately, and a trace row pointing at it.
 //
 // The link is what puts it outside an own-scoped reader's reach. An activity
@@ -35,16 +35,16 @@ func seedTracedActivity(ctx context.Context, t *testing.T, db *database.DB, owne
 	seedTracedActivityOwnedBy(ctx, t, db, owner, ids.Nil, sourceID)
 }
 
-// seedTracedActivityOwnedBy writes the activity, the person it links to, and the
-// trace row. personOwner names who owns that person — zero means a stranger,
-// whose person is seeded capture-private (visibility='owner'): a person is
+// seedTracedActivityOwnedBy writes the activity, the contact it links to, and the
+// trace row. contactOwner names who owns that contact — zero means a stranger,
+// whose contact is seeded capture-private (visibility='owner'): a contact is
 // workspace-readable identity, so ownership alone no longer hides it, and
 // capture privacy is what puts the activity outside every other reader's reach.
 func seedTracedActivityOwnedBy(ctx context.Context, t *testing.T, db *database.DB,
-	owner, personOwner ids.UUID, sourceID string,
+	owner, contactOwner ids.UUID, sourceID string,
 ) {
 	t.Helper()
-	activityID, personID := ids.NewV7(), ids.NewV7()
+	activityID, contactID := ids.NewV7(), ids.NewV7()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, occurred_at, source_system, source_id, source, captured_by)
@@ -53,30 +53,30 @@ func seedTracedActivityOwnedBy(ctx context.Context, t *testing.T, db *database.D
 			activityID, sourceID); err != nil {
 			return err
 		}
-		// A real app_user either way, because person.owner_id is a foreign key
+		// A real app_user either way, because contact.owner_id is a foreign key
 		// and a scope test that seeded a dangling owner would be proving
 		// something about referential integrity instead.
-		personHolder, visibility := personOwner, "workspace"
-		if personHolder.IsZero() {
-			personHolder, visibility = ids.NewV7(), "owner"
+		contactHolder, visibility := contactOwner, "workspace"
+		if contactHolder.IsZero() {
+			contactHolder, visibility = ids.NewV7(), "owner"
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO app_user (id, email, display_name, status)
-			VALUES ($1, $2, 'Person Owner', 'active')
-			ON CONFLICT (id) DO NOTHING`, personHolder, "owner-"+personHolder.String()+"@example.test"); err != nil {
+			VALUES ($1, $2, 'Contact Owner', 'active')
+			ON CONFLICT (id) DO NOTHING`, contactHolder, "owner-"+contactHolder.String()+"@example.test"); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+			INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 			VALUES ($1,
-			        'Linked Person', $2, $3, 'manual', 'human:test')`,
-			personID, personHolder, visibility); err != nil {
+			        'Linked Contact', $2, $3, 'manual', 'human:test')`,
+			contactID, contactHolder, visibility); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`,
-			activityID, personID); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`,
+			activityID, contactID); err != nil {
 			return err
 		}
 		return capture.Trace(ctx, tx, capture.TraceEntry{
@@ -112,7 +112,7 @@ func TestAnActivityTheReaderCannotSeeIsListedWithoutItsLink(t *testing.T) {
 func TestAnActivityTheReaderCanSeeKeepsItsLink(t *testing.T) {
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
-	// The person is owned by the READER, so an own-scoped reader reaches the
+	// The contact is owned by the READER, so an own-scoped reader reaches the
 	// activity through it. A workspace-scoped reader would prove nothing here:
 	// ActivityDiscoverClause returns an empty clause for an unbounded principal and
 	// hideUnreadableLinks returns before the probe ever runs — so a probe that

@@ -6,7 +6,6 @@ package attention
 import (
 	"context"
 	"errors"
-	"sort"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
@@ -44,10 +43,38 @@ const batchScanDepth = 200
 // decision lane because reading a task costs less than deciding one.
 const plannedCap = 12
 
+// upcomingCap bounds the work due AFTER today, and upcomingHorizonDays how far
+// ahead it looks.
+//
+// Small on purpose. The lane's job is still today: a handful of "due tomorrow"
+// rows tell a reader what is landing, where a full fortnight of them would bury
+// the work that is actually owed now under a calendar.
+const (
+	upcomingCap         = 6
+	upcomingHorizonDays = 14
+)
+
 // doneCap bounds the receipts. They are the least urgent thing on the surface
 // and the easiest to let run long, so this is deliberately the shortest window
 // on the page rather than a scrollback.
 const doneCap = 8
+
+// unansweredLookbackDays is how far back the lane of meetings owing an outcome
+// reaches, and it exists because the answer to "how did it go" does not expire
+// at midnight.
+//
+// That lane once opened at the start of the reader's own day, which made the
+// question survivable only for the hours left in it: a meeting at 17:00 was
+// asked about for seven hours, one at 23:30 for thirty minutes, and at local
+// midnight every unanswered meeting fell out of the window still carrying
+// `meeting_status` NULL. Nothing re-raised it, because nothing else reads that
+// column looking for work — so the record simply stayed wrong.
+//
+// A fortnight rather than forever: an unbounded lookback would, on the first
+// read after this ships, hand a reader every meeting their installation has
+// ever left unanswered, which is a queue nobody can clear and so a queue
+// nobody reads.
+const unansweredLookbackDays = 14
 
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
@@ -89,10 +116,6 @@ type Service struct {
 	// noticeCases is OPTIONAL and withheld-by-grant exactly as dsrs is — the
 	// same privacy_request object gates both reads.
 	noticeCases NoticeCases
-	// syncHealth is OPTIONAL like the lanes above it, and mode-gated on top:
-	// even where it is bound, a workspace not in overlay mode answers
-	// ErrModeNotOverlay and the lane stays absent (optionallanes.go).
-	syncHealth SyncHealth
 	// captureHealth is OPTIONAL like the lanes above it, and per-user on top:
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
@@ -105,6 +128,10 @@ type Service struct {
 	// walks is OPTIONAL like pins above it: nil means this feed freezes no
 	// walk, and every page is an offset into a freshly ranked day.
 	walks Walks
+	// snapshots composes this feed's ~40 lane reads into ONE transaction, and
+	// is OPTIONAL for the reason snapshot.go's inSnapshot gives: unbound is
+	// what this feed did before, which is what a unit test wants.
+	snapshots Snapshots
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
@@ -130,6 +157,9 @@ type Service struct {
 	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
 	// carried only a deal id travels without the deal's figures.
 	dealFacts DealFacts
+	// contactTouch is OPTIONAL in the same way: nil means a row names its
+	// contact and not when either side last wrote.
+	contactTouch ContactTouch
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves DealMoves
@@ -151,14 +181,21 @@ type Service struct {
 	money dayMoney
 	// machine answers whether an address is a sending system, for the group a
 	// routine contact decision joins. Nil means every address reads as a
-	// person's, which under-groups rather than hiding anything.
+	// contact's, which under-groups rather than hiding anything.
 	machine MachineSender
-	// teammates answers whether a team-scoped reader may open a named person's
+	// domainQuestions is the reader's own undecided domains. Optional in the
+	// ordinary way: nil is a feed that does not read the triage ledger at all,
+	// which the queue reports as an absent source rather than an empty one.
+	domainQuestions DomainQuestions
+	// teammates answers whether a team-scoped reader may open a named contact's
 	// queue. Unlike the lanes above it, nil does NOT mean "absent lane": it
 	// means the question has no answer, and resolveOwner refuses rather than
 	// admits. A lane whose absence widened a scope would be a security hole
 	// wearing the shape of a missing feature.
-	teammates Teammates
+	teammates   Teammates
+	namedTeams  NamedTeams
+	weeklyPlans WeeklyPlans
+	planRows    []ranked
 	// leads is the inbound leads still owed a first reply. Optional in the
 	// ordinary way: nil is a feed that does not read leads at all, which the
 	// queue reports as an absent source rather than as an empty one.
@@ -189,9 +226,11 @@ type Service struct {
 	// taskOwner is whose queue TasksOwnedBy means. Zero for every other scope,
 	// and never read by them.
 	taskOwner ids.UUID
+	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
+	noticeOwners []ids.UUID
 }
 
-// forOwner returns a copy that reads one named person's queue. Same
+// forOwner returns a copy that reads one named contact's queue. Same
 // copy-per-read reason as forReader: a service is shared by every request, and
 // an owner set on it would follow one manager's question onto another reader's
 // page.
@@ -223,12 +262,12 @@ func (s *Service) forUnowned() *Service {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
 	opts ...Option,
 ) *Service {
 	svc := &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
-		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
+		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
 	for _, opt := range opts {
 		opt(svc)
@@ -243,16 +282,6 @@ func (s *Service) countingDecisions() *Service {
 	deeper := *s
 	deeper.decisionDepth = batchScanDepth
 	return &deeper
-}
-
-// Assemble reads every lane and returns the day.
-//
-// A lane whose read is REFUSED is omitted and named rather than reported empty.
-// Any other failure is returned: a lane that is broken rather than withheld
-// must not read as a clear day.
-func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
-	day, _, err := s.assembleDay(ctx)
-	return day, err
 }
 
 // assembleDay is Assemble, plus everything else the night knows: its finding
@@ -276,7 +305,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
-	until, err := s.endOfDay(ctx, asOf)
+	until, loc, err := s.endOfDay(ctx, asOf)
 	if err != nil {
 		return crmcontracts.Attention{}, theNight{}, err
 	}
@@ -316,7 +345,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		return crmcontracts.Attention{}, theNight{}, err
 	}
 
-	planned, plannedTotal, err := s.planned(ctx, asOf, until, s.taskScope)
+	planned, plannedTotal, err := s.planned(ctx, asOf, until, loc, s.taskScope)
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = plannedTotal
@@ -358,7 +387,7 @@ type laneCount struct {
 }
 
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,
-// the two things on this surface a person alone may answer.
+// the two things on this surface a contact alone may answer.
 //
 // Both producers are read to the full page depth and then INTERLEAVED, so one
 // of them cannot bury the other. Reading each to depth and concatenating looks
@@ -446,35 +475,6 @@ func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcont
 		}
 	}
 	return out
-}
-
-// planned is today's agreed work, overdue first. The bound is the day's end,
-// resolved once by Assemble so every due-dated lane judges the same afternoon.
-func (s *Service) planned(
-	ctx context.Context, asOf, until time.Time, scope TaskScope,
-) ([]crmcontracts.AttentionItem, int, error) {
-	open, err := s.tasks.OpenForViewer(ctx, until, plannedCap, scope, s.taskOwner)
-	if err != nil {
-		return nil, 0, err
-	}
-	// How many there ARE, beside the page. The lane is capped at a dozen, so a
-	// badge of len(items) tells a reader with thirteen that they have twelve —
-	// and there is no second page on this lane to find the thirteenth by. The
-	// same reading needs_you has always had.
-	total, err := s.tasks.CountOpenForViewer(ctx, until, scope, s.taskOwner)
-	if err != nil {
-		return nil, 0, err
-	}
-	items := make([]crmcontracts.AttentionItem, 0, len(open))
-	for _, task := range open {
-		items = append(items, taskItem(task, asOf))
-	}
-	// Overdue first: a promise already broken outranks one merely due, and the
-	// server resolves it so every surface agrees on where the line falls.
-	sort.SliceStable(items, func(i, j int) bool {
-		return overdue(items[i]) && !overdue(items[j])
-	})
-	return items, total, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

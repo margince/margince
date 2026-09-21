@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -10,9 +10,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useLayoutEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
+import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { ContactsScreen } from "./contacts";
 import {
   type CreateField,
   CreateRecordModal,
@@ -21,7 +22,6 @@ import {
   visibleFields,
 } from "./create";
 import { DealsScreen } from "./deals";
-import { ContactsScreen } from "./people";
 
 // Create flows (the "you can actually add a record" acceptance): the list
 // screens open a create modal, the POST body carries the server's shape
@@ -51,6 +51,18 @@ function render(ui: ReactNode) {
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+/**
+ * The create form, scoped to the dialog it is in.
+ *
+ * The list behind it carries a column picker, and a column's tick is now a real
+ * labelled control — so "Value" and "via Partner" name a field in the form AND
+ * a column in that menu. The dialog is the boundary between the record being
+ * made and the list it will join.
+ */
+function inForm() {
+  return within(screen.getByRole("dialog"));
 }
 
 const emptyPage = { data: [], page: { next_cursor: null } };
@@ -118,7 +130,7 @@ describe("contact create flow", () => {
     const captured: Captured[] = [];
     stubApi(
       {
-        "POST /people": (body) =>
+        "POST /contacts": (body) =>
           jsonResponse(
             {
               id: "p-new",
@@ -140,7 +152,7 @@ describe("contact create flow", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Primary" }));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
-    const post = captured.find((entry) => entry.key === "POST /people");
+    const post = captured.find((entry) => entry.key === "POST /contacts");
     expect(post?.body).toMatchObject({
       full_name: "Peter Neu",
       source: "manual",
@@ -150,9 +162,135 @@ describe("contact create flow", () => {
     });
   });
 
+  // A WORK primary and a PERSONAL primary are independent, matching what the
+  // server itself enforces (contactformfields.ts's contactEditFields: only a
+  // SAME-type primary swap is refused).
+  it("keeps a WORK primary and a PERSONAL primary independent", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "POST /contacts": (body) =>
+          jsonResponse(
+            {
+              id: "p-new",
+              full_name: (body as { full_name: string }).full_name,
+              captured_by: "human:u1",
+              source: "manual",
+              version: 1,
+            },
+            201,
+          ),
+      },
+      captured,
+    );
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.work@neu.example");
+    await user.type(emailInputs[1], "peter.personal@neu.example");
+
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[0], "Work");
+    await pickOption(user, types[1], "Personal");
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+
+    // Marking the PERSONAL row primary must not have cleared the WORK row's
+    // own primary — the DOM's own radio-group exclusivity, and the state
+    // update, are both scoped by type.
+    expect(primaries[0].checked).toBe(true);
+    expect(primaries[1].checked).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
+    const post = captured.find((entry) => entry.key === "POST /contacts");
+    expect(post?.body).toMatchObject({
+      emails: [
+        {
+          email: "peter.work@neu.example",
+          email_type: "work",
+          is_primary: true,
+        },
+        {
+          email: "peter.personal@neu.example",
+          email_type: "personal",
+          is_primary: true,
+        },
+      ],
+    });
+  });
+
+  // The request mapper's own fallback (asEmailType) resolves an unset type
+  // to "work" — the form has to group rows the same way, or an unset row
+  // and an explicit Work row read as two kinds here and collide once both
+  // reach the server as two primary work emails.
+  it("groups an unset type with the field's own default kind", async () => {
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.unset@neu.example");
+    await user.type(emailInputs[1], "peter.work@neu.example");
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[1], "Work");
+    // types[0] stays unset on purpose.
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+
+    expect(primaries[0].checked).toBe(false);
+    expect(primaries[1].checked).toBe(true);
+  });
+
+  it("clears a row's own primary when its kind changes, rather than colliding with the new kind's primary", async () => {
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.personal@neu.example");
+    await user.type(emailInputs[1], "peter.work@neu.example");
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[0], "Personal");
+    await pickOption(user, types[1], "Work");
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+    expect(primaries[0].checked).toBe(true);
+    expect(primaries[1].checked).toBe(true);
+
+    // Retype the PERSONAL row as Work — the second row's own kind.
+    await pickOption(user, types[0], "Work");
+
+    expect(primaries[0].checked).toBe(false);
+    expect(primaries[1].checked).toBe(true);
+  });
+
   it("renders the server's 422 detail verbatim and stays open", async () => {
     stubApi({
-      "POST /people": () =>
+      "POST /contacts": () =>
         jsonResponse(
           { title: "Unprocessable", detail: "full_name must not be blank" },
           422,
@@ -175,9 +313,9 @@ describe("contact create flow", () => {
   });
 });
 
-// The multiselect CreateField type (A10): a checkbox group over `options`
-// that collects the toggled selection as a comma-joined string in the SAME
-// `values: Record<string, string>` channel every scalar field already uses —
+// The multiselect CreateField type (A10): a MultiSelect dropdown over
+// `options` that collects the toggled selection as a comma-joined string in
+// the SAME `values: Record<string, string>` channel every scalar field uses —
 // `splitMultiselectValue`/`joinMultiselectValue` are the documented mapper a
 // screen's transport uses to recover the `string[]`. This keeps every
 // existing single-string field (text/email/number/date/select) untouched.
@@ -191,12 +329,13 @@ describe("multiselect CreateField", () => {
       options: [
         { value: "deal.created", label: "Deal created" },
         { value: "deal.won", label: "Deal won" },
-        { value: "person.created", label: "Person created" },
+        { value: "contact.created", label: "Contact created" },
       ],
     },
   ];
 
-  it("renders each option as a toggleable checkbox", () => {
+  it("renders the options in a dropdown that stays open across toggles", async () => {
+    const user = userEvent.setup();
     render(
       <CreateRecordModal
         open
@@ -208,14 +347,26 @@ describe("multiselect CreateField", () => {
         onSubmit={() => {}}
       />,
     );
-    const dealCreated = screen.getByLabelText(
-      "Deal created",
-    ) as HTMLInputElement;
-    expect(dealCreated.type).toBe("checkbox");
-    expect(dealCreated.checked).toBe(false);
+    const control = screen.getByRole("combobox", { name: "Event types" });
+    await user.click(control);
+    const listbox = screen.getByRole("listbox");
+    expect(listbox.getAttribute("aria-multiselectable")).toBe("true");
+    const dealCreated = within(listbox).getByRole("option", {
+      name: "Deal created",
+    });
+    expect(dealCreated.getAttribute("aria-selected")).toBe("false");
+    await user.click(dealCreated);
+    // The list survives the toggle — that is the control's whole point — and
+    // the toggled option now reads as chosen.
+    expect(
+      within(screen.getByRole("listbox"))
+        .getByRole("option", { name: "Deal created" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
 
   it("collects toggled options as a string[] on submit, leaving an existing text field's plain string untouched", async () => {
+    const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(
       <CreateRecordModal
@@ -228,18 +379,20 @@ describe("multiselect CreateField", () => {
         onSubmit={onSubmit}
       />,
     );
-    await userEvent.type(screen.getByLabelText("Name *"), "Peter");
-    await userEvent.click(screen.getByLabelText("Deal created"));
-    await userEvent.click(screen.getByLabelText("Person created"));
-    // toggling back off removes it from the collected selection
-    await userEvent.click(screen.getByLabelText("Deal created"));
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.type(screen.getByLabelText("Name *"), "Peter");
+    // toggling "Deal created" a second time removes it from the selection
+    await toggleOptions(
+      user,
+      screen.getByRole("combobox", { name: "Event types" }),
+      ["Deal created", "Contact created", "Deal created"],
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const [values] = onSubmit.mock.calls[0] as [Record<string, string>];
     expect(values.name).toBe("Peter");
     expect(splitMultiselectValue(values.event_types)).toEqual([
-      "person.created",
+      "contact.created",
     ]);
   });
 });
@@ -383,7 +536,7 @@ describe("deal create flow", () => {
     ).toEqual(["Qualify"]);
     await userEvent.keyboard("{Escape}");
     await userEvent.type(screen.getByLabelText("Deal name *"), "Neuer Deal");
-    await userEvent.type(screen.getByLabelText("Value"), "480");
+    await userEvent.type(inForm().getByLabelText("Value"), "480");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/deals/d-new"));
     const post = captured.find((entry) => entry.key === "POST /deals");
@@ -404,22 +557,25 @@ describe("deal create flow", () => {
 describe("a field that depends on another", () => {
   const fields: CreateField[] = [
     { key: "name", label: "create.dealName", required: true },
-    { key: "partner_org_id", label: "deal.partnerOrg", type: "select" },
+    { key: "partner_company_id", label: "deal.partnerCompany", type: "select" },
     {
       key: "partner_attribution",
       label: "deal.partnerAttribution",
       type: "select",
-      showWhen: (values) => Boolean(values.partner_org_id),
+      showWhen: (values) => Boolean(values.partner_company_id),
     },
   ];
 
   it("stays hidden until the field it depends on is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_org_id: "" });
-    expect(shown.map((f) => f.key)).toEqual(["name", "partner_org_id"]);
+    const shown = visibleFields(fields, { name: "x", partner_company_id: "" });
+    expect(shown.map((f) => f.key)).toEqual(["name", "partner_company_id"]);
   });
 
   it("appears once that field is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_org_id: "p-1" });
+    const shown = visibleFields(fields, {
+      name: "x",
+      partner_company_id: "p-1",
+    });
     expect(shown.map((f) => f.key)).toContain("partner_attribution");
   });
 
@@ -429,7 +585,7 @@ describe("a field that depends on another", () => {
   it("does not submit a value whose field went away", () => {
     const sent = submittedValues(fields, {
       name: "x",
-      partner_org_id: "",
+      partner_company_id: "",
       partner_attribution: "influenced",
     });
     expect(sent.partner_attribution).toBe("");
@@ -439,7 +595,7 @@ describe("a field that depends on another", () => {
   it("submits the value while its field is showing", () => {
     const sent = submittedValues(fields, {
       name: "x",
-      partner_org_id: "p-1",
+      partner_company_id: "p-1",
       partner_attribution: "influenced",
     });
     expect(sent.partner_attribution).toBe("influenced");
@@ -460,7 +616,7 @@ describe("a field that depends on another", () => {
     // The state the form holds the moment A is cleared.
     const cleared = submittedValues(fields, {
       name: "x",
-      partner_org_id: "",
+      partner_company_id: "",
       partner_attribution: "influenced",
     });
     expect(cleared.partner_attribution).toBe("");
@@ -468,7 +624,7 @@ describe("a field that depends on another", () => {
     // Naming B from that state starts the claim over rather than inheriting.
     const withB = submittedValues(fields, {
       ...cleared,
-      partner_org_id: "p-b",
+      partner_company_id: "p-b",
     });
     expect(withB.partner_attribution).toBe("");
   });
@@ -482,14 +638,14 @@ describe("the deal form's partner fields", () => {
   const partnerRoutes = {
     "GET /pipelines": () =>
       jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({
         data: [{ id: "o-1", display_name: "VietnamPartner JSC" }],
         page: { next_cursor: null },
       }),
     "GET /partners": () =>
       jsonResponse({
-        data: [{ organization_id: "o-1", margin_tier: "tier2_20" }],
+        data: [{ company_id: "o-1", margin_tier: "tier2_20" }],
         page: { next_cursor: null },
       }),
   };
@@ -503,8 +659,8 @@ describe("the deal form's partner fields", () => {
     render(<DealsScreen startCreating />);
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
-    expect(screen.queryByLabelText("via Partner")).toBeNull();
-    expect(screen.queryByLabelText("What the partner did")).toBeNull();
+    expect(inForm().queryByLabelText("via Partner")).toBeNull();
+    expect(inForm().queryByLabelText("What the partner did")).toBeNull();
   });
 
   it("offers the partner once one exists, and asks what they did only after one is picked", async () => {
@@ -513,22 +669,22 @@ describe("the deal form's partner fields", () => {
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
     const user = userEvent.setup();
-    const partner = await screen.findByLabelText("via Partner");
+    const partner = await inForm().findByLabelText("via Partner");
     // The claim is a question about a partner, so it is not asked before one
     // is named.
-    expect(screen.queryByLabelText("What the partner did")).toBeNull();
+    expect(inForm().queryByLabelText("What the partner did")).toBeNull();
 
     await pickOption(user, partner, "VietnamPartner JSC");
 
-    expect(await screen.findByLabelText("What the partner did")).toBeTruthy();
+    expect(await inForm().findByLabelText("What the partner did")).toBeTruthy();
   });
 
-  // Only actual partners: the picker once listed every organization, which let
+  // Only actual partners: the picker once listed every company, which let
   // a deal be attributed to an ordinary customer and silently never pay.
   it("offers only companies that are partners", async () => {
     stubApi({
       ...partnerRoutes,
-      "GET /organizations": () =>
+      "GET /companies": () =>
         jsonResponse({
           data: [
             { id: "o-1", display_name: "VietnamPartner JSC" },
@@ -539,7 +695,8 @@ describe("the deal form's partner fields", () => {
     });
     const user = userEvent.setup();
     render(<DealsScreen startCreating />);
-    const partner = await screen.findByLabelText("via Partner");
+    const form = within(await screen.findByRole("dialog"));
+    const partner = await form.findByLabelText("via Partner");
     await user.click(partner);
 
     const offered = within(screen.getByRole("listbox"))

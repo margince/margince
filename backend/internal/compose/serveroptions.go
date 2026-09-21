@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 )
 
 // Option customizes the wiring for one process role; everything not
@@ -39,17 +38,12 @@ type Option func(*Server, *pgxpool.Pool)
 // ADR-0056 transport the INSTALLATION sends through, as distinct from a
 // rep's mailbox, which is what correspondence goes out on.
 //
-// It is named for the transport rather than for one consumer because it
-// has more than one. Password reset is the consumer that exists today, and
-// the invite mail rides the same door; the emailed daily digest
-// (UC-NOTIFY-03) is the next one, and it would otherwise have had to be
-// wired through an option whose name says password reset.
-//
-// Without it, forgot-password answers its explicit 501 and the
-// capabilities probe reports password_reset=false (A107 — the login UI
-// renders only what works). The link base is NOT wired here; it arrives
-// through WithPublicBaseURL, because an installation with no mailer still
-// builds set-password links (ADR-0061 Amendment 1).
+// Named for the transport rather than for one consumer, because it has several:
+// password reset today, the invite mail on the same door, the emailed digest
+// next. Without it, forgot-password answers its 501 and the capabilities probe
+// reports password_reset=false. The link base arrives separately through
+// WithPublicBaseURL, since an installation with no mailer still builds
+// set-password links.
 func WithOperatorMail(m mailer.Mailer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.authHandlers = s.WithPasswordReset(m)
@@ -64,20 +58,16 @@ func WithOperatorMail(m mailer.Mailer) Option {
 
 // WithDealRoomInviteMail wires the operator relay into Deal Room invitations.
 //
-// It rides the SAME mailer as password reset rather than a second channel: both
-// are product-originated transactional mail an operator configures once, and a
-// separate relay would let an installation deliver one and silently not the
-// other. The link base arrives separately through WithPublicBaseURL, for the
-// reason stated there — a buyer link carries a live credential, so its origin
-// must never come from a request Host.
+// It rides the SAME mailer as password reset: both are product-originated
+// transactional mail configured once, and a separate relay would let an
+// installation deliver one and silently not the other. The link base arrives
+// through WithPublicBaseURL, because a buyer link carries a live credential and
+// its origin must never come from a request Host.
 //
-// NOT WIRED BY ANY ROLE YET, deliberately. The link this would mail points at a
-// buyer screen the SPA does not serve, so a recipient would land on the
-// not-found page having spent their one credential getting there. Until that
-// screen and the credential exchange exist, the invite response hands the raw
-// credential to the seller, who passes it on — the same path an installation
-// with no mail relay already takes. cmd/api adds this option in the slice that
-// builds the buyer surface.
+// NOT WIRED BY ANY ROLE YET, deliberately: the link points at a buyer screen the
+// SPA does not serve, so a recipient would land on the not-found page having
+// spent their one credential. Until that screen exists the invite response hands
+// the raw credential to the seller, who passes it on.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.dealroomsHandlers = s.WithInviteMailer(m)
@@ -86,16 +76,17 @@ func WithDealRoomInviteMail(m mailer.Mailer) Option {
 
 // WithMCPResource injects the canonical MCP resource URL — public_base_url
 // + "/mcp" — onto the identity discovery handlers, so the RFC 9728
-// protected-resource document names the MCP server URL itself rather than
-// the bare request origin. cmd computes the value from --public-base-url;
-// an OAuth audience decision must never be derived from the Host header.
-// The connector's Origin guard reads its allowlist from the same value: the
-// origin a browser client may present is the origin the resource document
-// names, so the two cannot drift apart through a second flag.
+// protected-resource document names the MCP server URL itself and both
+// discovery documents name their issuer from it rather than from the request.
+// cmd computes the value from --public-base-url; nothing that tells a client
+// where to send its credentials may be derived from the Host header. The connector's Origin guard and the transport's 401 challenge read
+// the same origin: the origin a browser client may present, the one the
+// challenge points at and the one the documents name cannot drift apart
+// through a second flag.
 func WithMCPResource(resource string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithMCPResource(resource)
-		s.mcpAllowedOrigin = mcpOriginOf(resource)
+		s.mcpAllowedOrigin = httpserver.ConfiguredOrigin(resource)
 	}
 }
 
@@ -131,7 +122,7 @@ func WithBusReady(check func(context.Context) error) Option {
 
 // WithBlobstore wires the object store: it feeds the /readyz probe and
 // backs the attachment handlers, the offer PDF render endpoint, and the
-// organization-logo stream. Without it those endpoints stay their
+// company-logo stream. Without it those endpoints stay their
 // generated/explicit 501, so a role that stores no objects declares that
 // by omission rather than nil-derefing at request time. Several handler
 // sets promote a WithBlobstore method, so s.WithBlobstore itself would be
@@ -155,10 +146,17 @@ func WithBlobstore(store blobstore.Store) Option {
 		// dropped by a WithCaptureConfig that runs afterwards and assigns the
 		// whole struct, and that failure has no error and nothing missing to
 		// see until somebody looks for a file that never arrived.
+		// The Art. 15 export rebuilds a slimmed provider original, so it needs
+		// the store the part sweep moved those octets into. Built here rather
+		// than at assembly for the reason the purger above is: a role with no
+		// object store has no restore, and disclosing the stanza instead would
+		// answer Art. 15 with an address the subject cannot resolve.
+		s.consentHandlers = s.WithSubjectAccessAssembler(
+			newSubjectAccessAssembler(InstallationDB(pool)).withBlobstore(store))
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)
-		s.peopleHandlers = s.peopleHandlers.WithBlobstore(store)
+		s.contactsHandlers = s.contactsHandlers.WithBlobstore(store)
 		// A corpus document is object bytes like any other; without a store the
 		// upload refuses rather than accepting a file it cannot keep.
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
@@ -182,7 +180,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		if s.siteReadHandlers.engine != nil {
 			s.siteReadHandlers.engine.blob = store
 		}
-		// A company mark a person uploads is object bytes like any other. A role
+		// A company mark a contact uploads is object bytes like any other. A role
 		// with no store answers 501 on that route rather than accepting an image
 		// it cannot keep — the same refusal the endpoint that serves the bytes
 		// already gives.
@@ -197,15 +195,11 @@ func WithBlobstore(store blobstore.Store) Option {
 // nil-derefing at Authenticate — a capture-capable role must pass this or
 // fail to boot (enforced in cmd).
 //
-// It ALSO installs the outbound send pre-flight (WithSendAuthority) over the
-// registry it just ensured exists, so the channel half of that check — is
-// there a live bot bound for this provider? — is live on every
-// capture-capable role, Google app or not: NewCaptureRegistry registers
-// Telegram unconditionally, so the registry answers that question correctly
-// even with no Gmail/Graph app configured. A role that later configures
-// Gmail (WithGmailCapture) re-wires this over its own richer registry, which
-// upgrades the mailbox half without ever making the channel half depend on
-// that config.
+// It ALSO installs the outbound send pre-flight over the registry it just
+// ensured exists, so the channel half of that check is live on every
+// capture-capable role whether or not a Google app is configured. A role that
+// later configures Gmail re-wires this over its richer registry, upgrading the
+// mailbox half without making the channel half depend on that config.
 func WithKeyvault(vault keyvault.Vault) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.vault = vault
@@ -273,26 +267,6 @@ func WithKeyvault(vault keyvault.Vault) Option {
 				publicOrigin:         s.originStatus,
 			}
 		}
-		// The overlay incumbent connection lifecycle needs the same
-		// custodian: Connect seals the private-app token, Disconnect
-		// resolves-then-deletes it. s.overlayMeter is the Server's own
-		// shared instance (constructed unconditionally in newServer) so
-		// GetOverlayBudget answers from the SAME meter contractAPI's
-		// Dispatcher spends force-fresh reads against.
-		s.overlayHandlers = NewOverlayHandlers(pool, vault, s.overlayMeter, s.log, s.overlayBackfillLimit, s.sorDispatch.Invalidate)
-		// Now that the vault is wired, install the live per-workspace
-		// incumbent resolver on the overlay read dispatch — force-fresh
-		// reads can reach HubSpot (Authoritative:true), no longer degrading
-		// to the mirror unconditionally. newServer built the dispatch with a
-		// nil resolver because the vault arrives only here; the dispatch is
-		// a shared pointer, so this reaches the same instance that serves
-		// reads. Boot-time only (before serving), so it never races a Read.
-		// Guarded for the isolated-option unit tests that apply WithKeyvault
-		// to a Server with no dispatch wired; the real newServer path always
-		// has one.
-		if s.sorDispatch != nil {
-			s.sorDispatch.SetOverlayIncumbentResolver(s.resolveOverlayIncumbent(pool))
-		}
 		// The channel connect path needs the same custodian: it seals the bot
 		// token and destroys it on disconnect. A role that composed no channel
 		// transport is left that way (channelconnect.go).
@@ -307,44 +281,19 @@ func WithKeyvault(vault keyvault.Vault) Option {
 	}
 }
 
-// WithOverlayBackfillLimit bounds the overlay initial mirror backfill at
-// limit records per object class (dev/demo — MARGINCE_OVERLAY_BACKFILL_LIMIT).
-// It must be applied BEFORE WithKeyvault (which builds the overlay handlers
-// off s.overlayBackfillLimit); cmd/api orders them that way. 0 is uncapped.
-func WithOverlayBackfillLimit(limit int) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.overlayBackfillLimit = limit }
-}
-
-// WithOverlayMeter Rebinds the Server's shared OVB meter to the live,
-// Redis-backed meter cmd built. newServer constructs the meter fail-closed
-// (nil Redis) and shares that ONE pointer with the read dispatch and the
-// budget handlers, so this RebindFrom reaches every holder regardless of
-// option order — force-fresh reads and the budget surface all meter against
-// the same Redis windows. Taking the already-built *overlaybudget.Meter
-// (not a *redis.Client) keeps the raw-Redis dependency in cmd, never in
-// compose. Without this option the meter stays fail-closed (every
-// force-fresh read sheds to the mirror), the honest posture for a role with
-// no Redis.
-func WithOverlayMeter(meter *overlaybudget.Meter) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.overlayMeter.RebindFrom(meter) }
-}
-
-// WithAgentVolume Rebinds the Server's shared MCP-SESS-* meter to the live,
-// Redis-backed one cmd built. newServer constructs it fail-closed (nil Redis)
-// and hands that ONE pointer to both halves of the bound — the admission gate
-// that refuses on it and the tool registry that charges it — so this
-// RebindFrom reaches both together and they can never end up counting against
-// different windows.
+// WithAgentVolume rebinds the Server's shared MCP-SESS-* meter to the live,
+// Redis-backed one cmd built. newServer constructs it fail-closed and hands ONE
+// pointer to both the admission gate and the tool registry, so this rebind
+// reaches both and they cannot count against different windows.
 //
-// Taking the already-built *agentvolume.Meter (not a *redis.Client) keeps the
-// raw-Redis dependency in cmd, never in compose. Without this option the meter
-// stays fail-closed: a role serving the agent surface with no Redis cannot
-// tell whether an agent has passed any of its bounds, and answers that it has.
+// Taking the built *agentvolume.Meter rather than a *redis.Client keeps the
+// raw-Redis dependency in cmd. Without this option the meter stays fail-closed:
+// a role serving agents with no Redis cannot tell whether a bound was passed,
+// and answers that it was.
 //
-// The COST ceiling is installed here rather than in cmd because both halves of
-// that division live behind the pool this option is handed: the workspace's AI
-// budget and the credentials sharing it. cmd owns the Redis client; compose
-// owns what the workspace's own numbers mean.
+// The COST ceiling is installed here because both halves of that division live
+// behind the pool this option is handed. cmd owns the Redis client; compose owns
+// what the workspace's numbers mean.
 func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
@@ -373,7 +322,8 @@ func WithRetrievalEmbedder(embedder search.Embedder) Option {
 }
 
 // readinessChecks assembles the /readyz dependency probes for this role.
-// Postgres and the runtime role it connects as are always probed; the bus,
+// Postgres, the runtime role it connects as and the schema it was built
+// against are always probed; the bus,
 // the object store, the secret vault, and the schema pool are probed only
 // when this role wired them, so a split deployment answers ready on exactly
 // what it depends on. A wedged dependency must fail readiness — a probe is
@@ -382,7 +332,7 @@ func WithRetrievalEmbedder(embedder search.Embedder) Option {
 // runtimeRole takes the same shape as pgPing rather than a pool, because the
 // two unit-testable states here are the answers, not the connections: both
 // arrive as the caller's readings of the one pool routes.go serves from.
-func (s *Server) readinessChecks(pgPing, runtimeRole func(context.Context) error) []httpserver.ReadyCheck {
+func (s *Server) readinessChecks(pgPing, runtimeRole, schema func(context.Context) error) []httpserver.ReadyCheck {
 	checks := []httpserver.ReadyCheck{
 		{Name: "postgres", Check: pgPing},
 		// Boot already refused a pool holding an exemption; this reports the
@@ -390,6 +340,11 @@ func (s *Server) readinessChecks(pgPing, runtimeRole func(context.Context) error
 		// attributes are cluster state a grant can change under a running
 		// replica without restarting it.
 		{Name: "runtime-role", Check: runtimeRole},
+		// Re-read on every scrape rather than settled at boot: the ordinary
+		// deployment order starts the new binary and applies the migrations
+		// after it, so the first scrapes are meant to fail and a later one to
+		// pass — without a restart. schemareadiness.go carries the rest.
+		{Name: "schema-migrations", Check: schema},
 	}
 	if s.busReady != nil {
 		checks = append(checks, httpserver.ReadyCheck{Name: "redis", Check: s.busReady})
@@ -422,7 +377,7 @@ func WithPublicBaseURL(base string) Option {
 		// A Deal Room invitation carries the same kind of credential and is
 		// bound to the same canonical origin for the same reason.
 		s.dealroomsHandlers = s.WithInviteLinkBase(base)
-		// So does the confirm-details link, which opens one person's own record
+		// So does the confirm-details link, which opens one contact's own record
 		// to whoever holds it.
 		s.confirmLinkBase = base
 		s.rewireConfirmationLane(pool)

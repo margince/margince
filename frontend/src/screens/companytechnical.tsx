@@ -3,16 +3,18 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Card } from "../design-system/atoms";
+import { Badge } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 
-type OrganizationFact = components["schemas"]["OrganizationFact"];
+type CompanyFact = components["schemas"]["CompanyFact"];
 type TechnicalEnrichLane = components["schemas"]["TechnicalEnrichLane"];
 
 /**
@@ -21,7 +23,7 @@ type TechnicalEnrichLane = components["schemas"]["TechnicalEnrichLane"];
  * where it runs.
  *
  * Partitioned by FIELD and never by source, which looks equivalent and is not:
- * a person correcting a machine-read value rewrites the row's source to
+ * a contact correcting a machine-read value rewrites the row's source to
  * `human`, and a source-partitioned card would drop exactly the rows somebody
  * cared enough to fix.
  */
@@ -42,12 +44,12 @@ export const TECHNICAL_FIELDS: readonly string[] = TECHNICAL_SECTIONS.flatMap(
 );
 
 /** isTechnicalFact reports whether a fact belongs to the technical profile. */
-export function isTechnicalFact(fact: OrganizationFact): boolean {
+export function isTechnicalFact(fact: CompanyFact): boolean {
   return fact.category === "signal" && TECHNICAL_FIELDS.includes(fact.field);
 }
 
 /**
- * TechnicalProfileCard shows what a company publicly runs.
+ * TechnicalProfilePanel shows what a company publicly runs.
  *
  * It reads and never asks: the lookup is queued by the site read, so this card
  * has no button. A reader who wants it refreshed reads the site.
@@ -57,16 +59,16 @@ export function isTechnicalFact(fact: OrganizationFact): boolean {
  * the rest of the record uses, because "how do you know?" is the first
  * question a claim like this invites.
  */
-export function TechnicalProfileCard({
-  orgId,
-}: Readonly<{ orgId: string }>): ReactNode {
+export function TechnicalProfilePanel({
+  companyId,
+}: Readonly<{ companyId: string }>): ReactNode {
   const t = useT();
 
   const facts = useQuery({
-    queryKey: ["org-facts", orgId],
+    queryKey: factsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/facts", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/facts", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -83,11 +85,11 @@ export function TechnicalProfileCard({
   // either done or running in a worker; a card that polled would be watching
   // for an event it did not start.
   const lanes = useQuery({
-    queryKey: ["org-technical-latest", orgId],
+    queryKey: ["company-technical-latest", companyId],
     queryFn: async () => {
       const { data, error, response } = await api.GET(
-        "/organizations/{id}/technical-enrich/latest",
-        { params: { path: { id: orgId } } },
+        "/companies/{id}/technical-enrich/latest",
+        { params: { path: { id: companyId } } },
       );
       if (response.status === 404) {
         return null;
@@ -100,16 +102,25 @@ export function TechnicalProfileCard({
   });
 
   return (
-    <Card title={t("co.tech.title")} sub={t("co.tech.sub")}>
-      <QueryGate query={facts} pendingLabel={t("co.tech.title")}>
-        {(rows) => (
-          <TechnicalSections
-            facts={rows.filter(isTechnicalFact)}
-            lanes={lanes.data?.lanes ?? []}
-          />
-        )}
-      </QueryGate>
-    </Card>
+    <Panel title={t("co.tech.title")}>
+      {/* Which public records these values were read from is the answer to
+          "how do you know?", so it is a sentence rather than a truncated
+          line: it leads the panel in a block of its own, and the panel's own
+          seam divides it from the facts it qualifies. */}
+      <PanelBody>
+        <p className="t-sub">{t("co.tech.sub")}</p>
+      </PanelBody>
+      <PanelBody>
+        <QueryGate query={facts} pendingLabel={t("co.tech.title")}>
+          {(rows) => (
+            <TechnicalSections
+              facts={rows.filter(isTechnicalFact)}
+              lanes={lanes.data?.lanes ?? []}
+            />
+          )}
+        </QueryGate>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -119,7 +130,7 @@ function TechnicalSections({
   facts,
   lanes,
 }: Readonly<{
-  facts: readonly OrganizationFact[];
+  facts: readonly CompanyFact[];
   lanes: readonly TechnicalEnrichLane[];
 }>): ReactNode {
   const t = useT();
@@ -161,9 +172,7 @@ function TechnicalSections({
 }
 
 /** One technical value, with the public record that proved it. */
-function TechnicalRow({
-  fact,
-}: Readonly<{ fact: OrganizationFact }>): ReactNode {
+function TechnicalRow({ fact }: Readonly<{ fact: CompanyFact }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -217,10 +226,8 @@ function LaneNotices({
   return (
     <div className="co-facts-group">
       {notices.map((lane) => (
-        <p key={lane.lane} className="t-caption">
-          <Badge tone="warn" quiet>
-            {t(laneLabel(lane.lane))}
-          </Badge>{" "}
+        <p key={lane.lane}>
+          <Badge tone="warning">{t(laneLabel(lane.lane))}</Badge>{" "}
           {lane.outcome === "refused"
             ? t("co.tech.laneRefused")
             : t("co.tech.laneFailed", { lane: t(laneLabel(lane.lane)) })}

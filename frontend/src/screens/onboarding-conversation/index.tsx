@@ -149,10 +149,9 @@ function RestoreGate({ lookups }: Readonly<{ lookups: RestoreLookup[] }>) {
   return (
     <div className="ob-page ob-conv-page">
       {failed.length > 0 ? (
-        <div className="readfail warn" role="alert">
+        <div className="readfail warning" role="alert">
           <p>{t("ob.conv.loadFailed")}</p>
           <Button
-            small
             onClick={() => {
               for (const lookup of failed) {
                 void lookup.refetch();
@@ -252,7 +251,7 @@ function useRestore(
       // `#/onboarding`, and one whose installation is undescribed does not
       // belong anywhere else. Two pushes between those two addresses is a
       // history a reader cannot walk out of.
-      navigateReplacing({ screen: "brief" });
+      navigateReplacing({ screen: "home" });
       return;
     }
     dispatch({
@@ -403,7 +402,7 @@ function CurrentAct({
     // Every journey ends on the same handoff, once the act that closed it has
     // recorded completion.
     case "done":
-      return <BuildScene onDone={() => navigate({ screen: "brief" })} />;
+      return <BuildScene onDone={() => navigate({ screen: "home" })} />;
     case "connect":
       return (
         <ConnectAct

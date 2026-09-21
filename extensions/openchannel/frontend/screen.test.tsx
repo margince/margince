@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { LocaleProvider } from "@margince/frontend/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -131,7 +131,8 @@ const QUIET = {
 
 function renderScreen(client?: QueryClient) {
   const usedClient =
-    client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client ??
+    new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={usedClient}>
       <LocaleProvider>
@@ -227,7 +228,7 @@ describe("the openchannel screen", () => {
     expect(await screen.findByText("Accepting")).toBeTruthy();
   });
 
-  // The address is what a person hands to whoever configures the sender, so it
+  // The address is what a contact hands to whoever configures the sender, so it
   // has to be complete — and it has to say, where it is shown, that it is not
   // the thing that admits a request.
   it("shows the full inbound address and says it is not a credential", async () => {
@@ -246,7 +247,7 @@ describe("the openchannel screen", () => {
   });
 
   // THE ASSERTION THIS FILE EXISTS FOR. A `curl` that does not verify is worse
-  // than none: the person who pastes it is refused by the same opaque 401 a
+  // than none: the contact who pastes it is refused by the same opaque 401 a
   // forged request gets, and learns that the connector is broken rather than
   // that the example is. Each clause below is the verifier's own rule —
   // HMAC-SHA256 over the scope, slug, ref, unix seconds, nonce and body joined
@@ -300,7 +301,9 @@ describe("the openchannel screen", () => {
 
     renderScreen();
     await screen.findByTestId("openchannel-curl");
-    expect(screen.getByText(/visible to them in the process list/)).toBeTruthy();
+    expect(
+      screen.getByText(/visible to them in the process list/),
+    ).toBeTruthy();
   });
 
   // The secret exists on a screen exactly once, and the sentence saying so is
@@ -324,7 +327,10 @@ describe("the openchannel screen", () => {
 
     const shown = await screen.findByTestId("openchannel-signing-secret");
     expect(shown.textContent).toBe("b1946ac92492d2347c6235b4d2611184");
-    expect(screen.getByText(/only time this secret is shown/)).toBeTruthy();
+    // The caution's heading makes the claim; its body says what to do about
+    // it, and a reader who sees only one half has been told half of it.
+    expect(screen.getByText(/only time it is shown/)).toBeTruthy();
+    expect(screen.getByText(/copy it into the sender now/)).toBeTruthy();
     const mint = calls.find(
       (call) => call.path === "/ext/openchannel/endpoint/secret",
     );

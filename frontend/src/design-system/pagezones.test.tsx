@@ -1,9 +1,9 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PageZones } from "./pagezones";
 
 // The spec for the layout's READING order, which is the one promise the grid
@@ -80,5 +80,112 @@ describe("PageZones reading order", () => {
       "page-zones-rail-column",
       "page-zones-aside-column",
     ]);
+  });
+});
+
+// The details pane folding away. What the stylesheet does with the track is a
+// picture (pagezones.stories.tsx); what is spec here is the LANDMARK: a region
+// a reader cannot see and cannot reach is the one state this must never rest
+// in, so the aside is held exactly as long as its exit runs and no longer.
+function withAside(open: boolean) {
+  return (
+    <PageZones
+      shape="aside"
+      main={<p>{WORK}</p>}
+      aside={<p>what it is worth</p>}
+      asideLabel={CONTEXT}
+      asideOpen={open}
+    />
+  );
+}
+
+function asideColumn(container: HTMLElement): HTMLElement | null {
+  return container.querySelector("aside.page-zones-aside-column");
+}
+
+describe("PageZones details pane", () => {
+  it("draws no aside for a pane that starts folded", () => {
+    const { container } = render(withAside(false));
+    expect(asideColumn(container)).toBeNull();
+  });
+
+  it("keeps the same grid whether the pane is open or folded", () => {
+    const { container, rerender } = render(withAside(true));
+    const grid = container.firstElementChild;
+    const open = grid?.className;
+    rerender(withAside(false));
+    // The closed state is the same template with the track at zero. A grid
+    // class that changed with the pane would name a SECOND template, and two
+    // templates do not interpolate — the column would jump where it travels.
+    expect(container.firstElementChild?.className).toBe(open);
+    expect(container.firstElementChild).toBe(grid);
+  });
+
+  it("drops the landmark in the same commit when nothing is animating", () => {
+    const { container, rerender } = render(withAside(true));
+    // No Web Animations API in this environment, which is the reduced-motion
+    // path spelled by the runtime: a reader who asked for less motion runs no
+    // transition, so there is nothing to wait for and nothing to hold.
+    rerender(withAside(false));
+    expect(asideColumn(container)).toBeNull();
+  });
+});
+
+// The same fold with an exit actually running. happy-dom implements no Web
+// Animations API, so the animation is supplied here and ENDED by the test:
+// that is what puts the assertion on the transition's end rather than on a
+// duration this file would then have to keep in step with the stylesheet.
+describe("PageZones details pane, while its exit runs", () => {
+  let endExit: () => void;
+  let original: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    let end = (): void => undefined;
+    const finished = new Promise<void>((resolve) => {
+      end = resolve;
+    });
+    endExit = () => end();
+    // The two members the presence hook reads: whether the animation ENDS at
+    // all — a loop inside the pane is not an exit and is never waited for —
+    // and the promise that says when. A fuller fake would be asserting our own
+    // idea of the API rather than the part this depends on.
+    const animation = {
+      finished,
+      effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    } as unknown as Animation;
+    original = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      "getAnimations",
+    );
+    Object.defineProperty(Element.prototype, "getAnimations", {
+      configurable: true,
+      value: () => [animation],
+    });
+  });
+
+  afterEach(() => {
+    if (original) {
+      Object.defineProperty(Element.prototype, "getAnimations", original);
+      return;
+    }
+    Reflect.deleteProperty(Element.prototype, "getAnimations");
+  });
+
+  it("holds the landmark inert until the exit has run, then drops it", async () => {
+    const { container, rerender } = render(withAside(true));
+    expect(asideColumn(container)?.hasAttribute("inert")).toBe(false);
+
+    rerender(withAside(false));
+    const leaving = asideColumn(container);
+    expect(leaving).not.toBeNull();
+    expect(leaving?.getAttribute("data-state")).toBe("closing");
+    // Reachable by tab while it is leaving is focus dropped to the top of the
+    // document the moment it goes.
+    expect(leaving?.hasAttribute("inert")).toBe(true);
+
+    endExit();
+    await waitFor(() => {
+      expect(asideColumn(container)).toBeNull();
+    });
   });
 });

@@ -86,7 +86,7 @@ func registerFloorTransports(t *testing.T, e *ingressEnv) {
 			// every message filed on it and every identity bound on it.
 			for _, statement := range []string{
 				`DELETE FROM activity WHERE channel_provider = $1`,
-				`DELETE FROM person_channel_identity WHERE provider = $1`,
+				`DELETE FROM contact_channel_identity WHERE provider = $1`,
 				`DELETE FROM channel_provider WHERE provider = $1`,
 			} {
 				if _, err := owner.Exec(context.Background(), statement, provider); err != nil {
@@ -160,7 +160,7 @@ func landOne(t *testing.T, e *ingressEnv, rec extension.Record) ids.UUID {
 //
 // With mail sharing off the installation has said captured correspondence is not
 // shared. A message that arrived on this member's own credential is exactly that,
-// and it must be born held to the people on it rather than published to every
+// and it must be born held to the contacts on it rather than published to every
 // seat — which is what it was before the birth ladder could read whose credential
 // carried it.
 func TestTheWorkspaceFloorHoldsAMemberBoundChannelMessage(t *testing.T) {
@@ -456,7 +456,7 @@ func (e *ingressEnv) audienceWriterCtx(t *testing.T) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Update: true},
-				"person":   {Read: true, Update: true},
+				"contact":  {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

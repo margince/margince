@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -39,8 +40,8 @@ import (
 )
 
 // contractAPI builds the generated contract router with the ADR-0055
-// admission layer, idempotency, and the overlay-mode write guard wrapped
-// around it (outermost last — see the wrap-order note inline).
+// admission layer and idempotency wrapped around it (outermost last — see the
+// wrap-order note inline).
 func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) http.Handler {
 	// The SAME meter the tool registry charges: this door refuses on the bound
 	// the other door pays into, so a Passport cannot spend its window on one
@@ -60,15 +61,14 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// this registry, so a registry built without one would refuse REST calls on
 	// a counter it then never paid — the exact half-a-control this change exists
 	// to remove.
-	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.resolveOverlayIncumbent(pool), srv.send,
+	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
 		meetingBriefReader(srv.meetingBriefSvc), srv.log,
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
-	// provider seam: agentGate's StageResolver dispatches per workspace
-	// exactly like the MCP registry's tools do — and the overlay-mode
-	// human read shadows (overlayread.go) ride this same instance.
-	provider := srv.sorDispatch
+	// provider seam: agentGate's StageResolver reads exactly what the MCP
+	// registry's tools read.
+	provider := NewProvider(pool)
 	staging := approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}
 	// Wrap order: the generated router applies the slice left-to-right
 	// around the handler, so the LAST entry is outermost — idempotency
@@ -79,11 +79,16 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		BaseURL: httpserver.BaseURL,
 		Middlewares: []crmcontracts.MiddlewareFunc{
 			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
-			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)), dealrooms.NewStore(InstallationDB(pool)))),
-			// Outermost: an overlay-mode SoR write is refused before it can
-			// be recorded under an idempotency key or staged as an agent
-			// approval — the honest unsupported_by_sor, for every principal.
-			overlayWriteGuard(srv.sorDispatch),
+			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)))),
+			// Outermost, so the measurement covers the admission gate and the
+			// idempotency replay rather than only the handler underneath them. A 403 from the gate IS this route's
+			// latency as a client experiences it, and a refusal that cost a
+			// database read is exactly the slow answer worth seeing.
+			//
+			// These are OPERATION middleware: the generated wrapper applies
+			// them after chi has matched, which is what makes chiRoutePattern
+			// able to answer at all.
+			srv.httpMetrics.Measure(chiRoutePattern),
 		},
 		// Keep query/path/header parse failures on the problem+json path:
 		// the generated default writes err.Error() as text/plain, an
@@ -91,6 +96,23 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		ErrorHandlerFunc: paramParseError,
 	})
 	return api
+}
+
+// chiRoutePattern reads the route TEMPLATE chi matched -- `/v1/deals/{dealId}`,
+// never `/v1/deals/9f3c…`. That distinction is the whole reason this function
+// exists rather than r.URL.Path being passed: the path carries ids, and a label
+// carrying ids grows a series per record for the life of the process.
+//
+// The generated server applies its Middlewares as OPERATION middleware, after
+// the match, so RouteContext is populated by the time this runs. An empty
+// answer means chi matched nothing, and HTTPMetrics folds that into one bucket
+// rather than substituting the path.
+func chiRoutePattern(r *http.Request) string {
+	rc := chi.RouteContext(r.Context())
+	if rc == nil {
+		return ""
+	}
+	return rc.RoutePattern()
 }
 
 // replayProbes wires the module-owned visibility rules the replay gate borrows
@@ -106,7 +128,7 @@ func replayProbes(approvalsSvc *approvals.Service, contractsStore *contracts.Sto
 			_, err := dealRoomsStore.GetRoom(ctx, ids.From[ids.DealRoomKind](id))
 			return err
 		},
-		// A contract's visibility is inherited from its deal or organization,
+		// A contract's visibility is inherited from its deal or company,
 		// which only its own store can evaluate — the generic row-scope helper
 		// refuses a table with no owner column.
 		probeContract: func(ctx context.Context, id ids.UUID) error {
@@ -141,29 +163,22 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// configures one.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	// What is NOT checked here, said at the line where it would go: whether the
-	// composed units' MIGRATIONS were applied. A composed binary against a
-	// not-yet-migrated database becomes ready and publishes routes and jobs that
-	// fail with undefined-table errors — the ordinary rolling-deploy window.
-	// AssertRuntimeRole beside it is the pattern such a check would follow; the
-	// reason it is not here is that the runtime role holds no grant on the
-	// schema_migrations_ext_* tables, so adding the check means widening what
-	// margince_app may read. Tracked as issue #658.
 	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
-		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) })...))
+		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool))...))
 	// The claim surface, beside the probes rather than under /v1: the session
-	// middleware fronting /v1 resolves the singleton organization first and
+	// middleware fronting /v1 resolves the singleton company first and
 	// answers 503 when there is none, so an endpoint that exists to run when no
-	// organization exists cannot live behind it. See handlers_setup.go.
+	// company exists cannot live behind it. See handlers_setup.go.
 	setupLimit := newSetupLimiter()
 	mux.HandleFunc("GET /setup/status", setupStatus(identitySvc, setupLimit))
 	mux.HandleFunc("POST /setup/claim", setupClaim(identitySvc, pool, srv.bootstrapSeeds, setupLimit, log))
-	mux.HandleFunc("/metrics", gateMetrics(srv.metricsToken, httpserver.Metrics(pool,
-		func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
-		events.PublishedTotal,
-		srv.writeMetricsSections,
-		jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
-		overlayMetricsSection(srv, pool))))
+	mux.HandleFunc("/metrics", gateMetrics(srv.metricsToken, srv.metricsOpen, httpserver.Metrics(httpserver.MetricsInput{
+		Pool:      pool,
+		Backlog:   func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
+		Published: events.PublishedTotal,
+		Extra:     srv.writeMetricsSections,
+		JobStats:  jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
+	})))
 	// The anonymous public edges sit between the session middleware (which
 	// lets /v1/public/ through without session or workspace) and the
 	// router: each resolves its own token/slug → tenant, throttles, and
@@ -188,11 +203,11 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// shared/kernel/capabilitypath, not named at each mount. The booking
 	// page's slug is deliberately absent from that list; it is a public
 	// identifier the host hands out, not a credential.
-	// extendDeadlineForModelRoutes sits OUTSIDE the handler chain because a
+	// boundByResponseDeadline sits OUTSIDE the handler chain because a
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
-	mux.Handle("/v1/", extendDeadlineForModelRoutes(httpserver.Correlate(
+	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
 		httpserver.AccessLog(log, authH.Middleware(publicEdge)))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
@@ -271,50 +286,48 @@ func mountProviderPushWebhooks(mux *http.ServeMux, srv Server, log *slog.Logger)
 	if srv.graphPush != nil {
 		mux.Handle("/webhooks/graph", httpserver.Correlate(httpserver.AccessLog(log, srv.graphPush)))
 	}
-	if srv.overlayWebhook != nil {
-		mux.Handle("/webhooks/hubspot", httpserver.Correlate(httpserver.AccessLog(log, srv.overlayWebhook)))
-	}
 }
 
-// gateMetrics serves the metrics exposition, behind a bearer credential when
-// the deployment configured one and openly when it did not.
+// gateMetrics serves the metrics exposition to a scrape presenting the
+// configured bearer credential, to anyone when the deployment explicitly opened
+// it, and to nobody otherwise.
 //
-// OPEN IS THE DEFAULT, and the token is the single knob that changes it —
-// there is deliberately no second variable declaring a mode. An endpoint
-// whose only purpose is to be scraped is reached, overwhelmingly, by a
-// Prometheus that discovers its targets by annotation: it reads a target's
-// address and metrics path off the Kubernetes API and has nowhere to carry a
-// credential. Requiring one by default left that deployment — the ordinary
-// one — with no working configuration at all, and the ways around it (a
-// header-injecting proxy beside every pod, a hand-edited scrape job in a
-// shared cluster's config) are more moving parts guarding a port that a
-// private listener, a NetworkPolicy or an ingress allow-list already guards,
-// and guards for every role at once rather than this one endpoint. It is also
-// the posture cmd/worker's own /metrics has always taken behind
-// --observe-addr, so the two roles now agree.
+// CLOSED IS THE DEFAULT. This listener is the one /v1 is served on, which is
+// the one an ingress routes to the internet, and the exposition is fleet-wide:
+// every route pattern the api serves, pool and outbox gauges, job-runtime
+// telemetry labelled by workspace id, the declared-catalogue info metric. A
+// default that served it openly made every installation that forgot a setting
+// disclose all of that to whoever reached the port, which is the ordinary
+// deployment rather than the careless one.
 //
-// What that costs is worth stating plainly, because it is the reason the token
-// still exists: this exposition is fleet-wide and carries workspace ids and a
-// declared-catalogue info metric, so a deployment whose network boundary does
-// NOT contain the port is disclosing tenant shape to anything that reaches it.
-// Such a deployment sets --metrics-token, and cmd/api logs the open posture at
-// boot so it is visible without reading this file.
+// Two settings open it, and they answer different deployments:
 //
-// A configured token is checked as a bearer credential in constant time, the
-// same comparison the connector-state CSRF nonce uses (connectors_csrf.go), so
-// a scrape's authorization header cannot be timed byte-by-byte against the
-// configured value. The credential is read through httpserver.BearerToken —
-// the one reading of an Authorization header this process uses everywhere else
-// — rather than a second parse that could drift from it and accept or refuse a
-// scheme spelling the rest of the surface disagrees on.
-func gateMetrics(token string, next http.HandlerFunc) http.HandlerFunc {
+//   - --metrics-token: a scraper that can carry a credential presents it as a
+//     bearer. Checked in constant time, the same comparison the connector-state
+//     CSRF nonce uses (connectors_csrf.go), so a scrape's authorization header
+//     cannot be timed byte-by-byte against the configured value, and read
+//     through httpserver.BearerToken — the one reading of an Authorization
+//     header this process uses — rather than a second parse that could drift.
+//   - --metrics-access=open: a Prometheus that discovers its targets by
+//     annotation reads a target's address and path off the Kubernetes API and
+//     has nowhere to carry a credential. Where the port is already contained —
+//     a private listener, a NetworkPolicy, an ingress that does not route
+//     /metrics — the operator says so explicitly, and cmd/api logs the open
+//     posture at boot. That is cmd/worker's posture behind --observe-addr,
+//     which is a listener nothing routes to by default.
+//
+// With neither, the refusal is the same 401 a wrong token gets. It must be an
+// explicit branch rather than the comparison: an empty configured token and an
+// absent header compare EQUAL in constant time, which would serve the exposition
+// to every caller who presents nothing.
+func gateMetrics(token string, open bool, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if token == "" {
+		if open {
 			next(w, r)
 			return
 		}
 		presented := httpserver.BearerToken(r.Header.Get("Authorization"))
-		if subtle.ConstantTimeCompare([]byte(presented), []byte(token)) != 1 {
+		if token == "" || subtle.ConstantTimeCompare([]byte(presented), []byte(token)) != 1 {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="metrics"`)
 			httperr.Unauthorized(w, r, "invalid or missing metrics token")
 			return
@@ -324,12 +337,23 @@ func gateMetrics(token string, next http.HandlerFunc) http.HandlerFunc {
 }
 
 // WithMetricsToken sets the shared secret /metrics requires. Called
-// unconditionally at boot; an empty string is the default and serves the
-// exposition unauthenticated — see gateMetrics for why that direction is the
-// default and what a deployment gives up by taking it.
+// unconditionally at boot; an empty string configures no credential, which
+// leaves the exposition refusing every scrape unless WithOpenMetrics opened it
+// — see gateMetrics.
 func WithMetricsToken(token string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.metricsToken = token
+	}
+}
+
+// WithOpenMetrics serves /metrics to any caller that reaches the port, for the
+// deployment whose network boundary already contains it and whose scraper
+// cannot carry a credential. cmd/api applies it only for an explicit
+// --metrics-access=open, and refuses to boot with a token as well, because the
+// two settings describe contradictory postures.
+func WithOpenMetrics() Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.metricsOpen = true
 	}
 }
 
@@ -357,7 +381,7 @@ func WithUploadLimits(limits deployconfig.UploadLimits) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.uploadLimits = limits
 		s.activitiesHandlers = s.activitiesHandlers.WithUploadLimit(limits.Attachment)
-		s.peopleHandlers = s.peopleHandlers.WithUploadLimit(limits.LinkedInImport)
+		s.contactsHandlers = s.contactsHandlers.WithUploadLimit(limits.LinkedInImport)
 		s.knowledgeHandlers = knowledgeWithUploadLimit(s.knowledgeHandlers, limits.KnowledgeDocument)
 		s.uploadLimit = limits.CSVImport
 		s.maxUploadBytes = limits.Attachment

@@ -119,6 +119,54 @@ describe("the project tag a subject carries", () => {
     );
   });
 
+  it("clears a key carrying the underscore the CHECK admits", () => {
+    // project_key_shape is `^[A-Za-z][A-Za-z0-9_-]{1,23}$`, so `alpha_two` is a
+    // key the capture matcher reads. Left standing it is a SECOND live key
+    // beside the one written here — and a subject naming two files under
+    // neither, which is the exact outcome this function exists to prevent.
+    expect(withSubjectTag("[alpha_two] Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] Hallo",
+    );
+  });
+
+  it("takes no separator from the tag beside it, because that one is gone", () => {
+    expect(withSubjectTag("[OTHER-9] [THIRD-2] Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] Hallo",
+    );
+  });
+
+  it("takes the leading space of a key tag that ends the subject", () => {
+    expect(withSubjectTag("Hallo [OTHER-9]", "[N2P-1]")).toBe("[N2P-1] Hallo");
+  });
+
+  it("leaves a bracket that never closes, as the capture side does", () => {
+    // A subject trailing off mid-marker names no key. Reading the rest of the
+    // line as one would turn a stray `[` into a match.
+    expect(withSubjectTag("[N2P-1 Hallo", "[N2P-1]")).toBe(
+      "[N2P-1] [N2P-1 Hallo",
+    );
+  });
+
+  it("reads a group from its bracket to the NEXT close, as capture does", () => {
+    // `a[N2P-1` is what the matcher sees inside this group, and it is not a
+    // key — so neither side reads one here, and the rep's line stands. A
+    // frontend that instead started the group at the INNER `[` would strip a
+    // tag the matcher never saw, and leave the `[a` in front of it behind.
+    expect(withSubjectTag("[a[N2P-1] Hallo", "[OTHER-9]")).toBe(
+      "[OTHER-9] [a[N2P-1] Hallo",
+    );
+  });
+
+  it("reads a run of brackets after the last close without rewriting it", () => {
+    // Every `[` here opens a group that never closes, which is the shape a
+    // backtracking bracket matcher re-reads the tail of the line for, once per
+    // bracket. A subject is attacker-supplied text, and none of these is a key:
+    // the line comes back whole.
+    expect(withSubjectTag("Re: ] [[[[[[[[", "[N2P-1]")).toBe(
+      "[N2P-1] Re: ] [[[[[[[[",
+    );
+  });
+
   it("takes its own tag back off, and nobody else's", () => {
     expect(stripSubjectTag("[N2P-1] Re: Hallo", "[N2P-1]")).toBe("Re: Hallo");
     // One separator comes off with the tag, not every space behind it.

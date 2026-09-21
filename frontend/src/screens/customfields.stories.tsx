@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { CustomFieldsAdmin, FieldBuilder, FieldTable } from "./customfields";
 import {
@@ -74,7 +74,7 @@ export const BuilderText: Story = {
   render: () => (
     <StoryProviders>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={noop}
         onCancel={noop}
@@ -84,7 +84,7 @@ export const BuilderText: Story = {
 };
 
 // The builder in dark, for the consent callout it always carries. The DDL
-// preview is a `.cf-ddl` chip painting `--bgElevated` INSIDE a warn-toned
+// preview is a `.cf-ddl` chip painting `--bgElevated` INSIDE a warning-toned
 // Callout: an elevated ground nested in a tint, which is the composite that has
 // no reason to keep its separation once both tokens re-resolve. The autonomy dot
 // in the callout title is colour-only as well, and it is what marks this as a
@@ -94,7 +94,7 @@ export const BuilderTextDark: Story = {
   render: () => (
     <StoryProviders>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={noop}
         onCancel={noop}
@@ -155,7 +155,7 @@ export const BuilderRefusal: Story = {
   render: () => (
     <StoryProviders>
       <FieldBuilder
-        object="organization"
+        object="company"
         pending={false}
         onSubmit={noop}
         onCancel={noop}
@@ -168,7 +168,17 @@ export const BuilderRefusal: Story = {
       canvas.getByLabelText("Label"),
       "Link to parent account",
     );
-    await canvas.findByRole("alert");
+    // The refusal is STANDING — true of the label as it stands, and redrawn on
+    // every keystroke — so it announces nothing: an `alert` per character is
+    // how a reader learns to ignore every notice on a page. What holds it is
+    // the claim itself and the verb it keeps dead, which is what the co-located
+    // test asserts too.
+    await canvas.findByText(
+      "That looks like a new object or relationship, not a field.",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Confirm & add field" }),
+    ).toBeDisabled();
   },
 };
 
@@ -187,7 +197,7 @@ export const TableWithFields: Story = {
   ),
 };
 
-// The field table at 390px. Every row carries a fully-qualified mono key
+// The field table at 390px. Every row carries a fully-qualified key
 // (`deal.cf_deal_stage_reason`) next to a type, a version and its rename/archive
 // verbs — a long unbreakable identifier in an identity column beside an actions
 // column, which is the pairing that makes a table stop fitting. The table is
@@ -213,7 +223,7 @@ export const EmptyObject: Story = {
   render: () => (
     <StoryProviders>
       <FieldTable
-        object="person"
+        object="contact"
         fields={[]}
         canEdit
         meUserId="u1"
@@ -339,4 +349,33 @@ export const CardReadOnly: Story = {
       </StoryProviders>
     );
   },
+};
+
+// The gesture both multiple-choice frames make, named rather than inherited.
+//
+// A story that picks up its `play` through a spread of another story is indexed
+// WITHOUT the `play-fn` tag — the indexer reads the object literal in front of
+// it, not what the spread resolves to — and the capture gate keys its settle on
+// that tag. So the dark frame used to be screenshotted 250ms after paint rather
+// than 1.5s, which is before this interaction has landed. Naming the `play` on
+// each frame is what earns the tag back; the `render` can still be spread,
+// because nothing is keyed on it.
+const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Multiple choice" }),
+  );
+  const [first] = await canvas.findAllByLabelText("Option label");
+  await userEvent.type(first, "Fit, scope");
+};
+
+export const BuilderMultipleChoices: Story = {
+  ...BuilderPicklist,
+  play: chooseMultiple,
+};
+export const BuilderMultipleChoicesDark: Story = {
+  ...BuilderPicklist,
+  play: chooseMultiple,
+  globals: { theme: "dark" },
 };

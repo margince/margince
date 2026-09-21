@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -22,8 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -41,7 +38,7 @@ type onboardingVoiceReader interface {
 // the results and connect acts recognize a company saved through the
 // manual path — not only one confirmed from a site read.
 type onboardingCompanyReader interface {
-	GetCompany(ctx context.Context) (people.Company, error)
+	AnchorProfileStanding(ctx context.Context) (exists, minimumComplete bool, err error)
 }
 
 // companyPresent is the acts' company-existence probe: a confirmed site
@@ -54,13 +51,13 @@ func (a *onboardingCompanyAssistant) companyPresent(ctx context.Context, researc
 	if a.company == nil {
 		return false, nil
 	}
-	if _, err := a.company.GetCompany(ctx); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return false, nil
-		}
+	// The standing rather than the profile: this asks whether a company exists
+	// to speak about, which is not the administered read.
+	exists, _, err := a.company.AnchorProfileStanding(ctx)
+	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return exists, nil
 }
 
 // onboardingVoiceContext carries only server-computed numbers — the
@@ -124,7 +121,7 @@ func (a *onboardingCompanyAssistant) voiceContext(ctx context.Context) (onboardi
 // context block from already-computed server state — a pure mapping, so
 // the numbers a prompt sees are exactly the numbers a test can pin.
 func onboardingActContext(act string, voice onboardingVoiceContext, hasVoiceReader bool, research onboardingResearchState, remaining []string) (json.RawMessage, error) {
-	if act == string(crmcontracts.OnboardingActVoice) {
+	if act == string(crmcontracts.OnboardingActOnboardingActVoice) {
 		return json.Marshal(voice)
 	}
 	progress := onboardingProgressContext{
@@ -148,9 +145,9 @@ When the administrator refers to something the supplied context and the conversa
 func onboardingActSystem(act, locale string) string {
 	var role string
 	switch act {
-	case string(crmcontracts.OnboardingActVoice):
+	case string(crmcontracts.OnboardingActOnboardingActVoice):
 		role = `You are Margince, helping the administrator assemble the writing samples that train their personal voice profile. The context reports the honest corpus meter: total words kept (only the administrator's own words count), the build floor, the target, and the build status. Encourage adding more of their own writing when the corpus is small; a build is possible at the floor but improves toward the target.`
-	case string(crmcontracts.OnboardingActResults):
+	case string(crmcontracts.OnboardingActOnboardingActResults):
 		role = `You are Margince, recapping what onboarding has set up so far. The context reports whether the company profile is confirmed, which required company fields are still missing, and the voice profile's state. Recap honestly — skipped or unfinished stays skipped or unfinished.`
 	default:
 		role = `You are Margince, helping the administrator decide whether to connect an email inbox. Connecting is optional and happens last; consent is per purpose and default-deny, and nothing is read without an explicit grant. Answer questions about what connecting does and does not do.`
@@ -247,21 +244,21 @@ func (a *onboardingCompanyAssistant) answerAct(ctx context.Context, act, message
 func onboardingActAction(act string, voice onboardingVoiceContext, hasVoiceReader bool, research onboardingResearchState) *crmcontracts.OnboardingCompanyMessageReplyAvailableAction {
 	var action crmcontracts.OnboardingCompanyMessageReplyAvailableAction
 	switch act {
-	case string(crmcontracts.OnboardingActVoice):
+	case string(crmcontracts.OnboardingActOnboardingActVoice):
 		if !hasVoiceReader {
 			return nil
 		}
-		action = crmcontracts.OnboardingAvailableActionUploadVoiceSource
+		action = crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionUploadVoiceSource
 		if voice.CorpusTotalWords >= ai.StarterVoiceWords {
-			action = crmcontracts.OnboardingAvailableActionStartVoiceBuild
+			action = crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionStartVoiceBuild
 		}
-	case string(crmcontracts.OnboardingActResults):
+	case string(crmcontracts.OnboardingActOnboardingActResults):
 		if !research.confirmed {
 			return nil
 		}
-		action = crmcontracts.OnboardingAvailableActionFinish
-	case string(crmcontracts.OnboardingActConnect):
-		action = crmcontracts.OnboardingAvailableActionConnectInbox
+		action = crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionFinish
+	case string(crmcontracts.OnboardingActOnboardingActConnect):
+		action = crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionConnectInbox
 	default:
 		return nil
 	}

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Badge, Button, EmptyState } from "./atoms";
+import { Badge, Button, Disclosure, EmptyState } from "./atoms";
 import {
   Panel,
   PanelBody,
@@ -70,19 +70,21 @@ export const WithFooter: Story = {
     footer: (
       <>
         <span>Two of six shown</span>
-        <Button small>See all</Button>
+        <Button>See all</Button>
       </>
     ),
   },
 };
 
-// `sub`: one line of description inside the header band. The band is a floor
-// rather than a fixed measure, so this is the one slot that raises it — put this
-// story beside `WithBody` above and the title-only header is unchanged.
-export const WithSub: Story = {
+// `titleLevel`: the outline, and only the outline. Put this beside `WithBody`
+// above — the two titles are drawn at the same size, and what differs is that
+// this one is an h3 a screen reader reads as sitting INSIDE the section above
+// it rather than beside it. A title that shrank with its depth said the group
+// mattered less than the box holding it, which is not what nesting means.
+export const NestedTitleLevel: Story = {
   args: {
     title: "Passports",
-    sub: "Credentials you minted for an agent. Every call re-authenticates.",
+    titleLevel: 3,
     children: (
       <PanelBody>
         <p>Two active, one revoked this morning.</p>
@@ -91,39 +93,34 @@ export const WithSub: Story = {
   },
 };
 
-// A description and an action in the same header. The title block absorbs the
-// row's free space, so the button sits at the far end of a two-line band the
-// same way it does on a one-line one — the layout the old `:last-child` push
-// could not draw once the title stopped being the header's only child.
-export const WithSubAndTitleAction: Story = {
+// The band under pressure: a name longer than the panel is wide, and two things
+// at the far end that must keep their own size. The title ends in an ellipsis on
+// its one row — the band stays exactly as tall as every other head on the page,
+// and the badge and the button are not squeezed to buy the title room. Narrowed
+// to 320px on purpose; widen the frame and the ellipsis is the first thing to
+// go.
+export const LongTitleTruncates: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
   args: {
-    title: "Purposes",
-    sub: "Why this installation may hold personal data. Each one is answerable on its own.",
-    titleAction: <Button small>Add a purpose</Button>,
+    title: "Brandt Automotive Zulieferbetriebe Deutschland GmbH & Co. KG",
+    titleAction: (
+      <>
+        <Badge tone="accent">7</Badge>
+        <Button>Add</Button>
+      </>
+    ),
     children: (
       <>
         <PanelRow>Contract performance</PanelRow>
         <PanelRow>Legitimate interest — account management</PanelRow>
       </>
     ),
-  },
-};
-
-// The shape `sub` exists for: a header that explains itself, full-bleed rows,
-// and a footer carrying the figure for the whole panel. Before the slot a card
-// needing that sentence had to be a `Card` and lose the rows and the band.
-export const WithSubRowsAndFooter: Story = {
-  args: {
-    title: "Won deals",
-    sub: "Closed and invoiced. Reporting currency, at the day's rate.",
-    children: (
-      <>
-        <PanelRow>Renewal — €48,000</PanelRow>
-        <PanelRow>Expansion, EU — €12,500</PanelRow>
-        <PanelRow>Pilot — €4,200</PanelRow>
-      </>
-    ),
-    footer: <span className="t-mono">€64,700.00</span>,
   },
 };
 
@@ -153,19 +150,19 @@ export const AccentTone: Story = {
   },
 };
 
-// tone="warn": the same lead, when the FINDING is the bad news — a
+// tone="warning": the same lead, when the FINDING is the bad news — a
 // relationship that went quiet, a promise that is late. The tone is the
 // reading, which is why it recolours the card's own frame instead of adding a
 // badge inside it, and why the geometry does not move: an accent lead and a
-// warn lead are one card in two states, not two cards.
+// warning lead are one card in two states, not two cards.
 //
-// Check it in both themes. `--warn` inverts across them (a dark amber-brown on
-// light, a bright amber on dark) while `--warnBg` and `--warnBorder` stay the
+// Check it in both themes. `--warning` inverts across them (a dark amber-brown on
+// light, a bright amber on dark) while `--warningBg` and `--warningBorder` stay the
 // same translucent amber, so the title's contrast against the band is the one
 // thing to look at twice.
 export const WarnTone: Story = {
   args: {
-    tone: "warn",
+    tone: "warning",
     title: "Gone quiet",
     children: (
       <>
@@ -177,6 +174,32 @@ export const WarnTone: Story = {
   },
 };
 
+// The rest of the state vocabulary, on one page: `info` for the lead whose work
+// is still running, `success` for the one whose finding is that it landed,
+// `danger` for the finding that cannot be undone, `discovery` for a capability
+// this reader has not met. Same geometry at every tone — put them beside
+// `AccentTone` and only the band's colour moves.
+export const StateTones: Story = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-4)" }}>
+      <Panel tone="info" title="Still reading">
+        <PanelRow>Four of eleven pages read. Nothing to do yet.</PanelRow>
+      </Panel>
+      <Panel tone="success" title="The renewal is signed">
+        <PanelRow>Countersigned this morning, filed against the deal.</PanelRow>
+      </Panel>
+      <Panel tone="danger" title="The mailbox stopped">
+        <PanelRow>No message has been read since 04:12. Reconnect it.</PanelRow>
+      </Panel>
+      <Panel tone="discovery" title="Deal Rooms are new here">
+        <PanelRow>
+          A buyer can read the price and the plan in one place.
+        </PanelRow>
+      </Panel>
+    </div>
+  ),
+};
+
 // tone="ai": the panel a MACHINE wrote or read. It is the same lead geometry
 // again, in the --ai family, and it says something different from the other
 // two: not "this is the ask" or "this is the bad news" but "Margince produced
@@ -184,13 +207,25 @@ export const WarnTone: Story = {
 // across the whole product, so a panel takes it only when a machine really did
 // write or read what is inside.
 //
+// The two halves of the indigo vocabulary in one head, because they answer
+// different questions and a surface usually needs both: `tone="ai"` says a
+// machine wrote the BODY, and the `Badge tone="ai"` in the band says this panel
+// offers an AI verb — the "AI-assisted" tag the assistant surface carries, in
+// the header rather than beside the rows, so a reader finds it in the same place
+// on every such panel. The verb itself is `aiQuiet` and not `ai`: on ground the
+// family has already tinted, a filled indigo control reads as the panel's call
+// to action when it is its footnote.
+//
 // Check it in both themes. --aiText lifts on dark (a pale indigo) while
 // --aiLight and --aiMed stay the same translucent indigo, so the title's
-// contrast against the band is the thing to look at twice.
+// contrast against the band — and the badge's against the same band — is the
+// thing to look at twice.
 export const AiTone: Story = {
   args: {
     tone: "ai",
     title: "Brandt Automotive GmbH · 360",
+    titleAction: <Badge tone="ai">AI-assisted</Badge>,
+    actions: <Button variant="aiQuiet">Read it again</Button>,
     children: (
       <>
         <PanelRow>
@@ -200,6 +235,25 @@ export const AiTone: Story = {
       </>
     ),
     footer: <span>Read from 41 records · 14:22</span>,
+  },
+};
+
+// A tone TINTS, and nothing else: put this beside `WithTitleAction` and the two
+// bands are the same height and the two titles the same size. What differs is
+// the ground, the hairline's colour and the title's colour — the indigo head
+// used to hug its own content and so stood at a height of its own on a page of
+// panels.
+export const AiToneRowsOnly: Story = {
+  args: {
+    tone: "ai",
+    title: "What changed on this account",
+    titleAction: <Badge tone="ai">AI-assisted</Badge>,
+    children: (
+      <>
+        <PanelRow>Two contacts left the buying group in July.</PanelRow>
+        <PanelRow>The renewal date moved forward by three weeks.</PanelRow>
+      </>
+    ),
   },
 };
 
@@ -216,7 +270,7 @@ export const WithActions: Story = {
         <PanelRow>Expansion, EU — €12,500</PanelRow>
       </>
     ),
-    actions: <Button small>Add a deal</Button>,
+    actions: <Button>Add a deal</Button>,
   },
 };
 
@@ -343,22 +397,35 @@ const RAIL_PANEL_STATES: readonly RailPanelState[] = [
   "withheld",
   "unavailable",
   "loading",
-  "unsupported",
   "failed",
 ];
 
 // Every field at once, and each state reads exactly one of them: `failed` the
-// retry, `stale` the as-of, `partial` the count still missing, `unsupported`
-// and `withheld` their sentence. A state whose field is absent falls back to
-// the generic line, which is the floor rather than the target.
+// retry, `stale` the as-of, `partial` the count still missing, `withheld` its
+// sentence. A state whose field is absent falls back to the generic line,
+// which is the floor rather than the target.
 const DETAIL: SectionDetail = {
   onRetry: () => undefined,
   staleAsOf: "9:15 this morning",
   remaining: 4,
-  unsupportedReason:
-    "This workspace reads deals from HubSpot, and a composite section cannot be assembled from a mirror.",
   withheldReason:
     "Deal amounts on this account are readable by its owner and by finance.",
+};
+
+// A Disclosure standing in the panel directly, as one row among rows: its
+// summary sits on the pane's gutter at the row's interval, with no second
+// hairline under the header band, and the rows it opens run edge to edge like
+// the ones above it. Set free-standing the atom drew its own rule and inset,
+// and the caret stood hard against the card's edge.
+export const WithDisclosure: Story = {
+  render: () => (
+    <Panel title="Overnight">
+      <Disclosure summary="Sync details">
+        <PanelRow>3 messages synced</PanelRow>
+        <PanelRow>1 contact created</PanelRow>
+      </Disclosure>
+    </Panel>
+  ),
 };
 
 // RailPanel on `ready`: the children are handed to Panel undecorated, so rows

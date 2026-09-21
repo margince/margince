@@ -1,9 +1,9 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { CustomFieldsCard } from "./customfields.card";
+import { CustomFieldsPanel } from "./customfields.card";
 import type { CustomField, ObjectCustomFields } from "./customfields.form";
 
 // The card reads the live catalog through useObjectCustomFields; mock only that
@@ -16,6 +16,9 @@ vi.mock("./customfields.form", async (importOriginal) => {
     ...actual,
     useObjectCustomFields: (): ObjectCustomFields => ({
       fields: activeFields,
+      loading: false,
+      failed: false,
+      retry: () => undefined,
       formFields: [],
       recordSlice: () => ({}),
       toBody: () => ({}),
@@ -49,7 +52,7 @@ function render(ui: ReactNode) {
   return rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
 }
 
-describe("CustomFieldsCard", () => {
+describe("CustomFieldsPanel", () => {
   it("shows each field's label and formatted value", () => {
     activeFields.push(
       field({
@@ -65,7 +68,7 @@ describe("CustomFieldsCard", () => {
       }),
     );
     render(
-      <CustomFieldsCard
+      <CustomFieldsPanel
         object="deal"
         record={{ cf_budget_ceiling: 500000, cf_procurement_route: "Reseller" }}
       />,
@@ -86,7 +89,7 @@ describe("CustomFieldsCard", () => {
       field({ label: "Empty note", column_name: "cf_note", type: "text" }),
     );
     render(
-      <CustomFieldsCard
+      <CustomFieldsPanel
         object="deal"
         record={{ cf_ceiling: "set", cf_note: null }}
       />,
@@ -100,9 +103,9 @@ describe("CustomFieldsCard", () => {
       field({ label: "Note", column_name: "cf_note", type: "text" }),
     );
     const { container } = render(
-      <CustomFieldsCard object="deal" record={{ cf_note: "" }} />,
+      <CustomFieldsPanel object="deal" record={{ cf_note: "" }} />,
     );
-    expect(container.querySelector(".card")).toBeNull();
+    expect(container.querySelector(".panel")).toBeNull();
   });
 
   it("makes a value that is a web address followable, away from the record", () => {
@@ -110,7 +113,7 @@ describe("CustomFieldsCard", () => {
       field({ label: "Wiki page", column_name: "cf_wiki", type: "text" }),
     );
     render(
-      <CustomFieldsCard
+      <CustomFieldsPanel
         object="deal"
         record={{ cf_wiki: "https://wiki.example.com/globex" }}
       />,
@@ -134,7 +137,7 @@ describe("CustomFieldsCard", () => {
       field({ label: "Script", column_name: "cf_script", type: "text" }),
     );
     render(
-      <CustomFieldsCard
+      <CustomFieldsPanel
         object="deal"
         record={{
           cf_route: "Reseller",

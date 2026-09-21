@@ -36,7 +36,7 @@ func TestScopeValidate(t *testing.T) {
 // TestToolValidate: after the narrowing a Tool is {Name, Handle}, so the only
 // rule left is the verb grammar. Everything the old cases here covered — the
 // tier and scope vocabularies, the renderable title and description, the schema
-// shapes — moved to the declaration, and moved with it to TestVerbValidate.
+// shapes — moved to the declaration, and moved with it to TestVerbValidate….
 func TestToolValidate(t *testing.T) {
 	if err := (Tool{Name: "qualify_lead"}).Validate(); err != nil {
 		t.Fatalf("a well-formed tool must validate: %v", err)

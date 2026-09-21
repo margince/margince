@@ -29,8 +29,6 @@ import (
 	"strings"
 	"time"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
@@ -171,6 +169,9 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		h.connectIMAP(w, r)
 		return
 	}
+	if h.dispatchTestMailboxConnect(w, r, string(provider)) {
+		return
+	}
 	if !isOAuthProvider(string(provider)) {
 		if h.registry == nil {
 			httperr.NotImplemented(w, r, "ConnectConnector")
@@ -178,7 +179,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		}
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity,
-			Code:   "connector_unsupported",
+			Code:   codeConnectorUnsupported,
 			Detail: "Only the " + strings.Join(oauthProviders, ", ") + " and imap connectors can be connected here.",
 		})
 		return
@@ -268,7 +269,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// The signed state is the only trustworthy carrier here (no session cookie
 	// on the cross-site redirect), and it is what names the surface the human
 	// started from. Verify it BEFORE branching on the outcome: a denial that
-	// began in Settings has to land back in Settings, or the person never sees
+	// began in Settings has to land back in Settings, or the contact never sees
 	// the note explaining what happened. An unverifiable state yields no
 	// trustworthy ReturnTo, so those paths keep the default.
 	st, err := h.signer.verify(params.State, time.Now())
@@ -322,7 +323,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// state. Resolving above would mean an anonymous request unseals a live
 	// client secret before anything has authenticated it, on a path with no rate
 	// limit. It also answers a browser redirect with a JSON error, where every
-	// other failure here lands the person back on a page that explains itself.
+	// other failure here lands the contact back on a page that explains itself.
 	// runCtx, not ctx: a stored app is per-workspace and this route is
 	// session-less, so the raw request context has no workspace to read it
 	// under. Under ctx the lookup finds nothing and falls back to the
@@ -461,37 +462,4 @@ func postureOnWire(posture string) *crmcontracts.CaptureConnectionMailPosture {
 	}
 	p := crmcontracts.CaptureConnectionMailPosture(posture)
 	return &p
-}
-
-// toContractConnection maps a registry connection row onto the wire shape.
-// Storage now uses the contract's own status vocabulary (CAP-DDL-2 reconciled
-// capture_connection to it), so status is a straight cast — no translation. The
-// credential is never present.
-func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnection {
-	c := crmcontracts.CaptureConnection{
-		Id:             openapi_types.UUID(v.ID),
-		Provider:       crmcontracts.CaptureConnectionProvider(v.Provider),
-		Status:         crmcontracts.CaptureConnectionStatus(v.Status),
-		Scopes:         v.ProviderScopes,
-		WatchExpiresAt: v.WatchExpiresAt,
-		AccountLabel:   v.AccountLabel,
-		// Carried as the pointer it is: null on the wire is this mailbox
-		// following the tenant default, not a field the read forgot.
-		SignatureEnrichEnabled: v.SignatureEnrichEnabled,
-		MailPosture:            postureOnWire(v.MailPosture),
-		ContextTag:             contextTagOnWire(v.ContextTag),
-	}
-	if c.Scopes == nil {
-		c.Scopes = []string{}
-	}
-	if len(v.Cursor) > 0 {
-		s := string(v.Cursor)
-		c.SyncCursor = &s
-	}
-	c.LastSyncedAt = v.LastSyncedAt
-	c.LastSyncErrorClass = v.LastErrorClass
-	c.NextSyncDueAt = v.NextSyncDueAt
-	bf := backfillStatusPayload(v.Backfill)
-	c.Backfill = &bf
-	return c
 }

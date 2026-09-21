@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -38,7 +38,7 @@ const ROOM = {
 
 // One buyer who has been through the door, and one whose seat was taken back.
 // The revoked row is what separates "invited" from "rows in the list": counting
-// the list would say two people may enter a room only one may.
+// the list would say two contacts may enter a room only one may.
 const SIGNED_IN = {
   id: "part-1",
   room_id: ROOM.id,
@@ -151,6 +151,6 @@ it("marks a paused room as stopped rather than current", async () => {
   render(<DealRoomPage dealId="deal-1" />);
 
   const badge = (await screen.findByText("Paused")).closest(".badge");
-  expect(badge).toHaveClass("badge-warn");
+  expect(badge).toHaveClass("badge-warning");
   expect(badge?.querySelector(".badge-live-dot")).not.toBeInTheDocument();
 });

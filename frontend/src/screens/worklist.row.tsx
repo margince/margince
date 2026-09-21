@@ -1,95 +1,134 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// One row of the day, and the verbs it offers.
-//
-// Split from the screen because they answer different questions. The screen
-// decides WHAT the page shows — whose day, which cut, which headings. A row
-// decides how one piece of work reads and where each of its verbs goes, and
-// that is the half a reader of either question does not need the other for.
-
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
-import { type BriefMarkRequest, useBriefItemMark } from "./brief.queries";
-import { tomorrowMorning } from "./briefqueue";
-import { problemMessageOf } from "./common";
-import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
+import { useMe } from "./common";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
+import {
+  BriefAct,
+  type BriefAnswer,
+  BriefSetAsides,
+  useBriefAnswer,
+} from "./worklist.briefverbs";
+import { ApprovalBundleReview } from "./worklist.bundle";
 import {
   comparisonText,
   consequenceText,
   dealFactsText,
   isUnprepared,
   itemTitle,
-  moveHref,
-  moveLabel,
   phrasedReasons,
   reasonText,
   rowHref,
   whenText,
 } from "./worklist.copy";
-import { DispositionVerbs, PutDownByThumb } from "./worklist.dispositions";
+import { PutDownByThumb } from "./worklist.dispositions";
+import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { ReassignControl } from "./worklist.manager";
+import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
+import { leadFactsText } from "./worklist.leadfacts";
+import { MeetingOutcome } from "./worklist.meetingoutcome";
 import { PairDecision } from "./worklist.pair";
+import { lastTouch } from "./worklist.pane";
+import { PlanWorkActions } from "./worklist.plan";
 import {
   useApproval,
   useNudgeDismissal,
-  usePinRow,
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
-import { syncHealthDetail } from "./worklist.synchealth";
+import { noticeDetail, readerTask } from "./worklist.reader";
+import { replyTarget, WaitingReply } from "./worklist.reply";
+import {
+  aboutRecord,
+  REASONS_BEFORE_THE_FOLD,
+  RowCaptions,
+  shapedReadings,
+  touchOf,
+} from "./worklist.row.captions";
+import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
+import { RowActs } from "./worklist.rowverbs";
 import { VerdictLine } from "./worklist.verdict";
+import "./worklist.row.css";
 
-/**
- * A grouped row's named members, each ONCE.
- *
- * The contract asks for "a few members, named, so the group can be checked
- * before it is answered", and a group of eight failures of one automation sends
- * that automation's name eight times: the Worklist's top row read
- * "Post-meeting recap draft · Post-meeting recap draft · Post-meeting recap
- * draft", which tells a reader nothing about the group except that the list
- * repeats.
- *
- * Order is kept — first appearance wins — because the server sends them in the
- * order it thinks matters.
- */
+// Preserve server order while naming each group member once.
 function namedMembers(item: WorklistItem): string[] {
   return [...new Set(item.batch?.sample ?? [])];
 }
 
+/**
+ * How much of the row is drawn, and what each density owes.
+ *
+ * A DISCRIMINATED PAIR rather than one optional `position`, because the rank is
+ * required by the default density and refused by the compact one — a plain
+ * optional would let a Worklist caller forget it and lose the digit silently,
+ * which is the shape of failure a gate cannot see. This one the compiler sees.
+ */
+type RowDensity =
+  | Readonly<{
+      density?: undefined;
+      /** Where this row sits in the day's order, drawn as the rank. */
+      position: number;
+    }>
+  | Readonly<{
+      /**
+       * ONE LINE per row: no rank, the title carrying the link, the captions
+       * beside it, and everything else one press away
+       * (worklist.row.compact.tsx). For a surface that OPENS with a prefix of
+       * the queue and goes on to something else.
+       */
+      density: "compact";
+      /** Refused: the rank is a column this density does not draw. */
+      position?: undefined;
+    }>;
+
 export function WorklistRow({
   item,
   position,
+  density,
   owner,
+  allowPin = true,
   selected,
   onSelect,
   onReview,
   onOpenEmail,
+  context,
+  acts,
+  framed = false,
 }: Readonly<{
   item: WorklistItem;
-  position: number;
+  /** The way into what this row is ABOUT, drawn among its verbs. The Brief
+   *  has no pane beside its list, so its focus rows open a drawer instead. */
+  context?: ReactNode;
+  /** How the verbs stand: one flow (the queue's), or the triage ORDER a row
+   *  being answered reads in — worklist.rowverbs.tsx says what divides. */
+  acts?: "triage";
+  /** A CARD around this row says whose it is, why it is here and where it
+   *  stands, so the row withholds those captions and the verb that only
+   *  reaches its record. The Brief's card is the only frame there is. */
+  framed?: boolean;
   // Whose queue this row is on, empty for the reader's own. It names the
-  // person a reassignment moves work AWAY from, which on the reader's own
+  // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
   // prop carrying it, so an empty value is a real state and not a missing one.
   owner: string;
+  /** Personal ordering is available on the queue, not the Focus projection. */
+  allowPin?: boolean;
   // Whether the pane beside the queue is about this row.
   //
   // BOTH CALLBACKS ARE OPTIONAL, because one surface has no pane. The Brief
@@ -110,7 +149,8 @@ export function WorklistRow({
   // message and refuses to open it teaches them the product does not work.
   // Optional only for a caller that draws no waiting row at all.
   onOpenEmail?: (activityId: string) => void;
-}>) {
+}> &
+  RowDensity) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -118,65 +158,133 @@ export function WorklistRow({
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
   const href = rowHref(item);
-  const title = itemTitle(item, t, locale);
-  const facts = dealFactsText(item, t, locale, zone);
+  const viewer = useMe(false).data?.user;
+  const title = itemTitle(readerTask(item, viewer, t), t, locale);
+  const facts =
+    dealFactsText(item, t, locale, zone) ??
+    leadFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, recordZone, new Date());
-  // The supporting line. Every source but one sends a sentence already;
-  // sync_health sends its condition's facts in its own vocabulary, so its line
-  // is written from `kind` and `detail` together.
-  const detail =
-    item.source === "sync_health"
-      ? syncHealthDetail(item.kind, item.detail, t)
-      : item.detail;
+  // The supporting line, which every source sends as a sentence already.
+  const detail = noticeDetail(item, viewer, t);
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers. The when
   // line takes `due_today` the same way when it is drawn: the moment names the
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   const reasons = phrasedReasons(item, when !== null)
+    .filter((reason) => allowPin || reason.kind !== "pinned")
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null);
-  const above = comparisonText(item.above_next, t, locale, zone);
+  // WHERE THE FOLD FALLS, decided once for both densities. Sliced here rather
+  // than inside each one, because two copies of `slice(0, N)` are two answers
+  // to how many reasons a row says outright, and they drift the first time the
+  // ceiling moves.
+  const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
+  const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
+  const above =
+    !allowPin && item.above_next?.comparator === "pin"
+      ? null
+      : comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
   // How this row NAMES ITSELF: the canonical email row when there is a message
   // AND somewhere to open it, the title line otherwise. Held as the opener
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
   const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
+  // it: a waiting message names its sender as text, where every other title
+  // names and links its record (`itemTitle`, `rowHref`). A FRAMED row names it
+  // under the row itself (brief.focus.tsx) and withholds this — the frame, not
+  // the verb order, because the drawer takes that order with no card around
+  // its rows and this line is the only place those facts are said there.
+  const about = framed
+    ? undefined
+    : aboutRecord(item, emailOpener !== undefined);
+  const touch = lastTouch(touchOf(item, framed), t, locale, zone);
+  // Whether the day put a state on this row — overdue, or a meeting with
+  // nothing prepared. They ride on the title line, which is why it is drawn on
+  // a row that has no title of its own to draw.
+  const badged = item.overdue === true || isUnprepared(item);
+  // WHERE this lane's answer sits, and the write a brief item's two placements
+  // share. The hook is called on every row and fires on none it is not asked
+  // to: `useBriefItemMark` registers a mutation and reads nothing, and holding
+  // it here is what lets "Act" lead the row's verbs while the two set-asides
+  // stand among the quieter ones WITHOUT the row growing a second mutation.
+  // Two of them would each carry their own settled flag, so acting and then
+  // dismissing would answer one item twice — the same reason PutDownByThumb
+  // holds the disposition write for the verbs and the swipe.
+  const brief = useBriefAnswer(item);
+  const answer = rowAnswer(item, brief);
+  const readings: RowReadings = shapedReadings(framed, {
+    item,
+    title,
+    href,
+    when,
+    facts,
+    said,
+    folded,
+    above,
+    consequence,
+    detail,
+    sample,
+    zone,
+    about,
+    touch,
+  });
+  const named = conditionOf(item);
   return (
     <PanelRow
-      className={
-        selected ? "worklist-row worklist-row-selected" : "worklist-row"
-      }
+      // A CLASS and not a data attribute: `PanelRow` takes a className and
+      // forwards nothing else, and reaching into that primitive to pass one
+      // attribute through would make a screen the second author of the house
+      // row.
+      className={[
+        "worklist-row",
+        selected ? "worklist-row-selected" : "",
+        density === "compact" ? "worklist-row-compact" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {/* Below the fold the row itself answers the set-aside judgements, whose
           verbs do not fit beside the work at 390px. It wraps the row rather
           than the verbs because the row is what a thumb lands on; above the
           fold it draws its children and nothing else. */}
       <PutDownByThumb item={item}>
-        <Rank
-          position={position}
-          title={title}
-          selected={selected}
-          onSelect={onSelect}
-        />
-        {/* WHAT KIND of work, in its own column, so a reader running down the
-            queue reads the kinds as a list without reading a title first — and
-            in the warn tone on the rows the day put first, where the kind is
-            also why it is first. The title line keeps the states that are
-            about this row alone: overdue, unprepared. */}
-        <span
-          className={
-            item.band === "now"
-              ? "t-eyebrow worklist-row-kind worklist-row-kind-now"
-              : "t-eyebrow worklist-row-kind"
-          }
-        >
-          {t(`worklist.category.${item.category}` as const)}
+        {/* THE RANK IS WHAT THE DENSITY GIVES UP FIRST. It is a claim about
+            order, and at one line per row the ordered list already carries
+            that claim — so a digit per row spends a column saying again what
+            the page says once. `position` is refused in compact rather than
+            ignored: see RowDensity. */}
+        {position !== undefined && (
+          <Rank
+            position={position}
+            title={title}
+            selected={selected}
+            onSelect={onSelect}
+          />
+        )}
+        {/* WHAT KIND of work, in its own column at a width that has one, so a
+            reader running down the queue reads the kinds as a list without
+            reading a title first — and in the warning tone on the rows the day
+            put in its first band, where the kind is also why it is there. The
+            title line keeps the states that are about this row alone: overdue,
+            unprepared.
+
+            A soft `Badge`, the variant a column carrying one per row wears:
+            the solid fill is kept for the one status a surface must not let a
+            reader miss, and a queue of those would teach the eye to skip them.
+            The span is PLACEMENT — the grid cell and the
+            width the kinds share; `conditionOf` says what a system row
+            draws there instead. */}
+        <span className={kindClass(named)} title={named ?? undefined}>
+          <Badge tone={item.band === "now" ? "warning" : undefined}>
+            {named ?? t(eyebrowKeyFor(item))}
+          </Badge>
         </span>
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
@@ -185,106 +293,148 @@ export function WorklistRow({
             the badges below stay on both: they say where the row sits in the
             day, which the email row does not answer. */}
           {emailOpener && <WaitingEmailLine item={item} onOpen={emailOpener} />}
-          <p className="t-body worklist-row-title">
-            {emailOpener ? null : href ? (
-              <a className="entity-link" href={href}>
-                {title}
-              </a>
-            ) : (
-              title
-            )}
-            {item.overdue && (
-              <Badge tone="danger">{t("worklist.overdue")}</Badge>
-            )}
-            {/* A state of the meeting, not a reason among reasons: a rep
-              scanning for the one to open before it starts has to see it
-              without reading the line under the title. Warn rather than
-              danger — an unprepared meeting is work to do, not a deadline
-              already missed. */}
-            {isUnprepared(item) && (
-              <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
-            )}
-          </p>
-          {/* The supporting line, from every source that sends PROSE.
-
-            It was drawn for `notice` alone, because three sources used this
-            field as a typed channel — two wrote a bare day count, one wrote the
-            marker words the queue groups by — and drawing it would have printed
-            "90" under one title and "machine_sender" under another. Those three
-            send their values typed now, so the twelve sources that were already
-            writing sentences get to say them: which mailbox stopped, why a
-            message bounced, why a send was held, what an AI task was about,
-            which rule failed and how. That is the decisive line on most of these
-            rows, and a reader was reading around it.
-
-            `sync_health` sends its facts in the producer's own vocabulary —
-            `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
-            from that pair rather than drawn, by worklist.synchealth.ts. A value
-            that build does not recognise draws nothing, which is what this row
-            did for every sync value before. */}
-          {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
-          {sample.length > 0 && (
-            // A group nobody can see into is a group nobody trusts, and an
-            // untrusted group is worse than the pile it replaced.
-            <p className="t-caption worklist-row-sample">
-              {sample.join(" · ")}
-            </p>
-          )}
-          {/* How the deal is standing, above the captions rather than among
-              them. It is a READING and they are facts, and a reader who cannot
-              tell those apart cannot tell what to trust — worklist.verdict.tsx
-              states why the label says which. */}
-          <VerdictLine verdict={item.verdict} zone={zone} />
-          <RowCaptions
-            when={when}
-            facts={facts}
-            reasons={reasons}
-            consequence={consequence}
-            above={above}
-          />
-        </div>
-        {/* EVERY VERB ON ONE LINE UNDER THE WORK, not beside it. Beside it, seven
-            controls took the width and left the subject, the snippet and the
-            reasons a 160px column that wrapped every line; under it the work
-            has the whole row and the verbs read as what can be done about it,
-            in the order they were drawn: the move, then the ways to put the
-            row down, then the reader's own pin. */}
-        <div className="worklist-row-acts">
-          {item.batch && onReview ? (
-            <BatchVerb onReview={onReview} />
+          {/* Not drawn EMPTY. An email row is named by the message above, so
+              its title line held nothing at all unless the day had a state to
+              put on it — and an empty line still collects the text column's
+              interval, which is a stranded gap between the message and the
+              facts under it on every waiting row. */}
+          {density === "compact" ? (
+            // ONE LINE, off the same readings the default column prints. The
+            // name is withheld where the message above already carries it.
+            <CompactRowLine readings={readings} named={!emailOpener} />
           ) : (
-            <RowVerbs item={item} href={href} move={moveHref(item)} />
-          )}
-          {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
-          from `dispositions` rather than inferred from `source`: which rows a
-          rep may judge is a server rule, and a client keeping its own copy
-          draws a verb that 404s or hides one the rep is entitled to. */}
-          <DispositionVerbs item={item} />
-          {/* The reader's own override, on every row that can carry one. It is not
-          a disposition — those put a row DOWN, and this lifts one up — so it is
-          drawn beside them rather than among them. */}
-          <PinVerb item={item} />
-          {/* Only a task carries an assignee, so only a task can be handed on. A
-          group row stands for a pile and names no single activity to move.
-
-          Offered on the reader's OWN queue too: handing work on is not a
-          manager's verb, and gating it on a selected rep left somebody
-          looking at their own list with no way to pass a task along. Who is
-          excluded from the destinations follows the queue rather than this
-          condition — ReassignControl falls back to the reader when no rep is
-          selected, so the current holder is never offered as the new one. */}
-          {item.source === "task" && !item.batch && (
-            <ReassignControl item={item} owner={owner} />
+            <RowText
+              readings={readings}
+              emailOpener={emailOpener}
+              badged={badged}
+            />
           )}
         </div>
-        <RowAnswer item={item} />
+        {/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST. Under
+            the work where the card has no column to spare for it, beside the
+            work where it has, and on the trailing edge in both — so the answer
+            keeps one x down the whole queue. worklist.rowverbs.tsx states why
+            it is the tail of the line rather than its head. */}
+        <RowActs
+          allowPin={allowPin}
+          onOpenEmail={onOpenEmail}
+          item={item}
+          href={href}
+          density={density}
+          owner={owner}
+          primary={answer.primary}
+          equals={answer.equals}
+          onReview={onReview}
+          context={context}
+          shape={acts}
+          framed={framed}
+        />
+        {/* An answer that is not a VERB: a duplicate pair, whose two buttons
+            each name the record they keep and cannot leave the list that names
+            it. It stays a block under the row, where it has the width to show
+            both sides. */}
+        {answer.below}
       </PutDownByThumb>
     </PanelRow>
   );
 }
 
 /**
- * The answer a row can carry INSIDE it.
+ * The row's text column at the DEFAULT density: the name, the prose under it,
+ * and the captions under that.
+ *
+ * Its own component because the row draws one of two columns now and the
+ * readings are the same either way — `WorklistRow` reads the item once and
+ * hands the answers to whichever column the surface asked for. It stays in
+ * this file rather than beside the compact line: this is the row's own
+ * anatomy, and that line is the variant of it.
+ */
+function RowText({
+  readings,
+  emailOpener,
+  badged,
+}: Readonly<{
+  readings: RowReadings;
+  /** Opens a waiting message. Its PRESENCE is what names the row. */
+  emailOpener: ((activityId: string) => void) | undefined;
+  /** Whether the day put a state on this row — overdue, or nothing prepared. */
+  badged: boolean;
+}>) {
+  const {
+    item,
+    title,
+    href,
+    when,
+    facts,
+    said,
+    folded,
+    above,
+    consequence,
+    detail,
+    sample,
+    zone,
+  } = readings;
+  const t = useT();
+  return (
+    <>
+      {(!emailOpener || badged) && (
+        <p className="t-body worklist-row-title">
+          {emailOpener ? null : href ? (
+            <a className="entity-link" href={href}>
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
+          {/* A state of the meeting, not a reason among reasons: a rep
+              scanning for the one to open before it starts has to see it
+              without reading the line under the title. Warn rather than
+              danger — an unprepared meeting is work to do, not a deadline
+              already missed. */}
+          {isUnprepared(item) && (
+            <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
+          )}
+        </p>
+      )}
+      {/* The supporting line, from every source that sends PROSE.
+
+          It was drawn for `notice` alone, because three sources used this
+          field as a typed channel — two wrote a bare day count, one wrote the
+          marker words the queue groups by — and drawing it would have printed
+          "90" under one title and "machine_sender" under another. Those three
+          send their values typed now, so the twelve sources that were already
+          writing sentences get to say them: which mailbox stopped, why a
+          message bounced, why a send was held, what an AI task was about,
+          which rule failed and how. That is the decisive line on most of these
+          rows, and a reader was reading around it. */}
+      {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
+      {sample.length > 0 && (
+        // A group nobody can see into is a group nobody trusts, and an
+        // untrusted group is worse than the pile it replaced.
+        <p className="t-caption worklist-row-sample">{sample.join(" · ")}</p>
+      )}
+      {/* How the deal is standing, above the captions rather than among
+            them. It is a READING and they are facts, and a reader who cannot
+            tell those apart cannot tell what to trust — worklist.verdict.tsx
+            states why the label says which. */}
+      <VerdictLine verdict={item.verdict} zone={zone} />
+      <RowCaptions
+        about={readings.about}
+        touch={readings.touch}
+        when={when}
+        facts={facts}
+        said={said}
+        folded={folded}
+        consequence={consequence}
+        above={above}
+      />
+    </>
+  );
+}
+
+/**
+ * The answer a row can carry INSIDE it, and WHERE in the row it goes.
  *
  * Three kinds, and what they share is the reason they are here rather than
  * behind a link: the server already sent everything the decision needs, so
@@ -296,9 +446,30 @@ export function WorklistRow({
  * title, reasons, verbs — is already at the complexity the linter allows, and
  * a fourth kind of answer should extend this list rather than that function.
  */
+
+/**
+ * The three places an answer can stand, and each lane picks one.
+ *
+ * A PLACEMENT rather than a node, because "the answer" is not one shape. Most
+ * lanes have a single call to action, and it ends the row's verbs. Some offer
+ * several verbs of EQUAL weight, and there a call to action is a lie — it would
+ * name one of three meeting outcomes as the expected one. And one carries a
+ * payload rather than a verb at all.
+ *
+ * All three optional, and a lane with nothing to answer returns none of them: a
+ * row the server named no verb on is still real work with nothing to press.
+ */
+type RowPlacement = Readonly<{
+  /** The lane's one call to action, at the trailing end of the row's verbs. */
+  primary?: ReactNode;
+  /** Verbs of equal weight, among the row's quieter ones. */
+  equals?: ReactNode;
+  /** An answer carrying its own layout, under the row rather than in it. */
+  below?: ReactNode;
+}>;
 // The answers the row itself is enough for, keyed by the source that carries
 // them and the verb the server sent. A table rather than a branch each: they
-// differ only in which control to draw, so spelling them as code made RowAnswer
+// differ only in which control to draw, so spelling them as code made `rowAnswer`
 // grow one arm per source until it hit the complexity ceiling — which its own
 // doc predicted.
 //
@@ -309,52 +480,85 @@ export function WorklistRow({
 // `draw` takes the ROW, not its id. A task's completion is pinned to the
 // version the reader decided on, and every other verb here writes too — so the
 // entry that needs a second field next is served without leaving the table for
-// a branch of its own, which is how RowAnswer grew arms the last time.
+// a branch of its own, which is how `rowAnswer` grew arms the last time.
 const ANSWER_BY_SOURCE: Partial<
   Record<
     WorklistItem["source"],
     {
       verb: WorklistItem["actions"][number];
-      draw: (item: WorklistItem) => ReactNode;
+      draw: (item: WorklistItem) => RowPlacement;
     }
   >
 > = {
   notice: {
     verb: "acknowledge",
-    draw: (item) => <NoticeAcknowledge id={item.id} />,
+    draw: (item) => ({ primary: <NoticeAcknowledge id={item.id} /> }),
   },
   automation_run: {
     verb: "retry",
-    draw: (item) => <AutomationRetry id={item.id} />,
+    draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
   },
+  // Keyed on `keep`, which is the server's signal that this row may be
+  // answered at all; the control then asks the row again for each button, so a
+  // seat offered only one of the two draws only that one. The same one-entry
+  // shape meeting_outcome uses — one entry per source, not one per button.
+  domain_question: {
+    verb: "keep",
+    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
+  },
+  // TWO verbs of equal weight, so the row has no primary. Cancelling and saying
+  // what came of it are equally likely answers about a meeting the product
+  // knows nothing about, and leading the row with either would read as an
+  // expectation it has not got.
   meeting_outcome: {
     verb: "decide",
-    draw: (item) => <MeetingOutcome id={item.id} version={item.version} />,
+    draw: (item) => ({
+      equals: (
+        <MeetingOutcome
+          id={item.id}
+          version={item.version}
+          // The row's own title field, not `itemTitle`: that one takes a
+          // translator and a locale to name the rows that have no title of
+          // their own, and this lane always has one — the meeting's subject,
+          // written by whoever booked it. The dialog falls back to its own
+          // heading when a row arrives without one.
+          title={item.title}
+        />
+      ),
+    }),
   },
   conversation_claim: {
     verb: "complete",
-    draw: (item) => <PromiseKept id={item.id} />,
+    draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
   task: {
     verb: "complete",
-    draw: (item) => <TaskComplete id={item.id} version={item.version} />,
+    draw: (item) => ({
+      primary: <TaskComplete id={item.id} version={item.version} />,
+    }),
   },
-  // The row's id IS the person's here, which is what the dismissal endpoint
+  // The row's id IS the contact's here, which is what the dismissal endpoint
   // takes — the pairing is why this verb is offered on this lane and nowhere
   // else. `dismiss` also belongs to brief_item, where it means something else
   // and posts somewhere else, which is why this table is keyed by SOURCE.
   relationship_decay: {
     verb: "dismiss",
-    draw: (item) => <NudgeDismiss personId={item.id} />,
+    draw: (item) => ({ primary: <NudgeDismiss contactId={item.id} /> }),
   },
 };
 
-function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
+function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
+  if (item.source === "weekly_commitment")
+    return { primary: <PlanWorkActions item={item} /> };
   if (decidable(item)) {
-    return <RowDecision item={item} />;
+    return { primary: <RowDecision item={item} /> };
   }
   if (item.source === "dedupe_candidate" && item.pair) {
-    return <PairDecision item={item} />;
+    // UNDER the row, not in it. Each of its two verbs names the record it
+    // would keep and stands in the list entry that describes that record —
+    // lifted out into a row of verbs, "Keep Acme GmbH" and "Keep Acme GmbH"
+    // would be two identical buttons over an irreversible merge.
+    return { below: <PairDecision item={item} /> };
   }
   // Never a BATCH: a group row stands for a pile and names no single record, so
   // every id-keyed answer below would act on the wrong one.
@@ -367,20 +571,24 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   // travels with it.
   const replyTo = replyTarget(item);
   if (replyTo) {
-    return <WaitingReply id={item.id} to={replyTo} />;
+    return { primary: <WaitingReply item={item} to={replyTo} /> };
   }
-  // A brief item's three verbs, drawn together rather than one per entry: they
-  // share a surface and the component picks among them.
+  // A brief item's three verbs, RANKED the way the row ranks them: acting on
+  // the day's pick is what the reader came for, and setting it aside or
+  // dismissing it are the two ways of declining. All three share one write.
   if (item.source === "brief_item" && !item.batch) {
-    return <BriefVerbs item={item} />;
+    return {
+      primary: brief.offered("act") ? (
+        <BriefAct item={item} brief={brief} />
+      ) : undefined,
+      equals: <BriefSetAsides item={item} brief={brief} />,
+    };
   }
   // The one decided step a link cannot take.
   //
-  // Every other move the server sends already reaches the reader, as an anchor
-  // through moveHref — draft_reply and draft_email open the composer,
-  // open_task and open_meeting_brief open what they name. `create_task` POSTS a
-  // task body, which is a write and not a destination, so NAVIGABLE_MOVES
-  // excludes it and the row could name the step and offer no way to take it.
+  // Reply moves open their conversation or composer; other navigable moves
+  // open the task or meeting they name. Creating a task needs the deal
+  // status card’s writer rather than a destination.
   //
   // The button is the deal status card's own, mounted a second time rather than
   // written again: one answer to "what does Add this task do", on the two
@@ -391,190 +599,70 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   // that has none — so an earlier position here would replace Act, Set aside
   // and Dismiss with a task button on a row whose own verbs are the point.
   if (item.move?.action === "create_task" && hasMoveControl(item.move)) {
-    return (
-      <div className="worklist-row-verbs">
+    return {
+      primary: (
         <MoveButton
           dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
           move={item.move}
         />
-      </div>
-    );
+      ),
+    };
   }
-  return null;
+  return {};
 }
 
 // Setting a lapsed contact aside for a month.
 //
 // Nobody is waiting on a quiet contact, which is exactly why the row kept
 // coming back: there was no way to say "not this one, not now", so a rep who
-// had already decided met the same person every morning.
+// had already decided met the same contact every morning.
 //
 // UNDOABLE from the confirmation, like every disposition beside it. The row
 // leaves the lane on success, so a misclick otherwise costs the reader the only
 // address they had for a contact they were not done with.
-function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
+function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
   const t = useT();
   const toast = useToast();
   const { dismiss, restore } = useNudgeDismissal();
   return (
-    <div className="worklist-row-verbs">
-      <Button
-        small
-        pending={dismiss.isPending}
-        onClick={() =>
-          dismiss.mutate(
-            { personId },
-            {
-              onSuccess: () =>
-                toast.show(t("worklist.verb.dismissed"), {
-                  action: {
-                    label: t("worklist.verb.dismissUndo"),
-                    // The toast dismisses itself the moment the action is
-                    // pressed, so a failed undo leaves the contact set aside
-                    // with the only way back already off the screen.
-                    //
-                    // mutateAsync and a catch, for the reason TaskComplete
-                    // gives above: the dismissal REMOVES the row, so by the
-                    // time the reader presses Undo this component is unmounted
-                    // and React Query has dropped the observer that per-call
-                    // callbacks hang off. A refused undo would say nothing at
-                    // all — the reader presses the one control that undoes
-                    // their misclick, it fails, and the screen is silent.
-                    onAct: () => {
-                      restore.mutateAsync({ personId }).catch(() =>
-                        toast.show(t("worklist.verb.dismissUndoFailed"), {
-                          mark: false,
-                        }),
-                      );
-                    },
+    <Button
+      pending={dismiss.isPending}
+      onClick={() =>
+        dismiss.mutate(
+          { contactId },
+          {
+            onSuccess: () =>
+              toast.show(t("worklist.verb.dismissed"), {
+                action: {
+                  label: t("worklist.verb.dismissUndo"),
+                  // The toast dismisses itself the moment the action is
+                  // pressed, so a failed undo leaves the contact set aside
+                  // with the only way back already off the screen.
+                  //
+                  // mutateAsync and a catch, for the reason TaskComplete
+                  // gives above: the dismissal REMOVES the row, so by the
+                  // time the reader presses Undo this component is unmounted
+                  // and React Query has dropped the observer that per-call
+                  // callbacks hang off. A refused undo would say nothing at
+                  // all — the reader presses the one control that undoes
+                  // their misclick, it fails, and the screen is silent.
+                  onAct: () => {
+                    restore.mutateAsync({ contactId }).catch(() =>
+                      toast.show(t("worklist.verb.dismissUndoFailed"), {
+                        tone: "danger",
+                      }),
+                    );
                   },
-                }),
-              onError: () =>
-                toast.show(t("worklist.verb.dismissFailed"), { mark: false }),
-            },
-          )
-        }
-      >
-        {t("worklist.verb.dismiss")}
-      </Button>
-    </div>
-  );
-}
-
-/**
- * How many reasons a row says before the rest go behind a tap.
- *
- * A COUNT, because the ceiling has to survive the vocabulary growing. Saying
- * only what a row contains today puts it back over the limit the next time
- * somebody adds a reason, and that person has no way to know they did.
- *
- * Three because three still fit on ONE line at 390px. Measured 2026-09-05:
- * two reasons and three are both 19px; the fourth wraps to 37px and the sixth
- * to 56px. So the fold costs a reader nothing until the line would have taken
- * a second line anyway.
- */
-const REASONS_BEFORE_THE_FOLD = 3;
-
-/**
- * Why this row is here — the first few said outright, the rest a tap away.
- *
- * NOTHING IS DISCARDED, which is the whole shape of this. A cap that dropped
- * the overflow was tried and abandoned (it dropped the wrong ones: `pinned`,
- * `expected_revenue` and an absorbed deal's grounds are all appended LAST
- * because they are applied late, so a head-of-list cut takes exactly the facts
- * that decided where the row sits). The reasons arrive "in the order they were
- * weighed", so the first ones are the strongest and the fold falls in the
- * right place by construction — but the rest stay reachable rather than being
- * silenced.
- *
- * The same shape the deal status card uses: first line out, remainder behind a
- * disclosure. One answer to "too many reasons", not a second one written here.
- *
- * The summary NAMES THE COUNT rather than saying "more". A reader deciding
- * whether to spend a tap wants to know if it is one more fact or four.
- */
-function RowReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) {
-  const { locale } = useLocale();
-  if (reasons.length === 0) {
-    return null;
-  }
-  const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
-  const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
-  if (folded.length === 0) {
-    return <p className="t-caption worklist-row-because">{said.join(" · ")}</p>;
-  }
-  return (
-    <details className="worklist-row-because-fold">
-      <summary className="t-caption worklist-row-because">
-        {said.join(" · ")}{" "}
-        <span className="worklist-row-because-more">
-          {translatePlural(locale, "worklist.because.more", folded.length, {
-            // The reader's own notation, not String(): a count drawn for a
-            // person goes through the formatter like every other magnitude,
-            // and jsx-magnitude.test.ts holds that for the whole tree.
-            count: formatNumber(folded.length, locale),
-          })}
-        </span>
-      </summary>
-      <p className="t-caption worklist-row-because">{folded.join(" · ")}</p>
-    </details>
-  );
-}
-
-/**
- * Everything the row says about itself under the title, in the order a reader
- * needs it.
- *
- * When it happens, what it is worth, why it is ranked where it is, what doing
- * nothing costs, and why it beat the row below. Each is absent when the server
- * sent nothing for it — a caption drawn empty is a line of furniture the reader
- * has to look past on every row.
- *
- * Together in one component because they are one idea — the row's own account
- * of itself — and because the row's function had reached the complexity the
- * linter allows, which is a fair reading of how much a person can hold at once.
- */
-function RowCaptions({
-  when,
-  facts,
-  reasons,
-  consequence,
-  above,
-}: Readonly<{
-  when: string | null;
-  facts: string | null;
-  reasons: readonly string[];
-  consequence: string | null;
-  above: string | null;
-}>) {
-  return (
-    <>
-      {/* When it starts, or when it is due. Above the reasons because it is the
-          fact those reasons are ABOUT: "starting shortly" explains a rank, and
-          this says what time. */}
-      {/* WHEN, WHAT IT IS WORTH and WHY, on one wrapping line rather than
-          three stacked ones. Each is a fragment — "due 15:00", "€40k", "due
-          today · nobody owns it" — and three fragments of a dozen characters
-          each took three full lines of a 390px row, which is 38px of a 176px
-          ceiling spent on whitespace beside three short phrases. They stay
-          separate elements, so a reader still meets them in the same order and
-          a screen reader still reads three facts; only the line breaks between
-          them go. Above that width they stack as before, because a wide row has
-          the height and stacked lines are easier to scan. */}
-      <div className="worklist-row-facts-line">
-        {when && <p className="t-caption worklist-row-when">{when}</p>}
-        {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-        <RowReasons reasons={reasons} />
-      </div>
-      {/* What it costs to do nothing. The question a queue exists to answer,
-          and the one the lane feed had no field for. */}
-      {consequence && (
-        <p className="t-caption worklist-row-consequence">{consequence}</p>
-      )}
-      {/* Why this row beat the one below it. Absent on the last row, which has
-          nothing below it to beat. */}
-      {above && <p className="t-caption worklist-row-above">{above}</p>}
-    </>
+                },
+              }),
+            onError: () =>
+              toast.show(t("worklist.verb.dismissFailed"), { tone: "danger" }),
+          },
+        )
+      }
+    >
+      {t("worklist.verb.dismiss")}
+    </Button>
   );
 }
 
@@ -607,9 +695,7 @@ function Rank({
   // decorative: the list element carries the order for a screen reader and the
   // number states it for everybody else.
   const digit = (
-    <span className="t-caption worklist-rank">
-      {formatNumber(position, locale)}
-    </span>
+    <span className="worklist-rank">{formatNumber(position, locale)}</span>
   );
   if (!onSelect) {
     return digit;
@@ -634,7 +720,7 @@ function Rank({
   );
 }
 
-// Whether this row is a decision a person answers HERE.
+// Whether this row is a decision a contact answers HERE.
 //
 // The queue holds no authority of its own — the card below is the same one the
 // record page draws, posting to the same endpoint. What the queue adds is that
@@ -669,13 +755,11 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   // fire one read per row on arrival to fill cards nobody has opened, and the
   // row above needs none of it to draw its button.
   const approval = useApproval(item.id, open);
-  // A body with no `kind` is not a proposal this card can draw: the kind
-  // chooses the label, the tool chip and the autonomy dot. Treated as a failed
-  // read rather than rendered, because the alternative is a throw that takes
-  // the whole day's page down over one malformed answer.
   const usable = approval.data?.kind ? approval.data : undefined;
   return (
-    <div className="worklist-row-decision">
+    // A TEST ID rather than a class: which rows offer a decision is what a
+    // screen journey counts, and nothing draws this wrapper.
+    <div data-testid="worklist-row-decision">
       <Button
         ref={opener}
         variant="primary"
@@ -692,8 +776,12 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         size="wide"
         returnFocusTo={() => opener.current}
       >
-        <h2 id={titleId}>{t("worklist.decision.title")}</h2>
-        {usable ? (
+        <Heading size="large" id={titleId}>
+          {t("worklist.decision.title")}
+        </Heading>
+        {usable?.bundle_id ? (
+          <ApprovalBundleReview approval={usable} />
+        ) : usable ? (
           <ApprovalRow
             approval={usable}
             extraInvalidateKeys={[worklistKey]}
@@ -723,26 +811,23 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
   const toast = useToast();
   const acknowledge = useNoticeRead([worklistKey]);
   return (
-    <div className="worklist-row-verbs">
-      <Button
-        small
-        pending={acknowledge.isPending}
-        onClick={() =>
-          acknowledge.mutate(id, {
-            // A rejected read leaves the button idle with nothing else on
-            // screen to say so — the same rendering a click that did nothing
-            // would leave. Without this the notice stays in the lane and the
-            // reader has no reason to try again.
-            onError: () =>
-              toast.show(t("worklist.verb.acknowledgeFailed"), {
-                mark: false,
-              }),
-          })
-        }
-      >
-        {t("worklist.verb.acknowledge")}
-      </Button>
-    </div>
+    <Button
+      pending={acknowledge.isPending}
+      onClick={() =>
+        acknowledge.mutate(id, {
+          // A rejected read leaves the button idle with nothing else on
+          // screen to say so — the same rendering a click that did nothing
+          // would leave. Without this the notice stays in the lane and the
+          // reader has no reason to try again.
+          onError: () =>
+            toast.show(t("worklist.verb.acknowledgeFailed"), {
+              tone: "danger",
+            }),
+        })
+      }
+    >
+      {t("worklist.verb.acknowledge")}
+    </Button>
   );
 }
 
@@ -769,376 +854,53 @@ function TaskComplete({
   const undo = (task: string, at: number | undefined) =>
     update.mutateAsync({ id: task, version: at, body: { is_done: false } });
   return (
-    <div className="worklist-row-verbs">
-      <Button
-        small
-        variant="primary"
-        pending={update.isPending}
-        onClick={() =>
-          update.mutate(
-            { id, version, body: { is_done: true } },
-            {
-              // Undoable from the confirmation, the way every disposition
-              // beside it is. Done REMOVES the row, so a misclick otherwise
-              // costs the reader the only address they had for the task —
-              // they must remember what it was to find it again.
-              onSuccess: (completedAt) =>
-                toast.show(t("worklist.verb.completed"), {
-                  action: {
-                    label: t("worklist.verb.completeUndo"),
-                    // The toast dismisses itself the moment the action is
-                    // pressed, so a failed undo leaves the task done with the
-                    // only way back already off the screen.
-                    // The failure is reported from the mutationFn's own catch
-                    // rather than from a per-call onError, and that is the
-                    // whole reason this reads the way it does: the completion
-                    // REMOVES the row, so by the time the reader presses Undo
-                    // the component is unmounted and React Query has dropped
-                    // the observer that per-call callbacks hang off. A refused
-                    // undo then showed nothing at all — the reader pressed the
-                    // one control that could undo their misclick, it failed,
-                    // and the screen said nothing.
-                    onAct: () => {
-                      undo(id, completedAt).catch(() =>
-                        toast.show(t("worklist.verb.completeUndoFailed"), {
-                          mark: false,
-                        }),
-                      );
-                    },
+    <Button
+      variant="primary"
+      pending={update.isPending}
+      onClick={() =>
+        update.mutate(
+          { id, version, body: { is_done: true } },
+          {
+            // Undoable from the confirmation, the way every disposition
+            // beside it is. Done REMOVES the row, so a misclick otherwise
+            // costs the reader the only address they had for the task —
+            // they must remember what it was to find it again.
+            onSuccess: (completedAt) =>
+              toast.show(t("worklist.verb.completed"), {
+                action: {
+                  label: t("worklist.verb.completeUndo"),
+                  // The toast dismisses itself the moment the action is
+                  // pressed, so a failed undo leaves the task done with the
+                  // only way back already off the screen.
+                  // The failure is reported from the mutationFn's own catch
+                  // rather than from a per-call onError, and that is the
+                  // whole reason this reads the way it does: the completion
+                  // REMOVES the row, so by the time the reader presses Undo
+                  // the component is unmounted and React Query has dropped
+                  // the observer that per-call callbacks hang off. A refused
+                  // undo then showed nothing at all — the reader pressed the
+                  // one control that could undo their misclick, it failed,
+                  // and the screen said nothing.
+                  onAct: () => {
+                    undo(id, completedAt).catch(() =>
+                      toast.show(t("worklist.verb.completeUndoFailed"), {
+                        tone: "danger",
+                      }),
+                    );
                   },
-                }),
-              // A rejected PATCH otherwise leaves the button idle with nothing
-              // on screen to say so — the same rendering a click that did
-              // nothing would leave, and the reader has no reason to try again.
-              onError: () =>
-                toast.show(t("worklist.verb.completeFailed"), { mark: false }),
-            },
-          )
-        }
-      >
-        {t("tasks.complete")}
-      </Button>
-    </div>
-  );
-}
-
-// A brief item's three verbs, answered where the row sits.
-//
-// The row named work and offered no way to do it. `brief_item` is classified
-// `today` — it is seller work, on a seller's screen — and the server sends
-// `act`, `set_aside` and `dismiss` with it. None of the three is in
-// VERB_DESTINATION, so the queue drew a title, a deal and a Pin button, and a
-// rep looking at their most important next move had to go and find another
-// screen to make it.
-//
-// It calls the SAME mutation Brief's brief queue calls, which already
-// invalidates this queue on success — one answer to "what happens to a brief
-// item", not a second one written here.
-//
-// `set_aside` posts to the brief's own snooze rather than a task's: a task's
-// snooze moves a due date the rep agreed to, and a brief item's hides a
-// suggestion until later in the day. The contract says so out loud, and one
-// word for both is how a client writes the wrong endpoint.
-function BriefVerbs({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const toast = useToast();
-  const mark = useBriefItemMark();
-  // ALL THREE stand down together, once one has been ANSWERED — not merely
-  // while a write is in flight.
-  //
-  // They are three answers to one row, so a rep who acts and then dismisses has
-  // answered the same item twice. `isSuccess` rather than `isPending` is what
-  // makes that unreachable, and the difference is what a brief item does on
-  // success: a completed task LEAVES the queue and takes its button with it,
-  // while an answered brief item is patched in place and the row is still on
-  // screen. Between the write settling and the refetch arriving, a second press
-  // is both possible and wrong.
-  //
-  // Narrowing this by `mark.variables?.mark` to pend one button looks more
-  // precise and does not work: `variables` is not set until React has committed
-  // the mutation's state, so a second press in the same tick reads `undefined`,
-  // every button stays live, and two presses become two POSTs. A guard keyed on
-  // knowing WHICH verb is in flight cancels the question it was asked.
-  const working = mark.isPending || mark.isSuccess;
-  const answer = (next: BriefMarkRequest) => {
-    mark.mutate(next, {
-      // A refused answer otherwise leaves the row exactly as an unpressed one,
-      // and the reader has no reason to try again — the same reason
-      // NoticeAcknowledge and TaskComplete both say so.
-      //
-      // The error the CALLBACK was handed, not `mark.error`: that field holds
-      // the state React last rendered, which on the first failure is still
-      // null. The reader would be told "no cause reported" while the server
-      // had named a conflict, and the retry it invites hits the same 409.
-      onError: (failure) =>
-        toast.show(problemMessageOf(failure, t), {
-          mark: false,
-        }),
-    });
-  };
-  // Each verb is drawn only where the SERVER offered it. The lane sends all
-  // three today, and a client that assumed so would keep drawing three the day
-  // one is withheld — posting an answer the server did not authorise, which is
-  // the failure `RowAnswer` gates every other verb against.
-  const offered = (action: WorklistItem["actions"][number]) =>
-    item.actions.includes(action);
-  return (
-    <div className="worklist-row-verbs">
-      {offered("act") && (
-        <Button
-          small
-          variant="primary"
-          pending={working}
-          onClick={() => answer({ itemId: item.id, mark: "act" })}
-        >
-          {t("brief.act")}
-        </Button>
-      )}
-      {offered("set_aside") && (
-        <Button
-          small
-          pending={working}
-          onClick={() =>
-            answer({
-              itemId: item.id,
-              mark: "snooze",
-              snoozedUntil: tomorrowMorning(Date.now()),
-            })
-          }
-        >
-          {t("brief.snooze")}
-        </Button>
-      )}
-      {offered("dismiss") && (
-        <Button
-          small
-          pending={working}
-          onClick={() => answer({ itemId: item.id, mark: "dismiss" })}
-        >
-          {t("brief.dismiss")}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-// The way into a group.
-//
-// It narrows the queue to decisions rather than opening a screen of its own:
-// that screen is its own piece of work, and a row whose only verb led nowhere
-// would be worse than the pile it replaced.
-//
-// A button, not a link. The dials live in this screen's state today, so an
-// address carrying `?filter=decisions` would be read by nobody and the control
-// would do nothing — which is the defect it exists to avoid. Moving them into
-// the URL is the right shape and is its own change.
-function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
-  const t = useT();
-  return (
-    <div className="worklist-row-verbs">
-      <Button small onClick={onReview}>
-        {t("worklist.verb.review_batch")}
-      </Button>
-    </div>
-  );
-}
-
-// What this row offers, as the item itself declares it.
-//
-// Every verb is a LINK to the surface that owns it rather than a mutation from
-// here: this queue adds no authority of its own, so deciding an approval goes
-// to the decision surface and merging a pair to the dedupe queue, exactly as
-// they do from any other door. Rendering a button that acted here would be a
-// second place for those rules to live.
-//
-// A verb whose destination this page cannot name draws nothing. A control that
-// looks pressable and goes nowhere is worse than no control.
-function RowVerbs({
-  item,
-  href,
-  move,
-}: Readonly<{
-  item: WorklistItem;
-  href: string | undefined;
-  move: string | undefined;
-}>) {
-  const t = useT();
-  const drawn = new Set<string>();
-  type Verb = {
-    action: WorklistItem["actions"][number];
-    destination: string;
-  };
-  const verbs = item.actions.flatMap<Verb>((action) => {
-    if (action === "decide") {
-      const to = decideDestination(item, href);
-      return to ? [{ action, destination: to }] : [];
-    }
-    const route = VERB_DESTINATION[action];
-    if (!route) {
-      // A verb this build cannot route draws nothing. A control that looks
-      // pressable and goes nowhere is worse than no control.
-      return [];
-    }
-    const destination = route(href);
-    if (!destination) {
-      return [];
-    }
-    // One control per DESTINATION. `complete` and `snooze` both open the
-    // record this row is about, and two identical "Open" links side by side
-    // ask the reader to choose between the same thing twice.
-    const key = `${VERB_LABEL[action](t)}|${destination}`;
-    if (drawn.has(key)) {
-      return [];
-    }
-    drawn.add(key);
-    return [{ action, destination }];
-  });
-  if (verbs.length === 0 && !move) {
-    return null;
-  }
-  return (
-    <div className="worklist-row-verbs">
-      {/* The step the product already worked out, offered where the reader is
-          standing rather than on a screen they have to go and find. */}
-      {move && (
-        <a className="link-button" href={move}>
-          {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
-              address opens the composer the label is the act; where it only
-              reaches the record it says so. And it names the verb the SERVER
-              chose, so an opening outreach is not offered as a reply to a
-              conversation nobody has had. */}
-          {moveLabel(item, t)}
-        </a>
-      )}
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className="link-button" href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-// Where each verb lives. A total map over the ones this page can route, so a
-// verb the contract adds either gets a destination here or is not drawn —
-// never a button that does nothing.
-const VERB_DESTINATION: Partial<
-  Record<
-    WorklistItem["actions"][number],
-    (href: string | undefined) => string | undefined
-  >
-> = {
-  // `decide` and `merge` are deliberately absent: the surface that answers
-  // them IS this page, so a link would send the reader where they already are.
-  // They come back when the decision card is drawn inline, which is its own
-  // piece of work.
-  //
-  // `acknowledge` is absent too — see NoticeAcknowledge, which draws it
-  // inline instead of through this table.
-  //
-  // Everything routable is the record the row is about.
-  open: (href) => href,
-  complete: (href) => href,
-  snooze: (href) => href,
-};
-
-// The one verb whose routing depends on the SOURCE rather than only the verb.
-//
-// `decide` is answered inline for an approval — the card is right there, so a
-// link would send the reader where they already are. An introduction ask has no
-// inline card: its four answers are the colleague's own, given on the contact's
-// Network tab. Without this the ask row names somebody waiting and offers
-// nothing at all, which is the worst of both.
-function decideDestination(
-  item: WorklistItem,
-  href: string | undefined,
-): string | undefined {
-  return item.source === "introduction_request" ? href : undefined;
-}
-
-// What each routable verb is called. Spelled as a map of functions rather than
-// a composed key, so a verb the contract adds without copy here does not
-// compile — which is the only way this cannot reach a reader as a raw word.
-const VERB_LABEL: Record<
-  WorklistItem["actions"][number],
-  (t: ReturnType<typeof useT>) => string
-> = {
-  decide: (t) => t("worklist.verb.decide"),
-  merge: (t) => t("worklist.verb.merge"),
-  open: (t) => t("worklist.verb.open"),
-  complete: (t) => t("worklist.verb.complete"),
-  snooze: (t) => t("worklist.verb.snooze"),
-  acknowledge: (t) => t("worklist.verb.acknowledge"),
-  // The briefing queue's three verbs. Named here because the map is total over
-  // the contract's actions — they route nowhere from this page yet, so
-  // VERB_DESTINATION does not carry them and no control is drawn.
-  act: (t) => t("worklist.verb.open"),
-  dismiss: (t) => t("worklist.verb.open"),
-  set_aside: (t) => t("worklist.verb.open"),
-  // Named for the same reason: the map is total. `retry` is drawn by
-  // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
-  // nowhere and this label is never the one a reader sees.
-  retry: (t) => t("worklist.verb.retry"),
-  // The composer's own word, not a second one: ChannelReplyAction draws the
-  // button this labels, and two spellings of one act would read as two acts.
-  reply: (t) => t("compose.reply"),
-};
-
-// The day's figures, and the dials that narrow them.
-
-// The reader's own override: this row leads their day, whatever the ranking
-// chose.
-//
-// The ranking has carried a pin level since it was written and, until the store
-// shipped, nothing could set it. Every other control on this page changes what
-// the SERVER thinks — a disposition, a filter, a scope. This is the only one
-// that says "I know, and I want this first anyway", which is the difference
-// between a queue a rep works and a queue a rep argues with.
-//
-// WHAT IT READS to know which way to toggle: the row's own `pinned` reason. The
-// server states it on a pinned row, so the client asks the response rather than
-// keeping a second record of what it pressed — a local flag would disagree with
-// the page the moment the reader pinned from another tab, and the button would
-// offer to pin a row that already leads their day.
-//
-// A BATCH row is skipped. Its id is synthetic and minted by the fold, so a pin
-// on one names a group that will not exist under that key on the next read.
-function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const toast = useToast();
-  const pin = usePinRow();
-  if (item.batch) {
-    return null;
-  }
-  const pinned = (item.because ?? []).some((why) => why.kind === "pinned");
-  return (
-    <div className="worklist-row-verbs">
-      <Button
-        small
-        pending={pin.isPending}
-        onClick={() =>
-          pin.mutate(
-            { source: item.source, rowId: item.id, pinned },
-            {
-              // A refused write otherwise leaves the button exactly as an
-              // unpressed one looks, and the row keeps the place it had — so
-              // the reader is told nothing and sees nothing change.
-              onError: () =>
-                toast.show(
-                  t(
-                    pinned
-                      ? "worklist.verb.unpinFailed"
-                      : "worklist.verb.pinFailed",
-                  ),
-                  { mark: false },
-                ),
-            },
-          )
-        }
-      >
-        {t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
-      </Button>
-    </div>
+                },
+              }),
+            // A rejected PATCH otherwise leaves the button idle with nothing
+            // on screen to say so — the same rendering a click that did
+            // nothing would leave, and the reader has no reason to try again.
+            onError: () =>
+              toast.show(t("worklist.verb.completeFailed"), { tone: "danger" }),
+          },
+        )
+      }
+    >
+      {t("tasks.complete")}
+    </Button>
   );
 }
 
@@ -1155,29 +917,28 @@ function AutomationRetry({ id }: Readonly<{ id: string }>) {
   const toast = useToast();
   const retry = useAutomationRetry([worklistKey]);
   return (
-    <div className="worklist-row-verbs">
-      <Button
-        small
-        pending={retry.isPending}
-        onClick={() =>
-          retry.mutate(id, {
-            onSuccess: (result) =>
-              toast.show(
-                result?.retried === true
-                  ? t("worklist.verb.retryStarted")
-                  : t(refusalMessage(result?.refusal)),
-                { mark: result?.retried === true },
-              ),
-            // A rejected retry leaves the button idle with nothing on screen to
-            // say so, which renders exactly like a click that did nothing.
-            onError: () =>
-              toast.show(t("worklist.verb.retryFailed"), { mark: false }),
-          })
-        }
-      >
-        {t("worklist.verb.retry")}
-      </Button>
-    </div>
+    <Button
+      pending={retry.isPending}
+      onClick={() =>
+        retry.mutate(id, {
+          onSuccess: (result) =>
+            toast.show(
+              result?.retried === true
+                ? t("worklist.verb.retryStarted")
+                : t(refusalMessage(result?.refusal)),
+              // `info` and not `success`: a retry that was accepted has
+              // STARTED, not finished, and the work is still in flight.
+              { tone: result?.retried === true ? "info" : "danger" },
+            ),
+          // A rejected retry leaves the button idle with nothing on screen to
+          // say so, which renders exactly like a click that did nothing.
+          onError: () =>
+            toast.show(t("worklist.verb.retryFailed"), { tone: "danger" }),
+        })
+      }
+    >
+      {t("worklist.verb.retry")}
+    </Button>
   );
 }
 
@@ -1199,98 +960,12 @@ function refusalMessage(
   }
 }
 
-// How a meeting went, recorded from the row that asked.
-//
-// Three buttons rather than one primary and a menu: the answers are equally
-// likely and equally short, and hiding two of three behind a chevron would make
-// the common case a second click. None is emerald — an outcome is a record of
-// what already happened, not the day's next move, and the queue's one filled
-// primary belongs to the selected row's own action.
-//
-// The row leaves the queue on success because the lane asks only for meetings
-// with no outcome. That is also why there is no undo offered here: a corrected
-// outcome is a second answer to the same question, given on the meeting itself
-// where the history of both is visible, rather than a toast that disappears.
-function MeetingOutcome({
-  id,
-  version,
-}: Readonly<{ id: string; version: number | undefined }>) {
-  const t = useT();
-  const toast = useToast();
-  const record = useMeetingOutcome([worklistKey]);
-  const answer = (status: "held" | "no_show" | "canceled") => () =>
-    record.mutate(
-      { id, version, status },
-      {
-        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
-        // A refused write leaves the row exactly as it was, which renders
-        // identically to a click that did nothing.
-        onError: () =>
-          toast.show(t("worklist.verb.meetingOutcomeFailed"), { mark: false }),
-      },
-    );
-  return (
-    <div className="worklist-row-verbs">
-      <Button small pending={record.isPending} onClick={answer("held")}>
-        {t("worklist.verb.meetingHeld")}
-      </Button>
-      <Button small pending={record.isPending} onClick={answer("no_show")}>
-        {t("worklist.verb.meetingNoShow")}
-      </Button>
-      <Button small pending={record.isPending} onClick={answer("canceled")}>
-        {t("worklist.verb.meetingCanceled")}
-      </Button>
-    </div>
-  );
-}
-
-// The record a reply would be filed against, or nothing.
-//
-// Both halves must hold. The verb says the server judged this wait answerable —
-// it is mail, not a channel message the mail composer would answer in the wrong
-// place. The subject says WHICH record the sent message links to, and its type
-// has to be one the composer can file against: the row's own vocabulary is
-// wider than RELINK_KINDS, so an `activity` subject would type-check as a
-// string and fail at the composer.
-function replyTarget(
-  item: WorklistItem,
-): { type: RelinkKind; id: string } | undefined {
-  if (!item.actions.includes("reply") || !item.subject) {
-    return undefined;
-  }
-  const type = item.subject.type;
-  if (!RELINK_KINDS.includes(type as RelinkKind)) {
-    return undefined;
-  }
-  return { type: type as RelinkKind, id: item.subject.id };
-}
-
-// Answering the buyer, over the row that named the wait.
-//
-// Its own component so it can hold the hook that refreshes the queue. The
-// composer invalidates the RECORD timelines it knows about, and the worklist is
-// not one of them — nor does the queue poll — so without the callback the row
-// keeps saying nobody has replied, and keeps offering to reply again, over a
-// message the reader has already answered.
-function WaitingReply({
-  id,
-  to,
-}: Readonly<{ id: string; to: { type: RelinkKind; id: string } }>) {
-  const queryClient = useQueryClient();
-  return (
-    <div className="worklist-row-verbs">
-      <ChannelReplyAction
-        activityId={id}
-        kind="email"
-        entityType={to.type}
-        entityId={to.id}
-        onSent={() =>
-          queryClient.invalidateQueries({ queryKey: [worklistKey] })
-        }
-      />
-    </div>
-  );
-}
+// How a meeting went is recorded by `MeetingOutcome` in
+// worklist.meetingoutcome.tsx: "Cancelled" writes that one word from the card,
+// and "Update" opens the composer bound to this meeting, where the outcome is
+// typed. It lives in its own file because the dialog it carries reads the
+// meeting and patches it — a form, a query and a mutation, which is a screen's
+// worth of code rather than one of this file's row verbs.
 
 // Saying a promise was kept, from the row that keeps asking for it.
 //
@@ -1298,35 +973,32 @@ function WaitingReply({
 // `dismissed`, and they are genuinely different — kept, versus never really
 // promised — but only one of them is a thing a rep does on their morning queue.
 // Dismissing an extraction is a judgement about the extractor, made on the
-// person's own card beside the words it was read from, where the reader can see
+// contact's own card beside the words it was read from, where the reader can see
 // what it got wrong.
 function PromiseKept({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const toast = useToast();
   const settle = useClaimSettle([worklistKey]);
   return (
-    <div className="worklist-row-verbs">
-      <Button
-        small
-        variant="primary"
-        pending={settle.isPending}
-        onClick={() =>
-          settle.mutate(
-            { id, outcome: "done" },
-            {
-              onSuccess: () => toast.show(t("worklist.verb.promiseSettled")),
-              // A refused settle leaves the row exactly as it was, which reads
-              // the same as a click that did nothing.
-              onError: () =>
-                toast.show(t("worklist.verb.promiseSettleFailed"), {
-                  mark: false,
-                }),
-            },
-          )
-        }
-      >
-        {t("worklist.verb.promiseKept")}
-      </Button>
-    </div>
+    <Button
+      variant="primary"
+      pending={settle.isPending}
+      onClick={() =>
+        settle.mutate(
+          { id, outcome: "done" },
+          {
+            onSuccess: () => toast.show(t("worklist.verb.promiseSettled")),
+            // A refused settle leaves the row exactly as it was, which reads
+            // the same as a click that did nothing.
+            onError: () =>
+              toast.show(t("worklist.verb.promiseSettleFailed"), {
+                tone: "danger",
+              }),
+          },
+        )
+      }
+    >
+      {t("worklist.verb.promiseKept")}
+    </Button>
   );
 }

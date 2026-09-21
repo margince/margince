@@ -55,6 +55,7 @@ export const Setup: Story = {
         jsonResponse({
           window: "6m",
           estimated_messages: 1234,
+          after_date: "2026-01-23",
           computed_at: "2026-07-23T10:00:00Z",
         }),
     },
@@ -70,8 +71,8 @@ const RUNNING: BackfillStatus = {
   estimated_messages: 400,
   counts: {
     captured: 128,
-    people_created: 47,
-    organizations_created: 12,
+    contacts_created: 47,
+    companies_created: 12,
     messages_scanned: 150,
   },
   updated_at: new Date().toISOString(),
@@ -81,8 +82,8 @@ const DONE: BackfillStatus = {
   state: "done",
   counts: {
     captured: 512,
-    people_created: 90,
-    organizations_created: 20,
+    contacts_created: 90,
+    companies_created: 20,
     messages_scanned: 600,
   },
 };
@@ -102,7 +103,7 @@ export const RunningDark: Story = {
 };
 
 // The finished run in dark. `.capture-hero.done` is the one tinted plate in this
-// panel — `--successBg` behind the text with an `--online` border and a
+// panel — `--successBg` behind the text with an `--success` border and a
 // `--success` glyph — and "arrival" is the whole message of the state. A tint
 // that composites to the same value as the card leaves a hero saying nothing.
 export const DoneDark: Story = {
@@ -123,7 +124,7 @@ export const RunningPhone: Story = {
 export const ErrorState: Story = {
   render: panelStory("gmail", {
     state: "error",
-    counts: { captured: 40, people_created: 9 },
+    counts: { captured: 40, contacts_created: 9 },
     last_error_class: "auth",
   }),
 };
@@ -161,7 +162,7 @@ export const RestartAfterCancel: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /Start another import/ }),
     );
-    await canvas.findByText(/~890/);
+    await canvas.findByText("890 messages in that period.");
   },
 };
 
@@ -225,4 +226,28 @@ export const Narrowing: Story = {
     );
     await canvas.findByText(/only be widened/i);
   },
+};
+
+export const CappedHistory: Story = {
+  render: panelStory(
+    "gmail",
+    { state: "none" },
+    {
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          after_date: "2026-01-23",
+          computed_at: "2026-07-23T10:00:00Z",
+          estimated_messages: 20000,
+          estimate_is_floor: true,
+          estimated_cost_minor: 300,
+          currency: "USD",
+        }),
+    },
+  ),
+};
+
+export const CappedHistoryDark: Story = {
+  ...CappedHistory,
+  globals: { theme: "dark" },
 };

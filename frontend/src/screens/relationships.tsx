@@ -1,73 +1,57 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { isOption } from "../app/options";
+import { SEARCH_HIT_KIND_KEY } from "../app/searchkinds";
 import {
-  Badge,
   Button,
-  Card,
-  DataTable,
-  EmptyState,
   Field,
   Modal,
   SearchField,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import type { CreateField } from "./create";
-import { EditAction } from "./edit";
-import { EntityRef } from "./entityref";
+import {
+  type Candidate,
+  type RelationshipEntity,
+  searchByEntity,
+} from "./relationshipcandidates";
+import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
 
-// The Relationships tab (P-5): the one surface a person/company 360 renders
+// The Relationships tab (P-5): the one surface a contact/company 360 renders
 // its relationship edges through (employment, deal stakeholder, partner-of,
 // referred-by, co-sell-with). There is no GET /relationships/{id} in the
 // contract — every row is hydrated straight off the list read, so edit and
 // remove both act on the row already in hand rather than a re-fetch.
 
-type Relationship = components["schemas"]["Relationship"];
+export type Relationship = components["schemas"]["Relationship"];
 type CreateRelationshipRequest =
   components["schemas"]["CreateRelationshipRequest"];
-type RelationshipKind = Relationship["kind"];
 
 // Which 360 this tab is rendered from — fixes which side of the edge is
 // "this record" and which is the picked "other side".
 //
 // A deal is a scope of its own, not a counterparty of somebody else's: a
-// deal_stakeholder edge was creatable only from the PERSON's side, so adding a
-// champion to a deal meant knowing which person to open first, and a deal
+// deal_stakeholder edge was creatable only from the CONTACT's side, so adding a
+// champion to a deal meant knowing which contact to open first, and a deal
 // nobody had thought to name from a contact page had no stakeholder surface at
 // all. `GET /relationships` filters on deal_id for exactly this reading.
 export type RelationshipScope =
-  | { person_id: string }
-  | { organization_id: string }
+  | { contact_id: string }
+  | { company_id: string }
   | { deal_id: string };
-
-const KIND_LABELS: Record<RelationshipKind, MessageKey> = {
-  employment: "rel.kind.employment",
-  deal_stakeholder: "rel.kind.dealStakeholder",
-  project_stakeholder: "rel.kind.projectStakeholder",
-  // Readable here, never creatable below: a company's place on a project is
-  // written through the project's own surface, which holds the two rules this
-  // generic form cannot — write authority over the project row, and the refusal
-  // that keeps a project's last company on it.
-  project_company: "rel.kind.projectCompany",
-  partner_of: "rel.kind.partnerOf",
-  referred_by: "rel.kind.referredBy",
-  co_sell_with: "rel.kind.coSellWith",
-  works_with: "rel.kind.worksWith",
-};
 
 // What this FORM may create, which is narrower than what it may show: the
 // contract's create body omits project_company, so the type follows it and a
@@ -77,38 +61,40 @@ type CreatableRelationshipKind = CreateRelationshipRequest["kind"];
 const SEARCH_DEBOUNCE_MS = 250;
 
 function scopeQuery(scope: RelationshipScope): {
-  person_id?: string;
-  organization_id?: string;
+  contact_id?: string;
+  company_id?: string;
   deal_id?: string;
 } {
-  if ("person_id" in scope) {
-    return { person_id: scope.person_id };
+  if ("contact_id" in scope) {
+    return { contact_id: scope.contact_id };
   }
   if ("deal_id" in scope) {
     return { deal_id: scope.deal_id };
   }
-  return { organization_id: scope.organization_id };
+  return { company_id: scope.company_id };
 }
 
-function scopeQueryKey(scope: RelationshipScope): [string, string, string] {
-  if ("person_id" in scope) {
-    return ["relationships", "person", scope.person_id];
+export function scopeQueryKey(
+  scope: RelationshipScope,
+): [string, string, string] {
+  if ("contact_id" in scope) {
+    return ["relationships", "contact", scope.contact_id];
   }
   if ("deal_id" in scope) {
     return ["relationships", "deal", scope.deal_id];
   }
-  return ["relationships", "organization", scope.organization_id];
+  return ["relationships", "company", scope.company_id];
 }
 
 // The words this panel uses on the record it is rendered from, and whether that
 // record anchors a single kind.
 //
 // A deal anchors only deal_stakeholder, so it says "stakeholder" where a
-// person's page says "relationship": the generic word sends a reader looking for
+// contact's page says "relationship": the generic word sends a reader looking for
 // a control the deal page does not have, and a Kind picker holding one option —
 // or a Kind column repeating one badge down every row — asks a question with a
 // single answer.
-function scopeCopy(scope: RelationshipScope): {
+export function scopeCopy(scope: RelationshipScope): {
   title: MessageKey;
   add: MessageKey;
   empty: MessageKey;
@@ -130,7 +116,7 @@ function scopeCopy(scope: RelationshipScope): {
   };
 }
 
-async function fetchRelationships(
+export async function fetchRelationships(
   scope: RelationshipScope,
 ): Promise<Relationship[]> {
   const { data, error } = await api.GET("/relationships", {
@@ -145,124 +131,50 @@ async function fetchRelationships(
 // The other side of an edge from this scope's point of view, as a typed
 // record reference EntityRef can hydrate into a name + backlink. The far end
 // follows the edge shape (migration 0007 rel_*_shape) AND the scope: a
-// person's 360 sees its employment (→org) and deal_stakeholder (→deal) edges;
-// an org's 360 sees employment (→person) and the org↔org edges. Critically,
-// the org list filter matches an org↔org edge on EITHER end
-// (organization_id OR counterparty_org_id), so the far org is whichever id is
+// contact's 360 sees its employment (→company) and deal_stakeholder (→deal) edges;
+// a company's 360 sees employment (→contact) and the company↔company edges. Critically,
+// the company list filter matches a company↔company edge on EITHER end
+// (company_id OR counterparty_company_id), so the far company is whichever id is
 // not this scope's own — never the record itself.
 export function counterpartyRef(
   rel: Relationship,
   scope: RelationshipScope,
 ): { kind: EntityKind; id: string } | null {
-  // From a deal, every edge is a person: deal_stakeholder is the only kind the
+  // From a deal, every edge is a contact: deal_stakeholder is the only kind the
   // deal_id filter can return (rel_*_shape, migration 0007).
   if ("deal_id" in scope) {
-    return rel.person_id ? { kind: "person", id: rel.person_id } : null;
+    return rel.contact_id ? { kind: "contact", id: rel.contact_id } : null;
   }
-  if ("person_id" in scope) {
-    // works_with names a person on either column, and the person filter now
-    // matches either end — the far person is whichever id is not this
-    // scope's own, the same rule the org↔org branch below keeps.
+  if ("contact_id" in scope) {
+    // works_with names a contact on either column, and the contact filter now
+    // matches either end — the far contact is whichever id is not this
+    // scope's own, the same rule the company↔company branch below keeps.
     if (rel.kind === "works_with") {
-      const farPerson = [rel.person_id, rel.counterparty_person_id].find(
-        (personId) => personId != null && personId !== scope.person_id,
+      const farContact = [rel.contact_id, rel.counterparty_contact_id].find(
+        (contactId) => contactId != null && contactId !== scope.contact_id,
       );
-      return farPerson ? { kind: "person", id: farPerson } : null;
+      return farContact ? { kind: "contact", id: farContact } : null;
     }
     if (rel.deal_id) {
       return { kind: "deal", id: rel.deal_id };
     }
-    return rel.organization_id
-      ? { kind: "organization", id: rel.organization_id }
-      : null;
+    return rel.company_id ? { kind: "company", id: rel.company_id } : null;
   }
-  if (rel.person_id) {
-    return { kind: "person", id: rel.person_id };
+  if (rel.contact_id) {
+    return { kind: "contact", id: rel.contact_id };
   }
-  const far = [rel.counterparty_org_id, rel.organization_id].find(
-    (orgId) => orgId != null && orgId !== scope.organization_id,
+  const far = [rel.counterparty_company_id, rel.company_id].find(
+    (companyId) => companyId != null && companyId !== scope.company_id,
   );
-  return far ? { kind: "organization", id: far } : null;
+  return far ? { kind: "company", id: far } : null;
 }
 
-function dateRange(rel: Relationship, t: (key: MessageKey) => string): string {
+export function dateRange(
+  rel: Relationship,
+  t: (key: MessageKey) => string,
+): string {
   const end = rel.ended_at ?? t("rel.current");
   return rel.started_at ? `${rel.started_at} – ${end}` : end;
-}
-
-type Candidate = { id: string; name: string };
-
-// include_anchor: recording that a person works at the company running the CRM
-// is an ordinary, frequent fact. The list hides the own company by default
-// because it answers "which companies are we selling to"; this question is a
-// different one, so it opts back in (ADR-0082/A127).
-async function searchOrganizationCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/organizations", {
-    params: { query: { q, limit: 10, include_anchor: true } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((org) => ({ id: org.id, name: org.display_name }));
-}
-
-async function searchPersonCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/people", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((person) => ({ id: person.id, name: person.full_name }));
-}
-
-// /deals has no free-text `q` in the contract (only structured filters), so
-// the stakeholder picker fetches a recent page and matches the typed term
-// against the deal name client-side. Deals past that page aren't reached — an
-// accepted PoC limit, scoped to the manual deal_stakeholder edge.
-const DEAL_PICKER_PAGE = 50;
-
-async function searchDealCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/deals", {
-    params: { query: { limit: DEAL_PICKER_PAGE } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  const needle = q.toLowerCase();
-  return data.data
-    .filter((deal) => deal.name.toLowerCase().includes(needle))
-    .slice(0, 10)
-    .map((deal) => ({ id: deal.id, name: deal.name }));
-}
-
-// The entity kinds this tab can ever pick as a relationship's other side —
-// organization/person/deal, per the rel_*_shape CHECKs (migration 0007). A
-// lead has no relationship edges (it is promoted into a person first) and a
-// project seats its stakeholders through its own endpoint, so
-// this narrows EntityKind rather than switching on a kind the module can
-// never produce.
-type RelationshipEntity = Exclude<EntityKind, "lead" | "project">;
-
-function searchByEntity(
-  entity: RelationshipEntity,
-  query: string,
-): Promise<Candidate[]> {
-  switch (entity) {
-    case "organization":
-      return searchOrganizationCandidates(query);
-    case "person":
-      return searchPersonCandidates(query);
-    case "deal":
-      return searchDealCandidates(query);
-    default:
-      // Relationship edges only ever anchor person/organization/deal (see
-      // edgeOptions below) — `lead`/`user`/`team` are EntityRefKind additions
-      // for record refs elsewhere (EntityRef), not creatable relationship
-      // endpoints, so this branch is unreachable for any real EdgeOption but
-      // still needs to satisfy the now-widened union's exhaustiveness check.
-      return Promise.resolve([]);
-  }
 }
 
 // A creatable edge from this scope: the kind, which entity fills the picked
@@ -272,41 +184,43 @@ function searchByEntity(
 export type EdgeOption = {
   kind: CreatableRelationshipKind;
   entity: RelationshipEntity;
-  field: "organization_id" | "person_id" | "counterparty_org_id" | "deal_id";
+  field: "company_id" | "contact_id" | "counterparty_company_id" | "deal_id";
 };
 
-// Only the kinds a scope can actually anchor are offered — a person anchors
-// employment (→org) and deal_stakeholder (→deal); an org anchors employment
-// (→person) and the three org↔org kinds (→counterparty org). Offering the
+// Only the kinds a scope can actually anchor are offered — a contact anchors
+// employment (→company) and deal_stakeholder (→deal); a company anchors employment
+// (→contact) and the three company↔company kinds (→counterparty company). Offering the
 // rest would only earn an endpoint-shape 422.
 export function edgeOptions(scope: RelationshipScope): EdgeOption[] {
   // A deal anchors its stakeholders and nothing else — employment is a fact
-  // about a person and a company, and the org↔org kinds name no deal.
+  // about a contact and a company, and the company↔company kinds name no deal.
   if ("deal_id" in scope) {
-    return [{ kind: "deal_stakeholder", entity: "person", field: "person_id" }];
-  }
-  if ("person_id" in scope) {
     return [
-      { kind: "employment", entity: "organization", field: "organization_id" },
+      { kind: "deal_stakeholder", entity: "contact", field: "contact_id" },
+    ];
+  }
+  if ("contact_id" in scope) {
+    return [
+      { kind: "employment", entity: "company", field: "company_id" },
       { kind: "deal_stakeholder", entity: "deal", field: "deal_id" },
     ];
   }
   return [
-    { kind: "employment", entity: "person", field: "person_id" },
+    { kind: "employment", entity: "contact", field: "contact_id" },
     {
       kind: "partner_of",
-      entity: "organization",
-      field: "counterparty_org_id",
+      entity: "company",
+      field: "counterparty_company_id",
     },
     {
       kind: "referred_by",
-      entity: "organization",
-      field: "counterparty_org_id",
+      entity: "company",
+      field: "counterparty_company_id",
     },
     {
       kind: "co_sell_with",
-      entity: "organization",
-      field: "counterparty_org_id",
+      entity: "company",
+      field: "counterparty_company_id",
     },
   ];
 }
@@ -318,12 +232,12 @@ export function endpointBody(
   id: string,
 ): Partial<CreateRelationshipRequest> {
   switch (field) {
-    case "organization_id":
-      return { organization_id: id };
-    case "person_id":
-      return { person_id: id };
-    case "counterparty_org_id":
-      return { counterparty_org_id: id };
+    case "company_id":
+      return { company_id: id };
+    case "contact_id":
+      return { contact_id: id };
+    case "counterparty_company_id":
+      return { counterparty_company_id: id };
     case "deal_id":
       return { deal_id: id };
   }
@@ -339,11 +253,11 @@ export function endpointBody(
  * while the map one panel up still said the champion was missing.
  *
  * The whole coverage prefix rather than one deal's: a stakeholder can be seated
- * from the PERSON's page too, where the deal being changed is the picked target
+ * from the CONTACT's page too, where the deal being changed is the picked target
  * rather than the scope, and a page that knows only "some deal moved" cannot
  * name which key to drop.
  */
-function invalidateAfterEdge(
+export function invalidateAfterEdge(
   queryClient: ReturnType<typeof useQueryClient>,
   touchesADeal: boolean,
 ) {
@@ -357,21 +271,37 @@ function invalidateAfterEdge(
 // other-side target picker (mirrors merge.tsx's debounced search-and-pick —
 // the source of the edge is fixed by scope, so there is no "exclude self"
 // filtering here).
-function AddRelationshipAction({
+export function AddRelationshipAction({
   scope,
   refusedReasonId,
+  only,
 }: Readonly<{
   scope: RelationshipScope;
   // The id of the anchor page's sentence about why its record takes no
   // changes. An edge is written through the anchor's own write gate on the
   // server, so a deal this caller cannot write takes no stakeholder from them.
   refusedReasonId?: string;
+  // ONE edge and the word for it, when the surface offering this verb is about
+  // that edge alone. A contact's Deals tab is exactly that: the reader is there
+  // to seat this contact on a deal, and a kind selector offering "employment"
+  // beside it would ask them to answer a question the tab already answered.
+  //
+  // The scope is unchanged — it is still this contact — so the picker, the write
+  // and the invalidation are the ones the relationships tab already uses. What
+  // narrows is what this surface offers and what it calls it.
+  only?: { kind: CreatableRelationshipKind; label: MessageKey };
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
-  const options = edgeOptions(scope);
-  const copy = scopeCopy(scope);
+  const all = edgeOptions(scope);
+  const options = only
+    ? all.filter((option) => option.kind === only.kind)
+    : all;
+  const scopeWords = scopeCopy(scope);
+  const copy = only
+    ? { ...scopeWords, add: only.label, singleKind: true }
+    : scopeWords;
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<CreatableRelationshipKind>(options[0].kind);
   const [role, setRole] = useState("");
@@ -441,7 +371,7 @@ function AddRelationshipAction({
         // Not sent at all. This form offers every relationship kind and no
         // primary control, so `false` here was a literal rather than anybody's
         // decision — and for an employment it silently blocked the server's own
-        // rule that a person's only current job is their current primary one.
+        // rule that a contact's only current job is their current primary one.
         ...scopeQuery(scope),
         ...endpointBody(chosen.field, chosen.target.id),
       };
@@ -457,7 +387,7 @@ function AddRelationshipAction({
     },
   });
 
-  // Switching kind can switch the target entity (org→deal→person), so any
+  // Switching kind can switch the target entity (company→deal→contact), so any
   // pending pick and search results from the old entity must clear.
   function selectKind(next: CreatableRelationshipKind) {
     setKind(next);
@@ -482,7 +412,6 @@ function AddRelationshipAction({
   return (
     <>
       <Button
-        small
         reasonId={refusedReasonId}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
@@ -490,9 +419,14 @@ function AddRelationshipAction({
         {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: "var(--space-3)" }}
+        >
           {t(copy.add)}
-        </h2>
+        </Heading>
         <div className="form-stack">
           {!copy.singleKind && (
             <Field label={t("rel.kind")}>
@@ -512,6 +446,39 @@ function AddRelationshipAction({
               )}
             </Field>
           )}
+          {/* The counterparty comes before Role and Started: a reader picks
+              WHAT they are linking to before describing the edge, and the
+              caption names the kind being searched rather than a generic
+              "other side", reusing the same singular each search result
+              screen already carries for its own kind. */}
+          <p className="t-caption">{t(SEARCH_HIT_KIND_KEY[entity])}</p>
+          <SearchField
+            placeholder={t("merge.searchPlaceholder")}
+            aria-label={t("merge.searchPlaceholder")}
+            value={term}
+            onChange={(event) => {
+              setTerm(event.target.value);
+              setTarget(null);
+            }}
+          />
+          {searchFailure ? (
+            <p style={{ color: "var(--dangerText)" }}>
+              {problemMessageOf(searchFailure, t)}
+            </p>
+          ) : null}
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {candidates.map((candidate) => (
+              <li key={candidate.id}>
+                <Button
+                  className="candidate-option"
+                  aria-pressed={target?.id === candidate.id}
+                  onClick={() => setTarget(candidate)}
+                >
+                  {candidate.name}
+                </Button>
+              </li>
+            ))}
+          </ul>
           <Field label={t("rel.role")}>
             {(control) => (
               <TextInput
@@ -531,36 +498,8 @@ function AddRelationshipAction({
               />
             )}
           </Field>
-          <p className="t-caption">{t("rel.pickCounterparty")}</p>
-          <SearchField
-            placeholder={t("merge.searchPlaceholder")}
-            aria-label={t("merge.searchPlaceholder")}
-            value={term}
-            onChange={(event) => {
-              setTerm(event.target.value);
-              setTarget(null);
-            }}
-          />
-          {searchFailure ? (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
-              {problemMessageOf(searchFailure, t)}
-            </p>
-          ) : null}
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {candidates.map((candidate) => (
-              <li key={candidate.id}>
-                <Button
-                  className="candidate-option"
-                  aria-pressed={target?.id === candidate.id}
-                  onClick={() => setTarget(candidate)}
-                >
-                  {candidate.name}
-                </Button>
-              </li>
-            ))}
-          </ul>
           {target && (
-            <p style={{ marginBottom: 4 }}>
+            <p style={{ marginBottom: "var(--space-1)" }}>
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
@@ -568,7 +507,7 @@ function AddRelationshipAction({
             </p>
           )}
           {mutation.isError && (
-            <p className="t-caption" style={{ color: "var(--danger)" }}>
+            <p style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(mutation.error, t)}
             </p>
           )}
@@ -579,11 +518,10 @@ function AddRelationshipAction({
               justifyContent: "flex-end",
             }}
           >
-            <Button small onClick={close} disabled={mutation.isPending}>
+            <Button onClick={close} disabled={mutation.isPending}>
               {t("create.cancel")}
             </Button>
             <Button
-              small
               variant="primary"
               disabled={!target || mutation.isPending}
               onClick={() =>
@@ -607,236 +545,19 @@ function AddRelationshipAction({
   );
 }
 
-const relationshipEditFields: CreateField[] = [
+export const relationshipEditFields: CreateField[] = [
   { key: "role", label: "rel.role" },
   { key: "started_at", label: "rel.startedAt", type: "date" },
   { key: "ended_at", label: "rel.endedAt", type: "date" },
 ];
 
-// UpdateRelationshipRequest fields are nullable, but the backend's
-// UpdateRelationship applies them via coalesce($n, col) — null means KEEP
-// the existing value, not clear it (backend/internal/modules/people/
-// relationship.go). So this can SET/CHANGE role/started_at/ended_at to a
-// new value, but an emptied field is NOT reachable this way: sending null
-// leaves the stored value untouched rather than wiping it. `orNull` still
-// avoids sending an empty string over the wire; true clear-support needs a
-// backend change (distinguish omit vs. explicit-null) and is out of scope
-// here.
-function orNull(value: unknown): string | null {
+// UpdateRelationshipRequest fields are nullable, but the backend applies them
+// via coalesce($n, col) (backend/internal/modules/contacts/relationship.go):
+// null means KEEP the stored value, never clear it. So role, started_at and
+// ended_at can be set or changed here while an emptied one stays as it was —
+// clearing needs the server to tell omit from explicit-null first. `orNull`
+// still keeps an empty string off the wire.
+export function orNull(value: unknown): string | null {
   const text = typeof value === "string" ? value.trim() : "";
   return text.length > 0 ? text : null;
-}
-
-export function RelationshipsTab({
-  scope,
-  refusedReasonId,
-}: Readonly<{
-  scope: RelationshipScope;
-  // See AddRelationshipAction: the anchor page's one read-only sentence,
-  // which every write here points at when the anchor refuses changes.
-  refusedReasonId?: string;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const headingId = useId();
-  const copy = scopeCopy(scope);
-  // The object half of each verb's gate, asked as the server asks it
-  // (relationship:create on an add, :update on an edit, :delete on a
-  // removal). A verb the role holds no grant for is withheld outright — there
-  // is no fact about the record to report — where the anchor's refusal above
-  // keeps the verb and says why.
-  const canCreate = useCanWrite("relationship", "create");
-  const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
-  const query = useQuery({
-    queryKey: scopeQueryKey(scope),
-    queryFn: () => fetchRelationships(scope),
-  });
-
-  // Two-step confirm, mirroring ArchiveAction (archive.tsx) — Remove is a
-  // hard DELETE with no restore path, so it never fires from a single click.
-  // The ROW, not its id: what the write invalidates depends on whether the edge
-  // names a deal, and an id alone cannot answer that.
-  const [removing, setRemoving] = useState<Relationship | null>(null);
-
-  const remove = useMutation({
-    mutationFn: async (doomed: Relationship) => {
-      const { data, error } = await api.DELETE("/relationships/{id}", {
-        params: { path: { id: doomed.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (_removed, doomed) => {
-      invalidateAfterEdge(queryClient, doomed.deal_id != null);
-      setRemoving(null);
-    },
-  });
-
-  return (
-    <Card
-      title={t(copy.title)}
-      actions={
-        canCreate ? (
-          <AddRelationshipAction
-            scope={scope}
-            refusedReasonId={refusedReasonId}
-          />
-        ) : undefined
-      }
-    >
-      <QueryGate query={query} pendingLabel={t(copy.title)}>
-        {(rows) =>
-          rows.length === 0 ? (
-            <EmptyState>{t(copy.empty)}</EmptyState>
-          ) : (
-            <DataTable
-              label={t(copy.title)}
-              columns={[
-                ...(copy.singleKind
-                  ? []
-                  : [
-                      {
-                        key: "kind",
-                        header: t("rel.kind"),
-                        render: (rel: Relationship) => (
-                          <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
-                        ),
-                      },
-                    ]),
-                {
-                  key: "role",
-                  header: t("rel.role"),
-                  render: (rel: Relationship) => rel.role ?? "",
-                },
-                {
-                  key: "counterparty",
-                  header: t("rel.counterparty"),
-                  render: (rel: Relationship) => {
-                    const ref = counterpartyRef(rel, scope);
-                    return ref ? (
-                      <EntityRef kind={ref.kind} id={ref.id} />
-                    ) : (
-                      <span className="t-mono">—</span>
-                    );
-                  },
-                },
-                {
-                  key: "dates",
-                  header: t("rel.dates"),
-                  render: (rel: Relationship) => dateRange(rel, t),
-                },
-                {
-                  key: "actions",
-                  header: "",
-                  render: (rel: Relationship) => (
-                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                      {canUpdate && (
-                        <EditAction
-                          disabledReasonId={refusedReasonId}
-                          label={t("record.edit")}
-                          savedMessage={t("rel.saveDone")}
-                          fields={relationshipEditFields}
-                          record={{
-                            id: rel.id,
-                            version: rel.version,
-                            role: rel.role ?? "",
-                            started_at: rel.started_at ?? "",
-                            ended_at: rel.ended_at ?? "",
-                          }}
-                          update={async (values, _rows, opened) => {
-                            const { data, error } = await api.PATCH(
-                              "/relationships/{id}",
-                              {
-                                params: {
-                                  path: { id: rel.id },
-                                  ...ifMatch(requireVersion(opened?.version)),
-                                },
-                                body: {
-                                  role: orNull(values.role),
-                                  started_at: orNull(values.started_at),
-                                  ended_at: orNull(values.ended_at),
-                                },
-                              },
-                            );
-                            if (error) {
-                              throwProblem(error);
-                            }
-                            return data;
-                          }}
-                          invalidate="relationships"
-                          recordKey="relationship"
-                        />
-                      )}
-                      {canDelete && (
-                        <Button
-                          small
-                          variant="danger"
-                          reasonId={refusedReasonId}
-                          onClick={() => setRemoving(rel)}
-                          data-testid="remove-relationship"
-                        >
-                          {t("rel.remove")}
-                        </Button>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-              rows={rows}
-              rowKey={(rel) => rel.id}
-            />
-          )
-        }
-      </QueryGate>
-      <Modal
-        open={removing !== null}
-        onClose={() => {
-          setRemoving(null);
-          remove.reset();
-        }}
-        labelledBy={headingId}
-      >
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
-          {t("rel.remove")}
-        </h2>
-        <p style={{ marginBottom: 16 }}>{t("rel.removeConfirm")}</p>
-        {remove.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
-            {problemMessageOf(remove.error, t)}
-          </p>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--gapActions)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button
-            small
-            onClick={() => setRemoving(null)}
-            disabled={remove.isPending}
-          >
-            {t("create.cancel")}
-          </Button>
-          <Button
-            small
-            variant="danger"
-            onClick={() => {
-              if (removing) {
-                remove.mutate(removing);
-              }
-            }}
-            disabled={remove.isPending}
-            data-testid="remove-relationship-confirm"
-          >
-            {t("rel.remove")}
-          </Button>
-        </div>
-      </Modal>
-    </Card>
-  );
 }

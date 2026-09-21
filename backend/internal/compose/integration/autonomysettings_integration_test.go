@@ -17,6 +17,8 @@ package integration
 import (
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -30,12 +32,19 @@ import (
 // made about it is a claim about a path that runs.
 func closeDateRow(t *testing.T, settings []approvals.KindAutonomy) approvals.KindAutonomy {
 	t.Helper()
+	return kindRow(t, settings, deals.CloseDateCorrectionKind)
+}
+
+// kindRow finds one named kind in a settings answer, for the tests whose
+// subject is not the close-date kind itself.
+func kindRow(t *testing.T, settings []approvals.KindAutonomy, kind string) approvals.KindAutonomy {
+	t.Helper()
 	for _, row := range settings {
-		if row.Kind == deals.CloseDateCorrectionKind {
+		if row.Kind == kind {
 			return row
 		}
 	}
-	t.Fatalf("the settings answer names no %q: %+v", deals.CloseDateCorrectionKind, settings)
+	t.Fatalf("the settings answer names no %q: %+v", kind, settings)
 	return approvals.KindAutonomy{}
 }
 
@@ -63,10 +72,14 @@ func TestEveryAutomatableKindIsOfferedBeforeAnyoneHasDecidedOne(t *testing.T) {
 		if !approvals.AutoApplyKinds[row.Kind] {
 			t.Errorf("offered %q, which is not a kind that can apply automatically", row.Kind)
 		}
-		if row.Mode != approvals.ModeManual {
-			t.Errorf("%q reads %q for a rep who has decided nothing; a kind nobody has "+
-				"chosen must read manual, which is what will happen to it",
-				row.Kind, row.Mode)
+		mode, err := svc.AutoApplyMode(repCtx, row.Kind)
+		if err != nil || mode != row.Mode {
+			t.Errorf("%q executes as %q (err %v), settings show %q", row.Kind, mode, err, row.Mode)
+		}
+		if row.Mode != approvals.ModeAuto {
+			t.Errorf("%q reads %q for a rep who has decided nothing, want %q — the switch "+
+				"must say what happens to somebody who never touches it",
+				row.Kind, row.Mode, approvals.ModeAuto)
 		}
 	}
 }
@@ -94,7 +107,7 @@ func TestSwitchingAKindOnIsWhatTheSettingsThenReport(t *testing.T) {
 		if row.Kind == deals.CloseDateCorrectionKind {
 			continue
 		}
-		if row.Mode != approvals.ModeManual {
+		if row.Mode != approvals.ModeAuto {
 			t.Errorf("%q moved to %q on a write that named a different kind",
 				row.Kind, row.Mode)
 		}
@@ -124,16 +137,18 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 	svc := approvals.NewService(e.DB())
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	second := e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms)
+	// Switching one rep off must not turn off their colleague.
+	const kind = "company_name_promotion"
 
-	if _, err := svc.SetAutoApply(first, deals.CloseDateCorrectionKind, true); err != nil {
-		t.Fatalf("switching the first rep's kind on: %v", err)
+	if _, err := svc.SetAutoApply(first, kind, false); err != nil {
+		t.Fatalf("switching the first rep's kind off: %v", err)
 	}
 
 	settings, err := svc.AutoApplySettings(second)
 	if err != nil {
 		t.Fatalf("reading the second rep's settings: %v", err)
 	}
-	if got := closeDateRow(t, settings).Mode; got != approvals.ModeManual {
+	if got := kindRow(t, settings, kind).Mode; got != approvals.ModeAuto {
 		t.Fatalf("the second rep inherited %q from a colleague's choice", got)
 	}
 }
@@ -168,8 +183,8 @@ func TestTheTrackRecordUnderASwitchCountsTheRepsOwnDecisions(t *testing.T) {
 		t.Fatalf("a rejection counted as an approval: clean=%d edited=%d",
 			row.ApprovedClean, row.ApprovedEdited)
 	}
-	// A rejection is not a reason to stop asking.
-	if row.Mode != approvals.ModeManual {
+	// A decision changes history, not the standing default.
+	if row.Mode != approvals.ModeAuto {
 		t.Fatalf("the kind reads %q after a rejection", row.Mode)
 	}
 }
@@ -177,7 +192,7 @@ func TestTheTrackRecordUnderASwitchCountsTheRepsOwnDecisions(t *testing.T) {
 // The switch is what changes what the sweep does, on ONE proposal.
 //
 // The suite beside this one proves each half against its own fixture: a proposal
-// applies when its owner has the kind on, and waits when nobody opted in. Both
+// applies by default, and waits when its owner switches it off. Both
 // arrange the answer before staging, so neither can show that the SAME pending
 // proposal changes fate when the setting moves under it — which is what a rep
 // does when they open the screen and flip a switch on a queue they already have.
@@ -191,20 +206,24 @@ func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 	grantDealRepRole(t, e, e.Rep1)
 	approvalID := stageCloseDateCorrection(t, svc, e, deal)
 
+	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	if _, err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, false); err != nil {
+		t.Fatalf("switching the kind off: %v", err)
+	}
+
 	// Before the switch: the sweep leaves it alone.
 	applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool)
 	if err != nil {
 		t.Fatalf("sweeping before the switch: %v", err)
 	}
 	if applied != 0 {
-		t.Fatalf("the sweep applied %d proposals for a rep who has chosen nothing", applied)
+		t.Fatalf("the sweep applied %d proposals for a rep who switched it off", applied)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
 		t.Fatalf("the proposal reads %q before anyone switched the kind on", status)
 	}
 
 	// The rep switches the kind on, through the method the endpoint calls.
-	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	if _, err := svc.SetAutoApply(repCtx, deals.CloseDateCorrectionKind, true); err != nil {
 		t.Fatalf("switching the kind on: %v", err)
 	}
@@ -223,6 +242,37 @@ func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 	// The receipt has to say the machine did it, or the day's lane puts the
 	// rep's name on a click they never made.
 	if !bySystem {
-		t.Fatal("an automatic apply is recorded as a person's decision")
+		t.Fatal("an automatic apply is recorded as a contact's decision")
+	}
+}
+
+// Older releases first recorded review history using the column's manual
+// default. No stored field distinguishes those rows from deliberate opt-outs.
+func TestStoredModesFromEarlierDecisionHistoryStayOff(t *testing.T) {
+	for _, kind := range approvals.SortedAutoApplyKinds() {
+		t.Run(kind, func(t *testing.T) {
+			e := Setup(t)
+			e.WsExec(t, `INSERT INTO approval_autonomy_policy (user_id, kind, approved_clean)
+				VALUES (@user, @kind, 1)`, pgx.NamedArgs{"user": e.Rep1, "kind": kind})
+			svc := approvals.NewService(e.DB())
+			ctx := e.As(e.Rep1, nil, RepPerms)
+			settings, err := svc.AutoApplySettings(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, row := range settings {
+				want := approvals.ModeAuto
+				if row.Kind == kind {
+					want = approvals.ModeManual
+				}
+				mode, err := svc.AutoApplyMode(ctx, row.Kind)
+				if err != nil || row.Mode != want || mode != want {
+					t.Fatalf("%s: settings %s, execution %s, error %v; want %s", row.Kind, row.Mode, mode, err, want)
+				}
+			}
+			if got := kindRow(t, settings, kind).ApprovedClean; got != 1 {
+				t.Fatalf("review history = %d, want the existing decision preserved", got)
+			}
+		})
 	}
 }

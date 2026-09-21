@@ -49,7 +49,7 @@ import (
 // supervisory authority reads.
 //
 // A nil purger REFUSES rather than skipping. There is no second path that ages
-// raw_capture out — the Art. 17 cascade's purge is scoped to a PERSON where a
+// raw_capture out — the Art. 17 cascade's purge is scoped to a CONTACT where a
 // retention window is scoped to time — so an unwired seam is not a degraded
 // mode, it is an erasure that reports success over an intact original.
 func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
@@ -72,6 +72,18 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id); err != nil {
 		return err
 	}
+	// The byline the author repair wrote into its own bookkeeping. Every arm
+	// that reaches here has just cleared `source_author_name` off the activity,
+	// and the ledger holds a second copy of that same free text about the same
+	// human — so an erasure that stopped at the message would leave the erased
+	// name standing in a table anything can read.
+	//
+	// Here rather than beside each of those column writes, for the reason this
+	// function exists at all: the sweep and the lift both run this, and a clear
+	// spelled separately at each of them is the second list that goes short.
+	if err := clearAttributionLedgerNames(ctx, tx, "activity", []ids.UUID{id}); err != nil {
+		return err
+	}
 	// What a classifier concluded the message MEANT, and every human correction
 	// of that conclusion. It is derived from the text this act destroys, so it
 	// goes with it: a verdict saying somebody replied negatively is a claim
@@ -83,6 +95,12 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	// holds the subject's data after an operator was told it was gone.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
+		return err
+	}
+	// The external identities this message answered to, through the helper the
+	// Art. 17 cascade also calls — see retireActivityIdentities for why they
+	// cannot be left behind.
+	if err := retireActivityIdentities(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {

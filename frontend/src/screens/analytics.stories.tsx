@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
-import { ShareViewButton } from "./analytics.share";
 import {
   installFetchStub,
   jsonResponse,
@@ -115,13 +114,13 @@ const forecastRows = [
 
 const companyRows = [
   {
-    organization_id: "BÄR Pharma GmbH",
+    company_id: "BÄR Pharma GmbH",
     raw_minor: 2500000,
     deal_count: 4,
     currency: "EUR",
   },
   {
-    organization_id: "Brandt Systemtechnik",
+    company_id: "Brandt Systemtechnik",
     raw_minor: 870000,
     deal_count: 2,
     currency: "EUR",
@@ -235,7 +234,7 @@ export const Forecast: Story = {
 // selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Pipeline"),
+  play: clickButton("Deals"),
 };
 
 // "Explain this number" open: the report card above, the derivation card below
@@ -359,17 +358,38 @@ export const MyOutcomes: Story = {
   play: clickButton("My outcomes"),
 };
 
+// The seat's readings with NOTHING behind them. The lens answered and the seat
+// holds no open deal, which is a reading — and a different one from a read that
+// failed or one still in flight, all three of which used to say "Nothing to
+// read yet".
+export const MyOutcomesEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      ...ownLensRoutes,
+      "POST /reports/pipeline-current": () => run("pipeline-current", []),
+    });
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("My outcomes"),
+};
+
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and
   // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButton("Pipeline", "Explain this number"),
+  play: clickButton("Deals", "Explain this number"),
 };
 
-// The three absences a slot has to tell apart, side by side, because they are
-// three different facts and one of them used to be drawn as €0.00. A category
+// The four absences a slot has to tell apart, side by side, because they are
+// four different facts and one of them used to be drawn as €0.00. A category
 // the report returned no row for was measured in no currency at all; a band of
-// deals nobody priced has a currency but no figure; a stored zero IS a figure.
+// deals nobody priced has a currency but no figure; a band whose deals ARE
+// counted answers with the count and says the amount is what is missing; a
+// stored zero IS a figure.
 export const ForecastAbsences: Story = {
   render: () => (
     <StoryProviders>
@@ -386,6 +406,14 @@ export const ForecastAbsences: Story = {
           amountMinor={null}
           weightedMinor={null}
           currency={null}
+          locale="en"
+        />
+        <ForecastTile
+          label="Counted, unpriced"
+          amountMinor={null}
+          weightedMinor={null}
+          dealCount={7}
+          currency="EUR"
           locale="en"
         />
         <ForecastTile
@@ -444,66 +472,36 @@ export const ForecastSlots: Story = {
           currency="EUR"
           locale="en"
         />
+        {/* The money covers only part of what the category holds, so the
+            second fragment states the GAP instead of the plain count. */}
+        <ForecastTile
+          label="Pipeline"
+          amountMinor={4100000}
+          weightedMinor={1600000}
+          dealCount={9}
+          pricedDeals={6}
+          currency="EUR"
+          locale="en"
+        />
       </StatStrip>
     </StoryProviders>
   ),
 };
 
-// The share dialog, in both states a reader meets it in. The kind picker is
-// the first: two promises, told apart in words rather than by a label. The
-// link reveal is the second, and it is the one worth capturing — it is shown
-// once, so a regression that hid the caution would be invisible until somebody
-// closed the dialog and lost their link.
-const shareRoutes: RouteMap = {
-  ...meRoute,
-  "POST /v1/forecast/shares": () =>
-    jsonResponse({
-      id: "share-1",
-      kind: "live",
-      target: "forecast",
-      expires_at: "2026-10-03T00:00:00Z",
-      token: "shr_9f2c4a1e",
-      created_at: "2026-09-03T00:00:00Z",
-    }),
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+export const ForecastSlotsPhone: Story = {
+  ...ForecastSlots,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
-export const ShareDialogKinds: Story = {
-  render: () => (
-    <StoryProviders>
-      <ShareViewButton
-        target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
-        snapshotId="snap-1"
-      />
-    </StoryProviders>
-  ),
-  beforeEach: () => installFetchStub(shareRoutes),
-  play: clickButton("Share view"),
-};
-
-export const ShareDialogLinkShownOnce: Story = {
-  render: () => (
-    <StoryProviders>
-      <ShareViewButton
-        target="forecast"
-        scope={{ kind: "workspace", label: "Whole workspace" }}
-        snapshotId="snap-1"
-      />
-    </StoryProviders>
-  ),
-  beforeEach: () => installFetchStub(shareRoutes),
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Share view" }),
-    );
-    // `screen`, not `canvas`, for anything inside the dialog: Modal portals to
-    // document.body, so the dialog is a sibling of the canvas rather than a
-    // descendant of it, and a canvas-scoped query for its confirm waits out its
-    // full budget for a button that is on screen the whole time. The TRIGGER
-    // stays canvas-scoped, because that one really is in the story's own tree.
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Create link" }),
-    );
-  },
+// The seat's own two readings at 390px, where the door in each row's foot has
+// to stay a thumb target of its own.
+export const MyOutcomesPhone: Story = {
+  ...MyOutcomes,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

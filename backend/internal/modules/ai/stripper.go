@@ -28,10 +28,17 @@ import (
 // it would mean decoding and re-encoding every attachment on every call; the
 // product states the scope instead of implying a cover it does not have.
 //
-// Note which way that runs. The rules are not blind to the ENCODING: two of them
-// (AIza…, AKIA/ASIA…) are alphanumeric enough to match inside a blob by
-// coincidence, which is the inverse hazard and has its own issue. What they
-// cannot see is the plaintext underneath it.
+// Note which way that runs, because the converse used to bite. The rules are
+// not blind to the ENCODING: two of them (AIza…, AKIA/ASIA…) are alphanumeric
+// enough to match inside a blob by coincidence, and a match there replaced
+// encoded bytes with a redaction marker — characters base64 has no alphabet
+// for, injected into the middle of a file.
+//
+// The pass no longer reaches into an attachment: stripperspans.go finds the
+// encoded fields by POSITION in the document the adapter built and scans around
+// them, so a rule added tomorrow inherits the exclusion rather than having to be
+// written not to need it. What the rules still cannot see is the plaintext
+// underneath the encoding, which is the scope this comment opens with.
 func NewSecretStripper() model.SecretStripper {
 	return secretStripper{rules: stripRules}
 }
@@ -105,6 +112,26 @@ type secretStripper struct {
 func (s secretStripper) Strip(_ context.Context, payload []byte) ([]byte, model.StripReport, error) {
 	report := model.StripReport{}
 	kinds := map[string]bool{}
+	// Segment by segment, around the encoded attachment bytes rather than
+	// through them — stripperspans.go says why, and the whole body is one
+	// segment when it carries no attachment.
+	var out []byte
+	at := 0
+	for _, seg := range scannableSegments(payload, encodedSpans(payload)) {
+		out = append(out, payload[at:seg.from]...)
+		out = append(out, s.stripSegment(payload[seg.from:seg.to], &report, kinds)...)
+		at = seg.to
+	}
+	out = append(out, payload[at:]...)
+	for k := range kinds {
+		report.Kinds = append(report.Kinds, k)
+	}
+	sort.Strings(report.Kinds)
+	return out, report, nil
+}
+
+// stripSegment runs every rule over one scannable stretch of the body.
+func (s secretStripper) stripSegment(payload []byte, report *model.StripReport, kinds map[string]bool) []byte {
 	for _, rule := range s.rules {
 		payload = rule.re.ReplaceAllFunc(payload, func(match []byte) []byte {
 			report.Findings++
@@ -124,9 +151,5 @@ func (s secretStripper) Strip(_ context.Context, payload []byte) ([]byte, model.
 			return []byte("[SECRET-REMOVED:" + rule.kind + "]")
 		})
 	}
-	for k := range kinds {
-		report.Kinds = append(report.Kinds, k)
-	}
-	sort.Strings(report.Kinds)
-	return payload, report, nil
+	return payload
 }

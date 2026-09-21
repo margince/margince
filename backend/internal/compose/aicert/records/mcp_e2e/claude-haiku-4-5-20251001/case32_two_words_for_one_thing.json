@@ -1,0 +1,20 @@
+{
+  "scenario": "case32_two_words_for_one_thing",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 0,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 142,
+    "output_tokens": 4860,
+    "cache_creation_input_tokens": 20411,
+    "cache_read_input_tokens": 765111,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.1449
+  }
+}

@@ -38,6 +38,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
 import {
   PassportSelect,
@@ -60,6 +61,8 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
@@ -82,18 +85,18 @@ import {
   throwProblem,
   useLogout,
   useMe,
+  WriteRefused,
 } from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
-import { CreateAction, type CreateField, CreateRecordModal } from "./create";
 import { CustomFieldsAdmin } from "./customfields";
-import { EditAction } from "./edit";
 import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
+import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -112,17 +115,16 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
-import { OverlayCard } from "./overlay";
-import { MirrorUserMapCard } from "./overlay-usermap";
 import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
-import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
 import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
-import { RestrictedRecordsCard } from "./restrictedrecords";
-import { RetentionCard } from "./retention";
-import { StageExitCriteria } from "./settings.exitcriteria";
+import { RecordRolesCard } from "./recordroles";
+import { ReviewTemplatesCard } from "./reviewtemplates";
+import { PipelinesCard } from "./settings.pipelines";
+import { PrivacyLanes } from "./settings.privacy";
+import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
 import { TeamsCard } from "./users-access";
@@ -182,7 +184,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <AccountCard />
-          {/* When this person is bookable. Under the identity because it is a
+          {/* When this contact is bookable. Under the identity because it is a
               statement about this reader rather than about the workspace: their
               own week is theirs to set, and an admin setting it for them is the
               shape the design refuses. */}
@@ -217,7 +219,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       );
     case "authentication":
       // Split from the company profile, which is a different question with a
-      // different reader: what the organization IS, versus who may sign in to
+      // different reader: what the company IS, versus who may sign in to
       // it. The vendor OAuth apps sit with the sign-in methods because the same
       // OAuth client now serves sign-in as well as mailbox connection — filing
       // them under Capture said they belonged to one of the two.
@@ -229,7 +231,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
         </>
       );
 
-    // ---- people ----
+    // ---- contacts ----
     case "members":
       return <UsersAdminCard />;
     case "teams":
@@ -244,6 +246,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
     // ---- sales ----
     case "pipelines":
       return <PipelinesCard />;
+    case "stageautomation":
+      return <StageAutomationCard />;
     case "leads":
       return (
         <>
@@ -252,6 +256,12 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <LeadHandlingCard />
         </>
       );
+    case "acquisition":
+      return <AcquisitionSourcesCard />;
+    case "reviewtemplates":
+      return <ReviewTemplatesCard />;
+    case "recordroles":
+      return <RecordRolesCard />;
     case "fields":
       return <CustomFieldsAdmin />;
     case "tags":
@@ -281,7 +291,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
-              a machine or a person decided it. */}
+              a machine or a human decided it. */}
           <BlockedDomainsCard />
         </>
       );
@@ -325,9 +335,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* What the month has cost, above the breakdown that explains it. */}
+          <AiBudgetCard />
+          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
-          <ModelCostsCard />
+          <ModelPriceDetails />
         </>
       );
     case "model-calls":
@@ -335,21 +347,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
 
     // ---- governance ----
     case "privacy":
-      return (
-        <>
-          <ConsentPurposesCard />
-          {/* The retention ladder sits under the purpose catalogue and above
-              the DSR inbox: what the installation keeps by default, before the
-              requests that override it case by case. */}
-          <RetentionCard />
-          {/* What the ladder's statutory floor is holding right now, under the
-              ladder that explains why: an erasure that met a Handelsbrief
-              restricted it rather than destroying it, and the controller has
-              to be able to see that without opening the audit trail. */}
-          <RestrictedRecordsCard />
-          <PrivacyInboxCard />
-        </>
-      );
+      return <PrivacyLanes />;
     case "audit":
       // Split from the privacy page it used to end. The trail proves the
       // surfaces there were honoured, but it answers to `audit_log` where they
@@ -365,6 +363,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
+          {/* Beside the queue reading rather than under Extensions: both
+              answer "is something broken in the background", and an operator
+              chasing a quiet feed should not have to know that a connector is
+              an extension to find out. */}
+          <ExtensionIngestHealthCard />
         </>
       );
     case "extensions":
@@ -382,7 +385,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
 // mail connector list is scoped to the calling human server-side (capture is
 // per-user, RC-8), and both LinkedIn surfaces read `/me`. So this belongs to the
 // personal group, and needs no grant: a mailbox nobody else can see is not
-// organization configuration, and the entry that used to hold both kinds could
+// company configuration, and the entry that used to hold both kinds could
 // not say so.
 //
 // It is not WHOLLY personal, which is why the catalog marks it `mixed`:
@@ -400,7 +403,7 @@ function ConnectionsTab() {
       <ConnectorsCard />
       {/* Directly under the mailboxes and before what they brought in, because
           it changes what COUNTS as correspondence: an address declared here is
-          the same person, so mail among them is not a conversation with anybody
+          the same contact, so mail among them is not a conversation with anybody
           and never becomes one. Per-seat rather than per-connection, which is
           why it is a card of its own and not a row inside connectors.tsx —
           those rows render once per mailbox and a seat's own addresses are one
@@ -438,27 +441,17 @@ function ConnectionsTab() {
   );
 }
 
-// What the INSTALLATION is wired to: one shared contact-data credential, the
-// outbound subscriptions, the incumbent CRM it mirrors, and who each of its users
-// is over there. All four are workspace-wide — a key everybody spends from, a webhook everybody's writes
-// fire, a system-of-record flip that re-points every read — which is why they
-// sit under the organization heading and the personal connections do not.
+// What the INSTALLATION is wired to: one shared contact-data credential and the
+// outbound subscriptions. Both are workspace-wide — a key everybody spends from
+// and a webhook everybody's writes fire — which is why they sit under the
+// company heading and the personal connections do not.
 function IntegrationsTab() {
   return (
     <>
       <ProviderCard />
       <WebhooksCard />
-      {/* Everything overlay — connect, live sync/budget health (OverlayCard
-          renders OverlayLiveSection itself once a connection is active or in
-          error, so it is not rendered a second time here), and the user
-          mapping. Deliberately NOT gated on useSorMode() === "overlay": a
-          workspace is native until an overlay is connected, so mode-gating
-          would hide the only surface that can connect one. In native mode
-          OverlayCard renders its connect form and the rest stays quiet. */}
-      <OverlayCard />
-      <MirrorUserMapCard />
       {/* The other half of the units split: a unit whose secret is
-          `workspace`-scoped holds the INSTALLATION's credential, like the four
+          `workspace`-scoped holds the INSTALLATION's credential, like the two
           cards above it, so it is offered here and not on a member's own
           Connections page. Which page a unit lands on is its manifest's
           decision, never this file's. */}
@@ -503,7 +496,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // sender would open it and find it worked.
   //
   // The URL is left EXACTLY as typed. That is the whole affordance: the reader
-  // can read what they asked for, copy it, and ask the person who has it.
+  // can read what they asked for, copy it, and ask the colleague who has it.
   const boundary =
     target.kind === "unknown"
       ? "unknown"
@@ -571,16 +564,14 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
           `useUnsavedGuard` and need to know nothing about where the answer is
           asked. */}
       <div className="settings-stack arrive-stack">
-        {/* Said ONCE, at the top, and only when the whole page is a read. A
-            reader who can change nothing here would otherwise have to infer it
-            from a screenful of disabled controls, one card at a time.
-
-            Only for a page with no open control at all: a page where SOME
-            surface is theirs says nothing here, because a banner claiming the
-            page is read-only above a control that works is worse than
-            silence. That is exactly the `looksUp` half of the partition. */}
+        {/* Said ONCE, at the top, and only for a page with NO open control —
+            the `looksUp` half of the partition: a reader who can change nothing
+            would otherwise infer it from a screenful of disabled cards, and a
+            banner over a control that works is worse than silence. */}
         {readOnlyPage && (
-          <Callout tone="info">{t("settings.readOnlyPage")}</Callout>
+          <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
+            {t("settings.readOnlyPage")}
+          </Callout>
         )}
         {tabContent(active.id)}
       </div>
@@ -588,7 +579,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   );
 }
 
-// This person's own agent authority: what an agent may do unattended, the
+// This contact's own agent authority: what an agent may do unattended, the
 // credentials they have minted, the clients holding one, and the governed tools
 // those credentials reach. Every seat gets it, ungated — a connection's
 // authority comes from the human's own consent, so an admin-only surface here
@@ -610,7 +601,7 @@ function AgentsTab() {
       <AutonomyCard />
       {/* Which kinds of proposal stop asking this reader. It sat on Account,
           under the identity, because it is a statement about them rather than
-          about the organization — but every other thing on this page is also
+          about the company — but every other thing on this page is also
           theirs alone, and this is the page about agents deciding without them.
           Directly under the tier reference it is written in terms of. */}
       <AutonomySettingsCard />
@@ -643,11 +634,7 @@ function AccountCard() {
     <Panel
       title={t("settings.accountCard")}
       actions={
-        <Button
-          small
-          disabled={logout.isPending}
-          onClick={() => logout.mutate()}
-        >
+        <Button disabled={logout.isPending} onClick={() => logout.mutate()}>
           {t("auth.signOut")}
         </Button>
       }
@@ -762,7 +749,10 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // The same comparison the Save button already made, now also the claim that
   // stops a sidebar click throwing the draft away.
   const dirty = shown !== stored;
-  useUnsavedGuard(dirty);
+  // Only while the dialog is SHOWING. It outlives its own close, so a draft the
+  // reader already walked away from would otherwise go on blocking navigation
+  // from behind a dialog that is no longer on screen.
+  useUnsavedGuard(open && dirty);
   // The first line, because a sign-off is several lines and only the first one
   // identifies it. `.split` on a string always yields at least one element, so
   // the empty signature reads as the empty string and the row says so instead —
@@ -779,10 +769,15 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // Leaving discards the draft rather than keeping it: the reader closed the
   // form, and a sign-off half-typed into a dialog nobody reopened is not an
   // edit anybody is coming back to.
-  const close = () => {
+  // Closing only CLOSES. The dialog outlives it so it can animate out, and a
+  // draft cleared on the way out snaps back to the stored sign-off in front of
+  // a reader still watching the dialog leave. The discarding happens on the
+  // next OPEN, which is the same moment the reader asks for a blank form.
+  const close = () => setOpen(false);
+  const edit = () => {
     setBody(null);
     save.reset();
-    setOpen(false);
+    setOpen(true);
   };
 
   return (
@@ -792,61 +787,54 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button variant="ghost" onClick={edit}>
             {t("settings.signatureEdit")}
           </Button>
         }
       />
-      {open && (
-        <Modal open onClose={close} labelledBy={titleId}>
-          {/* A real form, so Enter from the field commits it — and the Save
+      <Modal open={open} onClose={close} labelledBy={titleId}>
+        {/* A real form, so Enter from the field commits it — and the Save
               button keeps the semantics it had as a card action: nothing is
               written until it is pressed. */}
-          <form
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (dirty && !save.isPending) save.mutate(shown);
-            }}
-          >
-            <h2 className="t-h3 modal-title" id={titleId}>
-              {t("settings.signature")}
-            </h2>
-            {save.isError && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(save.error, t)}
-              </Callout>
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (dirty && !save.isPending) save.mutate(shown);
+          }}
+        >
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+            {t("settings.signature")}
+          </Heading>
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <Field label={t("settings.signatureLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={5}
+                value={shown}
+                placeholder={t("settings.signaturePlaceholder")}
+                onChange={(event) => setBody(event.target.value)}
+              />
             )}
-            <Field label={t("settings.signatureLabel")}>
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={5}
-                  value={shown}
-                  placeholder={t("settings.signaturePlaceholder")}
-                  onChange={(event) => setBody(event.target.value)}
-                />
-              )}
-            </Field>
-            <p className="t-caption">{t("settings.signatureHint")}</p>
-            <div className="form-actions">
-              <Button small variant="ghost" onClick={close}>
-                {t("settings.signatureCancel")}
-              </Button>
-              <Button
-                small
-                type="submit"
-                variant="primary"
-                disabled={!save.isPending && !dirty}
-                pending={save.isPending}
-                busyLabel={t("settings.signatureSaving")}
-              >
-                {t("record.save")}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+          </Field>
+          <p className="t-caption">{t("settings.signatureHint")}</p>
+          <div className="form-actions">
+            <Button variant="ghost" onClick={close}>
+              {t("settings.signatureCancel")}
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!save.isPending && !dirty}
+              pending={save.isPending}
+              busyLabel={t("settings.signatureSaving")}
+            >
+              {t("record.save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }
@@ -961,14 +949,8 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         // verb stacked at the row's own measure, the same shape the pipeline
         // rows use.
         <div className="form-stack settingrow-measure">
-          {/* A refused save says so HERE. The query client's own handler only
-              logs, so without this a rejected name looked exactly like nothing
-              happening — and the server's 422 names this very control. */}
-          {save.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(save.error, t)}
-            </Callout>
-          )}
+          {/* Beside this control, because the server's 422 names it. */}
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
           <TextInput
             {...control}
             value={shown}
@@ -979,7 +961,6 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             onChange={(event) => setDraft(event.target.value)}
           />
           <Button
-            small
             disabled={!dirty || trimmed === "" || tooLong || save.isPending}
             onClick={() => save.mutate(trimmed)}
           >
@@ -995,7 +976,7 @@ function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const queryClient = useQueryClient();
-  // The choice is written to the seat so it follows this person to their next
+  // The choice is written to the seat so it follows this colleague to their next
   // browser; `setLocale` still keeps its local copy, which is what renders
   // before the request lands and what a signed-out reader is left with.
   //
@@ -1052,7 +1033,7 @@ function LanguageSettingRow() {
 
 const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
 
-// The scope's wire token is what the server reads; a person choosing what
+// The scope's wire token is what the server reads; a contact choosing what
 // authority to hand their agent needs the sentence. Composed rather than
 // switched, and annotated so an added scope is a missing-key compile error
 // rather than a checkbox that quietly labels itself `enrich` in every
@@ -1214,7 +1195,7 @@ function PassportCard() {
       // only one on the page, and a page with one loud button reads as if the
       // other three cards had nothing to offer.
       titleAction={
-        <Button small onClick={() => setMinting(true)}>
+        <Button onClick={() => setMinting(true)}>
           {t("settings.mintOpen")}
         </Button>
       }
@@ -1275,9 +1256,9 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <h2 className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2" id={mintTitleId}>
           {t("settings.mint")}
-        </h2>
+        </Heading>
         {/* The token region is mounted for the whole life of the drawer rather
             than appearing with the token in it: a live region inserted at the
             same moment as its content is not reliably announced, and this token
@@ -1290,8 +1271,8 @@ function PassportCard() {
         >
           {mint.isSuccess && (
             <PanelPlate>
-              <p className="t-label">{t("settings.tokenOnce")}</p>
-              <p className="t-mono passport-token-value">{mint.data.token}</p>
+              <p>{t("settings.tokenOnce")}</p>
+              <p className="passport-token-value">{mint.data.token}</p>
             </PanelPlate>
           )}
         </div>
@@ -1301,7 +1282,7 @@ function PassportCard() {
           // still reading has no way back — the list carries metadata and the
           // server will not re-disclose a token.
           <div className="form-actions">
-            <Button small variant="primary" onClick={closeMint}>
+            <Button variant="primary" onClick={closeMint}>
               {t("settings.mintDone")}
             </Button>
           </div>
@@ -1332,16 +1313,13 @@ function PassportCard() {
               className="field-multiselect"
               aria-describedby={mintScopeHintId}
             >
-              <legend className="t-label">
-                {t("settings.passportScopes")}
-              </legend>
+              <legend className="t-name">{t("settings.passportScopes")}</legend>
               <p id={mintScopeHintId} className="t-caption">
                 {t("settings.passportScopesHint")}
               </p>
               {PASSPORT_SCOPES.map((scope) => (
                 <Checkbox
                   key={scope}
-                  className="t-label"
                   checked={scopes.has(scope)}
                   onChange={(event) => {
                     const next = new Set(scopes);
@@ -1356,21 +1334,13 @@ function PassportCard() {
                 />
               ))}
             </fieldset>
-            {/* Beside the button that produced it, in the danger tone. It used
-                to render two blocks below, past the token region, as a caption
-                with no live role — so a refused mint announced nothing and sat
-                where nothing had been pressed. */}
-            {mint.isError && (
-              <Callout tone="danger" live="alert">
-                {problemMessageOf(mint.error, t)}
-              </Callout>
-            )}
+            {/* Beside the button that produced it, not below the tokens. */}
+            <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
             <div className="form-actions">
-              <Button small disabled={mint.isPending} onClick={closeMint}>
+              <Button disabled={mint.isPending} onClick={closeMint}>
                 {t("settings.mintCancel")}
               </Button>
               <Button
-                small
                 type="submit"
                 variant="primary"
                 // A passport with no scope is a credential that can do nothing,
@@ -1492,7 +1462,6 @@ function PassportRow({
             <Badge tone="danger">{t("settings.revoked")}</Badge>
           ) : (
             <Button
-              small
               variant="danger"
               // The row is remembered from the CLICK rather than from
               // `confirmId`: the focus resolver runs as the dialog closes, by
@@ -1654,7 +1623,7 @@ type AgentTool = components["schemas"]["AgentTool"];
 // right.
 //
 // The name and its written title used to share the label's line, so each row
-// read as a pair of unrelated strings — "account_coverage  Relationship coverage
+// read as a pair of unrelated strings — "company_coverage  Relationship coverage
 // on a deal" — beside cards whose rows are a label with a description beneath.
 // The title is a statement ABOUT the tool, so it goes where this page puts those.
 //
@@ -1682,11 +1651,7 @@ function ToolRow({
     <div data-tool={tool.name}>
       <SettingRow
         label={
-          <span
-            className={["t-mono", "tool-name", struck]
-              .filter(Boolean)
-              .join(" ")}
-          >
+          <span className={["tool-name", struck].filter(Boolean).join(" ")}>
             {tool.name}
           </span>
         }
@@ -1703,7 +1668,7 @@ function ToolRow({
           <span className="settings-run">
             <AutonomyDot tier={dotTier(tool.tier)} />
             {tool.required_scope && <Badge>{tool.required_scope}</Badge>}
-            {tool.egress && <Badge tone="warn">{t("tools.egress")}</Badge>}
+            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
           </span>
         }
       />
@@ -1727,7 +1692,7 @@ function ToolRow({
 // object named the verb, and this comment outlived that. A role edited to carry
 // the verb reaches the control and one that lost it does not, which the role
 // name could not say either way. The page above it now asks the same thing, so
-// a reader who gets here can use it. The organization's name
+// a reader who gets here can use it. The company's name
 // is not carried on MeResponse, so this never fetches or compares it
 // client-side: the input just has to be non-empty to enable the confirm
 // button, and the server is the sole judge of whether the typed text actually
@@ -1808,7 +1773,7 @@ function ResetDataCard() {
             label={t("settings.resetDataLabel")}
             description={t("settings.resetDataDesc")}
             control={
-              <Button small variant="danger" onClick={() => setOpen(true)}>
+              <Button variant="danger" onClick={() => setOpen(true)}>
                 {t("settings.resetDataButton")}
               </Button>
             }
@@ -1826,7 +1791,7 @@ function ResetDataCard() {
           </p>
         )}
         {summary?.drain_timed_out && (
-          <p className="t-caption settings-danger-warning" role="alert">
+          <p className="settings-danger-warning" role="alert">
             {t("settings.resetDataDrainWarning")}
           </p>
         )}
@@ -1858,12 +1823,10 @@ function ResetDataCard() {
       >
         <p>{t("settings.resetDataConfirmBody")}</p>
         {workspaceName ? (
-          <p className="t-caption">
+          <p>
             {t("settings.resetDataConfirmName")}{" "}
             {/* userSelect:all lets one click select the whole name to copy */}
-            <code style={{ userSelect: "all", fontWeight: 600 }}>
-              {workspaceName}
-            </code>
+            <code style={{ userSelect: "all" }}>{workspaceName}</code>
           </p>
         ) : null}
         <TextInput
@@ -1872,497 +1835,6 @@ function ResetDataCard() {
           onChange={(event) => setTyped(event.target.value)}
         />
       </ConfirmModal>
-    </Panel>
-  );
-}
-
-type Pipeline = components["schemas"]["Pipeline"];
-type Stage = components["schemas"]["Stage"];
-
-// The 3 shared scalar fields between create and edit pipeline forms.
-function pipelineFields(t: ReturnType<typeof useT>): CreateField[] {
-  return [
-    { key: "name", label: "pipeline.name", required: true },
-    {
-      key: "is_default",
-      label: "pipeline.default",
-      type: "select",
-      required: true,
-      options: [
-        { value: "false", label: t("pipeline.notDefault") },
-        { value: "true", label: t("pipeline.default") },
-      ],
-    },
-    { key: "position", label: "pipeline.position", type: "number" },
-  ];
-}
-
-// Coerces a form value (CreateAction's values are strings; EditAction's
-// update callback widens to Record<string, unknown> so a screen COULD prefill
-// non-string values) down to the trimmed string this form always produces —
-// mirrors deals.tsx's mapDealUpdate `str` helper, keeping both create's and
-// edit's transports on the one map function without an `as` cast.
-function str(v: unknown): string {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-function mapPipelineBody(v: Record<string, unknown>) {
-  return {
-    name: str(v.name),
-    is_default: v.is_default === "true",
-    position: v.position ? Number(str(v.position)) : 0,
-  };
-}
-
-// Narrows the form's free-text semantic value into the Stage enum WITHOUT a
-// cast (mirrors deals.tsx's forecastCategory) — an unrecognized value falls
-// back to "open" rather than shipping a bad literal to the wire.
-function stageSemantic(v: unknown): Stage["semantic"] {
-  switch (v) {
-    case "won":
-      return "won";
-    case "lost":
-      return "lost";
-    default:
-      return "open";
-  }
-}
-
-// UpdateStageRequest carries no pipeline_id (a stage never moves pipelines
-// via this form) while CreateStageRequest requires one — so this returns
-// only the fields the two requests share, and the create transport adds
-// pipeline_id on top.
-function mapStageBody(v: Record<string, unknown>) {
-  return {
-    name: str(v.name),
-    position: v.position ? Number(str(v.position)) : 0,
-    semantic: stageSemantic(v.semantic),
-    win_probability: v.win_probability ? Number(str(v.win_probability)) : 0,
-  };
-}
-
-function stageFields(t: ReturnType<typeof useT>): CreateField[] {
-  return [
-    { key: "name", label: "stage.name", required: true },
-    { key: "position", label: "pipeline.position", type: "number" },
-    {
-      key: "semantic",
-      label: "stage.semantic",
-      type: "select",
-      required: true,
-      options: [
-        { value: "open", label: t("stage.semOpen") },
-        { value: "won", label: t("stage.semWon") },
-        { value: "lost", label: t("stage.semLost") },
-      ],
-    },
-    { key: "win_probability", label: "stage.winProb", type: "number" },
-  ];
-}
-
-// Localized badge for a stage's semantic — open/won/lost each render as a
-// short label rather than the raw enum value.
-function stageSemanticLabel(
-  semantic: Stage["semantic"],
-  t: ReturnType<typeof useT>,
-): string {
-  if (semantic === "won") {
-    return t("stage.semWon");
-  }
-  if (semantic === "lost") {
-    return t("stage.semLost");
-  }
-  return t("stage.semOpen");
-}
-
-// Tone-less Badge shares the card-inset background it sits on (both resolve
-// to var(--bgCard)) — the semantic pill needs an explicit tone to be visible.
-function stageSemanticTone(
-  semantic: Stage["semantic"],
-): "success" | "danger" | "accent" {
-  switch (semantic) {
-    case "won":
-      return "success";
-    case "lost":
-      return "danger";
-    default:
-      return "accent"; // open
-  }
-}
-
-// The bespoke per-pipeline "new stage" trigger: CreateAction's testid
-// (`new-record`) can't disambiguate multiple pipelines on one screen, so
-// this composes the same Button + CreateRecordModal pieces directly rather
-// than adding new form infra.
-function StageCreate({ pipelineId }: Readonly<{ pipelineId: string }>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: async (values: Record<string, string>) => {
-      const { data, error } = await api.POST("/stages", {
-        body: { ...mapStageBody(values), pipeline_id: pipelineId },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: () => {
-      setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-    },
-  });
-  return (
-    <>
-      <Button
-        small
-        data-testid={`new-stage-${pipelineId}`}
-        onClick={() => setOpen(true)}
-      >
-        {t("stage.new")}
-      </Button>
-      <CreateRecordModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("stage.new")}
-        fields={stageFields(t)}
-        pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        onSubmit={(values) => mutation.mutate(values)}
-      />
-    </>
-  );
-}
-
-// The removal half of the bounded stage surface. Both refusals are the
-// server's — a stage still holding deals, and the terminal won/lost pair —
-// so this asks and then shows what it was told rather than pre-judging
-// from the row: the refusal names the deals standing in the way, which is
-// the part an admin acts on, and a board read a minute ago would name the
-// wrong ones.
-function StageRemove({
-  stage,
-  returnFocusTo,
-}: Readonly<{ stage: Stage; returnFocusTo: () => HTMLElement | null }>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  // Removal is pipeline:delete, not the pipeline:update everything else on
-  // this card runs on — the server gates it that way, so a principal who
-  // may add and rename stages but not remove one is not shown a control
-  // that could only ever answer 403. Read before the early return: the
-  // hooks a render performs must not depend on the answer.
-  const canRemove = useCanWrite("pipeline", "delete");
-  const remove = useMutation({
-    mutationFn: async () => {
-      const { error } = await api.DELETE("/stages/{id}", {
-        params: { path: { id: stage.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: async () => {
-      // The refetched pipelines FIRST, then the dialog: closing it hands
-      // focus back to a list that must no longer hold this row.
-      await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      setOpen(false);
-    },
-  });
-  // A refusal is about the workspace's state, not the dialog's: reopening
-  // must ask again rather than reprint what the last attempt was told.
-  const close = () => {
-    remove.reset();
-    setOpen(false);
-  };
-  if (!canRemove) {
-    return null;
-  }
-  return (
-    <>
-      {/* Ghost, not danger. The dialog behind it is where the danger lives —
-          its confirm is the red one — and a trigger that shouts as loudly as
-          the act it only ASKS about put six solid red buttons in one pipeline,
-          which is the shout a reader stops reading. */}
-      <Button
-        small
-        data-testid={`remove-stage-${stage.id}`}
-        onClick={() => setOpen(true)}
-      >
-        {t("stage.remove")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={close}
-        title={t("stage.removeTitle")}
-        confirmLabel={t("stage.removeConfirm")}
-        confirmVariant="danger"
-        pending={remove.isPending}
-        error={remove.isError ? problemMessageOf(remove.error, t) : null}
-        onConfirm={() => remove.mutate()}
-        // The stage list, not the trigger: a successful removal unmounts
-        // the row this button lives in, so there is nothing to hand focus
-        // back to (design-system/confirmmodal).
-        returnFocusTo={returnFocusTo}
-      >
-        <p className="t-caption">
-          {t("stage.removeBody", { name: stage.name })}
-        </p>
-      </ConfirmModal>
-    </>
-  );
-}
-
-function StageRow({
-  stage,
-  canEdit,
-  t,
-  returnFocusTo,
-}: Readonly<{
-  stage: Stage;
-  canEdit: boolean;
-  t: ReturnType<typeof useT>;
-  returnFocusTo: () => HTMLElement | null;
-}>) {
-  const { locale } = useLocale();
-  return (
-    // The four tracks (name, semantic badge, probability, edit) live in
-    // settings.css, where they can have a phone breakpoint. Inline, the three
-    // fixed tracks plus the Edit button left about 60px for a stage name that
-    // could not wrap, and it painted straight over the badge beside it.
-    <li className="stage-row">
-      <span className="stage-name">{stage.name}</span>
-      <Badge tone={stageSemanticTone(stage.semantic)}>
-        {stageSemanticLabel(stage.semantic, t)}
-      </Badge>
-      <span className="t-mono t-caption">
-        {formatNumber(stage.win_probability, locale)}%
-      </span>
-      {/* Each control carries its own verb — editing a stage is
-          pipeline:update, removing one is pipeline:delete — so a role
-          holding one without the other still sees the one it may use. */}
-      <span className="stage-verbs">
-        {canEdit && (
-          <EditAction<Stage>
-            label={t("stage.edit")}
-            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-            invalidate="pipelines"
-            recordKey="stage"
-            record={{
-              id: stage.id,
-              name: stage.name,
-              position: String(stage.position),
-              semantic: stage.semantic,
-              win_probability: String(stage.win_probability),
-            }}
-            fields={stageFields(t)}
-            update={async (values) => {
-              const { data, error } = await api.PATCH("/stages/{id}", {
-                params: { path: { id: stage.id } },
-                body: mapStageBody(values),
-              });
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
-            }}
-          />
-        )}
-        <StageRemove stage={stage} returnFocusTo={returnFocusTo} />
-      </span>
-      {/* The criteria sit UNDER the stage's own line rather than beside it:
-          a stage carries three to six of them, each with a label, a key, two
-          badges and two verbs, which is a list and not an answer that fits in
-          a track. */}
-      <div className="stage-criteria">
-        <Disclosure summary={t("stage.criteria.title")}>
-          <StageExitCriteria
-            stageId={stage.id}
-            semantic={stage.semantic}
-            canEdit={canEdit}
-          />
-        </Disclosure>
-      </div>
-    </li>
-  );
-}
-
-// One pipeline as one row: its name on the left, and under it what the pipeline
-// IS — default or not — the verbs that change it, and the stage ladder itself.
-//
-// Stacked, because the ladder IS the subject rather than an answer to a question
-// that fits beside it: three to six stages, each carrying a name, a semantic
-// badge, a probability and two verbs of its own. The pipeline's own name is the
-// row's LABEL, which is what puts it at the same x as every other naming on the
-// page — it used to be an inner heading, drawn one step larger than the card
-// title above it.
-function PipelineRow({
-  pipeline,
-  canEdit,
-  t,
-}: Readonly<{
-  pipeline: Pipeline;
-  canEdit: boolean;
-  t: ReturnType<typeof useT>;
-}>) {
-  const stageList = useRef<HTMLUListElement>(null);
-  const stages = [...(pipeline.stages ?? [])].sort(
-    (a, b) => a.position - b.position,
-  );
-  return (
-    <SettingRow
-      label={pipeline.name}
-      layout="stack"
-      control={
-        <div className="form-stack settingrow-measure">
-          {/* What this pipeline IS, and the verbs that change it, above the
-              ladder they act on. */}
-          <div className="pipeline-standing">
-            <Badge tone={pipeline.is_default ? "success" : undefined}>
-              {pipeline.is_default
-                ? t("pipeline.default")
-                : t("pipeline.notDefault")}
-            </Badge>
-            {canEdit && (
-              <>
-                <EditAction<Pipeline>
-                  label={t("pipeline.edit")}
-                  savedMessage={(saved) =>
-                    t("record.saveDone", { name: saved.name })
-                  }
-                  invalidate="pipelines"
-                  recordKey="pipeline"
-                  record={{
-                    id: pipeline.id,
-                    name: pipeline.name,
-                    is_default: String(pipeline.is_default),
-                    position: String(pipeline.position),
-                  }}
-                  fields={pipelineFields(t)}
-                  update={async (values) => {
-                    const { data, error } = await api.PATCH("/pipelines/{id}", {
-                      params: { path: { id: pipeline.id } },
-                      body: mapPipelineBody(values),
-                    });
-                    if (error) {
-                      throwProblem(error);
-                    }
-                    return data;
-                  }}
-                />
-                <StageCreate pipelineId={pipeline.id} />
-              </>
-            )}
-          </div>
-          {/* tabIndex -1 so a removal can hand focus to the list it changed:
-              the row's own Remove button is gone by then, and focus dropped to
-              <body> leaves a screen-reader user at the top of the document. */}
-          <ul ref={stageList} tabIndex={-1} className="stage-rows">
-            {stages.map((stage) => (
-              <StageRow
-                key={stage.id}
-                stage={stage}
-                canEdit={canEdit}
-                t={t}
-                returnFocusTo={() => stageList.current}
-              />
-            ))}
-          </ul>
-        </div>
-      }
-    />
-  );
-}
-
-// D-8: Settings → Pipelines config. Reads via the SAME ["pipelines","all"]
-// key the deals screen's plural selector uses (an array shape, distinct
-// from DealScreen's single-pipeline ["pipelines"] cache entry) — any
-// mutation here invalidates the ["pipelines"] prefix, so both shapes stay
-// fresh. The list itself is readable by everyone; only the write affordances are
-// gated, and the server stays the RBAC authority. Three of the five seeded roles
-// hold pipeline READ and no write verb at all, so for most readers this card is
-// the read-only case rather than an edge of it — which is why it states that
-// posture once instead of leaving a reader to infer it from absent buttons.
-export function PipelinesCard() {
-  const t = useT();
-  // Adding a pipeline is pipeline:create. Everything else here — renaming a
-  // pipeline, adding a stage, editing one, reordering — is pipeline:update,
-  // including the stage CREATE affordance: a stage is not its own RBAC object,
-  // so adding one is an update to the pipeline that owns it.
-  const canCreate = useCanWrite("pipeline", "create");
-  const canEdit = useCanWrite("pipeline", "update");
-  const query = useQuery({
-    queryKey: ["pipelines", "all"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
-  });
-  return (
-    <Panel
-      title={t("settings.pipelines")}
-      // Adding a pipeline is four inputs committed together, so the header
-      // keeps the verb and the dialog keeps the form. It sits in the header
-      // band rather than as a trailing row: a row's label would repeat the
-      // button beside it, and a card-level create verb is the header's job
-      // everywhere else on these pages. Absent without the create grant,
-      // exactly as each Edit verb is — the read-only posture is stated once
-      // below.
-      titleAction={
-        canCreate && (
-          <CreateAction
-            label={t("pipeline.new")}
-            invalidate="pipelines"
-            screen="settings"
-            create={async (values) => {
-              const { data, error } = await api.POST("/pipelines", {
-                body: { ...mapPipelineBody(values), stages: [] },
-              });
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
-            }}
-            fields={pipelineFields(t)}
-          />
-        )
-      }
-    >
-      <PanelBody>
-        <p className="settings-panel-sub">{t("settings.pipelinesSub")}</p>
-        {/* Said once, at the top, rather than annotating each absent control —
-            the rule in design-system/README.md. A reader holding one of the two
-            verbs can see for themselves which controls they got. */}
-        {!canCreate && !canEdit && (
-          <p className="settings-panel-sub">
-            {t("settings.pipelinesReadOnly")}
-          </p>
-        )}
-        <SettingList>
-          <QueryGate
-            pendingLabel={t("settings.pipelines")}
-            query={query}
-            empty={(pipelines) => pipelines.length === 0}
-          >
-            {(pipelines) =>
-              pipelines.map((pipeline) => (
-                <PipelineRow
-                  key={pipeline.id}
-                  pipeline={pipeline}
-                  canEdit={canEdit}
-                  t={t}
-                />
-              ))
-            }
-          </QueryGate>
-        </SettingList>
-      </PanelBody>
     </Panel>
   );
 }
@@ -2388,7 +1860,7 @@ function AutonomyCard() {
             runs at — the dot, and on the locked row the badge saying the answer
             cannot move — sits at the same x as every answer on this page. A
             reader coming from the tool inventory above is matching dots, which
-            is why sending carries the green one: a person's grant of the `send`
+            is why sending carries the green one: a contact's grant of the `send`
             scope IS the approval, so a funded send does not stage a second. */}
         <SettingList>
           <SettingRow
@@ -2413,7 +1885,7 @@ function AutonomyCard() {
             control={
               <span className="settings-run">
                 <AutonomyDot tier="confirm" />
-                <Badge tone="warn">{t("settings.locked")}</Badge>
+                <Badge tone="warning">{t("settings.locked")}</Badge>
               </span>
             }
           />
@@ -2613,7 +2085,7 @@ function AuditLogRow({
     // inside the one stacked row that holds the whole trail.
     <div className="audit-row">
       <div className="audit-row-head">
-        {/* The organization's clock, the same one the record change history
+        {/* The company's clock, the same one the record change history
             reads on: an audit entry is a fact in the shared book, and on the
             viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
             and 22 August to one in Ho Chi Minh City — two operators quoting the
@@ -2626,18 +2098,17 @@ function AuditLogRow({
         {entry.entity_id && isEntityKind(entry.entity_type) ? (
           <EntityRef kind={entry.entity_type} id={entry.entity_id} />
         ) : (
-          <span className="t-mono t-caption">
+          <span className="t-caption">
             {entry.entity_type}
             {entry.entity_id ? ` ${entry.entity_id}` : ""}
           </span>
         )}
         <Button
-          small
           aria-expanded={expanded}
           aria-label={t("settings.auditExpand")}
           onClick={() => setExpanded((value) => !value)}
         >
-          <ChevronDown aria-hidden size={14} className="expander-chevron" />
+          <ChevronDown aria-hidden className="expander-chevron" />
         </Button>
       </div>
       {expanded && (
@@ -2654,8 +2125,7 @@ function AuditLogRow({
           {entry.passport_id && <PassportChip id={entry.passport_id} />}
           {entry.on_behalf_of && (
             <span className="t-caption">
-              {t("settings.auditOnBehalf")}{" "}
-              <span className="t-mono">{entry.on_behalf_of}</span>
+              {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>
             </span>
           )}
           {entry.authorization_rule && (
@@ -2728,12 +2198,8 @@ function AuditLogEntries({
     return (
       <EmptyState>
         <p>{t("common.error")}</p>
-        <p className="t-mono audit-error-cause">
-          {problemMessageOf(query.error, t)}
-        </p>
-        <Button small onClick={() => query.refetch()}>
-          {t("common.retry")}
-        </Button>
+        <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
+        <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
       </EmptyState>
     );
   }
@@ -2804,5 +2270,14 @@ export function AuditLogCard() {
         </SettingList>
       </PanelBody>
     </Panel>
+  );
+}
+
+function ModelPriceDetails() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("aiRouting.priceSheet")}>
+      <ModelCostsCard />
+    </Disclosure>
   );
 }

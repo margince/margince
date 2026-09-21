@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__forecast_readings"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__forecast_readings", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "There are 7 deals in the window.\n\nForecasting is not available in this CRM, so I cannot give you a number for the board. Weserbund Pilotphase has no amount entered."}

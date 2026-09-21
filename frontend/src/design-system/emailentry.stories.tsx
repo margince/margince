@@ -21,7 +21,7 @@ import { Panel, PanelBody } from "./panel";
 //
 // The states worth a picture are the access ones, because they are what a
 // reader has to tell apart at a glance: a message the team may read, one
-// limited to the people on it, one narrowed to named colleagues, and one this
+// limited to the contacts on it, one narrowed to named colleagues, and one this
 // reader may not read at all — which keeps its shape and loses its words.
 //
 // `InEveryHost` is the load-bearing one. The same row is drawn inside a
@@ -45,6 +45,11 @@ const BASE: EmailSummary = {
   counterparty: "Ana Sommer",
 };
 
+// The contact the sender resolves to and the account the message is filed
+// against, named by the record reads the drawer's filing line makes.
+const ANA = "22222222-2222-4222-8222-222222222222";
+const BRANDT = "33333333-3333-4333-8333-333333333333";
+
 function Row({ summary }: Readonly<{ summary: EmailSummary }>) {
   return (
     <EmailEntry summary={summary} timestamp="1 Sep 09:12" onOpen={() => {}} />
@@ -62,7 +67,7 @@ type Story = StoryObj<typeof Row>;
 /** Readable by anyone who can reach a linked record. */
 export const Team: Story = { args: { summary: BASE } };
 
-/** Limited to the people on the correspondence. */
+/** Limited to the contacts on the correspondence. */
 export const Participants: Story = {
   args: { summary: { ...BASE, display_status: "participants" } },
 };
@@ -213,6 +218,12 @@ export const Detail: StoryObj = {
 /**
  * The record page's drawer, which draws nothing when no message is open. The
  * story shows the open state; the closed one is an empty canvas by design.
+ *
+ * It is also the shot of the whole envelope: the sender NAMED as the contact
+ * they resolve to, the records the message is filed against under the date,
+ * and the verb that answers it beside the way out. All three open beside the
+ * message rather than over it — a reader part-way through a mail who follows a
+ * contact must not lose the mail to reach the record.
  */
 export const RecordDrawer: StoryObj = {
   render: () => {
@@ -226,14 +237,21 @@ export const RecordDrawer: StoryObj = {
             summary: BASE,
             body: "Können wir Dienstag kurz sprechen?\n\nViele Grüße\nAna",
             from: [
-              { address: "ana@brandt.example", display_name: "Ana Sommer" },
+              {
+                address: "ana@brandt.example",
+                display_name: "Ana Sommer",
+                contact_id: ANA,
+              },
             ],
             to: [],
             cc: [],
             bcc: [],
             bcc_withheld: false,
             attachments: [],
-            links: [],
+            links: [
+              { entity_type: "contact", entity_id: ANA },
+              { entity_type: "company", entity_id: BRANDT },
+            ],
             access: {
               content_state: "available",
               display_status: "team",
@@ -244,6 +262,13 @@ export const RecordDrawer: StoryObj = {
             can_relink: false,
             version: 3,
           }),
+      // The reads that put a NAME to each filed record. `EntityRef` resolves
+      // one record per link, so a story with links and no records draws the
+      // line as ids rather than as the names a reader would meet.
+      [`GET /contacts/${ANA}`]: () =>
+        jsonResponse({ id: ANA, full_name: "Ana Sommer" }),
+      [`GET /companies/${BRANDT}`]: () =>
+        jsonResponse({ id: BRANDT, display_name: "Brandt Automotive" }),
     });
     return (
       <StoryProviders>
@@ -321,4 +346,15 @@ export const RecordDrawerHeld: StoryObj = {
       </StoryProviders>
     );
   },
+};
+
+export const ReplyTarget: StoryObj = {
+  render: () => (
+    <EmailEntry
+      summary={BASE}
+      timestamp="1 Sep 09:12"
+      onSelect={() => {}}
+      selected
+    />
+  ),
 };

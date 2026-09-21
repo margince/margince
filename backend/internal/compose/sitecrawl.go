@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultCrawlMaxPages = 40
+	defaultCrawlMaxPages = 60
 	defaultCrawlMaxBytes = 32 << 20
 	defaultCrawlWall     = 240 * time.Second
 	// crawlSkipReportCap bounds how many left-behind candidates a cap stop
@@ -40,6 +40,8 @@ type crawlPage struct {
 	URL  string
 	Kind crmcontracts.SiteReadPageKind
 	Text string
+	// Sections preserves the fetched page's heading-delimited evidence.
+	Sections []string
 	// Bytes and FetchDur are observability for the debug report; the
 	// pipeline itself keys off Text alone.
 	Bytes    int
@@ -387,7 +389,7 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 		seedURL: seedURL,
 		crawl: siteCrawl{
 			Pages:      []crawlPage{pageFrom(seedURL, crmcontracts.SiteReadPageKindHome, seedPage)},
-			SeedAssets: declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons},
+			SeedAssets: declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons, logos: seedPage.Logos},
 			SeedURL:    seedURL,
 		},
 		visited:       visited,
@@ -442,11 +444,11 @@ func (r *crawlRun) skip(candURL string, reason crmcontracts.SiteReadSkipReason) 
 func stopReason(ctx context.Context, pages, maxPages, bytes, maxBytes int) *crmcontracts.SiteReadReportStoppedReason {
 	switch {
 	case ctx.Err() != nil:
-		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonDeadline)
+		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline)
 	case pages >= maxPages:
-		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonPageCap)
+		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonPageCap)
 	case bytes >= maxBytes:
-		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonByteCap)
+		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap)
 	default:
 		return nil
 	}
@@ -458,10 +460,10 @@ func stopReason(ctx context.Context, pages, maxPages, bytes, maxBytes int) *crmc
 func leftBehind(rest []crawlCandidate, visited map[string]bool, stop crmcontracts.SiteReadReportStoppedReason) []crawlSkip {
 	var reason crmcontracts.SiteReadSkipReason
 	switch stop {
-	case crmcontracts.SiteReadReportStoppedReasonPageCap:
-		reason = crmcontracts.SiteReadSkipReasonPageCap
-	case crmcontracts.SiteReadReportStoppedReasonByteCap:
-		reason = crmcontracts.SiteReadSkipReasonByteCap
+	case crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonPageCap:
+		reason = crmcontracts.SiteReadSkipReasonSiteReadSkipReasonPageCap
+	case crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap:
+		reason = crmcontracts.SiteReadSkipReasonSiteReadSkipReasonByteCap
 	default:
 		return nil
 	}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -41,7 +41,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function Tabs() {
-  const tabs = useSavedViewTabs("organizations");
+  const tabs = useSavedViewTabs("companies");
   return (
     <ul>
       {tabs.map((tab) => (
@@ -94,7 +94,7 @@ describe("saved views", () => {
             {
               id: "v-1",
               owner_id: "u-1",
-              resource: "organizations",
+              resource: "companies",
               name: "German customers",
               version: 1,
               query: {
@@ -134,7 +134,7 @@ describe("saved views", () => {
             {
               id: "v-4",
               owner_id: "u-1",
-              resource: "organizations",
+              resource: "companies",
               name: "Closed too",
               version: 1,
               query: {
@@ -171,14 +171,14 @@ describe("saved views", () => {
             {
               id: "v-2",
               owner_id: "u-1",
-              resource: "organizations",
+              resource: "companies",
               name: "No query at all",
               version: 1,
             },
             {
               id: "v-3",
               owner_id: "u-1",
-              resource: "organizations",
+              resource: "companies",
               name: "A query with no list state",
               version: 1,
               query: {},
@@ -235,7 +235,7 @@ describe("saved views", () => {
         });
       }),
     );
-    wrap(<SaveViewAction resource="organizations" query={narrowed} />);
+    wrap(<SaveViewAction resource="companies" query={narrowed} />);
 
     await user.click(screen.getByRole("button", { name: "Save view" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Customers");
@@ -243,7 +243,7 @@ describe("saved views", () => {
 
     await waitFor(() => expect(posted).not.toBeNull());
     expect(posted).toMatchObject({
-      resource: "organizations",
+      resource: "companies",
       name: "Customers",
       query: {
         list: { sort: "display_name", filters: { lifecycle: "customer" } },
@@ -254,7 +254,7 @@ describe("saved views", () => {
   it("says the saved views failed to load rather than showing an empty rail", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", viewsFailingOnce());
-    wrap(<SaveViewAction resource="organizations" query={narrowed} />);
+    wrap(<SaveViewAction resource="companies" query={narrowed} />);
 
     // An empty rail claims the reader has saved nothing. A failed read knows
     // no such thing, and the retry is what makes it a failure rather than an
@@ -275,23 +275,6 @@ describe("saved views", () => {
     );
   });
 
-  it("reports no saved-view failure in overlay mode, where no rail is drawn", async () => {
-    vi.stubGlobal(
-      "fetch",
-      viewsFailingOnce({
-        ...meFixture({}),
-        system_of_record: { mode: "overlay" },
-      }),
-    );
-    wrap(<SaveViewAction resource="organizations" query={narrowed} />);
-
-    // The rail is withheld in overlay mode, so there is nothing on screen for
-    // the failure to be about. Waiting on the save button proves the read has
-    // settled rather than that the assertion below ran too early.
-    await screen.findByRole("button", { name: "Save view" });
-    expect(screen.queryByText("This section did not load.")).toBeNull();
-  });
-
   it("carries the search a view was saved with", async () => {
     vi.stubGlobal(
       "fetch",
@@ -301,7 +284,7 @@ describe("saved views", () => {
             {
               id: "v-5",
               owner_id: "u-1",
-              resource: "organizations",
+              resource: "companies",
               name: "Acme",
               version: 1,
               query: {
@@ -337,7 +320,7 @@ describe("saved views", () => {
             {
               id: "v-6",
               owner_id: "u-1",
-              resource: "organizations",
+              resource: "companies",
               name: "No page size",
               version: 1,
               // `query` is an open JSON object on the wire, so a view written
@@ -369,7 +352,7 @@ describe("saved views", () => {
     // Saving the default would add a tab that does what All already does.
     wrap(
       <SaveViewAction
-        resource="organizations"
+        resource="companies"
         query={{
           q: "",
           sort: "",

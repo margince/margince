@@ -30,10 +30,10 @@ type FxRateRow struct {
 	RateDate     time.Time
 }
 
-// SetFxRateInput sets one effective-dated rate. EffectiveDate is the UTC
-// day the rate takes effect; it may be today or later, never the past
-// (strict append-forward — a past-dated row prices historical rollups and
-// must never change).
+// SetFxRateInput sets one effective-dated rate. EffectiveDate is the calendar
+// day the rate takes effect, read in the installation's zone; it may be today
+// or later, never the past (strict append-forward — a past-dated row prices
+// historical rollups and must never change).
 type SetFxRateInput struct {
 	FromCurrency  string
 	Rate          string
@@ -59,12 +59,26 @@ func fxInvalid(field, code, message string) error {
 	return &FxRateValidationError{Field: field, Code: code, Message: message}
 }
 
-func (s *Store) todayUTC() time.Time {
-	return s.clock().UTC().Truncate(24 * time.Hour)
+// effectiveToday is the calendar day the sheet's append-forward guard and "in
+// force today" cutoff are judged against, in the installation's zone rather than
+// UTC: an operator east of UTC scheduling a rate in their local morning must not
+// have it read as yesterday's. The store clock is sampled inside the caller's
+// transaction, so a write that waited for the pool across the local day boundary
+// judges the day it commits.
+func (s *Store) effectiveToday(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	tzName, err := s.installation.Timezone(ctx, tx)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
+	}
+	loc, err := installationZone(tzName)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return storekit.WorkspaceDay(s.clock(), loc), nil
 }
 
-// SetFxRate appends (or corrects, same UTC day) one effective-dated FX
-// rate. Admin/ops-gated; append-forward (rejects a past effective date);
+// SetFxRate appends (or corrects, same installation-zone day) one effective-
+// dated FX rate. Admin/ops-gated; append-forward (rejects a past effective date);
 // resolves ToCurrency to the workspace base and rejects from == base.
 func (s *Store) SetFxRate(ctx context.Context, in SetFxRateInput) (FxRateRow, error) {
 	// RBAC + pure shape validation BEFORE acquiring a connection, so a denied
@@ -149,8 +163,8 @@ func fxRateImage(from, base, rate string, effDate time.Time) map[string]any {
 
 // writeFxRate does the transactional body: resolve and guard the effective day
 // against a clock sampled INSIDE the tx (so a write that waited for the pool
-// across UTC midnight is stored against the day it commits — append-forward
-// stays true at write time), resolve the workspace base, reject from == base,
+// across the installation's midnight is stored against the day it commits —
+// append-forward stays true at write time), resolve the workspace base, reject from == base,
 // require the grant the upsert turns out to need, then upsert the
 // append-forward row and audit — all in the caller-owned tx.
 func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetFxRateInput) (FxRateRow, error) {
@@ -160,14 +174,18 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 	if err := storekit.LockWriteIdentity(ctx, tx, "fx_rate", from); err != nil {
 		return FxRateRow{}, err
 	}
-	today := s.todayUTC()
-	eff := in.EffectiveDate
-	if eff.IsZero() {
-		eff = today
+	today, err := s.effectiveToday(ctx, tx)
+	if err != nil {
+		return FxRateRow{}, err
 	}
-	// Persist the same UTC-truncated day the past-date guard checks, so a
-	// sub-day offset can never store a calendar date different from the validated one.
-	effDate := eff.UTC().Truncate(24 * time.Hour)
+	// The chosen effective date is a calendar day the operator named, taken as
+	// itself; only an unset date falls back to today (derived from the clock).
+	// Projecting a chosen date through the zone would slip it a day west of UTC —
+	// the off-by-one a calendar date must never take.
+	effDate := today
+	if !in.EffectiveDate.IsZero() {
+		effDate = storekit.AsDate(in.EffectiveDate)
+	}
 	if effDate.Before(today) {
 		return FxRateRow{}, fxInvalid("effective_date", "fx_rate_past", "effective_date cannot be in the past")
 	}
@@ -293,14 +311,18 @@ func (s *Store) ListEffectiveFxRates(ctx context.Context) ([]FxRateRow, error) {
 		if err != nil {
 			return err
 		}
-		// Sample "today" inside the transaction: a wait for a pooled
-		// connection across UTC midnight must not list yesterday's cutoff.
+		// Sample "today" inside the transaction: a wait for a pooled connection
+		// across the installation's midnight must not list yesterday's cutoff.
+		today, err := s.effectiveToday(ctx, tx)
+		if err != nil {
+			return err
+		}
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
 			FROM fx_rate
 			 WHERE rate_date <= $1
 			   AND to_currency = $2
-			ORDER BY from_currency, rate_date DESC`, s.todayUTC(), base)
+			ORDER BY from_currency, rate_date DESC`, today, base)
 		if err != nil {
 			return fmt.Errorf("list effective fx_rate: %w", err)
 		}
@@ -316,8 +338,8 @@ func (s *Store) ListEffectiveFxRates(ctx context.Context) ([]FxRateRow, error) {
 // must see the same state the apply writes into. It takes the currency's
 // write-identity lock (so no standalone write can commit between this read
 // and the dependent write) and returns the day it sampled: the caller pins
-// its write to that SAME day, so a transaction that crosses UTC midnight
-// fails the append-forward guard instead of overwriting the new day's
+// its write to that SAME day, so a transaction that crosses the installation's
+// midnight fails the append-forward guard instead of overwriting the new day's
 // scheduled row. found=false means no rate is in force, a materially
 // different answer from any value. Admin/ops read gate.
 func (s *Store) EffectiveFxRateInTx(ctx context.Context, tx pgx.Tx, fromCurrency string) (rate string, asOf time.Time, found bool, err error) {
@@ -328,7 +350,9 @@ func (s *Store) EffectiveFxRateInTx(ctx context.Context, tx pgx.Tx, fromCurrency
 	if err := storekit.LockWriteIdentity(ctx, tx, "fx_rate", from); err != nil {
 		return "", time.Time{}, false, err
 	}
-	asOf = s.todayUTC()
+	if asOf, err = s.effectiveToday(ctx, tx); err != nil {
+		return "", time.Time{}, false, err
+	}
 	err = tx.QueryRow(ctx, `
 		SELECT rate::text FROM fx_rate
 		WHERE from_currency = $1 AND rate_date <= $2

@@ -92,10 +92,11 @@ export function useFieldHistory(
   });
 }
 
-// Every actor type gets a base ProvenanceTag (human/agent — system and
-// connector read as "agent", same as the record-level HistoryEntryRow and
-// settings.tsx's AuditLogRow), so no actor ever renders a blank attribution;
-// the passport/evidence chips layer on top only when the change carries them.
+// Every actor type gets a base ProvenanceTag through `provenanceOfEntry`, the
+// same reading the record-level HistoryEntryRow takes, so no actor ever renders
+// a blank attribution: each of human, buyer, agent, system and connector keeps
+// its own arm, and only an agent's change wears the AI tone. The
+// passport/evidence chips layer on top only when the change carries them.
 function ChangeWho({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   const viewerId = useViewerId();
   return (
@@ -140,9 +141,7 @@ function FieldGroupSection({
   const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
   return (
     <div className="fgroup">
-      <div className="fgroup-head t-caption">
-        {historyFieldLabel(group.field, t)}
-      </div>
+      <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
       <ul>
         {group.changes.map((change) => (
           <li key={change.id} className="change">
@@ -244,11 +243,7 @@ export function FieldHistoryTimeline({
     body = (
       <EmptyState>
         <p>{t("history.filterEmpty")}</p>
-        <Button
-          small
-          onClick={clearFilters}
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <Button onClick={clearFilters} style={{ marginTop: "var(--space-3)" }}>
           {t("history.clearFilter")}
         </Button>
       </EmptyState>
@@ -300,7 +295,6 @@ export function FieldHistoryTimeline({
             style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}
           >
             <Button
-              small
               variant={fieldFilter === undefined ? "primary" : "ghost"}
               onClick={() => setFieldFilter(undefined)}
             >
@@ -309,7 +303,6 @@ export function FieldHistoryTimeline({
             {fieldOptions.map((field) => (
               <Button
                 key={field}
-                small
                 variant={fieldFilter === field ? "primary" : "ghost"}
                 onClick={() => setFieldFilter(field)}
               >

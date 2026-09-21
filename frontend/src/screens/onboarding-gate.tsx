@@ -660,13 +660,13 @@ function TheatreTail({
             invented would be the one number here nobody could trust. */}
         <dl className="ob-scan-tally">
           <div>
-            <dt className="t-caption">{t("ob.scan.tallyPages")}</dt>
+            <dt>{t("ob.scan.tallyPages")}</dt>
             <dd>
               <CountUp value={pagesRead} locale={locale} />
             </dd>
           </div>
           <div>
-            <dt className="t-caption">{t("ob.scan.tallyFacts")}</dt>
+            <dt>{t("ob.scan.tallyFacts")}</dt>
             <dd>
               <CountUp value={read.facts.length} locale={locale} />
             </dd>
@@ -678,7 +678,7 @@ function TheatreTail({
               at that point. */}
           {uncertainCount !== undefined && (
             <div>
-              <dt className="t-caption">{t("ob.scan.tallyUncertain")}</dt>
+              <dt>{t("ob.scan.tallyUncertain")}</dt>
               <dd>
                 <CountUp value={uncertainCount} locale={locale} />
               </dd>
@@ -798,7 +798,7 @@ function ScanTickerEntry({
       {note !== null && (
         <button
           type="button"
-          className="ob-scan-ticker-kind t-caption"
+          className="ob-scan-ticker-kind"
           aria-expanded={expanded}
           aria-label={note}
           onClick={() => setExpanded((current) => !current)}

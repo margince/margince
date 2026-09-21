@@ -8,7 +8,7 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem, useSorMode } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import type { ListQuery, SavedViewTab } from "./listquery";
 import { decode, encode, isComplete, type Node } from "./segmentpredicate";
 
@@ -30,14 +30,14 @@ type SavedView = components["schemas"]["SavedView"];
 /**
  * The resources whose lists offer saved views, as the contract spells them.
  *
- * Plural here and singular on `/filters/*` — `people` against `person` — because
+ * Plural here and singular on `/filters/*` — `contacts` against `contact` — because
  * the two endpoint families spell their enums differently. That correspondence
  * is written down once, where the two meet (the filters screen's `VIEW_OF`), and
  * nowhere else.
  */
 export type ViewResource =
-  | "people"
-  | "organizations"
+  | "contacts"
+  | "companies"
   | "deals"
   | "leads"
   | "projects";
@@ -309,19 +309,12 @@ function SaveViewButton({
  * offered with it. It is NAMED, because it lands in the list's tools slot beside
  * Columns and Compact: "this section did not load" under a toolbar covering
  * three controls says which one only if the part is named.
- *
- * And it is reported only where the rail is drawn at all. Overlay mode has no
- * saved-view rail — a tab whose preset the incumbent mirror refuses is a tab
- * that lights up and does nothing — so a failed read there has no surface to be
- * about, and reporting it would put a failure on screen for something the
- * screen deliberately does not show.
  */
 export function SaveViewAction({
   resource,
   query,
 }: Readonly<{ resource: ViewResource; query: ListQuery }>) {
   const t = useT();
-  const railDrawn = useSorMode() !== "overlay";
   // The same query the rail reads, so this costs no second request: one read of
   // /views answers both, and the rail cannot be shown as loaded here and failed
   // there.
@@ -333,7 +326,7 @@ export function SaveViewAction({
     Object.values(query.filters).some(Boolean);
   return (
     <>
-      {railDrawn && views.isError && (
+      {views.isError && (
         <SurfaceState
           loadingLabel={t("views.rail")}
           state="failed"
@@ -399,7 +392,7 @@ export function LoadFilterViewMenu({
   return (
     <OverflowMenu label={t("filters.loadView")}>
       {readable.map((view) => (
-        <Button key={view.id} small onClick={() => onLoad(view.tree)}>
+        <Button key={view.id} onClick={() => onLoad(view.tree)}>
           {view.name}
         </Button>
       ))}

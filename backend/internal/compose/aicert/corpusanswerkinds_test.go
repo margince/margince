@@ -11,7 +11,7 @@ package aicert
 // The corpus census next door (corpus_test.go) is per SITE. A site whose model
 // answers from a CLOSED vocabulary satisfies that with ONE scenario and can
 // leave most of the vocabulary never once scored — which is how role_mailbox,
-// organization_sender and transactional shipped uncertified while the report
+// company_sender and transactional shipped uncertified while the report
 // called capture_counterparty_verdict covered, and how the confidentiality
 // verdict shipped with four of its seven kinds unmeasured.
 //
@@ -92,6 +92,13 @@ var recognisedOwners = []string{
 	// corpus/owed_verdict.
 	"owed_verdict/owed",
 	"propose_roles/committee",
+	// settled | still_owed | unsure. An ANSWER vocabulary like owed_verdict's
+	// above: the whole output is one of these three words per conversation.
+	// unsure wants a scenario of its own because it is a real answer rather
+	// than a failure to reach one — it leaves the request owed — and a corpus
+	// scoring only the two confident words would never measure the abstention
+	// the floor exists to produce.
+	"request_settlement/request_settle",
 	"signal_extract/thread_events",
 	"site_triage/triage",
 }
@@ -295,7 +302,7 @@ const notGroundedExpectationKey = "not_grounded"
 // walkExpectation is the ONE place this gate reads a decoded expectation, which
 // is why the `any` is here and nowhere else.
 //
-//craft:ignore naked-any expect.answer is free-form per site by contract — a bare string, a person-to-role map, a list of labels, a nested {kind, changes} object — so there is no shape to name, and naming one would be this gate deciding what a site may assert
+//craft:ignore naked-any expect.answer is free-form per site by contract — a bare string, a contact-to-role map, a list of labels, a nested {kind, changes} object — so there is no shape to name, and naming one would be this gate deciding what a site may assert
 func walkExpectation(node any, named map[string]bool) {
 	switch typed := node.(type) {
 	case string:

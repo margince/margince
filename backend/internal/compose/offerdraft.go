@@ -28,7 +28,7 @@ package compose
 // the SAME seam runner.go's Surface-B loop and the intent tools already
 // ride (compose/runnerservice.go, compose/registry.go), backed by
 // modules/search's fixed-depth graph walk (activities linked to the deal,
-// plus the people/orgs/deals those activities also touch). This file
+// plus the contacts/companies/deals those activities also touch). This file
 // invents no new context store: it is the one retrieval seam every other
 // AI consumer already shares, so "grounded in the deal's context" means
 // the same thing everywhere in the codebase.
@@ -52,11 +52,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -181,9 +182,14 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 		return DraftResult{}, err
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(before.DealId))
-	if _, err := d.deals.GetDeal(ctx, dealID, storekit.LiveOnly); err != nil {
+	deal, err := d.deals.GetDeal(ctx, dealID, storekit.LiveOnly)
+	if err != nil {
 		return DraftResult{}, err
 	}
+	// The deal the offer is for. The request carries that deal's own context —
+	// what the buyer asked for, in their words — so an erasure reaching a
+	// contact on this deal reaches these payloads through the deal it names.
+	ctx = ai.WithSubject(ctx, dealID.Ref(), deal.Name)
 
 	dealContext, err := d.gatherDealContext(ctx, dealID)
 	if err != nil {
@@ -232,17 +238,17 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 	}
 
 	added, removed, changed := diffOfferLines(linesOf(before), linesOf(after))
-	disclosure := signals.Art50Disclosure
+	disclosure := draftfloor.AIProvenanceNotice(textlang.Lang(identity.BaseLanguageForPrompt(ctx, d.pool)))
 	diff := buildOfferDiff(added, removed, changed)
 	after.AiGenerated = boolPtr(true)
 	after.AiDisclosure = &disclosure
 	after.DiffFromPrevious = diff
 
 	return DraftResult{
-		Offer:        after,
-		AIGenerated:  true,
-		AIDisclosure: &disclosure,
-		Diff:         diff,
+		Offer:              after,
+		AIGenerated:        true,
+		AIProvenanceNotice: &disclosure,
+		Diff:               diff,
 	}, nil
 }
 

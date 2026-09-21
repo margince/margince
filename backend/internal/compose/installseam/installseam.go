@@ -14,24 +14,28 @@ package installseam
 
 import (
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 )
 
 // Deals is the installation seam the deals module reads through.
 func Deals() deals.Installation {
 	return deals.Installation{
-		Name:         identity.NameOf,
-		BaseCurrency: identity.BaseCurrencyOf,
-		Timezone:     identity.TimezoneOf,
+		Name: identity.NameOf,
+		// contacts owns `company` and its provenance sidecar, so the "has a
+		// human confirmed what this installation is called" read lives there
+		// and the edge is injected here.
+		IssuerLegalName: contacts.ConfirmedIssuerLegalName,
+		BaseCurrency:    identity.BaseCurrencyOf,
+		Timezone:        identity.TimezoneOf,
 		// activities owns `activity`, so the stamp's write lives there and the
 		// edge is injected here (ADR-0054).
 		StampCorrespondence: activities.StampCorrespondenceForDeal,
-		// people owns `partner`, so the "is this company a partner" read lives
+		// contacts owns `partner`, so the "is this company a partner" read lives
 		// there and the edge is injected here for the same reason.
-		EnsurePartner: people.EnsureOrganizationIsPartner,
+		EnsurePartner: contacts.EnsureCompanyIsPartner,
 		// projects owns `project`, so the attach check and the delivery advance
 		// live there and the edges are injected here for the same reason.
 		EnsureProjectAttachable: projects.EnsureAttachable,

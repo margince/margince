@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
+import { ActionRow } from "../design-system/actionrow";
 import { Button, TextInput } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import type { ConfidenceLevel } from "../design-system/trust";
@@ -89,7 +90,7 @@ const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> = {
 //
 // The currency is always there to convert with: a reading omits an amount it
 // could not pair with one, precisely so no figure is ever scaled by a guess.
-// majorUnits renders a stored minor-unit amount as the figure a person types.
+// majorUnits renders a stored minor-unit amount as the figure a human types.
 // Plain digits rather than a formatted amount: this is what goes INTO an input,
 // and a grouped "148,500.00" would come back out as something to re-parse.
 export function majorUnits(minor: string, currency: string): string {
@@ -210,12 +211,12 @@ export function DocumentExtractionPanel({
   });
 
   if (dismissed) {
-    return <p className="t-caption">{t("extraction.dismissed")}</p>;
+    return <p>{t("extraction.dismissed")}</p>;
   }
   if (accepted !== null) {
     return (
       <section className="real-card" aria-label={t("extraction.acceptedLabel")}>
-        <p className="t-caption">
+        <p>
           {plural("extraction.acceptedHeading", accepted, {
             count: formatNumber(accepted, locale),
           })}
@@ -224,7 +225,7 @@ export function DocumentExtractionPanel({
     );
   }
   if (query.isLoading) {
-    return <p className="t-caption">{t("extraction.loading")}</p>;
+    return <p>{t("extraction.loading")}</p>;
   }
   if (!extraction) {
     return (
@@ -287,7 +288,7 @@ function ReadOffer({
   const t = useT();
   return (
     <div className="staging-card">
-      <p className="t-caption">{t("extraction.neverRead")}</p>
+      <p>{t("extraction.neverRead")}</p>
       <Button
         onClick={onRead}
         pending={pending}
@@ -295,7 +296,7 @@ function ReadOffer({
       >
         {t("extraction.readIt")}
       </Button>
-      {failed && <p className="t-caption">{t("extraction.startFailed")}</p>}
+      {failed && <p>{t("extraction.startFailed")}</p>}
     </div>
   );
 }
@@ -333,12 +334,12 @@ function ExtractionBody({
     if (extraction.stalled) {
       return (
         <div className="staging-card">
-          <p className="t-caption">{t("extraction.stalled")}</p>
+          <p>{t("extraction.stalled")}</p>
           <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
         </div>
       );
     }
-    return <p className="t-caption">{t("extraction.reading")}</p>;
+    return <p>{t("extraction.reading")}</p>;
   }
   if (extraction.status === "failed") {
     // The reason is the product here. "It failed" tells a rep nothing they can
@@ -346,7 +347,7 @@ function ExtractionBody({
     // who to ask.
     return (
       <div className="staging-card">
-        <p className="t-caption">{t("extraction.failed")}</p>
+        <p>{t("extraction.failed")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -359,7 +360,7 @@ function ExtractionBody({
     // what keeps it from reading as a broken feature.
     return (
       <div className="staging-card">
-        <p className="t-caption">{t("extraction.groundedNothing")}</p>
+        <p>{t("extraction.groundedNothing")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -370,12 +371,12 @@ function ExtractionBody({
 
   return (
     <StagingCard>
-      <p className="t-caption">
+      <p>
         {plural("extraction.heading", extraction.fields.length, {
           count: formatNumber(extraction.fields.length, locale),
         })}
       </p>
-      <ul className="extraction-fields">
+      <ul>
         {extraction.fields.map((field) => (
           <GroundedField
             key={field.field}
@@ -389,23 +390,29 @@ function ExtractionBody({
       </ul>
       <OmittedList omitted={extraction.omitted} />
       {canAccept && (
-        <div className="approval-gate">
-          <Button
-            onClick={() => onAccept(extraction.fields)}
-            disabled={accepting}
-          >
-            {plural("extraction.accept", extraction.fields.length, {
-              count: formatNumber(extraction.fields.length, locale),
-            })}
-          </Button>
+        <ActionRow
+          className="approval-gate"
+          primary={
+            <Button
+              variant="primary"
+              onClick={() => onAccept(extraction.fields)}
+              disabled={accepting}
+            >
+              {plural("extraction.accept", extraction.fields.length, {
+                count: formatNumber(extraction.fields.length, locale),
+              })}
+            </Button>
+          }
+        >
+          {/* Dismiss keeps its word here: it writes nothing and records no
+              verdict, it only puts this reading away for this viewer. A trash
+              can would claim the reading had been rejected. */}
           <Button variant="ghost" onClick={onDismiss}>
             {t("extraction.dismiss")}
           </Button>
-        </div>
+        </ActionRow>
       )}
-      {acceptFailed && (
-        <p className="t-caption">{t("extraction.acceptFailed")}</p>
-      )}
+      {acceptFailed && <p>{t("extraction.acceptFailed")}</p>}
     </StagingCard>
   );
 }
@@ -437,8 +444,8 @@ function GroundedField({
     ? formatMoney(Number(field.value), currency, locale)
     : field.value;
   return (
-    <li className="extraction-field">
-      <span className="t-caption">{label ? t(label) : field.field}</span>
+    <li>
+      <span>{label ? t(label) : field.field}</span>
       {draft === undefined ? (
         <EvidenceMark
           value={shown}
@@ -490,11 +497,11 @@ function OmittedList({
     return null;
   }
   return (
-    <ul className="extraction-omitted">
+    <ul>
       {omitted.map((field) => {
         const label = FIELD_LABELS[field.field];
         return (
-          <li key={field.field} className="t-caption">
+          <li key={field.field}>
             {label ? t(label) : field.field} —{" "}
             {t(OMITTED_REASONS[field.reason])}
           </li>

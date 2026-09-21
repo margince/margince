@@ -30,7 +30,8 @@ func (h Handlers) ListRecordGrants(w http.ResponseWriter, r *http.Request, param
 		id := ids.UUID(*params.SubjectId)
 		in.SubjectID = &id
 	}
-	grants, err := h.svc.ListRecordGrants(r.Context(), in)
+	in.Cursor, in.Limit = params.Cursor, params.Limit
+	grants, page, err := h.svc.ListRecordGrants(r.Context(), in)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -39,7 +40,11 @@ func (h Handlers) ListRecordGrants(w http.ResponseWriter, r *http.Request, param
 	for _, g := range grants {
 		data = append(data, wireGrant(g))
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": data, "page": crmcontracts.PageInfo{}})
+	wire := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		wire.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": data, "page": wire})
 }
 
 func (h Handlers) CreateRecordGrant(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateRecordGrantParams) {

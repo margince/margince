@@ -5,10 +5,9 @@
 // objective and its arc on top of the sections a reader already had, so a
 // half-built plan can never displace what was already working.
 
-import { AlertTriangle, Target } from "lucide-react";
+import { Target } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -17,17 +16,33 @@ import { SentenceList } from "../record360";
 
 type MeetingBrief = components["schemas"]["MeetingBrief"];
 type MeetingPlan = NonNullable<MeetingBrief["plan"]>;
-type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
+type BriefSentence = components["schemas"]["CompanyBriefSentence"];
 
 type OpenRecord = (entityType: string, entityId: string) => void;
+
+// Opens a cited message in the host's own email drawer. Threaded beside
+// onOpenRecord for the same reason: the brief cites the conversations it was
+// written from, and a citation that names a message should open it.
+type OpenEmail = (activityId: string) => void;
 
 // One cited claim, with its receipts. The brief's own renderer rather than a
 // second spelling of a citation.
 function Claim({
   sentence,
   onOpenRecord,
-}: Readonly<{ sentence: BriefSentence; onOpenRecord: OpenRecord }>) {
-  return <SentenceList sentences={[sentence]} onOpenRecord={onOpenRecord} />;
+  onOpenEmail,
+}: Readonly<{
+  sentence: BriefSentence;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
+  return (
+    <SentenceList
+      sentences={[sentence]}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
+    />
+  );
 }
 
 // The outcome to earn, and the reminder not to force it. The lead panel, tinted
@@ -36,16 +51,28 @@ function Claim({
 export function ObjectivePanel({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   if (!plan.objective) {
     return null;
   }
+  const byModel = plan.generated_by === "model";
   return (
     <Panel
-      title={t("person.meeting.objective")}
+      title={t("contact.meeting.objective")}
       titleLevel={3}
-      tone={plan.generated_by === "model" ? "ai" : "accent"}
+      tone={byModel ? "ai" : "accent"}
+      // The disclosure rides the plan's LEAD and nowhere else: the panels under
+      // it are the same writer's work and take the same tint, but a badge on
+      // each of them would be the same sentence said six times.
+      titleAction={
+        byModel ? <Badge tone="ai">{t("co.assistant.aiTag")}</Badge> : undefined
+      }
     >
       <PanelBody>
         <div className="mb-objective">
@@ -54,14 +81,19 @@ export function ObjectivePanel({
             <Claim
               sentence={plan.objective.sentence}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
             <p className="mb-caveat">{plan.objective.caveat}</p>
           </div>
         </div>
         {plan.opening && (
           <div className="mb-open">
-            <Eyebrow as="h4">{t("person.meeting.openWith")}</Eyebrow>
-            <Claim sentence={plan.opening} onOpenRecord={onOpenRecord} />
+            <Eyebrow as="h4">{t("contact.meeting.openWith")}</Eyebrow>
+            <Claim
+              sentence={plan.opening}
+              onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
+            />
           </div>
         )}
       </PanelBody>
@@ -70,26 +102,28 @@ export function ObjectivePanel({
 }
 
 // The moments that still bear on today, oldest first.
-export function AccountArc({
+export function CompanyArc({
   plan,
   onOpenRecord,
+  onOpenEmail,
   formatDay,
 }: Readonly<{
   plan: MeetingPlan;
   onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
   formatDay: (utcIso: string) => string;
 }>) {
   const t = useT();
-  if (plan.account_arc.length === 0) {
+  if (plan.company_arc.length === 0) {
     return null;
   }
   return (
     <Panel
-      title={t("person.meeting.arc")}
+      title={t("contact.meeting.arc")}
       titleLevel={3}
-      sub={t("person.meeting.arcSub")}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
     >
-      {plan.account_arc.map((moment) => (
+      {plan.company_arc.map((moment) => (
         <PanelRow key={`${moment.from}-${moment.title}`}>
           <div className="mb-arc-row">
             <time className="t-caption" dateTime={moment.from}>
@@ -97,7 +131,11 @@ export function AccountArc({
             </time>
             <div>
               {moment.title && <strong>{moment.title}</strong>}
-              <Claim sentence={moment.summary} onOpenRecord={onOpenRecord} />
+              <Claim
+                sentence={moment.summary}
+                onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
+              />
             </div>
           </div>
         </PanelRow>
@@ -111,7 +149,12 @@ export function AccountArc({
 export function AdvancePanel({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   const legs = [
     { key: "minimum", sentence: plan.advance.minimum },
@@ -119,15 +162,23 @@ export function AdvancePanel({
     { key: "fallback", sentence: plan.advance.fallback },
   ] as const;
   return (
-    <Panel title={t("person.meeting.close")} titleLevel={3} tone="accent">
+    <Panel
+      title={t("contact.meeting.close")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : "accent"}
+    >
       <PanelBody>
         <div className="mb-advance">
           {legs.map((leg) => (
             <div key={leg.key}>
               <Eyebrow as="h4">
-                {t(`person.meeting.advance.${leg.key}`)}
+                {t(`contact.meeting.advance.${leg.key}`)}
               </Eyebrow>
-              <Claim sentence={leg.sentence} onOpenRecord={onOpenRecord} />
+              <Claim
+                sentence={leg.sentence}
+                onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
+              />
             </div>
           ))}
         </div>
@@ -147,10 +198,14 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.unknowns")} titleLevel={3}>
+    <Panel
+      title={t("contact.meeting.unknowns")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
+    >
       {plan.unknowns.map((unknown) => (
         <PanelRow key={unknown.kind}>
-          <span className="mb-unknown">{unknown.question}</span>
+          <span>{unknown.question}</span>
         </PanelRow>
       ))}
     </Panel>
@@ -165,23 +220,36 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
 export function LikelyAsks({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   if (plan.likely_asks.length === 0) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.likelyAsks")} titleLevel={3}>
+    <Panel
+      title={t("contact.meeting.likelyAsks")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
+    >
       {plan.likely_asks.map((ask) => (
         <PanelRow key={ask.question}>
           <div className="mb-ask">
             <div className="mb-ask-head">
               <strong>{ask.question}</strong>
-              <Badge tone={ask.relevance === "high" ? "warn" : undefined} quiet>
-                {t(`person.meeting.relevance.${ask.relevance}`)}
+              <Badge tone={ask.relevance === "high" ? "warning" : undefined}>
+                {t(`contact.meeting.relevance.${ask.relevance}`)}
               </Badge>
             </div>
-            <Claim sentence={ask.basis} onOpenRecord={onOpenRecord} />
+            <Claim
+              sentence={ask.basis}
+              onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
+            />
             <p className="mb-ask-prepare">{ask.prepare}</p>
           </div>
         </PanelRow>
@@ -190,38 +258,58 @@ export function LikelyAsks({
   );
 }
 
-// The one watch-out, with what to say, show and not promise.
+// The one watch-out, with what to say, show and not promise. A tinted panel for
+// the same reason the sections' risk panel is one: this is the section whose
+// FINDING is the bad news, and the tint follows the WRITER first — indigo is
+// claimed for every panel of a model-written plan, so a warning tint here would be
+// the one card of that plan not saying who wrote it.
+//
+// It was a `Callout` holding a claim and a FactList, which is content rather
+// than something the surface says about itself — a notice's body is prose, and
+// a document's section is a panel.
 export function TopRisk({
   plan,
   onOpenRecord,
-}: Readonly<{ plan: MeetingPlan; onOpenRecord: OpenRecord }>) {
+  onOpenEmail,
+}: Readonly<{
+  plan: MeetingPlan;
+  onOpenRecord: OpenRecord;
+  onOpenEmail?: OpenEmail;
+}>) {
   const t = useT();
   if (!plan.top_risk) {
     return null;
   }
   const { response_plan: response } = plan.top_risk;
   return (
-    <section className="mb-risks">
-      <h3 className="mb-section-title">{t("person.meeting.beReady")}</h3>
-      <Callout tone="warn" icon={AlertTriangle}>
-        <Claim sentence={plan.top_risk.text} onOpenRecord={onOpenRecord} />
+    <Panel
+      title={t("contact.meeting.beReady")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : "warning"}
+    >
+      <PanelBody>
+        <Claim
+          sentence={plan.top_risk.text}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+        />
         <FactList
           facts={[
-            { key: "say", term: t("person.meeting.say"), value: response.say },
+            { key: "say", term: t("contact.meeting.say"), value: response.say },
             {
               key: "show",
-              term: t("person.meeting.show"),
+              term: t("contact.meeting.show"),
               value: response.show,
             },
             {
               key: "avoid",
-              term: t("person.meeting.avoid"),
+              term: t("contact.meeting.avoid"),
               value: response.avoid,
             },
           ]}
         />
-      </Callout>
-    </section>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -232,11 +320,15 @@ export function Scenarios({ plan }: Readonly<{ plan: MeetingPlan }>) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.scenarios")} titleLevel={3}>
+    <Panel
+      title={t("contact.meeting.scenarios")}
+      titleLevel={3}
+      tone={plan.generated_by === "model" ? "ai" : undefined}
+    >
       {plan.scenarios.map((scenario) => (
         <PanelRow key={scenario.label}>
           <div className="mb-path-row">
-            <Badge quiet>{scenario.label}</Badge>
+            <Badge>{scenario.label}</Badge>
             <span>{scenario.play}</span>
           </div>
         </PanelRow>

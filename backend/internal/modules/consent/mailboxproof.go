@@ -6,7 +6,7 @@ package consent
 // MailboxProof records how a caller established that a subject controls the
 // address a consent decision was made from.
 //
-// A double opt-in answers ONE question: does the person submitting an address
+// A double opt-in answers ONE question: does the contact submitting an address
 // actually control it? A web signup form cannot answer it — anyone may type
 // anyone's address into one — so the confirmation mail answers it instead, by
 // proving that whoever clicks reads that mailbox.
@@ -21,7 +21,7 @@ package consent
 // centre's token is deliberately reusable and lives up to 210 days, so anyone
 // who ever holds that URL could replay a grant — including re-granting after a
 // withdrawal. A replayable credential shows a mailbox was reached once, never
-// that this person chose this now. That is why no preference-link constant
+// that this contact chose this now. That is why no preference-link constant
 // appears below.
 //
 // This is deliberately not a bool. "The mailbox was proven" is a claim a reader

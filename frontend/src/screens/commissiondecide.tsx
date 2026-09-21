@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -88,7 +89,7 @@ async function decide(
   const { data, error } = await api.POST("/commissions/{id}/decide", {
     params: {
       path: { id: entry.id },
-      // The entry carries its own version, so two people deciding the same
+      // The entry carries its own version, so two contacts deciding the same
       // row at once get a 409 rather than the second one silently winning.
       ...ifMatch(entry.version ?? 0),
     },
@@ -116,11 +117,11 @@ async function decide(
 export function CommissionDecision({
   entry,
   decision,
-  organizationId,
+  companyId,
 }: Readonly<{
   entry: CommissionEntry;
   decision: Decision;
-  organizationId: string;
+  companyId: string;
 }>) {
   const t = useT();
   const { show: showToast } = useToast();
@@ -151,7 +152,7 @@ export function CommissionDecision({
       // decision: version skew".
       if (err instanceof ProblemError && isVersionSkew(err.problem)) {
         queryClient.invalidateQueries({
-          queryKey: ["partner-commissions", organizationId],
+          queryKey: ["partner-commissions", companyId],
         });
       }
     },
@@ -161,7 +162,7 @@ export function CommissionDecision({
       // second key nothing reads would be a line that looks like caution and
       // does nothing.
       queryClient.invalidateQueries({
-        queryKey: ["partner-commissions", organizationId],
+        queryKey: ["partner-commissions", companyId],
       });
       setOpen(false);
       setReason("");
@@ -182,7 +183,6 @@ export function CommissionDecision({
     <>
       <Button
         ref={triggerRef}
-        small
         variant={decision === "void" ? "danger" : "primary"}
         onClick={() => setOpen(true)}
         data-testid={`commission-${decision}`}
@@ -208,13 +208,14 @@ export function CommissionDecision({
         // top of the document without a named target.
         returnFocusTo={() => triggerRef.current}
       >
-        <h2
+        <Heading
+          size="large"
           id={headingId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           {t(copy.label)}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: "var(--space-4)" }}>{t(copy.confirm)}</p>
         {needsReason && (
           <div style={{ marginBottom: "var(--space-4)" }}>
@@ -243,11 +244,7 @@ export function CommissionDecision({
           // role="alert" so a refused decision is announced: the dialog stays
           // open either way, and without this the only difference between "it
           // failed" and "it is still working" is a line of red text.
-          <p
-            className="t-caption"
-            role="alert"
-            style={{ color: "var(--danger)" }}
-          >
+          <p role="alert" style={{ color: "var(--dangerText)" }}>
             {mutation.error instanceof ProblemError &&
             isVersionSkew(mutation.error.problem)
               ? t("edit.versionSkew")
@@ -255,15 +252,10 @@ export function CommissionDecision({
           </p>
         )}
         <div className="actions">
-          <Button
-            small
-            onClick={() => setOpen(false)}
-            disabled={mutation.isPending}
-          >
+          <Button onClick={() => setOpen(false)} disabled={mutation.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant={decision === "void" ? "danger" : "primary"}
             onClick={submit}
             pending={mutation.isPending}

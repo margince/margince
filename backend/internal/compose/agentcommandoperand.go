@@ -5,7 +5,7 @@ package compose
 
 // The REST door's half of the eight commands whose operand is a SECOND path
 // parameter or a second path segment, not the route's own {id}
-// (margince/margince#928 task 5): an organization fact or profile
+// (margince/margince#928 task 5): a company fact or profile
 // field, a custom field's retire/options actions, and a project stakeholder.
 // The decoding shape is the same one archiveCommand/patchCommand set in
 // agentcommand.go — parse {id} as the existence-hiding 404 (routedID, shared
@@ -143,18 +143,18 @@ func updateCustomFieldOptionsCommand(_ agentPolicy, deps restCommandDeps, r *htt
 }
 
 // setStakeholderCommand decodes PUT /v1/projects/{id}/stakeholders, whose
-// person_id arrives in the BODY where its DELETE twin carries it in the path.
+// contact_id arrives in the BODY where its DELETE twin carries it in the path.
 //
 // The shape check is the same one removeStakeholderCommand makes for its own
 // operand, and for the same reason: the request the approval stages IS the
-// request its redemption replays, so a person_id that names no person is a call
+// request its redemption replays, so a contact_id that names no contact is a call
 // the handler refuses AFTER a human's one-shot approval has been consumed. 422
-// rather than the routed id's 404 — like the path operand, person_id says WHICH
+// rather than the routed id's 404 — like the path operand, contact_id says WHICH
 // edge, not whether the project exists.
 //
 // It is checked here rather than in the resolver because there is nothing for
 // the command to carry it as: neither Guards nor Subject reads the attached
-// person (setStakeholderResolver's own doc says why), and a field with no
+// contact (setStakeholderResolver's own doc says why), and a field with no
 // reader documents no obligation.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
@@ -163,32 +163,32 @@ func setStakeholderCommand(_ agentPolicy, deps restCommandDeps, r *http.Request,
 	if err != nil {
 		return nil, err
 	}
-	if err := requireStakeholderPerson(body); err != nil {
+	if err := requireStakeholderContact(body); err != nil {
 		return nil, err
 	}
 	return agents.NewSetStakeholderCall(deps.records, agents.SetStakeholderCommand{ID: id}), nil
 }
 
-// requireStakeholderPerson holds the body to the one member the attach cannot
-// run without. crm.yaml's SetProjectStakeholderRequest requires person_id as a
+// requireStakeholderContact holds the body to the one member the attach cannot
+// run without. crm.yaml's SetProjectStakeholderRequest requires contact_id as a
 // uuid; a body that is not even an object is answered as the same missing
-// person_id, since neither carries one.
-func requireStakeholderPerson(body []byte) error {
+// contact_id, since neither carries one.
+func requireStakeholderContact(body []byte) error {
 	var payload struct {
-		PersonID string `json:"person_id"`
+		ContactID string `json:"contact_id"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || payload.PersonID == "" {
-		return httperr.Validation("person_id", "missing", "person_id is required")
+	if err := json.Unmarshal(body, &payload); err != nil || payload.ContactID == "" {
+		return httperr.Validation("contact_id", "missing", "contact_id is required")
 	}
-	if _, err := ids.Parse(payload.PersonID); err != nil {
-		return httperr.Validation("person_id", "invalid", "person_id must be a uuid")
+	if _, err := ids.Parse(payload.ContactID); err != nil {
+		return httperr.Validation("contact_id", "invalid", "contact_id must be a uuid")
 	}
 	return nil
 }
 
-// removeStakeholderCommand decodes DELETE /v1/projects/{id}/stakeholders/{person_id}.
-// person_id fails as 422, not 404: unlike the routed {id}, a malformed or
-// missing person_id names no row this door hides the existence of — it
+// removeStakeholderCommand decodes DELETE /v1/projects/{id}/stakeholders/{contact_id}.
+// contact_id fails as 422, not 404: unlike the routed {id}, a malformed or
+// missing contact_id names no row this door hides the existence of — it
 // names which edge the caller meant, a shape the caller simply got wrong.
 // Composed from the same pathOperand every other second-operand decoder
 // uses (a missing segment answers "missing") plus ids.Parse for the shape
@@ -201,15 +201,15 @@ func removeStakeholderCommand(_ agentPolicy, deps restCommandDeps, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	raw, err := pathOperand(r, "person_id")
+	raw, err := pathOperand(r, "contact_id")
 	if err != nil {
 		return nil, err
 	}
-	personID, perr := ids.Parse(raw)
+	contactID, perr := ids.Parse(raw)
 	if perr != nil {
-		return nil, httperr.Validation("person_id", "invalid", "person_id must be a uuid")
+		return nil, httperr.Validation("contact_id", "invalid", "contact_id must be a uuid")
 	}
-	return agents.NewRemoveStakeholderCall(deps.records, agents.RemoveStakeholderCommand{ID: id, PersonID: personID}), nil
+	return agents.NewRemoveStakeholderCall(deps.records, agents.RemoveStakeholderCommand{ID: id, ContactID: contactID}), nil
 }
 
 // createRoomItemCommand decodes POST /v1/deal-rooms/{id}/documents and the
@@ -262,7 +262,7 @@ func roomItemPatchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	// The existence-hiding 404 routedID gives, not the 422 person_id gives.
+	// The existence-hiding 404 routedID gives, not the 422 contact_id gives.
 	// The item id names a ROW rather than an edge, so "that is not a uuid" and
 	// "there is no such item" must read alike, or the shape of a caller's id
 	// tells them which of a room's items exist. It is also not a contract field,
@@ -302,8 +302,8 @@ func withRoomID(body []byte, roomID ids.UUID) (json.RawMessage, error) {
 }
 
 // setCompanyCommand decodes PUT /v1/projects/{id}/companies. The body's
-// organization_id is held here for the same reason the stakeholder attach holds
-// person_id: an attach that names no company cannot run, and refusing at
+// company_id is held here for the same reason the stakeholder attach holds
+// contact_id: an attach that names no company cannot run, and refusing at
 // staging tells the caller that rather than staging an approval that will fail
 // when it is redeemed.
 //
@@ -313,30 +313,30 @@ func setCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bod
 	if err != nil {
 		return nil, err
 	}
-	if err := requireCompanyOrganization(body); err != nil {
+	if err := requireCompanyCompany(body); err != nil {
 		return nil, err
 	}
 	return agents.NewSetCompanyCall(deps.records, agents.SetCompanyCommand{ID: id}), nil
 }
 
-// requireCompanyOrganization holds the body to the one member the attach cannot
+// requireCompanyCompany holds the body to the one member the attach cannot
 // run without. A body that is not even an object is answered as the same
-// missing organization_id, since neither carries one.
-func requireCompanyOrganization(body []byte) error {
+// missing company_id, since neither carries one.
+func requireCompanyCompany(body []byte) error {
 	var payload struct {
-		OrganizationID string `json:"organization_id"`
+		CompanyID string `json:"company_id"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || payload.OrganizationID == "" {
-		return httperr.Validation("organization_id", "missing", "organization_id is required")
+	if err := json.Unmarshal(body, &payload); err != nil || payload.CompanyID == "" {
+		return httperr.Validation("company_id", "missing", "company_id is required")
 	}
-	if _, err := ids.Parse(payload.OrganizationID); err != nil {
-		return httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+	if _, err := ids.Parse(payload.CompanyID); err != nil {
+		return httperr.Validation("company_id", "invalid", "company_id must be a uuid")
 	}
 	return nil
 }
 
 // removeCompanyCommand decodes DELETE
-// /v1/projects/{id}/companies/{organization_id} — the company is a second PATH
+// /v1/projects/{id}/companies/{company_id} — the company is a second PATH
 // operand, so it is read from the route rather than a body.
 //
 //nolint:ireturn // the call IS the product: a concrete resolver here is exactly the thing that must not leave the agents package
@@ -345,14 +345,14 @@ func removeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, 
 	if err != nil {
 		return nil, err
 	}
-	raw, err := pathOperand(r, "organization_id")
+	raw, err := pathOperand(r, "company_id")
 	if err != nil {
 		return nil, err
 	}
-	organizationID, perr := ids.Parse(raw)
+	companyID, perr := ids.Parse(raw)
 	if perr != nil {
-		return nil, httperr.Validation("organization_id", "invalid", "organization_id must be a uuid")
+		return nil, httperr.Validation("company_id", "invalid", "company_id must be a uuid")
 	}
 	return agents.NewRemoveCompanyCall(deps.records,
-		agents.RemoveCompanyCommand{ID: id, OrganizationID: organizationID}), nil
+		agents.RemoveCompanyCommand{ID: id, CompanyID: companyID}), nil
 }

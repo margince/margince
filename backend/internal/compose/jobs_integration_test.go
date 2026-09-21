@@ -6,9 +6,9 @@
 package compose
 
 // The behaviour-preserving proof for the River swap: the
-// close-date sweep reached through a River periodic job stages the IDENTICAL
-// provisional correction the direct Sweep test asserts
-// (TestCloseDateSweepStagesProvisionalForForecastBearingDeal). The domain
+// close-date sweep reached through a River periodic job applies the IDENTICAL
+// correction the direct Sweep test asserts
+// (TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal). The domain
 // seam (deals.Sweep) is unchanged; this proves the scheduler swap does not
 // change the outcome. Completion is observed on River's subscription
 // channel, bounded by a deadline — never a sleep.
@@ -27,60 +27,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
-
-// TestNewJobRunnerWiresTheOverlayPollerWhenAVaultIsConfigured proves
-// NewJobRunner's overlayVault-present branch actually registers the
-// overlay reconcile worker/periodic job rather than silently staying off
-// — the counterpart to TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep's
-// overlayVault=nil call below, which never exercises this branch.
-func TestNewJobRunnerWiresTheOverlayPollerWhenAVaultIsConfigured(t *testing.T) {
-	e := integration.Setup(t)
-	integration.ApplyRiverSchema(t)
-
-	runner, err := NewJobRunner(e.Pool, slog.New(slog.DiscardHandler), JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		OverlayVault:      keyvault.NewMemory(),
-		OverlayInterval:   time.Hour,
-	})
-	if err != nil {
-		t.Fatalf("NewJobRunner: %v", err)
-	}
-	if runner == nil {
-		t.Fatal("NewJobRunner: want a non-nil Runner when an overlay vault is configured")
-	}
-
-	// NewJobRunner returns a non-nil Runner regardless of the overlayVault
-	// branch, so non-nil alone proves nothing. Prove the branch actually
-	// registered the reconcile worker AND its RunOnStart periodic job:
-	// boot the runner and observe an overlay_reconcile completion on the
-	// subscription channel. With no overlay-mode workspace seeded the sweep
-	// finds nothing due and completes cleanly; if the overlayVault branch
-	// were deleted, the job is never scheduled and this await times out.
-	sub, cancelSub := runner.SubscribeCompleted()
-	defer cancelSub()
-
-	ctx := context.Background()
-	if err := runner.Start(ctx); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}()
-
-	// The DISPATCHER is the right kind to wait on here, unlike the close-date
-	// case above: what this proves is that the branch registered the job at
-	// all. No overlay-mode workspace is seeded, so there is no workspace child
-	// to wait for — the fan-out is legitimately empty.
-	awaitKindCompleted(t, sub, OverlayReconcileArgs{}.Kind())
-}
 
 // awaitBudget is how long ONE wait in this package gets. It is spelled here and
 // read by every wait helper, so the three of them cannot drift into three
@@ -193,7 +140,7 @@ func TestAWaitDoesNotDiscardAKindAnotherWaitIsOwed(t *testing.T) {
 	}
 }
 
-func TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep(t *testing.T) {
+func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T) {
 	e := setupCloseDate(t)
 	integration.ApplyRiverSchema(t)
 	// The exact fixture the direct-Sweep test uses: an overdue, active,
@@ -239,12 +186,13 @@ func TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep(t *testing.T) {
 		t.Fatalf("provisional date = %v — INV-CLOSE-PAST must hold immediately", swept.expectedClose)
 	}
 	if !swept.provisional {
-		t.Error("🟡 replacement must be provisional until a human confirms")
+		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
 	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
 		t.Errorf("forecast_category = %v, want the untouched commit override", swept.forecastCat)
 	}
-	if got := e.pendingCorrections(t, id); got != 1 {
-		t.Fatalf("pending close_date_correction approvals = %d, want 1 — the River-driven pass must stage exactly what the direct Sweep does", got)
+	if got := e.pendingCorrections(t, id); got != 0 {
+		t.Errorf("the job-driven pass raised %d cards, want none — it must do exactly "+
+			"what the direct sweep does, which is apply and report", got)
 	}
 }

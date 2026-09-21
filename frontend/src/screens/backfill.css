@@ -18,7 +18,7 @@
 }
 /* The finished capture reads as arrival, not just a stopped process. */
 .capture-hero.done {
-  border-color: var(--online);
+  border-color: var(--success);
   background: var(--successBg);
 }
 .backfill-h {
@@ -26,18 +26,7 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-2);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
-}
-/* The window choices wrap rather than overflow: three labelled radios plus the
-   control-label gap outgrow a narrow or zoomed column, and a horizontal
-   scrollbar is not an acceptable way to reach the third option. */
-/* Only the rhythm this screen expects around the group: the row, the gap and the
-   option layout all belong to `ChoiceList` now, and restating them here would be
-   this sheet arguing with the control. */
-.backfill-windows {
-  margin: var(--space-3) 0;
 }
 .backfill-estimate {
   margin-top: var(--space-3);
@@ -49,18 +38,11 @@
   margin: 0 0 var(--space-2);
 }
 .backfill-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .backfill-skipped {
   margin-top: var(--space-3);
 }
-/* Neutral, not danger-tinted: a capability gap and a stalled-progress note
-   are honest states, not errors. */
-.backfill-unsupported,
-.backfill-stale {
-  color: var(--textSecondary);
-}
-
 /* The panel's own trailing verb — skip, or cancel a live run. It used to be a
  * bare <button> painted as an underlined link; it is a Button now, and the only
  * thing left for this sheet to say is where it sits. */
@@ -123,8 +105,7 @@
   block-size: 32px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textSecondary);
+  background: var(--bgChip);
   transition:
     background-color var(--dur-move) var(--ease-out),
     color var(--dur-move) var(--ease-out),
@@ -191,20 +172,13 @@
   background: var(--successBg);
   color: var(--success);
 }
-/* The display face, because these three are the card's headline; tabular, so a
-   figure climbing under CountUp changes its digits without moving its caption. */
+/* Tabular, so a figure climbing under CountUp changes its digits without moving
+   its caption. */
 .capture-stat-value {
-  line-height: var(--lh-tight);
   font-variant-numeric: tabular-nums;
 }
 .capture-stat-label {
   grid-column: 2;
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  /* textContent, not textSecondary — clears AA over the done-state green tint. */
-  color: var(--textContent);
 }
 
 /* The bar draws the fraction the line under it states in words. Its fill is
@@ -214,7 +188,7 @@
   margin-top: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgCard);
+  background: var(--bgChip);
   overflow: hidden;
 }
 .capture-bar-fill {
@@ -251,11 +225,9 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin: var(--space-2) 0 0;
-  color: var(--textContent);
   font-variant-numeric: tabular-nums;
 }
 .capture-pct {
-  font-weight: var(--fw-semibold);
   color: var(--aiText);
 }
 .spin-slow {

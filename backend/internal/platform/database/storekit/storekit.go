@@ -51,9 +51,9 @@ func CapturedBy(ctx context.Context) (string, error) {
 // caller named, else the human behind the call. A record someone creates by
 // hand is theirs until they hand it on — an ownerless row would be every
 // seat's to change (the write arm admits a null owner) and, under an own
-// scope on a commercial table, invisible to the very person who made it.
+// scope on a commercial table, invisible to the very contact who made it.
 // A principal with no human behind it (system, a bare connector) leaves the
-// row ownerless, which is the honest answer for a row no person made.
+// row ownerless, which is the honest answer for a row no contact made.
 func OwnerOrActor(ctx context.Context, owner *ids.UserID) *ids.UserID {
 	if owner != nil {
 		return owner
@@ -236,7 +236,7 @@ func Emit(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityTyp
 		return err
 	}
 	_, err = tx.Exec(ctx,
-		`INSERT INTO event_outbox (stream, envelope) VALUES ($1, $2)`,
+		`INSERT INTO `+TableOutbox+` (stream, envelope) VALUES ($1, $2)`,
 		stream, body)
 	return err
 }
@@ -338,7 +338,7 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 // transaction, so a caller that locked at its precondition read may write
 // through the same store path without deadlock.
 //
-// The key carries no workspace. One installation serves one organization
+// The key carries no workspace. One installation serves one company
 // (ADR-0061), so a workspace in the key distinguishes nothing (ADR-0091 §5).
 func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(

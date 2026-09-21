@@ -33,7 +33,7 @@ import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
 import {
   boundedReference,
   type Reference,
-  searchOrganizations,
+  searchCompanies,
   useReferenceOptions,
 } from "./filterreference";
 import {
@@ -169,7 +169,6 @@ function GroupNode({
         {depth > 1 && (
           <Button
             variant="ghost"
-            small
             onClick={() => onChange(removeNode(tree, group.id))}
           >
             {t("filters.removeGroup")}
@@ -209,7 +208,6 @@ function GroupNode({
       <div className="filter-group-actions">
         <Button
           variant="ghost"
-          small
           onClick={() =>
             onChange(addToGroup(tree, group.id, firstClause(fields)))
           }
@@ -219,7 +217,6 @@ function GroupNode({
         {canNest && (
           <Button
             variant="ghost"
-            small
             onClick={() =>
               onChange(
                 addToGroup(
@@ -260,7 +257,7 @@ function firstClause(fields: readonly VocabularyField[]): Node {
 }
 
 // Deliberately NOT NodeProps: a clause has no children, so depth would be a
-// prop it accepts and ignores — and a prop nothing reads is one the next person
+// prop it accepts and ignores — and a prop nothing reads is one the next contact
 // has to check before trusting.
 type ClauseRowProps = Readonly<{
   leafID: string;
@@ -369,7 +366,6 @@ function ClauseRow({
       />
       <Button
         variant="ghost"
-        small
         iconOnly
         aria-label={t("filters.removeClause", {
           field: fieldLabel(
@@ -480,7 +476,7 @@ function ValueControl({
  *
  * Which control depends on the target and not on the operator: a set this
  * module can read whole is a list to pick from, and the one that cannot be —
- * organizations, as many as the workspace has customers — is searched. `many`
+ * companies, as many as the workspace has customers — is searched. `many`
  * only decides whether picking replaces the value or appends to it.
  */
 function ReferenceValue({
@@ -561,7 +557,7 @@ function chosenIDs(value: LeafValue): readonly string[] {
 }
 
 /**
- * The one reference too large to list: an organization, found by typing part of
+ * The one reference too large to list: a company, found by typing part of
  * its name.
  *
  * A box was the previous answer and it was the wrong one for the reason this
@@ -594,7 +590,7 @@ function SearchedRecordValue({
   // shows instead — see ChosenRecords.
   const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
   const { results, pending, failed } = useDebouncedSearch(
-    searchOrganizations,
+    searchCompanies,
     query,
   );
   const ids = chosenIDs(value);
@@ -645,15 +641,13 @@ function SearchedRecordValue({
               it is the failure this control exists to avoid: it reads as a
               confident "this workspace has none" for a question that never got
               an answer. */}
-          {!query && <p className="t-caption">{t("filters.typeToSearch")}</p>}
-          {query && pending && (
-            <p className="t-caption">{t("filters.searching")}</p>
-          )}
+          {!query && <p>{t("filters.typeToSearch")}</p>}
+          {query && pending && <p>{t("filters.searching")}</p>}
           {query && failed && (
-            <p className="t-caption error">{t("filters.searchFailed")}</p>
+            <p className="error">{t("filters.searchFailed")}</p>
           )}
           {query && !pending && !failed && results.length === 0 && (
-            <p className="t-caption">{t("filters.noRecordMatches")}</p>
+            <p>{t("filters.noRecordMatches")}</p>
           )}
           {results.map((option) => (
             <button
@@ -674,7 +668,7 @@ function SearchedRecordValue({
 /**
  * An id comparison as the RECORD it names, not its uuid.
  *
- * Only for a target the options module can enumerate. An organization reference
+ * Only for a target the options module can enumerate. A company reference
  * falls through to the plain box, because a workspace's accounts are as many as
  * its customers and a dropdown cannot hold them — the async picker that case
  * needs is its own change, and a half-filled list would be worse than a box.

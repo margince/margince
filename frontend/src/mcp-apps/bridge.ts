@@ -10,7 +10,7 @@
 // WHAT THIS FILE REFUSES TO DO, and why each refusal is load-bearing:
 //
 //   It never builds DOM from a string. Everything a view displays arrives in
-//   `structuredContent`, which is customer data — a person's name, a note
+//   `structuredContent`, which is customer data — a contact's name, a note
 //   someone pasted, the subject line of an ingested email. That is untrusted
 //   text by this system's own reckoning, and the view runs inside a sandbox
 //   whose whole job is to contain it. Assigning that text as MARKUP would hand
@@ -291,17 +291,91 @@ export function warned(warnings: Warning[], code: string): boolean {
 }
 
 /**
- * el is the ONLY way anything reaches the page, and it takes text rather than
- * markup.
+ * el and heading below are the ONLY two ways anything reaches the page, and
+ * both take text rather than markup. Nothing else in a view touches the
+ * document, which is what keeps the containment property at the top of this
+ * file true of every character a reader sees.
+ *
+ * el REFUSES a heading tag at compile time. A heading is not just an element
+ * here — it carries a size token and the class the stylesheet keys off — so a
+ * view that reached for `el("h2", …)` would render a heading with no type on
+ * it, in a document where nothing else says what a heading looks like. The type
+ * sends that call to heading() instead of leaving it to review.
  */
 export function el(
-  tag: string,
+  tag: Exclude<
+    keyof HTMLElementTagNameMap,
+    "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+  >,
   className?: string,
   text?: string | number,
 ): HTMLElement {
   const node = document.createElement(tag);
   if (className !== undefined) node.className = className;
   if (text !== undefined) node.textContent = String(text);
+  return node;
+}
+
+/** The sizes a heading can be, the app's seven --fontHeading* steps. */
+export type HeadingSize =
+  | "xxlarge"
+  | "xlarge"
+  | "large"
+  | "medium"
+  | "small"
+  | "xsmall"
+  | "xxsmall";
+
+/** What a heading may be rendered as when the size's own element is wrong. */
+export type HeadingElement =
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "div"
+  | "span";
+
+// The element a size means when nobody says otherwise. THIS TABLE IS THE TWIN OF
+// the one in src/design-system/heading.tsx and has to say the same thing: the
+// same heading rendered in the app and in a view is the same heading, and a view
+// whose h2 was the app's h3 would read as a different document outline for the
+// same content. src/design-system/heading-spelling.test.ts parses both literals
+// and fails in either direction on a key one side carries and the other does not.
+//
+// It is a copy rather than an import because these documents have NO REACT. A
+// view is built standalone and inlined whole into a third-party host, so
+// importing the component would pull a renderer into a page that has no root to
+// render into — and this module's whole shape (createElement, textContent, no
+// framework) is what makes that page auditable. The types are duplicated with
+// the table so the two halves of one rule sit together rather than one of them
+// reaching across the tier boundary.
+const HEADING_ELEMENT: Readonly<Record<HeadingSize, HeadingElement>> = {
+  xxlarge: "h1",
+  xlarge: "h1",
+  large: "h2",
+  medium: "h3",
+  small: "h4",
+  xsmall: "h5",
+  xxsmall: "h6",
+};
+
+/**
+ * heading puts a titled line on the page: the element follows the size, `as`
+ * overrides it, and the class and `data-size` are what heading.css — imported
+ * by view.css — draws the type from. Text, never markup, exactly as el().
+ */
+export function heading(
+  size: HeadingSize,
+  text: string | number,
+  opts?: { as?: HeadingElement; className?: string },
+): HTMLElement {
+  const node = document.createElement(opts?.as ?? HEADING_ELEMENT[size]);
+  node.className =
+    opts?.className === undefined ? "heading" : `heading ${opts.className}`;
+  node.dataset.size = size;
+  node.textContent = String(text);
   return node;
 }
 

@@ -30,8 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/project360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,7 +39,7 @@ import (
 )
 
 // project360RepPerms is a rep who may read every section: the project and
-// its company, deals, people, seats, contracts and activities. Its own
+// its company, deals, contacts, seats, contracts and activities. Its own
 // fixture rather than AccountRepPerms plus a delta, for the reason that file
 // gives: a widened shared fixture makes other suites pass while proving
 // nothing.
@@ -47,8 +47,8 @@ var project360RepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"project":               {Read: true},
-		"organization":          {Read: true},
-		"person":                {Read: true},
+		"company":               {Read: true},
+		"contact":               {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},
 		"relationship":          {Read: true},
@@ -61,7 +61,7 @@ var project360RepPerms = principal.Permissions{
 type project360Fixture struct {
 	project ids.ProjectID
 	deal    ids.UUID
-	person  ids.UUID
+	contact ids.UUID
 }
 
 // seedProject360 builds a project with one pursuit, one seat, 26 notes and
@@ -72,26 +72,26 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	t.Helper()
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	project := seedProject(admin, t, e, "ERP rollout", org, &e.Rep1).ID
-	other := seedProject(admin, t, e, "Datacentre migration", org, &e.Rep1).ID
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	project := seedProject(admin, t, e, "ERP rollout", company, &e.Rep1).ID
+	other := seedProject(admin, t, e, "Datacentre migration", company, &e.Rep1).ID
 	if _, err := e.Projects.AdvanceProjectPhase(admin, project, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
 
 	amount := int64(100_000)
 	currency := "EUR"
-	orgID := orgIDOf(org)
+	companyID := companyIDOf(company)
 	deal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "ERP licences", PipelineID: pipeline, StageID: open, OrganizationID: &orgID,
+		Name: "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &project, AmountMinor: &amount, Currency: &currency, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {
 		t.Fatalf("create the project's deal: %v", err)
 	}
-	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
-	if _, err := e.People.SetProjectStakeholder(admin, people.SetProjectStakeholderInput{
-		ProjectID: project, PersonID: PersonIDOf(person), Role: "champion",
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	if _, err := e.Contacts.SetProjectStakeholder(admin, contacts.SetProjectStakeholderInput{
+		ProjectID: project, ContactID: ContactIDOf(contact), Role: "champion",
 	}); err != nil {
 		t.Fatalf("seat the stakeholder: %v", err)
 	}
@@ -111,26 +111,26 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	yesterday := time.Now().UTC().Add(-24 * time.Hour)
 	log("task", "Send the revised SOW", &yesterday, onProject)
 	log("note", "Pricing call", nil, activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
-	log("email", "Invoice question", nil, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+	log("email", "Invoice question", nil, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 	log("email", "Rack decommissioning", nil,
-		activities.ActivityLinkInput{EntityType: "person", EntityID: person},
+		activities.ActivityLinkInput{EntityType: "contact", EntityID: contact},
 		activities.ActivityLinkInput{EntityType: "project", EntityID: other.UUID})
 	// A second seat on a capture-private contact of another rep: its
 	// correspondence circles the project too, but only for a caller who may
 	// read that contact.
-	private := e.SeedPerson(t, "Quiet Contact", &e.Rep3)
-	if _, err := e.People.SetProjectStakeholder(admin, people.SetProjectStakeholderInput{
-		ProjectID: project, PersonID: PersonIDOf(private), Role: "user",
+	private := e.SeedContact(t, "Quiet Contact", &e.Rep3)
+	if _, err := e.Contacts.SetProjectStakeholder(admin, contacts.SetProjectStakeholderInput{
+		ProjectID: project, ContactID: ContactIDOf(private), Role: "user",
 	}); err != nil {
 		t.Fatalf("seat the private stakeholder: %v", err)
 	}
-	log("email", "Side channel", nil, activities.ActivityLinkInput{EntityType: "person", EntityID: private})
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
-	return project360Fixture{project: project, deal: ids.UUID(deal.Id), person: person}
+	log("email", "Side channel", nil, activities.ActivityLinkInput{EntityType: "contact", EntityID: private})
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
+	return project360Fixture{project: project, deal: ids.UUID(deal.Id), contact: contact}
 }
 
 func project360Service(e *Env, now time.Time) *project360.Service {
-	return project360.NewService(e.Pool, e.Deals, e.Projects, e.People, e.Contracts, e.Activities, func() time.Time { return now })
+	return project360.NewService(e.Pool, e.Deals, e.Projects, e.Contacts, e.Contracts, e.Activities, func() time.Time { return now })
 }
 
 func TestProject360AssemblesEverySectionFromTheRealWriters(t *testing.T) {
@@ -181,8 +181,8 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 // and the timeline reports that it was cut.
 func assertProject360Collections(t *testing.T, page crmcontracts.Project360, f project360Fixture) {
 	t.Helper()
-	if page.Organization == nil || page.Organization.Name != "Acme" {
-		t.Errorf("organization = %+v, want Acme", page.Organization)
+	if page.Company == nil || page.Company.Name != "Acme" {
+		t.Errorf("company = %+v, want Acme", page.Company)
 	}
 	if page.Deals == nil || len(page.Deals.Data) != 1 || ids.UUID(page.Deals.Data[0].Id) != f.deal || page.Deals.Page.HasMore {
 		t.Errorf("deals = %+v, want exactly the project's one deal", page.Deals)
@@ -191,7 +191,7 @@ func assertProject360Collections(t *testing.T, page crmcontracts.Project360, f p
 		t.Fatalf("stakeholders = %+v, want the one seat the caller may read", page.Stakeholders)
 	}
 	seat := page.Stakeholders.Data[0]
-	if ids.UUID(seat.PersonId) != f.person || seat.PersonName == nil || *seat.PersonName != "Dana Buyer" ||
+	if ids.UUID(seat.ContactId) != f.contact || seat.ContactName == nil || *seat.ContactName != "Dana Buyer" ||
 		seat.Role == nil || *seat.Role != "champion" {
 		t.Errorf("seat = %+v, want Dana Buyer as champion", seat)
 	}
@@ -279,7 +279,7 @@ func TestProject360RefusesACallerWithNoSightOfTheProject(t *testing.T) {
 		t.Errorf("assemble on an archived project → %v, want ErrNotFound (the live-only anchor read)", err)
 	}
 	// The positive control: the same call served the page a moment ago.
-	if _, err := project360Service(e, time.Now().UTC()).Assemble(ctx, seedProject(e.Admin(), t, e, "Fresh", e.SeedOrg(t, "Beta", &e.Rep1), nil).ID); err != nil {
+	if _, err := project360Service(e, time.Now().UTC()).Assemble(ctx, seedProject(e.Admin(), t, e, "Fresh", e.SeedCompany(t, "Beta", &e.Rep1), nil).ID); err != nil {
 		t.Errorf("assemble on a live project the caller may read: %v", err)
 	}
 }
@@ -313,19 +313,19 @@ func TestProject360CoverageCountsOnlyWhatTheCallerMaySee(t *testing.T) {
 	}
 }
 
-func TestProject360OmitsTheOrganizationForACallerWithoutThatGrant(t *testing.T) {
+func TestProject360OmitsTheCompanyForACallerWithoutThatGrant(t *testing.T) {
 	e := Setup(t)
 	f := seedProject360(t, e)
 	svc := project360Service(e, time.Now().UTC())
-	page, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "organization")), f.project)
+	page, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "company")), f.project)
 	if err != nil {
-		t.Fatalf("assemble as a rep without the organization grant: %v — the page must narrow, not refuse", err)
+		t.Fatalf("assemble as a rep without the company grant: %v — the page must narrow, not refuse", err)
 	}
-	if page.Organization != nil {
-		t.Error("organization section present for a rep who cannot read companies")
+	if page.Company != nil {
+		t.Error("company section present for a rep who cannot read companies")
 	}
-	if !slices.Contains(page.SectionsOmitted, crmcontracts.Project360SectionOrganization) {
-		t.Errorf("sections_omitted = %v, want it to name organization", page.SectionsOmitted)
+	if !slices.Contains(page.SectionsOmitted, crmcontracts.Project360SectionCompany) {
+		t.Errorf("sections_omitted = %v, want it to name company", page.SectionsOmitted)
 	}
 	if page.Deals == nil || page.Activities == nil || page.PhaseHistory == nil {
 		t.Error("the rest of the page must still be served")

@@ -10,7 +10,7 @@ package integration
 //
 // The eraser is allowed to reach a subject by every identifier they hold,
 // archived bindings included, because refuseRivalIdentifierHolders has already
-// refused the whole request if a live person holds one of the same ones. This
+// refused the whole request if a live contact holds one of the same ones. This
 // sweep has no such refusal — there is no request to refuse — so it may only
 // match identifiers that still name the subject and nobody else.
 
@@ -43,12 +43,12 @@ func rowStillThere(t *testing.T, row ids.UUID) bool {
 	return found
 }
 
-// THE OVER-DELETION THE SWEEP MUST NOT COMMIT. Archiving a person archives
+// THE OVER-DELETION THE SWEEP MUST NOT COMMIT. Archiving a contact archives
 // their channel bindings, so the same customer writing in again resolves to a
-// SECOND person who now holds that account live. When a clock later reaches the
-// archived record, matching its archived binding would delete the live person's
+// SECOND contact who now holds that account live. When a clock later reaches the
+// archived record, matching its archived binding would delete the live contact's
 // rows — on a sweep that named only the archived one.
-func TestTheSweepDoesNotReachARosterRowNowHeldByALivePerson(t *testing.T) {
+func TestTheSweepDoesNotReachARosterRowNowHeldByALiveContact(t *testing.T) {
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	owner := OwnerConn(t)
@@ -56,14 +56,14 @@ func TestTheSweepDoesNotReachARosterRowNowHeldByALivePerson(t *testing.T) {
 	// The contact the sweep will reach: old enough for the unattached-contact
 	// selector, still live so the selector admits them, and holding a RETIRED
 	// binding on the account — the state left behind when a rebind moved it.
-	stale := SeedIDRow(t, owner, `INSERT INTO person (id, full_name, source, captured_by, created_at)
+	stale := SeedIDRow(t, owner, `INSERT INTO contact (id, full_name, source, captured_by, created_at)
 		VALUES ($1, 'Old Contact', 'manual', 'human:x', now() - interval '800 days')`)
-	SeedIDRow(t, owner, `INSERT INTO person_channel_identity (id, person_id, provider, channel_user_id, source, captured_by, archived_at)
+	SeedIDRow(t, owner, `INSERT INTO contact_channel_identity (id, contact_id, provider, channel_user_id, source, captured_by, archived_at)
 		VALUES ($1, '`+stale.String()+`', 'telegram', 'acct-shared', 'capture', 'connector:telegram', now())`)
 
 	// The same human, captured again, live and holding the account now.
-	live := e.SeedPerson(t, "The Same Human, Again", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO person_channel_identity (id, person_id, provider, channel_user_id, source, captured_by)
+	live := e.SeedContact(t, "The Same Human, Again", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_channel_identity (id, contact_id, provider, channel_user_id, source, captured_by)
 		VALUES ($1, '`+live.String()+`', 'telegram', 'acct-shared', 'capture', 'connector:telegram')`)
 
 	theirs := seedRosterOn(t, "acct-shared")
@@ -74,6 +74,6 @@ func TestTheSweepDoesNotReachARosterRowNowHeldByALivePerson(t *testing.T) {
 	}
 
 	if !rowStillThere(t, theirs) {
-		t.Fatal("the sweep deleted a roster row belonging to a LIVE person, because an archived record once held the same account — the Art. 17 path refuses that case outright and this one has nobody to refuse")
+		t.Fatal("the sweep deleted a roster row belonging to a LIVE contact, because an archived record once held the same account — the Art. 17 path refuses that case outright and this one has nobody to refuse")
 	}
 }

@@ -26,7 +26,7 @@ import (
 
 // legacyInteraction writes an activity with NO participant rows — the shape
 // every message captured before ACT-DDL-3 has.
-func legacyInteraction(t *testing.T, e *integration.Env, person ids.UUID, capturedBy string) ids.UUID {
+func legacyInteraction(t *testing.T, e *integration.Env, contact ids.UUID, capturedBy string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -39,8 +39,8 @@ func legacyInteraction(t *testing.T, e *integration.Env, person ids.UUID, captur
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a legacy activity: %v", err)
@@ -48,25 +48,25 @@ func legacyInteraction(t *testing.T, e *integration.Env, person ids.UUID, captur
 	return id
 }
 
-func seedGraphPerson(t *testing.T, e *integration.Env, name string) ids.UUID {
+func seedGraphContact(t *testing.T, e *integration.Env, name string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES ($1, $2,
 			        'manual', 'human:test', 'workspace')
 			RETURNING id`, name, e.Rep1).Scan(&id)
 	}); err != nil {
-		t.Fatalf("seeding a person: %v", err)
+		t.Fatalf("seeding a contact: %v", err)
 	}
 	return id
 }
 
 func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedGraphPerson(t, e, "Legacy Contact")
-	legacyInteraction(t, e, person, "human:"+e.Rep1.String())
+	contact := seedGraphContact(t, e, "Legacy Contact")
+	legacyInteraction(t, e, contact, "human:"+e.Rep1.String())
 
 	// The per-workspace turn, which is what River's row now walks rather than
 	// what it carries (ADR-0103): Work enumerates the fleet, and this suite is
@@ -107,8 +107,8 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 
 func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedGraphPerson(t, e, "Reconciled Contact")
-	activityID := legacyInteraction(t, e, person, "human:"+e.Rep1.String())
+	contact := seedGraphContact(t, e, "Reconciled Contact")
+	activityID := legacyInteraction(t, e, contact, "human:"+e.Rep1.String())
 
 	// Participants exist, but nothing has folded them — the state after a
 	// backfill runs with no consumer, or after a projection is lost.
@@ -120,8 +120,8 @@ func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, 'to')`, activityID, person)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'to')`, activityID, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding participants: %v", err)
@@ -138,7 +138,7 @@ func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
 	var edges int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM graph_interaction_edge WHERE person_id = $1`, person).Scan(&edges)
+			`SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&edges)
 	}); err != nil {
 		t.Fatal(err)
 	}

@@ -1,14 +1,31 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
-import { plainTextOf, safeEditorHTML } from "./richtext";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { plainTextOf, RichText, safeEditorHTML } from "./richtext";
+
+afterEach(cleanup);
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+const LABELS = {
+  bold: "Fett",
+  italic: "Kursiv",
+  bulletList: "Liste",
+  numberList: "Nummerierte Liste",
+  link: "Link",
+  linkPrompt: "Adresse",
+};
 
 // `value` is not always something a rep typed — an AI draft arrives here, and a
 // model's output is untrusted input however friendly its source. The server
 // filters what LEAVES for a recipient; this filters what ENTERS our document,
-// and the two protect different people.
+// and the two protect different contacts.
 describe("what may enter the editor", () => {
   it("keeps the formatting the toolbar can produce", () => {
     const markup =
@@ -95,5 +112,52 @@ describe("the plain-text rendering", () => {
   it("is empty for an empty editor", () => {
     expect(render("")).toBe("");
     expect(render("<br>")).toBe("");
+  });
+});
+
+// How tall the writing surface is, and what happens to a host that has less
+// room than that.
+//
+// The frame around the surface CLIPS — `overflow: hidden` is what keeps the
+// focus ring's rounded corners — so a surface that will not shrink inside a
+// shorter frame loses its last lines and the toolbar under them, and nothing
+// anywhere scrolls to them: the column above is not overflowing, because the
+// frame absorbed the squeeze by shrinking. Both halves below are what keeps
+// that from happening, and each fails on its own.
+describe("the writing surface inside a host that hands it a height", () => {
+  it("is rows lines TALL, not rows lines at least", () => {
+    render(
+      <RichText
+        value=""
+        onChange={() => {}}
+        label="Nachricht"
+        labels={LABELS}
+        rows={10}
+      />,
+    );
+    const surface = screen.getByRole("textbox", { name: "Nachricht" });
+
+    // A height follows the frame down and scrolls within itself; a floor is the
+    // one thing a shorter frame cannot argue with.
+    expect(surface.style.height).toBe("15em");
+    expect(surface.style.minHeight).toBe("");
+  });
+
+  // Read from the sheet rather than from a rendered box because neither engine
+  // the unit suite runs lays anything out: happy-dom and jsdom both answer zero
+  // for every height, so a test that measured the drawer would pass with the
+  // frame free to shrink to nothing again.
+  it("keeps a frame the reply drawer cannot squeeze to nothing", () => {
+    const css = readFileSync(
+      join(here, "..", "screens", "composethread.css"),
+      "utf8",
+    );
+    const frame =
+      css
+        .split(".compose-split > .compose-fields > .richtext {")[1]
+        ?.split("}")[0] ?? "";
+
+    expect(frame).toContain("min-block-size");
+    expect(frame).not.toContain("min-block-size: 0");
   });
 });

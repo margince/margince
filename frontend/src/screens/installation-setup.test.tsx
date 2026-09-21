@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -181,12 +181,12 @@ describe("the first-run setup gate", () => {
   });
 
   // The models bound and no app yet: the platform question, asked once of
-  // the person running the cold start. Google is the answer it opens on, with
+  // the contact running the cold start. Google is the answer it opens on, with
   // the two fields an OAuth client has.
-  it("asks what the organization runs on once the models are bound", async () => {
+  it("asks what the company runs on once the models are bound", async () => {
     mount(setupReport(true, false));
     expect(
-      await screen.findByText("What does your organization run on?"),
+      await screen.findByText("What does your company run on?"),
     ).toBeTruthy();
     expect(
       screen.getByRole("radio", { name: /Google Workspace/ }),
@@ -315,7 +315,7 @@ describe("the first-run setup gate", () => {
   });
 
   // IMAP has no installation-wide app, so the one thing the answer can do is
-  // connect the mailbox of the person on screen: the same standing connect
+  // connect the mailbox of the contact on screen: the same standing connect
   // Settings makes, and the step is done once the server confirms it.
   it("connects the reader's own mailbox on IMAP, through the standing connect", async () => {
     const { container, writes } = mount(setupReport(true, false));
@@ -501,8 +501,8 @@ describe("the first-run setup gate", () => {
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual([
-      "gemini-3.1-flash-liteUS$0.25 → US$1.50",
-      "gemini-3.5-flashUS$1.50 → US$9.00",
+      "gemini-3.1-flash-liteInput US$0.25 · Output US$1.50 per 1M tokens",
+      "gemini-3.5-flashInput US$1.50 · Output US$9.00 per 1M tokens",
     ]);
     await user.keyboard("{Escape}");
 
@@ -511,7 +511,7 @@ describe("the first-run setup gate", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["gemini-embedding-001US$0.15"]);
+    ).toEqual(["gemini-embedding-001Input US$0.15 per 1M tokens"]);
   });
 
   it("binds the model a reader picks off the list", async () => {
@@ -574,8 +574,8 @@ describe("the first-run setup gate", () => {
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual([
-      "mistralai/mistral-large-2512US$0.50 → US$1.50",
-      "mistralai/mistral-small-3.2-24b-instructUS$0.10 → US$0.30",
+      "mistralai/mistral-large-2512Input US$0.50 · Output US$1.50 per 1M tokens",
+      "mistralai/mistral-small-3.2-24b-instructInput US$0.10 · Output US$0.30 per 1M tokens",
     ]);
   });
 });

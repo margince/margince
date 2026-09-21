@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -247,7 +247,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p1",
               title: "Dana Buyer",
               snippet: "…Dana at Acme…",
@@ -269,10 +269,10 @@ describe("SearchScreen", () => {
     );
     render(<SearchScreen q="acme" />);
     // By ROLE, not by text: the type filter above the results names the same
-    // groups the headings do, so a bare getByText("People") matches the pill —
+    // groups the headings do, so a bare getByText("Contacts") matches the pill —
     // which renders before the read settles, and would wait out nothing.
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "People" })).toBeTruthy(),
+      expect(screen.getByRole("heading", { name: "Contacts" })).toBeTruthy(),
     );
     expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
@@ -295,7 +295,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p1",
               title: "Dana Buyer",
               snippet: "…Dana at Acme…",
@@ -327,7 +327,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p1",
               title: "Dana Buyer",
               trust_tier: "external",
@@ -339,10 +339,10 @@ describe("SearchScreen", () => {
     );
     const { container } = render(<SearchScreen q="acme" />);
     await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
-    // The tier covers every overlay and connector source, so the badge names
-    // none of them: a hit carries no provider field, and a vendor name here
-    // would be stamped on rows mirrored from a different system.
-    expect(screen.getByText("from a connected system")).toBeTruthy();
+    // The tier covers every connector source, so the badge names none of
+    // them: a hit carries no provider field, and a vendor name here would be
+    // stamped on rows mirrored from a different system.
+    expect(screen.getByText("From a connected system")).toBeTruthy();
     expect(screen.queryByText(/HubSpot/)).toBeNull();
     // authoritative's badge never renders alongside a mirrored hit.
     expect(screen.queryByText("verified")).toBeNull();
@@ -360,7 +360,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p2",
               title: "Sam Unknown",
               trust_tier: "unverified",
@@ -372,7 +372,7 @@ describe("SearchScreen", () => {
     );
     render(<SearchScreen q="acme" />);
     await waitFor(() => expect(screen.getByText("Sam Unknown")).toBeTruthy());
-    expect(screen.getByText("unverified")).toBeTruthy();
+    expect(screen.getByText("Unverified")).toBeTruthy();
     expect(screen.queryByText("verified")).toBeNull();
   });
 
@@ -459,8 +459,8 @@ describe("SearchScreen", () => {
 // this is the assertion that says so for every member of it.
 describe("SearchScreen — every hit type the contract can return", () => {
   const KINDS = [
-    { type: "person", heading: "People" },
-    { type: "organization", heading: "Organizations" },
+    { type: "contact", heading: "Contacts" },
+    { type: "company", heading: "Companies" },
     { type: "deal", heading: "Deals" },
     { type: "project", heading: "Projects" },
     { type: "product", heading: "Products" },

@@ -11,17 +11,16 @@ package identity
 // option from offering an action the server would refuse.
 
 import (
+	"context"
 	"testing"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestMeResponseCarriesNonProduction(t *testing.T) {
 	id := Identity{Roles: []string{"admin"}}
-	if got := NewHandlers(&Service{}).WithNonProduction(true).meResponse(id, crmcontracts.Native); !got.NonProduction {
+	if got := NewHandlers(&Service{}).WithNonProduction(true).meResponse(context.Background(), id); !got.NonProduction {
 		t.Fatal("want NonProduction true")
 	}
-	if NewHandlers(&Service{}).meResponse(id, crmcontracts.Native).NonProduction {
+	if NewHandlers(&Service{}).meResponse(context.Background(), id).NonProduction {
 		t.Fatal("want NonProduction false")
 	}
 }
@@ -41,11 +40,11 @@ func TestMeResponseCarriesTheDataResetSwitchSeparately(t *testing.T) {
 	id := Identity{Roles: []string{"admin"}}
 	// Non-production ALONE must not offer the action. This is the case that used
 	// to be conflated, and the one a staging installation lived in.
-	posture := NewHandlers(&Service{}).WithNonProduction(true).meResponse(id, crmcontracts.Native)
+	posture := NewHandlers(&Service{}).WithNonProduction(true).meResponse(context.Background(), id)
 	if posture.DataResetAvailable == nil || *posture.DataResetAvailable {
 		t.Fatal("a non-production installation that never armed the reset was offered it anyway")
 	}
-	armed := NewHandlers(&Service{}).WithDataResetAvailable(true).meResponse(id, crmcontracts.Native)
+	armed := NewHandlers(&Service{}).WithDataResetAvailable(true).meResponse(context.Background(), id)
 	if armed.DataResetAvailable == nil || !*armed.DataResetAvailable {
 		t.Fatal("an armed installation was not offered the reset")
 	}

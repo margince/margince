@@ -30,7 +30,7 @@ type Story = StoryObj;
 // that mounts the provider in its own return value is still outside it when
 // the hook runs. Every story here splits along that line.
 function TaskRowBody({ dueAt }: Readonly<{ dueAt?: string | null }>) {
-  const update = useTaskUpdate(taskWriteKeys("organization", "o-1"));
+  const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
     <div
       style={{
@@ -69,15 +69,20 @@ export const RowWithDueDate: Story = {
 
 export const RowUndated: Story = { render: () => <TaskRow dueAt={null} /> };
 
-function DetailModal() {
+function DetailModal({
+  emailRequest = false,
+}: Readonly<{ emailRequest?: boolean }>) {
   installFetchStub({
     "GET /activities/a-1": () =>
       jsonResponse({
         id: "a-1",
         kind: "task",
         subject: "Send the renewal paperwork",
-        body: "Draft went to legal on Tuesday; needs Dana's sign-off.",
-        due_at: "2026-08-01T09:00:00Z",
+        body: emailRequest
+          ? null
+          : "Draft went to legal on Tuesday; needs Dana's sign-off.",
+        source_activity_id: emailRequest ? "email-1" : null,
+        due_at: emailRequest ? null : "2026-08-01T09:00:00Z",
         occurred_at: "2026-07-28T09:00:00Z",
         is_done: false,
         assignee_id: "u-1",
@@ -96,7 +101,7 @@ function DetailModal() {
 }
 
 function DetailModalBody() {
-  const update = useTaskUpdate(taskWriteKeys("organization", "o-1"));
+  const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
     <TaskDetailModal
       activityId="a-1"
@@ -108,3 +113,7 @@ function DetailModalBody() {
 }
 
 export const DetailOpen: Story = { render: () => <DetailModal /> };
+
+export const CapturedEmailRequest: Story = {
+  render: () => <DetailModal emailRequest />,
+};

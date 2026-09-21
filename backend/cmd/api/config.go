@@ -19,11 +19,17 @@ import (
 
 // apiConfig is the parsed boot configuration of the api process.
 type apiConfig struct {
-	dsn                   string
-	configPath            string
-	schemaDSN             string
-	addr                  string
-	redisAddr             string
+	dsn        string
+	configPath string
+	schemaDSN  string
+	addr       string
+	redisAddr  string
+	// redisPassword is the bus credential, empty where the instance requires
+	// none. The bus carries job payloads and therefore CRM data, so an
+	// instance reachable by anything but this deployment has to require one —
+	// the desktop bundle's loopback bus does, and generates it per
+	// installation.
+	redisPassword         string
 	inlineRelay           bool
 	routingPath           string
 	fakeBrain             bool
@@ -43,10 +49,10 @@ type apiConfig struct {
 	graphClientSecret     string
 	graphTenant           string
 	microsoftSignInTenant string
-	hubspotAppSecret      string
 	connectorStateKey     string
 	webhookKey            string
 	metricsToken          string
+	metricsAccess         string
 	vatCheckBaseURL       string
 	geocodeBaseURL        string
 	oauthAccessTokenTTL   time.Duration
@@ -86,6 +92,8 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 		"Postgres DSN (owner role) for the customfields runtime-DDL pool; unset = the two schema-change operations answer 501")
 	fs.StringVar(&cfg.addr, "addr", ":8080", "listen address")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
+	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
+		"Event-bus credential, where the instance requires one")
 	fs.BoolVar(&cfg.inlineRelay, "inline-relay", true, "run the outbox relay in this process (false when cmd/worker runs it)")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "drive the AI surfaces with the offline fake model (dev/test only)")
@@ -103,13 +111,13 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; with the secret, state key and public-base-url, enables /connectors/graph/*")
 	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
 	env.String(fs, &cfg.graphPushToken, "graph-push-token", "MARGINCE_GRAPH_PUSH_TOKEN", "", "shared secret on the Graph change-notification URL; enables POST /webhooks/graph (empty = route absent)")
-	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for the consent endpoint (default: common — any organization)")
-	env.String(fs, &cfg.microsoftSignInTenant, "microsoft-signin-tenant", "MARGINCE_MICROSOFT_SIGNIN_TENANT", "", "Entra DIRECTORY IDs (GUIDs, comma-separated) whose members may sign in; defaults to --graph-tenant when that names a directory. Sign-in cannot run on common/organizations/consumers — it matches a token address to a member, and any tenant admin controls their own users mail attribute, so each directory is one an operator vouched for. 9188040d-6c67-4c5b-b112-36a304b66dad admits PERSONAL accounts, whose address Microsoft made the holder prove they receive mail at")
-	env.String(fs, &cfg.hubspotAppSecret, "hubspot-app-secret", "MARGINCE_HUBSPOT_APP_SECRET", "", "HubSpot app client secret; verifies inbound overlay webhook v3 signatures and, when set, mounts /webhooks/hubspot (absent otherwise)")
+	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for the consent endpoint (default: common — any company)")
+	env.String(fs, &cfg.microsoftSignInTenant, "microsoft-signin-tenant", "MARGINCE_MICROSOFT_SIGNIN_TENANT", "", "Entra DIRECTORY IDs (GUIDs, comma-separated) whose members may sign in; defaults to --graph-tenant when that names a directory. Sign-in cannot run on common/companies/consumers — it matches a token address to a member, and any tenant admin controls their own users mail attribute, so each directory is one an operator vouched for. 9188040d-6c67-4c5b-b112-36a304b66dad admits PERSONAL accounts, whose address Microsoft made the holder prove they receive mail at")
 	env.String(fs, &cfg.apiBaseURL, "api-base-url", "MARGINCE_API_BASE_URL", "", "the api's externally-reachable base for the OAuth callback redirect_uri; defaults to --public-base-url (same-origin deployments), set only when the api is on a different origin than the SPA (e.g. dev)")
 	env.String(fs, &cfg.connectorStateKey, "connector-state-key", "MARGINCE_CONNECTOR_STATE_KEY", "", "HMAC key (>=32 bytes) signing the OAuth connect `state`; required for the Gmail and Graph connect flows")
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the mutating /webhook-subscriptions surface, and (with --inline-relay) the cg:webhooks delivery consumer. Empty = those paths answer 503 and no inline delivery runs. Re-attempting a parked delivery is the worker role's River job, never this one's.")
-	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential. Empty (the default) serves the exposition unauthenticated, which is what a scraper that discovers its targets by annotation needs — it has nowhere to carry one. Set it when the port is not already contained by a private listener, a NetworkPolicy or an ingress allow-list, because the exposition is fleet-wide and carries workspace ids")
+	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential. Empty (the default) configures none, and /metrics then refuses every scrape unless --metrics-access=open")
+	env.String(fs, &cfg.metricsAccess, "metrics-access", "MARGINCE_METRICS_ACCESS", metricsAccessToken, "who /metrics serves: token (the default) requires --metrics-token as a Bearer credential and refuses every scrape without one; open serves anyone who reaches the port, for a scraper that discovers its targets by annotation and cannot carry a credential. Choose open only where a private listener, a NetworkPolicy or an ingress that does not route /metrics already contains the port — the exposition names every route and carries workspace ids")
 	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "", "same variable the worker reads to reach VIES; read here only to decide whether this role queues a consultation at all. Set on both roles together, or a stated VAT number goes unverified and /vat-check answers 404")
 	env.String(fs, &cfg.geocodeBaseURL, "geocode-base-url", "MARGINCE_GEOCODE_BASE_URL", "", "same variable the worker reads to reach Nominatim; read here only to decide whether this role queues a coordinate lookup at all. Set on both roles together, or every address write queues a lookup no worker can answer and the row lands as a geocode failure naming the wrong cause")
 	// A malformed TTL is CARRIED rather than returned, so it can be reported
@@ -182,6 +190,7 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// --microsoft-signin-tenant accepts several directories and falls back to
 	// this flag, so an operator configuring multi-directory sign-in has a
 	// reason to reach for the more prominent variable and break capture with it.
+	faults = append(faults, metricsAccessFaults(cfg.metricsAccess, cfg.metricsToken)...)
 	if strings.Contains(cfg.graphTenant, ",") {
 		faults = append(faults, "--graph-tenant takes ONE authority (a directory id, or common) and got a list: "+
 			cfg.graphTenant+" — several directories is a SIGN-IN posture, so put them in --microsoft-signin-tenant")
@@ -194,6 +203,31 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 			strings.Join(faults, "\n  - "))
 	}
 	return *cfg, nil
+}
+
+// The two postures --metrics-access names.
+const (
+	metricsAccessToken = "token"
+	metricsAccessOpen  = "open"
+)
+
+// metricsAccessFaults refuses a /metrics posture the api could only guess at: a
+// value that names neither posture, or an open endpoint that was also given a
+// token. The second is not harmless redundancy — the token would authenticate
+// nothing, and an operator who set one believes the endpoint is closed.
+func metricsAccessFaults(access, token string) []string {
+	switch access {
+	case metricsAccessToken:
+		return nil
+	case metricsAccessOpen:
+		if token != "" {
+			return []string{"--metrics-access=open serves /metrics to anyone, so the --metrics-token also set would " +
+				"authenticate nothing: unset the token to open the endpoint, or drop --metrics-access=open to require it"}
+		}
+		return nil
+	default:
+		return []string{fmt.Sprintf("--metrics-access %q is not a posture: token (the default) or open", access)}
+	}
 }
 
 // envDuration reads a duration from the environment as the default for its

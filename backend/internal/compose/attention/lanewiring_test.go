@@ -4,7 +4,6 @@
 package attention
 
 import (
-	"context"
 	"slices"
 	"testing"
 
@@ -34,18 +33,17 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
-		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
-		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -68,7 +66,6 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 			"this was approved, but the work it released did not run",
 		},
 		{"dsr", out.Dsr, "dsr", ""},
-		{"sync_health", out.SyncHealth, "sync_health", ""},
 		{"capture_health", out.CaptureHealth, "capture_health", ""},
 		{"ai_work_health", out.AiWorkHealth, "ai_work_health", ""},
 		{"bounces", out.Bounces, "bounce", "a bounced send"},
@@ -110,7 +107,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 	}
 	// `dismiss` is performable on a LANE, not everywhere, and that is why it
 	// is not in the set above. Its endpoint depends on the source: a decay row
-	// posts to the person's nudge dismissal, a brief item to the brief's own
+	// posts to the contact's nudge dismissal, a brief item to the brief's own
 	// mark, and the client dispatches on `item.source` for exactly that
 	// reason. A lane-blind entry would pass this gate for a lane the client
 	// has no route for, and the advertised verb would simply not be drawn —
@@ -127,18 +124,17 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
-		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
-		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -172,7 +168,7 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 	// `activity` is deliberately absent: it is a timeline entry, and no screen
 	// answers to it.
 	openable := map[crmcontracts.AttentionSubjectType]bool{
-		"organization": true, "person": true, "deal": true,
+		"company": true, "contact": true, "deal": true,
 		"lead": true, "project": true,
 	}
 	// Every lane carries a row, because a lane the fixture leaves empty is a
@@ -192,18 +188,17 @@ func TestOpenIsOfferedOnlyWithARecordToOpen(t *testing.T) {
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
-		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
-		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

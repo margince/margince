@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -56,12 +57,25 @@ type attentionBriefing struct {
 // aside and dismiss over a deal that has been deleted, and counting toward the
 // day's total. A row that can name nothing is not a suggestion.
 func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, time.Time, error) {
+	// This read WRITES — it resurfaces expired snoozes and records the open —
+	// and under a composed read those now ride the page's own transaction. That
+	// is the right fate for both: a brief whose page never rendered was not
+	// opened. Its errors already fail the page, so it needs no detachment.
 	run, err := a.engine.LatestRun(ctx, a.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, time.Time{}, nil
 	}
 	if err != nil {
 		return nil, false, time.Time{}, err
+	}
+	// Whether this run could read the relationship at all. A run that could not
+	// scores every deal's warmth zero, and a zero nobody measured must not be
+	// read as a cold relationship — see SignalOf.
+	warmthKnown := true
+	for _, factor := range run.FactorsOmitted {
+		if factor == string(crmcontracts.MorningBriefFactorsOmittedWarmth) {
+			warmthKnown = false
+		}
 	}
 	unanswered := make([]attention.BriefEntry, 0, len(run.Items))
 	named := make([]ids.UUID, 0, len(run.Items))
@@ -72,6 +86,10 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 		unanswered = append(unanswered, attention.BriefEntry{
 			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
 			Composite: item.Composite, Finding: item.Finding,
+			// Derived from the persisted vector rather than stored beside it:
+			// the vector IS the reason, so a second column could disagree with
+			// the numbers a reader can already see decomposed on the card.
+			Signal: string(briefs.SignalOf(item.Features, warmthKnown)),
 		})
 		named = append(named, item.DealID)
 	}

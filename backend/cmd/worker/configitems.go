@@ -62,12 +62,12 @@ func workerUnflaggedItems() []config.Item {
 	worker := []string{config.RoleWorker}
 	return []config.Item{
 		{
-			Name: overlayBackfillLimitEnv, Kind: config.KindInt, Default: "0", Roles: both,
-			Doc: "per-object-class cap on the overlay initial backfill; 0 runs it uncapped",
-		},
-		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,
 			Doc: "enrichment provider: live|offline|off; an unknown value is a boot error rather than a silently disabled feature",
+		},
+		{
+			Name: compose.AutoEnrichDailyCapEnv, Kind: config.KindInt, Default: "0", Roles: both,
+			Doc: "daily cap on automatic site deep reads (company auto-enrich and domain triage spend one budget); 0 takes the compiled default",
 		},
 		{
 			Name: deepReadMaxPagesEnv, Kind: config.KindInt, Default: "0", Roles: worker,

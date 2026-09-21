@@ -3,6 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { FieldControl } from "../design-system/atoms";
 import type { SelectOption } from "../design-system/select";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
@@ -28,16 +29,16 @@ import { throwProblem } from "./common";
 // picker degrades to its disabled, hinted state rather than issuing a query
 // the endpoint would refuse.
 const CUSTOM_FIELD_QUERY_OBJECTS = new Set([
-  "person",
-  "organization",
+  "contact",
+  "company",
   "deal",
   "lead",
   "project",
 ]);
 
 type CustomFieldQueryObject =
-  | "person"
-  | "organization"
+  | "contact"
+  | "company"
   | "deal"
   | "lead"
   | "project";
@@ -52,12 +53,14 @@ export function DateFieldSelect({
   object,
   value,
   onChange,
-  labelId,
+  control,
 }: Readonly<{
   object: string;
   value: string;
   onChange: (value: string) => void;
-  labelId: string;
+  /** What the enclosing `Field` hands its control — the id its label points
+   *  at, and the description wiring that goes with it. */
+  control: FieldControl;
 }>) {
   const t = useT();
   const known = isCustomFieldQueryObject(object);
@@ -109,7 +112,7 @@ export function DateFieldSelect({
   return (
     <>
       <Select
-        aria-labelledby={labelId}
+        {...control}
         options={options}
         value={value}
         onChange={onChange}

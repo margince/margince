@@ -21,16 +21,16 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
-	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -80,8 +80,27 @@ func workerModelPathSpec(cfg workerConfig, deployCfg deployconfig.Config) modelP
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fake:            cfg.fakeBrain,
+		seeds:           deployCfg.Seeds,
 		capturePayloads: deployCfg.AI.CapturePayloads,
 	}
+}
+
+// openBus opens this role's bus client and moves every ceiling this process
+// holds into the store its replicas count in.
+//
+// The two are one step because separating them has exactly one outcome and it
+// is silent: a worker that reached Redis but left its ceilings in memory paces
+// one mailbox at N times the rate the provider was promised, N being however
+// many replicas the deployment happens to run, and both ends look correct.
+// This role serves no public edge, but the send job's pacing is a ceiling all
+// the same.
+func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
+	rdb, err := events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
+	if err != nil {
+		return nil, err
+	}
+	ratelimit.ShareProcess(rdb)
+	return rdb, nil
 }
 
 // closeBus releases the bus client at shutdown, reporting a close fault rather
@@ -132,6 +151,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// flush never reaches this process.
 	logger.Info("data reset", "armed", cfg.allowDataReset)
 	startResetLane(laneCtx, cfg.allowDataReset, rdb, modelPath, lanes.background, logger)
+	logger.Info("test mailbox connector", "armed", cfg.captureConfig.AllowTestMailbox)
 
 	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
 	if err != nil {
@@ -155,14 +175,14 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	backfillConnectorCredentials(laneCtx, pool, vault, stdout, logger)
 	// Automatic enrichment on create, which needs BOTH halves the run lanes
 	// need: an adapter to call and the vault that unseals its credential.
-	if err := startPersonDataEnrich(laneCtx, pool, rdb, providers, vault, lanes.background, logger, stdout); err != nil {
+	if err := startContactDataEnrich(laneCtx, pool, rdb, providers, vault, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
 
 	// A company appearing queues its workspace's enrich pass now; the daily
 	// sweep stays the reconciler. Beside the enqueuing lanes rather than the
 	// projections because a failed inserter must fail the boot.
-	if err := startOrgAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
+	if err := startCompanyAutoEnrichTrigger(laneCtx, pool, rdb, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
 	// The same shape for captured mail: a contact who wrote this morning has
@@ -200,6 +220,9 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 		return lanes, err
 	}
 
+	if err := startAIBudgetTrigger(laneCtx, pool, rdb, lanes.background, logger); err != nil {
+		return lanes, err
+	}
 	announceGeocoding(cfg.geocodeBaseURL, stdout)
 
 	if err := startWebhookLane(laneCtx, cfg, pool, rdb, &lanes, logger, stdout); err != nil {
@@ -207,35 +230,6 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	}
 	startWorkflowLane(laneCtx, pool, rdb, modelPath, lanes.background, logger, stdout)
 	return lanes, nil
-}
-
-// announceGeocoding says at boot whether company addresses become coordinates,
-// and it is the ONLY lane announcement that speaks when the feature is ABSENT.
-//
-// Every other one here says something when its half is configured and stays
-// quiet otherwise, which is right for a feature whose absence shows up the
-// moment it is asked for: an unconfigured blobstore answers 501, an
-// unconfigured webhook key answers 503. Geocoding has no such moment. An
-// address writes, the row is saved, nothing is queued, and no coordinate ever
-// appears — so the only symptom is that `within_radius` answers "unavailable"
-// weeks later, in a different surface, with nothing to search for.
-//
-// A line naming the variable is what turns that into a question an operator
-// can answer.
-func announceGeocoding(baseURL string, stdout io.Writer) {
-	if !geocode.Configured(baseURL) {
-		_, _ = fmt.Fprintln(stdout,
-			"worker geocoding OFF (MARGINCE_GEOCODE_BASE_URL unset) — company addresses "+
-				"keep no coordinates and every within_radius query answers unavailable")
-		return
-	}
-	where := baseURL
-	if baseURL == "public" {
-		// Named rather than echoed: "public" is the flag's word, and an
-		// operator reading the log wants to know whose service this is.
-		where = geocode.PublicBaseURL + " (OpenStreetMap's own; 4 requests/minute)"
-	}
-	_, _ = fmt.Fprintf(stdout, "worker geocoding company addresses via %s\n", where)
 }
 
 // startExtensionSubscriptionLanes starts one consumer per composed unit
@@ -348,13 +342,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		return nil
 	}
 	grounding := search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
-	// The Surface-B runner's agent tools reach overlay write-back through the
-	// workspace's own vaulted incumbent token; wire the vault-backed resolver so
-	// an autonomous run can write back. A deployment with none configured has a
-	// nil vault here, and the resolver answers "no incumbent" from it — the same
-	// unsupported that the job lane's equivalent surface reports, because it is
-	// now the same value rather than a second reading of one.
-	// The same pool and custodian back the extension tier's per-call Runtime:
+	// The pool and custodian back the extension tier's per-call Runtime:
 	// a Surface-B run invokes governed extension tools through the runner's
 	// registry, so this role serves them and must bind what they reach the
 	// installation through. Bound here rather than at RegisterExtensions
@@ -371,7 +359,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// order the boot reaches them in: one pool, and the boot's one vault,
 	// which is already nil on a deployment that configured none.
 	compose.BindExtensionRuntime(pool, vault)
-	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, compose.OverlayIncumbentResolver(pool, vault), send)
+	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, send)
 	_, _ = fmt.Fprintln(stdout, "worker resuming approved Surface-B runs (cg:overnight-agent)")
 	lanes.runner = runnerSvc
 	lanes.background.Go(func() { runResumeSubscriber(ctx, rdb, runnerSvc, logger) })
@@ -406,14 +394,14 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// The LinkedIn ghost matcher (ADR-0078 §8b): a ghost attaches the moment
 	// its contact exists, whoever created them. Deterministic like the edge
 	// projection above, so it runs on every worker.
-	matcher := compose.NewLinkedInMatchGen(pool, people.NewStore(compose.InstallationDB(pool)), identity.NewService(pool), logger)
+	matcher := compose.NewLinkedInMatchGen(pool, contacts.NewStore(compose.InstallationDB(pool)), identity.NewService(pool), logger)
 	_, _ = fmt.Fprintln(stdout, "worker matching LinkedIn connections as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:linkedin-match", matcher.HandleEvent, logger, 0) })
 
-	// A person's captured mail finds them however late they arrive: the ensure
+	// A contact's captured mail finds them however late they arrive: the ensure
 	// links only the message it ran for, so every message captured before the
-	// person existed needs the cohort repair this consumer runs.
-	cohort := compose.NewCohortPromoteGen(pool, people.NewStore(compose.InstallationDB(pool)), logger)
+	// contact existed needs the cohort repair this consumer runs.
+	cohort := compose.NewCohortPromoteGen(pool, contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
 
@@ -425,7 +413,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
 
-	// What the AI is doing for one person, projected into the table the UI
+	// What the AI is doing for one contact, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every
 	// worker: an installation whose lane is not running has a rail that is not
 	// wrong so much as frozen, and a frozen rail reads as an idle one.
@@ -441,7 +429,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// from public search metadata when a provider is bound. Same trigger as the
 	// matcher above and the same reason: matching only at write time means every
 	// later arrival is a match nobody will ever make.
-	startPersonAutoEnrich(ctx, pool, rdb, background, logger, stdout)
+	startContactAutoEnrich(ctx, pool, rdb, background, logger, stdout)
 }
 
 // startWebhookLane starts the cg:webhooks delivery consumer, whose deliverer is

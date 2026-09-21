@@ -51,11 +51,7 @@ func setupExtRuntime(t *testing.T) *extRuntimeEnv {
 // every operation and needs all three.
 func (e *extRuntimeEnv) callCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   "system:extruntime-test",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:extruntime-test")
 }
 
 // runtime mints a Runtime the way the tool adapter does for an invocation
@@ -125,7 +121,7 @@ func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 // TestRuntimeTxCommitsAndRollsBack walks the seam's own contract: the three
 // verbs work, fn returning nil commits, fn returning an error rolls back.
 //
-// It runs against `app_user` — a CORE table, and one holding people's names —
+// It runs against `app_user` — a CORE table, and one holding contacts's names —
 // because the extension's own ext_* tables arrive with the demo unit and this
 // seam has to be correct before there is one.
 //

@@ -13,40 +13,39 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// readOrganization names the company the project is for. A project whose
-// organization_id is masked — the caller may not read that company — is
+// readCompany names the company the project is for. A project whose
+// company_id is masked — the caller may not read that company — is
 // reported as an omission, not an empty header: the mask IS the refusal,
-// and the organization read would answer the same way if it were asked.
+// and the company read would answer the same way if it were asked.
 //
-// The organization's custom-field catalog is read here rather than with the
-// other catalogs above the transaction: it takes organization:read, and a
+// The company's custom-field catalog is read here rather than with the
+// other catalogs above the transaction: it takes company:read, and a
 // caller holding project:read without it must get this section omitted, not
 // the page refused. It opens a connection of its own for the moment it runs,
 // which this page's transaction tolerates for one short catalog read.
-func (a *assembly) readOrganization() error {
-	if a.out.Project.OrganizationId == nil {
+func (a *assembly) readCompany() error {
+	if a.out.Project.CompanyId == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	active, err := a.svc.people.ActiveOrganizationColumns(a.ctx)
+	companyID := ids.From[ids.CompanyKind](ids.UUID(*a.out.Project.CompanyId))
+	// The catalog comes from ABOVE the transaction, like the project's and the
+	// deal's. Read here it opened a connection of its own while this one held
+	// the page's transaction.
+	company, err := a.svc.contacts.GetCompanyTx(a.ctx, a.tx, companyID, storekit.LiveOnly, a.cats.company)
 	if err != nil {
 		return err
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(*a.out.Project.OrganizationId))
-	org, err := a.svc.people.GetOrganizationTx(a.ctx, a.tx, orgID, storekit.LiveOnly, active)
-	if err != nil {
-		return err
-	}
-	a.out.Organization = &crmcontracts.Project360Organization{
-		Id:   org.Id,
-		Name: org.DisplayName,
+	a.out.Company = &crmcontracts.Project360Company{
+		Id:   company.Id,
+		Name: company.DisplayName,
 	}
 	return nil
 }
@@ -103,26 +102,26 @@ func (a *assembly) readDeals() error {
 }
 
 // readStakeholders reads the seats through the relationship list, so the
-// edge's own visibility rule applies, and names each person under the
-// person grant. A caller holding the edge grant but not the person grant
+// edge's own visibility rule applies, and names each contact under the
+// contact grant. A caller holding the edge grant but not the contact grant
 // still sees the seats — the role is the field a handover is judged on —
 // with the names withheld, which the contract spells as a null name.
 func (a *assembly) readStakeholders() error {
 	limit := sectionLimit
-	kind := people.ProjectStakeholderKind
-	edges, page, err := a.svc.people.ListRelationshipsTx(a.ctx, a.tx, people.ListRelationshipsInput{
+	kind := contacts.ProjectStakeholderKind
+	edges, page, err := a.svc.contacts.ListRelationshipsTx(a.ctx, a.tx, contacts.ListRelationshipsInput{
 		Kind: &kind, ProjectID: &a.projectID, Limit: &limit,
 	})
 	if err != nil {
 		return err
 	}
-	seated := make([]ids.PersonID, 0, len(edges))
+	seated := make([]ids.ContactID, 0, len(edges))
 	for _, e := range edges {
-		if e.PersonID != nil {
-			seated = append(seated, *e.PersonID)
+		if e.ContactID != nil {
+			seated = append(seated, *e.ContactID)
 		}
 	}
-	names, err := a.svc.people.PersonNamesTx(a.ctx, a.tx, seated)
+	names, err := a.svc.contacts.ContactNamesTx(a.ctx, a.tx, seated)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		names = map[ids.UUID]string{}
 	} else if err != nil {
@@ -130,16 +129,16 @@ func (a *assembly) readStakeholders() error {
 	}
 	data := make([]crmcontracts.Project360Stakeholder, 0, len(edges))
 	for _, e := range edges {
-		if e.PersonID == nil {
+		if e.ContactID == nil {
 			continue
 		}
 		seat := crmcontracts.Project360Stakeholder{
 			RelationshipId: openapi_types.UUID(e.ID),
-			PersonId:       openapi_types.UUID(e.PersonID.UUID),
+			ContactId:      openapi_types.UUID(e.ContactID.UUID),
 			Role:           e.Role,
 		}
-		if name, known := names[e.PersonID.UUID]; known {
-			seat.PersonName = &name
+		if name, known := names[e.ContactID.UUID]; known {
+			seat.ContactName = &name
 		}
 		data = append(data, seat)
 	}
@@ -147,5 +146,23 @@ func (a *assembly) readStakeholders() error {
 		Data []crmcontracts.Project360Stakeholder `json:"data"`
 		Page crmcontracts.PageInfo                `json:"page"`
 	}{Data: data, Page: pageInfo(page)}
+	return nil
+}
+
+// readHealth answers how the project is going now: the newest judgement
+// nothing has corrected.
+//
+// Absent `current` means nobody has judged it, which the page must not render
+// as "on track" — a project judged and found healthy and a project nobody has
+// looked at are different states, and the second is the one worth chasing.
+//
+// It rides the project grant the anchor read already held: a judgement about a
+// record is a fact about that record, gated exactly as the record is.
+func (a *assembly) readHealth() error {
+	current, err := a.svc.projects.CurrentHealthTx(a.ctx, a.tx, a.projectID)
+	if err != nil {
+		return err
+	}
+	a.out.Health = &crmcontracts.Project360Health{Current: current}
 	return nil
 }

@@ -44,8 +44,8 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
                          ranked hits (fused score)
 ```
 
-- **Nine searchable entity types**, declared once in `searchBranches`: `person`,
-  `organization`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`,
+- **Nine searchable entity types**, declared once in `searchBranches`: `contact`,
+  `company`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`,
   `activity`. Adding a searchable entity is a row there (plus the matching
   `embedText` / `pendingSources` entries) — the query builder derives the rest,
   and `SearchedTables()` is what the structural GIN proof asks about, so a
@@ -88,7 +88,8 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
 **Two entry points, and they are not the same query.** `GET /v1/search` runs the
 **lexical arm alone** (`Store.Search`) — ranked, cursor-paged, every result
 stamped `trust_tier: authoritative` (the provenance grade the contract puts on
-natively-held records, as opposed to `external` mirror data). The **fused** path (`Store.HybridSearch`) is
+natively-held records; `external` is reserved for connector-sourced rows and is
+not emitted yet). The **fused** path (`Store.HybridSearch`) is
 reached through the `shared/ports/retrieval` seam (`search.Retriever`), which is
 what the AI layers ground on: `cmd/api` wires it with the resolved model path's
 embedder for the offer-draft surface, `cmd/worker` wires it as the Surface-B
@@ -290,14 +291,14 @@ the `catch_me_up_on` / `prep_for_meeting` intent tools consume through the same
 The walk is **fixed-depth by construction**, two joins rather than a traversal
 that can wander: anchor profile → the anchor's linked activities (hop 1, split
 into `recent_touches` and `open_tasks`) → those activities' *other* link targets
-(hop 2, emitted as `related_people` / `related_organizations` / `related_deals` /
+(hop 2, emitted as `related_contacts` / `related_companies` / `related_deals` /
 `related_projects`).
 Every leg reads at most 50 rows before ranking trims to `max_items` (default 5,
 capped at 25), so an anchor with thousands of links costs about what one with
 fifty costs. Anchors are the non-activity, non-`textOnly` searchable types the contract's
 path enum names — derived from `searchBranches` rather than kept as a parallel
-list; an activity is a link, not a thing links hang off. Only `person`,
-`organization`, `deal` and `project` are WALKABLE (`anchorLinkColumn`): `lead`,
+list; an activity is a link, not a thing links hang off. Only `contact`,
+`company`, `deal` and `project` are WALKABLE (`anchorLinkColumn`): `lead`,
 `product` and `offer_template` name no `activity_link` column this walk follows,
 so their context is honestly their profile alone rather than a walk silently
 skipped. A `lead` has no `activity_link` neighborhood at all, so
@@ -310,7 +311,7 @@ tie-break; recency halves every 30 days, and source trust ladders `manual` 1.0 >
 similarity — there is no query — so their rank is recency × trust over the same
 weights.
 
-A **person** anchor additionally carries a `who_knows` section: which colleagues
+A **contact** anchor additionally carries a `who_knows` section: which colleagues
 actually interact with this contact, warmest first, each with its band and
 interaction count so a model handed the list cannot just pick the first name.
 That section reads the `graph_interaction_edge` projection, which is its own
@@ -321,7 +322,7 @@ mechanism with its own maintenance rules — see
 
 | Concern | Where |
 |---|---|
-| Lexical index | generated `search_tsv` columns on `person`, `organization`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`), `tag`, and `product` + `offer_template`; linguistics `0052`, apostrophe folding `0077` |
+| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `activity`, `lead`, `project` (migrations `0004`–`0009`, `0131`), `tag`, and `product` + `offer_template`; linguistics `0052`, apostrophe folding `0077` |
 | Vector store | `embedding` (migration `0022`; identity stamp + unbounded `vector` + corpus wipe in `0114`) — **non-tenant**, no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`0114`, run/identity/pending-set fan-out shape in `0174`) — **non-tenant**, no `workspace_id`, no RLS |
 | Relationship projection | `graph_interaction_edge` (`0158`) — see [relationship-graph.md](relationship-graph.md) |

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
@@ -8,13 +9,11 @@ import { ReadingsGrid } from "../design-system/readingsgrid";
 import { formatDateTime, formatDecimal, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { EntityRef } from "./entityref";
 import { leadScoreKey } from "./leadkeys";
-import {
-  leadStatusLabel,
-  scoreFactorLabel,
-  terminalBadge,
-} from "./leadpresentation";
+import { leadStatusLabel, scoreFactorLabel } from "./leadpresentation";
 import { firstResponseClock } from "./leadstanding";
 
 // The lead's four readings, in the cards every record page draws them in: how
@@ -29,6 +28,41 @@ import { firstResponseClock } from "./leadstanding";
 // to load one.
 
 type Lead = components["schemas"]["Lead"];
+type ScoreFactor = components["schemas"]["LeadScoreFactor"];
+
+// WHOSE judgement a factor is, printed under the points it contributed.
+//
+// The `manual:` prefix on the term already says a human supplied it, and that
+// is not enough to act on: a reader deciding whether to trust the number needs
+// which human, and how certain they said they were. A verified figure and a
+// colleague's estimate are the same points and different evidence.
+//
+// A machine factor shows none of this and does not get an empty line instead.
+// The three fields are OMITTED on the wire for an auto-captured signal rather
+// than sent null, so `signal_kind` is what says this row has an author at all;
+// a blank qualifier under a machine factor would read as an author nobody
+// named.
+//
+// `reason` is the rep's own prose. It goes in as a value and React escapes it,
+// which is the whole of what it needs — it is never markup here and must never
+// be given a path that would make it so.
+function whoseJudgement(factor: ScoreFactor, t: Translator): ReactNode {
+  if (!factor.signal_kind) {
+    return undefined;
+  }
+  return (
+    <>
+      {t(`lead.factorKind.${factor.signal_kind}` as MessageKey)}
+      {factor.set_by && (
+        <>
+          {" · "}
+          <EntityRef kind="user" id={factor.set_by} asText />
+        </>
+      )}
+      {factor.reason && <> — {factor.reason}</>}
+    </>
+  );
+}
 
 export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
@@ -37,30 +71,73 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
     <ReadingsGrid label={t("lead.readings.title")} testId="lead-readings">
       <ScoreCard lead={lead} locale={locale} t={t} />
       <FirstResponseCard lead={lead} locale={locale} t={t} />
-      {/* The status names the set of leads in it, and `#/leads` declares
-          `status` as a filter chip — a chip's key IS its wire parameter, so
-          this reading was an address already. */}
+      <StatusCard lead={lead} t={t} />
       <StatCard
-        label={t("lead.status")}
-        value={statusReading(lead, t)}
-        openLabel={t("lead.readings.openStatus")}
-        onOpen={() =>
-          navigate({ screen: "leads" }, new Map([["status", lead.status]]))
-        }
-      />
-      <StatCard
-        label={t("create.companyName")}
-        value={lead.company_name ?? t("lead.detailsUnset")}
+        label={t("lead.readings.company")}
+        // A lead with no company HAS none, which is a fact about the lead.
+        // "Not set" is a form's word for an empty input, and this is a reading.
+        // A name the server sent as whitespace is no name: a StatCard value is
+        // a non-empty string by contract, and a blank one draws a slot that
+        // reads as a reading which failed to load.
+        value={lead.company_name?.trim() || t("lead.readings.noCompany")}
       />
     </ReadingsGrid>
   );
 }
 
-/** The status as the readings state it: the terminal wording when it has one. */
-export function statusReading(lead: Lead, t: Translator): string {
-  const terminal = terminalBadge(lead.status);
-  const label = terminal?.label ?? leadStatusLabel(lead.status);
-  return label ? t(label) : lead.status;
+// The score's own words: what overrode it, else which factor won it, else
+// nothing to point at yet. Shared with the header's Score fact
+// (leadheader.tsx) so the two cannot come to name one number differently —
+// apart from the override, whose word each surface owns: the header wears a
+// lower-case badge, and a card's detail line is written as a line.
+export function scoreReasonLabel(
+  lead: Lead,
+  t: Translator,
+  overridden: MessageKey = "lead.overriddenBadge",
+): string {
+  if (lead.score_override_reason) return t(overridden);
+  if (lead.score_reason) return scoreFactorLabel(lead.score_reason, t);
+  return t("lead.scoreNoSignals");
+}
+
+/**
+ * Where the lead stands on the ladder, with the ending it reached under it.
+ *
+ * Two facts, two lines. Collapsing them left a promoted lead reading only
+ * "Archived" — the filing that followed the good ending standing in for the
+ * ending itself — and a merged one saying nothing about where it went.
+ *
+ * The status names the set of leads in it, and `#/leads` declares `status` as
+ * a filter chip — a chip's key IS its wire parameter, so this reading is an
+ * address already.
+ */
+function StatusCard({ lead, t }: Readonly<{ lead: Lead; t: Translator }>) {
+  return (
+    <StatCard
+      label={t("lead.status")}
+      value={t(
+        lead.merged_into_id
+          ? "lead.readings.merged"
+          : leadStatusLabel(lead.status),
+      )}
+      detail={terminalDetail(lead, t)}
+      onOpen={() =>
+        navigate({ screen: "leads" }, new Map([["status", lead.status]]))
+      }
+    />
+  );
+}
+
+// The ending under the ladder word, where the lead reached one. A merge is
+// read first: it archives the lead and leaves `status` exactly where it stood,
+// so a lead merged away mid-conversation has both an ending and a rung.
+function terminalDetail(lead: Lead, t: Translator): string | undefined {
+  if (lead.merged_into_id) {
+    // WHERE it went is not on this payload, so the detail says that it went
+    // rather than naming a survivor nothing here can name.
+    return t("lead.readings.mergedInto");
+  }
+  return lead.status === "promoted" ? t("lead.readings.archived") : undefined;
 }
 
 // The score, with the factors that add up to it behind the figure. The bar is
@@ -96,11 +173,11 @@ function ScoreCard({
   // a score of ZERO the absence is the truth, whether or not a breakdown was
   // retained.
   const basis = explain.isPending ? (
-    <p className="t-caption">{t("lead.scoreLoading")}</p>
+    <p>{t("lead.scoreLoading")}</p>
   ) : explain.isError ? (
     <>
-      <p className="t-caption">{t("lead.scoreFactorsFailed")}</p>
-      <Button small variant="ghost" onClick={() => explain.refetch()}>
+      <p>{t("lead.scoreFactorsFailed")}</p>
+      <Button variant="ghost" onClick={() => explain.refetch()}>
         {t("common.retry")}
       </Button>
     </>
@@ -111,25 +188,19 @@ function ScoreCard({
         key: factor.factor,
         term: scoreFactorLabel(factor.factor, t),
         value: formatDecimal(factor.points, locale, 1),
+        note: whoseJudgement(factor, t),
       }))}
     />
   ) : explain.data?.explained || lead.score === 0 ? (
-    <p className="t-caption">{t("lead.scoreNoFactors")}</p>
+    <p>{t("lead.scoreNoFactors")}</p>
   ) : (
-    <p className="t-caption">{t("lead.scoreNotStoredYet")}</p>
+    <p>{t("lead.scoreNotStoredYet")}</p>
   );
   return (
     <StatCard
       label={t("lead.score")}
       value={formatNumber(lead.score, locale)}
-      numeric
-      detail={
-        lead.score_override_reason
-          ? t("lead.overriddenBadge")
-          : lead.score_reason
-            ? scoreFactorLabel(lead.score_reason, t)
-            : t("lead.scoreNoSignals")
-      }
+      detail={scoreReasonLabel(lead, t, "lead.readings.scoreManual")}
       meter={{ filled: lead.score, total: 100 }}
       basis={basis}
     />
@@ -181,18 +252,20 @@ function FirstResponseCard({
   return (
     <StatCard
       label={label}
+      // Inside the target is still OWED: nobody has answered, and "on time" is
+      // a verdict on a response that does not exist yet. The deadline under it
+      // says everything the verdict was standing in for.
       value={
         breached
           ? t("lead.sla.breached")
           : atRisk
             ? t("lead.sla.atRisk")
-            : t("lead.sla.withinTarget")
+            : t("lead.readings.owed")
       }
       detail={t(breached ? "lead.sla.overdueSince" : "lead.sla.dueBy", {
         at: formatDateTime(clock.deadline, locale, zone),
       })}
-      tone={breached ? "danger" : atRisk ? "warn" : undefined}
-      dot={breached || atRisk}
+      tone={breached ? "danger" : atRisk ? "warning" : undefined}
     />
   );
 }

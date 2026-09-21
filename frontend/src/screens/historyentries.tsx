@@ -2,13 +2,11 @@ import {
   type InfiniteData,
   type UseInfiniteQueryResult,
   useInfiniteQuery,
-  useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
@@ -37,6 +35,7 @@ import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
 import { type HistoryValueCtx, historyValue } from "./historyvalues";
+import { useRecordRestore } from "./recordrestore";
 import "./history.css";
 
 // The per-record plain-language change list (B-EP09.x): every audit_log row
@@ -117,9 +116,7 @@ function EntryFieldDetail({
     <ul className="entry-fields">
       {changes.map((change) => (
         <li key={change.field} className="entry-field">
-          <span className="entry-field-name t-caption">
-            {historyFieldLabel(change.field, t)}
-          </span>
+          <span>{historyFieldLabel(change.field, t)}</span>
           <HistoryFieldDiff
             field={change.field}
             oldValue={change.oldValue}
@@ -131,16 +128,6 @@ function EntryFieldDetail({
     </ul>
   );
 }
-
-// The variables one press carries. A mutationFn takes what it needs rather
-// than closing over render state: the click belongs to the committed render,
-// so what it passes cannot be older than the control that carried it.
-type RestorePress = Readonly<{
-  kind: EntityKind;
-  id: string;
-  auditId: string;
-  version: number;
-}>;
 
 // What a change put back needs from the record it belongs to.
 export type RecordRestore = Readonly<{
@@ -208,31 +195,7 @@ function UndoButton({
   // lock, so a change that looked restorable a moment ago may not be one now.
   const [refused, setRefused] = useState<string | null>(null);
 
-  const putBack = useMutation({
-    mutationFn: async ({
-      kind: pressedKind,
-      id: pressedId,
-      auditId,
-      version,
-    }: RestorePress) => {
-      const { data, error } = await api.POST(
-        "/records/{entity_type}/{id}/history/{audit_id}/restore",
-        {
-          params: {
-            path: {
-              entity_type: pressedKind,
-              id: pressedId,
-              audit_id: auditId,
-            },
-            ...ifMatch(version),
-          },
-        },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
+  const putBack = useRecordRestore({
     onSuccess: () => {
       setRefused(null);
       setConfirming(false);
@@ -288,7 +251,6 @@ function UndoButton({
   return (
     <span className="entry-undo">
       <Button
-        small
         variant="ghost"
         reason={upFront}
         pending={putBack.isPending}
@@ -297,9 +259,7 @@ function UndoButton({
       >
         {t(label)}
       </Button>
-      {refused && (
-        <span className="entry-undo-refusal t-caption">{refused}</span>
-      )}
+      {refused && <span>{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -322,9 +282,7 @@ function UndoButton({
         <ul className="entry-fields">
           {changes.map((change) => (
             <li key={change.field} className="entry-field">
-              <span className="entry-field-name t-caption">
-                {historyFieldLabel(change.field, t)}
-              </span>
+              <span>{historyFieldLabel(change.field, t)}</span>
               <span>
                 {historyValue(change.field, change.oldValue, {
                   currency,
@@ -375,7 +333,7 @@ function HistoryEntryRow({
         {/* `summary` already NAMES the granting human as its subject
             ("Ada Authority, via an agent, updated the record"), so the
             on-behalf-of suffix that used to complete the old machine-first
-            sentence would now say the same person twice. */}
+            sentence would now say the same contact twice. */}
         <span className="tl-title">{entry.summary}</span>
         <span className="tl-meta">
           <span>{formatDateTime(entry.occurred_at, locale, recordZone)}</span>
@@ -383,12 +341,12 @@ function HistoryEntryRow({
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name
             // has to be handed in. The read path resolves it for exactly this:
-            // without it the chip says a person entered the row without
+            // without it the chip says a contact entered the row without
             // claiming which one, which is the same "nobody to ask" the
             // sentence above was fixed to avoid.
             renderUser={() => entry.actor_name}
           />
-          {note && <span className="entry-note t-caption">{note}</span>}
+          {note && <span className="t-caption">{note}</span>}
         </span>
         {edge ? (
           <HistoryEdgeDetail edge={edge} />

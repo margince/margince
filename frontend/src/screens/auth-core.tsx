@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "../design-system/ambient-waves";
+import { Heading } from "../design-system/heading";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
@@ -22,6 +23,9 @@ import { useT } from "../i18n";
  * Every one of the surface's four outcomes renders in this frame (§4) — sign-in,
  * password reset, connection problem, installation unavailable — so a reviewer
  * sees the same screen shape whatever went wrong.
+ *
+ * **The frame owns the h1** — see AuthCardTitle, which is how a card names
+ * itself under it.
  */
 export type AuthPhase =
   | "idle"
@@ -47,11 +51,11 @@ function coreState(phase: AuthPhase): MarginceCoreState {
   if (phase === "unavailable") {
     // The installation cannot be reached, which is the same shape of failure as
     // a source the agent cannot get to: nothing is wrong, nothing is reachable,
-    // and that is a person's problem to resolve, not the agent's.
+    // and that is a contact's problem to resolve, not the agent's.
     return "warning";
   }
   // idle and quiet both: nothing is running and nothing is staged. The surface
-  // is waiting on a person, and the Core does not claim to be listening for
+  // is waiting on a contact, and the Core does not claim to be listening for
   // them — the agent reads captured activity, it holds no conversation.
   return "idle";
 }
@@ -128,6 +132,31 @@ export function AuthExperience({
 }
 
 /**
+ * The title of whichever card the frame is carrying, at the one level the frame
+ * leaves for it.
+ *
+ * The h1 is the identity region's greeting: the subject of an unauthenticated
+ * surface is the system introducing itself, so a card's own name is a section
+ * under it. Spelled HERE rather than at each of the eight cards, because eight
+ * independent decisions about a level is how a view ends up with two h1s and
+ * nobody notices until an audit runs.
+ *
+ * `className` is for the sign-in card alone, whose name is `.sr-only`: the
+ * greeting beside it has already said what the page is, so a second, larger
+ * copy above the fields would say it twice.
+ */
+export function AuthCardTitle({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>) {
+  return (
+    <Heading size="xlarge" as="h2" className={className}>
+      {children}
+    </Heading>
+  );
+}
+
+/**
  * The legal line, in the task region and on every outcome (§6.7).
  *
  * It belongs to the task rather than to the identity region, and not by
@@ -158,7 +187,7 @@ function LegalFooter() {
       <p>{t("auth.legalProtected")}</p>
       {/* The bottom row is the surface's chrome row, and the theme control is
           chrome: it changes how this page looks and claims nothing about the
-          organization. It sits after the two links, behind a separator, so the
+          company. It sits after the two links, behind a separator, so the
           legal sentence above still reads as a statement and not as a control.
           The row already wraps, so the extra item cannot widen the surface. */}
       <span className="auth-legal-links">
@@ -182,10 +211,11 @@ function LegalFooter() {
  * order opened with a sentence and buried the Core in the middle, which is a
  * paragraph with an illustration rather than a system introducing itself.
  *
- * The four copy rows are ONE paragraph somebody is saying, not a list of
- * claims, so they are read in sequence or not at all — the greeting means
- * nothing after the promise. That is why they are four sibling paragraphs in
- * a fixed order rather than a collection something could reorder or filter.
+ * The copy rows are ONE paragraph somebody is saying, not a list of claims, so
+ * they are read in sequence or not at all — the greeting means nothing after the
+ * promise. That is why they are siblings in a fixed order rather than a
+ * collection something could reorder or filter. The greeting is the page's h1
+ * (see TypedStatement); what follows it is the line it introduces.
  * What the system does all day is deliberately not among them: on a screen
  * whose whole job is the introduction and the field, it was the fourth
  * sentence read while a form waited underneath. The reader meets that at the
@@ -233,7 +263,7 @@ export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
 
 /**
  * The typed statement, in its own component so that a state update per character
- * re-renders one paragraph rather than the region that also holds the Core.
+ * re-renders one heading rather than the region that also holds the Core.
  *
  * This is a precaution, not a fix for a measured bug, and the distinction is
  * worth recording because the obvious reading is wrong: a stream that looked
@@ -242,20 +272,30 @@ export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
  * The isolation stays because per-tick state next to a WebGL canvas is a bad
  * shape regardless of whether it has bitten yet.
  *
- * Not a heading. The one h1 belongs to the task (§6.4), and this is a paragraph
- * however large it is set. Two details keep it honest:
+ * THIS is the page's h1. The surface's subject is the system introducing
+ * itself, so the greeting is what names the page and the form below it is a
+ * section under that name — a task region whose own title says "sign in" is an
+ * h2, not because it matters less but because it is a part of what the h1
+ * names. The level is stated rather than inherited from the size, because the
+ * outline is the decision being made here and the size only follows it.
+ *
+ * Three details keep the typing honest:
  *
  *  - the GHOST is an invisible copy of the full sentence holding the final height
  *    open, so the scope line and the limits below never move. A typewriter that
  *    reflows the column under itself is worse than none.
  *  - the sentence reaches assistive tech COMPLETE, through an `.sr-only` span,
- *    because a screen reader must not be fed a partial sentence character by
- *    character. It is a span rather than an `aria-label` on the <p> because a
- *    paragraph has no role that supports being named — biome's a11y lint says so
- *    too.
+ *    while the two layers that hold a partial string are `aria-hidden`: a screen
+ *    reader must not be fed a sentence character by character, and a heading
+ *    least of all, since a partial one is also a wrong entry in the rotor. The
+ *    complete copy is the heading's only unhidden text, so it is the accessible
+ *    name as well.
+ *  - it stays a span rather than an `aria-label` on the element, so the name a
+ *    reader hears is the same node a test can find and the same text that is
+ *    rendered.
  *
  * Under reduced motion (or on a hidden tab) `useTypeStream` returns the complete
- * text on its first render and reports `done`, so this is a static paragraph with
+ * text on its first render and reports `done`, so this is a static heading with
  * no caret.
  */
 function TypedStatement({ text }: Readonly<{ text: string }>) {
@@ -271,7 +311,7 @@ function TypedStatement({ text }: Readonly<{ text: string }>) {
   const shown = intro ? stream.shown : text;
   const done = intro ? stream.done : true;
   return (
-    <p className="auth-statement">
+    <Heading size="xxlarge" as="h1" className="auth-statement">
       <span className="sr-only">{text}</span>
       <span className="auth-statement-ghost" aria-hidden>
         {text}
@@ -280,6 +320,6 @@ function TypedStatement({ text }: Readonly<{ text: string }>) {
         {shown}
         {done ? null : <span className="auth-caret" />}
       </span>
-    </p>
+    </Heading>
   );
 }

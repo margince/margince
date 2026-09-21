@@ -6,6 +6,7 @@ package approvals
 import (
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -20,7 +21,7 @@ import (
 // target and either the logical identity or the diff hash, so one member's
 // pending row could be joined as another's, expired as superseded by another's,
 // and one member's decline could refuse another member's proposal — for exactly
-// the kinds whose own gate says a row is one person's business.
+// the kinds whose own gate says a row is one colleague's business.
 //
 // The engine's answer to this used to be that a caller builds a
 // collision-proof identity. No caller states that property and none tests it,
@@ -34,8 +35,18 @@ import (
 // Asked of the SHAPE rather than of a kind list at each statement, so a kind
 // added to selfOnlyKinds, or a table enrolled in probeOwnerOnly, inherits the
 // narrowing instead of quietly staying shared.
+//
+// It must answer for EVERY kind decidable narrows to a seat, not only the
+// self-only ones. The two run on opposite sides of one row — this when it is
+// written, decidable when it is read — so a kind narrowed on the read side
+// alone still MATCHES across members on the write side, and the mismatch has
+// three shapes, all silent: one seat's pending proposal is joined and handed
+// back to another, a second seat's differing payload supersedes the first's,
+// and one seat's rejection suppresses the other's. Each time, the row that
+// survives names a seat the reader is not, so it is withheld from the very
+// contact it was staged for.
 func subjectScopedShape(in StageInput) bool {
-	if selfOnlyKinds[in.Kind] {
+	if approvalsubject.PayloadOwned(in.Kind) || selfOnlyKinds[in.Kind] || decidedByTheSeatStagedFor[in.Kind] {
 		return true
 	}
 	var targetType *string
@@ -48,7 +59,7 @@ func subjectScopedShape(in StageInput) bool {
 // subjectScope is the clause narrowing a same-proposal match to the member this
 // staging is for, and the empty string for a shared shape — where matching
 // across members is the point, and narrowing would split one team's proposal
-// into one row per person.
+// into one row per contact.
 //
 // It APPENDS the subject to args and derives the placeholder from the position
 // it landed in, because a hand-typed $N is a number nothing checks: the column
@@ -63,6 +74,12 @@ func subjectScopedShape(in StageInput) bool {
 func subjectScope(in StageInput, p principal.Principal, args *[]any) string {
 	if !subjectScopedShape(in) {
 		return ""
+	}
+	// Persisted import ownership also covers worker rows with no on_behalf_of.
+	// The production staging test holds this JSON key against the shared DTO.
+	if approvalsubject.PayloadOwned(in.Kind) {
+		*args = append(*args, approvalsubject.Owner(in.ProposedChange).String())
+		return fmt.Sprintf(" AND proposed_change->>'owner_id' = $%d", len(*args))
 	}
 	*args = append(*args, nullUUID(p.OnBehalfOf))
 	return fmt.Sprintf(" AND on_behalf_of IS NOT DISTINCT FROM $%d", len(*args))

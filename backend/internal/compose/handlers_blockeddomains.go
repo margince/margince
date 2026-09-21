@@ -5,7 +5,7 @@ package compose
 
 // The blocked-domain surface: which domains this installation refuses a
 // company, why, and what decided it — plus the admin's power to change any of
-// it. Thin transport; the people store owns the RBAC gate, the normalization,
+// it. Thin transport; the contacts store owns the RBAC gate, the normalization,
 // the sticky-human rule and the re-ask that makes an unblock actually produce
 // the company.
 
@@ -14,10 +14,8 @@ import (
 	"net/http"
 	"strings"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -33,7 +31,7 @@ const blockedDomainPageSize = 200
 const maxBlockedDomainReason = 500
 
 type blockedDomainHandlers struct {
-	people *people.Store
+	contacts *contacts.Store
 }
 
 func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +40,7 @@ func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
-	entries, total, err := h.people.ListDomainAdmissions(r.Context(), blockedDomainPageSize)
+	entries, total, err := h.contacts.ListDomainAdmissions(r.Context(), blockedDomainPageSize)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -50,7 +48,7 @@ func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http
 	// Empty answers as [], never null — the contract promises an array.
 	out := make([]crmcontracts.BlockedDomain, 0, len(entries))
 	for _, e := range entries {
-		out = append(out, toContractBlockedDomain(e))
+		out = append(out, contacts.ToContractBlockedDomain(e))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BlockedDomainListResponse{Data: out, Total: total})
 }
@@ -97,25 +95,40 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 	}
 	// The store answers with what it STORED, not what was sent: it normalizes
 	// the domain to its registrable form and stamps the decision time itself.
-	stored, err := h.people.SetDomainAdmission(r.Context(), body.Domain, string(body.Admission), body.Reason)
+	stored, err := h.contacts.SetDomainAdmission(r.Context(), body.Domain, string(body.Admission), body.Reason)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractBlockedDomain(stored))
+	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
 }
 
-func toContractBlockedDomain(e people.BlockedDomain) crmcontracts.BlockedDomain {
-	out := crmcontracts.BlockedDomain{
-		Domain:    e.Domain,
-		Admission: crmcontracts.BlockedDomainAdmission(e.Admission),
-		Reason:    e.Reason,
-		Source:    crmcontracts.BlockedDomainSource(e.Source),
-		DecidedAt: e.DecidedAt,
+// ReopenWithheldDomain asks about an undecided domain again.
+//
+// It carries no body. A decision owes a reason somebody can review, which is
+// why the PUT above demands one — but re-asking asserts nothing about what the
+// domain IS. It says only that the machine's grounds for giving up are not the
+// last word, and the crawl is what answers.
+func (h blockedDomainHandlers) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
+	// Human-only (x-agent-access): capture posture, not record data.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
 	}
-	if e.OrganizationID != nil {
-		id := openapi_types.UUID(e.OrganizationID.UUID)
-		out.OrganizationId = &id
+	// Shape is the transport's job, checked here so a caller learns which field
+	// is wrong rather than reading a 500 the store meant as an internal fault.
+	if _, ok := freemail.Hostname(domain); !ok {
+		httperr.Write(w, r, httperr.Validation("domain", "invalid",
+			"expected a domain name like example.com; a full email address or a URL is not one"))
+		return
 	}
-	return out
+	// The store answers with where the domain stands NOW, in the same shape the
+	// list showed it: an operator who pressed this reads back the row they were
+	// looking at, with the question open again.
+	stored, err := h.contacts.ReopenWithheldDomain(r.Context(), domain)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
 }

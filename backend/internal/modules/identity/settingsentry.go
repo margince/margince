@@ -5,7 +5,7 @@ package identity
 
 // The installation's own settings (ADR-0090/A135). Identity owns them because
 // it owns the installation: it is the module that bootstraps the singleton
-// organization and resolves it on every boot (ADR-0061 §3).
+// company and resolves it on every boot (ADR-0061 §3).
 //
 // These moved off columns on the `workspace` row. Two of them were never
 // reachable by a human at all — an installation that mistyped its base
@@ -58,13 +58,13 @@ const authenticationPolicyObject = "authentication_policy"
 // rather than two that happen to agree.
 const SettingsObject = installationSettingsObject
 
-// Name is the organization's display name. Seeded from margince.yaml at
+// Name is the company's display name. Seeded from margince.yaml at
 // bootstrap; the row is authoritative afterwards, so renaming the
-// organization does not require a redeployment.
+// company does not require a redeployment.
 //
 // The CEILING lives here because this entry is the only thing that governs the
 // value: without it the unauthenticated setup claim stores a name as large as
-// the body limit allows, and every screen that renders an organization carries
+// the body limit allows, and every screen that renders a company carries
 // it thereafter.
 //
 // 200 rather than the 63 an earlier bound happened to impose. That number was a
@@ -82,12 +82,12 @@ var Name = settings.Define[string](
 	func(v string) error {
 		trimmed := strings.TrimSpace(v)
 		if trimmed == "" {
-			return fmt.Errorf("the organization needs a name")
+			return fmt.Errorf("the company needs a name")
 		}
 		// Counted in RUNES, like every other length bound in this module: a name
 		// of 200 CJK characters is not three times too long.
 		if n := utf8.RuneCountInString(trimmed); n > maxInstallationNameLen {
-			return fmt.Errorf("an organization name is at most %d characters; this one is %d",
+			return fmt.Errorf("a company name is at most %d characters; this one is %d",
 				maxInstallationNameLen, n)
 		}
 		return nil
@@ -121,7 +121,7 @@ var Timezone = settings.Define[string](
 		return nil
 	},
 ).AsInstallationIdentity().
-	// Read ungated when a scheduler needs the clock a person who has chosen none
+	// Read ungated when a scheduler needs the clock a contact who has chosen none
 	// is bookable on. Disclosure through behaviour IS the feature here: the slots
 	// a public booking page offers are in this zone, and a customer reads them
 	// off the page. Withholding the name while showing every time computed from
@@ -156,7 +156,7 @@ var BaseCurrency = settings.Define[string](
 ).AsInstallationIdentity()
 
 // BaseLanguage is the language AI writes in when what it writes is read by the
-// whole team rather than by one person.
+// whole team rather than by one contact.
 //
 // A model asked nothing about language answers in whatever language its input
 // happened to be in, so a Vietnamese thread produced a Vietnamese claim on a
@@ -182,7 +182,7 @@ var BaseLanguage = settings.Define[string](
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+).AsInstallationIdentity().MachineryApplied()
 
 // Country is where this installation is established, as a lower-case ISO
 // 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
@@ -302,8 +302,11 @@ func Definitions() []settings.Definition {
 		Timezone,
 		BaseCurrency,
 		BaseLanguage,
+		DateFormat,
+		TimeFormat,
 		Country,
 		FiscalYearStartMonth,
+		DeadWorkBannerHours,
 		ForecastForwardMeasure,
 		EnabledOidcProviders,
 		SMTPPasswordRef,
@@ -335,6 +338,20 @@ func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // the hardest kind of wrong to notice.
 func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.RequireTx(ctx, tx, Timezone)
+}
+
+// TimezoneAppliedTx resolves the installation's zone for an INTERNAL date
+// derivation — a "today" computed while executing an operation the caller is
+// already authorized for — WITHOUT the installation_settings.read gate.
+//
+// ApplyTx, not the gated TimezoneOf: deriving which calendar day it is is
+// infrastructure, not the settings-management surface the object gate protects.
+// A contract writer holds `contract`, not `installation_settings`, and the zone
+// is disclosed by every date it is ever shown anyway — WorkingHoursOf reads it
+// the same way for the same reason. An unset zone reads as the registered UTC
+// default rather than erroring, so a fresh installation still writes.
+func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, Timezone)
 }
 
 // NameOf resolves the installation's display name inside a transaction the
@@ -452,4 +469,27 @@ func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 		return "", err
 	}
 	return jurisdiction.Code(code), nil
+}
+
+// LanguageOf is the language this installation's controller mail is written in,
+// read on the caller's transaction.
+//
+// MachineryApplied for the reason Country is: the confirm-details and
+// double-opt-in mails are rendered inside the transaction that mints their
+// link, and through the gated reader the language would be refused to any
+// principal without the installation_settings object — a narrow seat asking a
+// contact to confirm their details would silently get English while the
+// installation's own screens are German. A language a narrow principal could
+// not read would simply not apply to what they send, which is the opposite of
+// a setting.
+//
+// Nothing is widened. The value is the installation's own label, chosen by an
+// administrator and shown on a settings screen; it is not tenant data, and the
+// language a message is written in is not a fact about its recipient.
+//
+// An absent row reads as the registered default, which is English — the same
+// answer mailcopy falls back to, so an installation that has never chosen gets
+// what it got before this existed.
+func LanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, BaseLanguage)
 }

@@ -198,24 +198,23 @@ export function ProjectLinks({
             {t(emptyBody)}
           </EmptyState>
         ) : (
-          <EmptyState title={t("projectLinks.emptyTitle")}>
-            <p>{t(emptyBody)}</p>
-          </EmptyState>
+          /* One quiet line, the shape every other list on a record page draws
+             for "none yet": as a pane of its own the section already carries
+             its name in the head, so a display-sized heading under it said
+             the same word twice and made an absence the loudest thing in the
+             column. The sentence stays, because how a link of this kind comes
+             to exist is what a reader with none actually needs. */
+          <p className="surfacestate-empty">{t(emptyBody)}</p>
         )}
       </PanelBody>
     ) : (
       adapter.linked.map((project) => (
         <PanelRow key={project.project_id}>
           <div className="pl-row">
-            <a
-              className="pl-name"
-              href={project.href ?? `#/projects/${project.project_id}`}
-            >
+            <a href={project.href ?? `#/projects/${project.project_id}`}>
               {project.name}
             </a>
-            {project.key && (
-              <span className="t-mono pl-key">{project.key}</span>
-            )}
+            {project.key && <span>{project.key}</span>}
             {project.phase}
             {adapter.detach && !adapter.readOnly && (
               <Button

@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -132,6 +133,11 @@ func publishedChannelProviders(registered []channelProviderFacts, sending map[st
 		entry.Attachments.Carries = carriage.Carries
 		entry.Attachments.MaxFiles = carriage.MaxFiles
 		entry.Attachments.MaxBytesPerFile = carriage.MaxBytesPerFile
+		// The EFFECTIVE aggregate, from the same helper the carriage gate
+		// refuses on, so the number a composer warns with is the number a send
+		// applies. Publishing the provider's own would tell a composer nothing
+		// about the budget that actually stops the message.
+		entry.Attachments.MaxTotalBytes = comms.AggregateCarriageBound(carriage)
 		entry.Attachments.MaxBodyWithFiles = carriage.MaxBodyWithFiles
 		out = append(out, entry)
 	}

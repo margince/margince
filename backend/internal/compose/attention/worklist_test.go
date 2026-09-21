@@ -38,6 +38,24 @@ func withKind(kind string) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.Kind = &kind }
 }
 
+// decidable gives a row the verb its producer offers only to a reader who could
+// press it. A decision fixture without one models a row somebody else has to
+// settle, which is a real case but not the one most tests mean.
+func decidable() func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		i.Actions = []crmcontracts.AttentionItemActions{"decide"}
+	}
+}
+
+// dismissable gives a row the one verb a reader holds over a duplicate pair no
+// merge would take: two companies each carrying live projects cannot combine,
+// and saying they are not the same is still theirs to say.
+func dismissable() func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		i.Actions = []crmcontracts.AttentionItemActions{"dismiss"}
+	}
+}
+
 func withDue(at time.Time) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.DueAt = &at }
 }
@@ -160,8 +178,8 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 	if summary.Total != len(candidates) {
 		t.Fatalf("summary totals %d over a day of %d", summary.Total, len(candidates))
 	}
-	if summary.Urgent != 1 {
-		t.Fatalf("counted %d urgent, wanted the one promise", summary.Urgent)
+	if summary.Urgent != 2 {
+		t.Fatalf("counted %d urgent, wanted the promise and overdue task", summary.Urgent)
 	}
 	if summary.LowerPriority != 1 {
 		t.Fatalf("counted %d lower-priority, wanted the one hygiene decision", summary.LowerPriority)
@@ -251,7 +269,7 @@ func TestAFilteredQueueCarriesOnlyThatKindOfWork(t *testing.T) {
 		AtRisk:   lane(item("r1", "deal_at_risk")),
 	}
 
-	kept := keepCategory(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
+	kept := keepFiltered(classifyDay(day, rankInstant, dayMoney{}), "deals_at_risk")
 
 	if len(kept) != 1 || kept[0].item.Id != "r1" {
 		t.Fatalf("filtering for deals kept %d rows, wanted just the deal", len(kept))
@@ -447,7 +465,7 @@ func summaryScopeDay(n int) crmcontracts.Attention {
 // spelling as urgent and another as hygiene is how the same act ends up in two
 // places in the queue.
 func TestEveryOutboundSendKindBlocksCustomerWork(t *testing.T) {
-	for _, kind := range []string{"send_email", "send_account_email", "send_message", "book_meeting"} {
+	for _, kind := range []string{"send_email", "send_company_email", "send_message", "book_meeting"} {
 		day := crmcontracts.Attention{
 			AsOf:     rankInstant,
 			NeedsYou: []crmcontracts.AttentionItem{item("a", "approval", withKind(kind))},
@@ -556,7 +574,7 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 	}
 }
 
-// The longer somebody has waited, the higher they sit — among people who are
+// The longer somebody has waited, the higher they sit — among contacts who are
 // all waiting, the forgotten one is the one at risk.
 //
 // Both waits are inside the ordering ceiling. Past it every wait ties on age by

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -13,7 +13,7 @@ import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 // An address somebody typed needs no explanation. One the product LEARNED does:
 // a seat scanning this card would otherwise find an address they never entered
 // and have no way to tell whether they forgot adding it or something else did —
-// and they are the person who decides whether it stays.
+// and they are the colleague who decides whether it stays.
 
 afterEach(() => {
   cleanup();

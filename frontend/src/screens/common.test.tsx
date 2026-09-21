@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -87,7 +87,7 @@ describe("CreateAction dedupe link", () => {
             details: { existing_id: "01ABC" },
           })
         }
-        invalidate="people"
+        invalidate="contacts"
         screen="contacts"
         resolveExisting={(_code, id) => ({ screen: "contacts", id })}
       />,
@@ -104,28 +104,6 @@ describe("CreateAction dedupe link", () => {
 });
 
 describe("problemMessage", () => {
-  it("translates an unsupported_by_sor WRITE refusal when given a translator", () => {
-    expect(
-      problemMessage(
-        { code: "unsupported_by_sor", detail: "write not supported by SoR" },
-        t,
-      ),
-    ).toBe(t("overlay.refused"));
-  });
-
-  it("translates an unsupported_in_overlay_mode READ refusal to its own, different copy", () => {
-    const message = problemMessage(
-      { code: "unsupported_in_overlay_mode", detail: "422 read gap" },
-      t,
-    );
-    expect(message).toBe(t("overlay.filterUnsupported"));
-    // The two refusal codes are different states (a refused write vs. a
-    // refused filter/sort dial) — collapsing them onto one string would
-    // print the write-specific "can't serve this write" for a filter a
-    // caller never tried to write.
-    expect(message).not.toBe(t("overlay.refused"));
-  });
-
   // The sentinel string is what an object-RBAC denial and a read-share denial
   // both arrive with, and it names neither the authority the reader holds nor
   // what would widen it. Catalog copy replaces it.
@@ -148,7 +126,7 @@ describe("problemMessage", () => {
       t,
     );
     const rowDenial = problemMessage(
-      { code: "permission_denied", detail: "person:update denied" },
+      { code: "permission_denied", detail: "contact:update denied" },
       t,
     );
     expect(rowDenial).toBe(objectDenial);
@@ -177,32 +155,29 @@ describe("problemMessage", () => {
   // them — so this is the same nothing, spelled longer.
   it("stands in for a wrapped sentinel too, and never shows the object and verb", () => {
     const message = problemMessage(
-      { code: "permission_denied", detail: "person.update: permission denied" },
+      {
+        code: "permission_denied",
+        detail: "contact.update: permission denied",
+      },
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("person.update");
+    expect(message).not.toContain("contact.update");
   });
 
   it("keeps the server detail when no translator is given", () => {
     expect(
       problemMessage({
-        code: "unsupported_by_sor",
-        detail: "write not supported by SoR",
+        code: "version_skew",
+        detail: "record changed elsewhere",
       }),
-    ).toBe("write not supported by SoR");
+    ).toBe("record changed elsewhere");
     expect(
       problemMessage({
         code: "permission_denied",
         detail: "permission denied",
       }),
     ).toBe("permission denied");
-    expect(
-      problemMessage({
-        code: "unsupported_in_overlay_mode",
-        detail: "422 read gap",
-      }),
-    ).toBe("422 read gap");
   });
 
   it("keeps the server detail for an unrelated code even with a translator", () => {
@@ -335,9 +310,9 @@ describe("provenanceOf", () => {
     // contract enumerates are four different answers to "who do I ask", and
     // routing the unrecognised ones into the agent arm made a scheduled sweep
     // announce itself as an AI.
-    expect(provenanceOf("system:person_auto_enrich")).toEqual({
+    expect(provenanceOf("system:contact_auto_enrich")).toEqual({
       kind: "system",
-      job: "person_auto_enrich",
+      job: "contact_auto_enrich",
     });
     // A kind this app cannot read names no actor rather than the wrong one.
     expect(provenanceOf("capture")).toEqual({ kind: "unknown" });
@@ -345,7 +320,7 @@ describe("provenanceOf", () => {
 
   it("says a job ran without naming one when the wire names none", () => {
     // The privacy-retention sweep stamps a bare `system`, so the kind is all
-    // there is; the tag still has to say it was the system and not a person.
+    // there is; the tag still has to say it was the system and not a contact.
     expect(provenanceOf("system")).toEqual({ kind: "system", job: undefined });
   });
 
@@ -449,7 +424,7 @@ describe("provenanceOf", () => {
     // A buyer's own write stamps `buyer:<participant uuid>` — the principal is
     // the participant — and with no arm for it the string fell through to the
     // fallback below, which says nobody recorded a source. The source IS
-    // recorded here, and it is a person: the two are one branch apart, so both
+    // recorded here, and it is a contact: the two are one branch apart, so both
     // are asserted together.
     expect(provenanceOf("buyer:0192abcd-2222-4222-8222-222222222222")).toEqual({
       kind: "buyer",
@@ -484,12 +459,6 @@ describe("problemMessageOf", () => {
     expect(
       problemMessageOf(new ProblemError({ detail: "email taken" }), t),
     ).toBe("email taken");
-  });
-
-  it("translates a refusal code the same way the raw-body reader does", () => {
-    expect(
-      problemMessageOf(new ProblemError({ code: "unsupported_by_sor" }), t),
-    ).toBe(t("overlay.refused"));
   });
 
   it("never repeats the words of a bare Error", () => {

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -73,6 +73,7 @@ function stubRoutes(overrides: Record<string, () => Response> = {}) {
 
 const HEALTH = {
   generated_at: "2026-08-13T09:30:00Z",
+  dead_window_hours: 24,
   kinds: [
     {
       kind: "capture_classify",
@@ -82,6 +83,7 @@ const HEALTH = {
       running: 1,
       retrying: 2,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: 4_500,
     },
     {
@@ -92,6 +94,7 @@ const HEALTH = {
       running: 0,
       retrying: 0,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: null,
     },
   ],
@@ -136,7 +139,7 @@ afterEach(() => {
 });
 
 describe("JobHealthCard", () => {
-  it("reports every state of every kind, and which rows carry no organization", async () => {
+  it("reports every state of every kind, and which rows carry no company", async () => {
     stubRoutes();
     render(<JobHealthCard />);
     // All four counts, zeros included: "0 dead" is the reassurance an operator
@@ -154,11 +157,11 @@ describe("JobHealthCard", () => {
     // The dispatcher row is separated from the workspace's own work, and says
     // whose counts they are.
     expect(screen.getByText("retention_sweep_dispatch")).toBeInTheDocument();
-    expect(screen.getByText(/carry no organization/i)).toBeInTheDocument();
+    expect(screen.getByText(/carry no company/i)).toBeInTheDocument();
     // Each of the three readings is a NAMED row. The counts and the failures
     // are the same shape on screen, so a reading that lost its naming would
-    // leave an operator reading fleet work as this organization's.
-    expect(screen.getByText("This organization")).toBeInTheDocument();
+    // leave an operator reading fleet work as this company's.
+    expect(screen.getByText("This company")).toBeInTheDocument();
     expect(screen.getByText("Fleet dispatchers")).toBeInTheDocument();
     expect(screen.getByText("Recent failures")).toBeInTheDocument();
     // The stall signal, in a unit that survives the sub-hour case: 4500s reads as
@@ -192,10 +195,10 @@ describe("JobHealthCard", () => {
     stubRoutes();
     render(<JobHealthCard />);
     // The class is the token an alert is keyed on and the log is grepped by, so
-    // it is rendered verbatim and mono — the same treatment as the kind — and
-    // never as a second status pill beside the state badge.
+    // it is rendered verbatim — the same treatment as the kind, underscores
+    // kept — and never as a second status pill beside the state badge.
     const shownClass = await screen.findByText("provider_unavailable");
-    expect(shownClass).toHaveClass("t-mono");
+    expect(screen.queryByText(/provider unavailable/i)).not.toBeInTheDocument();
     expect(shownClass).not.toHaveClass("badge");
     // What to do about it, which is the half a failure list is useless without.
     expect(
@@ -288,7 +291,7 @@ describe("JobHealthCard", () => {
       "GET /admin/job-health": () =>
         jsonResponse({
           ...HEALTH,
-          kinds: [{ ...HEALTH.kinds[0], dead: 3, retrying: 0 }],
+          kinds: [{ ...HEALTH.kinds[0], dead: 3, dead_recent: 3, retrying: 0 }],
           recent_failures: [
             { ...HEALTH.recent_failures[0], state: "discarded", attempt: 5 },
           ],
@@ -301,9 +304,56 @@ describe("JobHealthCard", () => {
     expect(alert).toHaveClass("callout-danger");
     expect(alert).toHaveTextContent(/will not happen without intervention/i);
     expect(alert).toHaveTextContent(/3 jobs/);
+    // The span, in the sentence. A count with no window asks the reader to
+    // guess, and the guess is "since forever".
+    expect(alert).toHaveTextContent(/last 24 hours/i);
+    // Nothing to say about a week that holds no more than the day does.
+    expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
-    expect(screen.getByText("3 dead")).toHaveClass("badge-danger");
-    expect(screen.getByText("discarded")).toHaveClass("badge-danger");
+    expect(screen.getByText("3 dead").closest(".badge")).toHaveClass(
+      "badge-danger",
+    );
+    expect(screen.getByText("Discarded").closest(".badge")).toHaveClass(
+      "badge-danger",
+    );
+  });
+
+  // The case the window exists for: a settled outage. The rows are still there
+  // — River keeps them a week — and the banner must go quiet while the figure
+  // does not, or a finished outage goes on asking for a hand until they retire.
+  it("goes quiet once the dead work leaves the window, and still reports it", async () => {
+    stubRoutes({
+      "GET /admin/job-health": () =>
+        jsonResponse({
+          ...HEALTH,
+          kinds: [
+            { ...HEALTH.kinds[0], dead: 531, dead_recent: 0, retrying: 0 },
+          ],
+        }),
+    });
+    render(<JobHealthCard />);
+    await screen.findByText("531 dead");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // And when both are non-zero and differ, the week's total travels WITH the
+  // alarm rather than instead of it.
+  it("names the week's total beside the window's count", async () => {
+    stubRoutes({
+      "GET /admin/job-health": () =>
+        jsonResponse({
+          ...HEALTH,
+          kinds: [
+            { ...HEALTH.kinds[0], dead: 531, dead_recent: 4, retrying: 0 },
+          ],
+        }),
+    });
+    render(<JobHealthCard />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/4 jobs died in the last 24 hours/i);
+    expect(alert).toHaveTextContent(
+      /531 discarded or cancelled in the last 7 days/i,
+    );
   });
 
   it("keeps a healthy report free of the dead-work alert", async () => {
@@ -373,7 +423,7 @@ describe("JobHealthCard", () => {
     // In its own words, INSTEAD of the readings — not three named rows each
     // saying it has nothing. That the background system is idle is one finding,
     // and a list of empty rows reports it three times as three.
-    expect(screen.queryByText("This organization")).not.toBeInTheDocument();
+    expect(screen.queryByText("This company")).not.toBeInTheDocument();
     expect(screen.queryByText("Recent failures")).not.toBeInTheDocument();
     // The stamp stands even here. An operator acting on "nothing is queued" is
     // trusting a reading, and a reading with no time on it cannot be trusted.

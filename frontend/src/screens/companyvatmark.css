@@ -29,15 +29,11 @@
    is a fact about the lookup and not about the company — so it takes the
    secondary ink every other unset value in this panel takes. */
 .vatmark-glyph[data-tone="success"] {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .vatmark-glyph[data-tone="danger"] {
-  color: var(--danger);
-}
-
-.vatmark-glyph[data-tone="none"] {
-  color: var(--textSecondary);
+  color: var(--dangerText);
 }
 
 .vatmark-panel {
@@ -52,7 +48,6 @@
 }
 
 .vatmark-receipt dt {
-  color: var(--textSecondary);
   margin-bottom: var(--space-1);
 }
 
@@ -67,12 +62,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-
-/* The number moved after the check. Not a warning tone: nothing is wrong, the
-   receipt simply answers for a number the record no longer states. */
-.vatmark-stale {
-  color: var(--textSecondary);
 }
 
 /* The read failed. A button rather than the popover's trigger, because there is

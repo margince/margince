@@ -86,10 +86,11 @@ func buildReportWhere(
 	// WHICH population, as against which rows the caller may read at all.
 	//
 	// Row scope does not answer it: a deal is an identity table read by every
-	// seat, so the clause above renders TRUE and a rep's Pipeline showed the
-	// whole installation while their Forecast — narrowed by this same resolver
-	// since #4077 — showed their own. Two Analytics tabs disagreeing about
-	// which records they cover, with nothing on screen saying so.
+	// seat, so the clause above renders TRUE, and without a population
+	// narrowing a rep's Pipeline would show the whole installation while
+	// their Forecast — narrowed by this same resolver — shows their own. Two
+	// Analytics tabs disagreeing about which records they cover, with nothing
+	// on screen saying so.
 	if spec.population == measureCallersOwn {
 		population, err := reportPopulationClause(ctx, tx, requested, arg)
 		if err != nil {
@@ -176,7 +177,7 @@ func specNarrowings(
 	// with no owner_id column (activities-by-kind) resolving this
 	// unconditionally is not a narrower answer, it is a crash.
 	if spec.population == measureCallersOwn {
-		_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg)
+		_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg, unownedIsPartOfDefault)
 		if err != nil {
 			return nil, err
 		}

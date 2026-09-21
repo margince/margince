@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -87,10 +86,7 @@ func (w *approvalExpiryWorker) Work(ctx context.Context, _ *river.Job[ApprovalEx
 	// so binding one would put somebody's name on refusals they never made. The
 	// system id says exactly what happened, and the correlation id groups one
 	// tick's expiries as the single pass they are.
-	passCtx = principal.WithActor(passCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: approvals.ExpiryActor,
-	})
-	passCtx = principal.WithCorrelationID(passCtx, ids.NewV7())
+	passCtx = principal.SystemActing(passCtx, approvals.ExpiryActor)
 	expired, err := expiringApprovalsService(w.pool).ExpireDue(passCtx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -117,7 +113,7 @@ func (w *approvalExpiryWorker) Work(ctx context.Context, _ *river.Job[ApprovalEx
 	if marked > 0 {
 		// Louder than the expiry line above deserves to be read as. A human
 		// said yes to each of these and the work did not happen, so a run of
-		// them is an agent path failing to complete rather than people not
+		// them is an agent path failing to complete rather than contacts not
 		// getting round to their inbox.
 		w.logger().InfoContext(ctx, "approval expiry: approvals the assistant never redeemed", "count", marked)
 	}

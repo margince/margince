@@ -29,15 +29,29 @@
 }
 /* The editor is the one child that grows. `.richtext` is the RichText's own
    frame — the body stopped being a textarea when formatting moved into the
-   shared drawer — and its editable surface fills it. */
+   shared drawer — and its editable surface fills it.
+
+   The frame keeps a FLOOR, and it is the frame that needs one because the frame
+   is what clips. Free to shrink to nothing it took whatever the fields above it
+   left, which on a laptop with the head filled in is less than a message is
+   worth writing in; six lines is where it stops giving way, and past that
+   `.compose-fields` scrolls instead. Nothing is lost either way — the surface
+   inside is a height and not a floor (richtext.css), so it follows the frame
+   down and scrolls within itself — but a two-line box to write a mail in is not
+   a repair. */
 .compose-split > .compose-fields > .richtext {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-block-size: 0;
+  min-block-size: 9em;
 }
 .compose-split > .compose-fields > .richtext > .richtext-input {
   flex: 1 1 auto;
+  /* Said rather than inherited from the surface being a scroll container, which
+     is the other thing that would zero this: the two are one decision — it
+     follows the frame down — and a reader who later gave the surface
+     `overflow: visible` would take the shrink away without touching this line. */
+  min-block-size: 0;
   overflow-y: auto;
 }
 
@@ -55,7 +69,6 @@
 .compose-thread-head {
   flex: none;
   padding-block-end: var(--space-3);
-  color: var(--textMeta);
 }
 
 /* The pane scrolls, the form scrolls, the drawer does not. min-block-size: 0
@@ -117,7 +130,6 @@
   padding: 0;
   border-color: transparent;
   background: none;
-  font-size: var(--fs-meta);
   color: var(--accentText);
 }
 .compose-thread-leave:hover {
@@ -150,7 +162,6 @@
   border-color: transparent;
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
-  font-weight: inherit;
 }
 .compose-choice:hover {
   background: var(--bgHover);
@@ -158,10 +169,17 @@
 }
 
 .compose-choice-subject {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
-.compose-choice-meta {
-  color: var(--textMeta);
+.compose-message-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.compose-thread-list > .compose-message {
+  display: block;
+  padding: 0;
 }

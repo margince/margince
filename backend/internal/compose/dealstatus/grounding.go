@@ -182,7 +182,7 @@ func keepGrounded(
 	return out, nil
 }
 
-// refuseIDsInReaderText refuses a reply that spells a record id where a person
+// refuseIDsInReaderText refuses a reply that spells a record id where a contact
 // reads. An id in reader text is either a leak or filler.
 func refuseIDsInReaderText(text string, known map[string]bool) error {
 	for id := range known {

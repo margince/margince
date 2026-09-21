@@ -35,7 +35,7 @@ var stageLabels = map[Stage]string{
 	StageInternalDrop:    "Internal-only check",
 	StageActivityWrite:   "Saved to the timeline",
 	StageTierLadder:      "Contact decision",
-	StagePersonCreate:    "Contact created",
+	StageContactCreate:   "Contact created",
 	StageVerdict:         "Sender verdict",
 	StageCompanyTriage:   "Company check",
 	StageAttentionLabel:  "Attention label",
@@ -58,7 +58,7 @@ var reasonTexts = map[Reason]string{
 	ReasonInternalOnly:        "every party was on your own domains",
 	ReasonInvisibleIncumbent:  "it matched a record outside what you can see",
 	ReasonTransactionalInfra:  "the sender is mail infrastructure, not a company you work with",
-	ReasonTransactionalPrefix: "the sender looks like an automated mailer, not a person",
+	ReasonTransactionalPrefix: "the sender looks like an automated mailer, not a contact",
 	ReasonDeferralCapped:      "the open-question limit was reached, so no verdict is coming",
 	ReasonNoisePrior:          "a previous verdict judged this sender noise",
 	ReasonDecidedPrior:        "this sender was already decided",
@@ -68,7 +68,10 @@ var reasonTexts = map[Reason]string{
 	ReasonNotLinkedYet:        "no contact is linked to this message yet",
 	ReasonNoContactIntended:   "the contact decision concluded that none was to be made",
 	ReasonAwaitingVerdict:     "the sender is still waiting on a verdict",
-	ReasonVerdictReached:      "a verdict has been reached for this sender",
+	ReasonJudgedReal:          "this sender was judged a real contact",
+	ReasonJudgedNoise:         "this sender was judged noise, so no record was made",
+	ReasonJudgedRejected:      "somebody declined this sender, so no record was made",
+	ReasonJudgedSuppressed:    "this sender was suppressed, so no record was made",
 	ReasonNoOpenQuestion:      "there was no open question about this sender",
 	ReasonRecordNotAvailable: "this step's record is no longer kept, or is not yours to read — " +
 		"once the record is gone the two cannot be told apart",
@@ -76,7 +79,7 @@ var reasonTexts = map[Reason]string{
 	ReasonSenderUndecided:      "the sender is still waiting on a verdict, so the message is held back",
 	ReasonArchived:             "the message is archived",
 	ReasonNotConnectorCaptured: "the message was not captured by a connector",
-	ReasonAudienceLimited:      "the message is limited to the people on it, and this step does not read limited mail",
+	ReasonAudienceLimited:      "the message is limited to the contacts on it, and this step does not read limited mail",
 	ReasonAwaitingBatch:        "it is eligible and waiting for the next batch",
 	ReasonLabelled:             "the message was labelled",
 	AbsentNotComparable: "what a connector filters on its own side is not counted here — " +
@@ -84,7 +87,15 @@ var reasonTexts = map[Reason]string{
 	AbsentConnectorDefect:    "admission failures are a fault of the connection, not of one message",
 	AbsentWouldRestoreErased: "reporting this would restore data an erasure removed",
 	AbsentNoWriterYet:        "this step does not exist yet",
-	AbsentNotReportedYet:     "this step runs, but is not reported here yet",
+	AbsentAnsweredOnTheCompany: "this step asks about the sender's DOMAIN rather than about one message, " +
+		"so it is answered once on the company rather than repeated on every message from it",
+	ReasonCompanyWarranted: "this domain was judged to warrant a company record, and this is it",
+	ReasonNoSiteIdentified: "nothing on this domain's site identified a company, so the sender's own name " +
+		"was used instead",
+	ReasonTriageQueued:      "this domain is waiting to be looked at",
+	ReasonTriageUnevidenced: "nothing has been seen from this domain yet that would evidence a company",
+	ReasonTriageStale:       "what was seen from this domain is too old to decide on",
+	ReasonTriageNearDupe:    "this domain looks like one already recorded, so it is held rather than duplicated",
 }
 
 // ReasonText renders one reason.

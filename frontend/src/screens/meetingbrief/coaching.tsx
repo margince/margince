@@ -25,10 +25,10 @@ export function CoachPanel({
   const t = useT();
   return (
     <Panel
-      title={t("person.meeting.coach.title")}
+      title={t("contact.meeting.coach.title")}
       titleLevel={3}
       tone={writtenByModel ? "ai" : "accent"}
-      titleAction={<Badge quiet>{t("person.meeting.coach.eyebrow")}</Badge>}
+      titleAction={<Badge>{t("contact.meeting.coach.eyebrow")}</Badge>}
     >
       <PanelBody>
         <p className="mb-coach-lead">{coaching.focus}</p>
@@ -37,17 +37,17 @@ export function CoachPanel({
           facts={[
             {
               key: "listen",
-              term: t("person.meeting.coach.listenFor"),
+              term: t("contact.meeting.coach.listenFor"),
               value: coaching.listen_for,
             },
             {
               key: "watch",
-              term: t("person.meeting.coach.watchFor"),
+              term: t("contact.meeting.coach.watchFor"),
               value: coaching.watch_for,
             },
             {
               key: "intervene",
-              term: t("person.meeting.coach.interveneIf"),
+              term: t("contact.meeting.coach.interveneIf"),
               value: coaching.intervene_if,
             },
           ]}
@@ -59,17 +59,27 @@ export function CoachPanel({
 
 // The branches a lead rehearses against. The same ones the rep's own plan
 // carries, so the two are preparing for one meeting.
-export function MeetingPaths({ coaching }: Readonly<{ coaching: Coaching }>) {
+export function MeetingPaths({
+  coaching,
+  writtenByModel,
+}: Readonly<{ coaching: Coaching; writtenByModel: boolean }>) {
   const t = useT();
   if (coaching.paths.length === 0) {
     return null;
   }
   return (
-    <Panel title={t("person.meeting.coach.paths")} titleLevel={3}>
+    <Panel
+      title={t("contact.meeting.coach.paths")}
+      titleLevel={3}
+      // The same layer the panel above draws, so the same writer wrote it. A
+      // lead reading one tinted card beside an untinted one would take the two
+      // for two different readings.
+      tone={writtenByModel ? "ai" : undefined}
+    >
       {coaching.paths.map((path) => (
         <PanelRow key={path.label}>
           <div className="mb-path-row">
-            <Badge quiet>{path.label}</Badge>
+            <Badge>{path.label}</Badge>
             <span>{path.play}</span>
           </div>
         </PanelRow>

@@ -52,34 +52,36 @@ export function signalKindLabel(
 // deliberately untoned: a record whose worst news is a commitment somebody
 // made is a record with no bad news — colouring that would cry wolf on every
 // healthy record.
-const SIGNAL_TONE: Record<string, "warn" | "danger" | undefined> = {
+const SIGNAL_TONE: Record<string, "warning" | "danger" | undefined> = {
   info: undefined,
-  warn: "warn",
+  warn: "warning",
   urgent: "danger",
 };
 
 /** signalTone colours a signal by severity; an unknown severity is untoned. */
-export function signalTone(severity: string): "warn" | "danger" | undefined {
+export function signalTone(severity: string): "warning" | "danger" | undefined {
   return Object.hasOwn(SIGNAL_TONE, severity)
     ? SIGNAL_TONE[severity]
     : undefined;
 }
 
 // The deal-stakeholder roles worth a word. `role` is free text on the wire
-// (the enum is an unminted contract extension, DEAL-EXT-5).
+// (the enum is an unminted contract extension, DEAL-EXT-5). A label stands
+// alone, so it takes the sentence-case keys; `co.role.*` is the same word for
+// the middle of a phrase ("Thiếu {role}").
 const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
-  champion: "co.role.champion",
-  economic_buyer: "co.role.economic_buyer",
-  blocker: "co.role.blocker",
-  influencer: "co.role.influencer",
-  user: "co.role.user",
+  champion: "co.roleLabel.champion",
+  economic_buyer: "co.roleLabel.economic_buyer",
+  blocker: "co.roleLabel.blocker",
+  influencer: "co.roleLabel.influencer",
+  user: "co.roleLabel.user",
 };
 
 /**
  * dealRoleLabel names a stakeholder's role on a deal.
  *
  * It lives in the kit rather than on the company page because a deal role is
- * not a company's fact: person360, the coverage card and the project sections
+ * not a company's fact: contact360, the coverage card and the project sections
  * all name the same roles, and all three used to import this from a screen
  * about companies.
  */

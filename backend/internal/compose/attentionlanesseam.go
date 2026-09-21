@@ -9,7 +9,7 @@ package compose
 // exists), and its seam stays compiled here for that rebinding.
 //
 // Each is a binding rather than an implementation, which is the point: the
-// promises come from the people module's claim read, the deal risk from the
+// promises come from the contacts module's claim read, the deal risk from the
 // same candidate engine whats_slipping_this_week reads, and the meetings from
 // the activities list every other activity surface reads. A lane that derived
 // its own answer here would be a second opinion the product would have to keep
@@ -18,6 +18,8 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,8 +29,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -38,15 +41,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// attentionCommitments reads the acting rep's own promises through the people
+// attentionCommitments reads the acting rep's own promises through the contacts
 // store.
 //
-// A claim carries no assignee, so ownership rides the person it was made to:
+// A claim carries no assignee, so ownership rides the contact it was made to:
 // the rep who holds the relationship is the one who made the promise in their
 // own captured conversation. A principal with no human behind it has no
 // promises of its own to keep, which is a refusal rather than an empty lane —
 // the feed omits and NAMES the lane instead of reporting a clear day.
-type attentionCommitments struct{ store *people.Store }
+type attentionCommitments struct{ store *contacts.Store }
 
 var _ attention.Commitments = attentionCommitments{}
 
@@ -63,7 +66,7 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 	for _, row := range due {
 		promises = append(promises, attention.Commitment{
 			ID:          row.ID,
-			PersonID:    row.PersonID.UUID,
+			ContactID:   row.ContactID.UUID,
 			Body:        row.Body,
 			Quote:       row.SourceQuote,
 			SourceLabel: row.SourceLabel,
@@ -103,16 +106,18 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
 	for _, deal := range candidates {
 		risky = append(risky, attention.RiskyDeal{
-			DealID:            deal.DealID,
-			Name:              deal.Name,
-			StageID:           deal.StageID,
-			OwnerID:           deal.OwnerID,
-			AmountMinor:       deal.AmountMinor,
-			Currency:          deal.Currency,
-			QuietDays:         idleDaysOf(deal, now),
-			CloseOverdue:      deal.CloseOverdue,
-			ExpectedCloseDate: deal.ExpectedCloseDate,
-			NoChampion:        noChampionOf(cover, deal.DealID),
+			DealID:               deal.DealID,
+			Name:                 deal.Name,
+			StageID:              deal.StageID,
+			OwnerID:              deal.OwnerID,
+			AmountMinor:          deal.AmountMinor,
+			Currency:             deal.Currency,
+			QuietDays:            idleDaysOf(deal, now),
+			CloseOverdue:         deal.CloseOverdue,
+			ExpectedCloseDate:    deal.ExpectedCloseDate,
+			CloseDateProvisional: deal.CloseDateProvisional,
+			ForecastCategory:     deal.ForecastCategory,
+			NoChampion:           noChampionOf(cover, deal.DealID),
 		})
 	}
 	return risky, cut, nil
@@ -136,15 +141,20 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 // It is a bound on WORK, not a display cap: the projection answers "whose
 // silence is oldest" cheaply over an index, and the §4 derivation that follows
 // costs a pass over each candidate's interactions. Capping between the two is
-// what keeps the lane from becoming the walk over every person that the change
+// what keeps the lane from becoming the walk over every contact that the change
 // engine warns against, and the oldest silences are the ones worth the passes.
 const decayCandidateCap = 40
+
+// decayLaneCap is how many reconnects reach the reader. Five is what a rep can
+// write in a morning; the candidate set above it is wider so the ranking has
+// something to choose from.
+const decayLaneCap = 5
 
 // attentionDecay reads the acting rep's own lapsed relationships.
 //
 // TWO steps, and the order is the design. The projection narrows to the
 // reader's own edges that have been silent past the §4 threshold — one indexed
-// range rather than a sweep. Only then does the people module derive what
+// range rather than a sweep. Only then does the contacts module derive what
 // actually changed about those few, through the SAME engine the contact's own
 // page reads, so the lane and that page cannot come to disagree about when
 // somebody went quiet.
@@ -154,7 +164,7 @@ const decayCandidateCap = 40
 // of reporting a clear day. Same rule the commitments lane keeps.
 type attentionDecay struct {
 	pool  *pgxpool.Pool
-	store *people.Store
+	store *contacts.Store
 	now   func() time.Time
 }
 
@@ -174,20 +184,38 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 			now.AddDate(0, 0, -relstrength.QuietDays),
 			decayCandidateCap,
 			// Contacts this reader set aside, removed BEFORE the cap. The
-			// people module owns the rows and renders the predicate; search
+			// contacts module owns the rows and renders the predicate; search
 			// never imports a sibling, so the projection takes it as a hole.
 			func(arg func(any) int) (string, error) {
-				return people.NotDismissedClause(ctx, "e", now, arg)
+				dismissed, err := contacts.NotDismissedClause(ctx, "e", now, arg)
+				if err != nil {
+					return "", err
+				}
+				// AND the sender verdict's own answer. A contact capture judged
+				// personal, an advisor or noise is not a lapsed business
+				// relationship, and this lane is where that showed: a founder's
+				// clinic and a service desk sat under a heading promising new
+				// revenue. Composed here because each module renders the rule
+				// over the table it owns.
+				// The reader's own id, bound as a placeholder like every other
+				// value here: the ledger is per mailbox owner, and one rep's
+				// private verdict must not decide another rep's pipeline.
+				actor, ok := principal.Actor(ctx)
+				if !ok || actor.UserID.IsZero() {
+					return "", apperrors.ErrPermissionDenied
+				}
+				reader := fmt.Sprintf("$%d", arg(actor.UserID))
+				return dismissed + " AND " + capture.PrivateSenderClause("e", reader), nil
 			},
 		)
 		if err != nil {
 			return err
 		}
-		candidates := make([]ids.PersonID, 0, len(quiet))
+		candidates := make([]ids.ContactID, 0, len(quiet))
 		for _, edge := range quiet {
-			candidates = append(candidates, ids.From[ids.PersonKind](edge.PersonID))
+			candidates = append(candidates, ids.From[ids.ContactKind](edge.ContactID))
 		}
-		changed, err := d.store.RelationshipChangesForPeople(ctx, tx, candidates, now)
+		changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
 		if err != nil {
 			return err
 		}
@@ -201,7 +229,7 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		// silence is one fact on that answer, not the answer: failing here
 		// would take a rep's whole decay lane away over a grant that governs
 		// something else. They lose the ranking bump and keep the row.
-		funded, err := deals.OpenDealPeople(ctx, tx, candidates)
+		funded, err := deals.OpenDealContacts(ctx, tx, candidates)
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
@@ -228,17 +256,17 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 // contact on top.
 func quietRelationships(
 	quiet []search.InteractionEdge,
-	changed []people.PersonChanges,
+	changed []contacts.ContactChanges,
 	funded map[ids.UUID]bool,
 	now time.Time,
 ) []attention.QuietRelationship {
-	byPerson := make(map[ids.UUID]people.PersonChanges, len(changed))
+	byContact := make(map[ids.UUID]contacts.ContactChanges, len(changed))
 	for _, row := range changed {
-		byPerson[row.PersonID.UUID] = row
+		byContact[row.ContactID.UUID] = row
 	}
 	lapsed := make([]attention.QuietRelationship, 0, len(changed))
 	for _, edge := range quiet {
-		row, ok := byPerson[edge.PersonID]
+		row, ok := byContact[edge.ContactID]
 		if !ok {
 			continue
 		}
@@ -261,15 +289,44 @@ func quietRelationships(
 			// own page answer from the same arithmetic at the same moment,
 			// which is the property §4 is pure for.
 			lapsed = append(lapsed, attention.QuietRelationship{
-				PersonID:    row.PersonID.UUID,
+				ContactID:   row.ContactID.UUID,
 				Name:        row.DisplayName,
 				QuietDays:   change.Days,
 				LastAt:      change.At,
 				Strength:    edge.StrengthOf(now),
-				HasOpenDeal: funded[edge.PersonID],
+				HasOpenDeal: funded[edge.ContactID],
 			})
 			break
 		}
+	}
+	return rankReconnects(lapsed)
+}
+
+// rankReconnects puts the relationships worth reviving first and cuts to what a
+// rep can actually act on in a morning.
+//
+// Money leads, then how strong the relationship was, then how long it has been
+// quiet. The projection hands these over most-exchanged first, which is the
+// right CANDIDATE order — it is what stops a one-off exchange from years ago
+// crowding out a real lapse — but it says nothing about which of the survivors
+// matters most to this rep today.
+//
+// The cap is the product rule: five reconnects a rep can write. The rest are
+// not lost, they return tomorrow as the edges age, and a lane of forty names
+// under a heading promising new revenue is one a reader learns to skip.
+func rankReconnects(lapsed []attention.QuietRelationship) []attention.QuietRelationship {
+	sort.SliceStable(lapsed, func(i, j int) bool {
+		a, b := lapsed[i], lapsed[j]
+		if a.HasOpenDeal != b.HasOpenDeal {
+			return a.HasOpenDeal
+		}
+		if a.Strength.Strength != b.Strength.Strength {
+			return a.Strength.Strength > b.Strength.Strength
+		}
+		return a.QuietDays > b.QuietDays
+	})
+	if len(lapsed) > decayLaneCap {
+		return lapsed[:decayLaneCap]
 	}
 	return lapsed
 }
@@ -289,95 +346,17 @@ func (f attentionDealFacts) Figures(
 	out := make(map[ids.UUID]attention.DealFigures, len(found))
 	for id, figures := range found {
 		out[id] = attention.DealFigures{
-			StageID:           figures.StageID,
-			OwnerID:           figures.OwnerID,
-			AmountMinor:       figures.AmountMinor,
-			Currency:          figures.Currency,
-			ExpectedCloseDate: figures.ExpectedCloseDate,
-			CloseOverdue:      figures.CloseOverdue,
+			StageID:              figures.StageID,
+			OwnerID:              figures.OwnerID,
+			AmountMinor:          figures.AmountMinor,
+			Currency:             figures.Currency,
+			ExpectedCloseDate:    figures.ExpectedCloseDate,
+			CloseDateProvisional: figures.CloseDateProvisional,
+			ForecastCategory:     figures.ForecastCategory,
+			CloseOverdue:         figures.CloseOverdue,
 		}
 	}
 	return out, nil
-}
-
-// attentionTasks reads open tasks through the activities store. A task is an
-// activity of kind `task`, so this is the same read the task queue makes.
-type attentionTasks struct{ store *activities.Store }
-
-// openTasksDueBy is the ONE narrowing the lane's page and its count share.
-//
-// Narrowed in the QUERY, so the store's own bound applies to the rows that
-// qualify. Filtering the answer instead would let a colleague's twelve tasks
-// fill the page and hide the reader's own overdue one behind them — and a count
-// built from a second copy of these arms would answer a different question from
-// the page it sits beside, one arm at a time.
-//
-// The false answer means "no reader to answer for", which is a page of nothing
-// rather than a refusal.
-func openTasksDueBy(
-	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
-) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until}
-	switch scope {
-	case attention.TasksMine:
-		actor, ok := principal.Actor(ctx)
-		if !ok || actor.UserID.IsZero() {
-			// No human, no "own work" to answer for. Reading every task and
-			// calling the result theirs is the widening this narrowing exists
-			// to prevent.
-			return activities.ListActivitiesInput{}, false
-		}
-		// Exactly theirs. A task they wrote themselves carries their name from
-		// the moment it is written, so this needs no unassigned arm — and the
-		// arm it used to have is what put an automation's follow-up on every
-		// colleague's queue.
-		assignee := ids.From[ids.UserKind](actor.UserID)
-		in.OwnQueueOf = &assignee
-	case attention.TasksUnassigned:
-		in.UnassignedQueue = true
-	case attention.TasksOwnedBy:
-		// One named person's open work. The scope resolver already refused a
-		// reader whose tier does not reach past themselves, and the store's own
-		// row-scope gate still applies underneath — this narrows, never widens.
-		named := ids.From[ids.UserKind](owner)
-		in.OwnQueueOf = &named
-	case attention.TasksVisible:
-		// Every open task the reader may see; the row-scope gate in the store
-		// is the only narrowing.
-	}
-	return in, true
-}
-
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
-	if !ok {
-		return nil, nil
-	}
-	in.Limit = &limit
-	rows, _, err := t.store.ListActivities(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	open := make([]attention.Task, 0, len(rows))
-	for _, row := range rows {
-		// The filter above answers only dated rows, so this skip is unreachable
-		// today. It is here because the alternative to a skip is a nil deref
-		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
-		// clause one package away — too far for the next reader of this loop to
-		// see it.
-		if row.DueAt == nil {
-			continue
-		}
-		open = append(open, taskFromActivity(row))
-	}
-	return open, nil
 }
 
 // taskFromActivity carries one stored activity across the seam as a task.
@@ -387,14 +366,14 @@ func (t attentionTasks) OpenForViewer(
 // dropped, and a copy that stops happening is invisible — the lane still
 // returns the right NUMBER of rows, each one just quietly missing a fact.
 func taskFromActivity(row crmcontracts.Activity) attention.Task {
-	due := *row.DueAt
 	linkType, linkID := primaryLink(row)
 	task := attention.Task{
-		ID:       ids.UUID(row.Id),
-		Subject:  subjectOfActivity(row),
-		DueAt:    &due,
-		LinkType: linkType,
-		LinkID:   linkID,
+		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource,
+		ID:                     ids.UUID(row.Id),
+		Subject:                subjectOfActivity(row),
+		DueAt:                  row.DueAt,
+		LinkType:               linkType,
+		LinkID:                 linkID,
 	}
 	// Who holds it, already on the row the store returned and dropped here.
 	// Two of this lane's three scopes put somebody else's task in front of the

@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -31,20 +30,23 @@ import (
 // placement it is born on. CustomFields carries the request body's extra
 // top-level keys.
 type CreateDealInput struct {
-	Name           string
-	AmountMinor    *int64
-	Currency       *string
-	PipelineID     ids.PipelineID
-	StageID        ids.StageID
-	OrganizationID *ids.OrganizationID
-	// PartnerOrganizationID and PartnerAttribution are the one fact the
+	Name        string
+	AmountMinor *int64
+	// ExpectedArrMinor is the recurring half of the price, in the same
+	// currency as AmountMinor.
+	ExpectedArrMinor *int64
+	Currency         *string
+	PipelineID       ids.PipelineID
+	StageID          ids.StageID
+	CompanyID        *ids.CompanyID
+	// PartnerCompanyID and PartnerAttribution are the one fact the
 	// schema stores as one: the deal_partner_attribution_pairing CHECK
 	// rejects either half alone, so birthAttribution below settles them
 	// together rather than letting a half-filled pair reach the insert.
-	PartnerOrganizationID *ids.OrganizationID
-	PartnerAttribution    *string
-	ProjectID             *ids.ProjectID
-	OwnerID               *ids.UserID
+	PartnerCompanyID   *ids.CompanyID
+	PartnerAttribution *string
+	ProjectID          *ids.ProjectID
+	OwnerID            *ids.UserID
 	// OwnerExact states that OwnerID — nil included — IS the decided owner,
 	// so the actor fallback below must not run. The lead-qualify seam sets
 	// it: the deal inherits the LEAD's owner, and an unassigned lead
@@ -53,6 +55,16 @@ type CreateDealInput struct {
 	OwnerExact    bool
 	ExpectedClose *time.Time
 	Source        string
+	// Description is the human-authored brief. Distinct from the GENERATED
+	// deal briefing: no assembler writes this one.
+	Description *string
+	// CommercialMotion, Priority and AcquisitionSource are the deal's
+	// commercial context. All three are optional and born null — priority
+	// in particular is never defaulted from amount, score or stage, because
+	// a value nobody chose reads exactly like one somebody did.
+	CommercialMotion  *string
+	Priority          *string
+	AcquisitionSource *string
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).
@@ -134,16 +146,11 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	}
 	// The money pair holds from birth (data-model §6): a deal with an
 	// amount and no currency would silently skip the FX freeze at close
-	// and trip the deal_closed_fx CHECK far from the cause. values.Money
-	// is the one spelling of "a valid amount+currency" — the same rule
-	// the schema CHECKs repeat.
-	if (in.AmountMinor == nil) != (in.Currency == nil) {
-		return bornDeal{}, &AmountCurrencyPairError{Missing: missingMoneyHalf(in.AmountMinor == nil)}
-	}
-	if in.AmountMinor != nil {
-		if _, err := values.NewMoney(*in.AmountMinor, *in.Currency); err != nil {
-			return bornDeal{}, err
-		}
+	// and trip the deal_closed_fx CHECK far from the cause. moneyPairError is
+	// the same rule the update path applies, so a row cannot be born in a
+	// state no edit could have reached.
+	if err := moneyPairError(in.AmountMinor, in.ExpectedArrMinor, in.Currency); err != nil {
+		return bornDeal{}, err
 	}
 	attribution, err := birthAttribution(in)
 	if err != nil {
@@ -177,7 +184,7 @@ func birthAttribution(in CreateDealInput) (*string, error) {
 			return nil, err
 		}
 	}
-	if in.PartnerOrganizationID == nil {
+	if in.PartnerCompanyID == nil {
 		if in.PartnerAttribution == nil {
 			return nil, nil //nolint:nilnil // both halves empty IS the settled answer for a deal naming no partner — the pairing CHECK admits the pair populated together or not at all, and a sentinel here would be an error the caller must discard.
 		}
@@ -194,7 +201,7 @@ func birthAttribution(in CreateDealInput) (*string, error) {
 // at to the caller's own row scope.
 //
 // An FK argument that names a row-scoped business record is a read of that
-// record: embedding organization_id into a deal the caller will read back
+// record: embedding company_id into a deal the caller will read back
 // discloses the link, so the target must be visible under the caller's row
 // scope — not merely same-workspace, which the composite FK already enforces.
 // The partner link is the same kind of disclosure and carries the same gate.
@@ -207,11 +214,11 @@ func ensureBirthLinksVisible(ctx context.Context, tx pgx.Tx, in CreateDealInput,
 	// A link the deal does not name is not a read, so it is left out rather
 	// than checked as a zero id.
 	var links []recordLink
-	if in.OrganizationID != nil {
-		links = append(links, recordLink{linkEntityOrganization, in.OrganizationID.UUID})
+	if in.CompanyID != nil {
+		links = append(links, recordLink{linkEntityCompany, in.CompanyID.UUID})
 	}
-	if in.PartnerOrganizationID != nil {
-		links = append(links, recordLink{linkEntityOrganization, in.PartnerOrganizationID.UUID})
+	if in.PartnerCompanyID != nil {
+		links = append(links, recordLink{linkEntityCompany, in.PartnerCompanyID.UUID})
 	}
 	for _, link := range links {
 		if err := auth.EnsureLinkTarget(ctx, tx, link.entity, link.id); err != nil {
@@ -238,14 +245,14 @@ type recordLink struct {
 }
 
 // The entities a deal's birth links point at, as the visibility gate names
-// them. Both the customer and the partner are organizations.
+// them. Both the customer and the partner are companies.
 const (
-	linkEntityOrganization = "organization"
-	linkEntityProject      = "project"
+	linkEntityCompany = "company"
+	linkEntityProject = "project"
 )
 
 // createDealInTx guards the birth invariants (open stage, future close,
-// visible organization), inserts the deal with its first stage-history
+// visible company), inserts the deal with its first stage-history
 // row, and runs the write shape — all inside the caller's transaction.
 func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
 
@@ -263,11 +270,21 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	if err := ensureBirthLinksVisible(ctx, tx, in, s.ensureProjectAttachable); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+
+	// A newborn deal has no current source, so every named key is a NEW
+	// assignment and a retired one is refused. The FK below would catch an
+	// unknown key, but not a retired one — the row exists, it is simply no
+	// longer a choice.
+	if in.AcquisitionSource != nil {
+		if err := ensureAssignableAcquisitionSource(ctx, tx, *in.AcquisitionSource, nil); err != nil {
+			return crmcontracts.Deal{}, err
+		}
+	}
 	// Visible is not enough for the partner: it must actually BE one, or the
 	// deal reads as credited and can never earn anything (the accrual prices
 	// from the partner row's margin tier).
-	if in.PartnerOrganizationID != nil {
-		if err := s.installation.EnsurePartner(ctx, tx, *in.PartnerOrganizationID); err != nil {
+	if in.PartnerCompanyID != nil {
+		if err := s.installation.EnsurePartner(ctx, tx, *in.PartnerCompanyID); err != nil {
 			return crmcontracts.Deal{}, err
 		}
 	}
@@ -275,20 +292,32 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	id := ids.New[ids.DealKind]()
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
-		in.OrganizationID, in.PartnerOrganizationID, born.attribution,
+		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
+		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
+		in.ExpectedArrMinor,
 	})
 	_, err := tx.Exec(ctx,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
-		                   organization_id, partner_org_id, partner_attribution,
-		                   project_id, owner_id, expected_close_date, source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14`+cfHolders+`)`,
+		                   company_id, partner_company_id, partner_attribution,
+		                   project_id, owner_id, expected_close_date, source, captured_by,
+		                   description, commercial_motion, priority, acquisition_source,
+		                   expected_arr_minor`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+		         $15, $16, $17, $18, $19`+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline
-		// pairing and the organization target were pre-checked above.
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameOrgConstraint {
-			return crmcontracts.Deal{}, &DealProjectOrgMismatchError{}
+		// pairing and the company target were pre-checked above.
+		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
+			return crmcontracts.Deal{}, &DealProjectCompanyMismatchError{}
+		}
+		// The acquisition-source FK names a key the catalog does not hold.
+		// Told apart from the record FKs below because the caller's fix is
+		// different: a bad source is a field to correct, not a missing deal.
+		if constraint, ok := storekit.ForeignKeyViolation(err); ok &&
+			constraint == dealAcquisitionSourceConstraint {
+			return crmcontracts.Deal{}, &UnknownAcquisitionSourceError{}
 		}
 		if storekit.IsForeignKeyViolation(err) {
 			return crmcontracts.Deal{}, apperrors.ErrNotFound

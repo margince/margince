@@ -9,6 +9,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func zoneNamed(t *testing.T, name string) Zone {
@@ -18,6 +20,15 @@ func zoneNamed(t *testing.T, name string) Zone {
 		t.Fatalf("loading %s: %v", name, err)
 	}
 	return func(context.Context) (*time.Location, error) { return loc, nil }
+}
+
+// sameDate compares two instants by the LOCAL calendar date they fall on — a
+// test assertion, distinct from the DST day-boundary walk these tests exercise
+// through storekit.
+func sameDate(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
 }
 
 // THE DAY ENDS AT THE INSTALLATION'S MIDNIGHT, not UTC's.
@@ -39,7 +50,7 @@ func TestTheDayEndsAtTheInstallationsMidnight(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			s := &Service{zone: zoneNamed(t, tc.zone)}
-			got, err := s.endOfDay(context.Background(), asOf)
+			got, _, err := s.endOfDay(context.Background(), asOf)
 			if err != nil {
 				t.Fatalf("endOfDay: %v", err)
 			}
@@ -64,7 +75,7 @@ func TestADayTheClocksChangedInStillEndsAtMidnight(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			s := &Service{zone: berlin}
-			got, err := s.endOfDay(context.Background(), asOf)
+			got, _, err := s.endOfDay(context.Background(), asOf)
 			if err != nil {
 				t.Fatalf("endOfDay: %v", err)
 			}
@@ -85,7 +96,7 @@ func TestADayTheClocksChangedInStillEndsAtMidnight(t *testing.T) {
 // to ask gets — and is why the shipped wiring has to bind one.
 func TestAnUnboundZoneIsUTC(t *testing.T) {
 	asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
-	got, err := (&Service{}).endOfDay(context.Background(), asOf)
+	got, _, err := (&Service{}).endOfDay(context.Background(), asOf)
 	if err != nil {
 		t.Fatalf("endOfDay: %v", err)
 	}
@@ -98,7 +109,7 @@ func TestAnUnboundZoneIsUTC(t *testing.T) {
 // under the installation's name.
 func TestAZoneThatWillNotResolveIsAnError(t *testing.T) {
 	boom := func(context.Context) (*time.Location, error) { return nil, context.DeadlineExceeded }
-	if _, err := (&Service{zone: boom}).endOfDay(context.Background(), time.Now()); err == nil {
+	if _, _, err := (&Service{zone: boom}).endOfDay(context.Background(), time.Now()); err == nil {
 		t.Error("a zone the installation could not answer for produced a boundary anyway")
 	}
 }
@@ -115,12 +126,8 @@ func TestTheZoneIsResolvedOncePerAssembly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading the zone: %v", err)
 	}
-	s := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }),
-	)
-	if _, err := s.Assemble(context.Background()); err != nil {
+	s := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock, WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }))
+	if _, err := s.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
 	if asked != 1 {
@@ -137,7 +144,7 @@ func TestAZoneSeamAnsweringNoLocationIsAnErrorNotAPanic(t *testing.T) {
 	// this pins is that the feed survives a binding somebody got wrong.
 	//nolint:nilnil // the malformed seam IS the subject
 	nothing := func(context.Context) (*time.Location, error) { return nil, nil }
-	if _, err := (&Service{zone: nothing}).endOfDay(context.Background(), time.Now()); err == nil {
+	if _, _, err := (&Service{zone: nothing}).endOfDay(context.Background(), time.Now()); err == nil {
 		t.Error("a nil location produced a boundary; the next call would have panicked instead")
 	}
 }
@@ -175,7 +182,7 @@ func TestADayWhoseMidnightDoesNotExistEndsAtItsFirstInstant(t *testing.T) {
 				// these zones sit hours apart, and the same instant is morning
 				// in one and evening in another.
 				asOf := time.Date(day.Year(), day.Month(), day.Day(), 15, 0, 0, 0, loc).AddDate(0, 0, -1)
-				local := startOfNextDay(asOf.In(loc), loc).In(loc)
+				local := storekit.StartOfNextDay(asOf, loc).In(loc)
 				if !sameDate(local, day) {
 					t.Fatalf("the day ends at %s, which is not the start of %s", local, day.Format(time.DateOnly))
 				}
@@ -238,6 +245,79 @@ func TestTheDayBeginsAtTheInstallationsMidnight(t *testing.T) {
 	}
 }
 
+// A DEBT'S window opens a fortnight back, and on a local midnight.
+//
+// startOfDay answers "when did today begin", which is right for a lane about
+// today and wrong for one about what is still owed: an unrecorded outcome does
+// not stop being owed because the clock passed midnight. So this boundary walks
+// back from the day's start rather than from the read instant — measured off
+// the instant, the window's lower edge would slide through the morning and a
+// meeting fourteen days old would leave the lane midway through a working day.
+func TestTheOutcomeWindowOpensAFortnightBeforeTheDayBegan(t *testing.T) {
+	// Mid-afternoon in Ho Chi Minh City, which is 08:30 UTC — so the local date
+	// is already the 15th while UTC agrees, and a zone east of UTC is where a
+	// boundary computed in the wrong one shows up.
+	asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		zone string
+		want time.Time
+	}{
+		"east of UTC": {"Asia/Ho_Chi_Minh", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC).Add(-7 * time.Hour)},
+		"west of UTC": {"America/New_York", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC).Add(4 * time.Hour)},
+		"at UTC":      {"UTC", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := &Service{zone: zoneNamed(t, tc.zone)}
+			got, err := s.unansweredSince(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("unansweredSince: %v", err)
+			}
+			if !got.Equal(tc.want) {
+				t.Errorf("the window opens at %s, want %s — the edge is the installation's "+
+					"midnight a fortnight back, and %s reads it elsewhere", got.UTC(), tc.want.UTC(), name)
+			}
+		})
+	}
+}
+
+// And it opens BEFORE the day it is read on, which is the property that makes
+// yesterday's unanswered meeting survive the rollover.
+//
+// Asserted as a relationship rather than a constant: a lower bound correct
+// against its own fixture can still sit after the day's start if the arithmetic
+// is reversed, and the lane would then carry nothing at all rather than a
+// fortnight.
+func TestTheOutcomeWindowOpensBeforeTheDayItIsReadOn(t *testing.T) {
+	for _, name := range []string{"Asia/Ho_Chi_Minh", "America/New_York", "UTC", "America/Havana"} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := time.LoadLocation(name); err != nil {
+				t.Skipf("%s is not in this tzdata", name)
+			}
+			s := &Service{zone: zoneNamed(t, name)}
+			asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
+			opens, err := s.unansweredSince(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("unansweredSince: %v", err)
+			}
+			began, err := s.startOfDay(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("startOfDay: %v", err)
+			}
+			if !opens.Before(began) {
+				t.Fatalf("the window opens at %s, which is not before today's start %s — "+
+					"a meeting left unanswered yesterday is outside it", opens, began)
+			}
+			// Yesterday's meeting is the case the bug was reported on, so it is
+			// named rather than left to the span above.
+			yesterday := began.Add(-3 * time.Hour)
+			if !opens.Before(yesterday) {
+				t.Errorf("a meeting at %s falls outside the window opening %s, so it "+
+					"disappears overnight exactly as before", yesterday, opens)
+			}
+		})
+	}
+}
+
 // The two ends bound ONE day, which is the property a backward lane rests on.
 //
 // Asserted as a relationship rather than two constants: a start and an end each
@@ -257,7 +337,7 @@ func TestTheDaysTwoEndsBoundTheSameDay(t *testing.T) {
 			if err != nil {
 				t.Fatalf("startOfDay: %v", err)
 			}
-			ends, err := s.endOfDay(context.Background(), asOf)
+			ends, _, err := s.endOfDay(context.Background(), asOf)
 			if err != nil {
 				t.Fatalf("endOfDay: %v", err)
 			}
@@ -306,5 +386,38 @@ func TestADayWhoseMidnightDoesNotExistBeginsAtItsFirstInstant(t *testing.T) {
 	}
 	if found == 0 {
 		t.Fatal("no day without a local midnight under this tzdata, so this test proves nothing")
+	}
+}
+
+// The five runs, at their boundaries rather than in their middles: a grouping
+// is only ever wrong at an edge, and each of these edges is a day a reader
+// would notice.
+func TestADatedRowFallsInTheRunItsDeadlineNames(t *testing.T) {
+	loc := time.FixedZone("Europe/Berlin", 2*60*60)
+	asOf := time.Date(2026, 9, 10, 14, 0, 0, 0, loc)
+	until := storekit.StartOfNextDay(asOf, loc)
+
+	cases := []struct {
+		name string
+		due  time.Time
+		want string
+	}{
+		{"an hour ago", asOf.Add(-time.Hour), dueGroupOverdue},
+		// Not yet late, which is deadline.Passed's rule rather than this
+		// file's: a promise due at this instant still has the instant.
+		{"exactly now", asOf, dueGroupToday},
+		{"this afternoon", asOf.Add(3 * time.Hour), dueGroupToday},
+		{"a second before midnight", until.Add(-time.Second), dueGroupToday},
+		{"exactly midnight", until, dueGroupTomorrow},
+		{"tomorrow afternoon", until.Add(14 * time.Hour), dueGroupTomorrow},
+		{"the day after", until.AddDate(0, 0, 1), dueGroupThisWeek},
+		{"six days out", until.AddDate(0, 0, 6), dueGroupThisWeek},
+		{"seven days out", until.AddDate(0, 0, upcomingWeekDays), dueGroupLater},
+		{"a month out", until.AddDate(0, 1, 0), dueGroupLater},
+	}
+	for _, tc := range cases {
+		if got := dueGroup(tc.due, asOf, until, loc); got != tc.want {
+			t.Errorf("%s: dueGroup = %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }

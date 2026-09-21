@@ -119,6 +119,41 @@ export const ScoreReceipt: Story = {
   },
 };
 
+// The same receipt with a human's judgement in it, which is the case the frame
+// above cannot show: a manual factor carries WHO said it and how certain they
+// claimed to be, and a machine factor beside it carries neither. Read the two
+// rows together — the qualifier under one and the bare number under the other
+// is the whole distinction, and a catalog that only ever showed machine
+// factors is how it would quietly disappear.
+export const ScoreReceiptWithAHumansJudgement: Story = {
+  render: readings(
+    { ...lead, first_response_at: "2026-06-02T09:12:00Z" },
+    {
+      ...explained,
+      current: {
+        ...explained.current,
+        factors: [
+          ...explained.current.factors,
+          {
+            factor: "manual:employees",
+            points: 8,
+            set_by: "u-7",
+            signal_kind: "assumption",
+            reason: "they list four offices on the site",
+          },
+        ],
+      },
+    },
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Evidence",
+      }),
+    );
+  },
+};
+
 // Nobody has answered and the deadline has passed. The one slot on this row
 // that carries a verdict rather than a fact says it in a word, in the danger
 // family, with the dot that lets a reader catch it without reading — and names
@@ -151,9 +186,9 @@ export const DetailsUnset: Story = {
   ),
 };
 
-// A closed lead. The status reads with its TERMINAL wording rather than its
-// ladder rung, and the first-response slot reports what happened instead of
-// what is due — a disqualified lead owes nobody an answer, and the server sends
+// A closed lead. The ladder word IS the reading — "Disqualified" is where the
+// lead stands — and the first-response slot reports what happened instead of
+// what is due: a disqualified lead owes nobody an answer, and the server sends
 // no clock for one, so a deadline here would be a promise nobody made.
 export const Disqualified: Story = {
   render: readings({
@@ -161,5 +196,52 @@ export const Disqualified: Story = {
     status: "disqualified",
     disqualify_reason: "No budget this year",
     archived_at: "2026-07-13T00:00:00Z",
+  }),
+};
+
+// The good ending. The ladder word is the reading and the filing that followed
+// it is the qualifier — collapsed into one line, the card said only "Archived"
+// and the lead read like a loss.
+export const Qualified: Story = {
+  render: readings({
+    ...lead,
+    status: "promoted",
+    promoted_at: "2026-07-01T09:00:00Z",
+    archived_at: "2026-07-01T09:00:00Z",
+  }),
+};
+
+// Merged away mid-conversation. A merge leaves `status` exactly where it stood,
+// so the ending is the only thing on the row that says this lead is no longer
+// being worked — and it says the lead went somewhere without claiming to name
+// which, because the payload does not carry the survivor.
+export const Merged: Story = {
+  render: readings({
+    ...lead,
+    merged_into_id: "l-2",
+    archived_at: "2026-07-05T09:00:00Z",
+  }),
+};
+
+// A score a human set. The card writes the override as a line of its own; the
+// header's badge keeps its lower-case word, because it sits inside a line the
+// figure begins.
+export const ScoreSetByHand: Story = {
+  render: readings({
+    ...lead,
+    score: 90,
+    score_override_reason: "Strong buying signal from the trade show",
+  }),
+};
+
+// Owed, inside the target. "On time" was a verdict on a response nobody has
+// sent; what is true is that it is owed, and the deadline under it says the
+// rest.
+export const FirstResponseOwed: Story = {
+  render: readings({
+    ...lead,
+    status: "new",
+    sla_deadline_at: "2026-06-05T12:00:00Z",
+    sla_state: "within_target",
   }),
 };

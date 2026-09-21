@@ -31,10 +31,9 @@ import (
 )
 
 // pageExtractConcurrency bounds the fan-out. The calls are tiny and the
-// read's wall clock IS their slowest round, so the bound is generous —
-// effectively "every fact-bearing page at once" for a capped crawl —
-// while still capping runaway parallelism against provider rate limits
-// and the worker's DB pool (each call meters through it).
+// bound stays below the crawl page cap: completed calls release slots as
+// later pages arrive. Reading more pages must not increase the burst against
+// provider rate limits or the worker's DB pool (each call meters through it).
 const pageExtractConcurrency = 40
 
 // siteExtraction is the fan-out's outcome: the gated profile fields,
@@ -73,7 +72,7 @@ func profileEvidenceReady(pages []crawlPage) bool {
 }
 
 // The read's two live phases, spelled as the site_read store accepts them
-// (people.Store.UpdateSiteReadProgress rejects anything else): the crawl
+// (contacts.Store.UpdateSiteReadProgress rejects anything else): the crawl
 // is still fetching, or the crawl is done and the model lanes are not.
 const (
 	sitePhaseCrawling   = "crawling"
@@ -302,7 +301,7 @@ func publishDraft(onDraft func(pageFactsResult), results []pageFactsResult, publ
 	snapshot := append([]pageFactsResult(nil), results...)
 	sort.Slice(snapshot, func(i, j int) bool { return snapshot[i].url < snapshot[j].url })
 	merged := mergePageResults(snapshot)
-	if slices.Equal(merged.facts, published.facts) && slices.Equal(merged.people, published.people) &&
+	if slices.Equal(merged.facts, published.facts) && slices.Equal(merged.contacts, published.contacts) &&
 		slices.Equal(merged.entities, published.entities) {
 		return published
 	}

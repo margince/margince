@@ -46,23 +46,39 @@ type activityLinkArm struct {
 	column string
 }
 
-// title is the expression that renders this record type for a human, read off
-// the module's one entity table rather than restated here — so a record named
-// in a prep reads exactly as it reads in a search result and on an anchor
-// profile. An entity with no branch has no title, which is a broken read the
-// arm gate (TestEverySubjectLinkArmIsRanked) refuses before it can ship.
-func (a activityLinkArm) title() string {
+// branch is the search branch that owns this record type: where its table and
+// its display expression are declared. Everything about how a record reads is
+// held there once, so a record named in a prep reads exactly as it reads in a
+// search result and on an anchor profile. An entity with no branch is a broken
+// read the arm gate (TestEverySubjectLinkArmIsRanked) refuses before it ships.
+func (a activityLinkArm) branch() (searchBranch, bool) {
 	for _, branch := range searchBranches {
 		if branch.entity == a.entity {
-			return branch.title
+			return branch, true
 		}
 	}
-	return ""
+	return searchBranch{}, false
+}
+
+// title is the EXPRESSION that renders this record type for a human, not
+// necessarily a column: a lead reads as `coalesce(full_name, company_name,
+// email)`, because a lead is often a name, sometimes only an employer and
+// occasionally nothing but an address. Its columns are unqualified and resolve
+// against the entity table wherever a statement aliases that table — so a
+// caller composes it as a select expression and never as `alias.<title>`,
+// which is what asking Postgres to find a schema called `t` looks like.
+func (a activityLinkArm) title() string {
+	branch, ok := a.branch()
+	if !ok {
+		return ""
+	}
+	return branch.title
 }
 
 // activityLinkArms is EVERY arm of activity_link, in no particular order —
 // subjectTier decides the dereference precedence and relatedSectionOrder
-// decides which of them the hop-2 walk reports.
+// decides the order the hop-2 walk emits them in. All three cover the same
+// set, each for its own reason, and a gate holds each against the DDL.
 //
 // All five are here, and the completeness is load-bearing: the first draft of
 // the dereference borrowed the hop-2 walk's shorter list and so dropped the
@@ -73,8 +89,8 @@ func (a activityLinkArm) title() string {
 // (backend/internal/modules/search/graphactivity_test.go), which reads the
 // DDL's own enum rather than a sibling list in Go.
 var activityLinkArms = []activityLinkArm{
-	{entity: string(datasource.EntityPerson), column: "person_id"},
-	{entity: string(datasource.EntityOrganization), column: "organization_id"},
+	{entity: string(datasource.EntityContact), column: "contact_id"},
+	{entity: string(datasource.EntityCompany), column: "company_id"},
 	{entity: string(datasource.EntityDeal), column: "deal_id"},
 	{entity: string(datasource.EntityProject), column: "project_id"},
 	{entity: string(datasource.EntityLead), column: "lead_id"},
@@ -85,16 +101,16 @@ var activityLinkArms = []activityLinkArm{
 // contact. A prep built around the deal answers what is at stake in the room;
 // the same prep built around one attendee answers a smaller question.
 //
-// A lead comes last, below the person it may one day become: an event naming
+// A lead comes last, below the contact it may one day become: an event naming
 // both has a promoted record to prepare against, and that is the one with a
 // neighborhood. An event naming ONLY a lead still prepares against it — an
 // honest "this is all we hold" beats naming nothing at all.
 var subjectTier = map[string]int{
-	string(datasource.EntityDeal):         0,
-	string(datasource.EntityProject):      1,
-	string(datasource.EntityOrganization): 2,
-	string(datasource.EntityPerson):       3,
-	string(datasource.EntityLead):         4,
+	string(datasource.EntityDeal):    0,
+	string(datasource.EntityProject): 1,
+	string(datasource.EntityCompany): 2,
+	string(datasource.EntityContact): 3,
+	string(datasource.EntityLead):    4,
 }
 
 // How the event came to name the record, weakest evidence last. A link is
@@ -103,10 +119,10 @@ var subjectTier = map[string]int{
 // the attendee's current job. All three can reach the same record, and the fold
 // keeps it at its strongest.
 //
-// The employer hop is what lets a company be reached through the person who was
+// The employer hop is what lets a company be reached through the contact who was
 // in the room, which is the model the activity_link refusal for meetings and
 // calls rests on: without it, forbidding the direct link would remove the only
-// path an organization had into a prep rather than a redundant one.
+// path a company had into a prep rather than a redundant one.
 const (
 	namedByLink        = 0
 	namedByParticipant = 1
@@ -213,24 +229,24 @@ func linkedSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]acti
 	return out, nil
 }
 
-// participantSubjects reads the people capture matched to the event's parties.
-// There is no project or organization half of activity_participant — those
+// participantSubjects reads the contacts capture matched to the event's parties.
+// There is no project or company half of activity_participant — those
 // reach a prep through activity_link like everything else.
 func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]activitySubject, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.full_name, ap.role
-		  FROM activity_participant ap JOIN person p ON p.id = ap.person_id
+		  FROM activity_participant ap JOIN contact p ON p.id = ap.contact_id
 		 WHERE ap.activity_id = $1 AND p.archived_at IS NULL
 		 ORDER BY `+participantRoleOrder("ap")+`, p.id LIMIT $2`, activityID, graphExpansionLimit)
 	if err != nil {
-		return nil, fmt.Errorf("search: reading the people on an event: %w", err)
+		return nil, fmt.Errorf("search: reading the contacts on an event: %w", err)
 	}
 	defer rows.Close()
 	var out []activitySubject
 	for rows.Next() {
 		subject := activitySubject{
-			entityType: string(datasource.EntityPerson),
-			tier:       subjectTier[string(datasource.EntityPerson)], named: namedByParticipant,
+			entityType: string(datasource.EntityContact),
+			tier:       subjectTier[string(datasource.EntityContact)], named: namedByParticipant,
 		}
 		var role string
 		if err := rows.Scan(&subject.id, &subject.title, &role); err != nil {
@@ -246,31 +262,31 @@ func participantSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([
 	return out, rows.Err()
 }
 
-// employerSubjects reads the companies the event's people currently work for.
+// employerSubjects reads the companies the event's contacts currently work for.
 //
-// This is the hop that makes "a company is reached through the person who was
+// This is the hop that makes "a company is reached through the contact who was
 // in the room" true of the ASSEMBLY PATH rather than only of the model. Before
-// it, an organization reached a prep by activity_link alone, so forbidding the
+// it, a company reached a prep by activity_link alone, so forbidding the
 // direct link on a meeting removed the company from every surface that
 // assembles context rather than removing a redundancy.
 //
-// BOTH ways a person is on an event, because they are different facts and
-// capture writes each of them: activity_link is the person the event was filed
+// BOTH ways a contact is on an event, because they are different facts and
+// capture writes each of them: activity_link is the contact the event was filed
 // against, activity_participant is the address it matched. A hop over one of
 // them would leave the other's company unreachable, which is the whole failure
 // this exists to prevent — and it is the same pair of arms
-// activities.OrgLinkedActivityExists already walks for the account timeline.
+// activities.CompanyLinkedActivityExists already walks for the account timeline.
 //
 // CURRENT employment only, and by design: an attendee's former employer is a
 // company they left, and naming it in a prep would put the reader in the wrong
-// room. A person with two current jobs contributes both — the primary first,
+// room. A contact with two current jobs contributes both — the primary first,
 // because that is the one the rest of the product treats as theirs.
 //
-// Every organization it proposes still goes through rankSubjects like every
+// Every company it proposes still goes through rankSubjects like every
 // other candidate, so an employer the caller may not read is ABSENT rather than
-// a refusal — the same treatment the organization link arm has always had.
+// a refusal — the same treatment the company link arm has always had.
 //
-// The EDGE carries its own gate, and it is not the organization's. "This
+// The EDGE carries its own gate, and it is not the company's. "This
 // attendee works at that company" is a fact about a pair, which is what
 // relationship.read governs and what neither endpoint's grant covers — so a
 // caller with no edge grant learns no employer here at all, and one with a
@@ -283,6 +299,18 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	activityPos := arg(activityID)
 	limitPos := arg(graphExpansionLimit)
+	// The subjects this returns ARE companies — id and display name — so the
+	// company object half bounds it, not only the edge that reaches them. The
+	// edge grant says the caller may learn who works with whom; it says nothing
+	// about whether they may read companies at all, and under row_scope=all
+	// nothing else would stop them here.
+	//
+	// Omitted rather than refused, matching the edge branch below it: these are
+	// one band of a record's context, and a caller who may not read companies
+	// still gets the rest of theirs.
+	if !auth.ReadGranted(ctx, "company") {
+		return nil, nil
+	}
 	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil, nil
@@ -296,7 +324,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	// ROLE first, then the primary-job flag. Which company a meeting is WITH
 	// follows from who was in the room: the organizer's employer is the answer
 	// even when that job is their second, because is_current_primary is a fact
-	// about the person and the role is a fact about the meeting. Ordered the
+	// about the contact and the role is a fact about the meeting. Ordered the
 	// other way, an attendee's primary employer displaced the organizer's.
 	//
 	// Two orderings, and they are not the same one. The inner ORDER BY is what
@@ -307,7 +335,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	// the companies whose ids sort first, which is nobody's idea of the most
 	// relevant ones.
 	//
-	// A person the event both links and lists sorts at the LINK's rank, since
+	// A contact the event both links and lists sorts at the LINK's rank, since
 	// linkOnlyRole is ahead of every participant role — the same thing the fold
 	// does for a record named twice.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -316,17 +344,17 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			       o.id, o.display_name, onEvent.role_rank,
 			       r.is_current_primary AS primary_job
 			  FROM (
-			        SELECT l.person_id, `+strconv.Itoa(linkOnlyRole)+` AS role_rank
+			        SELECT l.contact_id, `+strconv.Itoa(linkOnlyRole)+` AS role_rank
 			          FROM activity_link l
-			         WHERE l.activity_id = $%[1]d AND l.person_id IS NOT NULL
+			         WHERE l.activity_id = $%[1]d AND l.contact_id IS NOT NULL
 			        UNION ALL
-			        SELECT ap.person_id, `+participantRoleOrder("ap")+` AS role_rank
+			        SELECT ap.contact_id, `+participantRoleOrder("ap")+` AS role_rank
 			          FROM activity_participant ap
-			         WHERE ap.activity_id = $%[1]d AND ap.person_id IS NOT NULL
+			         WHERE ap.activity_id = $%[1]d AND ap.contact_id IS NOT NULL
 			       ) onEvent
-			  JOIN person p ON p.id = onEvent.person_id
-			  JOIN relationship r ON r.person_id = p.id
-			  JOIN organization o ON o.id = r.organization_id
+			  JOIN contact p ON p.id = onEvent.contact_id
+			  JOIN relationship r ON r.contact_id = p.id
+			  JOIN company o ON o.id = r.company_id
 			 WHERE p.archived_at IS NULL
 			   AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			   AND o.archived_at IS NULL
@@ -336,15 +364,15 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 		 ORDER BY e.role_rank, e.primary_job DESC, e.id
 		 LIMIT $%[2]d`, activityPos, limitPos, edgeBound), args...)
 	if err != nil {
-		return nil, fmt.Errorf("search: reading the companies an event's people work for: %w", err)
+		return nil, fmt.Errorf("search: reading the companies an event's contacts work for: %w", err)
 	}
 	defer rows.Close()
 	var out []activitySubject
-	organization := string(datasource.EntityOrganization)
+	company := string(datasource.EntityCompany)
 	for rows.Next() {
 		subject := activitySubject{
-			entityType: organization,
-			tier:       subjectTier[organization], named: namedByEmployer,
+			entityType: company,
+			tier:       subjectTier[company], named: namedByEmployer,
 		}
 		if err := rows.Scan(&subject.id, &subject.title, &subject.role); err != nil {
 			return nil, err

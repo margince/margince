@@ -9,12 +9,12 @@ package draftcore
 //
 // This used to be two copies. `Write`, `writeChecked`, `writeWithModel`,
 // `buildRequest` and `ParseDraft` existed in full in both accountdraft and
-// persondraft, and they differed in error-message wording and one word of one
+// contactdraft, and they differed in error-message wording and one word of one
 // comment — nothing else. The `Draft` and `Reason` types were byte-identical.
 // Two implementations of one capability are two answers to one question, and
 // these two were already deciding independently what the fence looks like, how
 // a fenced answer is unwrapped, what a starved MAX_TOKENS reply does, and which
-// drafts carry the Art. 50 disclosure.
+// drafts carry the AI provenance notice.
 //
 // What stays PER SURFACE is what a draft is grounded in, and that is real: the
 // prompt, the response schema, the deterministic floor, and which uncited
@@ -69,7 +69,7 @@ type Reason struct {
 // Input is what a surface's folded record must be able to answer.
 //
 // An interface rather than a struct, because the two surfaces fold genuinely
-// different records — an Organization360 and a Person360 — and a shared struct
+// different records — a Company360 and a Contact360 — and a shared struct
 // would be one shape with half its fields empty on either side. What the writer
 // needs is only this: something to serialize, the envelope it is written into,
 // the names a greeting repair recognises, and where it goes.
@@ -93,11 +93,19 @@ type Input interface {
 	Addresses() []string
 	// Threaded says whether this draft continues an existing subject line.
 	Threaded() bool
+	// Booked says whether the record carries a meeting with this recipient.
+	//
+	// False is the common answer and the one that binds: with nothing booked, a
+	// draft naming a day is naming a day nobody agreed to. A prompt asking for
+	// two product examples came back proposing "unsere geplante Demonstration
+	// der Übersetzungsregeln für morgen" — grounded in nothing, and the kind of
+	// sentence a customer reads as a commitment.
+	Booked() bool
 }
 
 // Surface is what one drafting site decides for itself.
 type Surface struct {
-	// Name is what an error calls this site: "person draft", "account draft".
+	// Name is what an error calls this site: "contact draft", "account draft".
 	// Only ever in an error, so it is not a routing key.
 	Name string
 	// System is the prompt, assembled for THIS call — the fence's rule and the
@@ -110,7 +118,7 @@ type Surface struct {
 	// draft has a dossier to cite.
 	Kind func(raw string) (crmcontracts.AccountDraftReasonKind, bool)
 	// KeepUncited decides whether a reason that cited NO record is still
-	// honest. A person draft admits only the caller's own intent; an account
+	// honest. A contact draft admits only the caller's own intent; an account
 	// draft also admits a dossier line, which is a fact about the company with
 	// no record of ours behind it.
 	KeepUncited func(kind crmcontracts.AccountDraftReasonKind, label string) bool
@@ -149,23 +157,23 @@ func Write(
 	floor Draft,
 ) (Draft, crmcontracts.WrittenBy) {
 	if lane == nil {
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	written, err := writeChecked(ctx, lane, surface, in, voice)
 	if err != nil {
 		// The error is deliberately swallowed rather than returned — it is a
 		// fact about the lane, not about the record, and there is nothing the
 		// caller could do with it. The floor is a real message they can edit.
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
-	return written, crmcontracts.Model
+	return written, crmcontracts.WrittenByModel
 }
 
 func writeChecked(
 	ctx context.Context, lane Completer, surface Surface, in Input, voice draftvoice.Context,
 ) (Draft, error) {
 	envelope := in.WrittenInto()
-	draft, err := CorrectOnce(ctx, envelope.Lang(), envelope.Band(),
+	draft, err := CorrectOnce(ctx, envelope.Lang(), envelope.Band(), in.Booked(),
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, surface, in, voice, correction)
 		},
@@ -315,7 +323,7 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 		keep := Reason{Kind: kind, Label: label}
 		if reason.EntityID != "" {
 			// The PAIR, not the id alone: an id checked without its type lets a
-			// deal id come back labelled as a person, and the chip then opens
+			// deal id come back labelled as a contact, and the chip then opens
 			// the wrong record's page rather than nothing at all — the worse of
 			// the two failures, because it looks like it worked.
 			if surface.Cites(reason.EntityID) != reason.EntityType {

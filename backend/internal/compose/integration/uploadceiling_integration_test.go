@@ -6,7 +6,7 @@
 package integration
 
 // The upload ceiling, end to end: what the deployment file says, what the
-// chassis lets through, and what the refusal tells the person holding the file.
+// chassis lets through, and what the refusal tells the contact holding the file.
 //
 // These run over a composed server with a real session rather than a
 // hand-built handler, because the bug they exist to prevent IS a wiring bug —
@@ -110,15 +110,15 @@ func fileOf(size int) []byte {
 	return content
 }
 
-// attachmentForm builds an upload of the given bytes against an organization
+// attachmentForm builds an upload of the given bytes against a company
 // the product itself created.
 func attachmentForm(t *testing.T, e *apptest.AppEnv, content []byte) (*bytes.Buffer, string) {
 	t.Helper()
 	var buf bytes.Buffer
 	form := multipart.NewWriter(&buf)
 	for field, value := range map[string]string{
-		"entity_type": "organization",
-		"entity_id":   anOrganizationID(t, e),
+		"entity_type": "company",
+		"entity_id":   anCompanyID(t, e),
 	} {
 		if err := form.WriteField(field, value); err != nil {
 			t.Fatalf("writing %s: %v", field, err)
@@ -137,11 +137,11 @@ func attachmentForm(t *testing.T, e *apptest.AppEnv, content []byte) (*bytes.Buf
 	return &buf, form.FormDataContentType()
 }
 
-// anOrganizationID creates a company over the real endpoint, so the parent an
+// anCompanyID creates a company over the real endpoint, so the parent an
 // upload is filed against is one the product itself made.
-func anOrganizationID(t *testing.T, e *apptest.AppEnv) string {
+func anCompanyID(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	return createdID(t, e, "/v1/organizations", AnyMap{"display_name": "Ceiling Test GmbH"})
+	return createdID(t, e, "/v1/companies", AnyMap{"display_name": "Ceiling Test GmbH"})
 }
 
 func importForm(t *testing.T, size int) (*bytes.Buffer, string) {

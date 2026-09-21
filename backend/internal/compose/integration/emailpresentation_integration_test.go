@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -40,7 +41,7 @@ func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.
 	t.Helper()
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -61,7 +62,7 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	participant := e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	for _, tc := range []struct {
 		audience string
@@ -155,7 +156,7 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 func TestSelectedAudienceReadsBackItsMembers(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	id := logEmailActivity(author, t, e, contact, "Q3 renewal terms", "confidential pricing")
 
 	if _, err := e.Activities.SetAudience(author, id, activities.SetAudienceInput{
@@ -259,14 +260,14 @@ func assertWithholdsEverything(t *testing.T, who string, got crmcontracts.EmailP
 func TestEmailPresentationRefusesWhatIsNotAnEmail(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	for _, kind := range []string{"call", "note", "meeting", "task"} {
 		t.Run(kind, func(t *testing.T) {
 			subject := "not an email"
 			logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 				Kind: kind, Subject: &subject,
-				Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+				Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 			})
 			if err != nil {
 				t.Fatalf("log a %s: %v", kind, err)
@@ -287,7 +288,7 @@ func TestEmailPresentationRefusesWhatIsNotAnEmail(t *testing.T) {
 func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	id := logEmailActivity(author, t, e, contact, "Q3 renewal terms",
 		"Können wir Dienstag sprechen?\n\nViele Grüße\nAna")
@@ -302,14 +303,14 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 	if got.EmailSummary.Preview == nil || *got.EmailSummary.Preview != "Können wir Dienstag sprechen?" {
 		t.Errorf("preview = %v, want the sentence without the sign-off", got.EmailSummary.Preview)
 	}
-	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
-		t.Errorf("move = %v on an inbound message, want needs_reply", got.EmailSummary.Move)
+	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNone {
+		t.Errorf("move = %v on an unclassified message; direction alone establishes no obligation", got.EmailSummary.Move)
 	}
 
 	subject := "a call"
 	call, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "call", Subject: &subject,
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log a call: %v", err)
@@ -335,7 +336,7 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 func TestEveryRequiredListReachesTheWireAsAList(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	// A message with no CC, no BCC and no attachments — the ordinary shape,
 	// and the one whose empty lists are all built by appending nothing.
@@ -438,12 +439,12 @@ func requiredListFields(t *testing.T, schema string) []string {
 // them rather than read them off a header, no address at all — so the party
 // came back with an empty address and no name. The viewer rendered it as a bare
 // comma in the middle of the To line, and the reader who saw that gap was
-// usually the very person it stood for: a rep could not tell why the message
+// usually the very contact it stood for: a rep could not tell why the message
 // had reached them.
 func TestAColleaguesSeatIsNamedOnTheHeader(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	id := logEmailActivity(author, t, e, contact, "Outstanding invoices", "Hallo,\n\nanbei.")
 
 	// The row capture writes when it resolves our own side: a user_id, and no
@@ -476,7 +477,7 @@ func TestAColleaguesSeatIsNamedOnTheHeader(t *testing.T) {
 func TestADepartedColleagueStaysNamedOnAnOldMessage(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	id := logEmailActivity(author, t, e, contact, "Outstanding invoices", "Hallo,\n\nanbei.")
 	seatParticipant(t, e, id.UUID, e.Rep2)
 
@@ -516,7 +517,7 @@ func deactivateSeat(t *testing.T, e *Env, user ids.UUID) {
 func TestAnUnknownSenderIsNamedAsTheyWroteThemselves(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	id := logEmailActivity(author, t, e, contact, "Outstanding invoices", "Hallo,\n\nanbei.")
 
 	// Nobody we hold: no contact, no seat — only what the header said.
@@ -563,7 +564,7 @@ func seatParticipant(t *testing.T, e *Env, activityID ids.UUID, user ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, user_id, person_id, address, role)
+			INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role)
 			SELECT $1, $2, NULL, NULLIF('', ''), 'to'
 			 WHERE EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
 			ON CONFLICT DO NOTHING`, activityID, user)
@@ -580,11 +581,88 @@ func headerParticipant(t *testing.T, e *Env, activityID ids.UUID, role, address,
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, user_id, person_id, address, role, display_name)
+			INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role, display_name)
 			VALUES ($1, NULL, NULL, $2, $3, $4)
 			ON CONFLICT DO NOTHING`, activityID, address, role, name)
 		return err
 	}); err != nil {
 		t.Fatalf("stamping a header participant: %v", err)
+	}
+}
+
+// The badge tells "everyone here" apart from "whoever this record admits", and
+// says the same word on the row as in the editor.
+//
+// A workspace audience is not by itself the whole workspace: the record the
+// message is filed against still decides who may discover it. The badge read
+// `team` for both, beside a sentence saying everyone in the company could read
+// it — a privacy label understating the real audience, on the one surface where
+// the read boundary is real.
+//
+// Both halves are asserted on ONE message, because the defect is a
+// disagreement: the word is derived twice, once by the page pass over a list
+// and once by the single read behind the editor, and two derivations that can
+// differ are how a reader gets one answer on the timeline and another when they
+// open it.
+func TestTheBadgeSaysEveryoneOnlyWhenAStrangerCanReachTheMessage(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Renewal terms", "the usual")
+
+	assertBadge(author, t, e, id, contact, crmcontracts.EmailAccessStatusWorkspace,
+		"a message filed against a shared contact is one every seat can find")
+
+	// The same message, now filed against a contact its owner keeps to
+	// themselves. Nothing about the message changed — the audience column still
+	// says workspace — and it is no longer correspondence everyone reads.
+	private := "owner"
+	if _, err := e.Contacts.UpdateContact(author, ids.From[ids.ContactKind](contact),
+		contacts.UpdateContactInput{Visibility: &private}); err != nil {
+		t.Fatalf("making the contact owner-private: %v", err)
+	}
+
+	assertBadge(author, t, e, id, contact, crmcontracts.EmailAccessStatusTeam,
+		"the record it is filed against admits nobody else, so the message does not either")
+}
+
+// assertBadge reads the word off both derivations — the editor's single read,
+// and the page pass a LIST runs — and requires both to be the one given.
+//
+// Two reads and not one: the editor asks the gate directly, and a list cannot,
+// so the page pass widens rows the projection could only call narrow. Those are
+// two code paths to the same word, and a test that exercised one would let the
+// other say something else on the timeline the reader was looking at.
+func assertBadge(
+	reader context.Context, t *testing.T, e *Env, id ids.ActivityID, contact ids.UUID,
+	want crmcontracts.EmailAccessStatus, because string,
+) {
+	t.Helper()
+	presented, err := e.Activities.GetEmailPresentation(reader, id, nil)
+	if err != nil {
+		t.Fatalf("reading the message: %v", err)
+	}
+	if presented.Access.DisplayStatus != want {
+		t.Errorf("the editor badge says %q, want %q — %s",
+			presented.Access.DisplayStatus, want, because)
+	}
+
+	page, _, err := e.Activities.ListActivities(reader, activities.ListActivitiesInput{
+		EntityType: strPtr("contact"), EntityID: &contact,
+	})
+	if err != nil {
+		t.Fatalf("listing the contact's timeline: %v", err)
+	}
+	var row *crmcontracts.EmailSummary
+	for i := range page {
+		if ids.UUID(page[i].Id) == id.UUID {
+			row = page[i].EmailSummary
+		}
+	}
+	if row == nil {
+		t.Fatalf("the message carries no summary on a timeline of %d rows", len(page))
+	}
+	if row.DisplayStatus != want {
+		t.Errorf("the timeline badge says %q, want %q — %s", row.DisplayStatus, want, because)
 	}
 }

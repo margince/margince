@@ -20,12 +20,12 @@ package consent
 //     similar_goods_note is free text an operator typed about a sale ("espresso
 //     machines"). Comparing them is not a weak check but a SATISFIABLE one: an
 //     operator who types the purpose key into the note field would hold the
-//     exception for that person forever, which is the hole this file exists to
+//     exception for that contact forever, which is the hole this file exists to
 //     close, relocated.
 //   - The transmit phase carries no marketing purpose at all
 //     (commsauthz.TransmitRequest has no such field), so a check resting on it
 //     would allow at staging and deny at transmit — the disagreement
-//     VerdictForPerson's own header says it exists to prevent.
+//     VerdictForContact's own header says it exists to prevent.
 //
 // So an exception whose pack requires similarity is refused, with a reason that
 // names WHY rather than reading as "no consent recorded". Nothing regresses: no
@@ -46,12 +46,12 @@ import (
 )
 
 // existingCustomerAllows reports whether the exception the pack grants is
-// satisfied for this person.
+// satisfied for this contact.
 //
 // A nil exception is a jurisdiction that grants none, which is the answer for
 // every installation whose pack declares no MarketingExceptions and for one
 // that names no country at all.
-func existingCustomerAllows(ctx context.Context, tx pgx.Tx, personID string, exception *messaging.MarketingException) (bool, error) {
+func existingCustomerAllows(ctx context.Context, tx pgx.Tx, contactID string, exception *messaging.MarketingException) (bool, error) {
 	if exception == nil {
 		return false, nil
 	}
@@ -64,12 +64,12 @@ func existingCustomerAllows(ctx context.Context, tx pgx.Tx, personID string, exc
 		saleReference string
 		optoutNotice  bool
 	)
-	// One row per person: person_id is the primary key, so there is no history
+	// One row per contact: contact_id is the primary key, so there is no history
 	// to order and no newest to pick.
 	err := tx.QueryRow(ctx, `
 		SELECT sale_reference, optout_notice_given
 		  FROM consent_existing_customer_flag
-		 WHERE person_id = $1 AND revoked_at IS NULL`, personID).Scan(&saleReference, &optoutNotice)
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, contactID).Scan(&saleReference, &optoutNotice)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -86,7 +86,7 @@ func existingCustomerAllows(ctx context.Context, tx pgx.Tx, personID string, exc
 // this code does with one is to hand it the values directly.
 //
 // RequiresNoObjection is not read here, and the reason is structural rather
-// than an omission: VerdictForPerson blocks on a standing objection in its own
+// than an omission: VerdictForContact blocks on a standing objection in its own
 // first arm, for every class, before this is reached. There is no state where
 // the flag matters.
 func conditionsMet(exception messaging.MarketingException, saleReference string, optoutNotice bool) bool {

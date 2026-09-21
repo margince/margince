@@ -42,6 +42,21 @@ type AdvanceDealInput struct {
 	// product, not overruling it, so a move made THROUGH one must not protect
 	// the deal against the next proposal. Nil for an ordinary advance.
 	ApprovalID *ids.UUID
+	// IsExplicitUndo marks the move RevertStageProgression makes.
+	//
+	// It suppresses the automatic reversal detection below, which would
+	// otherwise find the very move being undone and mark it — and the undo
+	// then marks it again, so one reversal is counted twice and the safety
+	// rate reads double. The undo does its own marking, because only it knows
+	// which card the caller asked about.
+	IsExplicitUndo bool
+	// ReversalOf names the deal_stage_history row this move undoes.
+	//
+	// Written into the history row, where readProtection reads it: a move that
+	// was undone once is a move this deal has already had the argument about,
+	// and the product must not propose it again. Without it a reversed move is
+	// re-proposable the moment the fortnight's human-move protection lapses.
+	ReversalOf *ids.UUID
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -138,18 +153,21 @@ func (s *Store) advanceOnTx(
 		if err != nil {
 			return fmt.Errorf("read deal before advance: %w", err)
 		}
-		// pipeline_id/stage_id became nullable for overlay-mirror deals
-		// (OVA-MAP-6), but a NATIVE deal — the only kind this native advance
-		// path ever runs against — always carries both (NOT NULL columns).
-		// Refuse a deal missing them rather than nil-deref below: an overlay
-		// deal cannot reach here (advance_deal is unsupported in overlay mode),
-		// so a nil is corruption, not a valid transition.
+		// Both columns are NOT NULL, so a deal that reads back without them is
+		// corruption rather than a valid transition. Refuse it here rather than
+		// nil-deref below: the contract type carries them as pointers, and a
+		// panic would say nothing about which row was wrong.
 		if current.StageId == nil || current.PipelineId == nil {
 			return fmt.Errorf("advance deal %s: deal has no native pipeline/stage", id)
 		}
 
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
+			return err
+		}
+		// Under the lock resolveAdvanceTarget just took on the target row, and
+		// before anything is written.
+		if err := refuseAMoveTheGateDidNotAdmit(ctx, tx, current, in.ToStageID); err != nil {
 			return err
 		}
 		// Checked inside the transaction that writes the transition, and
@@ -174,12 +192,33 @@ func (s *Store) advanceOnTx(
 		// trajectory view must say what the odds WERE (the amount_at_change
 		// rationale). Won/lost stages carry their semantic 100/0 in the same
 		// column, so terminal moves snapshot too.
+		//
+		// semantic_at_change freezes what the move MEANT, for the same reason
+		// and one the probability cannot carry: an open stage may also sit at
+		// 0 or 100, so the number alone cannot say whether a deal closed. An
+		// administrator may edit a stage's semantic afterwards, and a reader
+		// joining the live stage would then report an old closing as something
+		// it was not.
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id, reversal_of, semantic_at_change)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			id, ids.UUID(*current.StageId), in.ToStageID, by,
-			current.AmountMinor, current.Currency, winProbability, in.ApprovalID); err != nil {
+			current.AmountMinor, current.Currency, winProbability, in.ApprovalID,
+			in.ReversalOf, semantic); err != nil {
 			return fmt.Errorf("record stage history: %w", err)
+		}
+
+		// A move BACK over a recent automatic one is a reversal, counted on the
+		// same ledger as the undo button. Not doing this here would let the
+		// safety number be dodged by the obvious route: a rep who disagrees
+		// with what the autopilot did drags the deal back by hand, the rate
+		// that governs the transition never moves, and it keeps applying.
+		if !in.IsExplicitUndo {
+			if err := countAManualMoveBackAsAReversal(
+				ctx, tx, id, ids.StageID{UUID: ids.UUID(*current.StageId)}, in,
+				s.clock()); err != nil {
+				return err
+			}
 		}
 
 		if err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability); err != nil {
@@ -210,7 +249,7 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 		AmountMinorAtChange: current.AmountMinor,
 		CurrencyAtChange:    current.Currency,
 		WinProbability:      winProbability,
-		PartnerOrgId:        current.PartnerOrgId,
+		PartnerCompanyId:    current.PartnerCompanyId,
 		FxRateToBase:        frozenFx,
 	}
 	if current.PartnerAttribution != nil {
@@ -234,9 +273,12 @@ func announceStageAdvance(
 	if err != nil {
 		return fmt.Errorf("audit stage advance: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		dealStageChangedPayload(current, in.ToStageID, status, winProbability,
-			frozenFxFromPatch(p, current))); err != nil {
+	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	args := []any{current.StageId, in.ToStageID}
+	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
+		return fmt.Errorf("read the stage names for the change: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload); err != nil {
 		return fmt.Errorf("emit deal.stage_changed: %w", err)
 	}
 	return nil

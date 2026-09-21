@@ -5,7 +5,7 @@
 
 package gates
 
-// Manifest-hash encoding fitness function (ADR-0069 §7): every hash a generated
+// Manifest-hash encoding fitness function (ADR-0120 §7): every hash a generated
 // unit manifest publishes says which algorithm produced it.
 //
 // A manifest is the record an operator reads to resolve what a unit requests,

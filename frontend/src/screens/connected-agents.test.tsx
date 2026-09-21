@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -351,7 +351,7 @@ describe("ConnectedAgentsCard", () => {
           document.querySelector('[data-testid="connection-pp-lapsed"]'),
         ).toBeTruthy(),
       );
-      expect(screen.getByText("credential expired")).toBeTruthy();
+      expect(screen.getByText("Credential expired")).toBeTruthy();
       expect(screen.getByText(/credential expired 30\/07\/2026/)).toBeTruthy();
       // No Disconnect: it would aim at a credential that is already gone. The
       // grant beneath it is still live, so the way to end that for good stays.
@@ -381,7 +381,7 @@ describe("ConnectedAgentsCard", () => {
           document.querySelector('[data-testid="connection-pp-renewing"]'),
         ).toBeTruthy(),
       );
-      expect(screen.getByText("renewing")).toBeTruthy();
+      expect(screen.getByText("Renewing")).toBeTruthy();
       // Regex, not an exact string: the phrase carries a formatted date, so an
       // exact-match query would miss "credential expired 30/07/2026" and pass
       // against the very contradiction this asserts is gone. A renewing row

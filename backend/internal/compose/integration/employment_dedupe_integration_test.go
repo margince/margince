@@ -5,8 +5,8 @@
 
 package integration
 
-// The two rules that make a person's employer a single readable fact: an
-// employment they already hold cannot be recorded a second time, and a person
+// The two rules that make a contact's employer a single readable fact: an
+// employment they already hold cannot be recorded a second time, and a contact
 // whose only employment this is holds it as their current primary one.
 //
 // Both are enforced in Postgres — a partial unique index and a subquery inside
@@ -22,11 +22,11 @@ import (
 // employment posts one edge and returns the status plus what the store made of
 // it — the created id, whether it landed primary, and the refusal detail when
 // it did not land at all.
-func (e *relEnv) employment(t *testing.T, orgID string, body AnyMap) (status int, id string, primary bool, detail string) {
+func (e *relEnv) employment(t *testing.T, companyID string, body AnyMap) (status int, id string, primary bool, detail string) {
 	t.Helper()
 	body["kind"] = "employment"
-	body["person_id"] = e.personID
-	body["organization_id"] = orgID
+	body["contact_id"] = e.contactID
+	body["company_id"] = companyID
 	body["source"] = "ui"
 	var out struct {
 		ID               string `json:"id"`
@@ -37,40 +37,40 @@ func (e *relEnv) employment(t *testing.T, orgID string, body AnyMap) (status int
 	return status, out.ID, out.IsCurrentPrimary, out.Detail
 }
 
-// secondOrg creates one more company to employ the same person at.
-func (e *relEnv) secondOrg(t *testing.T, name string) string {
+// secondCompany creates one more company to employ the same contact at.
+func (e *relEnv) secondCompany(t *testing.T, name string) string {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", name, status)
 	}
-	return org.ID
+	return company.ID
 }
 
 func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, first, _, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	status, first, _, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Fatalf("first employment → %d", status)
 	}
 
 	// The same pair again. Before uq_rel_employment both rows landed, and the
-	// account then counted the person twice.
-	status, _, _, detail := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	// account then counted the contact twice.
+	status, _, _, detail := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusConflict {
 		t.Fatalf("duplicate employment → %d, want 409", status)
 	}
-	const want = "this person already works at that company — end the employment they have there before recording a new one"
+	const want = "this contact already works at that company — end the employment they have there before recording a new one"
 	if detail != want {
 		t.Errorf("refusal detail = %q, want %q — the caller is told which rule fired, never the index name", detail, want)
 	}
 
-	// The role is not part of the key: the same person cannot hold the same job
+	// The role is not part of the key: the same contact cannot hold the same job
 	// twice under two titles either.
-	if status, _, _, _ := e.employment(t, e.orgID, AnyMap{"role": "ceo"}); status != http.StatusConflict {
+	if status, _, _, _ := e.employment(t, e.companyID, AnyMap{"role": "ceo"}); status != http.StatusConflict {
 		t.Errorf("duplicate under a different role → %d, want 409", status)
 	}
 
@@ -85,14 +85,14 @@ func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 		t.Fatalf("ending the first employment → %d", status)
 	}
 	if ended.IsCurrentPrimary {
-		t.Error("a job the person has left is still flagged as their CURRENT primary employer")
+		t.Error("a job the contact has left is still flagged as their CURRENT primary employer")
 	}
-	status, _, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	status, _, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Errorf("re-employment after leaving → %d, want 201: a former employer may hire someone back", status)
 	}
 	if !primary {
-		t.Error("the re-employment is the person's only current job and did not land as their primary one")
+		t.Error("the re-employment is the contact's only current job and did not land as their primary one")
 	}
 }
 
@@ -102,7 +102,7 @@ func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, edge, _, _ := e.employment(t, e.orgID, AnyMap{
+	status, edge, _, _ := e.employment(t, e.companyID, AnyMap{
 		"started_at": "2019-01-01", "ended_at": "2021-06-30",
 	})
 	if status != http.StatusCreated {
@@ -116,39 +116,42 @@ func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
 		t.Fatalf("patching the flag onto an ended employment → %d", status)
 	}
 	if patched.IsCurrentPrimary {
-		t.Error("an employment that ended in 2021 now reads as the person's current primary employer")
+		t.Error("an employment that ended in 2021 now reads as the contact's current primary employer")
+	}
+	if e.storedPrimary(t, edge) {
+		t.Error("the column took the flag the response refused, so the two answer differently")
 	}
 }
 
-func TestAPersonsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
+func TestAContactsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
 	e := setupRelationships(t)
 
 	// Nobody asked for primary. is_current_primary defaults to false, so before
-	// this rule the person ended up employed by exactly one company and having
+	// this rule the contact ended up employed by exactly one company and having
 	// no primary employer — a state every reader of the column has to guess at.
-	status, _, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	status, _, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Fatalf("first employment → %d", status)
 	}
 	if !primary {
-		t.Error("a person's only employment did not land as their current primary one")
+		t.Error("a contact's only employment did not land as their current primary one")
 	}
 
 	// A SECOND concurrent job is not promoted. Which of two employers is the
-	// primary one is a fact about the person that the second insert does not
+	// primary one is a fact about the contact that the second insert does not
 	// carry, and guessing it would overwrite the answer the first one gave.
-	if status, _, primary, _ := e.employment(t, e.secondOrg(t, "Moonlight Ltd"), AnyMap{}); status != http.StatusCreated || primary {
+	if status, _, primary, _ := e.employment(t, e.secondCompany(t, "Moonlight Ltd"), AnyMap{}); status != http.StatusCreated || primary {
 		t.Errorf("second concurrent employment → %d primary=%t, want 201 and not primary", status, primary)
 	}
 }
 
 // The store decides the flag only for a caller who left it out. A request that
-// SENDS false is a person unticking "current employer" in the rail, and
+// SENDS false is a contact unticking "current employer" in the rail, and
 // deriving over it would hand back the opposite of what they chose.
 func TestAnExplicitlyUnsetPrimaryFlagIsHonouredOnTheOnlyEmployment(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, first, primary, _ := e.employment(t, e.orgID, AnyMap{
+	status, first, primary, _ := e.employment(t, e.companyID, AnyMap{
 		"role": "cto", "is_current_primary": false,
 	})
 	if status != http.StatusCreated {
@@ -158,7 +161,7 @@ func TestAnExplicitlyUnsetPrimaryFlagIsHonouredOnTheOnlyEmployment(t *testing.T)
 		t.Error("a request that said is_current_primary=false got true back — the derivation overrode the caller")
 	}
 
-	// The choice sticks. Nothing later re-derives it, so the person keeps the
+	// The choice sticks. Nothing later re-derives it, so the contact keeps the
 	// employer they recorded and no primary flag until somebody says otherwise.
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+first, AnyMap{"role": "ceo"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("patching an unrelated field → %d", status)
@@ -196,7 +199,7 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 	// notice period rather than a re-statement of what the row already said. A row
 	// that starts with the future date and is then patched to the same value never
 	// crosses the boundary this test is about.
-	status, edge, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	status, edge, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Fatalf("employment → %d", status)
 	}
@@ -218,10 +221,10 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 
 	// And a fresh employment created ALREADY in notice keeps it too, which is the
 	// other door onto the same rule.
-	if status, _, alreadyNoticed, _ := e.employment(t, e.secondOrg(t, "Backfilled GmbH"), AnyMap{
+	if status, _, alreadyNoticed, _ := e.employment(t, e.secondCompany(t, "Backfilled GmbH"), AnyMap{
 		"ended_at": future,
 	}); status != http.StatusCreated || alreadyNoticed {
-		// Not primary: this person already holds a current employment, so the
+		// Not primary: this contact already holds a current employment, so the
 		// derivation does not fire — the point is only that it was accepted.
 		if status != http.StatusCreated {
 			t.Errorf("employment created already in notice → %d", status)
@@ -240,12 +243,12 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 func TestMakingANoticePeriodEmploymentThePrimaryOneReplacesTheIncumbent(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, incumbent, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	status, incumbent, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated || !primary {
 		t.Fatalf("the job they hold → %d primary=%t", status, primary)
 	}
 	// A second job, ending in ninety days, not primary yet.
-	status, notice, _, _ := e.employment(t, e.secondOrg(t, "Leaving Soon GmbH"), AnyMap{
+	status, notice, _, _ := e.employment(t, e.secondCompany(t, "Leaving Soon GmbH"), AnyMap{
 		"ended_at": e.dbDate(t, 90),
 	})
 	if status != http.StatusCreated {
@@ -276,22 +279,22 @@ func TestMakingANoticePeriodEmploymentThePrimaryOneReplacesTheIncumbent(t *testi
 // migration was written to end, reintroduced with a delay.
 //
 // Driven through the account's own contact count, because that is the number a
-// person actually looks at, and through the person-by-employer filter beside it.
+// contact actually looks at, and through the contact-by-employer filter beside it.
 func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount(t *testing.T) {
 	e := setupRelationships(t)
 
 	// Written as a notice period, so the flag is legitimately TRUE on the row.
-	status, edge, primary, _ := e.employment(t, e.orgID, AnyMap{
+	status, edge, primary, _ := e.employment(t, e.companyID, AnyMap{
 		"ended_at": e.dbDate(t, 30),
 	})
 	if status != http.StatusCreated || !primary {
 		t.Fatalf("notice-period employment → %d primary=%t", status, primary)
 	}
-	if got := e.contactCount(t, e.orgID); got != 1 {
+	if got := e.contactCount(t, e.companyID); got != 1 {
 		t.Fatalf("contact count while serving notice = %d, want 1 — they still work there", got)
 	}
-	if got := len(e.peopleAtOrg(t, e.orgID)); got != 1 {
-		t.Fatalf("people-at-employer while serving notice = %d, want 1", got)
+	if got := len(e.contactsAtCompany(t, e.companyID)); got != 1 {
+		t.Fatalf("contacts-at-employer while serving notice = %d, want 1", got)
 	}
 
 	// The last day arrives and passes. Nothing rewrites the row — the stored flag
@@ -308,45 +311,45 @@ func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount(t *testing.T) {
 	if !stored {
 		t.Fatal("the stored flag changed on its own; this test can no longer prove the readers derive")
 	}
-	if got := e.contactCount(t, e.orgID); got != 0 {
+	if got := e.contactCount(t, e.companyID); got != 0 {
 		t.Errorf("contact count after the last day passed = %d, want 0 — the reader trusted a stale flag", got)
 	}
-	if got := len(e.peopleAtOrg(t, e.orgID)); got != 0 {
-		t.Errorf("people-at-employer after the last day passed = %d, want 0", got)
+	if got := len(e.contactsAtCompany(t, e.companyID)); got != 0 {
+		t.Errorf("contacts-at-employer after the last day passed = %d, want 0", got)
 	}
 }
 
 // contactCount reads the account's own Contacts number, the one the companies
 // list and the company page both show.
-func (e *relEnv) contactCount(t *testing.T, orgID string) int {
+func (e *relEnv) contactCount(t *testing.T, companyID string) int {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ContactCount *int `json:"contact_count"`
 	}
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID, nil, nil, &org); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID, nil, nil, &company); status != http.StatusOK {
 		t.Fatalf("reading the account → %d", status)
 	}
-	if org.ContactCount == nil {
+	if company.ContactCount == nil {
 		t.Fatal("the account answered no contact_count at all")
 	}
-	return *org.ContactCount
+	return *company.ContactCount
 }
 
-// peopleAtOrg is the person list's employer filter — the other reader of the
+// contactsAtCompany is the contact list's employer filter — the other reader of the
 // flag, and the one a rep uses to find who they know at an account.
-func (e *relEnv) peopleAtOrg(t *testing.T, orgID string) []string {
+func (e *relEnv) contactsAtCompany(t *testing.T, companyID string) []string {
 	t.Helper()
 	var listed struct {
 		Data []struct {
 			FullName string `json:"full_name"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/people?organization_id="+orgID, nil, nil, &listed); status != http.StatusOK {
-		t.Fatalf("listing people at the employer → %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts?company_id="+companyID, nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("listing contacts at the employer → %d", status)
 	}
 	names := make([]string, 0, len(listed.Data))
-	for _, person := range listed.Data {
-		names = append(names, person.FullName)
+	for _, contact := range listed.Data {
+		names = append(names, contact.FullName)
 	}
 	return names
 }
@@ -367,7 +370,7 @@ func TestTheBoundaryBetweenNoticeAndDepartureIsTodayItself(t *testing.T) {
 	} {
 		t.Run(day.name, func(t *testing.T) {
 			env := setupRelationships(t)
-			status, _, primary, _ := env.employment(t, env.orgID, AnyMap{
+			status, _, primary, _ := env.employment(t, env.companyID, AnyMap{
 				"ended_at": env.dbDate(t, day.offset),
 			})
 			if status != http.StatusCreated {
@@ -381,12 +384,12 @@ func TestTheBoundaryBetweenNoticeAndDepartureIsTodayItself(t *testing.T) {
 }
 
 // An employment recorded as already over is history being backfilled. Promoting
-// it would tell every reader the person currently works somewhere they left —
+// it would tell every reader the contact currently works somewhere they left —
 // and asking for it to be primary must not cost them the employer they have.
 func TestAnAlreadyEndedEmploymentIsNeverPromoted(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, current, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
+	status, current, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated || !primary {
 		t.Fatalf("the job they actually hold → %d primary=%t, want 201 and primary", status, primary)
 	}
@@ -394,7 +397,7 @@ func TestAnAlreadyEndedEmploymentIsNeverPromoted(t *testing.T) {
 	// Backfilled WITH the flag asked for. The row does not take it, and the
 	// demotion that would have cleared the incumbent never runs — so the
 	// employer they actually have keeps the flag instead of the job they left.
-	status, _, primary, _ = e.employment(t, e.secondOrg(t, "Former Employer GmbH"), AnyMap{
+	status, _, primary, _ = e.employment(t, e.secondCompany(t, "Former Employer GmbH"), AnyMap{
 		"started_at": "2019-01-01", "ended_at": "2021-06-30", "is_current_primary": true,
 	})
 	if status != http.StatusCreated {
@@ -409,7 +412,7 @@ func TestAnAlreadyEndedEmploymentIsNeverPromoted(t *testing.T) {
 	}
 }
 
-// isPrimary re-reads one edge through the person's employment list — the only
+// isPrimary re-reads one edge through the contact's employment list — the only
 // read this surface offers for a single relationship.
 func (e *relEnv) isPrimary(t *testing.T, edgeID string) bool {
 	t.Helper()
@@ -419,7 +422,7 @@ func (e *relEnv) isPrimary(t *testing.T, edgeID string) bool {
 			IsCurrentPrimary bool   `json:"is_current_primary"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/relationships?kind=employment&person_id="+e.personID, nil, nil, &listed); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/relationships?kind=employment&contact_id="+e.contactID, nil, nil, &listed); status != http.StatusOK {
 		t.Fatalf("listing employments → %d", status)
 	}
 	for _, edge := range listed.Data {
@@ -427,6 +430,65 @@ func (e *relEnv) isPrimary(t *testing.T, edgeID string) bool {
 			return edge.IsCurrentPrimary
 		}
 	}
-	t.Fatalf("employment %s is not in the person's own list of %d", edgeID, len(listed.Data))
+	t.Fatalf("employment %s is not in the contact's own list of %d", edgeID, len(listed.Data))
 	return false
+}
+
+// The half of the PATCH rule no test held: ending an employment through the
+// patch itself clears the flag, in the same statement, rather than leaving a
+// stale true for every reader to derive around.
+//
+// Both directions, because the boundary is where a predicate written with the
+// wrong comparison passes one of them and still gets the other backwards — and
+// because the contract now states both, which is what makes them one item.
+func TestEndingAnEmploymentThroughAPatchClearsThePrimaryFlag(t *testing.T) {
+	e := setupRelationships(t)
+
+	status, edge, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
+	if status != http.StatusCreated || !primary {
+		t.Fatalf("the job they hold → %d primary=%t, want 201 and primary", status, primary)
+	}
+
+	// A last day still ahead is a notice period. They still work there — in
+	// the patch's own answer, in the list, and in the column, because the
+	// contract promises the response is what to read.
+	var patched struct {
+		IsCurrentPrimary bool `json:"is_current_primary"`
+	}
+	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
+		AnyMap{"ended_at": e.dbDate(t, 30)}, nil, &patched); status != http.StatusOK {
+		t.Fatalf("patching a notice period → %d", status)
+	}
+	if !patched.IsCurrentPrimary {
+		t.Error("the patch that filed a notice period answered as though they had already left")
+	}
+	if !e.isPrimary(t, edge) || !e.storedPrimary(t, edge) {
+		t.Error("a last day 30 days out took the flag off a job they are still doing")
+	}
+
+	// The last day arrives. The patch that says so is the departure.
+	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
+		AnyMap{"ended_at": e.dbDate(t, 0)}, nil, &patched); status != http.StatusOK {
+		t.Fatalf("patching the departure → %d", status)
+	}
+	if patched.IsCurrentPrimary {
+		t.Error("the patch that ended the employment answered with the flag still set")
+	}
+	if e.storedPrimary(t, edge) {
+		t.Error("the stored flag survived the departure, so every reader of the column has to derive around it")
+	}
+}
+
+// storedPrimary reads the column itself. The list read beside it goes through
+// the API's own derivation, so a stale flag can hide behind a reader that
+// corrects for it — which is exactly what this rule exists to stop being
+// necessary.
+func (e *relEnv) storedPrimary(t *testing.T, edgeID string) bool {
+	t.Helper()
+	var stored bool
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT is_current_primary FROM relationship WHERE id = $1`, edgeID).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	return stored
 }

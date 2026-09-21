@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -13,7 +13,7 @@ import { meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
 import { AutonomySettingsCard } from "./autonomy-settings";
 
-// Settings → Account → what answers itself: the switches a rep sets on their own
+// Settings → Agents → what answers itself: the switches a rep sets on their own
 // queue. No grant fixture appears below on purpose — the card reads and writes
 // the reader's own rows, so there is no seat that could be refused one.
 
@@ -90,7 +90,60 @@ afterEach(() => {
 });
 
 describe("AutonomySettingsCard", () => {
-  it("offers a kind the reader has never decided, switched off", async () => {
+  it("shows all three defaults on and lets the reader turn one off", async () => {
+    const backend = backendFor([
+      row("close_date_correction", "auto"),
+      row("company_name_promotion", "auto"),
+      row("lifecycle_change", "auto"),
+    ]);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AutonomySettingsCard />);
+    const user = userEvent.setup();
+    const switches = await screen.findAllByRole("switch");
+    expect(switches).toHaveLength(3);
+    for (const toggle of switches) {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    }
+    await user.click(screen.getByTestId("autonomy-toggle-lifecycle_change"));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByTestId("autonomy-toggle-lifecycle_change")
+          .getAttribute("aria-checked"),
+      ).toBe("false"),
+    );
+    expect(
+      screen
+        .getByTestId("autonomy-toggle-company_name_promotion")
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("shows a saved off choice beside kinds that default on", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        row("close_date_correction", "auto"),
+        row("company_name_promotion", "manual", 2),
+        row("lifecycle_change", "auto"),
+      ]).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+    await screen.findAllByRole("switch");
+    for (const [kind, checked] of [
+      ["close_date_correction", "true"],
+      ["company_name_promotion", "false"],
+      ["lifecycle_change", "true"],
+    ]) {
+      expect(
+        screen
+          .getByTestId(`autonomy-toggle-${kind}`)
+          .getAttribute("aria-checked"),
+      ).toBe(checked);
+    }
+  });
+
+  it("keeps a saved off choice even without review history", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor([row("close_date_correction", "manual")]).fetchMock,
@@ -128,9 +181,7 @@ describe("AutonomySettingsCard", () => {
     );
     render(<AutonomySettingsCard />);
 
-    expect(
-      await screen.findByText(/have not decided any of these yet/i),
-    ).not.toBeNull();
+    expect(await screen.findByText(/No reviews yet/i)).not.toBeNull();
   });
 
   // And it goes away the moment one HAS. A note that stands beside a real track
@@ -147,7 +198,7 @@ describe("AutonomySettingsCard", () => {
     render(<AutonomySettingsCard />);
 
     expect(await screen.findByText(/3 approved as proposed/i)).not.toBeNull();
-    expect(screen.queryByText(/have not decided any of these yet/i)).toBeNull();
+    expect(screen.queryByText(/No reviews yet/i)).toBeNull();
   });
 
   // AND NOT WHEN THERE IS NOTHING TO HAVE DECIDED. "You have not decided any of
@@ -163,7 +214,7 @@ describe("AutonomySettingsCard", () => {
     // would read the absence below off a card that had not loaded yet — an
     // assertion no implementation could fail.
     expect(await screen.findByText(/nothing here yet/i)).not.toBeNull();
-    expect(screen.queryByText(/have not decided any of these yet/i)).toBeNull();
+    expect(screen.queryByText(/No reviews yet/i)).toBeNull();
   });
 
   it("shows the track record under a kind the reader has decided", async () => {
@@ -212,26 +263,26 @@ describe("AutonomySettingsCard", () => {
   });
 
   it("switches a kind back off", async () => {
-    const backend = backendFor([row("org_name_promotion", "auto", 3)]);
+    const backend = backendFor([row("company_name_promotion", "auto", 3)]);
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
     render(<AutonomySettingsCard />);
 
     const toggle = await screen.findByTestId<HTMLButtonElement>(
-      "autonomy-toggle-org_name_promotion",
+      "autonomy-toggle-company_name_promotion",
     );
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await user.click(toggle);
 
     await waitFor(() =>
       expect(backend.patches()).toEqual([
-        { kind: "org_name_promotion", auto: false },
+        { kind: "company_name_promotion", auto: false },
       ]),
     );
     await waitFor(() =>
       expect(
         screen
-          .getByTestId("autonomy-toggle-org_name_promotion")
+          .getByTestId("autonomy-toggle-company_name_promotion")
           .getAttribute("aria-checked"),
       ).toBe("false"),
     );

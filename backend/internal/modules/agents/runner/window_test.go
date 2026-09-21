@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -29,7 +30,7 @@ func TestTheTriggerReferenceIsNeverPrintedWithoutSayingWhatItIs(t *testing.T) {
 		Goal:       "what do I need to know before the Acme meeting?",
 		TriggerRef: triggerRef,
 		Grounding: []Grounding{
-			{SourceID: "org:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e10", TrustTier: "T1", Content: "Acme GmbH"},
+			{SourceID: "company:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e10", TrustTier: "T1", Content: "Acme GmbH"},
 		},
 	}, nil, nil)
 
@@ -179,5 +180,40 @@ func TestAWindowOfZeroElidesNothing(t *testing.T) {
 		if m.Content == elisionMarker {
 			t.Fatal("a window of 0 elided; 0 means no limit worth planning around, not a limit of none")
 		}
+	}
+}
+
+// The frame names the two ways a turn ends WITHOUT the goal being done.
+//
+// It is a prose assertion, which is unusual and is the point: the corpus
+// measures whether the models actually abstain, and it measured zero across 84
+// runs while the frame described `final` only as "when the goal is done". A
+// certification run costs money and is not on every branch, so this is the
+// cheap half — it fails the moment somebody edits the frame back to describing
+// completion alone, which is the edit that produced the zero.
+//
+// Matched on the SUBSTANCE rather than on a sentence: the wording is the
+// prompt author's to improve, and a test pinning it verbatim would make every
+// improvement a test edit. What may not go is that the frame offers the two
+// grounds — no tool serves this, and the goal is ambiguous — as reasons to end
+// a turn.
+func TestTheFrameOffersStoppingAsAMoveAndNotOnlyAsCompletion(t *testing.T) {
+	prompt := systemPrompt(nil, promptfence.New(), "")
+
+	for _, must := range []struct{ what, phrase string }{
+		{"stopping is a move rather than the absence of one", "Ending the turn is a step"},
+		{"a goal no tool can serve is a reason to end", "no tool here can serve the goal"},
+		{"an ambiguous goal is a reason to end", "the goal is ambiguous"},
+	} {
+		if !strings.Contains(prompt, must.phrase) {
+			t.Errorf("the frame no longer says %s — a model under pressure to act will act, "+
+				"and the two agent_loop abstention scenarios go back to zero", must.what)
+		}
+	}
+	// Completion is the FIRST of the three, not a separate line above them —
+	// which is the whole move: it used to be the only reason the frame gave,
+	// and the two new ones are offered beside it rather than as a footnote.
+	if !strings.Contains(prompt, "the goal is done") {
+		t.Error("the frame no longer names completion as a reason to end the turn")
 	}
 }

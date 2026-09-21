@@ -20,7 +20,7 @@ import (
 // which is what keeps a fact on the bus from ageing into a stale copy of the
 // row it describes.
 type EntityRef struct {
-	// Type is the kind of record — a core entity type (`activity`, `person`)
+	// Type is the kind of record — a core entity type (`activity`, `contact`)
 	// for a core event, a unit's own table for an extension one.
 	Type string
 	// ID is the record's id, a canonical UUID.

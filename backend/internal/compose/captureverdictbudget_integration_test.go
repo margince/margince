@@ -44,7 +44,7 @@ func borderlineBacklog(t *testing.T, e *integration.Env, senders int) *scriptedV
 		// A CREATING answer under verdictCreateFloor and over
 		// verdictConfidenceFloor: the band the asymmetric floor re-asks, and
 		// the reason a pass's cost could double.
-		brain.verdicts[dispositionID.String()] = capture.KindPerson
+		brain.verdicts[dispositionID.String()] = capture.KindContact
 		brain.confidence[dispositionID.String()] = 0.8
 	}
 	if got := len(brain.verdicts); got != senders {
@@ -61,7 +61,7 @@ func TestAnEntirelyBorderlinePassStaysInsideItsCallBudget(t *testing.T) {
 	const senders = 12
 	brain := borderlineBacklog(t, e, senders)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestASenderTheBudgetCouldNotPayForIsLeftForAHuman(t *testing.T) {
 	const senders = 12
 	brain := borderlineBacklog(t, e, senders)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -106,9 +106,9 @@ func TestASenderTheBudgetCouldNotPayForIsLeftForAHuman(t *testing.T) {
 			"own answer rather than being dropped or accepted", n, senders)
 	}
 	// None created, which is what "not accepted" means for a creating answer.
-	if n := countIn(t, e, `SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+	if n := countIn(t, e, `SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email LIKE 'borderline-%@ambiguous.example'`); n != 0 {
-		t.Errorf("%d people created from answers below the creating floor", n)
+		t.Errorf("%d contacts created from answers below the creating floor", n)
 	}
 	// And none left pending, which is what "not dropped" means: a row still
 	// claimable would be re-judged next pass at the cost of another attempt.

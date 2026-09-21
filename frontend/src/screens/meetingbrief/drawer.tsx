@@ -23,28 +23,38 @@ import { problemMessageOf, throwProblem } from "../common";
 import type { MeetingFacts, PreparedFor } from "./header";
 import { type BriefViewState, MeetingBriefView } from "./view";
 
-// A cited deal or contact goes to its own screen. The brief's other citation
-// kind is the meeting activity itself, which has no screen and is rendered
-// flat by the shared Citations — so this is only ever called for the two that
-// route, and an unroutable kind is left where it is rather than guessed at.
+// A cited deal or contact goes to its own screen.
+//
+// An activity never arrives here. It has no screen of its own, and the shared
+// Citations sends a cited MESSAGE to onOpenEmail instead — so this is only ever
+// called for the kinds that route, and one that does not is left where it is
+// rather than guessed at.
 function openCitedRecord(entityType: string, entityId: string) {
   if (isEntityKind(entityType)) {
     navigate(ENTITY[entityType].route(entityId));
   }
 }
 
-export function PersonMeetingBrief({
+export function ContactMeetingBrief({
   activityId,
   open,
   onClose,
   projects = [],
   meeting,
   preparedFor,
+  onOpenEmail,
 }: Readonly<{
   activityId: string | null;
   open: boolean;
   onClose: () => void;
-  // The person's live projects, for a meeting filed under none: the brief
+  // Opens a cited message in the HOST's email drawer.
+  //
+  // Taken rather than mounted here: this component is itself a drawer, and a
+  // second one opened from inside it would be two dialogs stacked on the same
+  // page with the outer one still holding focus. Every host that shows this
+  // brief already mounts a drawer for its own timeline.
+  onOpenEmail?: (activityId: string) => void;
+  // The contact's live projects, for a meeting filed under none: the brief
   // scopes itself by the meeting's own filing, and only an unattributed
   // meeting needs to be told which body of work to prepare for.
   projects?: readonly PickableProject[];
@@ -112,7 +122,7 @@ export function PersonMeetingBrief({
     <Modal
       open={open}
       onClose={onClose}
-      labelledBy="person-meeting-title"
+      labelledBy="contact-meeting-title"
       size="wide"
       placement="right"
     >
@@ -121,7 +131,8 @@ export function PersonMeetingBrief({
         meeting={meeting}
         preparedFor={preparedFor}
         onOpenRecord={openCitedRecord}
-        titleId="person-meeting-title"
+        onOpenEmail={onOpenEmail}
+        titleId="contact-meeting-title"
         onClose={onClose}
         formatWhen={(utcIso) => formatDateTime(utcIso, locale, zone)}
         formatDay={(utcIso) => formatDate(utcIso, locale, zone)}

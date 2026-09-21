@@ -5,18 +5,15 @@ package commsauthz
 
 // Who decided that we may or may not write to somebody, and who may overrule it.
 //
-// One rule, and it has no special cases: YOU MAY OVERRULE A DECISION MADE BELOW
-// YOUR LEVEL, NEVER AT OR ABOVE IT. The tiers are ordered by how much authority
-// the decision carries, not by how senior the person is — which is why the
-// subject outranks the admin who administers the installation they are recorded
-// in.
+// One rule with no special cases: YOU MAY OVERRULE A DECISION MADE BELOW YOUR
+// LEVEL, NEVER AT OR ABOVE IT. The tiers order how much authority a decision
+// carries, not how senior the contact is, which is why the subject outranks the
+// admin administering the installation they are recorded in.
 //
-// The engine deciding from evidence is the weakest, because it is a reading of
-// what the record happens to show and the record is often incomplete. A rep who
-// knows the customer phoned them can say so. An admin can overrule the rep. And
-// nobody overrules the person themselves: an Art. 21 objection to direct
-// marketing is absolute in law, so a product that offered an admin a button to
-// lift one would be offering a button that cannot lawfully be pressed.
+// The engine is weakest, being a reading of a record that is often incomplete. A
+// rep who knows the customer phoned can say so, and an admin can overrule the
+// rep. Nobody overrules the contact: an Art. 21 objection to direct marketing is
+// absolute in law, so a button to lift one could not lawfully be pressed.
 
 // AuthorityLevel is the tier of the party a decision came from.
 type AuthorityLevel string
@@ -26,27 +23,30 @@ const (
 	LevelMachine AuthorityLevel = "machine"
 	// LevelUser is a rep or SDR exercising judgement about a contact they know.
 	LevelUser AuthorityLevel = "user"
-	// LevelAdmin is a workspace administrator: a seat that passes
-	// auth.RequireAdmin, which is the literal admin role and nothing else.
-	//
-	// NOT the `ops` role, despite ops administering most of the installation's
-	// wiring. The RBAC defaults separate the two deliberately — ops differs from
-	// admin "in row scope alone at this layer: what actually separates them is
-	// the literal-admin gate on identity and governance routes" — and reversing
-	// somebody's recorded stop is a governance act, not wiring. An ops seat
-	// therefore decides at LevelUser and cannot overrule a rep's judgement.
+	// LevelAdmin is a seat passing auth.RequireAdmin: the literal admin role and
+	// nothing else. NOT `ops`, despite ops administering most of the wiring —
+	// reversing somebody's recorded stop is a governance act, so an ops seat
+	// decides at LevelUser and cannot overrule a rep's judgement.
 	LevelAdmin AuthorityLevel = "admin"
-	// LevelSubject is the person the data is about, acting for themselves.
+	// LevelSubject is the contact the data is about, acting for themselves.
 	LevelSubject AuthorityLevel = "subject"
 )
 
-// rank orders the tiers. Unexported and unexported-only: a caller comparing
-// ranks is a caller reimplementing CanOverrule, and the second implementation
-// is the one that stops matching.
+// LevelsWeakestFirst is the authority ladder in rank order, exported so a caller
+// expressing the SAME comparison in SQL derives it here rather than retyping it:
+// a retyped ladder is a second answer to "who outranks whom", and the copy that
+// stops matching is a stop somebody could suddenly lift. Anything NOT in this
+// list outranks everything in it.
+func LevelsWeakestFirst() []AuthorityLevel {
+	return []AuthorityLevel{LevelMachine, LevelUser, LevelAdmin, LevelSubject}
+}
+
+// rank orders the tiers, unexported: a caller comparing ranks is a caller
+// reimplementing CanOverrule, and the second implementation stops matching.
 //
-// An unknown level ranks ABOVE every real one rather than below. A level this
-// build does not recognise is a level written by a newer build, and treating it
-// as weak would let this one overrule a decision it cannot even name.
+// An unknown level ranks ABOVE every real one. A level this build does not
+// recognise was written by a newer one, and treating it as weak would let this
+// build overrule a decision it cannot even name.
 func (l AuthorityLevel) rank() int {
 	switch l {
 	case LevelMachine:
@@ -94,7 +94,7 @@ func (l AuthorityLevel) CanOverrule(decided AuthorityLevel) bool {
 // The question each arm answers is narrow: WHOSE DECISION WAS THIS. It is not
 // "how serious is the refusal" and not "how likely is a seat to be right". A
 // refusal can bind absolutely and still be nobody's decision — a dead mailbox,
-// a rolling volume window, an address the engine cannot resolve to one person.
+// a rolling volume window, an address the engine cannot resolve to one contact.
 // Those are facts about the world, and a fact is corrected rather than
 // overruled, which is why they are LevelMachine and a seat may clear them.
 //
@@ -103,13 +103,13 @@ func (l AuthorityLevel) CanOverrule(decided AuthorityLevel) bool {
 func LevelForReason(reasonCode string) AuthorityLevel {
 	switch reasonCode {
 	// THE SUBJECT'S OWN ACT. An objection, a withdrawal, a restriction and a
-	// request to stop are things the person did, and Art. 21 makes the first
+	// request to stop are things the contact did, and Art. 21 makes the first
 	// absolute. Nobody in the installation lifts these, admin included.
 	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn:
 		return LevelSubject
 
 	// EVERYTHING ELSE IS THE ENGINE READING AN INCOMPLETE RECORD, and a seat
-	// may know better. That includes four refusals that BIND ABSOLUTELY but are
+	// may know better. That includes five refusals that BIND ABSOLUTELY but are
 	// nobody's decision, so being overrulable is the right answer for each:
 	//
 	//   - a hard bounce is a mailbox fact, cleared by correcting the address;
@@ -120,7 +120,12 @@ func LevelForReason(reasonCode string) AuthorityLevel {
 	//     wishes;
 	//   - an unconfirmed double opt-in is the absence of the subject's act
 	//     rather than an act, and an installation holding a paper opt-in needs
-	//     a way to say so.
+	//     a way to say so;
+	//   - a purpose contradicting the claim is a malformed REQUEST, corrected
+	//     by sending it with a purpose that means what the caller said. Nothing
+	//     about the recipient refuses it, and an admin who knows which of the
+	//     two the message really is can say so — by sending it again, which is
+	//     the remedy, not by overruling the recipient's wishes.
 	//
 	// Absolute and overrulable are different axes, and Absolute() already
 	// carries the first. Collapsing them here would make an admin stare at a

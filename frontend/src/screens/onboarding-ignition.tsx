@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useState } from "react";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -50,7 +50,7 @@ const CORE_BEATS: ReadonlyArray<{
   { at: 0, state: "ingest", progress: 0.12 },
   // The answer arrived and is being made sense of.
   { at: 2100, state: "working", progress: 0.62 },
-  // Bound, and waiting for the person who bound it.
+  // Bound, and waiting for the contact who bound it.
   { at: 3900, state: "idle", progress: 1 },
 ];
 
@@ -111,7 +111,9 @@ export function Ignition({
     <div className="ob-ig">
       {/* The wash is the STAGE's — it comes from the orb, which is in the other
           column, and the stage is what knows where the orb is. */}
-      <p className="ob-ig-sealed">{t("firstRun.ignite.sealed", { vendor })}</p>
+      <p className="ob-ig-sealed">
+        <Badge tone="accent">{t("firstRun.ignite.sealed", { vendor })}</Badge>
+      </p>
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}
       </p>

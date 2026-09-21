@@ -23,7 +23,7 @@ import (
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
 
-	// The composed extension set (ADR-0069): the generated module under
+	// The composed extension set (ADR-0120): the generated module under
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,7 +117,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// What this binary composed (ADR-0069 §5); pre-bootstrap the inventory half
+	// What this binary composed (ADR-0120 §5); pre-bootstrap the inventory half
 	// skips — the api records the first observation once it has bootstrapped
 	// the installation. The worker composes the same units the api does and
 	// runs the send path, so it registers the same channel vocabulary and
@@ -128,7 +128,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	rdb, err := events.NewClient(ctx, cfg.redisAddr)
+	rdb, err := openBus(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -152,9 +152,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// The api serves the write, this role only ever reads — so without this it
-	// would keep serving whatever binding it resolved at boot while the api
-	// served the new one, which is the two-roles-disagree failure moving
+	// The api serves the routing write, this role only ever reads — so without
+	// this it would keep serving whatever binding it resolved at boot while the
+	// api served the new one, which is the two-roles-disagree failure moving
 	// routing into the database was meant to end (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, &modelPath, config.FromOS, logger).Run(ctx)
 
@@ -181,7 +181,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, vault, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
-	stopJobs, err := startJobRunner(ctx, pool, rdb, vault, compose.OverlayBudgetConfig(deployCfg.EffectiveOverlayBudget()),
+	stopJobs, err := startJobRunner(ctx, pool, vault,
 		logger, cfg, modelPath, boundModels, lanes, weeklyMail, stdout)
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func releaseSkewRefusal(refused <-chan error) error {
 }
 
 // registerComposedExtensions registers the composed extension set before
-// anything else runs; a failing registration aborts the boot (ADR-0069 EXT-P4).
+// anything else runs; a failing registration aborts the boot (ADR-0120 EXT-P4).
 //
 // It returns the SAME snapshot it registered, because run hands that value on
 // to the boot inventory: taking a second snapshot there would let the two
@@ -279,6 +279,9 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 		return workerBoot{}, err
 	}
 	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
+	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
+	// operations.* kill switch, not a capture.* tuning knob.
+	cfg.captureConfig.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
 	return workerBoot{cfg: cfg, deploy: deployCfg, extensions: extensions, log: log}, nil
 }
 
@@ -419,7 +422,8 @@ func watchReleaseSkew(
 ) (context.Context, context.CancelFunc, <-chan error) {
 	ctx, stop := context.WithCancel(ctx)
 	skew := compose.WatchInstallationRelease(
-		ctx, pool, logger, buildinfo.ReleaseVersion, compose.ReleaseRecheckInterval)
+		ctx, pool, logger, buildinfo.ReleaseVersion, compose.ReleaseRecheckInterval,
+	)
 	refused := make(chan error, 1)
 	go func() {
 		err, stopping := <-skew

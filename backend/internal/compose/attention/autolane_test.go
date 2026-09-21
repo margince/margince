@@ -31,7 +31,7 @@ func (s *stubAutomations) TroubledRuns(_ context.Context, since time.Time, _ int
 func automationLaneService(health AutomationHealth) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, health, nil, nil, fixedClock)
 }
 
 func TestATroubledFiringNamesItsRuleAndItsReason(t *testing.T) {
@@ -40,7 +40,7 @@ func TestATroubledFiringNamesItsRuleAndItsReason(t *testing.T) {
 		{ID: ids.NewV7(), Name: "Route new leads", Outcome: "failed", Reason: "the assignee seat is gone", OccurredAt: fired},
 		{ID: ids.NewV7(), Name: "Renewal reminder", Outcome: "blocked", OccurredAt: fired},
 	}}
-	out, err := automationLaneService(stub).Assemble(context.Background())
+	out, err := automationLaneService(stub).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestATroubledFiringNamesItsRuleAndItsReason(t *testing.T) {
 }
 
 func TestARefusedAutomationReadIsNamedAsWithheld(t *testing.T) {
-	out, err := automationLaneService(&stubAutomations{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	out, err := automationLaneService(&stubAutomations{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestARefusedAutomationReadIsNamedAsWithheld(t *testing.T) {
 // Every rule doing its work is an EMPTY lane — the feed looked — which the
 // absent lane never promises.
 func TestHealthyAutomationsReadAsAnEmptyLane(t *testing.T) {
-	out, err := automationLaneService(&stubAutomations{}).Assemble(context.Background())
+	out, err := automationLaneService(&stubAutomations{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

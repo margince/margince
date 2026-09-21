@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Link2, UserX } from "lucide-react";
+import { Copy, Link2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -11,7 +11,6 @@ import {
   OverflowMenu,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -19,11 +18,12 @@ import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { IssuedNotice } from "./dealroomaccess.notices";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
 
 // Who may enter the room, and the verbs that change it: invite, issue a new
-// link, change what a person may do, revoke. Every link a rep is handed here
+// link, change what a contact may do, revoke. Every link a rep is handed here
 // is shown ONCE, with Copy — the server never stores it in clear, and dev has
 // no mail relay, so the rep pasting it into a chat is the normal path, not the
 // fallback.
@@ -53,7 +53,7 @@ export function participantsKey(roomId: string) {
   return ["deal-room-participants", roomId] as const;
 }
 
-// Every read of "who sits where" — the room's roster and the person page's
+// Every read of "who sits where" — the room's roster and the contact page's
 // room list — goes stale together when a seat changes.
 export function refreshSeats(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -126,10 +126,9 @@ export function DealRoomAccess({
   return (
     <Panel
       title={t("access.title")}
-      sub={t("access.sub")}
       titleAction={
         mayManage ? (
-          <Button small onClick={() => setInviting(true)}>
+          <Button onClick={() => setInviting(true)}>
             {t("access.invite")}
           </Button>
         ) : undefined
@@ -170,7 +169,7 @@ export function DealRoomAccess({
   );
 }
 
-// What this person has actually done in the room, under the line that says
+// What this contact has actually done in the room, under the line that says
 // whether they have been here. A seat that has taken nothing says nothing:
 // "0 documents" reads as a judgement about the buyer, and the honest state
 // early in a room's life is simply that there is nothing to report yet.
@@ -183,7 +182,7 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   }
   const titles = participant.documents_downloaded ?? [];
   return (
-    <p className="t-caption access-row-facts">
+    <p className="t-caption">
       {t("access.downloads", { count: formatNumber(downloads, locale) })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
@@ -210,12 +209,9 @@ function ParticipantRow({
       <div className="access-row-main">
         <p>
           {participant.full_name}
-          <span className="t-caption access-row-email">
-            {" "}
-            · {participant.email}
-          </span>
+          <span className="t-caption"> · {participant.email}</span>
         </p>
-        <p className="t-caption access-row-facts">
+        <p className="t-caption">
           {t(CAPABILITY_LABELS[participant.capability])}
           {" · "}
           {revoked
@@ -242,32 +238,18 @@ function ParticipantRow({
         ) : null}
       </div>
       <div className="access-row-side">
-        {revoked ? <Badge>{t("access.state.revoked")}</Badge> : null}
+        {revoked ? <Badge>{t("access.state.revokedBadge")}</Badge> : null}
         {mayManage && !revoked ? (
           <OverflowMenu
             label={t("access.rowActions", { name: participant.full_name })}
           >
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("reissue")}
-            >
-              <Link2 aria-hidden />
+            <Button variant="ghost" onClick={() => setConfirming("reissue")}>
               {t("access.issueLink")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("capability")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("capability")}>
               {t("access.changeCapability")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("revoke")}
-            >
-              <UserX aria-hidden />
+            <Button variant="ghost" onClick={() => setConfirming("revoke")}>
               {t("access.revoke")}
             </Button>
           </OverflowMenu>
@@ -311,25 +293,19 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
   };
   return (
     <div className="access-issued">
-      <Callout tone={issued.queued ? "success" : "info"}>
-        {issued.queued
-          ? t("access.issued.mailed", { email: issued.participant.email })
-          : t("access.issued.notMailed")}
-      </Callout>
+      <IssuedNotice queued={issued.queued} email={issued.participant.email} />
       <Field label={t("access.issued.linkLabel")}>
         {(control) => <TextInput {...control} readOnly value={link} />}
       </Field>
       <div className="card-actions">
-        <Button small onClick={copy}>
+        <Button onClick={copy}>
           <Copy aria-hidden />
           {copied === "done"
             ? t("access.issued.copied")
             : t("access.issued.copy")}
         </Button>
         {copied === "failed" ? (
-          <span className="t-caption t-danger">
-            {t("access.issued.copyFailed")}
-          </span>
+          <span className="t-danger">{t("access.issued.copyFailed")}</span>
         ) : null}
       </div>
       <p className="t-caption">{t("access.issued.oneTime")}</p>
@@ -440,7 +416,7 @@ function InviteDialog({
               description: t(CAPABILITY_HINTS[c]),
             }))}
           />
-          <p className="t-caption">{t("access.inviteNote")}</p>
+          <p>{t("access.inviteNote")}</p>
         </div>
       )}
     </ConfirmModal>
@@ -552,7 +528,7 @@ function RevokeDialog({
           ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
           : ` · ${t("access.neverSignedIn")}`}
       </p>
-      <p className="t-caption">{t("access.revokeBody")}</p>
+      <p>{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

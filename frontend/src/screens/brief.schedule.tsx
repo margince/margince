@@ -2,26 +2,45 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Badge } from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { isUnprepared, itemTitle, rowHref } from "./worklist.copy";
+import { sourceComplete } from "./brief.facts";
+import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
-// The two rail panels the morning is read alongside: what the day is booked
-// with, and what this rep owes.
-//
-// Both are cuts of the ONE worklist answer the work column is drawn from, not
-// reads of their own. The rail is context for the work beside it, and a rail
-// that fetched separately could show a meeting the queue had already dropped.
-//
-// NEITHER SORTS. The order is the server's, the same order the queue prints,
-// so the rail and the work column cannot disagree about what comes first.
-
+// Calendar context is drawn from the same loaded agenda, with explicit partial states.
 const MEETING = "meeting";
-const TASK = "task";
+
+/**
+ * Whether the day's schedule has nothing to draw.
+ *
+ * Exported because two surfaces turn on this one answer — the panel, which
+ * draws nothing, and the rail's quiet panel, which prints the line standing in
+ * for it. Spelled twice they would eventually disagree, and a reader would meet
+ * an empty panel and the line announcing its absence on the same rail.
+ */
+export function scheduleIsEmpty(
+  day: Worklist | undefined,
+  state: SectionState,
+): boolean {
+  return (
+    answered(state) &&
+    day !== undefined &&
+    sourceComplete(day, MEETING) &&
+    rowsFrom(day, MEETING).length === 0
+  );
+}
+
+/**
+ * Whether the read has ANSWERED, which is what makes an absence of rows mean
+ * there are none. Every other state is a fact about the request.
+ */
+function answered(state: SectionState): boolean {
+  return state === "ready" || state === "empty";
+}
 
 /**
  * The day's schedule, in the order the server ranked it.
@@ -37,28 +56,49 @@ export function SchedulePanel({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  if (scheduleIsEmpty(day, state)) {
+    return null;
+  }
   const meetings = rowsFrom(day, MEETING);
+  const calendarFailed = day?.sources_unavailable.some(
+    (entry) => entry.source === MEETING,
+  );
   return (
-    <section id="brief-schedule" aria-label={t("brief.panel.schedule")}>
-      <Panel title={t("brief.panel.schedule")} className="rail-panel">
+    <section id="brief-schedule">
+      <Panel title={t("brief.panel.schedule")}>
         {/* The rows are `PanelRow`s and carry the panel's own gutter, so they
             sit in the Panel directly — inside a `PanelBody` they would be
             padded twice and read as an indented block against every other
             panel in the rail. `SurfaceState` draws its sentence either way. */}
         <SurfaceState
           loadingLabel={t("brief.panel.schedule")}
-          state={state === "ready" && meetings.length === 0 ? "empty" : state}
-          emptyLabel={t("brief.schedule.clear")}
+          state={state}
+          // The words the rail prints for this absence, so the panel and the
+          // quiet line cannot report one morning in two vocabularies.
+          emptyLabel={t("brief.rail.quietSchedule")}
         >
+          {meetings.length === 0 && answered(state) && (
+            <PanelRow>
+              {t(
+                calendarFailed
+                  ? "brief.schedule.unavailable"
+                  : "brief.schedule.more",
+              )}
+            </PanelRow>
+          )}
           {meetings.map((item) => (
             <PanelRow key={item.id} className="rail-schedule-row">
               <span className="t-caption rail-schedule-when">
                 {whenOf(item, locale, zone)}
               </span>
+              {/* The stop on the day's line. Decorative: the time beside it is
+                  the fact, and the line the dots hang on is the panel's way of
+                  reading as a schedule rather than as a list of sentences. */}
+              <span className="rail-schedule-dot" aria-hidden="true" />
               <span className="rail-schedule-what">
                 <Title item={item} />
                 {isUnprepared(item) && (
-                  <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+                  <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
                 )}
               </span>
             </PanelRow>
@@ -69,54 +109,12 @@ export function SchedulePanel({
   );
 }
 
-/**
- * What this rep owes: their open tasks, and an honest word about promises.
- *
- * The commitments lane is not wired, so a promise made in a conversation
- * reaches nothing. The panel says so rather than listing tasks under a heading
- * that claims both — a rep who reads "Promises & tasks" and sees only tasks
- * would take the absence of a promise for its absence in the world.
- */
-export function PromisesPanel({
-  day,
-  state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
-  const t = useT();
-  const tasks = rowsFrom(day, TASK);
-  return (
-    <section id="brief-promises" aria-label={t("brief.panel.promises")}>
-      <Panel title={t("brief.panel.promises")} className="rail-panel">
-        <SurfaceState
-          loadingLabel={t("brief.panel.promises")}
-          state={state === "ready" && tasks.length === 0 ? "empty" : state}
-          emptyLabel={t("brief.promises.clear")}
-        >
-          {tasks.map((item) => (
-            <PanelRow key={item.id} className="rail-promise-row">
-              <Title item={item} />
-            </PanelRow>
-          ))}
-        </SurfaceState>
-        {/* Under the list on every reading, including the empty one. It is the
-            state of the PRODUCT rather than of this morning, and a reader who
-            saw it only on a busy day would read an empty panel as "no promises
-            outstanding" — which is exactly the claim nothing here can make. */}
-        <PanelBody>
-          <p className="t-caption rail-promise-note">
-            {t("brief.promises.untracked")}
-          </p>
-        </PanelBody>
-      </Panel>
-    </section>
-  );
-}
-
 /** The row's own words, linked where the row names a record. */
 function Title({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
   const title = itemTitle(item, t, locale);
-  const href = rowHref(item);
+  const href = rowHref(item) ?? (item.move ? moveHref(item) : undefined);
   return href ? (
     <a className="entity-link t-body" href={href}>
       {title}

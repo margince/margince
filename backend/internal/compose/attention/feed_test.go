@@ -139,9 +139,16 @@ type stubTasks struct {
 	until *time.Time
 	// scope records WHOSE tasks the lane asked for, so a test can prove the
 	// narrowing reaches the QUERY rather than trusting that a filter ran
-	// afterwards. owner records WHICH person, where the scope names one.
+	// afterwards. owner records WHICH contact, where the scope names one.
 	scope TaskScope
 	owner ids.UUID
+	// The upcoming read's own window, limit and rows, kept apart from the
+	// day's so a test can assert the two do not compete.
+	upcoming      []Task
+	upcomingErr   error
+	upcomingFrom  *time.Time
+	upcomingUntil *time.Time
+	upcomingLimit int
 }
 
 func (s *stubTasks) CountOpenForViewer(
@@ -163,6 +170,18 @@ func (s *stubTasks) OpenForViewer(
 	s.scope = scope
 	s.owner = owner
 	return s.rows, s.err
+}
+
+// UpcomingForViewer answers the work due after today. Recorded separately from
+// OpenForViewer's window so a test can prove the two reads are bounded
+// independently rather than sharing one allocation.
+func (s *stubTasks) UpcomingForViewer(
+	_ context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID,
+) ([]Task, error) {
+	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &from, &until, limit
+	s.scope = scope
+	s.owner = owner
+	return s.upcoming, s.upcomingErr
 }
 
 // mineOnly is what most callers actually ask of the recorded scope.
@@ -202,11 +221,8 @@ func approval(summary string) crmcontracts.Approval {
 }
 
 func TestADuplicateOutranksAnApprovalBecauseAMergeCannotBeUndone(t *testing.T) {
-	svc := NewService(
-		stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}},
-		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "person", Confidence: 0.9}}, open: 1},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}}, stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9}}, open: 1}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -219,12 +235,8 @@ func TestADuplicateOutranksAnApprovalBecauseAMergeCannotBeUndone(t *testing.T) {
 }
 
 func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{err: apperrors.ErrPermissionDenied},
-		&stubTasks{rows: []Task{{ID: ids.NewV7(), Subject: "Call Anna"}}},
-		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{err: apperrors.ErrPermissionDenied}, &stubTasks{rows: []Task{{ID: ids.NewV7(), Subject: "Call Anna"}}}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("a refused lane must not fail the read: %v", err)
 	}
@@ -243,10 +255,8 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 }
 
 func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
-	svc := NewService(
-		stubApprovals{err: fmt.Errorf("the database is unreachable")},
-		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err == nil {
+	svc := NewService(stubApprovals{err: fmt.Errorf("the database is unreachable")}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a lane that FAILED was reported as an empty day")
 	}
 }
@@ -254,13 +264,10 @@ func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 func TestTheCountReportsTheTotalThoughTheLaneIsBounded(t *testing.T) {
 	pairs := make([]DuplicatePair, needsYouPage+5)
 	for i := range pairs {
-		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "person", Confidence: 0.8}
+		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "contact", Confidence: 0.8}
 	}
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{pairs: pairs, open: 40},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{pairs: pairs, open: 40}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -280,10 +287,8 @@ func TestTheCountCoversStagedProposalsToo(t *testing.T) {
 	for i := range staged {
 		staged[i] = approval("Send something")
 	}
-	svc := NewService(
-		stubApprovals{rows: staged, pending: 20},
-		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{rows: staged, pending: 20}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -295,14 +300,11 @@ func TestTheCountCoversStagedProposalsToo(t *testing.T) {
 func TestAnOverdueTaskLeadsThePlannedLane(t *testing.T) {
 	yesterday := readInstant.Add(-24 * time.Hour)
 	later := readInstant.Add(6 * time.Hour)
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{},
-		&stubTasks{rows: []Task{
-			{ID: ids.NewV7(), Subject: "Due later today", DueAt: &later},
-			{ID: ids.NewV7(), Subject: "Was due yesterday", DueAt: &yesterday},
-		}},
-		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{rows: []Task{
+		{ID: ids.NewV7(), Subject: "Due later today", DueAt: &later},
+		{ID: ids.NewV7(), Subject: "Was due yesterday", DueAt: &yesterday},
+	}}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -326,14 +328,11 @@ func TestAnOverdueTaskLeadsThePlannedLane(t *testing.T) {
 func TestATaskCarriesTheRecordItWasRaisedFor(t *testing.T) {
 	due := readInstant.Add(-time.Hour)
 	lead := ids.NewV7()
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{},
-		&stubTasks{rows: []Task{{
-			ID: ids.NewV7(), Subject: "Follow up with the new lead", DueAt: &due,
-			LinkType: "lead", LinkID: lead,
-		}}},
-		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{rows: []Task{{
+		ID: ids.NewV7(), Subject: "Follow up with the new lead", DueAt: &due,
+		LinkType: "lead", LinkID: lead,
+	}}}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -354,13 +353,10 @@ func TestATaskCarriesTheRecordItWasRaisedFor(t *testing.T) {
 // stays a row: readable, completable, and pointing nowhere.
 func TestATaskUnderNoRecordCarriesNoSubject(t *testing.T) {
 	due := readInstant.Add(-time.Hour)
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{},
-		&stubTasks{rows: []Task{{
-			ID: ids.NewV7(), Subject: "Call the accountant", DueAt: &due,
-		}}},
-		stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{rows: []Task{{
+		ID: ids.NewV7(), Subject: "Call the accountant", DueAt: &due,
+	}}}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -370,14 +366,11 @@ func TestATaskUnderNoRecordCarriesNoSubject(t *testing.T) {
 }
 
 func TestAReceiptOffersNoDecision(t *testing.T) {
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{},
-		stubReceipts{rows: []Receipt{{
-			ID: ids.NewV7(), Kind: "close_date_correction",
-			Summary: "Moved the Acme close date to 27 Sep", OccurredAt: readInstant.Add(-time.Hour),
-		}}},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{rows: []Receipt{{
+		ID: ids.NewV7(), Kind: "close_date_correction",
+		Summary: "Moved the Acme close date to 27 Sep", OccurredAt: readInstant.Add(-time.Hour),
+	}}}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -392,11 +385,8 @@ func TestAReceiptOffersNoDecision(t *testing.T) {
 }
 
 func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.92}}, open: 1},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "company", Confidence: 0.92}}, open: 1}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -407,7 +397,7 @@ func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
 	if item.Title != nil {
 		t.Errorf("the server wrote %q for a duplicate; that sentence has no translation", *item.Title)
 	}
-	if item.Kind == nil || *item.Kind != "organization" {
+	if item.Kind == nil || *item.Kind != "company" {
 		t.Error("the client needs the record type to write the line")
 	}
 	if item.Confidence == nil {
@@ -422,17 +412,14 @@ func TestAFloodOfDuplicatesDoesNotBuryTheStagedDecisions(t *testing.T) {
 	// reach it — while the count beside the lane went on reporting all of them.
 	pairs := make([]DuplicatePair, needsYouPage+1)
 	for i := range pairs {
-		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.9}
+		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "company", Confidence: 0.9}
 	}
 	staged := make([]crmcontracts.Approval, needsYouPage)
 	for i := range staged {
 		staged[i] = approval("Send the follow-up")
 	}
-	svc := NewService(
-		stubApprovals{rows: staged, pending: 79},
-		stubDuplicates{pairs: pairs, open: len(pairs)},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{rows: staged, pending: 79}, stubDuplicates{pairs: pairs, open: len(pairs)}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -452,15 +439,12 @@ func TestADuplicateCardNamesBothRecords(t *testing.T) {
 	// Without the pair a card can only say "two companies look like the same
 	// one" and send the reader elsewhere to find out which two.
 	left, right := ids.NewV7(), ids.NewV7()
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "organization", Confidence: 0.93,
-			LeftID: left, RightID: right,
-			Evidence: []FieldComparison{{Field: "display_name", Signal: "collide"}},
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{open: 1, pairs: []DuplicatePair{{
+		ID: ids.NewV7(), EntityType: "company", Confidence: 0.93,
+		LeftID: left, RightID: right,
+		Evidence: []FieldComparison{{Field: "display_name", Signal: "collide"}},
+	}}}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -476,124 +460,21 @@ func TestADuplicateCardNamesBothRecords(t *testing.T) {
 	}
 }
 
-func TestAnUnreadableSideCostsTheMergeVerbRatherThanLeakingTheRecord(t *testing.T) {
-	hidden := ids.NewV7()
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, unreadable: hidden, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: hidden,
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
-	if err != nil {
-		t.Fatalf("a record this reader may not see must not fail the whole day: %v", err)
-	}
-	if out.NeedsYou[0].Pair != nil {
-		t.Fatal("a side the reader may not read was named anyway")
-	}
-	for _, action := range out.NeedsYou[0].Actions {
-		if action == "merge" {
-			t.Error("merge is offered over a record the reader cannot see")
-		}
-	}
-}
-
-// A pair naming a record the reader may see but could not change offers no
-// verb. This is the ordinary case for a rep: everyone here reads every
-// colleague's customer records and can write almost none of them, so a merge
-// button decided by visibility refused every press it invited.
-func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
-	theirs := ids.NewV7()
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: theirs,
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
-	if err != nil {
-		t.Fatalf("assembling: %v", err)
-	}
-	// The pair is still NAMED. Withholding the verb is not withholding the
-	// fact: a reader who cannot merge these two still needs to know a duplicate
-	// is waiting, and who it is about.
-	if out.NeedsYou[0].Pair == nil {
-		t.Fatal("a pair the reader may read was hidden because they cannot decide it")
-	}
-	for _, action := range out.NeedsYou[0].Actions {
-		if action == "merge" {
-			t.Error("merge is offered over a record the reader cannot change, which is the press that always refused")
-		}
-	}
-}
-
-// Authority over ONE side is not authority to decide the pair: the merge
-// archives one record and rewrites the other, so half the authority settles
-// nothing and a verb offered on it would refuse.
-func TestOwningOneSideOfAPairDoesNotOfferTheVerb(t *testing.T) {
-	mine, theirs := ids.NewV7(), ids.NewV7()
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "organization", Confidence: 1,
-			LeftID: mine, RightID: theirs,
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
-	if err != nil {
-		t.Fatalf("assembling: %v", err)
-	}
-	if len(out.NeedsYou[0].Actions) != 0 {
-		t.Errorf("actions %v offered on a pair the reader owns half of", out.NeedsYou[0].Actions)
-	}
-}
-
-// A reader who can change both records still gets the verb. Without this the
-// two tests above would pass against a lane that had simply stopped offering
-// merge to anybody.
-func TestAPairTheReaderCanChangeStillOffersTheVerb(t *testing.T) {
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: ids.NewV7(),
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
-	if err != nil {
-		t.Fatalf("assembling: %v", err)
-	}
-	var offered bool
-	for _, action := range out.NeedsYou[0].Actions {
-		if action == "merge" {
-			offered = true
-		}
-	}
-	if !offered {
-		t.Error("a steward who can change both records was offered no way to settle the pair")
-	}
-}
-
 func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 	// The queue stores whatever the detector wrote. A key the client has no
-	// word for would print as itself — which is how `full_name` and `org`
+	// word for would print as itself — which is how `full_name` and `company`
 	// reached the screen from the queue this lane replaces.
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: ids.NewV7(),
-			Evidence: []FieldComparison{
-				{Field: "full_name", Signal: "collide"},
-				{Field: "some_internal_column", Signal: "collide"},
-				{Field: "email", Signal: "unheard_of_verdict"},
-				{Field: "org", Signal: "collide"},
-			},
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{open: 1, pairs: []DuplicatePair{{
+		ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
+		LeftID: ids.NewV7(), RightID: ids.NewV7(),
+		Evidence: []FieldComparison{
+			{Field: "full_name", Signal: "collide"},
+			{Field: "some_internal_column", Signal: "collide"},
+			{Field: "email", Signal: "unheard_of_verdict"},
+			{Field: "company", Signal: "collide"},
+		},
+	}}}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -611,14 +492,11 @@ func TestARecordReadThatBrokeIsNotReportedAsWithheld(t *testing.T) {
 	// them tells a reader a pair is hidden from their account when the truth is
 	// that the database would not answer — a reassuring lie, and the one this
 	// surface must never tell.
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, describeErr: fmt.Errorf("the database is unreachable"), pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: ids.NewV7(),
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err == nil {
+	svc := NewService(stubApprovals{}, stubDuplicates{open: 1, describeErr: fmt.Errorf("the database is unreachable"), pairs: []DuplicatePair{{
+		ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
+		LeftID: ids.NewV7(), RightID: ids.NewV7(),
+	}}}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a record read that FAILED was rendered as a pair the reader may not see")
 	}
 }
@@ -629,17 +507,14 @@ func TestAnIdentityConflictKeepsTheOneRowThatExplainsIt(t *testing.T) {
 	// card named two records and said nothing about why they collided. The
 	// field vocabulary alone could not catch it — a row dies on either half.
 	lane := "email:anna@example.com"
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 1,
-			LeftID: ids.NewV7(), RightID: ids.NewV7(),
-			Evidence: []FieldComparison{
-				{Field: "matched_lane", Signal: "exact_conflict", Left: &lane},
-			},
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{open: 1, pairs: []DuplicatePair{{
+		ID: ids.NewV7(), EntityType: "contact", Confidence: 1,
+		LeftID: ids.NewV7(), RightID: ids.NewV7(),
+		Evidence: []FieldComparison{
+			{Field: "matched_lane", Signal: "exact_conflict", Left: &lane},
+		},
+	}}}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -657,9 +532,9 @@ func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -688,10 +563,8 @@ func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
 }
 
 func TestAMorningWithNoRunIsEmptyRatherThanWithheld(t *testing.T) {
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -709,10 +582,8 @@ func TestAMorningWithNoRunIsEmptyRatherThanWithheld(t *testing.T) {
 }
 
 func TestABriefingLaneRefusedIsNamedRatherThanReportedQuiet(t *testing.T) {
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -725,10 +596,8 @@ func TestABriefingLaneRefusedIsNamedRatherThanReportedQuiet(t *testing.T) {
 }
 
 func TestABrokenBriefingLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{err: errors.New("the brief read fell over")}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err == nil {
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{err: errors.New("the brief read fell over")}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a broken briefing read was reported as a quiet morning")
 	}
 }
@@ -737,9 +606,9 @@ func TestABriefingItemOffersItsOwnThreeVerbs(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -777,8 +646,8 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 	decay := &stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		commitments, stubAtRisk{}, decay, meetings, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	if _, err := svc.Assemble(context.Background()); err != nil {
+		commitments, stubAtRisk{}, decay, meetings, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
 	if commitments.calls != 1 {
@@ -798,8 +667,8 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -814,60 +683,104 @@ func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 	}
 }
 
-// A pair the MERGE would refuse offers no verb either, whatever authority the
-// reader holds.
+// Today's backlog must never consume the upcoming allocation.
 //
-// Two companies each carrying live work do not combine (PROJ-LIFE-4). Authority
-// cannot see that: it is a property of the PAIR, not of either record, so a
-// data steward who may write both was handed a button that answered 409 every
-// time — the same dead end the authority check above was added to remove,
-// reached by another path.
-func TestAPairTheMergeWouldRefuseOffersNoVerb(t *testing.T) {
-	pairID := ids.NewV7()
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, unsettleable: pairID, pairs: []DuplicatePair{{
-			ID: pairID, EntityType: "organization", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: ids.NewV7(),
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+// The two are separate bounded reads for exactly this: sharing one limit let a
+// full day of work fill it before a single upcoming row was reached, so the
+// reader who most needs next week's deadline was the one who never saw it.
+func TestUpcomingWorkSurvivesAFullDayOfTasks(t *testing.T) {
+	full := make([]Task, 0, plannedCap+6)
+	for i := 0; i < plannedCap+6; i++ {
+		due := rankInstant.Add(time.Duration(i) * time.Minute)
+		full = append(full, Task{ID: ids.NewV7(), Subject: "Due today", DueAt: &due})
+	}
+	nextWeek := rankInstant.Add(72 * time.Hour)
+	tasks := &stubTasks{
+		rows:     full,
+		upcoming: []Task{{ID: ids.NewV7(), Subject: "Due later", DueAt: &nextWeek}},
+	}
+
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
-		t.Fatalf("assembling: %v", err)
+		t.Fatal(err)
 	}
-	// Named, like the authority case: a steward who cannot merge these two
-	// still needs to know the duplicate is waiting.
-	if out.NeedsYou[0].Pair == nil {
-		t.Fatal("a pair the reader may read was hidden because the merge would refuse it")
-	}
-	for _, action := range out.NeedsYou[0].Actions {
-		if action == "merge" {
-			t.Error("merge is offered on a pair the merge itself refuses — the press " +
-				"answers 409 and says nothing about what to do next")
+	var sawUpcoming bool
+	for _, item := range out.Planned {
+		if item.Title != nil && *item.Title == "Due later" {
+			sawUpcoming = true
 		}
+	}
+	if !sawUpcoming {
+		t.Errorf("a day full of tasks buried the upcoming work: %d planned rows and "+
+			"none of them the one due later", len(out.Planned))
 	}
 }
 
-// And a pair nothing blocks still gets the verb, or the check above is
-// satisfied by a lane that offers merge to nobody.
-func TestAnUnblockedPairStillOffersTheVerb(t *testing.T) {
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "organization", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: ids.NewV7(),
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(context.Background())
+// The two reads ask for windows that MEET rather than overlap: a task due at
+// exactly the day's end belongs to tomorrow, and no task may fall between them
+// or be counted by both.
+func TestTheTwoTaskReadsCoverOneUnbrokenWindow(t *testing.T) {
+	tasks := &stubTasks{}
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	if _, err := svc.Assemble(pageReader()); err != nil {
+		t.Fatal(err)
+	}
+	if tasks.until == nil || tasks.upcomingFrom == nil {
+		t.Fatal("one of the two reads never ran, so the window cannot be checked")
+	}
+	if !tasks.upcomingFrom.Equal(*tasks.until) {
+		t.Errorf("today ends at %s and the upcoming read starts at %s — a task due "+
+			"between them belongs to neither lane", *tasks.until, *tasks.upcomingFrom)
+	}
+	if tasks.upcomingLimit != upcomingCap {
+		t.Errorf("the upcoming read is bounded at %d, want its own cap of %d",
+			tasks.upcomingLimit, upcomingCap)
+	}
+}
+
+// A cut upcoming list must say it was cut.
+//
+// The lane is two reads sharing one slice, so a single length test answers
+// neither: six upcoming rows beside an empty day sat under the combined bound
+// and the page called itself complete, while a seventh had been dropped and no
+// paging path existed to find it.
+func TestATruncatedUpcomingListReportsItselfTruncated(t *testing.T) {
+	upcoming := make([]Task, 0, upcomingCap)
+	for i := 0; i < upcomingCap; i++ {
+		due := rankInstant.Add(time.Duration(48+i) * time.Hour)
+		upcoming = append(upcoming, Task{ID: ids.NewV7(), Subject: "Due later", DueAt: &due})
+	}
+	// No work due today at all, which is what hid the defect: the combined
+	// length never approaches the day's own cap.
+	tasks := &stubTasks{upcoming: upcoming}
+
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
-		t.Fatalf("assembling: %v", err)
+		t.Fatal(err)
 	}
-	var offered bool
-	for _, action := range out.NeedsYou[0].Actions {
-		offered = offered || action == "merge"
+	// Asked through boundedSources, which is what the page actually reads —
+	// calling the helper directly would pass against the very reading that
+	// hid this defect.
+	if !boundedSources(out)["task"] {
+		t.Errorf("a full upcoming read (%d rows, cap %d) reports the lane complete, "+
+			"so the page shows an exact count and offers no way to the rest",
+			len(out.Planned), upcomingCap)
 	}
-	if !offered {
-		t.Error("a writable pair the merge would accept offers no verb — the lane has " +
-			"stopped offering merge at all, which the withholding cases above cannot see")
+
+	// The premise guard: a lane under BOTH caps is not truncated, or the
+	// assertion above passes for a reading that calls everything cut.
+	oneEach := &stubTasks{
+		rows:     []Task{{ID: ids.NewV7(), Subject: "Due today", DueAt: &rankInstant}},
+		upcoming: upcoming[:1],
+	}
+	svc = NewService(stubApprovals{}, stubDuplicates{}, oneEach, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	small, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if boundedSources(small)["task"] {
+		t.Error("a lane well under both caps reported itself truncated")
 	}
 }

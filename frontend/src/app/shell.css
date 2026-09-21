@@ -56,7 +56,6 @@
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
-  font-size: var(--fs-sm);
 }
 /* :focus, not :focus-visible — the point is that it appears whenever it holds
    focus, and a heuristic about whether the focus "should" be visible is exactly
@@ -99,7 +98,7 @@
   height: 100vh;
   box-sizing: border-box;
   /* The lit ground (DESIGN.md §2): the emerald light behind the sidebar at the
-     top-left, the indigo one at the bottom-right, painted into the page colour.
+     top-left, the indigo one at the top-right, painted into the page colour.
      Declared once in tokens.css, because the buyer's Deal Room stands on the
      same ground from outside this shell. */
   background: var(--groundLit);
@@ -125,7 +124,7 @@
   }
 }
 .app.railexpanded {
-  --railW: 224px;
+  --railW: 256px;
 }
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
@@ -243,19 +242,43 @@
      what is left. */
   flex: none;
 }
-/* Every page that keeps the reading column, and the ONE place the measure is
-   applied — see --pageColumn, `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`.
-   A record is in this rule like any other capped page: it carries more parts
-   than a settings page does, which changes what stands inside the column and
-   not how wide the column is.
+/* THE PAGE'S MEASURE: what this page's content is allowed to be, published on
+   the column so the page's NAME and the page's body can only read one number.
+   Which pages have one at all is `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`
+   in app/nav.ts; a record is in it like any other capped page, since carrying
+   more parts changes what stands inside the column and not how wide it is. */
+.main-gridded {
+  --pageMeasure: var(--pageColumn);
+}
+/* Except where the page's body is the settings stack, which takes a narrower
+   measure than the page's — so there the page's measure IS that stack's, read
+   from the one token both sheets read (--settingsColumn, screens/settings.css).
+   Plus the gutter on each side, because that is padding these boxes carry and
+   the stack inside them does not.
+
+   Keyed on the stack BEING there rather than on the route, so the head aligns
+   with the column actually under it: a settings arm that draws no stack — the
+   boundary plate — keeps the page measure on both and is aligned anyway. */
+.main-gridded:has(.settings-stack) {
+  --pageMeasure: calc(var(--settingsColumn) + 2 * var(--pageGutter));
+}
+/* The ONE place that measure is applied, and both the head and the body are in
+   it: a page whose name starts a hand's width to the left of the first card
+   under it is the page disagreeing with itself about where it begins, and the
+   only way for the two to be given different measures is for somebody to give
+   the head a rule of its own. There is nothing to keep in step here.
+
+   The head used to be full width, on the argument that it is the window's
+   chrome while the column is the document. It is not: it stands INSIDE the
+   scroller and scrolls away with the page, so it belongs to the document and
+   aligns with what it names.
+
    Centred in the page: the column is the thing being read, so it sits in the
-   middle of the space it is given rather than hugging one edge of it. The page
-   head above stays full width and is therefore wider than it on a big display —
-   deliberately, since the head is the window's chrome and the column is the
-   document. */
-.main-gridded .wrap {
-  max-width: var(--pageColumn);
-  margin: 0 auto;
+   middle of the space it is given rather than hugging one edge of it. */
+.main-gridded .wrap,
+.main-gridded .pagetitle {
+  max-width: var(--pageMeasure);
+  margin-inline: auto;
 }
 /* The rail-less surfaces — sign-in, onboarding, a public booking page. These
    render no page head to align with, and they are a single centred column on
@@ -288,10 +311,18 @@
    this: a tab that draws two panels draws them edge to edge. A record's own
    step is the wider one its bodies take from `.record-stack` (composed.css) —
    this is the floor under a body that has not, not a second answer to how a
-   record reads. */
+   record reads.
+
+   `.stat-strip-wrap` is a readings ROW standing in the same stack, and it
+   belongs on both sides of the pair for the same reason the panel does: the
+   strip draws no box of its own, so a panel landing under one sat on it with
+   nothing between — the forecast's call editor against the readings it argues
+   with. The interval is the page's, not the strip's, which is why it is stated
+   here rather than as a margin the strip carries into every layout it is used
+   in. */
 :is(.wrap, .surfacestate-part, .page-zones-main)
-  > :is(.card, .panel)
-  + :is(.card, .panel) {
+  > :is(.card, .panel, .stat-strip-wrap)
+  + :is(.card, .panel, .stat-strip-wrap) {
   margin-top: var(--gapCards);
 }
 
@@ -376,10 +407,8 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
-/* The label is absolutely positioned for the collapse animation, so it does not
-   flow around the shortcut cap — it is held clear of it instead. */
-/* The head: the brand block, then the line that says what it runs on and which
-   build this is. TWO ROWS, so the marker stands beside the attribution instead
+/* The head: the brand block, then the line that says what it runs on and what
+   stage it is at. TWO ROWS, so the marker stands beside the attribution instead
    of at the foot of a column a demo never scrolls to — and the control that
    collapses this panel is not among them, it stands in the top bar
    (app/topbar.css) where it does not travel with the panel it opens.
@@ -409,13 +438,23 @@
   min-height: var(--topbarH);
   /* A breath between the head and the first destination: with the marker on the
      head's last line the row under it read as one more item in its stack. */
-  margin-bottom: var(--space-3);
+  margin-block-end: var(--space-5);
+  /* The rows' own inset, matched. The panel's padding stands every child
+     --space-2 in from the edge, and then every ROW adds --space-2 of its own
+     (`.rail .navitem`, `.rail .navheading`) — so the head alone sat 8px out
+     from the column of words it heads. This is that second inset, on the one
+     child that had no reason to be exempt from it. Collapsed it is taken back
+     below: 56px less the panel's padding is a 40px column, and 8px off each
+     side of that is the mark's own box. */
+  margin-inline: var(--space-2);
 }
 /* Collapsed the head is the mark and the marker under it, and neither has a
    text column to stand on: at 56px the axis is the column's own centre, which is
    the axis every row glyph below them stands on too. */
 .rail.collapsed .railhead {
   align-items: center;
+  /* The expanded head's second inset would eat the 40px the mark stands in. */
+  margin-inline: 0;
 }
 /* brand block */
 .rail .ws {
@@ -466,13 +505,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--fs-h3);
 }
 .rail .ws-logo-product {
-  font-family: var(--f-display);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 .rail.collapsed .ws-logo {
@@ -532,9 +567,6 @@
 .rail .ws-chip-company .avatar {
   width: 100%;
   height: 100%;
-  /* ds:ignore the brand slot is a 40px box no avatar rung sizes, and the
-     monogram that fits it is the body glyph */
-  font-size: var(--fs-body);
 }
 /* The head row is a column when collapsed, so flex-basis cannot squeeze this
    shut the way it does the nav labels — the width has to be explicit, or the
@@ -573,62 +605,45 @@
   height: 0;
   opacity: 0;
 }
-.rail .ws-name b {
-  /* A step up from the rows: the workspace's name heads the column and reads
-     first, and at the rows' own size it was one more label among them. */
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  color: var(--textPrimary);
-  /* Set tight, because a company name is a NAME rather than prose: two lines of
-     it are one object and the reading leading between them pulled it apart. The
-     air the lockup needs is the gap above, which belongs to the block. */
-  line-height: 1.1;
-}
-/* The head's second line: what this installation runs on, and which build of it
-   this is. One row for both, because they are one statement — and in the same
-   small voice as the name above them rather than the mono uppercase kicker this
-   used to draw in, which was a third type family standing in the corner of
-   every screen and saying nothing the name did not.
+/* The head's second line: what this installation runs on, and what stage that
+   product is at. One row for both, because they are one statement.
    It is a SIBLING of the brand anchor and not a child of it: the marker is a
    fact about the build, and a fact inside a link is a fact a press carries you
    away from. */
-.rail .ws-org {
+.rail .ws-company {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  line-height: 1;
 }
 /* The ellipsis is the TEXT's, not the row's: an installation name is user data
    of unbounded length in a narrow column, and a row that clipped itself would
    take the marker with it — the one thing on this line that must always be
-   legible. */
-.rail .ws-org-text {
+   legible.
+
+   Body S, because this is the attribution UNDER the name and not a second name:
+   at the body size it read as a peer of the heading above it and the head had
+   two titles. */
+.rail .ws-company-text {
+  font: var(--fontBodySmall);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* WHICH BUILD THIS IS, as a badge rather than a line of grey type.
-   Filled in the brand's own accent so it reads as a stamp on the product rather
-   than as one more label: the reader it exists for is somebody seeing the
-   product for the first time, and "this is not finished software" is the one
-   thing in this panel they must not miss. --textOnAccentControl and not
-   --textOnAccent, because the fill IS --accent and dark mode lightens it
-   (design-system/tokens.css says so where the two are split). */
-.rail .ws-alpha {
-  flex: none;
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-  font-weight: var(--fw-bold);
-  padding: 1px var(--space-1); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
-  border-radius: var(--r-xs);
+/* Only the attribution gives way. Whatever else stands on this line is sized by
+   its own words, and one squeezed to buy the name room loses its label to the
+   ellipsis above — where the name can afford the ellipsis and still be read.
+   Said of the row's other children rather than of any one class, so the marker
+   beside it can be replaced or removed without taking its sizing with it; the
+   same direction `.panel-head` takes with its own title. */
+.rail .ws-company > :not(.ws-company-text) {
+  flex-shrink: 0;
 }
 /* Collapsed there is no room for the attribution and no need for it: the mark
-   above says whose installation this is, and 56px is one glyph wide. The badge
-   stays — it is the whole reason this line survives the collapse — shortened to
-   one letter by release.ts and centred under the mark by the head's own
-   `align-items`. */
-.rail.collapsed .ws-org-text {
+   above says whose installation this is, and 56px is one glyph wide. The marker
+   stays — it is the whole reason this line survives the collapse — at its full
+   word, which is short enough for the column, and centred under the mark by the
+   head's own `align-items`. */
+.rail.collapsed .ws-company-text {
   display: none;
 }
 
@@ -657,12 +672,20 @@
   margin-top: var(--space-5);
 }
 /* A quiet label over a group, not a heading competing with the rows under it:
-   sentence case, one step down from the rows in size and weight, in the meta
-   ink — the rows are what the eye is looking for. Not the uppercase eyebrow:
-   ten places to go under three shouted labels read as a form, and the mock
-   sets these small and plain. The group is separated by space, not by a rule:
-   a heading and a divider do the same job, and stacking both says it twice. */
+   sentence case, root type in the meta ink — the rows are what the eye is
+   looking for, and the ink is the whole difference between the label and them.
+   Not the uppercase eyebrow: ten places to go under three shouted labels read
+   as a form, and the mock sets these small and plain. The group is separated by
+   space, not by a rule: a label and a divider do the same job, and stacking
+   both says it twice. */
 .rail .navheading {
+  /* The rows' own height, so a group label sits on the same 32px rhythm as the
+     destinations under it rather than on whatever its line box happens to be.
+     Flex for the one reason a label needs it: the words centre in that box. */
+  display: flex;
+  align-items: center;
+  height: 32px; /* ds:ignore the destination row's height, spelled in `.rail .navitem` */
+  color: var(--textSecondary);
   padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
      the text cursor, which offers a selection nobody wants over a word that
@@ -760,7 +783,6 @@
 .rail .navitem.active {
   background: var(--accentLight);
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
 }
 .rail .navitem.active svg {
   color: var(--accentText);
@@ -795,18 +817,7 @@
   opacity: 0;
 }
 .rail .navitem .count {
-  min-width: 18px;
-  height: 18px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  display: grid;
-  place-items: center;
-  padding: 0 var(--space-1);
-  font-family: var(--f-body);
+  display: inline-flex;
   flex: none;
   margin-left: auto;
 }
@@ -830,7 +841,6 @@
   color: var(--railIconActive);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
   white-space: nowrap;
   box-shadow: var(--shadow-pop);
   z-index: 50;
@@ -839,7 +849,7 @@
 /* ===== a navigation level =====
  * The panel shows ONE level at a time: on a section route the ten destinations
  * step aside for that section's entries, with the way back up above them. 56px
- * cannot carry two levels, and 224px carrying both reads as a list of twenty
+ * cannot carry two levels, and 256px carrying both reads as a list of twenty
  * places to go.
  *
  * The rows are the same `.navitem`s as the destinations, deliberately: every
@@ -903,15 +913,12 @@
      two got to disagree; there is one now. */
   background: var(--bgCard);
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
+  font-family: var(--fontFamilyBody);
   text-align: left;
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */
 .rail .navback svg {
-  color: var(--textMeta);
   transition: transform var(--dur-state) var(--ease-out);
 }
 .rail .navback:hover svg,
@@ -959,7 +966,13 @@
 /* ===== the page's own name =====
  * Inside the scroller, on the content column's gutter, above the screen's own
  * block: the heading belongs to the document and scrolls with it. The top bar
- * above says where you are and stays; this says what this page is. */
+ * above says where you are and stays; this says what this page is.
+ *
+ * On the same gutter AND, where the page has a measure, in the same box: the
+ * cap is applied to this element and to `.wrap` by one declaration above
+ * (--pageMeasure), so the name starts and ends exactly where the content under
+ * it does at every width. An uncapped page needs nothing more than the gutter,
+ * because there the content is the full column too. */
 .pagetitle {
   display: flex;
   align-items: flex-start;
@@ -994,22 +1007,19 @@
 
 .pagetitle h1 {
   margin: 0;
-  font-family: var(--f-display);
-  line-height: 1.15;
+  font-family: var(--fontFamilyHeading);
   /* This heading names a SECTION, never a record — a record's own surface prints
      its name. Section titles are translated strings, so wrapping here guards
      against a long translation, not against user data. */
   overflow-wrap: anywhere;
 }
 /* The line under the page's name, for a page whose name alone does not say what
-   it is for. Quiet and one step down the type scale: it explains the heading, so
-   reading it must never compete with reading the heading. */
+   it is for. Quiet meta one step down the type scale, which is `t-sub` on the
+   element: it explains the heading, so reading it must never compete with
+   reading the heading. */
 .pagesub {
   margin: 0;
   max-width: 68ch;
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
-  color: var(--textSecondary);
 }
 /* The heading IS the switcher at phone width: the h1 carries no type of its own
    there, because the control inside it brings the page's name at the size the
@@ -1057,9 +1067,7 @@
   border-radius: var(--r-md);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
+  font-family: var(--fontFamilyBody);
   text-align: left;
   cursor: pointer;
 }
@@ -1080,7 +1088,6 @@
 }
 .pageswitch svg {
   flex: none;
-  color: var(--textMeta);
 }
 
 /* The list inside the sheet: the section's groups and their entries, which are
@@ -1112,15 +1119,13 @@
 }
 .sectionpickgroup a svg {
   flex: none;
-  color: var(--textMeta);
 }
-/* The entry the reader came from, in the same three signals the sidebar's rows
-   use — a tint, a weight and the accent on the glyph — because a tint alone is
-   colour-only (WCAG 1.4.1). */
+/* The entry the reader came from, in the same signals the sidebar's rows use —
+   a tint and the accent on the glyph — because a tint alone is colour-only
+   (WCAG 1.4.1). */
 .sectionpickgroup a[aria-current="page"] {
   background: var(--accentLight);
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
 }
 .sectionpickgroup a[aria-current="page"] svg {
   color: var(--accentText);
@@ -1151,17 +1156,16 @@
 .palette-input svg {
   width: 16px;
   height: 16px;
-  color: var(--textMeta);
   flex: none;
 }
+/* No type and no ink here: the box IS a `.input` (SearchField `flush`), and the
+   face, size, weight, colour and placeholder tone all come from that one rule.
+   Restating them made the bar a second opinion about what a field looks like. */
 .palette-input input {
   flex: 1;
   border: 0;
   outline: none;
   background: transparent;
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  color: var(--textPrimary);
 }
 .palette-list {
   max-height: 320px;
@@ -1178,13 +1182,12 @@
   padding: var(--space-2);
   border-radius: var(--r-sm);
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: left;
 }
 .palette-row svg {
   width: 14px;
   height: 14px;
-  color: var(--textMeta);
   flex: none;
 }
 .palette-row.selected,
@@ -1198,22 +1201,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.palette-row .type {
-  font-size: var(--fs-eyebrow);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
-  background: var(--bgCard);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
-}
-/* The two things the list says that are not a row. Both sit on the list's own
+/* The one thing the list says that is not a row. It sits on the list's own
    inset so the sentence starts on the same text column the results do. */
-.palette-notice {
-  margin: var(--space-1);
-}
 .palette-list .pending {
   /* ds:ignore the palette draws its rows on the list's own inset */
   padding: var(--space-2);
@@ -1258,7 +1247,6 @@
      are the whole of what this surface offers on a phone. */
   .palette-row {
     min-height: 44px;
-    font-size: var(--fs-body);
   }
 }
 
@@ -1276,11 +1264,20 @@
 .client-back {
   color: var(--railIconActive);
   text-decoration: none;
-  font-size: var(--fs-sm);
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+}
+/* The sender lookup: the field takes the line and the verb stands on the box's
+   own baseline, not on the label's — the row is bottom-aligned because only the
+   field has a name above it. */
+.client-lookup {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.client-lookup > .field {
+  flex: 1;
 }
 .client-footer {
   margin-top: var(--space-6);
@@ -1471,7 +1468,6 @@
     border: 0;
     border-radius: var(--r-control);
     background: transparent;
-    color: var(--textMeta);
     cursor: pointer;
   }
   .rail .railmore svg {
@@ -1580,7 +1576,7 @@
   }
   /* And the attribution beside the marker: the sheet is 600px wide, so the row
      the 56px rail reduces to one badge is spelled out in full here. */
-  .rail.sheetopen .ws-org-text {
+  .rail.sheetopen .ws-company-text {
     display: block;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner
@@ -1652,7 +1648,6 @@
     top: auto;
     transform: none;
     max-width: none;
-    font-size: var(--fs-body);
     text-align: left;
   }
   /* The count is a trailing figure in a list row, not a badge pinned to a tab. */
@@ -1667,7 +1662,6 @@
      out. Later in the file than that rule and weighing the same, so it wins. */
   .rail.sheetopen .navheading {
     display: block;
-    color: var(--textMeta);
   }
   /* In the sheet the level is a column again — the sheet is the phone's whole
      sidebar, and a bar's row of tabs is not a list of ten places. The collapsed
@@ -1703,11 +1697,11 @@
 }
 
 /* A list screen is one full-height surface: the page itself does not scroll,
- * the table's own body does. It keeps the same reading column (--pageColumn) and
- * the same page gutter as every other screen — it used to opt out of the cap,
- * which read as "a list uses the width it is given" until a 4K window gave it
- * 3000px and a six-column table stretched across a metre of desk with the eye
- * losing the row between name and status.
+ * the table's own body does. This rule gives it the height and the same page
+ * gutter as every other screen; whether it is also CAPPED is the column policy's
+ * answer and not this rule's — a list is scanned across, so most of them are not
+ * (`GRIDDED_SCREENS` in app/nav.ts names the one that is, and there the rule
+ * above caps this wrap at --pageMeasure like any other page).
  *
  * Keyed off the wrap CARRYING a surface, not on it being the only child. An
  * `:only-child` rule states that the layout depends on the surface having no
@@ -1733,16 +1727,14 @@
   min-height: 0;
 }
 
-/* An app banner spans the content column edge to edge: it is chrome the shell
- * mounts above every screen, not a card inside one, so it drops the radius the
- * Callout carries elsewhere. */
-.appbanner {
-  border-radius: 0;
-  border-inline: none;
-}
+/* `.appbanner` paints nothing and has no rule here on purpose: it is the
+ * shell's MARKER on the wrapper a banner mounts in, read by
+ * `.main:not(:has(> .appbanner)) > .scroll` above so the content column stops
+ * reserving the top bar's height while a banner stands in it. The notice inside
+ * the wrapper draws itself, and a wrapper is not a surface. */
 
 /* The resume-connect banner is the one that sits INSIDE the content column,
- * above the screen it interrupts, so it keeps its radius and earns a gap. */
+ * above the screen it interrupts, so it earns a gap under it. */
 .resumebanner {
   margin-bottom: var(--space-4);
 }
@@ -1807,26 +1799,41 @@
   left: var(--space-2);
   width: 16px;
   height: 16px;
-  color: var(--textMeta);
   /* Decoration over the field: it must not eat a click aimed at the box. */
   pointer-events: none;
 }
 
 .settingssearch input {
   width: 100%;
-  height: var(--control-h-sm);
+  height: var(--controlHeight);
   padding-inline: calc(var(--space-2) + 16px + var(--space-1)) var(--space-2);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
+  font-family: var(--fontFamilyBody);
+  /* A hand-rolled field, wearing the floor the design system's own fields wear
+     — a reader cannot tell this box apart from theirs, so its depth may not
+     disagree with them. */
+  box-shadow: var(--shadow-well);
+  /* Named, never `all`: the shadow is the one thing this box changes about
+     itself, and `transition: <time>` alone would put its height and padding on
+     a timer too. */
+  transition: box-shadow var(--dur-state) var(--ease-out);
+}
+
+/* The floor comes up to meet the pointer, as it does on every other field. */
+.settingssearch input:hover:not(:disabled, [aria-disabled="true"]),
+.settingssearch input:active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow: none;
 }
 
 .settingssearch input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
+  /* The ring is drawn outside the box and does not stand in for the floor the
+     way a glow does, so the floor goes rather than sitting under it. */
+  box-shadow: none;
 }
 
 /* Over the rows rather than pushing them down: a rail that grew by four rows
@@ -1839,7 +1846,10 @@
   right: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--space-1);
+  /* The menu anatomy's INSET (tokens.css), which every option list spends on
+     itself. Not its floor: this list is pinned to the search box it drops from,
+     so its width is that box's and never its own. */
+  padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
@@ -1852,7 +1862,10 @@
 .settingssearch-hit {
   display: flex;
   flex-direction: column;
-  padding: var(--space-1) var(--space-2);
+  /* The anatomy's block inset, so a hit here is the row a menu draws; the
+     inline inset is the list's own, since a hit carries two lines rather than
+     one and an optical menu inset would crowd the second. */
+  padding: var(--controlGap) var(--space-2);
   border-radius: var(--r-sm);
   color: var(--textPrimary);
   text-decoration: none;
@@ -1867,6 +1880,4 @@
 
 .settingssearch-empty {
   padding: var(--space-1) var(--space-2);
-  color: var(--textMeta);
-  font-size: var(--fs-body);
 }

@@ -1,30 +1,24 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { useUrlParams } from "../app/urlstate";
-import { Button, SegmentedControl } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Eyebrow } from "../design-system/eyebrow";
-import { FilterPills } from "../design-system/filterpills";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { type Translator, useLocale, useT } from "../i18n";
+import { rosterOwnerNaming, useRoster } from "./entityref";
 import { useOpenEmail } from "./openemail";
+import { useWorklistAddress } from "./worklist.address";
 import {
   bandSections,
   canReportEmptyBands,
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
-import {
-  completenessText,
-  pillCount,
-  sourceUnavailableText,
-} from "./worklist.copy";
+import { sourceUnavailableText } from "./worklist.copy";
 import {
   reviewShortfall,
   reviewWork,
@@ -32,12 +26,12 @@ import {
 } from "./worklist.destinations";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
+import { WORKLIST_FILTER_PARAM, WorklistHeader } from "./worklist.header";
 import { HiddenBacklogPanel } from "./worklist.hidden";
-import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   loadedQueue,
-  UNASSIGNED,
   useRefreshWalk,
   useWorklist,
   type Worklist,
@@ -45,7 +39,9 @@ import {
   type WorklistItem,
   type WorklistScope,
   type WorklistWalk,
+  worklistKey,
 } from "./worklist.queries";
+import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
 import { WalkNotice } from "./worklist.walknotice";
@@ -62,34 +58,11 @@ import "./worklist.css";
 // Every row answers the five questions the surface exists for — what happened,
 // why now, what is at stake, what to do, and can I do it here.
 
-// The cuts through the queue. `all` first because it is the default view.
-const FILTERS: readonly WorklistFilter[] = [
-  "all",
-  "customer_waiting",
-  "leads",
-  "deals_at_risk",
-  "meetings",
-  "tasks",
-  "decisions",
-  "system",
-];
-
-/** The dial's name in the address. One spelling, read and written. */
-export const WORKLIST_FILTER_PARAM = "filter";
-
-/**
- * The lane the address asks for, or the default.
- *
- * An unknown value reads as `all` rather than as an error: the vocabulary grows
- * on the server, and a pasted link naming a lane this build has not learnt
- * should show the day rather than an empty screen or a crash.
- */
-export function worklistFilterFrom(
-  params: ReadonlyMap<string, string>,
-): WorklistFilter {
-  const asked = params.get(WORKLIST_FILTER_PARAM);
-  return FILTERS.find((value) => value === asked) ?? "all";
-}
+// The address dial, re-exported from where it lives. It belongs beside the
+// strip that draws the lanes (`worklist.header.tsx`), and it is reachable from
+// the SCREEN because another surface names one of this screen's lanes to open
+// it — a reading in the Brief. One spelling of the parameter, two ways in.
+export { WORKLIST_FILTER_PARAM };
 
 // Which narrowing actually CONTAINS this group's members.
 //
@@ -113,108 +86,6 @@ function rowIdentity(item: WorklistItem): string {
   return `${item.source}-${item.id}`;
 }
 
-// One row.
-//
-// The rank number leads because the whole promise of the page is an order; the
-// reason line under the title is what makes that order checkable rather than
-// something to trust.
-function WorklistHeader({
-  day,
-  loaded,
-  scope,
-  filter,
-  onScope,
-  onFilter,
-  owner,
-  onOwner,
-}: Readonly<{
-  day: Worklist;
-  // How many rows are on screen, which grows as the reader pages.
-  loaded: number;
-  scope: WorklistScope;
-  filter: WorklistFilter;
-  owner: string;
-  onScope: (next: WorklistScope) => void;
-  onFilter: (next: WorklistFilter) => void;
-  onOwner: (next: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const scopes = day.scope_options;
-  const completeness = completenessText(day, filter, t, locale, loaded);
-  return (
-    <div className="worklist-header">
-      {/* The facts line and the scope on one line: what the day holds, and
-          whose day. The scope belongs beside the sentence it changes rather
-          than under it, where it read as a control over the pills below. */}
-      <div className="worklist-header-line">
-        {/* Five figures, ONE scope: the whole assembled day. All five come off
-          `summary`, which the server counts over every candidate it weighed
-          rather than over the page it cut — so the sentence stays still as the
-          reader pages, and a total the browser derived a second way cannot
-          disagree with the bands beside it. */}
-        <p className="t-h3 worklist-lead">
-          {t(
-            // `in_play` is optional, and a server that does not send it has not
-            // said there is none — it has said nothing. Printing 0 for silence
-            // is the under-reporting this line must never do, so the sentence
-            // without the figure is drawn instead.
-            day.summary.in_play === undefined
-              ? "worklist.summary.noMiddle"
-              : "worklist.summary",
-            {
-              urgent: formatNumber(day.summary.urgent, locale),
-              due: formatNumber(day.summary.due, locale),
-              inPlay: formatNumber(day.summary.in_play ?? 0, locale),
-              lower: formatNumber(day.summary.lower_priority, locale),
-              total: formatNumber(day.summary.total, locale),
-            },
-          )}
-        </p>
-        {/* Drawn only when there is a choice: a rep who can see only their own
-          work is never offered a switch that would refuse when pressed. */}
-        {scopes.length > 1 && owner === "" && (
-          <SegmentedControl
-            options={scopes}
-            value={scope}
-            onChange={onScope}
-            label={t("worklist.scope.label")}
-            labels={{
-              mine: t("worklist.scope.mine"),
-              unassigned: t("worklist.scope.unassigned"),
-              team: t("worklist.scope.team"),
-              all: t("worklist.scope.all"),
-            }}
-          />
-        )}
-      </div>
-      {/* Whose queue. Offered on the same tier the server admits a named owner
-          on — `team` in the options means this reader reaches past themselves —
-          so the control and the refusal cannot disagree. It replaces the scope
-          switch rather than sitting beside it: a named owner outranks the scope
-          word, and the pair is a 422. */}
-      {scopes.includes("team") && (
-        <OwnerPicker owner={owner} onOwner={onOwner} />
-      )}
-      <FilterPills
-        pills={FILTERS.map((value) => ({
-          value,
-          label: t(`worklist.filter.${value}` as const),
-          count: pillCount(day, value),
-        }))}
-        value={filter}
-        onChange={onFilter}
-        label={t("worklist.filter.label")}
-      />
-      {/* What the page is NOT showing. Drawn only when there is a difference to
-          report: on a day the queue carries whole, "12 of 12" is noise. */}
-      {completeness !== null && (
-        <p className="t-caption worklist-completeness">{completeness}</p>
-      )}
-    </div>
-  );
-}
-
 /**
  * The reader has put every row down.
  *
@@ -226,7 +97,7 @@ function WorklistHeader({
  * An identity no row can carry: `rowIdentity` joins a source and an id, and no
  * source is empty.
  */
-const NOTHING_IN_HAND = "\u0000none";
+const NOTHING_IN_HAND = "none";
 
 /**
  * The row the pane is about.
@@ -263,7 +134,7 @@ function rowInHand(
   // highlight that means nothing and never clears.
   //
   // The FIRST such row rather than the first row: a day led by a deal still has
-  // a person further down whose context is worth standing open, and skipping to
+  // a contact further down whose context is worth standing open, and skipping to
   // it keeps the pane useful without moving the queue's own order.
   return queue.find(hasPane);
 }
@@ -328,6 +199,16 @@ function QueueRows({
             }
             onOpenEmail={onOpenEmail}
             onReview={() => onFilter(reviewFilter(item))}
+            // The ORDER the Brief's card reads in, on every row of the queue:
+            // the set-asides lead, the prepared move closes. The queue is a
+            // list of rows a reader answers one at a time, which is the same
+            // act the card is shaped for — and the two surfaces drawing one
+            // row's verbs in two orders is what sent a rep looking for the
+            // answer at a different x depending on where they opened it.
+            //
+            // The ORDER only. No card frames these rows, so they keep their
+            // own captions, the way to their record, and the pin.
+            acts="triage"
           />
         </li>
       ))}
@@ -345,21 +226,42 @@ function QueueRows({
 // describe a slice as though it were the day.
 // Which "there is nothing here" sentence an empty queue earns.
 //
-// A partial read outranks both: a day cannot be reported clear while something
-// that would have filled it was never read. Otherwise the Tasks pill names its
-// HORIZON — this queue is today's, so a task due tomorrow is deliberately
+// A partial read outranks the rest: a day cannot be reported clear while
+// something that would have filled it was never read. Then the Tasks pill names
+// its HORIZON — this queue is today's, so a task due tomorrow is deliberately
 // absent, and "Nothing is waiting on you" read as "you have no work" to a rep
 // looking at three open tasks on the company page beside it. The other pills
 // keep the unqualified sentence: the full queue carries replies and reviews
 // that have no deadline, so "due today" would be the wrong frame for it.
-function clearMessage(partial: boolean, filter: WorklistFilter): MessageKey {
+//
+// WHOSE day is clear is the last question, and only the unqualified sentence
+// gets it wrong: it is the one arm that says "on YOU", and on a colleague's
+// queue that named the reader over somebody else's empty day. The other two
+// describe the READ rather than the reader and stay as they are.
+//
+// The name is the roster's, and its absence falls back to the unqualified
+// sentence rather than to an id or a gap: a reader who cannot be named is a
+// question this line does not have to answer, and "Nothing is waiting on
+// 4f3c…" is worse than a sentence one word too general.
+function clearSentence(
+  partial: boolean,
+  filter: WorklistFilter,
+  colleague: string | null,
+  t: Translator,
+): string {
   if (partial) {
-    return "worklist.clearOfWhatWasRead";
+    return t("worklist.clearOfWhatWasRead");
   }
-  return filter === "tasks" ? "worklist.clearOfTasksToday" : "worklist.clear";
+  if (filter === "tasks") {
+    return t("worklist.clearOfTasksToday");
+  }
+  return colleague
+    ? t("worklist.clearFor", { name: colleague })
+    : t("worklist.clear");
 }
 
 function WorklistBody({
+  embedded = false,
   day,
   walk,
   onRefresh,
@@ -378,6 +280,7 @@ function WorklistBody({
   moreFailed,
   onMore,
 }: Readonly<{
+  embedded?: boolean;
   day: Worklist;
   queue: readonly WorklistItem[];
   scope: WorklistScope;
@@ -402,11 +305,19 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  // The pane belongs to the DAY, so only a row in the day can fill it. A review
-  // row selected here would draw its context beside the Today panel while the
-  // highlighted row sat in the panel below — the two halves of one answer, a
-  // screen apart, with nothing joining them.
-  const selected = rowInHand(sellerWork(queue), selectedId);
+  // Whose day this is, by name. The same roster read the owner picker above
+  // already makes, under the same key — so this resolves out of that cache and
+  // opens no request of its own, and asks for nothing at all on the reader's
+  // own day. `rosterOwnerNaming` answers null both for nobody and for an id
+  // this roster cannot name, which is the one answer this sentence needs: it
+  // has a wording that names no one.
+  const colleague = rosterOwnerNaming(useRoster("user", owner !== ""))(owner);
+  // Default context follows seller work. An explicit choice may also name a
+  // review row, whose record context must remain reachable from the queue.
+  const selected = rowInHand(
+    selectedId === "" ? sellerWork(queue) : queue,
+    selectedId,
+  );
   // The day cut into the two jobs it holds. `destination` says which, and the
   // server decides it — the counts above the queue are computed from the same
   // field, so a split derived here from `source` or `category` would drift
@@ -444,17 +355,29 @@ function WorklistBody({
   };
   return (
     <>
-      <WorklistHeader
-        day={day}
-        loaded={queue.length}
-        scope={scope}
-        filter={filter}
-        owner={owner}
-        onScope={onScope}
-        onFilter={onFilter}
-        onOwner={onOwner}
-      />
-      {/* What the day is WORTH. A SIBLING of the queue rather than part of the
+      {/* TWO COLUMNS where the page has the width: the LANES — the day's
+          figures, whose day it is, and the cuts through it — stand beside the
+          day and stay put while it scrolls, so a reader ten rows down changes
+          the cut without going back to the top. The columns wrapper is what
+          the page's own width is measured against (a box cannot answer a
+          query about itself); under the fold all three wrappers dissolve
+          (worklist.css, `display: contents`) and the blocks take the one
+          column in the order the phone rules give them. */}
+      <div className="worklist-columns">
+        <div className="worklist-lanes">
+          <WorklistHeader
+            day={day}
+            loaded={queue.length}
+            scope={scope}
+            filter={filter}
+            owner={owner}
+            onScope={onScope}
+            onFilter={onFilter}
+            onOwner={onOwner}
+          />
+        </div>
+        <div className="worklist-day">
+          {/* What the day is WORTH. A SIBLING of the queue rather than part of the
           header, which is what lets the phone put the work first.
 
           On a wide screen it reads above the queue, where a figure describing
@@ -462,174 +385,146 @@ function WorklistBody({
           block, and with the title and controls above them the first row's
           verb landed 972px down an 844px screen — a rep opened their morning
           and had to scroll before they could do anything. The stylesheet moves
-          this below the queue under 720px; the DOM order stays as it reads,
-          so a screen reader still meets the day's figures before its rows. */}
-      <WorklistReadings day={day} onLane={onFilter} />
-      {/* Who on the team is carrying what.
-          Offered on the SAME tier the server admits the board on, read off
-          scope_options so the control and the refusal cannot disagree — the
-          rule the owner picker beside it already keeps.
-          Drawn only on the reader's OWN day. On a named person's queue the
-          reader has already chosen who to look at, and a board above it would
-          offer them the choice they just made. */}
-      {/* WHAT is going wrong, above WHO is carrying what. A lead opens this
-          page for the first question — the board answers the second, and
-          answering it first asks them to infer the trouble from three counts
-          per teammate. Same tier and same condition as the board: both are the
-          lead's read of a team, and a rep is refused both. */}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamExceptionsPanel
-          enabled={day.scope_options.includes("team")}
-          onOwner={onOwner}
-        />
-      )}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamBoard
-          onOwner={onOwner}
-          onUnassigned={() => onScope("unassigned")}
-        />
-      )}
-      {/* The verbs a lead has over somebody else's day. Drawn only on a named
-          person's queue: on the reader's own there is nobody to coach. */}
-      {owner !== "" && <CoachControl owner={owner} />}
-      {/* What the queue is NOT showing. Beside the team board because it is the
-          same reader's question — a lead asking whether the day their team sees
-          is the day their team has — and on the same tier for the same reason.
+          this below the queue under 720px, in PAINT only — worklist.layout.ts
+          holds why the document order does not follow it.
 
-          On the reader's OWN day only. The endpoint takes no owner and no
-          scope: it derives its subject from the authenticated principal, so
-          wherever the queue beside it is about somebody else, this panel is
-          still answering about the reader. "412 hidden from you" stood on a
-          page headed with a colleague's name and read as THEIR backlog — on
-          the one surface whose whole job is to say what a queue is hiding.
-
-          BOTH ways of leaving your own day are guarded, because there are two
-          and they are reached by different controls. `owner` is the drill-down
-          into a named colleague; `scope` is the picker beside it, and the team
-          board's own "show me the unowned pile" moves the scope while leaving
-          the owner empty. Guarding the drill-down alone left the same wrong
-          figure standing under the unassigned and team queues.
-
-          Answering it FOR a colleague is a different feature needing a
-          different endpoint. Until that exists, saying nothing beats saying the
-          wrong person's number under their name. */}
-      {owner === "" && scope === "mine" && (
-        <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
-      )}
-      {/* What has moved since the reader started paging. An offer to refresh
+          NOT IN THE DRAWER. The drawer is opened from a page that already
+          carries these five readings under its own work, so a second set of
+          them is the same figures said twice on one screen — and folded away
+          behind a disclosure they were a rule and a word of chrome standing
+          between the head and the queue the drawer exists to show. */}
+          {!embedded && <WorklistReadings day={day} onLane={onFilter} />}
+          {/* THE REASON A LEAD OPENED SOMEBODY ELSE'S DAY, at the head of that day
+          in every state — below it the block moved as its own form opened, and
+          a lead read three panels of somebody else's morning before the way to
+          say anything about it. Only on a named queue. */}
+          {owner !== "" && <CoachControl owner={owner} name={colleague} />}
+          {/* What has moved since the reader started paging. An offer to refresh
           rather than a fault: the day on screen is correct, it is simply no
           longer complete. */}
-      <WalkNotice walk={walk} onRefresh={onRefresh} />
-      {/* A day cannot read as clear while something that would have filled it
+          <WalkNotice walk={walk} onRefresh={onRefresh} />
+          {/* A day cannot read as clear while something that would have filled it
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}
-      {missing.length > 0 && (
-        <Callout tone="warn">
-          {t("worklist.partial", {
-            sources: missing
-              .map((source) => sourceUnavailableText(source, t))
-              .join(", "),
-          })}
-        </Callout>
-      )}
-      {queue.length === 0 ? (
-        // One line, not a panel. No card is drawn to report a zero.
-        //
-        // And ONE line rather than the four per-band ones below, which is a
-        // deliberate difference. Those exist because a reader whose Now band is
-        // empty cannot otherwise tell that from a page that simply starts lower
-        // — a question only worth answering when there IS a page. A wholly
-        // clear day has nothing to distinguish, and four headings each saying
-        // nothing is under them says less than the sentence that says so once.
-        //
-        // Under the Tasks pill the sentence names its HORIZON. This queue is
-        // today's: the server takes open tasks due before the installation's
-        // midnight, so a task due tomorrow is deliberately absent. "Nothing is
-        // waiting on you" read as "you have no work" to a rep who could see
-        // three tasks on the company beside it, and the page offered nothing
-        // to reconcile the two.
-        <p className="t-body worklist-clear">
-          {t(clearMessage(missing.length > 0, filter))}
-        </p>
-      ) : (
-        // The queue, and beside it what the SELECTED row is about.
-        //
-        // PageZones is used only where there IS a pane. Its aside shape
-        // reserves a 7fr/3fr grid whatever the aside contains, so wrapping an
-        // unselected page would leave the queue at seventy per cent width with
-        // an empty third beside it — a column that reads as a pane which
-        // failed to load.
-        //
-        // hasPane is asked BEFORE the element is made: a component returning
-        // null is still an element, and an element still gets the aside column
-        // and its landmark. The rule lives beside the component that obeys it.
-        <PageZonesWhenPaned
-          pane={
-            selected && hasPane(selected) ? (
-              <WorklistPane item={selected} />
-            ) : null
-          }
-          label={t("worklist.pane.title")}
-          queue={
-            <Panel title={t("worklist.queue")}>
-              {/* The headings come from the SERVER's band list, in its draw
+          {missing.length > 0 && (
+            <Callout
+              tone="warning"
+              kind="standing"
+              title={t("worklist.partialTitle")}
+            >
+              {t("worklist.partial", {
+                sources: missing
+                  .map((source) => sourceUnavailableText(source, t))
+                  .join(", "),
+              })}
+            </Callout>
+          )}
+          {queue.length === 0 ? (
+            // One line, not a panel. No card is drawn to report a zero.
+            //
+            // And ONE line rather than the four per-band ones below, which is a
+            // deliberate difference. Those exist because a reader whose Now band is
+            // empty cannot otherwise tell that from a page that simply starts lower
+            // — a question only worth answering when there IS a page. A wholly
+            // clear day has nothing to distinguish, and four headings each saying
+            // nothing is under them says less than the sentence that says so once.
+            //
+            // Under the Tasks pill the sentence names its HORIZON. This queue is
+            // today's: the server takes open tasks due before the installation's
+            // midnight, so a task due tomorrow is deliberately absent. "Nothing is
+            // waiting on you" read as "you have no work" to a rep who could see
+            // three tasks on the company beside it, and the page offered nothing
+            // to reconcile the two.
+            <p className="t-body worklist-clear">
+              {clearSentence(missing.length > 0, filter, colleague, t)}
+            </p>
+          ) : (
+            // The queue, and beside it what the SELECTED row is about.
+            //
+            // PageZones is used only where there IS a pane. Its aside shape
+            // reserves a 7fr/3fr grid whatever the aside contains, so wrapping an
+            // unselected page would leave the queue at seventy per cent width with
+            // an empty third beside it — a column that reads as a pane which
+            // failed to load.
+            //
+            // hasPane is asked BEFORE the element is made: a component returning
+            // null is still an element, and an element still gets the aside column
+            // and its landmark. The rule lives beside the component that obeys it.
+            <PageZonesWhenPaned
+              active={selectedId !== ""}
+              onClose={() => onSelect(NOTHING_IN_HAND)}
+              pane={
+                // NOT IN THE DRAWER, and this is the one surface it is
+                // withheld from. The pane says whom a row is about, when they
+                // last wrote and when we did — and the ROW now says all three
+                // itself, on every surface that draws it. On the queue's own
+                // page the column beside it is free and the pane adds the
+                // record's own reading to that; in a drawer it is a third of
+                // an already narrow list spent repeating the line above it.
+                !embedded && selected && hasPane(selected) ? (
+                  <WorklistPane item={selected} />
+                ) : null
+              }
+              label={t("worklist.pane.title")}
+              queue={
+                <Panel
+                  // INDIGO, the band the Brief's Focus panel wears and a
+                  // record's "what needs you today" pane before it: these rows
+                  // are the agent's reading of the day — what it ranked and
+                  // what it prepared — and indigo is the one claim the product
+                  // makes about who did that. The same panel is drawn on this
+                  // page and in the queue drawer, so the claim is made once
+                  // and reads the same in both.
+                  tone="ai"
+                  title={t("worklist.queue")}
+                  titleAction={
+                    <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                  }
+                >
+                  {/* The headings come from the SERVER's band list, in its draw
                   order, rather than from the rows — which is the only way a
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-              {bandSections(day, today).map((section) =>
-                section.items.length === 0 ? (
-                  canReportEmptyBands(hasMore) && (
-                    <div key={section.band} className="worklist-queue-band">
-                      <Eyebrow as="h3" className="worklist-band">
-                        {t(`worklist.band.${section.band}` as const)}
-                      </Eyebrow>
-                      {/* Said, not left blank. A heading with nothing under it
-                          reads as a page that failed to draw. */}
-                      <p className="t-body worklist-band-clear">
-                        {t(`worklist.bandClear.${section.band}` as const)}
-                      </p>
-                    </div>
-                  )
-                ) : (
-                  <div key={section.band} className="worklist-queue-band">
-                    <Eyebrow as="h3" className="worklist-band">
-                      {t(`worklist.band.${section.band}` as const)}
-                    </Eyebrow>
-                    <QueueRows items={section.items} {...rowProps} />
-                  </div>
-                ),
-              )}
-              {/* Rows an older server sent with no band. Real work, drawn under
+                  {bandSections(day, today).map((section) => (
+                    <QueueBand
+                      key={section.band}
+                      section={section}
+                      canReportEmpty={canReportEmptyBands(hasMore)}
+                      rows={QueueRows}
+                      rowProps={rowProps}
+                    />
+                  ))}
+                  {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
-              {unbandedRows(today).length > 0 && (
-                <QueueRows items={unbandedRows(today)} {...rowProps} />
-              )}
-              {/* The way to the rest of the backlog.
+                  {unbandedRows(today).length > 0 && (
+                    <QueueRows items={unbandedRows(today)} {...rowProps} />
+                  )}
+                  {/* The way to the rest of the backlog.
                   Acceptance asks that the queue's counts be reachable, and
                   before this the page stopped at its first read with no route
                   to the rows behind it — the figures said work existed and
                   offered no way to it. */}
-              {hasMore && (
-                <div className="worklist-more">
-                  <Button onClick={onMore} pending={loadingMore}>
-                    {t("worklist.more")}
-                  </Button>
-                  {/* A refused page leaves the button looking exactly as an
+                  {hasMore && (
+                    <div className="worklist-more">
+                      <Button onClick={onMore} pending={loadingMore}>
+                        {t("worklist.more")}
+                      </Button>
+                      {/* A refused page leaves the button looking exactly as an
                       unpressed one does. Saying so is what tells the reader
                       the backlog is still there and worth asking for again. */}
-                  {moreFailed && (
-                    <span className="co-part-error" role="alert">
-                      {t("worklist.more.failed")}
-                    </span>
+                      {moreFailed && (
+                        <span className="co-part-error" role="alert">
+                          {t("worklist.more.failed")}
+                        </span>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
-            </Panel>
-          }
-        />
-      )}
-      {/* What is NOT the seller's to execute, below their day rather than
+                </Panel>
+              }
+            />
+          )}
+          {/* What is NOT the seller's to execute, below their day rather than
           inside it.
           A duplicate pair, a stopped mailbox and an approval somebody owes are
           three different jobs, and none of them is the next call to make. Drawn
@@ -637,13 +532,43 @@ function WorklistBody({
           customer stepped over the product's own housekeeping to find one.
           Below, and never hidden — this work is somebody's, and a screen that
           swallowed it would be the reason it went undone. */}
-      <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
-      {/* LAST, and folded shut. A reader opens this page to find what to do
-          next; what is already finished answers a different question — worth
-          having, and not worth leading with. It is also the only panel here
-          that asks for nothing: the receipt is why the acts above it are safe
-          to take. */}
-      <HandledForYouPanel />
+          <ReviewPanel
+            items={review}
+            shortfall={reviewMissing}
+            rows={rowProps}
+          />
+          {/* Team oversight belongs to the explicitly selected wider scope. */}
+          {owner === "" &&
+            scope !== "mine" &&
+            scope !== "unassigned" &&
+            day.scope_options.includes("team") && (
+              <TeamExceptionsPanel
+                enabled={day.scope_options.includes("team")}
+                onOwner={onOwner}
+              />
+            )}
+          {owner === "" &&
+            scope !== "mine" &&
+            scope !== "unassigned" &&
+            day.scope_options.includes("team") && (
+              <TeamBoard
+                onOwner={onOwner}
+                onUnassigned={() => onScope("unassigned")}
+              />
+            )}
+          {/* This diagnostic counts all readable history, not personal obligations. */}
+          {owner === "" && scope === "all" && (
+            <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
+          )}
+          {/* LAST, and open. A reader opens this page to find what to do next;
+          what is already finished answers a different question — worth having,
+          and not worth leading with, which is what its position says. It is
+          also the only panel here that asks for nothing: the receipt is why the
+          acts above it are safe to take, and a receipt folded shut is one
+          nobody checks. */}
+          <HandledForYouPanel />
+        </div>
+      </div>
     </>
   );
 }
@@ -668,22 +593,31 @@ function ReviewPanel({
     return null;
   }
   return (
-    <Panel title={t("worklist.review")}>
+    <Panel
+      title={t("worklist.review")}
+      // What this panel is NOT showing, in the FOOTER band — which is what a
+      // figure belonging to the whole panel gets. It was a bare `<p>` among the
+      // panel's direct children, and a direct child of `Panel` sits in no
+      // padding at all: the rows around it are `PanelRow`s carrying the panel's
+      // own inset, so the sentence started a full `--padPanel` to the left of
+      // every row above it and read as a line that had escaped the card.
+      //
+      // The panel has no cursor of its own — review rows arrive as a side
+      // effect of paging the day — so a reader with an approval past the page
+      // cut sees a panel that looks complete and nothing that says otherwise.
+      // The day's own total is the denominator, never drawn bare: it counts
+      // every candidate the read weighed, so alone it would claim rows this
+      // panel does not hold.
+      footer={
+        shortfall
+          ? t("worklist.review.partial", {
+              loaded: formatNumber(shortfall.loaded, locale),
+              total: formatNumber(shortfall.total, locale),
+            })
+          : undefined
+      }
+    >
       <QueueRows items={items} {...rows} />
-      {/* What this panel is NOT showing. It has no cursor of its own — review
-          rows arrive as a side effect of paging the day — so a reader with an
-          approval past the page cut sees a panel that looks complete and
-          nothing that says otherwise. The day's own total is the denominator,
-          never drawn bare: it counts every candidate the read weighed, so
-          alone it would claim rows this panel does not hold. */}
-      {shortfall && (
-        <p className="t-caption worklist-completeness">
-          {t("worklist.review.partial", {
-            loaded: formatNumber(shortfall.loaded, locale),
-            total: formatNumber(shortfall.total, locale),
-          })}
-        </p>
-      )}
     </Panel>
   );
 }
@@ -697,15 +631,32 @@ function PageZonesWhenPaned({
   queue,
   pane,
   label,
-}: Readonly<{ queue: ReactNode; pane: ReactNode; label: string }>) {
+  active,
+  onClose,
+}: Readonly<{
+  queue: ReactNode;
+  pane: ReactNode;
+  label: string;
+  active: boolean;
+  onClose: () => void;
+}>) {
+  const t = useT();
   if (!pane) {
     return <>{queue}</>;
   }
   return (
     <PageZones
       shape="aside"
+      className={active ? "worklist-context-open" : "worklist-context-idle"}
       mainClassName="worklist-main"
-      aside={pane}
+      aside={
+        <>
+          <Button className="worklist-context-back" onClick={onClose}>
+            {t("brief.queue.back")}
+          </Button>
+          {pane}
+        </>
+      }
       asideLabel={label}
       main={queue}
     />
@@ -715,71 +666,33 @@ function PageZonesWhenPaned({
 // The Worklist screen.
 export function WorklistScreen({
   opensOn,
+  embedded = false,
 }: Readonly<{
   // What the address asked for, from `#/worklist/<segment>`: a user id opens
-  // that person's queue, and the literal "unassigned" opens the unowned pile.
+  // that contact's queue, and the literal "unassigned" opens the unowned pile.
   // Both are doors a team board row needs — a row that could only reach this
   // page would ask the reader to pick the same thing a second time.
   //
-  // It SEEDS the dials and nothing more. They stay state afterwards and the
-  // address does not follow them, for the reason the dials give below: an
-  // address carrying one of four would describe a fraction of what is on screen.
+  // An unassigned path supplies the default scope; an explicit scope query
+  // overrides it so the scope dial remains usable after following that link.
   opensOn?: string;
+  embedded?: boolean;
 }> = {}) {
   const t = useT();
-  // The dials are state rather than a stored preference: a scope is a question
-  // about right now, and a remembered one would answer a different question
-  // than the reader asked on their next visit.
-  const [scope, setScope] = useState<WorklistScope>(
-    opensOn === UNASSIGNED ? UNASSIGNED : "mine",
-  );
-  // The one dial of the four that lives in the ADDRESS, and the reason is a
-  // figure on another screen: Brief's readings each count one of these lanes,
-  // and a reading that names a set is the way into it — which it cannot be
-  // unless the lane is nameable. `?filter=` is the query half, which
-  // `routeIdentity` ignores by design, so this does not disturb the
-  // `#/worklist/<owner>` remount that applies `opensOn`. It also makes a
-  // narrowed queue a link somebody can paste, which is what the address is for.
-  //
-  // Scope, owner and the selected row stay state. Moving all four is still its
-  // own change; this moves the one that another surface has to be able to say.
-  const [params, setParams] = useUrlParams();
-  const filter = worklistFilterFrom(params);
-  const setFilter = (next: WorklistFilter) => {
-    const query = new Map(params);
-    // "all" is the default, so it is spelled by the parameter's ABSENCE — an
-    // address carrying `?filter=all` describes the same view as one carrying
-    // nothing and would be a second spelling of it.
-    if (next === "all") {
-      query.delete(WORKLIST_FILTER_PARAM);
-    } else {
-      query.set(WORKLIST_FILTER_PARAM, next);
-    }
-    setParams(query);
-  };
-  // Whose queue, when it is not the reader's own. Empty means their own day,
-  // which is what every seat sees and the only thing most seats may ask for.
-  const [owner, setOwner] = useState(
-    opensOn && opensOn !== UNASSIGNED ? opensOn : "",
-  );
-  // Which row the context pane is about. Local state, not the address: the
-  // page's other dials are state too, and putting one of the four in the URL
-  // would make the address describe a fraction of what the reader is looking
-  // at. Moving them all there is its own change.
-  const [selectedId, setSelectedId] = useState("");
+  const {
+    scope,
+    filter,
+    owner,
+    selectedId,
+    setScope,
+    setFilter,
+    setOwner,
+    setSelectedId,
+  } = useWorklistAddress(opensOn, embedded);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  // Changing a dial drops the selection. A row chosen under one question is
-  // not a row the reader chose under the next one, and keeping the id means a
-  // row that comes back — a filter switched away and back, a snooze that lifts
-  // — re-opens its pane with nobody having asked it to.
-  const answerWith =
-    <T,>(set: (next: T) => void) =>
-    (next: T) => {
-      setSelectedId("");
-      set(next);
-    };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const refreshWalk = useRefreshWalk();
+  const queryClient = useQueryClient();
   // A failed SHOW MORE is not a failed page. `isError` covers both, and
   // treating them alike would replace a screen of rows the reader is working
   // through with an error panel because one extra page did not arrive. The
@@ -823,6 +736,7 @@ export function WorklistScreen({
       >
         {first && (
           <WorklistBody
+            embedded={embedded}
             day={first}
             walk={walk}
             // Refreshing starts a NEW walk, which is what brings in the work
@@ -835,9 +749,9 @@ export function WorklistScreen({
             filter={filter}
             owner={owner}
             selectedId={selectedId}
-            onScope={answerWith(setScope)}
-            onFilter={answerWith(setFilter)}
-            onOwner={answerWith(setOwner)}
+            onScope={setScope}
+            onFilter={setFilter}
+            onOwner={setOwner}
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
             hasMore={day.hasNextPage}
@@ -850,10 +764,18 @@ export function WorklistScreen({
       {/* One drawer over the whole queue, at page level rather than inside a
           row: two mounted dialogs would be two `aria-modal` elements, and the
           day stays legible behind the message being read. */}
+      {/* A reply sent from the drawer refreshes the queue, exactly as the
+          row's own Reply does. Without it the message a rep just answered
+          keeps its place in the waiting lane and keeps offering to answer it,
+          which is the one thing this lane exists to stop saying. Invalidated
+          rather than reset: the walk stays where the reader had paged it. */}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}
         onClose={() => setOpenEmail(null)}
+        onReplySent={() =>
+          void queryClient.invalidateQueries({ queryKey: worklistKey })
+        }
       />
     </div>
   );

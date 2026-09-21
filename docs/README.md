@@ -2,19 +2,19 @@
 
 **Using the product rather than changing it?** The end-to-end walkthroughs for a
 rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
-is mostly for the person changing the code — with one deliberate exception:
-`how-to/` carries product how-tos (working your pipeline, setting up projects,
+is mostly for the contact changing the code — with one deliberate exception:
+`how-to/` carries product how-tos (working your deals, setting up projects,
 partner programs) beside the engineering ones, because a how-to is a thing you
 return to for one answer whichever audience you are in.
 
 Documentation for building and operating **Margince** — a governed, single-tenant CRM (a Go `/v1` API
-backend; the Vite/React web UI ships separately). One installation serves one organisation, and boot
+backend; the Vite/React web UI ships separately). One installation serves one company, and boot
 refuses a second. The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
 **how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*, plus
 **[principles](principles/README.md)** — the handful of statements about this codebase's shape that
 settle a class of arguments before they start.
 
-**Designing anything a person can see?** [`DESIGN.md`](../DESIGN.md) at the
+**Designing anything a reader can see?** [`DESIGN.md`](../DESIGN.md) at the
 repository root is the visual language: the look every new surface is designed
 against, and the research behind it. The plan for landing it, one PR per
 step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md), continued in
@@ -30,9 +30,13 @@ maps the codebase and links everything below.
 
 ## Map
 
+- [Import purchased employment history](how-to/import-employment-history.md) — contact channels, employer matching, installation and backfill.
+
+- [Editing records concurrently](how-to/concurrent-record-edits.md) — independent field changes and conflict recovery.
+
 ### Handbook — how to USE the product
 
-The only tree here written for the person using Margince rather than building it:
+The only tree here written for the contact using Margince rather than building it:
 no code, no API, just the app.
 
 - [handbook/README.md](handbook/README.md) — eleven pages covering records, the
@@ -51,6 +55,15 @@ decision rather than an omission.
   are the German ones in [compliance/de/](compliance/de/); a translation of a
   legal document is not the document.
 
+### Incident reporting — our duty, not the customer's
+
+What we do when a weakness in Margince is being exploited in the wild: who
+files, to whom, and against which clocks. Written before it is needed, because
+a 24-hour deadline is not a thing to work out under pressure.
+
+- [compliance/cra/README.md](compliance/cra/README.md) — the runbook, the three
+  filled report skeletons and the tabletop walk (CRA Article 14).
+
 ### Principles — how this codebase decides things
 
 - [principles/README.md](principles/README.md) — the index. Each page carries the statement, the method for checking the tree still holds it, and what it explicitly does not ask for.
@@ -65,12 +78,14 @@ decision rather than an omission.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
+- [write-an-email.md](how-to/write-an-email.md) — start a contextual email, select an exact reply target, and read the conversation while writing.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
 - [add-a-job.md](how-to/add-a-job.md) — declare a background job kind in the job contract, then write and register its worker.
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md) — add a new RBAC object across the policy, the contract enum, the backfill migration, and the published matrix.
 - [create-a-workflow.md](how-to/create-a-workflow.md) — scaffold and wire a new automation starter workflow into the closed catalog.
 - [apply-migrations.md](how-to/apply-migrations.md) — write and apply a database migration.
+- [claim-a-red-main.md](how-to/claim-a-red-main.md) — say you are fixing a red `main` before you start, so parallel sessions do not all diagnose it.
 - [mint-a-passport.md](how-to/mint-a-passport.md) — issue an agent passport token.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md) — connect a client to the governed MCP tool surface.
 - [run-the-frontend.md](how-to/run-the-frontend.md) — run the SPA in dev.
@@ -81,31 +96,33 @@ decision rather than an omission.
 - [connect-telegram.md](how-to/connect-telegram.md) — bind a workspace-level Telegram bot for pull ingress and governed replies.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
-- [connect-a-hubspot-overlay.md](how-to/connect-a-hubspot-overlay.md) — connect a workspace to a HubSpot portal in overlay (read + continuous sync) mode.
-- [flip-an-overlay-to-native.md](how-to/flip-an-overlay-to-native.md) — the one-way overlay→native cutover: preflight, seal, the typed confirmation, and what recovery actually means.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
+- [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
 - [add-an-ai-task.md](how-to/add-an-ai-task.md) — add a new AI task or invocation site: declare it in the contract, wire the lane, register the site, certify it.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md) — bind a site to the production request builder and validator that certify it: the test-first loop, the case interface, the three site kinds, scenario and rubric authoring, scope.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
-- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the pipeline numbers; no code.
-- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline.
+- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the deal numbers; no code.
+- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the deals.
 - [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
 - [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
-- [test-overlay-locally.md](how-to/test-overlay-locally.md) — validate the overlay end to end against the real HubSpot API, using an isolated developer test account and a committed fixture seed.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
+- [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
 
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
+- [brief-priorities.md](reference/brief-priorities.md) — how morning priorities, scoped risk and weekly coverage are derived.
 - [meeting-brief.md](reference/meeting-brief.md) — the pre-meeting brief and its preparation plan: the three invariants, what a caller is and is not shown, how a year of history becomes five moments, and why the plan and the sections have separate writers.
-- [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
+- [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, and its egress.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
+- [ai-prompts.md](reference/ai-prompts.md) — **generated**: every instruction this build sends a model, read off real requests, with how many untrusted spans each call carried.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
 - [ai-certification.md](reference/ai-certification.md) — what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, an index naming the best model still measured for each site, and a table per (provider, model, env) binding, with `ai-certification.json` beside it carrying the same numbers for a reader who wants to analyse them. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md) — which served MCP tools the USE-CASE lane actually drives: per tool, the cases that require it, what those cases scored and on which model, the scheduled agents that attach it, and what it costs. With `mcp-tool-coverage.json` beside it. Generated from the served surface, `e2e/llm/scenarios` and the verdicts that lane commits, never hand-edited. It reads that lane ALONE — single steps are `ai-certification.md`’s question — and it answers what neither page does: a tool can be paid for on every step of every run and be required by no case at all.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
+- [ci-workflows.md](reference/ci-workflows.md) — the nine workflows that run beside the merge gate rather than inside it: what each triggers on, what it does and does not gate, and what a red one means.
 
 Several reference pages are **generated** and say so in their own first lines —
 `mcp-info`, `agent-tool-budget`, `ai-certification`, `mcp-tool-coverage`, `rbac-matrix`,
@@ -125,6 +142,7 @@ budget rather than keeping its own list of which pages are generated.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
 - [system-requirements.md](reference/system-requirements.md) — what an installation needs, for both deployment shapes: one node, or the api / worker / web / database on separate nodes.
 - [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
+- [record-vocabulary.md](reference/record-vocabulary.md) — the rule both record nouns hold: the reader and the program say the same word, and the schema follows. Why it is this way round, the words that merely spell those letters and stay, and the four gates that keep a second spelling out.
 - [issue-labels.md](reference/issue-labels.md) — the full issue-label taxonomy. The binding short form is in `AGENTS.md`.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 - [sonarcloud-deviations.md](reference/sonarcloud-deviations.md) — the SonarCloud findings that stay open on purpose, one entry each saying what would break if somebody applied the rule. Everything not listed there is a finding to fix.
@@ -144,6 +162,8 @@ budget rather than keeping its own list of which pages are generated.
 - [write-backbone.md](explanation/write-backbone.md) — storekit, `audit_log`, the outbox, and who consumes the events.
 - [composition-layer.md](explanation/composition-layer.md) — how `internal/compose/` boots and where every cross-module edge is wired.
 - [job-fleet.md](explanation/job-fleet.md) — the job contract: declaration before code, dispatchers vs workspace workers, why args name rows, and the failure vocabulary.
+- [prompt-shape.md](explanation/prompt-shape.md) — how a prompt is built: the per-call data fence, why prompt caching cannot help us, what the repeated instructions cost, and the test for whether a task asks about one item per call or several.
+- [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md) — why the stored original keeps its attachments by reference: proof before removal, why the strip is by byte offset rather than by parsing, and the guarantee it narrows.
 - [custom-fields.md](explanation/custom-fields.md) — the one runtime `ALTER TABLE` chokepoint: the closed type/object sets, the privilege boundary, and the `fieldcatalog` seam.
 
 **Capture, messaging and privacy**
@@ -154,14 +174,15 @@ budget rather than keeping its own list of which pages are generated.
 - [channel-capture-parity.md](explanation/channel-capture-parity.md) — whose correspondence a captured chat is: the rule that a member-bound credential puts it on the mailbox path while a shared one keeps it workspace business, which rungs of the birth ladder each faces, what makes the import row's delivery evidence sound, and a capability-by-capability table of what each side gets.
 - [outbound-messaging.md](explanation/outbound-messaging.md) — the egress twin of capture: the staging row, the transmit-time gates, receipt-before-bookkeeping, and the channel reply.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md) — the governed egress surface: subscription config vs. delivery engine, secret sealing, the contract-first payload pipeline (`api/public-events.yaml` + `gen-payloads` + the typed `EmitEvent` seam) and its additive-only versioning, the retry/dead-letter state machine, the owner-scope fan-out gate (incl. the ratified deferred-delivery exceptions), and the Settings → Integrations UI.
-- [scheduling.md](explanation/scheduling.md) — how a meeting time is proposed: whose working hours decide which slots are offerable (the person's, not the installation's), what a person sets and what the unset fallback is, which clock the hours are read on and why that is this page's decision rather than the general zone rule's, and how `activities` reaches a fact `identity` owns.
+- [scheduling.md](explanation/scheduling.md) — how a meeting time is proposed: whose working hours decide which slots are offerable (the colleague's, not the installation's), what a colleague sets and what the unset fallback is, which clock the hours are read on and why that is this page's decision rather than the general zone rule's, and how `activities` reaches a fact `identity` owns.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md) — the authorization engine that decides whether each message may go, and the GDPR engines (erasure / SAR / retention).
 
 **AI, retrieval and automation**
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
-- [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a person, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
+- [ai-provenance-notice.md](explanation/ai-provenance-notice.md) — the sentence a model-written draft carries: what it is for, why it discharges no EU AI Act Art. 50 disclosure duty, which surface shows it to the rep only and which renders it into the outgoing body, and the send-without-review path that would make the analysis stop holding.
+- [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a contact, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md) — the lexical and hybrid lanes, row scope inside the query, embedding identity, and the two kinds of staleness with their two different answers.
 - [relationship-graph.md](explanation/relationship-graph.md) — who on our team knows this contact: participants, the interaction projection, warmth, deal coverage and its risk rules.
 - [company-context.md](explanation/company-context.md) — the cold start, the governed company profile (profile fields, facts, site reads), and how bounded company context reaches AI tasks. This is the *installation's own* company; for the company **record** page see below.
@@ -169,13 +190,20 @@ budget rather than keeping its own list of which pages are generated.
 
 **The product surface**
 
+- [customer-requests.md](explanation/customer-requests.md) — recognition, acceptance and completion of customer requests across email, tasks, Home and closed deals; historical reconciliation and the shared obligation read.
+
 - [frontend-architecture.md](explanation/frontend-architecture.md) — the SPA's layers, the shell and its nav rules, the colour and theme contract, the evidence mark, and the gates that fail a frontend push.
+- [contact-record-page.md](explanation/contact-record-page.md) — sparse and active contact layouts, communication permissions, and Focus ranking.
 - [company-record-page.md](explanation/company-record-page.md) — the company record page: one gated 360 read, the work-in-flight card, Ask, record-derived suggestions, the visit baseline, and why view state carries no audit row.
 
 **Modes and extension**
 
-- [overlay-augmentation.md](explanation/overlay-augmentation.md) — the two SoR modes, the frozen seam + inner incumbent seam, the mirror-as-cache, fail-closed visibility, and teardown for the HubSpot overlay (branch 1: read + continuous sync).
 - [extensibility.md](explanation/extensibility.md) — the stable extension tier: the inert compile-time declaration, the marker-allowlisted surface, the composition build, the `GOWORK` binding that decides which composition module the compiler links, boot reconciliation, and the fitness functions that hold the boundary.
+
+**Building and merging**
+
+- [ci-pipeline.md](explanation/ci-pipeline.md) — the merge gate as GitHub Actions: the merge queue, the change classifier that decides which jobs run, the job graph, the shared Go build cache, and how coverage reaches SonarCloud.
+
 ### Operate — run it in production
 - [deployment.md](deployment.md) — self-hosting: the container materials, the two-role non-superuser database model the grant wall requires, env-only configuration, one-host routing for `/v1` + `/mcp` + the OAuth flow, health checks, and order of operations.
 - [desktop-distribution.md](explanation/desktop-distribution.md) — the other shape: one folder a non-technical user runs on macOS or Windows with no Docker. Why it must carry its own Postgres (pgvector is not in `contrib`), how relocatability is enforced and verified on each platform, the update contract the folder layout encodes, single-file configuration, the four places the two platforms are forced apart (socket vs. loopback auth, `pg_ctl` vs. a child process, Valkey vs. Redis, signing), and the limits — collation, signing, and the socket-path ceiling.

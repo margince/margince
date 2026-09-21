@@ -7,7 +7,7 @@
 // existed and every reader filters on `open`. Nothing wrote the other two, so
 // the row named a debt every morning and there was no way to say it was paid.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -31,7 +31,7 @@ function aPromise(over = {}) {
     band: "now",
     destination: "today",
     actions: ["complete", "open"],
-    subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000f2" },
+    subject: { type: "contact", id: "01a05500-0000-7000-8000-0000000000f2" },
     ...over,
   });
 }

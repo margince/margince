@@ -158,7 +158,7 @@ export function CompanyAct({
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
   // first token: name order is not universal, so slicing one off would greet
-  // some people by their family name.
+  // some contacts by their family name.
   const me = useMe();
   const configuredModel = useConfiguredModel();
 
@@ -853,7 +853,7 @@ export function CompanyAct({
                 // registry identity and falls back to the tax one: an entity
                 // whose notice printed only a VAT ID would otherwise be a
                 // bare name at the moment somebody has to pick between two.
-                mono: entity.register_number ?? entity.vat_number,
+                identifier: entity.register_number ?? entity.vat_number,
                 snippet: entity.evidence_snippet,
                 source: entity.source_url,
               };
@@ -983,7 +983,7 @@ export function CompanyAct({
               to see the WHOLE record, and the crawl found far more than the
               twenty-odd fields the deck ever asks about. The companion beside
               the deck never gets this prop, on purpose — it answers "what did
-              my answer just land in", and the facts, people and legal
+              my answer just land in", and the facts, contacts and legal
               entities the deck never touches would bury that under the whole
               archive. `onSettle` is the reverse door: pressing it on an
               unanswered line switches the deck back on AND points it at that

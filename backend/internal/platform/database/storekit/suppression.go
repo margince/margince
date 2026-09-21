@@ -18,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // SuppressionHash is the one identifier hashing rule: sha256 hex over
@@ -42,7 +44,7 @@ func EscapeLike(value string) string {
 // nothing for one to key on: core 0217 (ADR-0091) retired every isolation
 // policy and core 0255 dropped erasure_suppression.workspace_id outright,
 // so the list is installation-wide by construction. What makes that the
-// right scope is A107/ADR-0061 — one installation serves one organization,
+// right scope is ADR-0061 — one installation serves one company,
 // and the server refuses to start holding more than one live workspace.
 // Naming the guarantee matters here more than most places: this is an
 // erasure gate, and the expensive mistake is a later reader assuming
@@ -66,7 +68,7 @@ func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error)
 // GLOBAL rather than bot-scoped, so keying on the bot would make an
 // erasure stop holding the moment the workspace rotated its bot — the
 // erased subject's next message would resurrect them, with nothing
-// erroring and nothing logged. person_channel_identity's unique key omits
+// erroring and nothing logged. contact_channel_identity's unique key omits
 // the bot id for the same reason (0152).
 func ChannelIdentityHash(provider, channelUserID string) string {
 	return SuppressionHash(strings.TrimSpace(provider) + ":" + strings.TrimSpace(channelUserID))
@@ -75,7 +77,7 @@ func ChannelIdentityHash(provider, channelUserID string) string {
 // ChannelIdentitySuppressed reports whether a channel identity belongs to
 // an erased subject in this installation, under exactly the scope
 // EmailSuppressed documents. It is the channel twin of EmailSuppressed: an
-// ingest path that can create or re-bind a Person from an inbound message
+// ingest path that can create or re-bind a Contact from an inbound message
 // consults it first.
 func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (bool, error) {
 	var suppressed bool
@@ -101,7 +103,7 @@ type ChannelIdentityKey struct {
 // transactions at READ COMMITTED, so an ingest that probes, finds nothing, and
 // then writes can have a whole erasure commit between its two statements: the
 // row it goes on to write names a subject whose suppression is already armed,
-// which guarantees person_channel_identity is never recreated — and every lane
+// which guarantees contact_channel_identity is never recreated — and every lane
 // that could reach that row later (the erasure raw purge, the SAR raw section)
 // drives off exactly those rows. Re-probing after the write narrows the window
 // without closing it, because the erasure's own purge has already run by the
@@ -154,6 +156,44 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 			hash); err != nil {
 			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+		}
+	}
+	return nil
+}
+
+// LockTranscriptBody serialises a reading of one activity's transcript against
+// the engines that destroy it, and holds it until the transaction ends.
+//
+// It is the mutex between a reading and an erasure of the SAME body, and both
+// sides must take it or neither is protected. A reading loads the lines, puts
+// them to a model — seconds — and only then stages proposals quoting up to 500
+// characters of them. Nothing ordered that against the two engines that empty
+// the same activity, so an erasure could land in the middle: the timeline scrub
+// nulled the body, the citing scrub found no proposals because none were staged
+// yet, and the tombstone committed certifying the words destroyed. The worker
+// then came back and staged them.
+//
+// Nothing heals that. The erasure set archived_at, so the retention selector
+// (`archived_at IS NULL`) can never pick the activity up again; the body is
+// NULL, so the transcript selector (`body IS NOT NULL`) cannot either; and a
+// subject-only activity is redacted by no other contact's erasure. The
+// quotations stay in the approvals inbox permanently.
+//
+// A re-check without this lock only narrows the window while reading as
+// complete, which is worse than the honest gap.
+//
+// The activities are locked in a FIXED order, deduplicated, for the reason
+// LockChannelIdentities states: two transactions taking one pair in opposite
+// orders deadlock, and Postgres resolves that by killing one — an erasure or a
+// rep's reading lost to an ordering nobody chose.
+func LockTranscriptBody(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	sorted := slices.Clone(activityIDs)
+	slices.SortFunc(sorted, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
+	for _, id := range slices.Compact(sorted) {
+		if _, err := tx.Exec(ctx, `
+			SELECT pg_advisory_xact_lock(hashtextextended('activity_transcript:' || $1, 0))`,
+			id.String()); err != nil {
+			return fmt.Errorf("storekit: locking an activity's transcript against a concurrent erasure: %w", err)
 		}
 	}
 	return nil

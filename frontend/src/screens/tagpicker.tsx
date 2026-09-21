@@ -3,8 +3,9 @@
 
 import { useId, useMemo, useState } from "react";
 
-import { Button, Modal, SearchField } from "../design-system/atoms";
+import { Button, EmptyState, Modal, SearchField } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
 import type { RecordTag, TaggableType } from "./tags.queries";
@@ -63,9 +64,9 @@ export function AddTagDialog({
   return (
     <Modal open onClose={onClose} labelledBy={titleID}>
       <div className="tagpicker">
-        <h2 id={titleID} className="tagpicker-title">
+        <Heading size="large" id={titleID}>
           {t("tags.add")}
-        </h2>
+        </Heading>
         <SearchField
           aria-label={t("tags.pickerLabel")}
           value={query}
@@ -90,14 +91,18 @@ export function AddTagDialog({
             );
           })}
         </div>
+        {/* A search that found nothing is a RESULT, not something the dialog
+            says about itself — so it is the empty plate and not a notice. */}
         {normalized !== "" && matches.length === 0 && (
-          <Callout>{t("tags.noMatch")}</Callout>
+          <EmptyState>{t("tags.noMatch")}</EmptyState>
         )}
         {/* The catalog was cut. Say so, because a reader who cannot find a word
             in a SHORT list concludes the workspace lacks it and asks an admin
             to coin the duplicate this dialog exists to prevent. */}
         {vocabulary.data?.truncated && (
-          <Callout>{t("tags.catalogTruncated")}</Callout>
+          <Callout kind="standing" title={t("tags.catalogTruncatedTitle")}>
+            {t("tags.catalogTruncated")}
+          </Callout>
         )}
       </div>
     </Modal>

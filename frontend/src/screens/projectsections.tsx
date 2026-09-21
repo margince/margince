@@ -21,6 +21,7 @@ import {
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ProjectContractRow } from "./contractterms";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import {
@@ -38,7 +39,6 @@ import { projectRoleLabel } from "./record360";
 export type Project360 = components["schemas"]["Project360"];
 type Project360Section = components["schemas"]["Project360Section"];
 type Deal = components["schemas"]["Deal"];
-type Contract = components["schemas"]["Contract"];
 type Attachment = components["schemas"]["Attachment"];
 type Stakeholder = components["schemas"]["Project360Stakeholder"];
 type Commitment = components["schemas"]["Project360Commitment"];
@@ -134,7 +134,7 @@ export function PhaseHistoryCard({
             {history.phase_durations.map((duration) => (
               <li key={duration.phase}>
                 <span>{phaseWord(duration.phase, t)}</span>
-                <span className="t-mono">
+                <span className="t-num">
                   {formatDuration(duration.seconds * 1000, locale)}
                   {duration.current && ` · ${t("project.history.current")}`}
                 </span>
@@ -221,10 +221,10 @@ function ProjectDealRow({
         {deal.name}
       </button>
       <span className="project-row-meta t-caption">
-        <Badge tone={deal.status === "won" ? "success" : undefined} quiet>
+        <Badge tone={deal.status === "won" ? "success" : undefined}>
           {deal.status}
         </Badge>
-        <span className="t-mono">
+        <span className="t-num">
           {formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
         </span>
       </span>
@@ -233,7 +233,7 @@ function ProjectDealRow({
 }
 
 /**
- * The people seated on the project, each with the seat they hold — and the
+ * The contacts seated on the project, each with the seat they hold — and the
  * verbs that put them there.
  *
  * The verbs ride `titleAction`, which `SectionPanel` draws only on a section
@@ -309,14 +309,14 @@ function StakeholderRow({
   const t = useT();
   return (
     <PanelRow className="project-row">
-      <EntityRef kind="person" id={seat.person_id} name={seat.person_name} />
+      <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
       <span className="project-row-meta t-caption">
-        {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
+        {seat.role && <Badge>{projectRoleLabel(seat.role, t)}</Badge>}
         {writable && (
           <RemoveProjectStakeholder
             projectId={projectId}
-            personId={seat.person_id}
-            personName={seat.person_name}
+            contactId={seat.contact_id}
+            contactName={seat.contact_name}
             returnFocusTo={returnFocusTo}
           />
         )}
@@ -345,33 +345,13 @@ export function ProjectContractsCard({
       emptyLabel={t("project.contracts.empty")}
     >
       {contracts.map((contract) => (
-        <ContractRow key={contract.id} contract={contract} locale={locale} />
+        <ProjectContractRow
+          key={contract.id}
+          contract={contract}
+          locale={locale}
+        />
       ))}
     </SectionPanel>
-  );
-}
-
-function ContractRow({
-  contract,
-  locale,
-}: Readonly<{
-  contract: Contract;
-  locale: ReturnType<typeof useLocale>["locale"];
-}>) {
-  const recordZone = useRecordZone();
-  return (
-    <PanelRow className="project-row">
-      <span>{contract.title}</span>
-      <span className="project-row-meta t-caption">
-        <Badge quiet>{contract.status}</Badge>
-        <span className="t-mono">
-          {formatMoneyOrAbsent(contract.value_minor, contract.currency, locale)}
-        </span>
-        {contract.ends_on && (
-          <span>{formatDateAbbrev(contract.ends_on, locale, recordZone)}</span>
-        )}
-      </span>
-    </PanelRow>
   );
 }
 
@@ -422,7 +402,7 @@ function DocumentRow({
       </a>
       <span className="project-row-meta t-caption">
         {doc.byte_size != null && (
-          <span className="t-mono">{formatBytes(doc.byte_size, locale)}</span>
+          <span className="t-num">{formatBytes(doc.byte_size, locale)}</span>
         )}
         <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
       </span>
@@ -433,7 +413,15 @@ function DocumentRow({
 /** The open tasks filed under the project, soonest due first. */
 export function CommitmentsCard({
   view,
-}: Readonly<{ view: Project360 | undefined }>) {
+  onOpenTask,
+}: Readonly<{
+  view: Project360 | undefined;
+  // Opens one commitment's task detail. Owned by the screen rather than by
+  // this card, because the modal is one per page: a card that mounted its own
+  // would put a second dialog on a screen that already has one whenever both
+  // are open.
+  onOpenTask?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const commitments = view?.commitments?.data ?? [];
@@ -454,6 +442,7 @@ export function CommitmentsCard({
           key={commitment.activity_id}
           commitment={commitment}
           locale={locale}
+          onOpenTask={onOpenTask}
         />
       ))}
     </SectionPanel>
@@ -463,9 +452,11 @@ export function CommitmentsCard({
 function CommitmentRow({
   commitment,
   locale,
+  onOpenTask,
 }: Readonly<{
   commitment: Commitment;
   locale: ReturnType<typeof useLocale>["locale"];
+  onOpenTask?: (activityId: string) => void;
 }>) {
   const t = useT();
   // The record's clock, exactly as the tasks screen reads it. A commitment is a
@@ -474,7 +465,21 @@ function CommitmentRow({
   const recordZone = useRecordZone();
   return (
     <PanelRow className="project-row">
-      <span>{commitment.subject}</span>
+      {/* The subject opens the task, the way this file's other two rows open
+          theirs. It was flat text here, so a reader who wanted the description,
+          the assignee or the verbs behind a commitment had nowhere to press —
+          on the one card that names what the project owes. */}
+      {onOpenTask ? (
+        <button
+          type="button"
+          className="project-rowlink"
+          onClick={() => onOpenTask(commitment.activity_id)}
+        >
+          {commitment.subject}
+        </button>
+      ) : (
+        <span>{commitment.subject}</span>
+      )}
       <span className="project-row-meta t-caption">
         {commitment.due_at && (
           <span>{formatDateAbbrev(commitment.due_at, locale, recordZone)}</span>

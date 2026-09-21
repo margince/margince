@@ -27,7 +27,7 @@ import (
 
 // searchEmailStore is the search store wired the way compose wires it: with
 // the activities reader behind an email hit's summary. A test that built the
-// store bare would prove nothing about the surface a person searches.
+// store bare would prove nothing about the surface a contact searches.
 func searchEmailStore(e *Env) *search.Store {
 	return search.NewStore(e.DB()).WithEmailSummaries(activities.EmailSummariesByIDBatch)
 }
@@ -47,12 +47,12 @@ func hitFor(page search.Page, id ids.UUID) *search.Hit {
 func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Rennsteig renewal terms", "The quote is attached, and it holds until Friday."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -79,8 +79,11 @@ func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
 	if got.Preview == nil || *got.Preview == "" {
 		t.Error("summary carried no preview; the row shows one and the hit must show the same one")
 	}
-	if got.DisplayStatus != crmcontracts.EmailAccessStatusTeam {
-		t.Errorf("display_status = %q, want team for an unlimited mail", got.DisplayStatus)
+	// `workspace` and not `team`: the mail is filed against a shared contact, so
+	// a seat with no standing of any kind can find it, and that is what the two
+	// words tell apart. `team` here would be the badge understating the audience.
+	if got.DisplayStatus != crmcontracts.EmailAccessStatusWorkspace {
+		t.Errorf("display_status = %q, want workspace for a mail every seat can reach", got.DisplayStatus)
 	}
 	if got.Direction == nil || *got.Direction != crmcontracts.EmailSummaryDirectionInbound {
 		t.Errorf("summary direction = %v, want inbound", got.Direction)
@@ -102,12 +105,12 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Rennsteig severance package", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -170,7 +173,7 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	store := searchEmailStore(e)
 
 	for _, kind := range []string{"call", "note", "task", "meeting"} {
@@ -178,7 +181,7 @@ func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 		body := "what we agreed on the " + kind
 		logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 			Kind: kind, Subject: &subject, Body: &body,
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		})
 		if err != nil {
 			t.Fatalf("log %s: %v", kind, err)
@@ -207,7 +210,7 @@ func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	const mails = 12
 	for i := range mails {
@@ -215,7 +218,7 @@ func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 		body := "line one of message"
 		if _, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 			Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		}); err != nil {
 			t.Fatalf("log %d: %v", i, err)
 		}
@@ -248,12 +251,12 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Severance figures", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)

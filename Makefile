@@ -1,7 +1,7 @@
 # Thin delegator: the real Makefile lives in backend/ (the Go module root).
 # `make check` is the merge gate; `make dev` boots everything.
 # The frontend lane is separate (`make frontend-check`) — it needs node+pnpm,
-# which not every backend machine has; CI runs both. Since ADR-0069's composed
+# which not every backend machine has; CI runs both. Since ADR-0120's composed
 # SPA lane the dependency runs BOTH ways: `make check-fe` also needs a Go
 # toolchain, because the composed registry the frontend typechecks against is
 # produced by gen-composition and nothing else can produce it. A machine that
@@ -15,17 +15,22 @@ GO ?= go
 # The deterministic script gates `check-backend` fans out. One list, one
 # consumer — see the comment on check-backend for why they are not that
 # target's prerequisites.
-ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
+ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
   test-dev-cleanup \
   test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict \
+  test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
-  test-lanes env-reads gofmt lint-modules go-file-length rls-store-path \
+  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path \
+  comment-budget test-comment-budget comment-density \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-desktop-launcher changelog-sections \
-  test-changelog-sections test-dev-postgres-container test-e2e-llm-check
+  test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
+  test-release-version-stamped test-closing-declaration test-release-patch-base \
+  test-published-tag \
+  test-craft-review test-release-tag-version
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -44,29 +49,7 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
 # run whose interleaving you need untangled.
 GATE_JOBS ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
 
-# Where the demo dataset lives. It is a SEPARATE, private repo (it carries real
-# company names and crawled pages), cloned beside this one by convention. The
-# seeder has the same default; naming it here is what lets `make seed-demo` be
-# the whole command.
-#
-# Resolved against the MAIN worktree rather than $(CURDIR), because a sibling
-# of a worktree under .tmp/worktrees/<name>/ is not a sibling of the clone. A
-# checkout with no git (a tarball, a container copy) falls back to $(CURDIR).
-DATASET_ROOT := $(or $(shell git rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/\.git$$||'),$(CURDIR))
-DATASET ?= $(abspath $(DATASET_ROOT)/../margince-demo-database)
-
-# Reaching a stack other than this worktree's. A stack is three things — an API
-# base, a database and an object bucket — so an override is all three or none:
-# SEED_STACK below refuses a partial one rather than sending the API half of a
-# seed to one stack and the SQL half to another, which is the exact defect the
-# resolution underneath it exists to close.
-SEED_DSN ?=
-SEED_API ?=
-SEED_BUCKET ?=
-
-# The dev stack's MinIO port. Same default scripts/dev.sh uses. seed-demo needs
-# it to upload the company logos: without a blobstore the seeder skips them and
-# every company renders as a placeholder initial.
+# The dev stack's MinIO port. Same default scripts/dev.sh uses.
 MINIO_PORT ?= 29000
 
 # The stack THIS worktree runs, in the three places a seed reaches it: the API
@@ -82,25 +65,8 @@ MINIO_PORT ?= 29000
 # that refusal into an empty database name and seed the wrong place anyway. Each
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
-# An override is all three or none, and `dev_seed_override` refuses in between
-# before anything here is resolved — `set -e` and the command substitution carry
-# that refusal out. The rule is stated in the library rather than spelled in this
-# recipe, so it has one writer and a gate can reach it without a seeder.
-SEED_STACK = set -e; . scripts/lib-devstate.sh; \
-  seed_override="$$(dev_seed_override "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)" "$(SEED_ARGS)")"; \
-  if [ "$$seed_override" = "all" ]; then \
-    seed_api="$(SEED_API)"; \
-    seed_bucket="$(SEED_BUCKET)"; \
-    seed_dsn="$(SEED_DSN)"; \
-  else \
-    seed_api="$$(dev_app_base_url)"; \
-    seed_slug="$$(dev_resolve_slug "$(DEV_SLUG)")"; \
-    seed_bucket="$$(dev_bucket_for_slug "$$seed_slug")"; \
-    seed_db="$$(dev_database_name)"; \
-    seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
-  fi;
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length comment-budget test-comment-budget comment-density rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -202,11 +168,17 @@ check:
 ## minutes and needs Postgres up, so paying it on a README edit would train
 ## everybody to skip the gate that also holds the security cases.
 ##
-## Not in the pre-push hook either, and the reason is this machine rather than
-## principle: parallel sessions share one test template, so a hook running the
-## lane on every push would have them rebuilding each other's schema mid-run —
-## failures that are schema-shaped and look nothing like their cause. The hook
-## keeps the checks that are fast, need nothing running, and cannot collide.
+## The pre-push hook DOES run the lane, for a push that changes backend Go or
+## SQL — a migration is the likeliest thing of all to redden it.
+## It did not until 2026-09-12, and the reason it gave had expired: parallel
+## sessions were said to share one test template, so a hook would have them
+## rebuilding each other's schema mid-run. scripts/lib-testdb.sh has derived a
+## template per linked worktree since 2026-08-24 (_testdb_worktree_slug), which
+## is two weeks before that reasoning was written down.
+##
+## What is still shared: two shells in the SAME worktree, and the primary
+## checkout. The hook skips rather than blocks when pg_isready says Postgres is
+## not ready, because a push blocked on a stopped stack gets the hook disabled.
 check-all:
 	@bash scripts/phase-timer.sh reset
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
@@ -261,7 +233,7 @@ infra-down:
 ## the derived slug for a second stack inside one worktree. A bound port stops
 ## the boot loudly rather than letting you poll a server from an older branch;
 ## `make dev-sweep` is the machine-wide clear. Boots COLD: the
-## organization + admin the api bootstraps from config/margince.yaml and no
+## company + admin the api bootstraps from config/margince.yaml and no
 ## other data, so onboarding and empty states are the default view — run
 ## `make seed-dev` on top when you want the demo records. Reads an optional
 ## Anthropic BYOK key from .env.local for the live cold-start read-back. Logs +
@@ -270,7 +242,7 @@ dev:
 	@bash scripts/dev.sh up "$(DEV_SLUG)"
 
 ## dev-fresh — `make dev` onto a REBUILT database: drops it, re-migrates,
-## and boots the installation a first customer gets (organization + admin,
+## and boots the installation a first customer gets (company + admin,
 ## no records). Use it when the last session left data behind; plain
 ## `make dev` keeps whatever is there.
 ##
@@ -289,6 +261,21 @@ dev-fresh:
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
 
+## dev-snapshot — copy THIS stack's database to `<db>_tmpl`, so `dev-restore`
+## can put the world back in about a second instead of a migrate and a reseed.
+## The stack must be STOPPED: Postgres will not copy a database a session is
+## connected to, and the api's pool redials the moment it is terminated.
+## DEV_SLUG=<slug> names another stack in this worktree.
+dev-snapshot:
+	@bash scripts/dev.sh snapshot "$(DEV_SLUG)"
+
+## dev-restore — put THIS stack's database back exactly as `dev-snapshot` left
+## it, with the stack still RUNNING: the clone closes the api's connections and
+## its pool redials on the next query. Cheaper AND safer for a long-lived api
+## than a reseed, which mints new ids for every record.
+dev-restore:
+	@bash scripts/dev.sh restore "$(DEV_SLUG)"
+
 ## dev-sweep — clear EVERY margince dev stack on this machine: kill every
 ## api/worker/vite (recorded, orphaned, or belonging to another worktree) and
 ## forget their claims. `DROP=1` also drops every per-slug margince_dev_*
@@ -305,7 +292,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -386,9 +373,13 @@ fe-test-ext: composition
 ## ds-purity — design-system token purity (no raw hex/rgb outside tokens.css).
 ds-purity:
 	frontend/scripts/check-ds-purity.sh
-## font-lock — font-family lock lint (the sanctioned families only).
+## font-lock — font-family lock lint (the sanctioned families only, and the mono
+## face on code, pre, samp and .code-block alone). Its test runs beside it: every
+## mono arm is planted in a fixture tree, because an arm that stopped firing would
+## read exactly like a clean tree.
 font-lock:
 	frontend/scripts/check-font-lock.sh
+	bash frontend/scripts/check-font-lock.test.sh
 ## icon-lint — icon-glyph lock lint (UI chrome is Lucide only).
 icon-lint:
 	frontend/scripts/check-icon-glyph.sh
@@ -468,58 +459,8 @@ seed-dev:
 	./scripts/seed-dev.sh
 	$(MAKE) -C backend seed-dev-db
 
-## seed-demo — fill a running stack from the demo dataset: real companies,
-## people and facts, plus the invented commercial half. Stack must be running
-## (make dev). Converges — a second run creates nothing. DATASET= points at the
-## dataset checkout; SEED_ARGS= passes flags through (-dry-run, -limit N).
-## It fills THIS worktree's stack, and refuses a `-api` in SEED_ARGS: that moves
-## the API leg alone and leaves the database and bucket here. To seed another
-## stack, pass SEED_DSN, SEED_API and SEED_BUCKET together.
-# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
-# is /bin/sh — dash on most Linux images, where sourcing it fails before the
-# stack is resolved.
-seed-demo: SHELL := /bin/bash
-seed-demo:
-	@test -f "$(DATASET)/datasets/v1/demo.json" || { \
-	  echo "no demo dataset at $(DATASET) — clone margince-demo-database beside this repo, or pass DATASET=<path>" >&2; \
-	  exit 1; }
-	@test -f config/margince-admin-password || { \
-	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
-	@$(SEED_STACK) \
-	MARGINCE_SEED_PASSWORD="$$(cat config/margince-admin-password)" \
-	MARGINCE_SEED_DSN="$$seed_dsn" \
-	MARGINCE_BLOBSTORE_ENDPOINT="localhost:$(MINIO_PORT)" \
-	MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-	MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-	MARGINCE_BLOBSTORE_BUCKET="$$seed_bucket" \
-	MARGINCE_BLOBSTORE_REGION=us-east-1 \
-	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" \
-	  SEED_ARGS="-api $$seed_api $(SEED_ARGS)"
-
-## verify-demo — re-run the demo seeder's verify pass against a running stack,
-## writing nothing: every row owned, every person employed, every conversation
-## naming somebody, every deal with a committee, every account off `unknown`.
-##
-## It delegates into backend/ rather than re-entering seed-demo here, because
-## the frontend-lane parity gate reads $(MAKE) lines to find the legs it must
-## check and refuses a spelling it cannot parse — `$(MAKE) seed-demo
-## SEED_ARGS="… $(SEED_ARGS)"` is one, and a leg it silently dropped would be
-## a gate that stopped gating.
-# scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
-# is /bin/sh — dash on most Linux images, where sourcing it fails before the
-# stack is resolved.
-verify-demo: SHELL := /bin/bash
-verify-demo:
-	@test -f config/margince-admin-password || { \
-	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
-	@$(SEED_STACK) \
-	MARGINCE_SEED_PASSWORD="$$(cat config/margince-admin-password)" \
-	MARGINCE_SEED_DSN="$$seed_dsn" \
-	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" \
-	  SEED_ARGS="-api $$seed_api -verify-only"
-
 ## verify-boot — prove a running, seeded stack end to end: seeded-admin
-## login, seeded people visible over /v1, frontend production build.
+## login, seeded contacts visible over /v1, frontend production build.
 ## Pure client (make dev, then make seed-dev — dev boots cold); fails loudly,
 ## never skips.
 verify-boot:
@@ -542,6 +483,7 @@ verify-boot:
 frontend-check:
 	$(MAKE) fe-ds-gates
 	$(MAKE) fe-drift
+	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
 	$(MAKE) fe-unit
 	$(MAKE) fe-build
@@ -559,6 +501,7 @@ frontend-check:
 fe-ds-gates:
 	frontend/scripts/check-ds-purity.sh
 	frontend/scripts/check-font-lock.sh
+	bash frontend/scripts/check-font-lock.test.sh
 	frontend/scripts/check-icon-glyph.sh
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
@@ -593,16 +536,59 @@ fe-drift:
 ## a CLI `--coverage.reporter` REPLACES the configured entry, option and all.
 ## check-lcov-paths.sh is the report's acceptance test: an lcov naming files the
 ## scanner cannot resolve is indistinguishable, everywhere downstream, from a
-## suite that covers nothing. Its own test runs on EVERY invocation of this
-## target rather than beside it, because the gate itself only runs on the
-## FE_COVERAGE runs — which are CI's — while an edit to it lands on a bare
+## suite that covers nothing. Both it and the shard-union gate have their own
+## tests run on EVERY invocation of this target rather than beside the gates
+## themselves, because neither gate runs outside CI — one wants FE_COVERAGE, the
+## other wants four blobs — while an edit to either lands on a bare
 ## `make fe-unit`.
+##
+## FE_SHARD=k/N runs slice k of N instead of the whole suite, and writes a BLOB
+## The shard run carries a SECOND reporter, `default`, and it is the only thing
+## that says which test failed. `blob` writes its report to a file and prints
+## nothing, and the upload step that would have carried that file is skipped
+## when the test step fails — so a red shard produced a log with no test name in
+## it anywhere, and the merge job that would have printed one never ran. Two
+## reporters cost a few hundred lines of passing output and are the difference
+## between a finding and a bisect.
+##
+## report rather than an lcov: one slice's coverage is not a measurement of
+## anything until every slice is added to it, so the shard runs hand their blobs
+## to `fe-unit-merge` and the lcov and its gates live there. Unset — the local
+## default, and the only way to reach a verdict in one command — runs everything
+## and writes the report directly.
 FE_COVERAGE ?=
+FE_SHARD ?=
 fe-unit:
 	bash frontend/scripts/check-lcov-paths.test.sh
+	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=.vitest-reports/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
 		$(if $(FE_COVERAGE),--coverage.enabled)
-	$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info)
+	$(if $(FE_SHARD),,$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info))
+
+## fe-unit-merge — one measurement out of the shards' blob reports. CI only:
+## nothing produces a blob unless FE_SHARD asked for one.
+##
+## Both of its own outputs land in .vitest-merge/ rather than beside the blobs:
+## `--merge-reports` parses EVERY file in .vitest-reports/, so a discovery list
+## written there stops the merge with a JSON syntax error on its own input.
+##
+## `vitest --merge-reports` runs no test. It reads the blobs, replays their
+## results into one verdict and hands the merged coverage to the reporter
+## configured in vite.config.ts, so the lcov the scanner reads is built the same
+## way whether the suite ran in one job or in several.
+##
+## Then both gates, in the order their failures are worth reading: the union
+## check first, because a report describing two thirds of the suite makes every
+## number after it answer the wrong question, and the path check second, on the
+## file that is about to be uploaded.
+fe-unit-merge:
+	cd frontend && pnpm install --frozen-lockfile && mkdir -p .vitest-merge && \
+		pnpm exec vitest list --filesOnly >.vitest-merge/discovered.txt && \
+		pnpm exec vitest --merge-reports --coverage.enabled \
+			--reporter=default --reporter=json --outputFile.json=.vitest-merge/merged.json
+	frontend/scripts/check-shard-union.sh frontend/.vitest-merge/merged.json frontend/.vitest-merge/discovered.txt
+	frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info
 
 ## fe-clock-drift — the same vitest suite, run as if it were FE_CLOCK_SKEW_DAYS
 ## from now, and required to reach the same verdict. A test whose result depends
@@ -626,6 +612,7 @@ fe-clock-drift:
 fe-quality: fe-typecheck-composed
 	$(MAKE) fe-ds-gates
 	$(MAKE) fe-drift
+	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
 	$(MAKE) fe-test-ext
 
@@ -651,7 +638,7 @@ fe-install:
 fe-typecheck:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec tsc -b
 
-## fe-typecheck-composed — the COMPOSED frontend lane (ADR-0069): typecheck the
+## fe-typecheck-composed — the COMPOSED frontend lane (ADR-0120): typecheck the
 ## same sources against the generated registry under build/composition/frontend/
 ## instead of the committed empty-tree stub. The TypeScript mirror of building
 ## the backend under GOWORK=build/composition/go.work — one program, two
@@ -705,6 +692,16 @@ fe-typecheck-composed: composition
 ## frontend-e2e — the screen-acceptance harness (AC-<screen>-N + axe WCAG AA
 ## + PERF-1's held-read claim) against the built app over the seed mock.
 ## Set BASE_URL to point the same suite at a live backend.
+##
+## `pnpm e2e` builds the BUNDLE and not the typecheck in front of it. That
+## typecheck is `pnpm build`'s first half and it dominates the build — vite
+## emits in seconds and `tsc -b` takes over a minute of them. This
+## lane is about what the built app renders; whether the sources typecheck is
+## fe-bundle's question, it runs the same `tsc -b` on every change that reaches
+## here (both jobs sit behind the same frontend classifier and both are in the
+## `ci` aggregate), and a type error therefore still fails the merge. What the
+## two share is `build:bundle`, so the app this suite exercises cannot quietly
+## become a different artefact from the one that ships.
 frontend-e2e:
 	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
 
@@ -744,7 +741,7 @@ bench-mobile-check:
 ## because the two states that must look right — a populated account and a
 ## freshly imported one — are data states rather than fixtures.
 ## Screenshots land OUTSIDE the repo for eyeball comparison against the PNGs.
-## Override E2E_ORG_POPULATED / E2E_ORG_SPARSE to aim it at other companies.
+## Override E2E_COMPANY_POPULATED / E2E_COMPANY_SPARSE to aim it at other companies.
 E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
@@ -759,9 +756,37 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+##
+## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
+## does the answer carry this name, this date, this count; its `judge:` criteria
+## are sentences a human can read, decided per run by a pinned model, because
+## the regexes that used to carry them scored 15% and 20% of CORRECT answers as
+## failures on two paid sweeps. That costs a few extra calls per run, and a lane
+## whose judge cannot be reached STOPS rather than scoring: E2E_LLM_JUDGE
+## defaults to `live` here and has no default anywhere else.
 e2e-llm: SHELL := /bin/bash
 e2e-llm:
 	@bash scripts/e2e-llm.sh
+
+## e2e-llm-guards — put the SCENARIOS' regex guards on trial rather than the
+## product. A real model writes answers a good assistant would give and answers
+## carrying the defect the scenario forbids, and e2e/llm/probe.py judges every
+## one of them through check.check itself — so a pattern that reds a correct
+## answer, or misses the defect it exists for, is named instead of waiting for
+## the next reviewer to construct the sentence by hand.
+##
+## COSTS MONEY and is opt-in: MARGINCE_E2E_LLM_GUARDS=1 make e2e-llm-guards.
+## Needs no stack. SCENARIO=<name> audits one, E2E_LLM_GUARDS_COUNT=<n> asks for
+## more answers, E2E_LLM_GUARDS_OUT=<dir> keeps the candidates.
+## The findings are for a HUMAN to judge: a model asked for a correct answer can
+## write an incorrect one, so nothing here ever rewrites a pattern.
+## To judge sentences you wrote yourself, no model and no opt-in are needed:
+##   python3 e2e/llm/probe.py <scenario.yaml> --expect correct "<answer>"
+## A scenario's judged criteria are audited too, at one model call each per
+## candidate; E2E_LLM_JUDGE=replay:<dir> audits only the patterns.
+e2e-llm-guards: SHELL := /bin/bash
+e2e-llm-guards:
+	@bash scripts/e2e-llm-guards.sh
 
 e2e-company: SHELL := /bin/bash
 e2e-company:
@@ -770,8 +795,8 @@ e2e-company:
 	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
 	cd frontend && BASE_URL="$$app" \
 		E2E_SHOT_DIR="$(E2E_SHOT_DIR)" \
-		E2E_ORG_POPULATED="$(E2E_ORG_POPULATED)" \
-		E2E_ORG_SPARSE="$(E2E_ORG_SPARSE)" \
+		E2E_COMPANY_POPULATED="$(E2E_COMPANY_POPULATED)" \
+		E2E_COMPANY_SPARSE="$(E2E_COMPANY_SPARSE)" \
 		pnpm exec playwright test company-record.spec.ts
 	@echo "screenshots: $(E2E_SHOT_DIR)"
 
@@ -815,6 +840,35 @@ fe-uat:
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \
 		node scripts/fe-uat.mjs $(ARGS)
 
+## test-craft-pin — prove the pinned craftsmanship gate is actually pinned: four
+## real digests, a resolver that yields the gate and nothing else, and a cached
+## binary still matching its digest. A resolver that quietly fell back to PATH
+## would turn every craft lane green against an unknown rubric, and nothing
+## downstream could tell.
+##
+## A prerequisite of craft-static rather than a member of ROOT_SCRIPT_GATES, so
+## it runs wherever the gate runs and nowhere it does not: enrolling it in the
+## root gates would put a network fetch inside `make check-backend`, whose CI job
+## has no other reason to reach the network and should not start failing on a
+## download flake.
+test-craft-pin:
+	@./scripts/test-craft-pin.sh
+
+## fe-edge-padding — no text printed against the edge of the box holding it.
+## Renders the WHOLE story catalog in headless Chromium at 1280px and 420px and
+## fails on a box that draws a visible edge with no inline padding between that
+## edge and its text — the defect `.card` + a caller class that re-declares
+## `padding` with a zero inline half produces, which no stylesheet reader can
+## see because the two rules are correct apart and wrong together. A browser is
+## the only instrument that answers it: jsdom does not resolve var(), so the
+## fixed rule reads back identical to the broken one. A story it could not read
+## fails the run rather than passing quietly. WHOLE-TREE and minutes long, so
+## like fe-clock-drift it is not in `make check`. Optional: ARGS="--filter <id>".
+fe-edge-padding:
+	cd frontend && pnpm install --frozen-lockfile && \
+		pnpm exec playwright install chromium >/dev/null 2>&1 && \
+		node scripts/check-edge-padding.mjs $(ARGS)
+
 ## craft-static — the deterministic code-craftsmanship gate (ADR-0045) over
 ## every hand-written Go tree, strict: BLOCKER and MAJOR findings both fail it.
 ## The pre-push hook (.githooks/pre-push) runs the same bar diff-scoped; this
@@ -822,24 +876,48 @@ fe-uat:
 ## to arm it. extensions/ and fixtures/ are their own Go modules, so `./...`
 ## never reaches them and the bar has to name them: a first-party unit ships
 ## the same product, and the fixture is the worked example a unit author copies.
-craft-static:
-	go run -C cli/craft . static --strict --root ../../backend
-	go run -C cli/craft . static --strict --root ../../extensions
-	go run -C cli/craft . static --strict --root ../../fixtures
-	go run -C cli/craft . static --strict --root ../../desktop
+##
+## The gate is a pinned binary (scripts/craft-pin.sh), not source in this tree.
+## Roots are written from the REPOSITORY ROOT, which is where the binary runs —
+## they used to lead with ../../ because the gate was built and run from its own
+## directory, which changed the working directory first. A leftover ../../
+## resolves outside the repository and reports a clean sweep of nothing, which
+## reads exactly like a pass.
+craft-static: test-craft-pin
+	@bin="$$(./scripts/craft-pin.sh)" && \
+		"$$bin" static --strict --root backend && \
+		"$$bin" static --strict --root extensions && \
+		"$$bin" static --strict --root fixtures && \
+		"$$bin" static --strict --root desktop
 
-## craft-test — cli/craft's own suite, including the `wiring` package that
-## asserts the repo-level obligations no Go package can express: the CI job
-## ordering, the contributor rulebook, and the community-health files. It needs
-## its own target because every other test lane runs `./...` inside the backend
-## module, which cannot reach a separate module — a test nothing runs is a test
-## that proves nothing.
-craft-test:
-	go test -C cli/craft -count=1 ./...
+## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
+## this branch's diff to an external model API and get a reading of what a
+## syntax tree cannot see. It calls a paid API, so nothing calls it for you —
+## no hook, no CI job, no prerequisite. `make craft-static` is the arm that is
+## enforced and it is the one that blocks a push.
+##
+##   ANTHROPIC_API_KEY=... make craft-review              # vs origin/main
+##   ANTHROPIC_API_KEY=... BASE=<ref> make craft-review
+##
+## It refuses rather than reporting a pass it did not earn: with no key, and
+## again when the reviewer comes back having skipped, because that answer is
+## `verdict: PASS` with no findings and is otherwise indistinguishable from a
+## clean diff. test-craft-review holds both refusals.
+craft-review: test-craft-pin
+	@./scripts/craft-review.sh
 
-## test-desktop-launcher — the launcher's own suite. It exists for the reason
-## craft-test does, and the reason is worth repeating because this module hid it
-## longer: desktop/launcher is its own module and deliberately OUTSIDE go.work,
+## test-craft-review — prove craft-review refuses a reading that did not happen:
+## no key, a result the reviewer skipped, and a blocking verdict it must not
+## swallow, against a real reading it must not refuse. The reviewer is stubbed —
+## it is an external HTTP boundary, and a test that called it would spend a paid
+## request to assert on a refusal that never gets that far.
+test-craft-review:
+	@./scripts/test-craft-review.sh
+
+## test-desktop-launcher — the launcher's own suite. It exists because a test
+## lane that cannot reach a module is a test lane that proves nothing about it,
+## and this module hid that longer than any other: desktop/launcher is its own
+## module and deliberately OUTSIDE go.work,
 ## since it supervises the shipped binaries as child processes rather than
 ## importing them. So `./...` inside backend cannot reach it, the workspace
 ## cannot reach it, and the seven test files it already carried ran nowhere —
@@ -848,14 +926,37 @@ craft-test:
 ##
 ## GOWORK=off for the reason its go.mod states: inside a workspace that does not
 ## list the module, every package fails to resolve.
+##
+## LAUNCHER_COVER_OUT (optional): also write a coverage profile there. It exists
+## because the product profile CANNOT contain a launcher line — that one is
+## `go test -coverpkg=./...` over the backend module, and this module is not in
+## it — so the number reported for shipped code a user runs was 0% whatever the
+## suite did. A profile of its own is what makes the figure real.
 test-desktop-launcher:
-	GOWORK=off go test -C desktop/launcher -count=1 ./...
+	GOWORK=off go test -C desktop/launcher -count=1 	  $(if $(LAUNCHER_COVER_OUT),-covermode=atomic -coverprofile=$(abspath $(LAUNCHER_COVER_OUT))) ./...
 
 ## craft-residue — fail if any unresolved CRAFT-FIX/CRAFT-DISPUTE marker was
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI
 ## `craft-residue` job runs this so a marker can never ride to main.
 craft-residue:
-	go run -C cli/craft . residue --root ../../backend
+	@"$$(./scripts/craft-pin.sh)" residue --root backend
+
+## craft-prose — the rulebook's ## Craftsmanship section agrees with the standard
+## the gate applies: every T- or P-id the prose names is a real rule, and the
+## range it advertises reaches the highest rule there is.
+##
+## Both directions, because they fail differently. Prose naming a rule that does
+## not exist is survivable — a reader looks for it and finds nothing. A range
+## that falls SHORT is not: the reader is told the standard is smaller than it
+## is, has no reason to look further, and nothing else in the tree corrects them.
+## The prose once advertised "T1-P3" over a rubric of T1-T10 plus P1-P5.
+##
+## The check lives in the gate rather than here because both directions need its
+## section scanner, which survives a fenced example and a fence opener behind a
+## list marker. A second copy of that scanner in this tree would be the untested
+## one. check-craft-doc stays beside this as the cheap floor: the section exists.
+craft-prose:
+	@"$$(./scripts/craft-pin.sh)" prose --rulebook AGENTS.md
 
 ## check-craft-doc — assert AGENTS.md still carries the `## Craftsmanship`
 ## section (the craft gate's operating contract, ADR-0045). A cheap doc floor
@@ -884,6 +985,14 @@ secret-scan:
 test-secret-scan:
 	@./scripts/test-secret-scan.sh
 
+## test-sbom-sign — prove `sbom-sign` signs what is unsigned and skips what
+## already carries a current bundle. A Rekor entry is permanent, so a second one
+## for the same bytes leaves the first corroborating nothing — and a run that
+## signs everything again looks exactly like a clean one. cosign is stubbed:
+## what is under test is which files reach it.
+test-sbom-sign:
+	@./scripts/test-sbom-sign.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
@@ -891,6 +1000,17 @@ test-secret-scan:
 ## than a reading.
 test-api-entrypoint:
 	@./scripts/test-api-entrypoint.sh
+## test-dev-env-local — prove that what an engineer sets in .env.local reaches
+## the stack `make dev` boots, and that what `make dev` owns outright says so
+## rather than winning in silence.
+##
+## The failure it replaces: the blobstore vars were exported from .env.local and
+## then discarded by a command-prefix assignment on the launch line, so the
+## stack booted on the default and looked like a bug in whatever was being
+## tested.
+test-dev-env-local:
+	@./scripts/test-dev-env-local.sh
+
 ## test-dev-dsn — prove the dev stack resolves its DSNs through the same names
 ## the binaries read (MARGINCE_OWNER_DSN / MARGINCE_DSN), still owns the
 ## database name itself so a DEV_SLUG stack cannot land on the base database,
@@ -955,6 +1075,14 @@ test-ci-verdict:
 test-merge-verdict:
 	@./scripts/test-check-merge-verdict.sh
 
+## test-review-coverage — prove the review-coverage report still tells a review
+## of the tip from a review of something older. It is quiet when it is working,
+## so "no complaint" is the signal that cannot be trusted on its own; and the
+## arm with no natural symptom is a force-push, where the approval goes on
+## standing against a tree nobody compared it to.
+test-review-coverage:
+	@./scripts/test-check-review-coverage.sh
+
 ## test-laneorder — prove the integration lane still dispatches its long pole
 ## first. The order is only a scheduling hint, so a regression here never turns
 ## a lane red: it makes the run longer and says nothing, which is why it needs a
@@ -963,15 +1091,20 @@ test-merge-verdict:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
-## check-image-pins — every `uses:` in .github/workflows/ AND every container
-## `image:` (workflow service containers + infra/docker-compose.dev.yml) is
-## pinned to an immutable ref (supply-chain: a floating vN/main tag or image
-## tag lets a compromised artifact ride into CI unreviewed). Lives at the root
-## because the workflows do; also a CI step, so a pin can't regress.
+## check-image-pins — every `uses:` in .github/workflows/, every container
+## `image:` (workflow service containers + docker-compose.dev.yml) AND every
+## Dockerfile base `FROM` is pinned to an immutable ref (supply-chain: a
+## floating vN/main tag or image tag lets a compromised artifact ride into CI
+## — or into a release image — unreviewed). Lives at the root because the
+## workflows and the Dockerfile do; also a CI step, so a pin can't regress.
 check-image-pins:
 	@./scripts/check-image-pins.sh
+## check-image-pins.test.sh runs beside it because the newest half of the gate
+## reads Dockerfiles, and a scan that stopped recognising a `FROM` line reports
+## the same "image pins OK" as a fully pinned tree.
+	@bash ./scripts/check-image-pins.test.sh
 
-## check-host-ports — every host port published by infra/docker-compose.dev.yml
+## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's
 ## ephemeral range can be transiently held as some unrelated process's client
 ## port, and `make db-up` then loses the bind and fails the job it was setting
@@ -1052,7 +1185,7 @@ gofmt:
 	@./scripts/check-gofmt.sh
 
 ## lint-modules — golangci-lint over the Go modules `./...` from backend/ cannot
-## reach: backend/tools, cli/craft, composition and the units under extensions/
+## reach: backend/tools, composition and the units under extensions/
 ## are each their own module, so the backend lint lane never saw them. Same
 ## config as the product module; the list derives from tracked go.mod files.
 lint-modules: composition
@@ -1071,6 +1204,30 @@ test-golangci-guard:
 go-file-length:
 	@./scripts/check-go-file-length.sh
 
+## fe-file-length — the same cap on frontend sources (1000 for a test or a
+## story), ratcheted via scripts/fe-file-length-waivers.txt. Its counterpart
+## above held one half of the product while the other could grow without limit.
+fe-file-length:
+	@./scripts/check-fe-file-length.sh
+
+## comment-budget — a change may not add more comment lines than the code they
+## explain. Diff-scoped against origin/main, Go only; `doc.go` and generated
+## files are exempt. The counterweight to the function ceiling, which does not
+## count comment lines at all.
+comment-budget:
+	@./scripts/check-comment-budget.sh
+
+## comment-density — backend's comment-to-code ratio may fall and never rise,
+## pinned in scripts/comment-density-baseline.txt. The aggregate counterpart to
+## comment-budget, which judges one diff and cannot see the tree.
+comment-density:
+	@./scripts/check-comment-density.sh
+
+## test-comment-budget — prove the budget gate fails an over-budget change.
+## A budget nothing can trip reads exactly like a change within budget.
+test-comment-budget:
+	@./scripts/test-check-comment-budget.sh
+
 ## rls-store-path — DB-free floor under the row-scope runtime proof: no
 ## internal/modules statement may address the superuser pool directly, where
 ## the database applies no per-workspace filter of its own; per-workspace work
@@ -1081,7 +1238,10 @@ rls-store-path:
 
 ## test-e2e-llm-check — prove the e2e-llm checker tells a failed use case apart
 ## from a run that never reached the model: a refused credential is named as
-## one, and a genuinely bad answer is still a finding.
+## one, and a genuinely bad answer is still a finding. It also holds the judged
+## half offline, against verdicts a real judge gave the committed fixtures: a
+## judge that agreed with everything fails 22 of these cases, and a judge that
+## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
 
@@ -1103,6 +1263,49 @@ changelog-sections:
 test-changelog-sections:
 	@./scripts/test-check-changelog-sections.sh
 
+## test-release-version-stamped — prove the release bake refuses to publish a set
+## that carries no release version. An empty or "dev" VERSION builds and pushes
+## perfectly well and ships a fleet whose mixed-release guard is inert, which
+## nothing downstream can tell from a working one — so the one path that must
+## always stamp proves it, and this proves the proof still refuses.
+test-release-version-stamped:
+	@./scripts/release-version-stamped.test.sh
+
+## test-closing-declaration — prove the closing-declaration report still refuses
+## a pull request that declares nothing, and still accepts one that declares
+## either way. The case that matters is the prose one: the check exists because
+## "Closes the residual half of #548" reads as a declaration and closes nothing,
+## so a version reading the BODY would pass the exact pull request it was written
+## for and report the defect as absent.
+test-closing-declaration:
+	@./scripts/check-closing-declaration.test.sh
+
+## test-release-patch-base — prove a release patch is cut from what was last
+## PUBLISHED, not from this push's previous tip. The two agree only while every
+## lane publishes, and a cancelled or failed one drops its commit's files from
+## every patch a consumer will ever apply — silently, and identically to a
+## correct run from the publishing side. The case that matters walks the
+## sequence that made it a defect: publish, skip, publish.
+test-release-patch-base:
+	@./scripts/release-patch-base.test.sh
+
+## test-published-tag — prove the tag that base is read from only ever moves
+## FORWARD. The move is a job outside the publish concurrency group, so two
+## releases in flight are serialized at the publish and not at the tag: an older
+## one's move landing last would point the tag backward, and every later patch
+## would then be cut from a base ahead of what consumers actually have. The case
+## that matters records an older release after a newer one already recorded
+## itself.
+test-published-tag:
+	@./scripts/publish-released-tag.test.sh
+
+## test-release-tag-version — the release tag reader's own test: what the
+## grammar accepts, and what shelf each accepted tag lands on. The reader has
+## exactly one caller, a tag push, so without this the grammar's only test is a
+## release named `v0.1` that orders against nothing.
+test-release-tag-version:
+	@./scripts/release-tag-version.test.sh
+
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
 ## in core CODE — Go AND SQL — only in the jurisdiction seam
@@ -1121,7 +1324,7 @@ no-jurisdiction:
 test-no-jurisdiction:
 	@./scripts/check-no-jurisdiction.test.sh
 
-## check-ext-migrations — the extension migration gate (ADR-0069): apply every
+## check-ext-migrations — the extension migration gate (ADR-0120): apply every
 ## enabled unit's migrations as its restricted ext_<name> role against a
 ## throwaway clone and assert the resulting catalog against the allowlist. The
 ## one gate in the tier that is the DATABASE refusing rather than a scanner
@@ -1149,7 +1352,7 @@ check-ext-migrations:
 check-extension-modules:
 	@./scripts/check-extension-modules.sh
 
-## pkg-freeze — published-surface freeze gate (ADR-0069 §3, EXT-P3): apidiff
+## pkg-freeze — published-surface freeze gate (ADR-0120 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF
 ## in CI; locally the extensions integration branch, else origin/main).
 ## ADVISORY before the first v1+ release tag (the surface is design-fluid:
@@ -1443,11 +1646,36 @@ sbom-validate:
 ## job's artifact, and running the syft scan under that token is the isolation the SBOM
 ## workflow forbids. Both gates re-check the existing files cheaply and refuse to sign a
 ## stale, un-normalized, or malformed set.
-sbom-sign: sbom-parity sbom-validate
+##
+## Signing is SKIPPED for a file that already carries a bundle at least as new as
+## itself, and that is the recovery path rather than a micro-optimisation. A
+## Rekor entry is permanent and cannot be retracted, so a re-run that signs
+## again does not replace the first entry — it adds a second, and leaves the
+## first as a claim in a public append-only log that no published artifact
+## corroborates. The window is real: the entry is written before the bundle
+## reaches disk and the bundle is published after that, so a job cancelled in
+## between (a maintainer's hand, the runner's own ceiling) lands exactly there.
+## Re-running the same workspace now converges instead of accumulating.
+##
+## The comparison is the SBOM's mtime against its bundle's, not the bundle's
+## mere existence: a regenerated SBOM under an older bundle is a signature over
+## bytes that are gone, and skipping there would publish a bundle that verifies
+## against nothing.
+##
+## The prerequisites are a variable so scripts/test-sbom-sign.sh can drive the
+## skip decision without standing up three pinned validator containers. It is
+## the only override, and overriding it does not weaken CI: the workflow runs
+## the bare target.
+SBOM_SIGN_DEPS ?= sbom-parity sbom-validate
+sbom-sign: $(SBOM_SIGN_DEPS)
 	@mkdir -p $(COSIGN_HOME)
-	@for f in $(SBOM_FILES); do \
+	@set -e; for f in $(SBOM_FILES); do \
+	  if [ -s "$$f.cosign.bundle" ] && [ ! "$$f" -nt "$$f.cosign.bundle" ]; then \
+	    echo "already signed: $$f"; \
+	    continue; \
+	  fi; \
 	  echo "signing $$f"; \
-	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f" || exit 1; \
+	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f"; \
 	done
 	@echo "signed: $(addsuffix .cosign.bundle,$(SBOM_FILES))"
 

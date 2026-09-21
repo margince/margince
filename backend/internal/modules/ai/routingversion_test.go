@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// The routing version is a cache key. It travels into personbrief.Fingerprint
+// The routing version is a cache key. It travels into contactbrief.Fingerprint
 // and its siblings, where it decides whether a stored brief may be reused, so
 // what it must track is the BINDING — and what it must ignore is everything
 // about how that binding was written down.
@@ -73,7 +73,8 @@ embeddings:
 		// loud and leaving it out are the same binding — which is what an
 		// operator would assume, and what the byte digest punished.
 		"the default width is written out instead of omitted": strings.Replace(
-			baseRouting, ", dimensions: 1536", "", 1),
+			baseRouting, ", dimensions: 1536", "", 1,
+		),
 		"a trailing blank line": baseRouting + "\n\n",
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -93,17 +94,22 @@ func TestChangingTheBindingChangesTheVersion(t *testing.T) {
 	for name, doc := range map[string]string{
 		"a tier is re-pointed at another model": strings.Replace(
 			baseRouting, "premium: {provider: gemini, model: gemini-3.5-flash}",
-			"premium: {provider: gemini, model: gemini-3.1-pro-preview}", 1),
+			"premium: {provider: gemini, model: gemini-3.1-pro-preview}", 1,
+		),
 		"the embeddings width changes": strings.Replace(
-			baseRouting, "dimensions: 1536", "dimensions: 768", 1),
+			baseRouting, "dimensions: 1536", "dimensions: 768", 1,
+		),
 		"the location ladder changes": strings.Replace(
-			baseRouting, "profile: eu_hosted", "profile: cloud_frontier", 1),
+			baseRouting, "profile: eu_hosted", "profile: cloud_frontier", 1,
+		),
 		"a tier gains a base-url override": strings.Replace(
 			baseRouting, "premium: {provider: gemini, model: gemini-3.5-flash}",
-			"premium: {provider: gemini, model: gemini-3.5-flash, base_url: https://eu-gateway.example}", 1),
+			"premium: {provider: gemini, model: gemini-3.5-flash, base_url: https://eu-gateway.example}", 1,
+		),
 		"a tier narrows what it accepts": strings.Replace(
 			baseRouting, "premium: {provider: gemini, model: gemini-3.5-flash}",
-			"premium: {provider: gemini, model: gemini-3.5-flash, input: [text]}", 1),
+			"premium: {provider: gemini, model: gemini-3.5-flash, input: [text]}", 1,
+		),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if got := versionOf(t, doc); got == base {

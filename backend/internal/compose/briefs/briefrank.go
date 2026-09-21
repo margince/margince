@@ -4,12 +4,12 @@
 // Package briefs is the Morning-Brief orchestration (E05) — a compose
 // subpackage because it is a cross-module composition, never a module:
 // deal facts (deals),
-// relationship warmth (people §4), and the overnight activity signal
+// relationship warmth (contacts §4), and the overnight activity signal
 // (activities) rank into the persisted run the home surface reads.
 // The deterministic ranker (this file) implements formulas-and-rules
-// §10/§10.1; the pure fold it feeds is briefscore.go, the persisted
-// read model briefstore.go, the advisory model re-order briefl2.go,
-// and the contract transport briefhandlers.go. The composite is the
+// §10/§10.1 over the rows briefreads.go gathers; the pure fold it feeds
+// is briefscore.go, the persisted read model briefstore.go, the advisory
+// model re-order briefl2.go, and the contract transport briefhandlers.go. The composite is the
 // fallback rank when the L2 layer is unavailable and the evidence basis
 // every ranked item exposes (B-E05.12).
 package briefs
@@ -17,16 +17,14 @@ package briefs
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
-	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -47,12 +45,17 @@ type BriefRanking struct {
 	// the USD in force by then.
 	RevenueNormCurrency string
 	AsOf                time.Time
+	// FactorsOmitted names the ranking factors this run could not read. Empty
+	// is the ordinary answer and is not the same as a factor that scored zero:
+	// a floored factor the reader is not told about makes every deal rank lower
+	// than it is, with nothing marking why.
+	FactorsOmitted []string
 }
 
 // briefStrengthSource is the compose-injected §4 warmth seam —
-// people.Store satisfies it; the brief never reaches into people's SQL.
+// contacts.Store satisfies it; the brief never reaches into contacts's SQL.
 type briefStrengthSource interface {
-	PersonStrength(ctx context.Context, personID ids.PersonID, now time.Time) (people.RelationshipStrength, error)
+	ContactStrength(ctx context.Context, contactID ids.ContactID, now time.Time) (contacts.RelationshipStrength, error)
 }
 
 // BriefEngine ranks a rep's open deals and owns the brief_run/brief_item
@@ -99,6 +102,15 @@ type briefFacts struct {
 	// revenueNormCurrency is what that value is in.
 	revenueNorm         int64
 	revenueNormCurrency string
+	// seatsReadable is whether the caller holds the edge grant the stakeholder
+	// read needs. False is NOT "this rep's deals have no stakeholders": it
+	// floors the warmth factor for every deal, which reorders the queue.
+	seatsReadable bool
+	// today is the installation-zone calendar day the timing factor measures
+	// "days until expected close" from — the SAME day brief_run.local_day is
+	// stamped in, resolved once in the gather transaction so the score reads the
+	// morning the run belongs to.
+	today time.Time
 }
 
 // gather reads one transaction's worth of ranking facts.
@@ -113,6 +125,13 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		// The rep's last brief view: the previous run's data cutoff. No
 		// previous run → the overnight window is all-time.
 		lastView, err := briefLastView(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+
+		// The installation-zone day the timing factor measures against,
+		// resolved in this transaction so it is the same day the run is stamped.
+		out.today, err = localDay(ctx, tx, now)
 		if err != nil {
 			return err
 		}
@@ -134,7 +153,8 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		if err := briefCandidates(ctx, tx, userID, now, base, out.facts, &out.order); err != nil {
 			return err
 		}
-		if err := briefEvidenceRows(ctx, tx, lastView, out.facts, out.order, out.stakeholders); err != nil {
+		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, now, out.facts, out.order, out.stakeholders)
+		if err != nil {
 			return err
 		}
 		// Why each returning deal is back, for the whole candidate set at once.
@@ -171,13 +191,14 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 	stakeholders := gathered.stakeholders
 	lineage := gathered.lineage
 
-	if err := e.resolveWarmth(ctx, now, facts, stakeholders); err != nil {
+	warmthReadable, err := e.resolveWarmth(ctx, now, facts, stakeholders)
+	if err != nil {
 		return BriefRanking{}, err
 	}
 
 	scored := make([]BriefQueueItem, 0, len(order))
 	for _, dealID := range order {
-		item := briefScore(facts[dealID], revenueNorm, now)
+		item := briefScore(facts[dealID], revenueNorm, gathered.today)
 		// Attached AFTER scoring, never inside it. briefScore is a pure
 		// function of the ranking facts and is tested as one; lineage explains
 		// why a deal is in the queue and must not be able to change where it
@@ -216,21 +237,8 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		RevenueNormMinor:    revenueNorm,
 		RevenueNormCurrency: gathered.revenueNormCurrency,
 		AsOf:                now,
+		FactorsOmitted:      omittedFactors(gathered, warmthReadable),
 	}, nil
-}
-
-// briefUser resolves the human the brief belongs to. The brief is a
-// personal lens — a principal without a user identity (the system actor)
-// has no "my morning" to rank.
-func briefUser(ctx context.Context) (ids.UUID, error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return ids.Nil, errors.New("brief: no actor bound to context")
-	}
-	if p.UserID.IsZero() {
-		return ids.Nil, apperrors.ErrPermissionDenied
-	}
-	return p.UserID, nil
 }
 
 // briefLastView reads the previous run's data cutoff for this user; nil
@@ -251,224 +259,16 @@ func briefLastView(ctx context.Context, tx pgx.Tx, userID ids.UUID) (*time.Time,
 	return lastView, nil
 }
 
-// briefRevenueNorm computes REVENUE_NORM: the workspace P90 base deal
-// value over live deals with an evidencable amount, or the fixed
-// fallback below ten deals of history.
-//
-// The basis is a bind parameter, and the workspace join that used to supply it
-// is gone with it: it earned its place only by carrying base_currency, which
-// is now one installation-wide value rather than a column on a joinable row.
-func briefRevenueNorm(ctx context.Context, tx pgx.Tx, now time.Time, base string) (int64, error) {
-	var valued int
-	var p90 *float64
-	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		WITH sized AS (
-			SELECT %s AS base_value
-			FROM deal d
-			WHERE d.archived_at IS NULL
-		)
-		SELECT count(*), percentile_cont(%v) WITHIN GROUP (ORDER BY base_value::double precision)
-		FROM sized WHERE base_value IS NOT NULL`,
-		briefBaseValueSQL("$1", "$2", "d"), briefRevenueNormPercentile), now.UTC(), base).Scan(&valued, &p90)
-	if err != nil {
-		return 0, err
+// briefUser resolves the human the brief belongs to. The brief is a
+// personal lens — a principal without a user identity (the system actor)
+// has no "my morning" to rank.
+func briefUser(ctx context.Context) (ids.UUID, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.Nil, errors.New("brief: no actor bound to context")
 	}
-	if valued < briefRevenueNormMinDeals || p90 == nil || *p90 <= 0 {
-		return briefRevenueNormFallbackMinor, nil
+	if p.UserID.IsZero() {
+		return ids.Nil, apperrors.ErrPermissionDenied
 	}
-	return int64(math.Round(*p90)), nil
-}
-
-// briefCandidates gathers the open, row-scoped candidate deals, minus
-// the ones this user acted on or dismissed with no linked activity since
-// the mark (B-E05.13: a dismissed deal reappears only when it materially
-// changed; an unchanged one stays out — across ALL previous runs, not
-// just the last). A snoozed item suppresses its deal on time alone
-// (A77/AC-home-6): out while snoozed_until lies ahead, back once it
-// passes — no material change required.
-func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.Time,
-	base string, facts map[ids.UUID]briefDealFacts, order *[]ids.UUID,
-) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	asOfPos := arg(now.UTC())
-	userPos := arg(userID)
-	basePos := arg(base)
-
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
-	if err != nil {
-		return err
-	}
-	q := fmt.Sprintf(`
-		SELECT d.id, s.win_probability, %s, d.expected_close_date
-		FROM deal d
-		JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL AND d.status = 'open'
-		  AND NOT EXISTS (
-			SELECT 1 FROM brief_item bi
-			JOIN brief_run br ON br.id = bi.brief_run_id
-			WHERE br.user_id = $%d AND bi.deal_id = d.id AND bi.state <> 'new'
-			  AND CASE WHEN bi.state = 'snoozed'
-			      -- Still suppressed while the snooze holds. A time snooze
-			      -- holds until its moment; the other two hold until the
-			      -- shared predicate says the world moved.
-			      THEN CASE WHEN bi.reopen_on = 'time'
-			           THEN bi.snoozed_until > $%d
-			           ELSE NOT %s END
-			      ELSE NOT EXISTS (
-				SELECT 1 FROM activity a
-				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at
-				  -- Not after this instant. A future-dated activity has not
-				  -- happened, so treating it as "the deal moved" brings a
-				  -- dismissed deal back for something still to come — and the
-				  -- lineage read bounds itself the same way, so an unbounded
-				  -- one here would return deals whose card can say nothing.
-				  AND a.occurred_at <= $%d) END)`,
-		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos,
-		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
-		asOfPos)
-	if scope != "" {
-		q += " AND " + scope
-	}
-	q += " ORDER BY d.id"
-
-	rows, err := tx.Query(ctx, q, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var f briefDealFacts
-		if err := rows.Scan(&f.dealID, &f.winProbability, &f.baseValueMinor, &f.expectedClose); err != nil {
-			return err
-		}
-		facts[f.dealID] = f
-		*order = append(*order, f.dealID)
-	}
-	return rows.Err()
-}
-
-// briefEvidenceRows gathers each candidate's overnight activities (the
-// momentum evidence) and stakeholder persons, after the candidate rows
-// are drained (one connection, one active query).
-func briefEvidenceRows(ctx context.Context, tx pgx.Tx, lastView *time.Time, facts map[ids.UUID]briefDealFacts, order []ids.UUID, stakeholders map[ids.UUID][]ids.UUID) error {
-	// The seat edge's admission is resolved ONCE, ahead of the loop: it is a
-	// property of the caller, not of the deal being read, and asking per deal
-	// would put a grant lookup inside a per-row loop for an answer that cannot
-	// change. A refused caller runs no stakeholder query at all — the brief
-	// simply carries no seat evidence, which is the same shape as a deal with
-	// no stakeholders on it.
-	edgeArgs, edgeBound, mayReadSeats, err := seatEvidenceBound(ctx)
-	if err != nil {
-		return err
-	}
-	for _, dealID := range order {
-		f := facts[dealID]
-		overnight, err := collectIDList(tx.Query(ctx, `
-			SELECT a.id FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-			WHERE a.archived_at IS NULL
-			  AND ($2::timestamptz IS NULL OR a.occurred_at > $2)
-			ORDER BY a.occurred_at DESC, a.id DESC
-			LIMIT $3`, dealID, lastView, briefOvernightEvidenceCap))
-		if err != nil {
-			return err
-		}
-		f.overnightActivityIDs = overnight
-		facts[dealID] = f
-
-		if !mayReadSeats {
-			continue
-		}
-		persons, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
-			SELECT r.person_id FROM relationship r
-			WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $1 AND r.archived_at IS NULL
-			  AND (%s)
-			ORDER BY r.person_id`, edgeBound), append([]any{dealID}, edgeArgs...)...))
-		if err != nil {
-			return err
-		}
-		stakeholders[dealID] = persons
-	}
-	return nil
-}
-
-// seatEvidenceBound resolves the seat edge's admission for the stakeholder
-// evidence read: the arguments its clause binds, the clause itself, and whether
-// the caller may run the read at all.
-//
-// The registrar returns positions offset by one because the statement it feeds
-// already spends $1 on the deal id. Getting that wrong would bind the deal id
-// to a scope predicate, which is why the offset lives here with the statement
-// it belongs to rather than at the call site.
-func seatEvidenceBound(ctx context.Context) (args []any, clause string, admitted bool, err error) {
-	clause, err = auth.EdgeReadScope(ctx, "r", func(v any) int {
-		args = append(args, v)
-		return len(args) + 1
-	})
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil, "", false, nil
-	}
-	if err != nil {
-		return nil, "", false, err
-	}
-	if clause == "" {
-		clause = "TRUE"
-	}
-	return args, clause, true, nil
-}
-
-// resolveWarmth fills each deal's warmth from its strongest visible
-// stakeholder through the injected §4 seam. A stakeholder outside the
-// caller's row scope — or a caller with no person grant at all —
-// contributes nothing: the warmth factor floors instead of out-seeing
-// the people list.
-func (e *BriefEngine) resolveWarmth(ctx context.Context, now time.Time, facts map[ids.UUID]briefDealFacts, stakeholders map[ids.UUID][]ids.UUID) error {
-	cache := map[ids.UUID]people.RelationshipStrength{}
-	for dealID, persons := range stakeholders {
-		f := facts[dealID]
-		for _, personID := range persons {
-			st, ok := cache[personID]
-			if !ok {
-				var err error
-				st, err = e.strength.PersonStrength(ctx, ids.From[ids.PersonKind](personID), now)
-				switch {
-				case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
-					// Invisible to this caller: no strength to disclose.
-					st = people.RelationshipStrength{}
-				case err != nil:
-					return err
-				}
-				cache[personID] = st
-			}
-			if st.Strength > f.warmthStrength {
-				f.warmthStrength = st.Strength
-				f.warmthEvidence = make([]ids.UUID, len(st.ContributingIDs))
-				for i, activityID := range st.ContributingIDs {
-					f.warmthEvidence[i] = activityID.UUID
-				}
-			}
-		}
-		facts[dealID] = f
-	}
-	return nil
-}
-
-// collectIDList drains a single-uuid-column result set (the compose
-// spelling of the modules' collectIDs helpers).
-func collectIDList(rows pgx.Rows, err error) ([]ids.UUID, error) {
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
+	return p.UserID, nil
 }

@@ -15,7 +15,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -40,7 +39,7 @@ func (e *InvalidEditError) Unwrap() error { return e.Cause }
 // UUID may take. An undecidable approval reads as absent, exactly like
 // Get, so Decide never becomes the lookup oracle the inbox filter closed.
 func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string) (row, error) {
-	return s.recordDecision(ctx, id, approve, reason, nil, decidedByPerson)
+	return s.recordDecision(ctx, id, approve, reason, nil, decidedByContact)
 }
 
 // DecideEdited is the ADR-0036 §4 modify-then-approve arm: the human's
@@ -66,10 +65,10 @@ func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited js
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.recordDecision(ctx, id, true, nil, edited, decidedByPerson)
+	return s.recordDecision(ctx, id, true, nil, edited, decidedByContact)
 }
 
-// decider says whether a person answered this or the product applied it under
+// decider says whether a contact answered this or the product applied it under
 // a rep's standing policy. It is a parameter rather than something read off the
 // context because it is a claim the receipt makes to a reader — "nobody was
 // asked" — and a claim that travels invisibly is one a future call site sets
@@ -77,8 +76,8 @@ func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited js
 type decider bool
 
 const (
-	decidedByPerson decider = false
-	decidedBySystem decider = true
+	decidedByContact decider = false
+	decidedBySystem  decider = true
 )
 
 func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
@@ -114,7 +113,13 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 		return nil
 	})
 	if err != nil {
-		return a, err
+		if s.effectIsStillOwed(a, approve, err) {
+			// The decision stands and its work never ran. Re-drive rather than
+			// refuse: see effectIsStillOwed for why this is the only answer
+			// that is not a dead end.
+			return a, s.runDecisionEffect(ctx, id, a, approve)
+		}
+		return row{}, err
 	}
 	return a, s.runDecisionEffect(ctx, id, a, approve)
 }
@@ -157,125 +162,19 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 	return check(ctx, a.ProposedChange, edited)
 }
 
-// runDecisionEffect runs what a COMMITTED decision releases: a step-up's window
-// widening, or the kind's registered follow-on executor.
-//
-// It is spelled once because two callers release decisions — one approval at a
-// time here, a whole bundle at a time in bundle.go — and a second copy of this
-// branch is how a bundle member would quietly stop executing what a human
-// approved.
-//
-// The decision is already committed when this runs, so a failure never un-decides
-// anything: the approval IS decided either way, and the approved-unredeemed row
-// and its audit trail say exactly how far it got. That is also why the error says
-// "approved, but …" — a human told only "redis is unreachable" would reasonably
-// decide again, and the row would refuse them as already decided.
-func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a row, approve bool) error {
-	// A step-up's effect is not a write into another module, so it does not run
-	// through the effect table — which is closed to agent-minted stagings for
-	// the reason serverProposed states, and a step-up is always agent-minted.
-	// It widens the window the staging named, from that row's own passport
-	// (quotarelease.go).
-	if approve && a.Kind == KindVolumeRelease {
-		if err := s.applyVolumeRelease(ctx, a); err != nil {
-			return s.recordEffectFailure(ctx, id,
-				"the agent's window could not be widened, so the approval has not taken effect",
-				fmt.Errorf("approved, but widening the agent's window failed: %w", err))
-		}
-		return nil
-	}
-	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
-		if err := effect(ctx, id, a.ProposedChange, a.DiffHash); err != nil {
-			return s.recordEffectFailure(ctx, id,
-				"this was approved, but the work it released did not run",
-				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
-		}
-	}
-	return nil
-}
-
-// recordEffectFailure marks an approved row whose effect did not run, and
-// returns the caller's own error unchanged.
-//
-// Without the mark the row is unreachable: it is not pending, so the decision
-// lane skips it, and it names a human decider, so the receipts lane does too. A
-// person approved something, was told it was approved, and the work never
-// happened — with the only trace an error on one request nobody may have read.
-//
-// The stored sentence is written HERE rather than from the executor's error,
-// which carries whatever the failing module said and can name a table, a
-// statement or a host. What reaches a reader says what happened and what it
-// means for them.
-//
-// A failure to record the failure is logged and swallowed on purpose, and it is
-// the one place in this file that swallows anything: the caller is already
-// returning an error about the effect, and replacing it with a bookkeeping
-// error would tell the human who approved the row the wrong thing about what
-// went wrong.
-func (s *Service) recordEffectFailure(ctx context.Context, id ids.ApprovalID, reader string, cause error) error {
-	// Detached from the request's cancellation: an effect that failed BECAUSE
-	// the request was cancelled or timed out is exactly a failure this mark
-	// exists to keep, and writing it through the dead context would lose it.
-	ctx = context.WithoutCancel(ctx)
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The IS NULL arm is the CAS: two failures racing on one row keep the
-		// FIRST mark, because that is the one whose timestamp says when the
-		// work was actually lost. Zero rows affected is that race resolved,
-		// not an error.
-		tag, err := tx.Exec(ctx,
-			`UPDATE approval SET effect_failed_at = now(), effect_failure = $2
-			  WHERE id = $1 AND effect_failed_at IS NULL`, id, reader)
-		if err == nil && tag.RowsAffected() == 0 {
-			s.logger().InfoContext(ctx, "approvals: effect failure already marked", "approval_id", id.String())
-		}
-		return err
-	})
-	if err != nil {
-		s.logger().ErrorContext(ctx, "approvals: an approved effect failed and the row could not be marked",
-			"approval_id", id.String(), "error", err)
-	}
-	return cause
-}
-
-// serverProposed reports whether this staging was minted by a SERVER-SIDE
-// proposal flow rather than by an agent asserting a passport.
-//
-// The effect table is keyed by the kind string alone, and a kind is not a
-// namespace: the REST admission gate stages under the operation's TOOL name,
-// so an agent could mint a staging whose kind matched a kind some compose
-// proposal flow had registered an executor for — "enrich" names both the
-// scrape proposal and the tool behind three agent-reachable routes. A human
-// approving that staging then invoked the compose executor over an
-// agent-authored REST envelope, which consumed the approval in its own
-// committed transaction and only then failed to parse: the human got a 500,
-// the approval could never be redeemed again, and the audit row asserted a
-// redemption for an effect that never ran.
-//
-// Provenance is the discriminator, because it is the thing that actually
-// differs: a server-side proposal is staged by the system or by a human, and
-// carries no passport. An agent-minted staging is redeemed the way ADR-0055
-// says — by repeating the identical call with the approval token — and needs
-// no server-side executor at all.
-func serverProposed(a row) bool { return a.PassportID == nil }
-
-// decideInTx runs the decision inside the caller's transaction: the
-// decide-authority + row-scope gate, the pending guard, the optional
-// modify-then-approve edit, the status write, and the write shape. It
-// returns the re-read row so the follow-on effect runs against committed
-// state.
-// countIfAPersonDecided records the track record, and records nothing for an
+// countIfAContactDecided records the track record, and records nothing for an
 // automatic apply.
 //
-// The counters are one person's experience of one kind, and the clean-approval
+// The counters are one contact's experience of one kind, and the clean-approval
 // column is the one a promotion offer is read from — so a pass running every
 // minute under a policy the rep already set would manufacture unbounded
 // evidence that they keep agreeing, about proposals they never saw. The ladder
 // is climbed by decisions, not by the automation a previous rung enabled.
-func countIfAPersonDecided(
+func countIfAContactDecided(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, kind string,
 	approve bool, edited json.RawMessage, by decider,
 ) error {
-	if by != decidedByPerson {
+	if by != decidedByContact {
 		return nil
 	}
 	return countDecisionTx(ctx, tx, userID, kind, decisionOutcomeOf(approve, edited))
@@ -339,7 +238,13 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		return row{}, err
 	}
 	if st := a.effectiveStatus(s.now()); st != "pending" {
-		return row{}, &AlreadyDecidedError{Status: st}
+		// The ROW travels with the refusal. recordDecision has to tell an
+		// approved row whose effect never ran from one that is genuinely
+		// finished, and re-reading it there would be a second look at a row
+		// this transaction is holding — a different answer is possible, and it
+		// is the answer that decides whether a human's yes is honoured or
+		// refused.
+		return a, &AlreadyDecidedError{Status: st}
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected
@@ -352,10 +257,17 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// decided_by is a pointer because ONE verdict has no decider: the expiry
 	// sweep's. A human decision always names theirs, so it is always set here.
 	decidedBy := openapi_types.UUID(p.UserID)
+	// decided_by_system travels on the event as well as into the column. A
+	// consumer measuring whether CONTACTS agree with what the product proposes
+	// has to exclude the product's own applies from its denominator, and
+	// without this field it cannot tell one from a human's clean approval —
+	// the autopilot would be counted as agreeing with itself.
+	bySystem := bool(by)
 	decidedPayload := crmcontracts.PublicEventApprovalDecided{
-		Kind:      a.Kind,
-		Verdict:   crmcontracts.PublicEventApprovalDecidedVerdict(verdict),
-		DecidedBy: &decidedBy,
+		Kind:            a.Kind,
+		Verdict:         crmcontracts.PublicEventApprovalDecidedVerdict(verdict),
+		DecidedBy:       &decidedBy,
+		DecidedBySystem: &bySystem,
 	}
 	if err := landEditedPayload(ctx, tx, id, edited, a, auditEvidence, &decidedPayload); err != nil {
 		return row{}, err
@@ -371,7 +283,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// transaction as the decision it counts. A counter that could outlive a
 	// rolled-back approval would offer a rep autonomy on evidence of a decision
 	// they never made.
-	if err := countIfAPersonDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
+	if err := countIfAContactDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
 	// An approval's whole content is a state transition, so the images are the
@@ -394,62 +306,6 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	return get(ctx, tx, id)
 }
 
-// applyEditedPayload is the modify-then-approve write (ADR-0036 §4): the
-// human's edited payload replaces the staged change under a freshly
-// computed diff_hash, and both sides of the human delta go on the record
-// — what the agent proposed, and what the human actually released. The
-// decided event carries the human's version, so a suspended agent run
-// resumes with THIS call; the original hash no longer opens anything.
-func applyEditedPayload(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, edited json.RawMessage, a row, auditEvidence map[string]any, decidedPayload *crmcontracts.PublicEventApprovalDecided) error {
-	canonical, editedHash, hashErr := diffhash.Canonical(edited)
-	if hashErr != nil {
-		return &InvalidEditError{Cause: hashErr}
-	}
-	// The edit may correct the action, never re-aim it: the row-scope probe
-	// and the version pin above were both evaluated against the records the
-	// STAGED payload named, and the effect resolves what it writes from the
-	// payload rather than from the approval's target. See editscope.go.
-	if err := assertSameEntityRefs(a.ProposedChange, canonical); err != nil {
-		return err
-	}
-	// The same rule for the half entityRefs cannot see: a record named inside the
-	// request path rather than as a field of its own.
-	if err := assertSameCallIdentity(a.ProposedChange, canonical); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE approval SET proposed_change = $2, diff_hash = $3 WHERE id = $1`,
-		id, canonical, editedHash); err != nil {
-		return err
-	}
-	auditEvidence["edited"] = true
-	auditEvidence["original_change"] = json.RawMessage(a.ProposedChange)
-	auditEvidence["original_diff_hash"] = a.DiffHash
-	auditEvidence["edited_change"] = json.RawMessage(canonical)
-	auditEvidence["edited_diff_hash"] = editedHash
-
-	// edited_change stays an OPEN object on the wire (A9): the staged
-	// kind's proposed_change shape varies by kind, so the payload carries
-	// it as a raw map rather than a narrowly typed struct that would drop
-	// a future kind's fields.
-	var editedChange map[string]any
-	if err := json.Unmarshal(canonical, &editedChange); err != nil {
-		return fmt.Errorf("approvals: canonicalized edited change did not decode as a JSON object: %w", err)
-	}
-	if editedChange == nil {
-		// A literal JSON `null` decodes without error but leaves the map nil,
-		// which would emit edited_change: null (violating the public contract)
-		// and could resume a parked run with null args — reject it as an
-		// invalid edit (422) rather than a JSON object.
-		return &InvalidEditError{Cause: errors.New("payload is not a JSON object")}
-	}
-	wasEdited := true
-	decidedPayload.Edited = &wasEdited
-	decidedPayload.DiffHash = &editedHash
-	decidedPayload.EditedChange = &editedChange
-	return nil
-}
-
 // emitKindDecided fires the kind-specific echo of the verdict (e.g. a
 // coldstart read-back's approved/rejected event) on the same audit row,
 // when the staging's kind registers one.
@@ -468,7 +324,7 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 // ApplyUnderPolicy approves a proposal because the rep it belongs to has put
 // this kind on automatic, rather than because anybody was asked.
 //
-// It is the SAME decision path a person takes — one entry point, so the
+// It is the SAME decision path a contact takes — one entry point, so the
 // registered effect, the audit row, the outbox event and the track record are
 // all written exactly as they are for a human. A second execution route would
 // be a second answer to "what does approving this do", and the two would drift.

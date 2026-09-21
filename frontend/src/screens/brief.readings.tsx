@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
+import { useTooltip } from "../design-system/tooltip";
 import {
   formatDateTime,
   formatMoneyCompact,
-  formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -18,114 +19,304 @@ import {
   usePlural,
   useT,
 } from "../i18n";
-import { useAnalyticsContext } from "./analytics.context";
-import { useForecastReadings } from "./forecast.queries";
+import {
+  meetingReadiness,
+  scheduledMeetings,
+  sourceComplete,
+} from "./brief.facts";
+import {
+  boundedCategories,
+  DECISIONS,
+  decisionsBlocking,
+  LEADS,
+} from "./brief.readings.honesty";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
-import { isUnprepared } from "./worklist.copy";
 import type {
   Worklist,
   WorklistFilter,
   WorklistItem,
 } from "./worklist.queries";
 
-// The day's readings, on one plate.
+// The day's readings, on one dense plate.
 //
-// FIVE slots, and every one of them answerable — which is what changed. Two of
-// the five were placeholders drawing an em dash: promises, because the
-// commitments lane is unwired, and quota pace, because targets were retired from
-// the product by founder decision. A row where two slots say "not tracked" is
-// not a comparison a reader can make; it is three figures and two apologies, and
-// the apologies were permanent.
+// FIVE slots, and every one of them answerable. The plate asks: what is urgent,
+// what is on today's calendar, which leads are owed a reply, what the drifting
+// deals are worth, and what is waiting on a decision.
 //
-// The rule that kept them was that a strip is read ACROSS, so a shrinking row
-// could let a reader take a missing question for an answered one. That rule
-// holds for a question the product intends to answer LATER. It does not hold for
-// one the product decided not to ask: a slot that will never fill is not a
-// pending answer, and drawing it forever teaches a reader to skip the row.
+// ALL FIVE come from the ONE worklist answer the queue below is drawn from, so
+// no second read can put a different number beside the same rows.
 //
-// So the count is the same and the content is not. The plate asks: what is
-// urgent, what needs preparing, which leads are owed an answer, where the
-// pipeline stands, and what is waiting on a decision.
+// THE WHOLE CELL IS THE DOOR, and which reading it opens is that door's
+// DESCRIPTION rather than its name. `StatCard onOpen` owns the word and
+// stretches the press target over the tile, so five doors read as five
+// different readings to a screen reader while still being one control each.
 //
-// FOUR OF THE FIVE come from the ONE worklist answer the queue below is drawn
-// from, so no second read can put a different number beside the same rows. The
-// pipeline outlook is the exception and is read separately, through the same
-// query key Analytics uses — one answer to "what is the pipeline worth",
-// wherever it is asked.
-//
-// The floor caveat is the plate's own, through `StatStrip`'s `floor` slot — the
-// row is read across as one statement, so a caveat belonging to one figure would
-// invite the reading where the others are exact.
-
-const MEETINGS = "meetings";
-const LEADS = "leads";
+// A BOUNDED READ IS A `+` ON THE FIGURES IT IS TRUE OF. The row used to carry a
+// sentence saying a source hit its limit; the fact belongs on the number, and
+// the cell's hover line says why. All four used to be marked from
+// `WorklistReadings.more_available`, which is one flag for the whole answer —
+// so a calendar read whole showed `3+` because an unrelated lane stopped, and a
+// mark on the exact figures is one a reader learns to discount. Per slot is not
+// guesswork: `counts` carries `more_available` PER CATEGORY, seeded from the
+// bounded SOURCES through `categoryOfSource` (reach.go).
 
 // Open the worklist on the lane a reading counted.
 //
 // Each figure in this strip IS one of the queue's filter pills counted, so the
-// reading's door is that lane. It goes in the QUERY rather than the path because
-// `#/worklist/<owner>` is already an address the team board navigates to, and
-// `routeIdentity` ignores the query half — so this narrows the view without
-// remounting the screen, and leaves an address somebody can paste.
-function openLane(filter: WorklistFilter): void {
-  navigate({ screen: "worklist" }, new Map([[WORKLIST_FILTER_PARAM, filter]]));
+// reading's door is that lane.
+function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
+  navigate(
+    { screen: "worklist" },
+    new Map([
+      [WORKLIST_FILTER_PARAM, filter],
+      ["scope", scope],
+    ]),
+  );
+}
+
+/**
+ * One reading: what it is, the figure, and what the figure rests on.
+ *
+ * `warning` is deliberately narrow. Neutral ink is the default for every figure on
+ * the plate, because a row where four numbers are coloured is a traffic light
+ * rather than a comparison. It is spent only where the reading counts something
+ * that is BREACHING — somebody waiting, a promise going, a meeting starting
+ * with nothing prepared — and never on a figure that is merely large.
+ */
+type Reading = Readonly<{
+  label: string;
+  /** The figure itself, so the slot can tell a floor of none from a floor. */
+  count: number | null;
+  basis: ReactNode;
+  /**
+   * Why this slot has no figure, in the words of ITS OWN source.
+   *
+   * "Not counted" says a number is missing; it does not say the calendar never
+   * answered while the lead lane did. Kept beside the basis rather than folded
+   * into it because the two are answers to different questions, and a reader
+   * who meets one where the other belongs learns to trust neither.
+   */
+  unavailable: string;
+  warning?: boolean;
+  /** The source behind the figure was read to its bound: it is a floor. */
+  floor?: boolean;
+  /** The lane this reading counted, which is where its cell leads. */
+  lane: WorklistFilter;
+  scope: Worklist["scope"];
+  /**
+   * This slot spans the whole day rather than naming one topic, so its door
+   * stands even at zero.
+   *
+   * A TOPIC's zero has nothing behind it and its door is a trip: "no meetings
+   * today" leads to an empty lane framed by every other slot's urgent count,
+   * which reads as a broken filter. The spanning slot is not a topic — it is
+   * the strip's way into the worklist at all, and a clear morning is exactly
+   * when a reader wants to go and look.
+   *
+   * Declared by the caller rather than read off `lane`, so this component never
+   * has to know which of its callers' values is the special one.
+   */
+  spans?: boolean;
+}>;
+
+/**
+ * One reading, with the door in the card's own foot.
+ *
+ * The DOOR IS A WORD, not the cell. `StatCard onOpen` is the one spelling of
+ * that control in the product and it stretches its own press target over the
+ * whole tile, so the reading is still one thing to press — and a stat card's
+ * appearance is a question for the card, not for the five screens that draw one.
+ *
+ * The lane goes in the QUERY rather than the path because `#/worklist/<owner>`
+ * is already an address the team board navigates to, and `routeIdentity`
+ * ignores the query half — so this narrows the view without remounting the
+ * screen, and leaves an address somebody can paste.
+ */
+function LaneReading({
+  label,
+  count,
+  basis,
+  unavailable,
+  warning,
+  floor,
+  lane,
+  scope,
+  spans,
+}: Reading) {
+  const t = useT();
+  const { locale } = useLocale();
+  // A FLOOR OF NONE IS NOT A FLOOR. `0+` says "at least nothing", which is
+  // true of every number there has ever been — so the mark goes on a figure
+  // that counts something and nowhere else. A bounded read that found none of
+  // a kind is a reading of zero, and the `+` was noise on it.
+  const marked = floor === true && count !== null && count > 0;
+  // A DOOR INTO NOTHING IS NOT REASSURANCE, it is a trip. A topic's confirmed
+  // zero has no rows behind it, so its door lands the reader in an empty lane
+  // framed by the urgent counts of every other slot — which reads as a filter
+  // they broke rather than as a morning with none of that kind.
+  //
+  // Three things keep a door, and each is a different reason:
+  //   - a figure that counts something, which has rows to show;
+  //   - a BOUNDED zero, because "none so far, and the read stopped early" is a
+  //     question the worklist can still answer where "none" is not. `floor`
+  //     tells those apart and is already on this slot for the `+` mark;
+  //   - the SPANNING slot, which is the strip's way into the worklist at all.
+  const openable =
+    count === null || count > 0 || floor === true || spans === true;
+  // The tip rides the whole CELL rather than the three characters that carry
+  // the mark: a `+` that explains itself only to a pointer resting on it is a
+  // mark most readers never read. Focus reaches it too — the card's own door is
+  // inside this element, and a focus event bubbles.
+  const floorTip = useTooltip<HTMLSpanElement>(t("brief.readings.floorTip"));
+
+  const figure =
+    count === null
+      ? t("brief.readings.unavailable")
+      : formatNumber(count, locale);
+  const card = (
+    <StatCard
+      label={label}
+      value={readingFigure(figure, marked)}
+      tone={warning ? "warning" : undefined}
+      // The basis says what the figure was taken over. With no figure there was
+      // nothing to take it over, so the line says what failed instead.
+      detail={count === null ? unavailable : basis}
+      // On a phone the plate is a list, not five boxes stacked.
+      narrow="row"
+      onOpen={openable ? () => openLane(lane, scope) : undefined}
+    />
+  );
+  // A plain SPAN and nothing more where the figure is a floor: it carries the
+  // tip and no behaviour of its own, because the card inside it already holds
+  // the only control on the cell. An unmarked reading gets no wrapper at all —
+  // an `aria-describedby` pointing at a tip nobody renders is a dangling
+  // reference.
+  return marked ? (
+    <span ref={floorTip.ref} {...floorTip.trigger}>
+      {card}
+      {floorTip.tip}
+    </span>
+  ) : (
+    card
+  );
 }
 
 export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const readings = day.readings;
   const meetings = meetingsReading(day);
   const soonest = soonestLeadDeadline(day);
+  const blocking = decisionsBlocking(day);
+  // A lane that never ANSWERED is the case the per-category narrowing does not
+  // reach: it travels in `sources_unavailable`, which names a source, and only
+  // the server maps a source to its lane. Re-deriving that here would be a
+  // second copy of it, so an unavailable lane marks the whole strip — which
+  // over-marks rather than calling a figure exact over work nobody could see.
+  const bounded = boundedCategories(day);
+  const unread = day.sources_unavailable.length > 0;
+  const floorOf = (category: string): boolean =>
+    day.sources_unavailable.some(
+      (entry) => entry.category === category || !entry.category,
+    ) || bounded.has(category);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
-      <StatStrip
-        testId="brief-readings"
-        hero
-        floor={
-          readings.more_available ? t("brief.readings.truncated") : undefined
-        }
-      >
-        <StatCard
-          numeric
+      <StatStrip testId="brief-readings">
+        <LaneReading
+          scope={day.scope}
           label={t("brief.readings.urgent")}
-          value={formatNumber(day.summary.urgent, locale)}
-          tone={day.summary.urgent > 0 ? "warn" : undefined}
           // The SUMMARY's own count, not one lane's. `urgent` is every row at
           // the top two levels — somebody waiting or a promise breaking — and
-          // the morning's first question is how many of those there are, not
-          // how many came from one producer.
-          //
-          // The basis line says what the figure was taken over, on every day. A
-          // zero already reads as "none"; a line under it repeating that says
-          // the same thing twice and drops the one fact it could add.
-          detail={t("brief.readings.urgentBasis")}
-          openLabel={t("brief.readings.openLane")}
-          onOpen={() => openLane("all")}
+          // the morning's first question is how many of those there are.
+          count={unread && day.summary.urgent === 0 ? null : day.summary.urgent}
+          warning={day.summary.urgent > 0}
+          // The one slot that genuinely spans the day: `urgent` is every row at
+          // the top two levels whatever lane raised it, so any bounded source
+          // anywhere makes it a floor. This is what `more_available` is for.
+          floor={readings.more_available || unread}
+          // The basis says what the figure was taken over, on every day. A zero
+          // already reads as "none"; a line repeating that says the same thing
+          // twice and drops the one fact it could add.
+          basis={t("brief.readings.urgentBasis")}
+          // Urgent is taken over every lane, so the reason names none of them.
+          unavailable={t("brief.readings.unavailable.urgent")}
+          // ITS OWN LANE, not the whole queue. This figure counts levels 0 to
+          // 2; opening `all` landed a reader who was sent by a 4 in a list of
+          // thirty, with nothing saying which four it meant.
+          lane="urgent"
+          // The one slot that is not a topic: its door stands at zero, because
+          // a clear morning is exactly when a reader goes to look for
+          // themselves. Every other slot's zero is a dead end.
+          spans
         />
-        <MeetingsStat
-          meetings={meetings.meetings}
-          unready={meetings.unready}
-          locale={locale}
-          t={t}
-          onOpen={() => openLane("meetings")}
+        <LaneReading
+          scope={day.scope}
+          label={t("brief.readings.meetings")}
+          count={meetings.meetings}
+          // Readiness is the breach here: a meeting starting with nothing
+          // prepared is the one fact on this slot a reader must act on before
+          // it begins. The count of meetings itself is neither good nor bad.
+          warning={meetings.unready !== null && meetings.unready > 0}
+          floor={
+            day.reach?.find((entry) => entry.source === "meeting")
+              ?.more_available ||
+            day.sources_unavailable.some(
+              (entry) => entry.source === "meeting" || !entry.category,
+            )
+          }
+          basis={meetingsDetail(meetings, locale, t, plural)}
+          unavailable={t("brief.readings.unavailable.meetings")}
+          lane="meetings"
         />
-        <LeadsStat
-          leads={readings.prospecting}
-          soonest={soonest}
-          locale={locale}
-          t={t}
-          onOpen={() => openLane("leads")}
+        <LaneReading
+          scope={day.scope}
+          label={t("brief.readings.leads")}
+          count={
+            day.sources_unavailable.some(
+              (entry) => entry.source === "lead_response",
+            )
+              ? null
+              : readings.prospecting
+          }
+          floor={floorOf(LEADS)}
+          // The deadline is the fact that changes what a reader does before
+          // lunch, and NULL rather than a guess where the page cannot honestly
+          // compute one.
+          basis={
+            soonest === null
+              ? t("brief.readings.leadsBasis")
+              : t("brief.readings.leadsDue", {
+                  value: formatDateTime(soonest, locale, viewerZone()),
+                })
+          }
+          unavailable={t("brief.readings.unavailable.leads")}
+          lane="leads"
         />
-        <PipelineOutlook />
-        <StatCard
-          numeric
+        <RiskReading day={day} />
+        <LaneReading
+          scope={day.scope}
           label={t("brief.readings.decisions")}
-          value={formatNumber(readings.review, locale)}
-          tone={readings.review > 0 ? "warn" : undefined}
-          detail={t("brief.readings.decisionsBasis")}
-          openLabel={t("brief.readings.openLane")}
-          onOpen={() => openLane("decisions")}
+          count={
+            day.sources_unavailable.some(
+              (entry) => entry.category === DECISIONS || !entry.category,
+            ) && readings.review === 0
+              ? null
+              : readings.review
+          }
+          floor={floorOf(DECISIONS)}
+          // Only where something IS held up, and how much of it. Otherwise the
+          // plain basis, which says what the figure was taken over and claims
+          // nothing about who is waiting.
+          basis={
+            blocking === null || blocking === 0
+              ? t("brief.readings.decisionsBasis")
+              : plural("brief.readings.decisionsBlocking", blocking, {
+                  count: formatNumber(blocking, locale),
+                })
+          }
+          unavailable={t("brief.readings.unavailable.decisions")}
+          lane="decisions"
         />
       </StatStrip>
     </section>
@@ -138,42 +329,13 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
 // starts, so a day with meetings and nothing unprepared says "all prepared"
 // rather than leaving the line blank: the absence of a warning has to be
 // readable as an answer, not as a gap.
-function MeetingsStat({
-  meetings,
-  unready,
-  locale,
-  t,
-  onOpen,
-}: Readonly<{
-  onOpen: () => void;
-  meetings: number;
-  // Null when the page carries fewer meetings than it counted, so no honest
-  // readiness figure exists — NOT the same as zero unprepared.
-  unready: number | null;
-  locale: Locale;
-  t: Translator;
-}>) {
-  const plural = usePlural();
-  return (
-    <StatCard
-      numeric
-      label={t("brief.readings.meetings")}
-      value={formatNumber(meetings, locale)}
-      tone={unready !== null && unready > 0 ? "warn" : undefined}
-      detail={meetingsDetail(meetings, unready, locale, t, plural)}
-      openLabel={t("brief.readings.openLane")}
-      onOpen={onOpen}
-    />
-  );
-}
-
 function meetingsDetail(
-  meetings: number,
-  unready: number | null,
+  reading: MeetingsReading,
   locale: Locale,
   t: Translator,
   plural: ReturnType<typeof usePlural>,
 ): string {
+  const { meetings, unready } = reading;
   if (unready === null) {
     return t("brief.readings.prepUnknown");
   }
@@ -187,47 +349,6 @@ function meetingsDetail(
   return meetings === 0
     ? t("brief.readings.meetingsBasis")
     : t("brief.readings.prepared");
-}
-
-// How much new business is owed a first answer, and when the nearest one is due.
-//
-// The deadline is the fact that changes what a reader does before lunch, so it
-// takes the same shape readiness takes on the meetings slot beside it: a second
-// fact in the detail line, and NULL rather than a guess where the page cannot
-// honestly compute one.
-function LeadsStat({
-  leads,
-  soonest,
-  locale,
-  t,
-  onOpen,
-}: Readonly<{
-  onOpen: () => void;
-  leads: number;
-  // Null when no honest nearest deadline exists — either nothing on the page
-  // names one, or the leads read was cut short and an unshown lead could be
-  // sooner than every one the reader can see.
-  soonest: string | null;
-  locale: Locale;
-  t: Translator;
-}>) {
-  return (
-    <StatCard
-      numeric
-      label={t("brief.readings.leads")}
-      value={formatNumber(leads, locale)}
-      tone={leads > 0 ? "warn" : undefined}
-      detail={
-        soonest === null
-          ? t("brief.readings.leadsBasis")
-          : t("brief.readings.leadsDue", {
-              value: formatDateTime(soonest, locale, viewerZone()),
-            })
-      }
-      openLabel={t("brief.readings.openLane")}
-      onOpen={onOpen}
-    />
-  );
 }
 
 // The nearest deadline among the lead rows the page is SHOWING, or none.
@@ -279,12 +400,12 @@ function replyDueAt(item: WorklistItem): string | undefined {
   return undefined;
 }
 
-// The count slots call `StatCard` straight rather than through a shared tile
-// helper. `worklist.readings.tsx` has a `CountStat` of its own, and lifting it
-// was considered: it takes a fixed detail string, while these need a detail that
-// changes with the figure and a tone that follows it. A helper carrying both
-// would be `StatCard` with its own props spelled twice — a rename, not a shared
-// answer. The primitive they genuinely share is `StatCard`, and both use it.
+type MeetingsReading = Readonly<{
+  meetings: number | null;
+  // Null when the page carries fewer meetings than it counted, so no honest
+  // readiness figure exists — NOT the same as zero unprepared.
+  unready: number | null;
+}>;
 
 // The meetings reading: how many stand behind the day, and how many of those
 // nothing is prepared for — or that the second question could not be answered.
@@ -297,121 +418,81 @@ function replyDueAt(item: WorklistItem): string | undefined {
 // meetings are ready when nothing checked them.
 //
 // So readiness is claimed ONLY when the page carries every meeting it counted.
-// Short of that the slot says the page could not check them all, which is the
-// same honesty the strip's untracked slots keep.
-function meetingsReading(day: Worklist): {
-  meetings: number;
-  unready: number | null;
-} {
-  const entry = day.counts.find((count) => count.category === MEETINGS);
-  // No entry at all means no meeting was read: a day of zero meetings, carried
-  // whole. Treating that as unanswerable told a rep the page could not check
-  // meetings it had already established there were none of.
-  if (entry === undefined) {
-    return { meetings: 0, unready: 0 };
+function meetingsReading(day: Worklist): MeetingsReading {
+  const meetings = scheduledMeetings(day);
+  if (day.sources_unavailable.some((entry) => entry.source === "meeting")) {
+    return { meetings: null, unready: null };
   }
-  const whole = entry.shown === entry.considered && !entry.more_available;
+  const reach = day.reach?.find((entry) => entry.source === "meeting");
+  const known =
+    sourceComplete(day, "meeting") &&
+    meetings.every((item) => meetingReadiness(item) !== "unknown");
   return {
-    meetings: entry.considered,
-    unready: whole ? day.queue.filter(isUnprepared).length : null,
+    meetings: reach?.considered ?? meetings.length,
+    unready: known
+      ? meetings.filter((item) => meetingReadiness(item) === "unprepared")
+          .length
+      : null,
   };
 }
 
-// Where the pipeline stands: what is open, and what it is worth weighted.
-//
-// TWO FIGURES, NEITHER OF THEM A TARGET. The slot this replaces said "Quota
-// pace — no target is set", which was a permanent apology for a question the
-// product decided not to ask. What a rep can actually be told is what the
-// pipeline holds, and the honest version of that is both numbers: `open` is the
-// face value of every open deal, `weighted` applies each deal's own probability.
-// One without the other invites the reader to treat a face value as a forecast.
-//
-// The card NEVER says on track, attainment, or gap. There is no authoritative
-// target in this product to compare against — the quota table was dropped by
-// founder decision — so any such word would be inventing the thing that was
-// removed.
-//
-// READ THROUGH THE SAME KEY ANALYTICS USES. Two surfaces asking what the
-// pipeline is worth must not get two answers, so this calls the shared hook
-// rather than its own fetch.
-function PipelineOutlook() {
+function readingFigure(value: string, lowerBound: boolean) {
+  return lowerBound ? `${value}+` : value;
+}
+
+// This value describes the same scoped work as the rest of the brief.
+function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
-  // The reader's OWN pipeline, under the scope the SERVER names for them.
-  //
-  // `/analytics/context` answers `default_scope`, which is what Analytics starts
-  // from too: a rep's own records, a manager's managed teams, the workspace for
-  // a reader whose lens reaches it. Asking for it here is what makes the shared
-  // key true rather than merely claimed — an earlier version spelled the
-  // omission as a client-built `managed_teams` scope, which keyed as
-  // "managed_teams" while Analytics keyed the same rep's read as "owner:<id>",
-  // so the two surfaces held two cache entries for one identical request.
-  //
-  // It also stops the client constructing a scope it has no standing to name.
-  // `managed_teams` is documented as a server ANSWER, never a request, and
-  // building one meant filling its required `label` with an empty string —
-  // a placeholder where the code had nothing true to put.
-  const context = useAnalyticsContext();
-  const readings = useForecastReadings(context.data?.default_scope);
-
-  if (readings.isPending) {
-    // KEEPS THE ROW'S SHAPE: a detail line, like every slot beside it. A card
-    // one line shorter reflows the whole strip when the read lands, which is the
-    // opposite of the property this plate's fixed slot count defends.
-    return (
-      <StatCard
-        label={t("brief.readings.pipeline")}
-        value="—"
-        detail={t("brief.readings.pipelineReading")}
-      />
+  const plural = usePlural();
+  const { revenue_at_risk_minor: amount, revenue_currency: currency } =
+    day.readings;
+  const count =
+    day.counts.find((entry) => entry.category === "deals_at_risk")
+      ?.considered ?? 0;
+  const incomplete =
+    day.sources_unavailable.some(
+      (entry) => entry.category === "deals_at_risk" || !entry.category,
+    ) ||
+    day.counts.some(
+      (entry) => entry.category === "deals_at_risk" && entry.more_available,
     );
-  }
-  // The currency is what makes the money sayable, so its absence is read as an
-  // unanswered question rather than as a figure.
-  //
-  // `base_currency` IS required of this response, and that is exactly why the
-  // check is here: a 200 whose shape is not the one the contract promises is
-  // another absent read, and reaching into it for the currency threw — taking
-  // the whole of `#/brief` down to the app's error boundary, where a reader sees
-  // no strip, no feed and no rail rather than one em dash. A server too old to
-  // send it, a projection that lost it, or a proxy answering the route with
-  // something else all arrive this way.
-  if (readings.isError || !readings.data?.base_currency) {
-    // A read that did not land is not a pipeline of nothing. The em dash says
-    // the question went unanswered, which is what the retired slots said and
-    // the one case where that spelling is still true.
-    return (
-      <StatCard
-        label={t("brief.readings.pipeline")}
-        value="—"
-        detail={t("brief.readings.pipelineUnread")}
-      />
-    );
-  }
-  const data = readings.data;
+  // NOTHING FLAGGED is not the same as NOTHING PRICED, and only a complete read
+  // can tell them apart: a day that flagged no deal at all has none to price,
+  // while a day that flagged some and priced none has money nobody can size.
+  const nothingFlagged = count === 0 && !incomplete && amount == null;
   return (
     <StatCard
-      label={
-        data.scope_kind === "workspace"
-          ? t("brief.readings.pipelineWorkspace")
-          : t("brief.readings.pipeline")
+      narrow="row"
+      label={t("brief.readings.risk")}
+      value={
+        amount != null && currency
+          ? readingFigure(
+              formatMoneyCompact(amount, currency, locale),
+              incomplete,
+            )
+          : t(
+              nothingFlagged
+                ? "brief.readings.noDealWork"
+                : "brief.readings.unpriced",
+            )
       }
-      // formatMoneyCompact, not the full amount: its own doc says a strip slot
-      // has about 110px and a full euro figure wraps mid-number or clips. Every
-      // other money StatCard in the tree uses it.
-      value={formatMoneyCompact(data.open_minor, data.base_currency, locale)}
-      // The weighted figure and the completeness in one line, because they are
-      // read together: a weighted number over a partly priced population is a
-      // floor, and a reader who cannot see the second cannot judge the first.
-      detail={t("brief.readings.pipelineBasis", {
-        weighted: formatMoneyOrAbsent(
-          data.weighted_minor,
-          data.base_currency,
-          locale,
-        ),
-        priced: formatNumber(data.priced_count, locale),
-        eligible: formatNumber(data.eligible_count, locale),
-      })}
+      detail={
+        nothingFlagged
+          ? t("brief.readings.noDealWorkWhy")
+          : incomplete
+            ? t("brief.readings.riskPartial")
+            : day.readings.unpriced_deals
+              ? plural(
+                  "brief.readings.unpricedCount",
+                  day.readings.unpriced_deals,
+                  {
+                    count: formatNumber(day.readings.unpriced_deals, locale),
+                  },
+                )
+              : t("brief.readings.riskBasis")
+      }
+      onOpen={() => openLane("deals_at_risk", day.scope)}
     />
   );
 }

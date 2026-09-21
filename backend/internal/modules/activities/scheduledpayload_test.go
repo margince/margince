@@ -81,10 +81,51 @@ func TestTheRoundTripFixtureLeavesNoFieldUnset(t *testing.T) {
 	}
 	v := reflect.ValueOf(in)
 	for i := range v.NumField() {
+		name := v.Type().Field(i).Name
+		if notFrozen[name] {
+			continue
+		}
 		if v.Field(i).IsZero() {
 			t.Errorf("SendEmailInput.%s is zero in the round-trip fixture, so the round trip proves nothing about it",
-				v.Type().Field(i).Name)
+				name)
 		}
+	}
+}
+
+// notFrozen names the fields a freeze deliberately DROPS, so the census above
+// does not demand a round trip for something that must not make one.
+//
+// Each entry is a claim that the field describes the CALL rather than the
+// message, and a test below holds every one of them.
+var notFrozen = map[string]bool{
+	// Where this send was resumed FROM. A held message that is refused again is
+	// frozen afresh and gets its own held row; carrying the old intent into the
+	// new payload would make the second row point at the first, so a resume
+	// would reach for a message that is already gone — and the decision
+	// standing over the predecessor would be found for a message nobody
+	// acknowledged.
+	"ResumingIntentID": true,
+}
+
+// THE DROPPED FIELDS ARE ACTUALLY DROPPED. Without this the exemption above
+// would be a way to stop testing a field rather than a statement about it: a
+// field listed here and then quietly frozen would round-trip, and nothing would
+// say the claim had stopped being true.
+func TestAFreezeCarriesNothingAboutTheCallThatMadeIt(t *testing.T) {
+	in := SendEmailInput{
+		Recipients:       []string{"buyer@example.test"},
+		Subject:          "Your quote",
+		Body:             "As discussed.",
+		ResumingIntentID: ids.NewV7(),
+	}
+	out, err := freezePayload(in).thaw()
+	if err != nil {
+		t.Fatalf("thawing a frozen send: %v", err)
+	}
+	if !out.ResumingIntentID.IsZero() {
+		t.Error("a freeze carried the intent this send was resumed from — a message refused " +
+			"again would be held pointing at the message it replaced, and a decision taken " +
+			"about that predecessor would be found for one nobody acknowledged")
 	}
 }
 

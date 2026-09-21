@@ -2,16 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The two interventions a lead makes on somebody else's queue: handing a task
-// to another person, and leaving them a note about it.
+// to another contact, and leaving them a note about it.
 //
 // Both were shipped with stories and no test. A story shows that a control
 // draws; neither of these is about drawing. Reassign moves a customer's work
-// from one person's day to another's, and coaching writes a notice that arrives
+// from one contact's day to another's, and coaching writes a notice that arrives
 // in a colleague's queue under their own name — so what has to be held is the
 // WRITE: which endpoint, and what body. A control that renamed the promise and
 // posted nothing looks identical on screen.
+//
+// The dial that chooses whose queue is open is held here too, for the same
+// reason from the other side: what it OFFERS is a promise about where a press
+// lands, and a choice that leads nowhere draws exactly like one that works.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,7 +23,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CoachControl, ReassignControl } from "./worklist.manager";
+import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
 import { WorklistRow } from "./worklist.row";
 import { jsonResponse, row } from "./worklist.testkit";
 
@@ -29,8 +33,8 @@ afterEach(() => {
 });
 
 // The roster the pickers read, and the reader themself in it. `LENA` is the
-// owner whose queue is open, so she is the person the reassign picker must NOT
-// offer — handing work to the person who already holds it is the one move that
+// owner whose queue is open, so she is the contact the reassign picker must NOT
+// offer — handing work to the contact who already holds it is the one move that
 // does nothing.
 const LENA = "u-lena";
 const MINH = "u-minh";
@@ -119,6 +123,29 @@ async function wrote(
   return undefined;
 }
 
+// A refusal in the shape the server sends it: RFC-7807, with the `code`
+// discriminator the screens branch on. A 403 with no code is a different fact
+// — a proxy or a bug rather than a stated refusal — so the two are spelled
+// apart here for the same reason the screen tells them apart.
+function refusal(code?: string) {
+  return new Response(
+    JSON.stringify({
+      title: "Forbidden",
+      status: 403,
+      ...(code ? { code } : {}),
+    }),
+    { status: 403, headers: { "content-type": "application/problem+json" } },
+  );
+}
+
+// The green dot is the toast region's way of saying "that worked". A failure
+// wearing it tells the reader the opposite of what the sentence beside it
+// says, which is why every failure arm on this page passes `{ tone: "danger" }`
+// and gets the red one instead.
+function completionMark(container: HTMLElement) {
+  return container.ownerDocument.body.querySelector(".toast-dot-success");
+}
+
 describe("handing a task to somebody else", () => {
   it("AC-WORKLIST-MGR-03: writes the new assignee to the task the row names", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
@@ -147,7 +174,7 @@ describe("handing a task to somebody else", () => {
     expect(sent?.url).toContain("/activities/task-1");
     expect(sent?.body).toEqual({ assignee_id: MINH });
     // Conditioned on the version the lead was looking at. Unpinned, two leads
-    // hand one task to different people and the second press wins silently —
+    // hand one task to different contacts and the second press wins silently —
     // the row then sits on one queue while the other believes they delegated it.
     expect(sent?.ifMatch).toBe("3");
     expect(
@@ -155,8 +182,8 @@ describe("handing a task to somebody else", () => {
     ).toBeTruthy();
   });
 
-  // The person who already holds the work is not a destination for it.
-  it("offers everyone except the person whose queue this is", async () => {
+  // The contact who already holds the work is not a destination for it.
+  it("offers everyone except the contact whose queue this is", async () => {
     stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
     renderUnderAToastRegion(
@@ -176,16 +203,10 @@ describe("handing a task to somebody else", () => {
 
   // A refused handover leaves the work where it was, which looks exactly like a
   // press that did nothing.
-  it("says so when the handover is refused", async () => {
-    stubRosterAnd(
-      () =>
-        new Response(JSON.stringify({ title: "Forbidden", status: 403 }), {
-          status: 403,
-          headers: { "content-type": "application/problem+json" },
-        }),
-    );
+  it("says so when the handover is refused, and does not mark it done", async () => {
+    stubRosterAnd(() => refusal());
     const user = userEvent.setup();
-    renderUnderAToastRegion(
+    const { container } = renderUnderAToastRegion(
       <ReassignControl item={row({ id: "task-1" })} owner={LENA} />,
     );
 
@@ -205,11 +226,12 @@ describe("handing a task to somebody else", () => {
     expect(
       await screen.findByText(en["worklist.manager.reassignFailed"]),
     ).toBeTruthy();
+    expect(completionMark(container)).toBeNull();
   });
 });
 
 describe("leaving a note on somebody's queue", () => {
-  it("AC-WORKLIST-MGR-03: writes the note to the person it is about", async () => {
+  it("AC-WORKLIST-MGR-03: writes the note to the contact it is about", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
     renderUnderAToastRegion(<CoachControl owner={LENA} />);
@@ -235,6 +257,57 @@ describe("leaving a note on somebody's queue", () => {
     });
     expect(
       await screen.findByText(en["worklist.manager.coached"]),
+    ).toBeTruthy();
+  });
+
+  // A NOTE THE READER MAY NOT SEND says why, and never wears the mark that
+  // means it worked.
+  //
+  // The server answers 403 `permission_denied` where the caller may not coach
+  // this contact at all. "That note could not be left" invited a retry, and
+  // every press earned the same refusal — a reader pressing four times learnt
+  // nothing the first press could have told them.
+  it("names the refusal a 403 states, with no completion mark", async () => {
+    stubRosterAnd(() => refusal("permission_denied"));
+    const user = userEvent.setup();
+    const { container } = renderUnderAToastRegion(
+      <CoachControl owner={LENA} name="Lena Fischer" />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.coachConfirm"],
+      }),
+    );
+
+    expect(
+      await screen.findByText("You may not coach Lena Fischer."),
+    ).toBeTruthy();
+    expect(completionMark(container)).toBeNull();
+  });
+
+  // And the branch is on the SENTINEL, not on the status: a 403 the server sent
+  // with no code is a proxy or a bug rather than a stated refusal, and claiming
+  // "you may not coach her" over one would name a rule nobody wrote.
+  it("falls back to the shared line where no code was stated", async () => {
+    stubRosterAnd(() => refusal());
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<CoachControl owner={LENA} name="Lena Fischer" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.coachConfirm"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["worklist.manager.coachFailed"]),
     ).toBeTruthy();
   });
 
@@ -266,7 +339,7 @@ describe("leaving a note on somebody's queue", () => {
 //
 // The control used to be gated on a rep being SELECTED, so a reader looking at
 // their own queue — where nobody is selected — had no way to pass a task along.
-// Dropping that gate is only safe if the picker still refuses the person who
+// Dropping that gate is only safe if the picker still refuses the contact who
 // already holds the task: with no selection the exclusion had nothing to
 // compare against, and the reader was offered their own name. A press on it
 // posts a reassignment from Lena to Lena, which is a write that changes
@@ -297,7 +370,7 @@ describe("a rep hands on their own task", () => {
 
   // The window between opening the picker and learning who is reading.
   //
-  // Nothing on the server refuses a reassignment to the person who already
+  // Nothing on the server refuses a reassignment to the contact who already
   // holds the task, so the client filter is the only guard — and a filter with
   // nothing to compare against is not one. A reader quick enough to open the
   // picker before `/me` lands would be offered their own name.
@@ -358,5 +431,75 @@ describe("the row a rep is standing on", () => {
         name: en["worklist.manager.reassign"],
       }),
     ).toBeTruthy();
+  });
+});
+
+// The roster as the owner picker reads it. `page.next_cursor` is what decides
+// whether the walk reached the end of the workspace, so it is the one thing the
+// two frames below differ in — and each page answers a fresh colleague, because
+// a walk that met the same id ten times would say nothing about a long roster.
+function stubRosterWalk(
+  seats: readonly Record<string, unknown>[],
+  options: { endless?: boolean } = {},
+) {
+  let page = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes("/users")) {
+        return jsonResponse({ data: [] });
+      }
+      page += 1;
+      return options.endless
+        ? jsonResponse({
+            data: [{ id: `u-${page}`, display_name: `Colleague ${page}` }],
+            page: { next_cursor: `after-${page}` },
+          })
+        : jsonResponse({ data: seats, page: { next_cursor: null } });
+    }),
+  );
+}
+
+describe("whose queue the page is answering", () => {
+  // An agent seat is an Agent Runner identity rather than a colleague: it opens no
+  // Worklist of its own, so a lead who chose one would land on a day that comes
+  // back with nothing in it and nothing saying why.
+  it("offers no agent seat as an owner", async () => {
+    stubRosterWalk([
+      { id: MINH, display_name: "Minh Tran" },
+      { id: "u-runner", display_name: "Overnight Runner", is_agent: true },
+    ]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    await user.click(await screen.findByRole("combobox"));
+    expect(screen.getByRole("option", { name: "Minh Tran" })).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: "Overnight Runner" }),
+    ).toBeNull();
+  });
+
+  // The walk is bounded, so past its reach this list is part of the workspace
+  // rather than the workspace. Unsaid, a picker missing colleagues reads as a
+  // workspace that has none — on the one control a lead uses to reach somebody.
+  it("admits it when the roster walk stopped short", async () => {
+    stubRosterWalk([], { endless: true });
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    expect(await screen.findByText(en["state.partial"])).toBeTruthy();
+  });
+
+  // And says nothing of the kind over a roster it read to the end: a caveat
+  // about a complete list is simply untrue, and one drawn always is one nobody
+  // reads when it matters.
+  it("says nothing about the list when the walk reached the end", async () => {
+    stubRosterWalk([{ id: MINH, display_name: "Minh Tran" }]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+
+    await user.click(await screen.findByRole("combobox"));
+    await screen.findByRole("option", { name: "Minh Tran" });
+    expect(screen.queryByText(en["state.partial"])).toBeNull();
   });
 });

@@ -108,6 +108,17 @@ func malformedRoutedID(method, collection string) unrunnableCall {
 	}
 }
 
+// demoteLead's route carries a suffix after the id, so it cannot use
+// malformedRoutedID's collection-shaped path: the refusal is the same one, and
+// the URL has to be the operation's own.
+var demoteLeadUnrunnable = unrunnableCall{
+	refusal: hiddenRow("the routed id is not a uuid, so it names no record the handler could act on"),
+	build: func() (*http.Request, []byte) {
+		return routedFixture(http.MethodPost, "/v1/leads/not-a-uuid/demote", "not-a-uuid",
+			`{"reason":"promoted by mistake"}`)
+	},
+}
+
 // routedFixture builds the request with the router's {id} bound, and nothing
 // else bound: every fixture here that needs a SECOND path parameter is a
 // fixture about that parameter being absent.
@@ -145,23 +156,25 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"archiveTag":           malformedRoutedID(http.MethodDelete, "/tags"),
 	"archiveOffer":         malformedRoutedID(http.MethodDelete, "/offers"),
 	"archiveOfferTemplate": malformedRoutedID(http.MethodDelete, "/offer-templates"),
-	"archiveOrganization":  malformedRoutedID(http.MethodDelete, "/organizations"),
-	"archivePerson":        malformedRoutedID(http.MethodDelete, "/people"),
+	"archiveCompany":       malformedRoutedID(http.MethodDelete, "/companies"),
+	"archiveContact":       malformedRoutedID(http.MethodDelete, "/contacts"),
 	"archiveProduct":       malformedRoutedID(http.MethodDelete, "/products"),
 	"archiveProject":       malformedRoutedID(http.MethodDelete, "/projects"),
 	"archiveRelationship":  malformedRoutedID(http.MethodDelete, "/relationships"),
 	"archiveSavedView":     malformedRoutedID(http.MethodDelete, "/views"),
 
-	"approveImportRun":          malformedRoutedID(http.MethodPost, "/imports"),
-	"disqualifyLead":            malformedRoutedID(http.MethodDelete, "/leads"),
+	"approveImportRun": malformedRoutedID(http.MethodPost, "/imports"),
+	"disqualifyLead":   malformedRoutedID(http.MethodDelete, "/leads"),
+	"demoteLead":       demoteLeadUnrunnable,
+
 	"retireCustomField":         malformedRoutedID(http.MethodPost, "/custom-fields"),
 	"updateCustomFieldOptions":  malformedRoutedID(http.MethodPatch, "/custom-fields"),
 	"updateWebhookSubscription": malformedRoutedID(http.MethodPatch, "/webhook-subscriptions"),
-	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/organizations"),
-	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/organizations"),
-	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/organizations"),
-	"mergePerson":               malformedRoutedID(http.MethodPost, "/people"),
-	"mergeOrganization":         malformedRoutedID(http.MethodPost, "/organizations"),
+	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/companies"),
+	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/companies"),
+	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/companies"),
+	"mergeContact":              malformedRoutedID(http.MethodPost, "/contacts"),
+	"mergeCompany":              malformedRoutedID(http.MethodPost, "/companies"),
 
 	"updateProject": {
 		refusal: refusedArgument("nickname", "the patch names a member a project has no field for"),
@@ -218,11 +231,11 @@ var unrunnableCalls = map[string]unrunnableCall{
 				`{"to":[],"subject":"Q3","body":"hi","consent_purpose":"sales"}`)
 		},
 	},
-	"sendAccountEmail": {
+	"sendCompanyEmail": {
 		refusal: refusedArgument("to", "the send reaches nobody"),
 		build: func() (*http.Request, []byte) {
 			body := []byte(`{"to":[],"subject":"Q3","body":"hi","consent_purpose":"sales",` +
-				`"links":[{"entity_type":"organization","entity_id":"019ff000-0000-7000-8000-000000000022"}]}`)
+				`"links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000022"}]}`)
 			return httptest.NewRequest(http.MethodPost, "/v1/emails", bytes.NewReader(body)), body
 		},
 	},
@@ -239,30 +252,30 @@ var unrunnableCalls = map[string]unrunnableCall{
 	// The operand family: the second path segment the router would have bound
 	// is absent, which is the shape a routing defect produces and the one thing
 	// these operations cannot run without.
-	"confirmOrganizationFact":         missingOperand(http.MethodPost, "/v1/organizations/%s/facts//confirm", "factKey"),
-	"updateOrganizationFact":          missingOperand(http.MethodPatch, "/v1/organizations/%s/facts/", "factKey"),
-	"confirmOrganizationProfileField": missingOperand(http.MethodPost, "/v1/organizations/%s/profile-fields//confirm", "field"),
-	"updateOrganizationProfileField":  missingOperand(http.MethodPatch, "/v1/organizations/%s/profile-fields/", "field"),
-	"removeProjectStakeholder":        missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "person_id"),
-	"removeProjectCompany":            missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "organization_id"),
+	"confirmCompanyFact":         missingOperand(http.MethodPost, "/v1/companies/%s/facts//confirm", "factKey"),
+	"updateCompanyFact":          missingOperand(http.MethodPatch, "/v1/companies/%s/facts/", "factKey"),
+	"confirmCompanyProfileField": missingOperand(http.MethodPost, "/v1/companies/%s/profile-fields//confirm", "field"),
+	"updateCompanyProfileField":  missingOperand(http.MethodPatch, "/v1/companies/%s/profile-fields/", "field"),
+	"removeProjectStakeholder":   missingOperand(http.MethodDelete, "/v1/projects/%s/stakeholders/", "contact_id"),
+	"removeProjectCompany":       missingOperand(http.MethodDelete, "/v1/projects/%s/companies/", "company_id"),
 
 	"setProjectStakeholder": {
-		refusal: namedMember("person_id", "invalid",
-			"the person_id in the body is not a uuid, so the edge names no person"),
+		refusal: namedMember("contact_id", "invalid",
+			"the contact_id in the body is not a uuid, so the edge names no contact"),
 		build: func() (*http.Request, []byte) {
 			id := ids.NewV7().String()
 			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/stakeholders", id,
-				`{"person_id":"not-a-uuid","role":"champion"}`)
+				`{"contact_id":"not-a-uuid","role":"champion"}`)
 		},
 	},
 
 	"setProjectCompany": {
-		refusal: namedMember("organization_id", "invalid",
-			"the organization_id in the body is not a uuid, so the edge names no company"),
+		refusal: namedMember("company_id", "invalid",
+			"the company_id in the body is not a uuid, so the edge names no company"),
 		build: func() (*http.Request, []byte) {
 			id := ids.NewV7().String()
 			return routedFixture(http.MethodPut, "/v1/projects/"+id+"/companies", id,
-				`{"organization_id":"not-a-uuid","role":"partner"}`)
+				`{"company_id":"not-a-uuid","role":"partner"}`)
 		},
 	},
 }

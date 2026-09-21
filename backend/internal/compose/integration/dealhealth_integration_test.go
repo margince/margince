@@ -104,7 +104,7 @@ func TestDealHealthReproducesTheWorkedExampleOverSeededRows(t *testing.T) {
 		t.Fatalf("recency evidence = %v, want the freshest deal activity %s", got.Evidence.MostRecentActivityID, freshest)
 	}
 	if len(got.Evidence.EngagedStakeholderIDs) != 2 {
-		t.Fatalf("engaged stakeholders = %v, want exactly the two two-way persons", got.Evidence.EngagedStakeholderIDs)
+		t.Fatalf("engaged stakeholders = %v, want exactly the two two-way contacts", got.Evidence.EngagedStakeholderIDs)
 	}
 	seen := map[ids.UUID]bool{}
 	for _, id := range got.Evidence.EngagedStakeholderIDs {

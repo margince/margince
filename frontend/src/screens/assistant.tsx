@@ -20,24 +20,25 @@ import { AskSection } from "./company360";
  * this record.
  */
 export function AssistantPanel({
-  orgId,
-  enabled,
+  companyId,
   onOpenRecord,
+  onOpenEmail,
   projects,
 }: Readonly<{
-  orgId: string;
-  enabled: boolean;
+  companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   // The account's projects, for the question to be asked about one of them.
   projects?: readonly PickableProject[];
 }>) {
   const t = useT();
-  if (!enabled) {
-    return null;
-  }
   return (
     <Panel
       title={t("co.assistant.title")}
+      // Indigo, because everything under this head is a machine's reading of
+      // the account: the questions are the agent's and so is every answer.
+      tone="ai"
       // The disclosure is the badge, and it rides in the header band so it is
       // read before anything under it. The sentence that used to sit beside it
       // explained the panel's own epistemology to a reader who came here to
@@ -46,9 +47,9 @@ export function AssistantPanel({
     >
       <PanelBody>
         <AskSection
-          orgId={orgId}
-          enabled={enabled}
+          companyId={companyId}
           onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
           projects={projects}
         />
       </PanelBody>

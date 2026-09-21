@@ -71,6 +71,8 @@ import (
 // separate axis which a later scope change can flip either way, so the refusal
 // does not pretend to it — "nobody can read this" is proven here only in the
 // sense the audience column decides.
+// This checks whether membership is orphaned. Source revocation independently
+// withholds derived reminders; it does not erase their surviving membership.
 func ActivityHasAReaderTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
 	var reachable bool
 	if err := tx.QueryRow(ctx, `

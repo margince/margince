@@ -65,7 +65,10 @@
   border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  /* A field, so it takes the floor and not the top side — the same depth the
+     design system's own fields wear, because this one is a hand-rolled shell
+     and a reader cannot tell it apart from theirs. */
+  box-shadow: var(--shadow-well);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -85,19 +88,21 @@
 .ob-gate-field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-glow-danger);
 }
+/* The shell above owns the box and the leading inset, so this owns the rest of
+   the inset and the type — the field's own, not the engine's. */
 .ob-gate-input {
   flex: 1;
   min-width: 0;
   border: 0;
   background: none;
   outline: 0;
-  padding: var(--space-3) var(--space-3) var(--space-3) 0;
-  font-family: var(--f-body);
-  font-size: var(--fs-lead);
-  color: var(--textPrimary);
+  padding-block: var(--inputPaddingY);
+  padding-inline: 0 var(--inputPaddingX);
+  font: inherit;
+  color: inherit;
 }
 .ob-gate-input::placeholder {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 .ob-gate-submit {
   flex: none;
@@ -110,9 +115,7 @@
   border-radius: var(--r-sm);
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
+  font-family: var(--fontFamilyBody);
   cursor: pointer;
   transition: background 0.12s ease;
 }
@@ -148,7 +151,6 @@
 }
 .ob-gate-trust {
   margin: 0;
-  line-height: var(--lh-relaxed);
   text-wrap: pretty;
 }
 .ob-gate-link {
@@ -156,9 +158,7 @@
   border: 0;
   padding: var(--space-1);
   cursor: pointer;
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
+  font-family: var(--fontFamilyBody);
   color: var(--accentText);
 }
 .ob-gate-link:hover,
@@ -177,18 +177,15 @@
   border: 1px solid var(--danger);
   border-radius: var(--r-sm);
   padding: var(--space-3) var(--space-4);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
-  color: var(--textContent);
 }
 
-/* A paused read wears the warn family, not the danger family: the server will
+/* A paused read wears the warning family, not the danger family: the server will
    come back to it, so it must not read as something the reader broke. The two
    tones are also distinguished by their role (alert vs status), so the
    difference survives without colour. */
 .ob-gate-alert.is-paused {
-  border-color: var(--warnBorder);
-  background: var(--warnBg);
+  border-color: var(--warningBorder);
+  background: var(--warningBg);
 }
 
 /* Picking a setup back up is not a problem report. It wears the neutral card
@@ -197,7 +194,6 @@
 .ob-gate-alert.is-resumed {
   border-color: var(--borderStrong);
   background: var(--bgCard);
-  color: var(--textMeta);
 }
 
 /* Which model is about to read the site, stated before the address is handed
@@ -212,11 +208,7 @@
 
 .ob-gate-ai span {
   color: var(--aiText);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
+  font-family: var(--fontFamilyBody);
 }
 
 /* A routing label names every model the installation can reach, so it can be a
@@ -230,10 +222,6 @@
   line-clamp: 2;
   overflow: hidden;
   max-width: 100%;
-  color: var(--textContent);
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
 }
 
 /* ===== the read theatre ================================================= */
@@ -285,9 +273,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  letter-spacing: var(--tracking-normal);
+  font-family: var(--fontFamilyBody);
   color: var(--aiText);
 }
 @keyframes ob-scan-fade {
@@ -334,7 +320,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 /* The two figures the read is earning, at the size of the thing being waited
@@ -358,11 +344,7 @@
 .ob-scan-tally dd {
   order: 1;
   margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-display);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 /* A drawn separator rather than a character: a middot in a string would be copy
@@ -408,30 +390,23 @@
 }
 .ob-scan-cost-label {
   margin: 0;
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
+  font-family: var(--fontFamilyBody);
   color: var(--aiText);
 }
 .ob-scan-cost-line {
   margin: 0;
   min-height: 15px;
-  font-family: var(--f-mono);
   font-variant-numeric: tabular-nums;
 }
 /* Warn, not the line's own meta tone: the figure beside it is missing a call
    the provider billed with no effective rate, so it reads as a caveat on the
    number rather than more of the same disclosure. */
 .ob-scan-cost-unpriced {
-  font-family: var(--f-body);
   font-variant-numeric: normal;
-  color: var(--warn);
+  color: var(--warningText);
 }
 .ob-scan-cost-model {
   margin: 0;
-  font-family: var(--f-mono);
   overflow-wrap: anywhere;
 }
 
@@ -483,15 +458,11 @@
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
-  color: var(--textContent);
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .ob-scan-ticker-entry[data-page-status="skipped"] .ob-scan-ticker-path {
-  color: var(--textMeta);
   text-decoration: line-through;
 }
 
@@ -517,7 +488,7 @@
   background: none;
   padding: 0;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
@@ -540,10 +511,6 @@
 @media (max-width: 899px) {
   .ob-gate {
     gap: var(--space-4);
-  }
-  .ob-gate-input {
-    /* Never below 16px, or iOS zooms the page on focus. */
-    font-size: var(--fs-h3);
   }
 }
 

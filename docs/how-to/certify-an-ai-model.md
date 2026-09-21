@@ -87,7 +87,7 @@ response caching off so every run is a fresh model call), judges each answer, an
 prints the verdict:
 
 ```text
-cold_start: certified (reliability=1.00 score_p50=100 self_judged=false)
+cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
 ```
 
 `self_judged` is `true` when the candidate and the judge resolved to the **same
@@ -243,7 +243,7 @@ stdout:
 
 > **Except a `no_payload` task**, whose content the contract forbids retaining
 > whatever the capture posture says (`ai.NoPayload` — today the counterparty
-> verdict, which judges other people's mail). Its calls carry no payload, so the
+> verdict, which judges other contacts's mail). Its calls carry no payload, so the
 > trace has no line for them and the run's `WARN … did not pass its
 > validator/caps gate` detail is the only evidence of what went wrong. That is
 > the prohibition working, not a gap to widen.

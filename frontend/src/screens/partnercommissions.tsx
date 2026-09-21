@@ -6,8 +6,8 @@ import { Badge, DataTable, EmptyState, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
-import { formatMoney, INTL_LOCALE } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import { QueryGate, throwProblem } from "./common";
@@ -34,12 +34,13 @@ const STATUS_LABELS: Record<CommissionStatus, MessageKey> = {
 // Accrued is the one that still needs a decision, so it leads; approved and
 // paid are both settled and read the same; void is the exception a reader must
 // not skim past.
-const STATUS_TONES: Record<CommissionStatus, "accent" | "success" | "warn"> = {
-  accrued: "accent",
-  approved: "success",
-  paid: "success",
-  void: "warn",
-};
+const STATUS_TONES: Record<CommissionStatus, "accent" | "success" | "warning"> =
+  {
+    accrued: "accent",
+    approved: "success",
+    paid: "success",
+    void: "warning",
+  };
 
 // The whole ledger, followed page by page.
 //
@@ -48,14 +49,14 @@ const STATUS_TONES: Record<CommissionStatus, "accent" | "success" | "warn"> = {
 // the worst way for a money figure to be wrong. The panel totals nothing today,
 // but a list that claims to be the ledger has to be the ledger.
 async function fetchPartnerCommissions(
-  organizationId: string,
+  companyId: string,
 ): Promise<CommissionEntry[]> {
   const entries: CommissionEntry[] = [];
   let cursor: string | undefined;
   do {
     const { data, error } = await api.GET("/commissions", {
       params: {
-        query: { partner_org_id: organizationId, limit: 50, cursor },
+        query: { partner_company_id: companyId, limit: 50, cursor },
       },
     });
     if (error) {
@@ -85,19 +86,22 @@ async function fetchPartnerCommissions(
  */
 export function outstandingByCurrency(
   entries: CommissionEntry[],
-): Array<{ currency: string; amountMinor: number }> {
-  const totals = new Map<string, number>();
+): Array<{ currency: string; amountMinor: number; entryCount: number }> {
+  const totals = new Map<string, { amountMinor: number; entryCount: number }>();
   for (const entry of entries) {
     if (entry.status !== "accrued" && entry.status !== "approved") {
       continue;
     }
-    totals.set(
-      entry.currency,
-      (totals.get(entry.currency) ?? 0) + entry.amount_minor,
-    );
+    const running = totals.get(entry.currency);
+    // The COUNT travels with the sum, because the card states both and a second
+    // pass over the same rows to find it is a second answer to one question.
+    totals.set(entry.currency, {
+      amountMinor: (running?.amountMinor ?? 0) + entry.amount_minor,
+      entryCount: (running?.entryCount ?? 0) + 1,
+    });
   }
   return [...totals.entries()]
-    .map(([currency, amountMinor]) => ({ currency, amountMinor }))
+    .map(([currency, total]) => ({ currency, ...total }))
     .sort((a, b) => stable(a.currency, b.currency));
 }
 
@@ -109,17 +113,17 @@ export function outstandingByCurrency(
  * and a partner asking "what happened to that one" needs to see both halves.
  */
 export function PartnerCommissions({
-  organizationId,
-}: Readonly<{ organizationId: string }>) {
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const query = useQuery({
-    queryKey: ["partner-commissions", organizationId],
-    queryFn: () => fetchPartnerCommissions(organizationId),
+    queryKey: ["partner-commissions", companyId],
+    queryFn: () => fetchPartnerCommissions(companyId),
   });
 
   return (
-    <Panel title={t("commission.panelTitle")} sub={t("commission.panelSub")}>
+    <Panel title={t("commission.panelTitle")}>
       <QueryGate query={query} pendingLabel={t("commission.panelTitle")}>
         {(entries) =>
           entries.length === 0 ? (
@@ -128,11 +132,15 @@ export function PartnerCommissions({
             </PanelBody>
           ) : (
             <PanelBody>
+              {/* What this ledger is and is not: it records decisions, and the
+                  money leaves through the finance system. On the panel, because
+                  it is true of every row and every total under it. */}
+              <p className="t-sub">{t("commission.decide.settledElsewhere")}</p>
               <OutstandingStrip entries={entries} locale={locale} />
               <CommissionLedger
                 entries={entries}
                 locale={locale}
-                organizationId={organizationId}
+                companyId={companyId}
               />
             </PanelBody>
           )
@@ -155,6 +163,7 @@ function OutstandingStrip({
   locale,
 }: Readonly<{ entries: CommissionEntry[]; locale: Locale }>) {
   const t = useT();
+  const plural = usePlural();
   const outstanding = outstandingByCurrency(entries);
   if (outstanding.length === 0) {
     return null;
@@ -165,13 +174,25 @@ function OutstandingStrip({
       style={{ marginBottom: "var(--space-4)" }}
     >
       <StatStrip>
-        {outstanding.map(({ currency, amountMinor }) => (
+        {outstanding.map(({ currency, amountMinor, entryCount }) => (
           <StatCard
             key={currency}
-            numeric
+            // A partner owed in two currencies is two slots, and on a phone
+            // they read as rows rather than as two clipped boxes.
+            narrow="row"
             label={t("commission.outstanding")}
+            // In FULL, never compact. This is money somebody is OWED: the
+            // compact form carries no fraction below ten thousand, so forty
+            // cents outstanding would read "€0" — a partner told they are owed
+            // nothing. The aggregates of deal value elsewhere abbreviate for
+            // width; a balance does not.
             value={formatMoney(amountMinor, currency, locale)}
-            detail={t("commission.decide.settledElsewhere")}
+            // What the figure is made of. Where paying happens is true of the
+            // whole panel rather than of this one currency's total, so it is
+            // said once above the readings instead of on each of them.
+            detail={plural("commission.outstandingDetail", entryCount, {
+              count: formatNumber(entryCount, locale),
+            })}
           />
         ))}
       </StatStrip>
@@ -182,11 +203,11 @@ function OutstandingStrip({
 function CommissionLedger({
   entries,
   locale,
-  organizationId,
+  companyId,
 }: Readonly<{
   entries: CommissionEntry[];
   locale: Locale;
-  organizationId: string;
+  companyId: string;
 }>) {
   const t = useT();
   // The object grant decides whether the verbs are drawn at all. Without this
@@ -243,7 +264,7 @@ function CommissionLedger({
             key: "status",
             header: t("commission.column.status"),
             render: (entry) => (
-              <Badge tone={STATUS_TONES[entry.status]} quiet>
+              <Badge tone={STATUS_TONES[entry.status]}>
                 {t(STATUS_LABELS[entry.status])}
               </Badge>
             ),
@@ -265,7 +286,7 @@ function CommissionLedger({
               }
               if (!canDecide) {
                 return (
-                  <span className="t-caption" data-testid="commission-withheld">
+                  <span data-testid="commission-withheld">
                     {t("commission.decide.withheld")}
                   </span>
                 );
@@ -277,7 +298,7 @@ function CommissionLedger({
                       key={decision}
                       entry={entry}
                       decision={decision}
-                      organizationId={organizationId}
+                      companyId={companyId}
                     />
                   ))}
                 </div>

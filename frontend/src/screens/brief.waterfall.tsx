@@ -1,9 +1,11 @@
 import type { components } from "../api/schema";
-import { SegmentedControl, StatCard } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { useRecordZone } from "../app/recordzone";
+import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
-import { formatMoneyOrAbsent } from "../format/format";
+import { middayInstant } from "../format/calendarday";
+import { formatDate, formatMoney, formatMoneyOrAbsent } from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useT } from "../i18n";
 
 type Review = components["schemas"]["WeeklyReview"];
@@ -20,32 +22,61 @@ export function OutlookPanel({
   locale,
   horizon,
   onHorizon,
+  onOpenForecast,
 }: Readonly<{
   outlook: readonly Outlook[];
   locale: Locale;
   horizon: string;
   onHorizon: (next: string) => void;
+  // Where each figure's door goes: Analytics' forecast section, which is the
+  // measure all five were read under. The panel does not build the address
+  // itself — both surfaces that draw it own their own navigation, and a leaf
+  // reaching for the router is a leaf two screens cannot place differently.
+  onOpenForecast: () => void;
 }>) {
   const t = useT();
+  const zone = useRecordZone();
 
   // A review written before a forecast was composed carries none. Said in
   // words, because a week nobody forecast and a week that landed on nothing
   // are different facts and zeros would claim the second.
   if (outlook.length === 0) {
     return (
-      <Callout tone="info" title={t("brief.weekly.outlook")}>
-        {t("brief.weekly.outlook.none")}
-      </Callout>
+      // It stands WHERE the panel would, and the panel's own heading was
+      // restated as the notice's — so it is the empty state, not a remark
+      // about a surface that is not there.
+      <EmptyState>{t("brief.weekly.outlook.none")}</EmptyState>
     );
   }
 
   const shown =
     outlook.find((one) => one.period_kind === horizon) ?? outlook[0];
+  // A STAT CARD'S VALUE IS A READING, and an em dash is not one. The word for
+  // the absence belongs to the slot: on a frozen outlook it means the period
+  // was never forecast in a currency this review could convert to.
   const money = (minor: number) =>
-    formatMoneyOrAbsent(minor, shown.base_currency, locale);
+    formatMoneyOrWord(
+      minor,
+      shown.base_currency,
+      locale,
+      t("format.notForecast"),
+      // In FULL: an outlook figure is read once, at panel width, and this
+      // panel is a record of what the week WAS.
+      formatMoney,
+    );
 
   return (
     <>
+      <p className="t-caption">
+        {t("brief.forecast.period", {
+          start: formatDate(
+            middayInstant(shown.period_start, zone),
+            locale,
+            zone,
+          ),
+          end: formatDate(middayInstant(shown.period_end, zone), locale, zone),
+        })}
+      </p>
       <SegmentedControl
         label={t("brief.weekly.outlook")}
         value={shown.period_kind}
@@ -60,33 +91,44 @@ export function OutlookPanel({
         }}
       />
 
+      {/* Every slot opens the forecast. These five are what the forward measure
+          produces, and Analytics · Forecast is the surface that measure is read
+          on, so that is where a reader goes to see how a landing is reached.
+          The door says "this is the forecast" and not "these are the deals":
+          the figures here were FROZEN when the week closed, and no list in the
+          product can be narrowed back to the population one of them counted. */}
       <StatStrip>
         <StatCard
           label={t("brief.weekly.outlook.won")}
           value={money(shown.won_minor)}
-          numeric
+          onOpen={onOpenForecast}
         />
         <StatCard
           label={t("brief.weekly.outlook.commit")}
           value={money(shown.commit_minor)}
-          numeric
+          onOpen={onOpenForecast}
         />
-        {/* The label says "incl. commit" because the figure includes it, and a
-            reader adding best case to commit would double-count the overlap. */}
+        {/* The detail says the figure already contains commit, because a reader
+            adding best case to the slot beside it would double-count the
+            overlap. It is a basis and not a label: the label names the
+            reading, and a qualifier folded into it made the one card in the
+            row whose name was a sentence. */}
         <StatCard
           label={t("brief.weekly.outlook.bestCase")}
           value={money(shown.best_case_minor)}
-          numeric
+          detail={t("brief.weekly.outlook.bestCaseDetail")}
+          onOpen={onOpenForecast}
         />
         <StatCard
           label={t("brief.weekly.outlook.weighted")}
           value={money(shown.weighted_minor)}
-          numeric
+          onOpen={onOpenForecast}
         />
         {shown.closing_landing_minor !== undefined && (
           <StatCard
             label={t("brief.weekly.outlook.landing")}
             value={money(shown.closing_landing_minor)}
+            onOpen={onOpenForecast}
             // Which measure produced it, because the same pipeline reads
             // differently under each and a landing with no basis is a number a
             // reader cannot argue with.
@@ -95,7 +137,6 @@ export function OutlookPanel({
                 ? t(`brief.weekly.outlook.measure.${shown.forward_measure}`)
                 : undefined
             }
-            numeric
           />
         )}
       </StatStrip>
@@ -120,11 +161,7 @@ function BridgePanel({
     outlook.opening_landing_minor === undefined ||
     outlook.closing_landing_minor === undefined
   ) {
-    return (
-      <Callout tone="info" title={t("brief.weekly.bridge")}>
-        {t("brief.weekly.bridge.noOpening")}
-      </Callout>
-    );
+    return <EmptyState>{t("brief.weekly.bridge.noOpening")}</EmptyState>;
   }
 
   const steps: WaterfallStep[] = outlook.movement.map((bar: Bar) => ({

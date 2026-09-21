@@ -35,12 +35,12 @@ func wholeHandoff() HandoffFacts {
 		AsOf: sweptAt(),
 		Project: HandoffProject{
 			ProjectID: ids.NewV7(), Name: "Acme ERP rollout", Key: "ERP", Phase: "delivering",
-			OrganizationID: &anchor, OwnerID: &owner, TargetEndDate: &target,
+			CompanyID: &anchor, OwnerID: &owner, TargetEndDate: &target,
 		},
 		Deals: []HandoffDeal{{
 			DealID: ids.NewV7(), Name: "Acme ERP licence", Status: "won", AmountMinor: &amount,
 		}},
-		Stakeholders: []HandoffStakeholder{{PersonID: ids.NewV7(), Role: "Sponsor"}},
+		Stakeholders: []HandoffStakeholder{{ContactID: ids.NewV7(), Role: "Sponsor"}},
 		OpenCommitments: []OpenCommitment{{
 			TaskID: newTaskID(), Subject: "Book the kickoff", DueAt: at(48 * time.Hour),
 		}},
@@ -218,11 +218,11 @@ func TestAnEmptyHandoverAnswersEmptyListsNotNulls(t *testing.T) {
 	raw, err := json.Marshal(assembleHandoff(HandoffFacts{
 		AsOf: sweptAt(),
 		Project: HandoffProject{
-			ProjectID: ids.NewV7(), Name: "Bare", OrganizationID: &anchor,
+			ProjectID: ids.NewV7(), Name: "Bare", CompanyID: &anchor,
 			OwnerID: &owner, TargetEndDate: &target,
 		},
 		Deals:        []HandoffDeal{{DealID: ids.NewV7(), Status: "won", AmountMinor: &amount}},
-		Stakeholders: []HandoffStakeholder{{PersonID: ids.NewV7(), Role: "Sponsor"}},
+		Stakeholders: []HandoffStakeholder{{ContactID: ids.NewV7(), Role: "Sponsor"}},
 	}, nil))
 	if err != nil {
 		t.Fatal(err)

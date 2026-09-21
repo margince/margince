@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -26,11 +26,11 @@ import {
 } from "./sendpermission.testkit";
 import { TimelineActions } from "./timelineactions";
 
-// The composer's "why are you writing?" dial, named rather than reached for
-// by role alone: the To, Cc and Bcc lines are comboboxes of their own now
-// (they offer the record's people), so a bare role query matches four
-// controls and the readiness signal every suite waits on has to say which.
+// The composer's "why are you writing?" dial, named rather than reached for by
+// role alone: To, Cc and Bcc are comboboxes of their own now, so a bare role
+// query matches four controls and every readiness wait has to say which.
 const WHY_ASK = "Why are you writing?";
+const DISCLOSURE = { name: "AI-assisted draft" };
 type Activity = components["schemas"]["Activity"];
 
 function jsonResponse(body: unknown, status = 200) {
@@ -231,7 +231,7 @@ describe("RelinkModal", () => {
       <RelinkModal
         activityId="act-1"
         activityVersion={4}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -278,7 +278,7 @@ describe("RelinkModal", () => {
       <RelinkModal
         activityId="act-1"
         activityVersion={null}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -305,7 +305,7 @@ describe("RelinkModal", () => {
     const sent = stubRoutes({
       "GET /search": () =>
         jsonResponse({
-          data: [{ type: "organization", id: "o-2", title: "Globex" }],
+          data: [{ type: "company", id: "o-2", title: "Globex" }],
           page: { has_more: false },
         }),
       "POST /activities/act-1/relink": () => jsonResponse(activity202),
@@ -331,7 +331,7 @@ describe("RelinkModal", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const relink = sent.find((r) => r.key === "POST /activities/act-1/relink");
     expect(relink?.body).toEqual({
-      entity_type: "organization",
+      entity_type: "company",
       entity_id: "o-2",
       replace_existing_of_type: true,
     });
@@ -353,7 +353,7 @@ describe("RelinkModal", () => {
         activityId="act-1"
         activityVersion={4}
         threadKey="thread:abc"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -395,7 +395,7 @@ describe("RelinkModal", () => {
       <RelinkModal
         activityId="act-1"
         activityVersion={4}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -414,7 +414,7 @@ describe("RelinkModal", () => {
         jsonResponse({
           data: [
             { type: "activity", id: "a-x", title: "Some email" },
-            { type: "person", id: "pp-1", title: "Jane Doe" },
+            { type: "contact", id: "pp-1", title: "Jane Doe" },
           ],
           page: { has_more: false },
         }),
@@ -438,7 +438,7 @@ describe("RelinkModal", () => {
   });
 });
 
-// The two purposes as the rep READS them: a pick names what a person would
+// The two purposes as the rep READS them: a pick names what a contact would
 // click, while the ConsentPurpose.key each label stands for is the wire value,
 // asserted on the request body wherever a send is under study.
 // What a rep answers when the composer asks why they are writing. These are
@@ -490,7 +490,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -498,7 +498,7 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     // The editor's own text, read back the way a reader sees it: the body is a
@@ -509,10 +509,10 @@ describe("ComposeModal", () => {
     expect(screen.getByText("buyer@acme.test")).toBeTruthy();
   });
 
-  // Art. 50 is a hard gate: a model-produced draft that reaches a human
-  // without a disclosure is a compliance failure, so these three cases fix the
-  // banner's presence, its verbatim text, and its absence on human-written
-  // text. Removing the banner from the composer fails all three.
+  // A model-produced draft reaching the rep without the provenance notice
+  // presents as one a colleague wrote, so these three cases fix the banner's
+  // presence, its verbatim text, and its absence on human-written text.
+  // Removing the banner from the composer fails all three.
   it("discloses a model-produced draft, rendering the server's line verbatim", async () => {
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
@@ -527,7 +527,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -535,10 +535,10 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(
       screen.getByText("AI-assisted draft (Art. 50): reviewed by a human."),
     ).toBeTruthy();
@@ -562,7 +562,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -570,10 +570,10 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.getByText(/This draft was produced by AI/i)).toBeTruthy();
   });
 
@@ -591,7 +591,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -599,13 +599,13 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     // The fill proves the draft landed, so the missing banner is the
     // disclosure being conditional rather than the response never arriving.
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
-    expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull();
+    expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
   });
 
   it("names the voice version that styled the draft and flags a provisional profile", async () => {
@@ -624,7 +624,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -632,7 +632,7 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(await screen.findByText("Built from your corpus · v3")).toBeTruthy();
@@ -655,7 +655,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -663,7 +663,7 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(await screen.findByText(/not written in your voice/)).toBeTruthy();
@@ -685,7 +685,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -693,7 +693,7 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
@@ -722,7 +722,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -730,7 +730,7 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(await screen.findByText("Built from your corpus · v3")).toBeTruthy();
@@ -744,7 +744,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -752,7 +752,7 @@ describe("ComposeModal", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(await screen.findByText(/AI drafting is unavailable/i)).toBeTruthy();
@@ -768,7 +768,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -808,7 +808,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -854,9 +854,9 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         open
         onClose={onClose}
       />,
@@ -879,7 +879,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -904,7 +904,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={onClose}
@@ -932,7 +932,7 @@ describe("ComposeModal", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -940,7 +940,7 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(
@@ -985,7 +985,7 @@ function renderComposer(onClose = vi.fn()) {
   render(
     <ComposeModal
       activityId="act-1"
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
       open
       onClose={onClose}
@@ -1008,7 +1008,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
@@ -1043,12 +1043,12 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() =>
       expect(
@@ -1083,7 +1083,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     // EMPTIED, then written afresh — two acts, and the first is the one under
@@ -1117,7 +1117,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
@@ -1156,7 +1156,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
@@ -1207,7 +1207,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
@@ -1244,7 +1244,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
@@ -1284,7 +1284,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
@@ -1307,7 +1307,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     const announced = await screen.findAllByRole("alert");
@@ -1335,7 +1335,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     const bodyField = messageBox("Body");
@@ -1374,7 +1374,7 @@ describe("ComposeModal draft binding", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -1384,7 +1384,7 @@ describe("ComposeModal draft binding", () => {
   });
 });
 
-// The Art. 50 banner describes the words on screen, so it rides on exactly the
+// The provenance banner describes the words on screen, so it rides on exactly the
 // condition that puts a served draft there and leaves when they do. A banner
 // that outlived its text would attribute a human's writing to a model, or
 // credit it to a voice version that never touched it.
@@ -1400,14 +1400,13 @@ describe("ComposeModal draft provenance", () => {
 
     writeMessage("Body", "My own words.");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    // The subject fill proves the draft landed, so the missing banner is the
-    // disclosure following the body rather than the response never arriving.
+    // Wait for draft completion before checking the discarded body's provenance.
     expect(await screen.findByDisplayValue("Re: Q3")).toBeTruthy();
     expect(messageText("Body")).toBe("My own words.");
-    expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull();
+    expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
   });
 
   it("keeps the applied draft's voice version when a re-draft is discarded", async () => {
@@ -1422,12 +1421,12 @@ describe("ComposeModal draft provenance", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() =>
       expect(
@@ -1451,15 +1450,15 @@ describe("ComposeModal draft provenance", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    expect(screen.getByTestId("ai-disclosure-banner")).toBeTruthy();
+    expect(screen.getByRole("heading", DISCLOSURE)).toBeTruthy();
 
     writeMessage("Body", "");
 
     await waitFor(() =>
-      expect(screen.queryByTestId("ai-disclosure-banner")).toBeNull(),
+      expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull(),
     );
   });
 
@@ -1480,10 +1479,10 @@ describe("ComposeModal draft provenance", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    expect(await screen.findByTestId("ai-disclosure-banner")).toBeTruthy();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.queryByText("Provisional voice")).toBeNull();
   });
 });
@@ -1648,7 +1647,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1680,7 +1679,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1705,7 +1704,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1729,7 +1728,7 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         kind="message"
         open
@@ -1759,9 +1758,9 @@ describe("ComposeModal — channel reply", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         kind="message"
         open
         onClose={vi.fn()}
@@ -1831,7 +1830,7 @@ describe("TimelineActions", () => {
     expect(await screen.findByText("Draft email")).toBeTruthy();
   });
 
-  it("offers no reply when the person is unreachable", async () => {
+  it("offers no reply when the contact is unreachable", async () => {
     // A blocked (or never-established) Telegram identity means a reply box
     // here would only fail once the rep has already written the message —
     // worse than never offering it (design §9.3).
@@ -1842,7 +1841,7 @@ describe("TimelineActions", () => {
       channel_provider: "telegram",
     };
     stubRoutes({
-      "GET /people/p-1": () =>
+      "GET /contacts/p-1": () =>
         jsonResponse({
           id: "p-1",
           full_name: "Jane Doe",
@@ -1861,9 +1860,9 @@ describe("TimelineActions", () => {
     render(
       <TimelineActions
         activity={telegram}
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
       />,
     );
 
@@ -1893,7 +1892,7 @@ describe("TimelineActions", () => {
     // Reachable, or the action renders nothing and the case would pass over an
     // empty tree — the button being absent is a different answer entirely.
     stubRoutes({
-      "GET /people/p-1": () =>
+      "GET /contacts/p-1": () =>
         jsonResponse({
           id: "p-1",
           full_name: "Jane Doe",
@@ -1914,9 +1913,9 @@ describe("TimelineActions", () => {
         activityId="a9"
         kind="message"
         channelProvider="telegram"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         contentWithheld
       />,
     );
@@ -2070,7 +2069,7 @@ describe("TimelineActions", () => {
   // `selected` is the API's third audience and the dialog offered two, because
   // choosing it without a way to name anybody is a choice the reader cannot
   // complete. These are the claims that closed that.
-  it("names the people a message is limited to and submits them as one set", async () => {
+  it("names the contacts a message is limited to and submits them as one set", async () => {
     const roster = {
       "GET /users": () =>
         jsonResponse({
@@ -2081,7 +2080,7 @@ describe("TimelineActions", () => {
               email: "lena@demo.test",
             },
             // An agent seat, which the picker must not offer: a message is
-            // limited to people and teams, never to an agent.
+            // limited to contacts and teams, never to an agent.
             {
               id: "u-9",
               display_name: "Margince",
@@ -2239,8 +2238,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={onClose}
       />,
@@ -2259,7 +2258,7 @@ describe("ComposeModal started from an account", () => {
       communication_context: "requested_followup",
       // Without a link the message belongs to no record and nobody finds it
       // again, which is the gap this origin exists to close.
-      links: [{ entity_type: "organization", entity_id: "org-1" }],
+      links: [{ entity_type: "company", entity_id: "company-1" }],
     });
     // ADR-0055 holds on this origin too: the human's click is the approval.
     expect(req?.headers.get("X-Approval-Token")).toBeNull();
@@ -2271,8 +2270,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2298,14 +2297,16 @@ describe("ComposeModal started from an account", () => {
     const sent = stubRoutes({});
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
 
-    const drafting = screen.getByRole("button", { name: "Draft with AI" });
+    const drafting = screen.getByRole("button", {
+      name: /Draft (reply )?with AI/,
+    });
     expect(drafting).toHaveProperty("disabled", true);
     expect(sent.some((r) => r.key.includes("draft-email"))).toBe(false);
     // Undraftable is not unsendable: the rep writes it themselves and sends.
@@ -2318,12 +2319,12 @@ describe("ComposeModal started from an account", () => {
   // not repair it, because the fill never clobbers a non-empty field.
   it("retires the draft when the recipient changes", async () => {
     stubRoutes({
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-08-09T09:00:00Z",
-          organization: {
-            id: "org-1",
+          company: {
+            id: "company-1",
             display_name: "Acme",
             source: "manual",
             captured_by: "human:u1",
@@ -2331,10 +2332,10 @@ describe("ComposeModal started from an account", () => {
             updated_at: "2026-08-01T00:00:00Z",
           },
           sections_omitted: [],
-          people: {
+          contacts: {
             data: [
               {
-                person_id: "p-1",
+                contact_id: "p-1",
                 full_name: "Sarah Cole",
                 strength: {
                   score: 40,
@@ -2350,7 +2351,7 @@ describe("ComposeModal started from an account", () => {
                 consent: {},
               },
               {
-                person_id: "p-2",
+                contact_id: "p-2",
                 full_name: "Mark Hughes",
                 strength: {
                   score: 20,
@@ -2369,7 +2370,7 @@ describe("ComposeModal started from an account", () => {
             page: { has_more: false, next_cursor: null },
           },
         }),
-      "POST /organizations/org-1/draft-email": () =>
+      "POST /companies/company-1/draft-email": () =>
         jsonResponse({
           subject: "For Sarah",
           body: "Hi Sarah, shall we pick this up?",
@@ -2382,8 +2383,9 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        intent="Discuss the renewal"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2396,7 +2398,7 @@ describe("ComposeModal started from an account", () => {
       "Sarah Cole",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hi Sarah, shall we pick this up?"),
@@ -2424,12 +2426,12 @@ describe("ComposeModal started from an account", () => {
   // it, so the mail landed unfiled and the ladder asked about it afterwards.
   it("still offers the project when the account has no contact yet", async () => {
     stubRoutes({
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-08-09T09:00:00Z",
-          organization: {
-            id: "org-1",
+          company: {
+            id: "company-1",
             display_name: "Acme",
             source: "manual",
             captured_by: "human:u1",
@@ -2437,7 +2439,7 @@ describe("ComposeModal started from an account", () => {
             updated_at: "2026-08-01T00:00:00Z",
           },
           sections_omitted: [],
-          people: { data: [], page: { has_more: false } },
+          contacts: { data: [], page: { has_more: false } },
           projects: [
             {
               project_id: "pr-1",
@@ -2450,8 +2452,8 @@ describe("ComposeModal started from an account", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2489,13 +2491,13 @@ describe("ComposeModal started from an account", () => {
         jsonResponse({
           id: "d-1",
           name: "netcare",
-          organization_id: "o-1",
+          company_id: "o-1",
           project_id: "pr-9",
         }),
-      "GET /organizations/o-1/360": () =>
+      "GET /companies/o-1/360": () =>
         jsonResponse({
           as_of: "2026-08-09T09:00:00Z",
-          organization: {
+          company: {
             id: "o-1",
             display_name: "netcare",
             source: "manual",
@@ -2504,7 +2506,7 @@ describe("ComposeModal started from an account", () => {
             updated_at: "2026-08-01T00:00:00Z",
           },
           sections_omitted: [],
-          people: { data: [], page: { next_cursor: null } },
+          contacts: { data: [], page: { next_cursor: null } },
           deals: { data: [], page: { next_cursor: null } },
           projects: projects.map((one) => ({
             ...one,
@@ -2612,7 +2614,7 @@ describe("ComposeModal started from an account", () => {
     replyBackend([{ entity_type: "deal", entity_id: "d-1" }], []);
     const subject = await openReply();
 
-    await screen.findByRole("button", { name: "Draft with AI" });
+    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
     // A list whose only entry is None asks a question with one answer.
     expect(screen.queryByLabelText("Project")).toBeNull();
     expect(subject().value).toBe("");
@@ -2696,8 +2698,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2711,7 +2713,7 @@ describe("what the composer says it is answering", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     // And the draft answers THAT message: the account-wide draft, which needs
@@ -2735,18 +2737,18 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
 
-    expect(await screen.findByText(/starts a new thread/i)).toBeTruthy();
+    expect(await screen.findByText("New email")).toBeTruthy();
   });
 
   // Who this is going to, on the line, once it is known. The composer used to
-  // make the reader pick the person, and picking them is what made the consent
+  // make the reader pick the contact, and picking them is what made the consent
   // purpose an attestation about a named human. The thread supplies the
   // address now, so the reader has to SEE it before they attest anything.
   it("names the recipient once the draft has filled it", async () => {
@@ -2765,8 +2767,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2779,7 +2781,7 @@ describe("what the composer says it is answering", () => {
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     // And WHO, in the field that will actually carry it — asked for as the
@@ -2823,8 +2825,8 @@ describe("what the composer says it is answering", () => {
     );
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2832,8 +2834,8 @@ describe("what the composer says it is answering", () => {
 
     await screen.findByText(/Rechnung GR-2026-0207/);
     // The record still scopes the read; a project only narrows it further.
-    expect(asked.params?.get("entity_type")).toBe("organization");
-    expect(asked.params?.get("entity_id")).toBe("org-1");
+    expect(asked.params?.get("entity_type")).toBe("company");
+    expect(asked.params?.get("entity_id")).toBe("company-1");
     expect(asked.params?.get("kind")).toBe("email");
     // And no project is selected here, so none is asked for.
     expect(asked.params?.get("project_id")).toBeNull();
@@ -2842,7 +2844,7 @@ describe("what the composer says it is answering", () => {
   // The draft and the SEND must agree on what is being answered. Split, the
   // draft answers a thread and writes "Re: …" while the send takes the account
   // path: the message files under the links the body names rather than the
-  // anchor's own, so the person it was actually with gets none of it, and it
+  // anchor's own, so the contact it was actually with gets none of it, and it
   // leaves as a new RFC chain — an orphan, to a reader who was shown a reply.
   it("sends against the same message it drafted against", async () => {
     const sent = stubRoutes({
@@ -2861,8 +2863,8 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -2872,7 +2874,7 @@ describe("what the composer says it is answering", () => {
       await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await waitFor(() =>
       expect(
@@ -2915,32 +2917,30 @@ describe("what the composer says it is answering", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
 
-    // Not offered as a way in: its subject comes back null and the draft
-    // endpoint gates on content, so choosing it would dead-end the composer.
-    // The reader gets the account path, which asks them to name a recipient.
-    expect(await screen.findByText(/starts a new thread/i)).toBeTruthy();
-    expect(
-      screen.queryByRole("region", { name: /continue a conversation/i }),
-    ).toBeNull();
+    // Withheld content cannot be offered as a reply target.
+    expect(await screen.findByText("New email")).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: /continue a conversation/i }),
+      ).toBeNull(),
+    );
   });
 
-  // A caller that named the message has already shown it — the page behind the
-  // dialog IS that message — so the line would repeat what the reader opened.
-  it("stays quiet when the caller already named the message", async () => {
+  it("names the exact message the caller chose", async () => {
     stubRoutes({
       "GET /activities/act-1": () => jsonResponse(activity202),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -2948,7 +2948,7 @@ describe("what the composer says it is answering", () => {
     );
 
     await screen.findByRole("combobox", { name: WHY_ASK });
-    expect(screen.queryByText(/Replying to|starts a new thread/i)).toBeNull();
+    expect(await screen.findByText(/Replying to “Re: Q3”/)).toBeTruthy();
   });
 });
 
@@ -2970,7 +2970,7 @@ describe("what the composer says this message is", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -2995,7 +2995,7 @@ describe("what the composer says this message is", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -3052,7 +3052,7 @@ describe("what the composer says this message is", () => {
           </button>
           <ComposeModal
             activityId={anchored ? "act-1" : undefined}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -3092,7 +3092,7 @@ describe("what the composer says this message is", () => {
     });
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -3127,7 +3127,7 @@ describe("what the composer says this message is", () => {
     });
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -3177,7 +3177,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3214,7 +3214,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3243,7 +3243,7 @@ describe("the composer's conversation pane", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3266,7 +3266,7 @@ describe("the composer's conversation pane", () => {
     expect(
       await screen.findByRole("region", { name: /this conversation/i }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Choose another" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New email" })).toBeTruthy();
   });
 
   it("draws no conversation beside a reply to a note", async () => {
@@ -3282,7 +3282,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}
@@ -3314,7 +3314,7 @@ describe("the composer's conversation pane", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="organization"
+        entityType="company"
         entityId="o-1"
         open
         onClose={vi.fn()}

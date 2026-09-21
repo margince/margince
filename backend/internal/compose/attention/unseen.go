@@ -30,7 +30,7 @@ import (
 // Under-reporting is the one way this must not fail. A source silently marked
 // complete tells a rep there is no more work of that kind, and there is no
 // failing row to notice — which is why every lane with a bound appears here and
-// `TestEveryBoundedLaneIsNamedInTheBoundsTable` fails when a new one is not.
+// `TestEveryBoundedLaneReportsItsTruncation` fails when a new one does not.
 // The bounds of the lanes whose limit lives behind their seam, where this
 // package cannot reach it. They are MIRRORS: `compose.slippingScanLimit` and
 // `compose.decayCandidateCap` are the real numbers, and
@@ -45,7 +45,12 @@ import (
 // filters after it scans needs.
 const (
 	quietDealBound = 50
-	decayBound     = 40
+	// The reconnect lane hands over five, ranked out of a wider candidate set.
+	// Bounded at what the LANE returns rather than at what it scanned: read
+	// against the scan depth, a page holding every row it was given still
+	// reported itself complete, and the sixth relationship was gone with no
+	// count saying so.
+	decayBound = 5
 )
 
 func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
@@ -63,14 +68,20 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)
-	atCap("notice_case", day.NoticeCases, doneCap)
+	atCap(sourceNoticeCase, day.NoticeCases, doneCap)
 	atCap("ai_work_health", day.AiWorkHealth, doneCap)
 	atCap("notice", day.Notices, doneCap)
 	atCap("automation_run", day.AutomationHealth, doneCap)
 	atCap("bounce", day.Bounces, doneCap)
 	atCap("introduction_request", day.Introductions, doneCap)
 	// Each of these carries its own, declared where the lane is read.
-	atCap("task", &day.Planned, plannedCap)
+	//
+	// The planned lane is TWO reads sharing one slice, so it is counted by
+	// window rather than by length. Counted whole, six upcoming tasks beside an
+	// empty day sat under the combined bound of twelve and the page called
+	// itself complete — while a seventh had been dropped and no paging path
+	// existed to find it. Either window at its own cap truncates the lane.
+	bounded["task"] = plannedWindowAtCap(day.Planned)
 	// The meetings that owe an answer share the planned bound, because the lane
 	// reads at it. Without this a day holding twelve unsettled meetings reports
 	// itself complete while the twelfth pushed a thirteenth off the page — the
@@ -81,13 +92,42 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
 	// counts a pile and a count taken from a page of ten would report ten over
-	// a hundred and fifty. Approvals and duplicate pairs share that ONE bound,
-	// so filling it says the LANE was truncated and neither source can claim to
-	// be complete — the conservative reading, since the alternative is telling a
-	// rep there are no more of a kind when there are.
+	// a hundred and fifty. Filling that bound says the LANE was truncated, so
+	// the staged proposals sharing it cannot claim to be complete — the
+	// conservative reading, since the alternative is telling a rep there are no
+	// more of a kind when there are.
 	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
-	bounded["dedupe_candidate"] = bounded["approval"]
+	// The duplicate pairs know their own TOTAL, so they do not guess from the
+	// page, and the difference is not academic. Their read is bounded twice:
+	// once by the census depth above, and again by the page the dedupe queue
+	// will answer, which is smaller. A length test can see neither of those —
+	// a hundred pairs read under a depth of two hundred fill no bound, and the
+	// page then says nothing more is waiting over every pair it never read.
+	//
+	// Counts.DuplicatesOpen is that total, taken by the store under the same
+	// visibility rule as the page, so the two are answering one question about
+	// one reader.
+	bounded[sourceDuplicate] = duplicatesShown(day.NeedsYou) < openPairs(day)
 	return bounded
+}
+
+// openPairs is how many open duplicate pairs this reader has in total, which
+// the lane omits entirely when it has none.
+func openPairs(day crmcontracts.Attention) int {
+	if day.Counts.DuplicatesOpen == nil {
+		return 0
+	}
+	return *day.Counts.DuplicatesOpen
+}
+
+func duplicatesShown(lane []crmcontracts.AttentionItem) int {
+	shown := 0
+	for _, item := range lane {
+		if item.Source == sourceDuplicate {
+			shown++
+		}
+	}
+	return shown
 }
 
 // unavailable turns the assembled day's withheld lanes into the queue's own
@@ -109,7 +149,7 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 		//
 		// This suppression is WIDER than it should be, and the difference is
 		// worth stating rather than hiding: the DSR read also refuses a reader
-		// who has the admin role but lost `person:read`, and that refusal is
+		// who has the admin role but lost `contact:read`, and that refusal is
 		// real news this list swallows. Telling the two apart needs a reason on
 		// the refusal, which the lane contract does not carry — issue filed.
 		if lane == laneDSR || lane == laneNoticeCase {
@@ -129,5 +169,41 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 // same reason, and the caveat above applies to each identically.
 const (
 	laneDSR        = crmcontracts.AttentionLanesOmitted("dsr")
-	laneNoticeCase = crmcontracts.AttentionLanesOmitted("notice_case")
+	laneNoticeCase = crmcontracts.AttentionLanesOmitted(sourceNoticeCase)
 )
+
+// plannedWindowAtCap reports whether either half of the planned lane was cut.
+//
+// The lane is read twice — today's work to plannedCap, what is coming to
+// upcomingCap — and appended into one slice. A single length test over the
+// result answers neither question: it under-reports whenever one window is
+// full and the other is not, which on a quiet day is the common case rather
+// than the edge one.
+func plannedWindowAtCap(lane []crmcontracts.AttentionItem) bool {
+	var today, upcoming int
+	for _, item := range lane {
+		if isUpcoming(item.DueGroup) {
+			upcoming++
+			continue
+		}
+		today++
+	}
+	return today >= plannedCap || upcoming >= upcomingCap
+}
+
+// isUpcoming reports whether a row came from the second read. Absent means the
+// first: a row with no group is one the day's own read returned, which is every
+// row on a lane an older assembly built.
+func isUpcoming(group *crmcontracts.AttentionItemDueGroup) bool {
+	if group == nil {
+		return false
+	}
+	switch *group {
+	case crmcontracts.AttentionItemDueGroupTomorrow,
+		crmcontracts.AttentionItemDueGroupThisWeek,
+		crmcontracts.AttentionItemDueGroupLater:
+		return true
+	default:
+		return false
+	}
+}

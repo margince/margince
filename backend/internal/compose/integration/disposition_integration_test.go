@@ -9,7 +9,7 @@ package integration
 //
 // The whole feature is two anti-joins in one SQL statement, so none of it can
 // be proved with hand-built rows. The claim that costs the most if it is wrong
-// is the one this file leads with: a snooze belongs to the person who set it,
+// is the one this file leads with: a snooze belongs to the contact who set it,
 // and a rep clearing their own morning must not clear a colleague's.
 //
 // Every refusal here is paired with an admission over the same fixture. A read
@@ -28,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// waitsFor reads the waiting lane as one person and reports whether the subject
+// waitsFor reads the waiting lane as one contact and reports whether the subject
 // is on their day.
 func waitsFor(t *testing.T, e *Env, user ids.UUID, subject string) bool {
 	t.Helper()
@@ -152,7 +152,7 @@ func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
 	}
 
 	// Now held to its participants, of whom this rep is not one — through the
-	// writer a person's narrowing goes through, because the raw column is not
+	// writer a contact's narrowing goes through, because the raw column is not
 	// the whole state. SetAudience also stamps audience_reason=manual, and
 	// RecomputeAudienceTx reads that reason to tell a human's hold from a
 	// derived one: a row narrowed by UPDATE alone is one the next sync widens
@@ -313,9 +313,9 @@ func TestASnoozeIntoThePastIsRefused(t *testing.T) {
 // mean what it says.
 func TestAJudgedThreadStaysJudgedWhenTheSenderWritesAgain(t *testing.T) {
 	e := Setup(t)
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-recurring", "inbound", "Newsletter issue 41",
-		waitingInstant.Add(-5*24*time.Hour), person)
+		waitingInstant.Add(-5*24*time.Hour), contact)
 	id := waitingMessageID(t, e, "Newsletter issue 41")
 
 	if err := activities.NewStore(e.DB()).SetThreadNotSales(
@@ -329,7 +329,7 @@ func TestAJudgedThreadStaysJudgedWhenTheSenderWritesAgain(t *testing.T) {
 	// The next issue arrives on the SAME thread. It is a different activity,
 	// and it is the one the lane would now pick as the thread's wait.
 	seedWaitingMessageLinked(t, e, "thread-recurring", "inbound", "Newsletter issue 42",
-		waitingInstant.Add(-1*24*time.Hour), person)
+		waitingInstant.Add(-1*24*time.Hour), contact)
 
 	if waitsFor(t, e, e.Rep1, "Newsletter issue 42") {
 		t.Fatal("a judged thread came back as fresh work when the sender wrote again")
@@ -347,9 +347,9 @@ func TestAJudgedThreadStaysJudgedWhenTheSenderWritesAgain(t *testing.T) {
 // public event, and the rows would sit in two tables no read ever consults.
 func TestOnlyAnInboundMessageCarriesADisposition(t *testing.T) {
 	e := Setup(t)
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-outbound-probe", "inbound", "A real wait",
-		waitingInstant.Add(-2*24*time.Hour), person)
+		waitingInstant.Add(-2*24*time.Hour), contact)
 	inbound := waitingMessageID(t, e, "A real wait")
 
 	// The admitting case first: a lane that refused everything would pass the
@@ -362,7 +362,7 @@ func TestOnlyAnInboundMessageCarriesADisposition(t *testing.T) {
 	// The workspace's own reply on the same thread is not something anybody
 	// waits on, and judging it would judge the thread from the wrong end.
 	seedWaitingMessageLinked(t, e, "thread-outbound-probe", "outbound", "Our answer",
-		waitingInstant.Add(-1*24*time.Hour), person)
+		waitingInstant.Add(-1*24*time.Hour), contact)
 	var outbound ids.ActivityID
 	if err := OwnerConn(t).QueryRow(context.Background(),
 		`SELECT id FROM activity WHERE subject = 'Our answer'`).Scan(&outbound); err != nil {

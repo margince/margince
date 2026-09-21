@@ -26,12 +26,8 @@ package compose
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,7 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -99,6 +95,10 @@ type replayCandidate struct {
 	ourHeaderIsTrusted bool
 }
 
+// activity names the row this candidate is about, satisfying
+// storedOriginalCandidate.
+func (c replayCandidate) activity() ids.ActivityID { return c.activityID }
+
 // partyListIsAttested is this candidate's answer to the question
 // capture.ParticipantListAttested asks of a live record: did the PROVIDER state
 // this party list?
@@ -110,7 +110,7 @@ type replayCandidate struct {
 // captured_by, which capture wrote, not from anything the record claimed about
 // itself.
 //
-// A replayed row and a live one must name the same people, so this answers the
+// A replayed row and a live one must name the same contacts, so this answers the
 // same question live capture asks; a drift here is an attendee who reads a
 // meeting on one path and not the other.
 func (c replayCandidate) partyListIsAttested() bool {
@@ -121,7 +121,7 @@ func (c replayCandidate) partyListIsAttested() bool {
 // many activities it settled — written, empty or refused alike, because every
 // one of them is progress the next pass will not repeat.
 func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
-	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass{
+	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass[replayCandidate]{
 		name:   "participant replay",
 		unit:   "activities",
 		offer:  selectReplayCandidates,
@@ -140,22 +140,37 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 // refused without one, which would fail the batch and re-select the same rows
 // forever), and a marker written for every row the pass touched so a settled row
 // is never offered twice.
-type storedOriginalPass struct {
+// It is generic in the CANDIDATE because each pass needs a different set of
+// facts about the row it is judging, and reading the extra ones back per row
+// would be another read of `activity` per pass — another place to gate, and
+// another chance to forget one. The harness itself needs only the id, which is
+// what storedOriginalCandidate asks for.
+type storedOriginalPass[C storedOriginalCandidate] struct {
 	// name and unit are what the debug line says: which pass ran, and what its
 	// count is counting.
 	name string
 	unit string
 	// offer answers which rows this pass still owes work on.
-	offer  func(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error)
-	settle func(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error)
+	offer  func(ctx context.Context, tx pgx.Tx, limit int) ([]C, error)
+	settle func(ctx context.Context, tx pgx.Tx, c C) (string, error)
 	mark   func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error
 }
+
+// storedOriginalCandidate is the one thing every pass's candidate must answer:
+// which activity this is. The marker is written against it, so a candidate that
+// could not name its row could not be settled.
+type storedOriginalCandidate interface{ activity() ids.ActivityID }
+
+// unitMeetings is what a meeting-shaped pass counts. Both meeting passes report
+// through it, so their debug lines describe the same kind of work in the same
+// word.
+const unitMeetings = "meetings"
 
 // drainStoredOriginals runs one bounded batch of a stored-original pass and
 // answers how many rows it settled — written, empty or refused alike, because
 // every one of them is progress the next pass will not repeat.
-func drainStoredOriginals(
-	ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger, pass storedOriginalPass,
+func drainStoredOriginals[C storedOriginalCandidate](
+	ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger, pass storedOriginalPass[C],
 ) (int, error) {
 	if limit <= 0 {
 		return 0, fmt.Errorf("compose: the %s needs a positive batch limit, got %d", pass.name, limit)
@@ -175,7 +190,7 @@ func drainStoredOriginals(
 			if err != nil {
 				return err
 			}
-			if err := pass.mark(ctx, tx, c.activityID, outcome); err != nil {
+			if err := pass.mark(ctx, tx, c.activity(), outcome); err != nil {
 				return err
 			}
 			settled++
@@ -318,12 +333,12 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 		return "", err
 	}
 	// The rows just written carry whatever name the original gave, so the
-	// people they resolved to are named here rather than left to the recovery
+	// contacts they resolved to are named here rather than left to the recovery
 	// pass beside this one. That pass selects on display_name IS NULL, which
 	// the stamp above has just filled in, and this pass is settled per activity
 	// and will not offer the meeting again — so a meeting replayed before the
 	// recovery ever ran would otherwise fall permanently between the two.
-	if err := people.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
+	if err := contacts.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}
 	return replayWroteParticipants, nil
@@ -331,37 +346,11 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 
 // decodeStoredOriginal unwraps what the sink put in raw_capture.payload.
 //
-// The column is jsonb and a provider's original need not be JSON, so three
-// spellings arrive here: a JSON payload (a calendar event resource) as itself,
-// text (an RFC822 message) as a JSON *string*, and bytes jsonb cannot hold as
-// text — invalid UTF-8, or a NUL — in a base64 envelope that names its own
-// encoding. The envelope is checked before the string case because it IS a
-// JSON object, and it is checked by its declared encoding rather than by shape
-// so a provider payload that happens to carry those two keys cannot be
-// mistaken for one.
+// Delegated rather than spelled here: the three spellings a payload can carry
+// are capture/sinkraw.go's own invention, and a reader holding its own copy of
+// that list is the copy that falls behind when a fourth arrives.
 func decodeStoredOriginal(payload []byte) ([]byte, error) {
-	if len(payload) == 0 {
-		return nil, errors.New("compose: the stored original is empty")
-	}
-	var envelope struct {
-		Encoding string `json:"encoding"`
-		Data     string `json:"data"`
-	}
-	if err := json.Unmarshal(payload, &envelope); err == nil && envelope.Encoding == capture.RawCaptureBase64Encoding {
-		raw, err := base64.StdEncoding.DecodeString(envelope.Data)
-		if err != nil {
-			return nil, fmt.Errorf("compose: decoding the stored original: %w", err)
-		}
-		return raw, nil
-	}
-	if !strings.HasPrefix(strings.TrimSpace(string(payload)), `"`) {
-		return payload, nil
-	}
-	var text string
-	if err := json.Unmarshal(payload, &text); err != nil {
-		return nil, fmt.Errorf("compose: unwrapping the stored original: %w", err)
-	}
-	return []byte(text), nil
+	return capture.DecodeStoredOriginal(payload)
 }
 
 // markReplayed records that this activity has been re-read, so no later pass

@@ -32,7 +32,7 @@ func unboundService() *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 // An installation with no mail stream has no waiting queue, so nothing can be

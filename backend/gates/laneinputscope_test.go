@@ -15,11 +15,12 @@ package gates
 //
 // It has already happened. `live-boot` is the README quickstart run literally —
 // `make seed-dev` then `make verify-boot` — and the `e2e` scope named
-// backend/, frontend/, infra/, extensions/, fixtures/ and composition/ but
-// neither `scripts/**` nor the Makefile that reaches them. A change to the dev
-// seeder and to the boot proof, which is to say a change to precisely what that
-// lane does, classified as touching nothing the lane cares about. The `frontend`
-// scope had the same hole around check-contract-frontend-drift.sh.
+// backend/, frontend/, the dev compose stack, extensions/, fixtures/ and
+// composition/ but neither `scripts/**` nor the Makefile that reaches them. A
+// change to the dev seeder and to the boot proof, which is to say a change to
+// precisely what that lane does, classified as touching nothing the lane cares
+// about. The `frontend` scope had the same hole around
+// check-contract-frontend-drift.sh.
 //
 // So the obligation is derived from what the lanes RUN rather than kept as a
 // list beside them: every root script a filtered job reaches — directly, or

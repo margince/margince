@@ -74,125 +74,6 @@ export function useMorningDigest(): UseQueryResult<MorningDigest | null> {
   });
 }
 
-/** One currency's open pipeline: what it is worth, and what it is worth once
- *  each deal is weighted by its stage's probability. */
-export type PipelineValue = {
-  currency: string;
-  rawMinor: number;
-  weightedMinor: number;
-  deals: number;
-};
-
-/** What the report answered: the per-currency lines, and whether a field mask
- *  kept rows out of them. */
-export type PipelineReading = {
-  rows: PipelineValue[];
-  /** Rows a mask withheld from every total here. Non-zero means the figures
-   *  understate the pipeline, and saying so is the difference between a
-   *  partial answer and a wrong one. */
-  excluded: number;
-};
-
-/**
- * The open pipeline, per currency.
- *
- * Grouped by currency and rendered one line each rather than summed: adding
- * native minor units across currencies produces a number that is not money,
- * which is the rule the board's mixed-currency columns already follow.
- *
- * The report never includes archived deals, and this asks only for open ones —
- * a won deal is revenue, not pipeline, and counting it here would make the
- * headline grow every time somebody closed something.
- */
-export function usePipelineValue(): UseQueryResult<PipelineReading> {
-  return useQuery({
-    // Under ["deals"] so the invalidation every deal mutation already fires
-    // reaches this too. Keyed apart, the headline went on naming yesterday's
-    // pipeline after a rep won something and came back to Brief.
-    queryKey: ["deals", "brief-pipeline-value"],
-    queryFn: async (): Promise<PipelineReading> => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "deals-by-stage" } },
-        body: {
-          group_by: ["currency"],
-          aggregates: [
-            { fn: "count", as: "deals" },
-            { fn: "sum", field: "amount_minor", as: "raw_minor" },
-            { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
-          ],
-          filters: { status: "open" },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return {
-        rows: data.rows.flatMap((row) => {
-          const currency = row.currency;
-          // A SUM over deals nobody priced is absent, not zero, and a row with
-          // no currency cannot be rendered as money at all.
-          if (
-            typeof currency !== "string" ||
-            typeof row.raw_minor !== "number"
-          ) {
-            return [];
-          }
-          return [
-            {
-              currency,
-              rawMinor: row.raw_minor,
-              weightedMinor:
-                typeof row.weighted_minor === "number" ? row.weighted_minor : 0,
-              deals: typeof row.deals === "number" ? row.deals : 0,
-            },
-          ];
-        }),
-        excluded: data.excluded_by_permission ?? 0,
-      };
-    },
-  });
-}
-
-/** One page of deals, and whether the list ended there. */
-export type BriefDeals = Readonly<{ rows: Deal[]; more: boolean }>;
-
-/** How many deals Brief reads in one go. */
-const BRIEF_DEALS_PAGE = 100;
-
-/**
- * The deals page Brief reads twice over: the quiet ones it lists, and the count
- * of open ones its readings strip reports.
- *
- * One query rather than two because there is no server-side "stalled" filter to
- * ask for — the flag arrives on the row and the filtering is ours.
- *
- * ONE page, and the page's own `has_more` travels with it. Following the cursor
- * would cost an unbounded fan-out on the one screen that opens every morning,
- * so the honest answer is the other one: every reading taken from these rows is
- * a FLOOR past the page, and says so where it is drawn. A count that quietly
- * stopped rising is the failure this repo cares about most — the same words, a
- * smaller number, and nothing failing.
- */
-export function useBriefDeals(): UseQueryResult<BriefDeals> {
-  return useQuery({
-    queryKey: ["deals"],
-    queryFn: async (): Promise<BriefDeals> => {
-      const { data, error } = await api.GET("/deals", {
-        params: { query: { limit: BRIEF_DEALS_PAGE } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return { rows: data.data, more: data.page?.has_more ?? false };
-    },
-  });
-}
-
-/** The open deals that have gone quiet, in the order the wire sent them. */
-export function quietDeals(deals: readonly Deal[]): Deal[] {
-  return deals.filter((deal) => deal.stalled && deal.status === "open");
-}
-
 /**
  * Ask for today's brief now. The overnight pass owns generation and a rep has
  * one run per local day, so this is a catch-up rather than a re-rank: it
@@ -223,11 +104,18 @@ export function useBriefRefresh() {
  * be written.
  */
 export type BriefMarkRequest =
-  | { itemId: string; mark: "act" | "dismiss" }
+  | { itemId: string; mark: "act" | "dismiss" | "unsnooze" }
   | { itemId: string; mark: "snooze"; snoozedUntil: string };
 
+/** The bodyless marks and the route each one posts to. */
+const MARK_PATHS = {
+  act: "/brief/items/{itemId}/act",
+  dismiss: "/brief/items/{itemId}/dismiss",
+  unsnooze: "/brief/items/{itemId}/unsnooze",
+} as const;
+
 /**
- * Act on, dismiss or snooze one item.
+ * Act on, dismiss, snooze or un-snooze one item.
  *
  * The item id travels as a mutation VARIABLE rather than in the closure: the
  * click handler belongs to the committed render, so a variable it passes cannot
@@ -248,10 +136,11 @@ export function useBriefItemMark() {
         }
         return data;
       }
-      const path =
-        variables.mark === "act"
-          ? "/brief/items/{itemId}/act"
-          : "/brief/items/{itemId}/dismiss";
+      // The three bodyless verbs share one call. `unsnooze` rides here rather
+      // than in its own mutation because it takes the same cache work as the
+      // others — the item moves between the brief and the worklist lane either
+      // way, and a second mutation would be a second answer to where it goes.
+      const path = MARK_PATHS[variables.mark];
       const { data, error } = await api.POST(path, {
         params: { path: { itemId: variables.itemId } },
       });

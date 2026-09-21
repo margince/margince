@@ -142,7 +142,7 @@ embeddings: {provider: ollama, model: embed, dimensions: 8}
 // resolveAliases handles both idioms; this is the half the schema can express.
 func TestABindingThatReferencesAnAnchorElsewhereInTheFileStillSeeds(t *testing.T) {
 	const doc = `version: 1
-organization:
+workspace:
   name: &v fake
 seeds:
   ai_routing:

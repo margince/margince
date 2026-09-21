@@ -27,8 +27,6 @@ export function DealEmailAside({ dealId }: Readonly<{ dealId: string }>) {
       replyTo={replyTo}
       strings={{
         title: "dealmail.title",
-        subReply: "dealmail.sub.reply",
-        subFresh: "dealmail.sub.fresh",
         reply: "dealmail.reply",
         send: "dealmail.send",
       }}

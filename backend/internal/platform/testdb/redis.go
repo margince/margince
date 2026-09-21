@@ -16,7 +16,7 @@ import (
 //
 // Two other places carry it and they are NOT all the same number. REDIS_DBS in
 // scripts/test-integration-parallel.sh is this same highest index; --databases in
-// infra/docker-compose.dev.yml is a TOTAL and so is one greater, since Redis
+// docker-compose.dev.yml is a TOTAL and so is one greater, since Redis
 // counts the reserved db 0. Raising the three to one value would take the lane's
 // top db away without saying so, which is why
 // TestRedisDBCountAgreesWithTheLaneAndTheServer asserts the offset rather than

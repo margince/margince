@@ -9,14 +9,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { Avatar, Badge, Button, Modal } from "../design-system/atoms";
+import { Avatar, Badge, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
+import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { useCompany } from "../screens/onboarding";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
+import { BetaBadge } from "./betabadge";
 import { CaptureChip } from "./capture-chip";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
@@ -24,8 +26,6 @@ import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import {
   entryLabel,
-  GRIDDED_RECORD_SCREENS,
-  GRIDDED_SCREENS,
   MOBILE_PRIMARY,
   NAV,
   type NavCounts,
@@ -49,7 +49,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
-import { displayVersion, narrowVersion } from "./release";
+import { useReadingColumn } from "./readingcolumn";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -65,7 +65,7 @@ import "./shell.css";
 // above the content (app/topbar.tsx) carries everything else that is true of the
 // whole session — where you are, how you search, and who you are signed in as.
 // The sidebar holds destinations and nothing else, because a panel that also
-// held the search, the settings door and the person had four different kinds of
+// held the search, the settings door and the contact had four different kinds of
 // row in one column and read as a list of everything.
 //
 // The content column carries only what is true of THIS screen: its heading,
@@ -75,9 +75,9 @@ import "./shell.css";
 // The attention counts the rail badges on the rows a level declares badgeable.
 // They are the levels' own currency (app/subnav.ts), named here for the shell
 // because this is the seam a caller hands them in at. No caller does today: the
-// primary level badges nothing (app/nav.ts BADGE_SCREENS) now that the queues
-// that had counts are lanes inside Today, which reports its numbers on the page.
-// The prop stays because a deeper level declaring `badgeIds` needs this door.
+// primary level badges nothing (app/nav.ts BADGE_SCREENS) now the queues that
+// had counts are lanes inside Today, which reports its numbers on the page. The
+// prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
 const COLLAPSE_KEY = "margince.sidebarCollapsed";
@@ -101,32 +101,21 @@ function writeStored(key: string, value: string): void {
 }
 
 // `narrow` is the panel at its 56px width — the caller's own `collapsed &&
-// !sheetOpen`, which is the condition shell.css already uses for every rule that
-// means "this is a rail and not a column". The phone sheet is 600px wide
-// whatever the desktop preference was left at, so a block reading `collapsed`
-// alone would put the square badge in front of a reader with room for the
-// wordmark.
+// !sheetOpen`, which is the condition shell.css already uses for every rule
+// that means "this is a rail and not a column". The phone sheet is 600px wide
+// whatever the desktop preference was, so a block reading `collapsed` alone
+// would put the square badge in front of a reader with room for the wordmark.
 function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   const t = useT();
-  /* WHAT BUILD THIS IS, on the brand's own second line.
-   *
-   * It is the alpha marker: a corner ribbon across the mark said the product is
-   * unfinished and nothing else, where a version says that AND which build a
-   * reader is looking at — the thing worth having in front of somebody the first
-   * time they see the product, which is why it stands beside the name rather
-   * than at the foot of a column a demo never scrolls to.
-   *
-   * On every branch, including the one with no installation to attribute: the
-   * marker is a fact about the BUILD, so it does not depend on whether there is
-   * a company name above it. At 56px the word shortens (release.ts) and nothing
-   * else in that column is a label at all. */
-  const marker = (
-    <span className="ws-alpha">
-      {narrow ? narrowVersion() : displayVersion()}
-    </span>
-  );
-  // The installation's own organization (A107/ADR-0061: one installation, one
-  // organization), OBSERVED on the entry the onboarding gate already filled.
+  /* WHAT STAGE THIS PRODUCT IS AT, on the brand's own second line. It stands
+   * beside the name rather than at the foot of a column a demo never scrolls
+   * to, and on every branch below including the one with no installation to
+   * attribute: the marker is a fact about the BUILD, so it does not depend on
+   * whether there is a company name above it. Temporary, and betabadge.tsx
+   * carries the list of what its deletion takes. */
+  const marker = <BetaBadge />;
+  // The installation's own company (ADR-0061: one installation, one
+  // company), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's
   // read and walk the app back through its splash, but it does re-render when
   // the company card writes a new mark into the entry — a plain cache peek
@@ -142,17 +131,17 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   if (!installation) {
     return (
       <>
-        <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
+        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <span className="ws-chip">
             <Logomark />
           </span>
-          <span className="ws-name">
-            <b>{t("shell.logoAria")}</b>
-          </span>
+          <Heading size="small" as="div" className="ws-name">
+            {t("shell.logoAria")}
+          </Heading>
         </a>
         {/* No attribution line here: the product's own mark is already above it,
             and a company name is never invented to fill the row. */}
-        <span className="ws-org">{marker}</span>
+        <span className="ws-company">{marker}</span>
       </>
     );
   }
@@ -172,7 +161,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       <>
         <a
           className="ws ws-logo"
-          href="#/brief"
+          href="#/home"
           aria-label={t("shell.companyLogoAria", {
             company: installation.display_name,
           })}
@@ -183,8 +172,8 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             fallback={<b>{installation.display_name}</b>}
           />
         </a>
-        <span className="ws-org">
-          <span className="ws-org-text">
+        <span className="ws-company">
+          <span className="ws-company-text">
             {t("shell.poweredByPrefix")}{" "}
             <span className="ws-logo-product">{t("shell.logoAria")}</span>
           </span>
@@ -197,7 +186,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
     <>
       <a
         className="ws"
-        href="#/brief"
+        href="#/home"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
@@ -210,17 +199,20 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             declared no icon has a face rather than a gap. */}
         <span className="ws-chip ws-chip-company">
           <Avatar
-            identity={installation.organization_id}
+            identity={installation.company_id}
             name={installation.display_name}
-            shape="organization"
+            shape="company"
           />
         </span>
-        <span className="ws-name">
-          <b>{installation.display_name}</b>
-        </span>
+        {/* `as="div"`: the workspace name is the rail's identity, not a section
+            of the page. It sits above every h1 the content column draws, so an
+            h5 here would be a level nothing opened. */}
+        <Heading size="small" as="div" className="ws-name">
+          {installation.display_name}
+        </Heading>
       </a>
-      <span className="ws-org">
-        <span className="ws-org-text">{t("shell.poweredBy")}</span>
+      <span className="ws-company">
+        <span className="ws-company-text">{t("shell.poweredBy")}</span>
         {marker}
       </span>
     </>
@@ -323,7 +315,7 @@ export function WorkspaceRail({
   // Which of the route's levels the panel is showing, and the two ways the
   // reader moves between them (app/navlevel.tsx). A section's entries take the
   // panel OVER rather than hanging off the destinations: 56px cannot carry two
-  // levels, and 224px carrying both reads as a list of twenty places to go.
+  // levels, and 256px carrying both reads as a list of twenty places to go.
   //
   // At phone width the panel is a bottom bar of four destinations, and it KEEPS
   // them on a section route — a bar that hands its four tabs over to a section
@@ -380,7 +372,7 @@ export function WorkspaceRail({
   //
   // The SKIP LINK goes inert with it, and is not an afterthought: it is a sibling
   // of the nav rather than a child of the column, so Tab past the sheet's last row
-  // wrapped onto it, drew it over the scrim, and pointed it at an inert element —
+  // wrapped onto it, drew it over the scrim, and pointed at an inert element —
   // a control that takes focus, shows itself, and does nothing.
   useEffect(() => {
     if (!sheetOpen) {
@@ -440,10 +432,9 @@ export function WorkspaceRail({
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
           // At phone width the agent stands in the MIDDLE of the bar rather
-          // than at the foot of a column that is not there — inside the row
-          // stream, so a thumb and a Tab key read the bar in the same order.
-          // One Core either way: the foot below renders only above the
-          // breakpoint.
+          // than at the foot of a column that is not there — in the row stream,
+          // so a thumb and a Tab key read the bar in the same order. One Core
+          // either way: the foot below renders only above the breakpoint.
           centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
         />
         {/* Phone-width only: expands the bar into a sheet carrying every
@@ -569,7 +560,11 @@ function SectionPickGroup({
     group.headingKey === section.titleKey ? undefined : group.headingKey;
   return (
     <div className="sectionpickgroup">
-      {heading && <h3 className="t-label">{t(heading)}</h3>}
+      {heading && (
+        <Heading size="xsmall" as="h3">
+          {t(heading)}
+        </Heading>
+      )}
       {group.items.map((entry) => (
         <a
           key={entry.id}
@@ -636,9 +631,9 @@ function SectionSwitcher({
       <Modal open={open} onClose={close} labelledBy={titleId}>
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
-        <h2 id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2">
           {t(section.titleKey)}
-        </h2>
+        </Heading>
         {/* Above the rows, exactly where the rail puts it. Without this the
             search was unreachable at phone width — the one width where the
             navigation is hardest to scan, since the rail is gone and the whole
@@ -655,22 +650,13 @@ function SectionSwitcher({
             />
           ))}
         </div>
-        {/* At this width the dialog is a full-screen sheet: there is no backdrop
-            left to click and a touch reader has no Escape, so the way out has to
-            be a control in the sheet. */}
-        <div className="actions">
-          <Button small onClick={close}>
-            {t("shell.closeMenu")}
-          </Button>
-        </div>
       </Modal>
     </>
   );
 }
 
 /**
- * The page's own name, standing in the content column above the content it
- * names.
+ * The page's own name, standing in the content column above what it names.
  *
  * It is INSIDE the scroller and scrolls away with the page, because the heading
  * belongs to the document rather than to the chrome: the top bar says where you
@@ -695,7 +681,7 @@ export function PageTitle({
   const inSection = sectionHead(section, route);
   // On a screen that publishes a level, the page is the ENTRY the reader opened
   // rather than the section they opened it from: the section is named by the
-  // trail in the top bar and by the sidebar's level, and printing it here too
+  // trail in the top bar and the sidebar's level, and printing it here
   // named the section twice and the surface never — a settings page read
   // "Settings" above a heading reading "Settings" with the audit log under both.
   //
@@ -730,12 +716,11 @@ export function PageTitle({
   // heading joins a list instead of adding a clause, and the list is the one
   // place to read which screens do this.
   const selfHeaded = SELF_HEADED_SCREENS.has(route.screen);
-  // Read only on the branch that prints an h1: a surface that names itself gets
-  // no subtitle from here either, or the page would carry a description of a
-  // heading it is not showing.
-  // The ENTRY's own line first: a section is many pages behind one screen, and
-  // the screen-keyed table can only carry a sentence true of all of them. The
-  // table remains for screens that ARE one page.
+  // Read only on the branch that prints an h1: a surface naming itself gets no
+  // subtitle from here either, or the page would carry a description of a
+  // heading it is not showing. The ENTRY's own line first: a section is many
+  // pages behind one screen, and the screen-keyed table carries only a sentence
+  // true of all of them. The table remains for screens that ARE one page.
   const subKey = inSection?.entry.subKey ?? PAGE_SUB_KEYS[route.screen];
   // Whose state the page changes. Only a settings entry carries one, and only
   // then: on every other screen the answer is the record in front of you.
@@ -766,21 +751,20 @@ export function PageTitle({
             children, so a badge placed as a sibling would sit under the heading
             at full width and read as a second line of the title. */}
         <div className="pagetitle-head">
-          <h1
+          <Heading
+            size="xlarge"
             className={switcher ? "t-display pageswitchhead" : "t-display"}
             aria-label={switcher ? title : undefined}
           >
             {switcher || title}
-          </h1>
+          </Heading>
           {/* Beside the heading rather than inside it: the scope is about the
               page, not part of its name, and a heading carrying it would read
               "Capture rules Company" in every document outline and screen
-              reader. `quiet` because it states a fact rather than flagging one
-              — a page being company-wide is the ordinary case, not a warning.
-              `quiet` keeps the vocabulary and drops the fill (design-system
-              README, Badge); it still draws the status dot. */}
+              reader. Neutral: company-wide is the ordinary case, not a
+              warning. */}
           {scopeKey && (
-            <Badge quiet>
+            <Badge>
               {/* The mixed page says something different from the others: not
                   WHO it affects, but that it has no single answer and each
                   setting states its own. "Who this page affects: Mixed" would
@@ -794,7 +778,7 @@ export function PageTitle({
             </Badge>
           )}
         </div>
-        {subKey && <p className="pagesub">{t(subKey)}</p>}
+        {subKey && <p className="pagesub t-sub">{t(subKey)}</p>}
       </div>
     </div>
   );
@@ -825,28 +809,17 @@ export function Shell({
   const railless = RAIL_LESS_SCREENS.has(route.screen);
   // An extension unit's page is REACHED from settings and says so in its trail
   // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
-  // not: the rail fell back to the destinations, and following "Open" from a
+  // not: the rail fell back to the destinations, and following "Open" on a
   // settings card swapped the whole sidebar out from under a reader whose URL
   // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
-  // answered `settings` for a unit route; this is the other half of that answer.
+  // answered `settings` for a unit route; this is the other half of it.
   //
   // Conditioned on the descriptor RESOLVING, like the page title's own branch:
   // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.
   const onUnitPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  // Record pages only: the id is what makes it one. `#/companies` is the list,
-  // and a list belongs to the other family.
-  const griddedRecord =
-    route.id !== undefined && GRIDDED_RECORD_SCREENS.has(route.screen);
-  // The id-less half of the same policy: a screen that reads down but is not a
-  // record, so there is no id to key on. Brief is the one today.
-  const griddedScreen = GRIDDED_SCREENS.has(route.screen);
-  // A unit is NOT in this family, though it is leveled: the reading column is a
-  // claim about the page's own content, and a unit's surface is the unit's to
-  // lay out.
-  const gridded =
-    route.screen === SETTINGS_SCREEN || griddedRecord || griddedScreen;
+  const { gridded, griddedRecord } = useReadingColumn(route);
   const [collapsed, setCollapsed] = useState(
     () => readStored(COLLAPSE_KEY) === "1",
   );
@@ -1018,7 +991,7 @@ export function Shell({
         </main>
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
-          person is working in, and a contour that stopped at the sidebar would
+          contact is working in, and a contour that stopped at the sidebar would
           read as a panel border. Last in the tree, because it is an overlay and
           not a column. */}
         <AgentEdge />

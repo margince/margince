@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,7 +94,7 @@ func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
 }
 
 // capturePolicy is the narrowest grant that lets a captured message land: the
-// activity itself, plus the person and organization the counterparty ladder may
+// activity itself, plus the contact and company the counterparty ladder may
 // mint beside it.
 //
 // Narrow rather than an admin document on purpose. What these tests assert is
@@ -101,8 +102,8 @@ func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
 // enough that taking it away is visibly the reason the next landing is refused.
 const capturePolicy = `{"objects":{
 	"activity":{"read":true,"create":true,"update":true},
-	"person":{"read":true,"create":true,"update":true},
-	"organization":{"read":true,"create":true,"update":true}},
+	"contact":{"read":true,"create":true,"update":true},
+	"company":{"read":true,"create":true,"update":true}},
 	"row_scope":"all"}`
 
 // grantCapture gives the member a real role carrying capturePolicy, because the
@@ -319,7 +320,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 		owner := integration.OwnerConn(t)
 		for _, statement := range []string{
 			`DELETE FROM activity WHERE channel_provider = $1`,
-			`DELETE FROM person_channel_identity WHERE provider = $1`,
+			`DELETE FROM contact_channel_identity WHERE provider = $1`,
 			`DELETE FROM channel_provider WHERE provider = $1`,
 		} {
 			if _, err := owner.Exec(context.Background(), statement, ingressProbeProvider); err != nil {
@@ -330,7 +331,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 }
 
 // A unit's captured chat message lands as a MESSAGE on the unit's own transport,
-// with the account it can be answered at bound to the person behind it.
+// with the account it can be answered at bound to the contact behind it.
 //
 // This is the whole point of the slice, and each half is separately load-bearing.
 // The kind and the provider are the two axes stated separately (ADR-0107/A158):
@@ -370,7 +371,7 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	// The binding, which is what makes the recipient resolvable — and it names
 	// the account the UNIT reported, not one derived from the address.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
+		`SELECT count(*) FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
 		ingressProbeProvider, "probe-channel-1"); got != 1 {
 		t.Errorf("channel identity bindings = %d, want the one the reply path resolves its recipient from", got)
 	}
@@ -430,7 +431,7 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 	}
 }
 
-// The counterparty ladder, as it actually decides — which is NOT "a person
+// The counterparty ladder, as it actually decides — which is NOT "a contact
 // appears". A first-time corporate address is captured and DEFERRED to the
 // pending inbox, and that is the common case for a chat connector.
 func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
@@ -446,15 +447,15 @@ func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 		t.Errorf("pending counterparty rows = %d, want the deferral the ladder writes for a first-time corporate sender", got)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1`, "buyer@acme-corp.test"); got != 0 {
-		t.Errorf("person rows = %d, want none — the record is captured, and who it is with is not decided yet", got)
+		`SELECT count(*) FROM contact_email WHERE email = $1`, "buyer@acme-corp.test"); got != 0 {
+		t.Errorf("contact rows = %d, want none — the record is captured, and who it is with is not decided yet", got)
 	}
 }
 
 // The other arm of the same ladder: a freemail sender ALSO defers, and differs
 // in leaving no company question behind. Both arms are asserted because a suite that pinned only
 // one would describe the pipeline as doing whichever it happened to check.
-func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
+func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -463,26 +464,26 @@ func TestAFreemailSenderDefersThePersonAndNamesNoCompany(t *testing.T) {
 		t.Fatalf("Ingest: %v", err)
 	}
 	// An extension's record walks the SAME tier ladder as a mailbox sync, which
-	// is the point of this arm: a consumer mailbox settles the organization
-	// question by itself and settles nothing about the person, so the sender
+	// is the point of this arm: a consumer mailbox settles the company
+	// question by itself and settles nothing about the contact, so the sender
 	// goes to the verdict rather than being minted on sight. An extension that
 	// could mint what a mailbox defers would be a second answer on a public
 	// surface.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1`, "someone@gmail.com"); got != 0 {
-		t.Errorf("person rows = %d, want none — a free-mail sender defers to the verdict", got)
+		`SELECT count(*) FROM contact_email WHERE email = $1`, "someone@gmail.com"); got != 0 {
+		t.Errorf("contact rows = %d, want none — a free-mail sender defers to the verdict", got)
 	}
-	// The SUPPRESSED half, which the person count cannot see. Capture withholds
+	// The SUPPRESSED half, which the contact count cannot see. Capture withholds
 	// a company rather than creating one, so what a corporate domain leaves
 	// behind is the domain row and the OPEN QUESTION about it — and gmail.com
 	// must leave neither. Without these the arm reads as asserted while a
 	// change that started minting a company from a consumer mailbox passes.
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM organization_domain WHERE domain = $1`, "gmail.com"); got != 0 {
-		t.Errorf("organization domain rows for gmail.com = %d, want none — a consumer mailbox is not a company", got)
+		`SELECT count(*) FROM company_domain WHERE domain = $1`, "gmail.com"); got != 0 {
+		t.Errorf("company domain rows for gmail.com = %d, want none — a consumer mailbox is not a company", got)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM organization_domain_disposition WHERE domain = $1`, "gmail.com"); got != 0 {
+		`SELECT count(*) FROM company_domain_disposition WHERE domain = $1`, "gmail.com"); got != 0 {
 		t.Errorf("triage rows for gmail.com = %d, want none — the domain answers the question itself, so nothing is queued", got)
 	}
 }
@@ -636,7 +637,7 @@ func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
 
 // A suite here used to pin behaviour that only a SECOND workspace could produce.
 // ADR-0091 §8 phase D took the tenant column off app_user, and an installation
-// serves one organization (ADR-0061), so the fixture it needed is a state the
+// serves one company (ADR-0061), so the fixture it needed is a state the
 // product cannot reach — the guarantee has no subject rather than a weaker one.
 
 // The nesting refusal, on a POOL OF ONE — which is the configuration where the
@@ -713,3 +714,100 @@ func (e *ingressEnv) countAsWorkspace(t *testing.T, sql string, args ...any) int
 // WRITE, which is what the demotion test measures. A test reading the principal
 // back would be reading this package's own construction.
 var _ = principal.PrincipalConnector
+
+// A record the grammar refuses leaves a trace the CORE can see.
+//
+// The unit moves its cursor past it and counts it in its own logs, which is
+// what it can do with what it has — and is exactly why the drop was invisible
+// to the installation: a provider format change that made every record
+// unrepresentable presented as a quiet feed. Two ingests rather than one,
+// because the row is a COUNT and a writer that overwrote instead of
+// accumulating would report a broken connector as having dropped one record.
+func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
+	e := setupIngress(t)
+	rt := e.ingestingRuntime()
+	ctx := context.Background()
+
+	// Unkeyed: the core cannot make an unkeyed capture idempotent, so the
+	// grammar refuses it. The class is the KEY check's.
+	refused := aProviderRecord("", "member@buyer.test")
+
+	for range 2 {
+		result, err := rt.Ingest(ctx, extension.UserID(e.member.String()), refused)
+		if err != nil {
+			t.Fatalf("Ingest: %v — a record the grammar refuses is a disposition, not a failure", err)
+		}
+		if result.Disposition != extension.DispositionUnrepresentable {
+			t.Fatalf("disposition = %q, want unrepresentable", result.Disposition)
+		}
+		if result.Refusal != extension.RefusalKey {
+			t.Errorf("refusal = %q, want %q — the class is what the core records and what a unit groups by",
+				result.Refusal, extension.RefusalKey)
+		}
+		if result.Ref != (extension.Ref{}) {
+			t.Errorf("ref = %+v, want none — nothing was written", result.Ref)
+		}
+		// The complaint travels, so a unit logs the same sentence it used to
+		// read off the error rather than losing why the record was refused.
+		if result.Reason == "" {
+			t.Error("the refusal says nothing about what was wrong with the record")
+		}
+	}
+	if got := e.countAsWorkspace(t,
+		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 0 {
+		t.Errorf("activity rows = %d, want none — a record the grammar refuses never reaches capture", got)
+	}
+
+	var unit, class string
+	var refusedCount int64
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT unit, refusal, refused FROM extension_ingest_refusal`).
+			Scan(&unit, &class, &refusedCount)
+	})
+	if unit != ingressUnit || class != string(extension.RefusalKey) {
+		t.Errorf("breadcrumb names %q/%q, want %q/%q", unit, class, ingressUnit, extension.RefusalKey)
+	}
+	if refusedCount != 2 {
+		t.Errorf("refused = %d, want 2 — the row accumulates, so a connector refusing everything reads "+
+			"as refusing everything rather than as having dropped one record", refusedCount)
+	}
+}
+
+// And what it does NOT keep. The core's complaint quotes the record back — a
+// participant's account id, a provider name — so a table holding it would give
+// the extension tier a retention and erasure question about third-party content
+// that the tier was deliberately built without.
+func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
+	e := setupIngress(t)
+	rt := e.ingestingRuntime()
+	ctx := context.Background()
+
+	// A participant naming an account on a record with no channel provider:
+	// the one refusal whose sentence quotes a provider-supplied identifier.
+	const leaked = "acct-90210-should-not-be-stored"
+	refused := aProviderRecord("ws-9:9001", "member@buyer.test")
+	refused.Activity.ChannelProvider = ""
+	refused.Participants = []extension.Participant{{Account: leaked, Role: "to"}}
+
+	result, err := rt.Ingest(ctx, extension.UserID(e.member.String()), refused)
+	if err != nil {
+		t.Fatalf("Ingest: %v", err)
+	}
+	if result.Refusal != extension.RefusalParticipants {
+		t.Fatalf("refusal = %q, want %q", result.Refusal, extension.RefusalParticipants)
+	}
+	// The unit holds the record, so the sentence is the unit's to read.
+	if !strings.Contains(result.Reason, leaked) {
+		t.Errorf("the unit was not told which account was refused: %q", result.Reason)
+	}
+
+	var stored string
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT unit || ' ' || refusal FROM extension_ingest_refusal`).Scan(&stored)
+	})
+	if strings.Contains(stored, leaked) {
+		t.Errorf("the breadcrumb stored a provider-supplied identifier: %q", stored)
+	}
+}

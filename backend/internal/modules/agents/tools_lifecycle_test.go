@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -157,11 +158,14 @@ func (a *recordingAdvancer) AdvanceProjectPhase(
 	return nil, nil
 }
 
-// recordingDisqualifier captures the id Handle passed to the store.
-type recordingDisqualifier struct{ id ids.UUID }
+// recordingDisqualifier captures the id and the pin Handle passed to the store.
+type recordingDisqualifier struct {
+	id  ids.UUID
+	pin *int64
+}
 
-func (d *recordingDisqualifier) DisqualifyLead(_ context.Context, id ids.UUID) (json.RawMessage, error) {
-	d.id = id
+func (d *recordingDisqualifier) DisqualifyLead(_ context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
+	d.id, d.pin = id, ifVersion
 	return nil, nil
 }
 
@@ -185,6 +189,44 @@ func TestDisqualifyLeadHandsTheNamedLeadToTheStore(t *testing.T) {
 	}
 }
 
+// A redeemed retry carries the version its approval was released against, and
+// this tool takes no if_version of its own — so the released pin is the ONLY
+// thing that can condition the write.
+//
+// Without it the write is unconditioned: redemption commits its own transaction
+// and this handler opens a fresh one, so the skew check inside redemption proves
+// the row was at the approved version when the approval was CONSUMED, not when
+// the disqualify lands — and the agent controls both sides of that window.
+func TestDisqualifyLeadCarriesTheReleasedPinToTheStore(t *testing.T) {
+	seam := &recordingDisqualifier{}
+	tool := disqualifyLead{disqualifier: seam}
+	id := ids.NewV7()
+	const approvedAt = int64(7)
+
+	ctx := withApprovalRedeemed(context.Background(), approvedAt, true)
+	if _, err := tool.Handle(ctx, json.RawMessage(`{"lead_id":"`+id.String()+`"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if seam.pin == nil {
+		t.Fatal("the store was handed no version — a redeemed retry then writes unconditioned")
+	}
+	if *seam.pin != approvedAt {
+		t.Errorf("store saw version %d, want the %d the approval was released against", *seam.pin, approvedAt)
+	}
+
+	// An unapproved call at a static tier has nothing to pin, and must not
+	// invent one: a version nothing established would refuse writes that are
+	// perfectly fine.
+	unapproved := &recordingDisqualifier{}
+	plain := disqualifyLead{disqualifier: unapproved}
+	if _, err := plain.Handle(context.Background(), json.RawMessage(`{"lead_id":"`+id.String()+`"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if unapproved.pin != nil {
+		t.Errorf("an unapproved call pinned version %d; nothing established one", *unapproved.pin)
+	}
+}
+
 func TestRelinkActivityRefusesATargetTypeTheStoreWouldNotAccept(t *testing.T) {
 	seam := &recordingRelinker{}
 	tool := relinkActivity{relinker: seam}
@@ -200,16 +242,16 @@ func TestRelinkActivityRefusesATargetTypeTheStoreWouldNotAccept(t *testing.T) {
 		t.Fatalf("the refusal reached the seam first (entity_type=%q)", seam.entityType)
 	}
 
-	if _, err := tool.Handle(context.Background(), args("person")); err != nil {
-		t.Fatalf("a person is a link target: %v", err)
+	if _, err := tool.Handle(context.Background(), args("contact")); err != nil {
+		t.Fatalf("a contact is a link target: %v", err)
 	}
-	if seam.entityType != "person" {
-		t.Fatalf("seam saw entity_type %q, want person", seam.entityType)
+	if seam.entityType != "contact" {
+		t.Fatalf("seam saw entity_type %q, want contact", seam.entityType)
 	}
 }
 
 // Closing a project without a reason is a 422 the contract states, so a call
-// that stages, waits for a human, and THEN fails is a person asked to decide
+// that stages, waits for a human, and THEN fails is a human asked to decide
 // something that could never have applied.
 func TestAdvanceProjectPhaseRefusesAClosureWithNoReasonBeforeStaging(t *testing.T) {
 	tool := advanceProjectPhase{advancer: unreachableAdvancer{}}
@@ -414,7 +456,7 @@ func assertRelinkTierReadsEntityType(t *testing.T, name string, spec mcp.ToolSpe
 		why         string
 	}{
 		{"project", mcp.TierConfirmationRequired, "filing under a project writes an irreversible six-year retention mark"},
-		{"person", mcp.TierAutoExecute, "an ordinary association a member can undo by relinking again"},
+		{"contact", mcp.TierAutoExecute, "an ordinary association a member can undo by relinking again"},
 		{"deal", mcp.TierAutoExecute, "the deal's own stamp is governed at the deal move, not here"},
 		{"not_a_record_type", mcp.TierConfirmationRequired, "an unrecognised destination fails toward the gate, never away from it"},
 	} {
@@ -455,7 +497,7 @@ func TestRelinkActivityHandsTheWriteTheVersionItsGateBound(t *testing.T) {
 		t.Helper()
 		tool := relinkActivity{relinker: seam}
 		args := json.RawMessage(`{"activity_id":"` + ids.NewV7().String() +
-			`","entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+			`","entity_type":"contact","entity_id":"` + ids.NewV7().String() + `"}`)
 		if _, err := tool.Handle(ctx, args); err != nil {
 			t.Fatalf("relink: %v", err)
 		}
@@ -485,3 +527,64 @@ func TestRelinkActivityHandsTheWriteTheVersionItsGateBound(t *testing.T) {
 		}
 	})
 }
+
+// THE OTHER DIRECTION, which the gate above cannot see because it walks the
+// ADVERTISED list: a value the server enforces and never advertises.
+//
+// Both halves are one invariant — the schema is the vocabulary the server
+// enforces — and they fail differently. Advertised-and-refused sends a caller to
+// do as they were told and refuses them for it, which is what the gate above
+// catches. Enforced-and-unadvertised is quieter and worse for a model: the
+// server would accept the value and no caller is ever told it exists, so the
+// capability is unreachable through the surface that documents it.
+//
+// Nothing in this tree drives these tools with a value a human did not first
+// read off the predicate, so neither direction shows up as a failing call.
+func TestEveryEnforcedEnumValueIsAlsoAdvertised(t *testing.T) {
+	t.Parallel()
+
+	// Each pair is one tool's advertised property beside the Go vocabulary its
+	// handler enforces — the schema literal a client reads against the
+	// predicate that actually decides.
+	mirrors := []struct {
+		property   string
+		spec       mcp.ToolSpec
+		vocabulary []string
+	}{
+		{"to_phase", advanceProjectPhase{}.Spec(), projectPhaseNames()},
+		{"entity_type", relinkActivity{}.Spec(), relinkTargetNames()},
+		{"entity_type", relinkActivities{}.Spec(), relinkTargetNames()},
+		{"entity_type", relinkThread{}.Spec(), relinkTargetNames()},
+		{"record_type", listRecords{}.Spec(), slices.Clone(listRecordTypes)},
+		{"record_type", archiveRecord{}.Spec(), slices.Clone(archivableRecordTypes)},
+		{"depth", enrichCompany{}.Spec(), []string{
+			string(EnrichDepthPage), string(EnrichDepthSite), string(EnrichDepthTechnical),
+		}},
+	}
+
+	for _, mirror := range mirrors {
+		t.Run(mirror.spec.Name+"."+mirror.property, func(t *testing.T) {
+			t.Parallel()
+			advertised := advertisedEnum(t, mirror.spec.InputSchema, mirror.property)
+			if len(mirror.vocabulary) == 0 {
+				t.Fatalf("%s.%s's enforced vocabulary came back empty",
+					mirror.spec.Name, mirror.property)
+			}
+			for _, member := range mirror.vocabulary {
+				if !slices.Contains(advertised, member) {
+					t.Errorf("%s.%s ENFORCES %q and never advertises it, so the server accepts a "+
+						"value no caller is told about: advertised %v",
+						mirror.spec.Name, mirror.property, member, advertised)
+				}
+			}
+		})
+	}
+}
+
+// OUT OF REACH HERE: run_analytics_query's aggregate functions and comparison
+// operators are the two largest hand-typed enums on the surface, and the ones a
+// caller is likeliest to guess wrong — but analyticsquery lives in compose,
+// downstream of this package, so their pair needs a file that can see both
+// sides. And an enum with no Go predicate behind it cannot be compared at all:
+// where the schema IS the only statement of the vocabulary, there is nothing to
+// hold it against.

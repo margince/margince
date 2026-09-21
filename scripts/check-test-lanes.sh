@@ -56,8 +56,7 @@ while IFS= read -r f; do
     done
     violations=1
   fi
-# Search roots: the backend hand-written Go tree. cli/craft is separate
-# craftsmanship gate tooling with its own tests, out of this gate's scope.
+# Search roots: the backend hand-written Go tree, and nothing else is in scope.
 done < <(find backend -name '*_test.go' 2>/dev/null | sort)
 
 if [[ "$violations" -ne 0 ]]; then

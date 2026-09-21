@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -48,22 +49,39 @@ const autoApplyActorID = "agent:auto-apply"
 //
 // Two entries, because two is what the eligible kinds can name: a close-date
 // correction targets a deal, and both a rename and a lifecycle move target an
-// organization. A kind joining AutoApplyKinds against another record type adds
+// company. A kind joining AutoApplyKinds against another record type adds
 // its row here, and until then a speculative entry would be a table this can
 // reach that nothing asks it to.
 //
 //nolint:goconst // wire record-type names read as data; a shared constant would tie this map to whichever other concept spells the same word
 var ownedTables = map[string]string{
-	"deal":         "deal",
-	"organization": "organization",
+	"deal":    "deal",
+	"company": "company",
 }
 
+// kindPolicy answers whether ONE proposal of an admin-governed kind may apply
+// right now, in the transaction that would apply it.
+//
+// A seam rather than a call, because the answer lives in the module that owns
+// the kind — stage automation's thresholds are deals' — and compose may not
+// reach into a module's judgement any more than a module may reach into a
+// sibling's. What compose owns is which seam answers for which kind.
+//
+// It takes the OWNER'S context, the same one the apply runs under, so a policy
+// that reads the acting principal reads the one that will do the writing.
+type kindPolicy func(ctx context.Context, approvalID ids.ApprovalID) (bool, error)
+
 // autoApplier decides and applies proposals that their owner has put on
-// automatic.
+// automatic, or that an admin's governing policy has earned.
 type autoApplier struct {
 	pool  *pgxpool.Pool
 	svc   *approvals.Service
 	users *identity.Service
+	// governed answers for the admin-governed kinds, keyed by kind. A kind in
+	// AdminGovernedAutoKinds with no seam here NEVER applies: an unanswerable
+	// policy is a refusal, because the alternative is applying on the absence
+	// of a judgement.
+	governed map[string]kindPolicy
 }
 
 // Apply runs one pending proposal if its owner has this kind on automatic.
@@ -71,7 +89,7 @@ type autoApplier struct {
 // It reports whether it applied. Not applying is the ordinary outcome and never
 // an error: an unowned record, a departed owner, a rep who has not opted in and
 // a kind that is not eligible all mean the same thing to the product — the
-// proposal stays in the queue for a person to answer.
+// proposal stays in the queue for a contact to answer.
 //
 // The owner is resolved at APPLY time rather than carried on the staged row, so
 // a handover moves who an automatic apply acts for. That also means a proposal
@@ -83,7 +101,11 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 	if err != nil {
 		return false, err
 	}
-	if target.kind == "" || !approvals.AutoApplyKinds[target.kind] {
+	if target.kind == "" {
+		return false, nil
+	}
+	admin := approvals.AdminGovernedAutoKinds[target.kind]
+	if !admin && !approvals.AutoApplyKinds[target.kind] {
 		return false, nil
 	}
 	owner, err := a.ownerOf(ctx, target.entityType, target.entityID)
@@ -94,7 +116,7 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 	if err != nil {
 		// A refusal to establish the owner's authority is a refusal to apply,
 		// not a failure of the caller that offered the proposal. The row keeps
-		// waiting for a person, which is the safe direction.
+		// waiting for a contact, which is the safe direction.
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
 		}
@@ -103,17 +125,43 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 	// Read the policy AS the owner, not before becoming them: the policy read
 	// takes its subject from the acting principal, so asking first would ask
 	// about whoever the sweep happened to be running as.
-	mode, err := a.svc.AutoApplyMode(ownerCtx, target.kind)
-	if err != nil {
+	//
+	// WHICH policy depends on the ladder. A rep's own kinds read the rep's own
+	// row; an admin-governed kind reads the rule the admin set for the
+	// transition, through the seam its module supplies. Asking the rep's
+	// ladder about a governed kind would answer 'manual' for every rep who
+	// never opted into a setting they are not offered.
+	may, err := a.mayApply(ownerCtx, target.kind, admin, approvalID)
+	if err != nil || !may {
 		return false, err
-	}
-	if mode != approvals.ModeAuto {
-		return false, nil
 	}
 	if _, err := a.svc.ApplyUnderPolicy(ownerCtx, approvalID); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// mayApply asks the ladder that governs this kind.
+//
+// The two are not interchangeable and neither is a fallback for the other. A
+// governed kind whose seam is missing answers NO — an unwired policy is an
+// unanswered question, and applying on an unanswered question is the one thing
+// this whole path exists to prevent.
+func (a autoApplier) mayApply(
+	ctx context.Context, kind string, admin bool, approvalID ids.ApprovalID,
+) (bool, error) {
+	if !admin {
+		mode, err := a.svc.AutoApplyMode(ctx, kind)
+		if err != nil {
+			return false, err
+		}
+		return mode == approvals.ModeAuto, nil
+	}
+	policy, wired := a.governed[kind]
+	if !wired {
+		return false, nil
+	}
+	return policy(ctx, approvalID)
 }
 
 // proposalTarget is the proposal's kind and what it points at.
@@ -194,13 +242,13 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 //
 // What it does NOT bound is every write that follows. Two of the three
 // eligible effects deliberately swap in a system principal before writing —
-// an org rename and a lifecycle move stamp their own machine provenance — so
+// a company rename and a lifecycle move stamp their own machine provenance — so
 // the honest statement is that the DECISION is gated by the owner's authority
 // and the effect then runs exactly as it does after a human's click. That is
-// the same bound a person gets, which is the point: this path is not a wider
+// the same bound a contact gets, which is the point: this path is not a wider
 // authority than the button, only an unattended one.
 //
-// actingForAHuman admits this shape already: an agent naming the person it acts
+// actingForAHuman admits this shape already: an agent naming the contact it acts
 // for is somebody's agent, and a credential nobody lent is what it refuses.
 //
 // dealOwnerAuthority.asOwner (dealownerseam.go) binds an owner the same way and
@@ -249,9 +297,10 @@ func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context
 func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalID, error) {
 	var due []ids.ApprovalID
 	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		// The kinds come from the module that owns them, in its order: the scan
-		// must not come to look for a set the applier would then refuse, and the
-		// kinds travel as one parameter, so a map-ordered list would send the
+		// The kinds come from the module that owns them, as the UNION of both
+		// ladders: the scan must not come to look for a set the applier would
+		// then refuse, nor miss one it would accept. They travel as one
+		// parameter in a stable order, so a map-ordered list cannot send the
 		// same set differently on every tick and make two runs incomparable.
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM approval
@@ -259,7 +308,7 @@ func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalI
 			   AND expires_at > now()
 			   AND kind = ANY($1)
 			 ORDER BY created_at
-			 LIMIT $2`, approvals.SortedAutoApplyKinds(), limit)
+			 LIMIT $2`, approvals.AutoAppliableKinds(), limit)
 		if err != nil {
 			return err
 		}
@@ -311,7 +360,7 @@ func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 		case refusesThisRow(err):
 			// The row itself cannot apply and says why on its own record: the
 			// decision path marks a failed effect on the approval, so the
-			// proposal is visible as needing a person rather than silently
+			// proposal is visible as needing a contact rather than silently
 			// skipped here.
 			continue
 		default:
@@ -331,7 +380,7 @@ func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 //
 // The others are the same shape. A decision already taken, a target the owner
 // may no longer reach, a redemption whose token no longer fits — each is a fact
-// about that proposal, and each leaves it pending for a person.
+// about that proposal, and each leaves it pending for a contact.
 func refusesThisRow(err error) bool {
 	var decided *approvals.AlreadyDecidedError
 	return errors.As(err, &decided) ||
@@ -349,8 +398,9 @@ func refusesThisRow(err error) bool {
 // it is assembled from.
 func SweepAutoApply(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return autoApplier{
-		pool:  pool,
-		svc:   approvalsServiceWithEffects(pool),
-		users: identity.NewService(pool),
+		pool:     pool,
+		svc:      approvalsServiceWithEffects(pool),
+		users:    identity.NewService(pool),
+		governed: governedKindPolicies(pool, deals.NewStore(InstallationDB(pool), DealsInstallation())),
 	}.Sweep(ctx)
 }

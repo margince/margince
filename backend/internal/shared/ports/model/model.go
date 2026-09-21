@@ -30,6 +30,19 @@ var ErrEmbeddingsUnsupported = errors.New("model: provider has no embedding lane
 // or surface honestly rather than silently dropping the attachment.
 var ErrAttachmentUnsupported = errors.New("model: provider cannot carry this attachment type")
 
+// ErrAttachmentMislabelled reports inline bytes that are not the kind their
+// attachment claims — a blob labelled image/png, or the text of an SVG on a
+// wire that would build an image part from it.
+//
+// A SEPARATE sentinel from ErrAttachmentUnsupported, because the two ask
+// opposite things of a caller. Carriage is a property of the binding, so
+// falling back to another lane is right; this is a property of the BYTES, which
+// every lane reads the same way, so a retry spends a call to hear it again.
+//
+// Port-level so other modules can errors.Is without importing a provider
+// package.
+var ErrAttachmentMislabelled = errors.New("model: attachment bytes are not the type claimed")
+
 // Attachment is one cross-provider input part. Bytes XOR URI: Bytes for inline
 // content, URI for a provider file handle / URL. Name is optional provenance.
 type Attachment struct {
@@ -60,23 +73,15 @@ func CarriesMIME(declared []string, mime string) bool {
 }
 
 // IntersectMIMEs is the other half of CarriesMIME: the carriage set two
-// declarations both admit, computed over the patterns rather than over their
-// spellings.
-//
-// The spellings are the whole point. Two declarations can describe overlapping
-// sets and share no literal — a wire that decodes {image/jpeg, image/png} and
-// an operator who wrote `image/*` agree completely, and a literal comparison
-// reads that agreement as a contradiction and carries nothing. That is what a
-// binding-side permission written as a wildcard has to compose with, so the
-// intersection has to understand what CarriesMIME understands.
+// declarations both admit, computed over the patterns rather than their
+// spellings. Two declarations can describe overlapping sets and share no literal
+// — {image/jpeg, image/png} and `image/*` agree completely — and a literal
+// comparison reads that agreement as a contradiction and carries nothing.
 //
 // Never wider than either input: every pattern returned is the narrower of one
-// pattern from each side, so anything it admits both sides already admitted.
-// That is the safety property the literal comparison used to buy by being
-// blunt, and it is now bought by construction instead.
-//
-// Order follows a, then b within each element of a, so the answer is stable for
-// a caller that compares sets by equality.
+// from each side, so anything it admits both sides already admitted. Order
+// follows a, then b within each element of a, so the answer is stable for a
+// caller comparing sets by equality.
 func IntersectMIMEs(a, b []string) []string {
 	kept := make([]string, 0, len(a))
 	for _, left := range a {
@@ -257,18 +262,12 @@ type Response struct {
 	// back to the configured tier binding, which may differ from what actually
 	// served if the vendor silently substitutes a model).
 	ServedModel string
-	// ServedProvider is the UPSTREAM that generated the completion, as distinct
-	// from the vendor we sent the request to. Only a broker reports one: a
-	// gateway fronting many inference hosts answers for whichever one served,
-	// and that choice is remade per request. Empty on every direct vendor,
-	// where the provider we called is the provider that served.
-	//
-	// It is a separate field from ServedModel rather than a refinement of it
-	// because the two have different trustworthiness on the same wire. A broker
-	// on the OpenAI wire echoes our own `model` back (so ServedModel is not a
-	// confirmation of what ran) while naming the upstream independently — we
-	// learn WHO served without learning WHAT they served, and collapsing the
-	// two would launder the echo into a confirmation.
+	// The UPSTREAM that generated the completion, as distinct from the vendor we
+	// sent to. Only a broker reports one, remade per request; empty on a direct
+	// vendor. Separate from ServedModel because the two differ in
+	// trustworthiness on one wire: a broker echoes our own `model` back while
+	// naming the upstream independently, so we learn WHO served without learning
+	// WHAT — and collapsing them would launder the echo into a confirmation.
 	ServedProvider string
 	// FinishReason is the provider's normalized stop reason ("stop", "length",
 	// "content_filter", …), empty when the provider reports none.
@@ -325,61 +324,38 @@ type Capabilities struct {
 	// LocalOnly is true for local inference — the P7 sovereignty and
 	// zero-egress path.
 	LocalOnly bool
-	// AttachmentMIMEs is the closed set of media types this client carries on
-	// its wire, in CarriesMIME's spelling ("image/*", "application/pdf"). Empty
-	// means the wire carries no attachment parts at all, which is a legitimate
-	// binding rather than a broken one.
+	// The closed set of media types this client carries, in CarriesMIME's
+	// spelling. Empty is a legitimate binding, not a broken one.
 	//
-	// It is DECLARED rather than discovered because refusing at send time
-	// answers the wrong question: a caller holding a document learns "this
-	// binding is text-only" only by attempting the call, and that attempt is
-	// indistinguishable, in the operator's own call trace, from a model that
-	// failed. A caller that can read this picks its input lane first and
-	// leaves no failed attempt behind for a configuration that is merely
-	// text-only.
+	// DECLARED rather than discovered: refusing at send time makes a text-only
+	// binding indistinguishable, in the operator's call trace, from a model that
+	// failed. A caller reading this picks its input lane first.
 	AttachmentMIMEs []string
-	// PromptWindow is the largest prompt this client will carry, in tokens, or
-	// 0 for a wire whose window is not a limit worth planning around.
+	// The largest prompt this client will carry, in tokens, or 0 for a wire whose
+	// window is not worth planning around. DECLARED per adapter: vendors disagree
+	// about what they publish and change it without notice, so a number from a
+	// list endpoint can quietly stop describing the model serving the call.
 	//
-	// DECLARED per adapter rather than read from the vendor, for the reason
-	// model.Info's own comment gives for dropping context length: the vendors
-	// disagree about what they publish and change it without notice, so a
-	// number taken from a list endpoint is one that can quietly stop describing
-	// the model actually serving the call.
-	//
-	// ZERO IS THE ORDINARY ANSWER for a cloud wire, and it does not mean "no
-	// window" — every model has one. It means the window is far larger than
-	// anything this product assembles, so eliding a transcript against it would
-	// be arithmetic with no decision behind it. A local runner is the opposite:
-	// it sizes a KV cache from the number it is handed, so the limit is real,
-	// small, and worth cutting a transcript to respect.
+	// ZERO IS THE ORDINARY ANSWER for a cloud wire and does not mean "no window".
+	// It means the window dwarfs anything this product assembles, so eliding
+	// against it is arithmetic with no decision behind it. A local runner sizes a
+	// KV cache from the number, so its limit is real, small and worth respecting.
 	PromptWindow int
 }
 
 // Lister is implemented by an adapter whose vendor publishes what it
 // currently serves.
 //
-// Deliberately NOT part of Client. A vendor list endpoint is a different
-// question from inference, not every adapter has one to answer, and widening
-// Client would make five adapters carry a method two of them can only refuse.
-// A caller type-asserts, exactly as it does for any other optional capability,
-// and treats a client that does not implement it as "this vendor does not
-// publish a list" rather than as a failure.
+// Deliberately NOT part of Client: a list endpoint is a different question from
+// inference, and widening Client would make five adapters carry a method two can
+// only refuse. A caller type-asserts and treats a non-implementer as "this
+// vendor publishes no list" rather than as a failure.
 //
-// It answers AVAILABILITY, never price. A broker (OpenRouter) publishes
-// per-model prices on the same wire endpoint this reads; the native vendors
-// put theirs on an HTML page. Either way this interface drops it: the price
-// sheet is its own effective-dated record and stays the authority on cost for
-// anything reached through a stored binding, so a second price arriving by
-// this route would be two answers that drift the first time either moves. A
-// model listed here that the sheet cannot price is bindable and reports
-// UNPRICED — that is honest.
-//
-// `ai`'s unauthenticated, unbound OpenRouter read (asked by provider name,
-// never through a Lister) folds a vendor's own price in anyway: it has no
-// stored binding to protect and no sheet row to contradict yet, so its price
-// rides beside the sheet's, always labelled PROPOSED and never confused with
-// a recorded rate.
+// It answers AVAILABILITY, never price. The price sheet is its own
+// effective-dated record and stays the authority on cost for anything reached
+// through a stored binding, so a second price arriving here would drift the
+// first time either moved. A model the sheet cannot price is bindable and
+// reports UNPRICED, which is honest.
 type Lister interface {
 	// ListModels reports what the vendor serves, newest first where the vendor
 	// dates its models and in the vendor's own order where it does not.
@@ -388,20 +364,15 @@ type Lister interface {
 
 // Info is one model a vendor says it serves.
 //
-// Three fields and no fourth. The vendors disagree about everything else they
-// publish — context windows, modalities, deprecation dates, owners — and a
-// field only some of them fill is one the caller cannot rely on. What every
-// list endpoint agrees on is an id, and what a picker needs is that id plus
-// enough to sort and label it.
+// Three fields and no fourth. Vendors disagree about everything else they
+// publish, and a field only some of them fill is one no caller can rely on;
+// every list endpoint agrees on an id, and a picker needs that plus enough to
+// sort and label it.
 //
-// A caller that needs more than this asks a wider question than Lister
-// answers: `ai.AvailableModel` embeds Info and adds the price and rank-score
-// fields the one unauthenticated broker read (OpenRouter, by provider name)
-// can honestly state. That type lives beside its own caller rather than
-// widening this one, because every OTHER vendor's Lister still cannot fill
-// those fields — and a Lister that returned them anyway would have nothing
-// but a zero value to put there, which reads as an answer rather than as
-// silence.
+// A caller needing more asks a wider question: `ai.AvailableModel` embeds this
+// and adds what the one unauthenticated broker read can honestly state. It lives
+// beside its own caller, because a Lister returning those fields would have only
+// a zero value to put there — which reads as an answer rather than as silence.
 type Info struct {
 	// ID is the string a binding names, exactly as the vendor spells it.
 	ID string

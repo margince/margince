@@ -35,7 +35,7 @@ function Catalog() {
   const [locale, setLocale] = useState("en");
   const [profile, setProfile] = useState("balanced");
   return (
-    <Card title="Capture" sub="What happens to mail that arrives.">
+    <Card title="Capture">
       <SettingList>
         <SettingRow
           label="Auto-enrich captured companies"

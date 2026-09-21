@@ -9,18 +9,19 @@ import { Callout } from "../design-system/callout";
 import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { profileFieldLabel } from "./companies";
+import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
-import { DetailsGrid, SidecarFieldRow } from "./companyraildetails";
-import { useOrgProfileFields } from "./evidenceverdict";
-import { profileFieldLabel } from "./organizations";
+import { SidecarFieldRow } from "./companyraildetails";
+import { useCompanyProfileFields } from "./evidenceverdict";
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
 
 // The account's own story, in the order a rep reads it: what the company
 // sells, who it sells to, and how the sale actually happens. These eleven
-// fields have no column on `organization` — the profile-field row IS the
+// fields have no column on `company` — the profile-field row IS the
 // record of them — so every one is written through the same PATCH the rail's
 // registration rows use.
 //
@@ -64,14 +65,23 @@ const NARRATIVE_FIELDS = [
  * and withholding the page's one explanation is the defect.
  */
 export function CompanyProfileForm({
-  org,
+  company,
   onOpenHistory,
+  nameOf,
+  onOpenRecord,
+  onOpenEmail,
   tools,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   // Opens the record's own history drawer, for a reader following an evidence
   // mark back to what changed.
   onOpenHistory?: () => void;
+  // The dossier's own props, threaded straight from the page: this tab's copy
+  // reads the same names and opens through the same receipt as the
+  // overview's, so a chip cited in either place lands in the same drawer.
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
   // The account's own tooling — custom fields, group rollup, the site read,
   // the technical profile. Passed in rather than built here: they are the
   // caller's existing cards and this file has no business knowing what is in
@@ -80,11 +90,11 @@ export function CompanyProfileForm({
 }>): ReactNode {
   const t = useT();
   const reasonId = useId();
-  const writable = useCanWriteRecord("organization", org);
-  // The archived/overlay/not-yours sentence, when there is one. It is the
+  const writable = useCanWriteRecord("company", company);
+  // The archived/not-yours sentence, when there is one. It is the
   // more specific answer, so it wins over the generic refusal below whenever
   // it applies.
-  const specificReason = useCompanyReadOnlyReason(org);
+  const specificReason = useCompanyReadOnlyReason(company);
   // Every denial owes the reader a sentence. `useCanWriteRecord` also refuses
   // a read seat and a missing grant, neither of which the specific reason
   // knows about, and a control pointing at an id that renders nothing is a
@@ -93,28 +103,37 @@ export function CompanyProfileForm({
     ? undefined
     : (specificReason ?? t("record.notYoursToChange"));
   const canEdit = writable && !specificReason;
-  const profileQuery = useOrgProfileFields(org.id);
+  const profileQuery = useCompanyProfileFields(company.id);
   const fields = profileQuery.data ?? [];
 
   return (
     <div className="record-stack">
+      {/* The account in prose, leading the tab the same way it leads the
+          overview: what the account IS, before its fields and facts. The
+          overview keeps its own copy so a reader who never opens this tab
+          still meets it. */}
+      <DossierPanel
+        companyId={company.id}
+        nameOf={nameOf}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
       {reason && (
-        <Callout tone="info">
-          <p id={reasonId}>{reason}</p>
-        </Callout>
+        <Callout
+          tone="info"
+          kind="standing"
+          // The sentence carries the id every refused control below points at,
+          // so the heading IS the description rather than a copy of it.
+          title={<span id={reasonId}>{reason}</span>}
+        />
       )}
-      <Panel title={t("co.details.title")}>
-        <PanelBody>
-          <DetailsGrid organization={org} />
-        </PanelBody>
-      </Panel>
-      <Panel title={t("co.narrative.title")} sub={t("co.narrative.sub")}>
+      <Panel title={t("co.narrative.title")}>
         <PanelBody>
           <FieldGrid>
             {NARRATIVE_FIELDS.map((field) => (
               <SidecarFieldRow
                 key={field}
-                orgId={org.id}
+                companyId={company.id}
                 fields={fields}
                 // A pending or failed read is not the same claim as "this
                 // field has no row": editing on that guess sends no If-Match
@@ -138,7 +157,7 @@ export function CompanyProfileForm({
           time, and now addable and removable — which is a different act from
           stating a field, and needs the same write state this form derived. */}
       <CompanyFactsPanel
-        orgId={org.id}
+        companyId={company.id}
         canEdit={canEdit}
         reasonId={reason ? reasonId : undefined}
         onOpenHistory={onOpenHistory}

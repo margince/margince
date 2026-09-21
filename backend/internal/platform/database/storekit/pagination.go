@@ -14,6 +14,12 @@ import (
 type Page struct {
 	NextCursor string
 	HasMore    bool
+	// Total is how many rows match, ignoring the cursor and the page size,
+	// for the reads that count. Nil means this read did not count — never
+	// that it counted zero, which is why it is a pointer: a plain 0 would
+	// make "we do not know" and "there is nothing" the same wire value, and
+	// a list that stopped counting would report itself empty.
+	Total *int
 }
 
 // Cursor is the opaque keyset token: the last row's (created_at, id)
@@ -164,6 +170,46 @@ func ClampLimit(limit *int) int {
 // stays indexed; the query text is a bind parameter (LIKE
 // metacharacters at worst widen the caller's own match).
 func QuickFindClause(pos int, nameExpr string) string {
-	return fmt.Sprintf(`(search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
-	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || f_fold_apostrophes(lower($%[1]d)) || '%%')`, pos, nameExpr)
+	return QuickFindClauseWith(pos, nameExpr, Identifier{})
+}
+
+// Identifier is a record's identifier table — the addresses and domains contacts
+// paste in when they are not typing a name.
+//
+// Table is joined by FK to the row's own id, and Column is matched EXACTLY
+// against the lower-cased query. Both identifier tables store their values
+// lower-cased under a CHECK and carry a unique index on the value alone
+// (uq_contact_email_dedupe, uq_company_domain), so this arm is one index lookup.
+//
+// Exact, with no prefix arm: `LIKE 'x%'` is not reliably indexed under the
+// database's collation, and a search that silently reads the whole table is
+// worse than one that finds nothing.
+type Identifier struct {
+	Table  string
+	FK     string
+	Column string
+}
+
+// QuickFindClauseWith is QuickFindClause plus the identifier arm.
+//
+// A rep who pastes an address into the contact search was told "no contacts
+// match these filters" for somebody plainly in the CRM, because the query only
+// ever read the name index. The address lives one table away and is the thing
+// most often copied out of a mail client, so it is the identifier a search has
+// to answer for.
+//
+// `id IN (SELECT fk FROM t WHERE col = ...)`, deliberately, and not a
+// correlated EXISTS: an EXISTS in this position stops the planner satisfying
+// the whole predicate as a bitmap OR over the name indexes, and turns a
+// three-index lookup into a scan of the record table.
+func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
+	clause := fmt.Sprintf(`search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
+	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || f_fold_apostrophes(lower($%[1]d)) || '%%'`, pos, nameExpr)
+	if id.Table != "" {
+		clause += fmt.Sprintf(`
+	   OR id IN (SELECT %[2]s FROM %[3]s
+	              WHERE archived_at IS NULL AND %[4]s = lower(btrim($%[1]d)))`,
+			pos, id.FK, id.Table, id.Column)
+	}
+	return "(" + clause + ")"
 }

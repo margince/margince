@@ -283,7 +283,8 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 		provOut, modelOut                   string
 		laneOut                             Lane
 	)
-	if err := tx.QueryRow(ctx, `
+	if err := tx.QueryRow(
+		ctx, `
 		INSERT INTO ai_model_rate (
 			provider, model_id,
 			input_per_mtok_microusd, output_per_mtok_microusd,

@@ -125,7 +125,7 @@ func PoolsInLockOrder(cost map[Pool]int) []Pool {
 // What it buys: the free set is what automatic enrichment may spend on nobody's
 // explicit say-so. Everything a run can take without touching a credit pool can
 // be bought for every new contact and nobody has to weigh it, while the priced
-// categories stay behind a human pressing a button for one named person.
+// categories stay behind a human pressing a button for one named contact.
 //
 // A cascade's cost counts. A category that is free to request but triggers a
 // charged fallback is not free, and calling it so would put a spend behind a

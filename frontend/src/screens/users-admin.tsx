@@ -31,7 +31,7 @@ import {
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
 
 type User = components["schemas"]["User"];
-// The member roster (org settings). Every user-management WRITE is admin-only
+// The member roster (company settings). Every user-management WRITE is admin-only
 // server-side, but the read is not: `GET /users` answers 200 to any authenticated
 // principal, so the list is fetched for everyone and only the controls that
 // change a member are withheld. The read opts into inactive members
@@ -233,9 +233,7 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
       {/* Named for what it opens, not for what it does: this button invites
           nobody, and the dialog's own submit reads "Invite". Two buttons with
           one name are ambiguous for a reader and for `getByRole` alike. */}
-      <Button small onClick={() => setOpen(true)}>
-        {t("users.inviteOpen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("users.inviteOpen")}</Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -337,7 +335,7 @@ function RoleCell({
 }
 
 // The role a row reports rather than offers: the agent seat's, whose authority
-// is the passport granting it intersected with the person that passport names,
+// is the passport granting it intersected with the contact that passport names,
 // and any member's for a reader who may not change one. `undefined` means the
 // row draws a picker instead.
 function roleAnswer(
@@ -390,17 +388,17 @@ function MemberVerbs({
   return (
     <OverflowMenu label={t("users.rowActions", { name: member.display_name })}>
       {canMintLink && (
-        <Button small disabled={pending} onClick={onMintLink}>
+        <Button disabled={pending} onClick={onMintLink}>
           {t("users.link.action")}
         </Button>
       )}
       {canDeactivate && (
-        <Button small disabled={pending} onClick={onDeactivate}>
+        <Button disabled={pending} onClick={onDeactivate}>
           {t("users.deactivate")}
         </Button>
       )}
       {canReactivate && (
-        <Button small disabled={pending} onClick={onReactivate}>
+        <Button disabled={pending} onClick={onReactivate}>
           {t("users.reactivate")}
         </Button>
       )}
@@ -414,14 +412,16 @@ function MemberVerbs({
 // flight is the ordinary first state of every seat, and painting a whole
 // column of new colleagues amber tells an admin something is wrong when
 // nothing is. Warn is kept for the states somebody has to act on.
-function statusTone(status: string): "success" | "warn" | "danger" | undefined {
+function statusTone(
+  status: string,
+): "success" | "warning" | "danger" | undefined {
   switch (status) {
     case "active":
       return "success";
     case "invited":
       return undefined;
     default:
-      return "warn";
+      return "warning";
   }
 }
 
@@ -615,14 +615,14 @@ function MemberRow({
           </>
         }
       />
-      {/* Same vocabulary as the invite dialog's refusal: a failed role change or
-          deactivation is the surface saying something is wrong, and it takes
-          the row's full width rather than wedging itself between the controls
-          that caused it. */}
+      {/* The invite dialog's vocabulary, at the row's full width. The interval
+          under it belongs to the WRAPPER: a notice owns no layout. */}
       {error && (
-        <Callout tone="danger" live="alert" className="users-member-error">
-          {error}
-        </Callout>
+        <div className="users-member-error">
+          <Callout tone="danger" kind="outcome" title={t("users.notSaved")}>
+            {error}
+          </Callout>
+        </div>
       )}
       <ConfirmModal
         open={confirmOff}
@@ -641,10 +641,10 @@ function MemberRow({
       >
         {/* Deactivating the agent seat is a posture an operator is entitled to
             take, so it stays offered — and the generic body (signed out, sessions
-            revoked) describes a person rather than an identity that signs in
+            revoked) describes a colleague rather than an identity that signs in
             nowhere. The agent body's job is to say what does NOT stop: scheduled
             extension jobs keep running, because a tick acts as the job it is. */}
-        <p className="t-caption">
+        <p>
           {t(
             member.is_agent
               ? "users.deactivateAgentConfirmBody"

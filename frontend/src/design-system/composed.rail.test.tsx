@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
-import { RecordView } from "./composed";
+import { RecordView } from "./recordview";
 
 afterEach(cleanup);
 
 // The rail says who wrote before a reader reads a word: a change the agent
-// made carries the indigo mark, a change a person made the hollow one, and a
+// made carries the indigo mark, a change a contact made the hollow one, and a
 // thing that was said the solid one. Held on the class the sheet colours by.
 describe("the timeline's rail marks who wrote", () => {
-  it("draws an agent's change indigo, a person's hollow, and an exchange solid", () => {
+  it("draws an agent's change indigo, a contact's hollow, and an exchange solid", () => {
     const { container } = render(
       <RecordView
         name="Anna Weber"

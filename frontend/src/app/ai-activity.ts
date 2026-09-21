@@ -8,7 +8,7 @@ import { api } from "../api/client";
 import { useModelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { throwProblem } from "../screens/common";
-import { displayedKinds } from "./ai-activity-lines";
+import { displayedKinds } from "./ai-activity-speak";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
 
@@ -20,7 +20,7 @@ const POLL_IDLE_MS = 30_000;
  * How long this tab's own ask stays reported after its request ended.
  *
  * A model call that answers in a tenth of a second is still the agent doing
- * something a person asked for, and a light that appears and disappears inside
+ * something a contact asked for, and a light that appears and disappears inside
  * one animation frame is a light nobody sees. This is the same floor the
  * ticker's lines are given (`LINGER_MS` in agentrail-ticker.ts) and for the
  * same reason: long enough to register, short enough that the report is never
@@ -101,6 +101,16 @@ export type AiActivity = Readonly<{
   /** Occurrences that settled since local midnight, newest first. */
   recent: readonly AiActivityItem[];
   /**
+   * Whether a read of the feed has actually ANSWERED.
+   *
+   * The three lists above coalesce an absent read to empty, which is the right
+   * default for anything that counts them and the wrong one for anything that
+   * would SAY so: "nothing has finished today" claims a day nobody read. A
+   * surface that draws an empty state needs the two apart, and nothing else in
+   * the shape can tell them apart.
+   */
+  answered: boolean;
+  /**
    * What went wrong today — failed and degraded runs, newest first.
    *
    * Beside `recent` rather than filtered out of it, and the difference is the
@@ -125,7 +135,7 @@ export type AiActivity = Readonly<{
 }>;
 
 /**
- * What the AI is doing for this person, polled while somebody is looking.
+ * What the AI is doing for this contact, polled while somebody is looking.
  *
  * ONE read over one projection: a scheduled run and a document reading arrive
  * through the same feed, so a new kind of AI work never adds a call here.
@@ -203,7 +213,7 @@ export function useAiActivity(): AiActivity {
   // Both EDGES of an ask, read immediately rather than waited for: the request
   // leaving is when the occurrence appears, and the request answering is when
   // it settles. Polling alone would show each of those up to a poll late, which
-  // for the short tasks a person triggers and then watches is most of the run.
+  // for the short tasks a contact triggers and then watches is most of the run.
   //
   // On `open` rather than on the lingering flag above, because the linger is a
   // presentation floor and this is a read: waiting it out would put the settled
@@ -239,15 +249,16 @@ export function useAiActivity(): AiActivity {
   // off the body: a 200 whose shape is not the one the contract promises is
   // another absent read, and reaching into it for a length is how the rail's
   // whole section throws instead of reporting nothing.
-  const answered = query.data;
-  const running = answered?.running ?? NOTHING;
-  const recent = answered?.recent ?? NOTHING;
-  const faults = answered?.faults ?? NOTHING;
+  const feed = query.data;
+  const running = feed?.running ?? NOTHING;
+  const recent = feed?.recent ?? NOTHING;
+  const faults = feed?.faults ?? NOTHING;
   const asking = useLingeringAsk(open, recent[0]?.id);
   return {
     running,
     recent,
     faults,
+    answered: feed !== undefined,
     // STALLED is not working. The server derives that state for an occurrence
     // whose own source says it should have finished by now, and the chrome that
     // reads `working` pulses to say the AI is busy — so counting a stalled item

@@ -61,9 +61,14 @@ export type StageStep = {
 
 /**
  * `label` names the group: what this ladder is a ladder OF. `hint` is the one
- * line under it — how the record got where it is, or what a step will ask for
- * before it happens. Both surfaces that had one kept it; the deal never had a
- * hint and now can.
+ * line under it — how the record got where it is, what a step will ask for
+ * before it happens, or why none of them can be taken. Both surfaces that had
+ * one kept it; the deal never had a hint and now can.
+ *
+ * A refusal belongs there when the page has no sentence of its own to point at:
+ * drawn once under the ladder and given an id, it is what every rung's
+ * `reasonId` names — which is how a ladder refused for one cause says it once
+ * rather than under each rung in turn.
  */
 export function StageLadder({
   label,
@@ -110,7 +115,6 @@ export function StageLadder({
               </span>
             ) : (
               <Button
-                small
                 variant="ghost"
                 data-testid={step.testId}
                 disabled={step.disabled}

@@ -42,6 +42,11 @@ type Definition interface {
 	AuditVerb() string
 	// DefaultJSON is the value a read resolves to when no row exists.
 	DefaultJSON() (json.RawMessage, error)
+	// MachineryAppliedEntry reports whether this entry is admitted to the
+	// ungated machinery read. It is on the interface so a batched reader can
+	// ask the same question ApplyTx asks, of a definition whose value type it
+	// does not know.
+	MachineryAppliedEntry() bool
 	// ValidateJSON checks a candidate value, decoding it to the entry's own
 	// type first. A value that cannot decode is invalid, not zero.
 	ValidateJSON(json.RawMessage) error
@@ -154,6 +159,10 @@ func (e *Entry[T]) Key() string { return e.key }
 
 // Object is the RBAC object gating this setting.
 func (e *Entry[T]) Object() string { return e.object }
+
+// MachineryAppliedEntry answers the question ApplyTx asks, for a caller holding
+// the entry as a Definition rather than as its own type.
+func (e *Entry[T]) MachineryAppliedEntry() bool { return e.machineryApplied }
 
 // AuditVerb is the action a change to this setting writes to audit_log.
 func (e *Entry[T]) AuditVerb() string { return e.verb }

@@ -190,22 +190,6 @@ func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
 	return run, nil
 }
 
-// MirrorRunInFlight reports whether a mirror-connector run is recorded
-// as running. On its own it is NOT proof of liveness — a cancelled
-// request leaves the row behind — so it is read together with the
-// flip's advisory lock (compose's FlipImportProbe).
-func MirrorRunInFlight(ctx context.Context, tx pgx.Tx) (bool, error) {
-	var running bool
-	if err := tx.QueryRow(
-		ctx,
-		`SELECT EXISTS (SELECT 1 FROM import_run WHERE connector = $1 AND status = $2)`,
-		ConnectorMirror, StatusRunning,
-	).Scan(&running); err != nil {
-		return false, fmt.Errorf("migration: checking for a running mirror import: %w", err)
-	}
-	return running, nil
-}
-
 // LookupIdentity resolves an external id to the native row a previous
 // (or the current) run landed for it. The engine-owned map is the ONLY
 // authority for "already imported": the rows' own source/source_system

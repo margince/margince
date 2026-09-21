@@ -42,7 +42,20 @@ func (d replyDrafter) loadVoice(ctx context.Context) draftvoice.Context {
 // the deterministic anti-AI floor: detect → one critic retry → sanitize →
 // on surviving violations fall back to the plain draft and record the
 // failure as a rejected learning signal.
+//
+// It PROPAGATES its model failures — unlike loadVoice, recordVoiceDraft and
+// recordVoiceRejection below, which are best-effort and log. Three of its four
+// exits return an error, and the containment for all three is the caller's:
+// DraftEmailWithProvenance answers with the DETERMINISTIC draft, not with a
+// retry that drops the profile. Read as best-effort, the error return looks
+// vestigial and the caller's degrade looks removable — and removing it turns
+// every transient model failure into a failed draft_reply.
 func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data replyActivityData, voice draftvoice.Context) (replyDraft, *int, *string, error) {
+	// Every model call in this lane is ABOUT the message being answered, and
+	// the request carries that message's text. Named here rather than at each
+	// of the four calls below, so the critic retry and the fallback draft
+	// cite the same record the first attempt did.
+	ctx = ai.WithSubject(ctx, ids.From[ids.ActivityKind](anchor).Ref(), "")
 	if !voice.OK {
 		draft, err := d.completeChecked(ctx, replyDraftSystem, data, nil)
 		return draft, nil, nil, err
@@ -61,7 +74,16 @@ func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data 
 			return block(fence) + draftvoice.Feedback(violations)
 		}
 		retried, retryErr := d.complete(ctx, data, withFeedback)
-		if retryErr == nil {
+		if retryErr != nil {
+			// This is the one call in the lane that goes to d.complete rather
+			// than completeChecked, so draftRetryLog never sees it: unlogged,
+			// the failure is recorded nowhere at all. Keeping the first draft
+			// is the right answer — the re-check below still decides whether
+			// it may be served — but that decision is then made on a retry
+			// nobody can see happened.
+			d.logger().WarnContext(ctx, "voice critic retry failed; keeping the first draft with its violations",
+				"err", retryErr, "violations", len(violations))
+		} else {
 			draft = retried
 		}
 	}

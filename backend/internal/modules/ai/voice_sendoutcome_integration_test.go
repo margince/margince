@@ -189,7 +189,8 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 
 	callCtx := principal.WithCorrelationID(
 		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor),
-		ids.NewV7())
+		ids.NewV7(),
+	)
 	return draftFixture{workspace: workspace, profile: profile, signal: signal, draftRef: draftRef, actor: actor, ctx: callCtx}
 }
 
@@ -261,7 +262,8 @@ func (e *sendOutcomeEnv) readSignal(t *testing.T, id ids.UUID) signalRow {
 		       qualifies_as_source, retention_until, version, updated_at
 		FROM voice_learning_signal WHERE id = $1`, id).Scan(
 		&row.outcome, &row.similarity, &row.finalText, &row.finalCapturedBy,
-		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.updatedAt); err != nil {
+		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.updatedAt,
+	); err != nil {
 		t.Fatal(err)
 	}
 	return row
@@ -299,7 +301,7 @@ func (e *sendOutcomeEnv) countAudits(t *testing.T, signal ids.UUID) int {
 
 // auditedFinalCapturedBy returns the human the audit row's "after" state names
 // as the one who closed this signal. The trail exists to attribute a judgment
-// of the machine's words to a person, so the field has to be READABLE from the
+// of the machine's words to a contact, so the field has to be READABLE from the
 // audit row, not only from the domain row it describes.
 func (e *sendOutcomeEnv) auditedFinalCapturedBy(t *testing.T, signal ids.UUID) string {
 	t.Helper()
@@ -335,7 +337,7 @@ func (e *sendOutcomeEnv) emittedOutcome(t *testing.T, profile ids.UUID) string {
 // An unedited send is the owner accepting the machine's draft: the outcome
 // is recorded with full similarity, the audit + outbox rows commit with
 // it, and NO correspondence text is persisted — final_text stays NULL
-// because this row carries no person linkage, so Art. 17 erasure can never
+// because this row carries no contact linkage, so Art. 17 erasure can never
 // reach it and only the 180-day sweep would.
 func TestRecordSendOutcomeAcceptsAnUneditedSend(t *testing.T) {
 	env := setupSendOutcomeStore(t)

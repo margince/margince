@@ -31,8 +31,42 @@ import { textsOf } from "./waits";
  * outlives the guard fails here, naming itself, rather than being measured
  * mid-flight.
  */
+// How long a finite animation is given to land before the assertions read the
+// page. Longer than the design system's own arrivals — the Select's open is
+// ~140ms, the longest here — and short enough that a PERPETUAL animation is
+// still reported by the assertion below rather than hidden by the wait.
+const ANIMATION_LANDING_MS = 500;
+
 async function settleAnimations(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  // Reduced motion stops the NEXT animation; it cannot call off one already in
+  // flight. The design system's Select drives its open through the Web
+  // Animations API, gated by usePrefersReducedMotion() AT RENDER TIME — so a
+  // test that clicks the control and then emulates has already started an
+  // animation the media query has no say over, and CSS `animation: none` does
+  // not govern a WAAPI one the way it governs a keyframe.
+  //
+  // So the in-flight ones are given a moment to LAND, at their resting frame,
+  // which is what a settled page means. The race is the bound: a perpetual
+  // animation never resolves `finished`, and waiting on one would turn the
+  // finding below into a timeout that names nothing. What survives this wait is
+  // exactly what the assertion is about.
+  //
+  // allSettled rather than all: a cancelled animation REJECTS `finished`, and
+  // that is a settled outcome here — the animation is over, which is all this
+  // waits for.
+  await page.evaluate(async (budgetMs) => {
+    const landing = document
+      .getAnimations()
+      .filter((animation) => animation.playState === "running")
+      .map((animation) => animation.finished);
+    await Promise.race([
+      Promise.allSettled(landing),
+      new Promise((resolve) => {
+        window.setTimeout(resolve, budgetMs);
+      }),
+    ]);
+  }, ANIMATION_LANDING_MS);
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
@@ -93,7 +127,7 @@ test.beforeEach(async ({ page }) => {
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
 
 const CORE_SCREENS = [
-  "brief",
+  "home",
   "contacts",
   "companies",
   "deals",
@@ -227,12 +261,12 @@ async function pageOverflow(page: Page): Promise<string[]> {
  * The one account affordance, at the foot of the sidebar.
  *
  * Scoped to the top bar's trailing cluster rather than found by name alone:
- * WHERE it is is half of what the restructure promises — the person sits at the
+ * WHERE it is is half of what the restructure promises — the contact sits at the
  * end of the session strip, opposite the trail that says where you are — and a
  * second account control appearing anywhere else would still satisfy a bare
  * name lookup. The name itself is deliberately a substring: the trigger carries
  * who is signed in into its accessible name (WCAG 2.5.3), so it reads
- * "<person> — Konto".
+ * "<contact> — Konto".
  */
 function accountTrigger(page: Page) {
   return page.locator(".topbar .topbar-trail").getByRole("button", {
@@ -240,47 +274,77 @@ function accountTrigger(page: Page) {
   });
 }
 
-// The canonical ten, in order: Brief alone, then records / work / intelligence.
-// Not upstream's set: Automations is not a destination here (it is set-and-forget
-// configuration on Settings → AI). One label differs from its route id on
-// purpose — `deals` presents as Pipeline — so this asserts what a person reads,
-// not what the router matches.
+// The translated destinations are an acceptance expectation, independent of
+// NAV_GROUPS: importing production's list would only prove it renders itself.
+// Home owns the work queue; the queue opens in a drawer rather than occupying
+// a second sidebar destination.
+const primaryDestinations = [
+  "Startseite",
+  "Kontakte",
+  "Firmen",
+  "Leads",
+  "Deals",
+  "Projekte",
+  "Filter & Ansichten",
+  "Analytics",
+  "Margince fragen",
+];
+
+// settleAnimations' own case, because the gap it closes is invisible to every
+// other test in this file: none of them touches a WAAPI-driven control before
+// sweeping, so all of them pass whether or not an in-flight animation is
+// settled.
 //
-// The count and the list are both spelled out on purpose. NAV_GROUPS in
-// src/app/nav.ts is the source of the rail; deriving this from it would assert
-// only that the rail renders itself, so a destination added there is meant to
-// fail here until somebody says what a person now reads and where.
-//
-// Heute LEADS the work group and is the only door to the work that waits on a
-// person: decisions to answer, tasks to finish and duplicates to merge are lanes
-// inside it rather than rows of their own.
-test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
+// The design system's Select drives its ~140ms open through the Web Animations
+// API and reads prefers-reduced-motion AT RENDER TIME, so a test that clicks
+// the control and then emulates has started something the media query cannot
+// call off. Reproduced here directly rather than through a screen, so the case
+// is about the harness and not about whichever surface happens to carry a
+// Select today.
+test("the settle waits for an animation already in flight to land", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
+  // Anchored before the animation starts, because the page's OWN boot carries
+  // finite work — the Core's fallback dress transitions its opacity out over
+  // 300ms once the canvas takes over — and a settle that ran during boot would
+  // be reporting that rather than the animation this case is about.
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
+  await settleAnimations(page);
+
+  await page.evaluate(() => {
+    // What Select does: a finite WAAPI animation on a real element, started
+    // BEFORE reduced motion is emulated. `animation: none` does not govern it.
+    document.body.animate([{ opacity: 1 }, { opacity: 0.5 }], {
+      duration: 140,
+      iterations: 1,
+    });
+  });
+
+  // Without the landing wait this fails on that animation, mid-flight, which is
+  // the flake #5298 recorded — and axe would have read the frame it was at.
+  await settleAnimations(page);
+});
+test("AC-shell-1: the rail renders the primary destinations in order", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
   // evaluateAll never waits — anchor on the rendered count first, or the
   // read races the auth splash and sees an empty rail.
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
   // while the foot's Settings door rides the same `.navitem` geometry without
   // being one of them.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
   const labels = await page
     .locator("nav.rail .navlevel a.navitem")
     .evaluateAll((links) =>
       links.map((link) => link.getAttribute("aria-label")),
     );
-  expect(labels).toEqual([
-    "Briefing",
-    "Personen",
-    "Firmen",
-    "Leads",
-    "Filter & Ansichten",
-    "Arbeitsliste",
-    "Pipeline",
-    "Projekte",
-    "Analytics",
-    "Margince fragen",
-  ]);
+  expect(labels).toEqual(primaryDestinations);
 });
 
 test("AC-shell-2: exactly one rail item is active and tracks the route", async ({
@@ -290,7 +354,7 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Pipeline",
+    "Deals",
   );
   await page.locator('nav.rail a[aria-label="Analytics"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
@@ -309,7 +373,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   page,
 }) => {
   await page.goto("/#/contacts");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Personen");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kontakte");
 
   await page.goto("/#/contacts/p-anna");
   const heading = page.getByRole("heading", { level: 1 });
@@ -318,7 +382,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
-  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Personen");
+  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
   await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
     "Anna Weber",
   );
@@ -341,21 +405,21 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await page.locator("body").click();
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
-  // "Deals" is the route id, not the label the rail shows (Pipeline) — typing the
-  // domain word still has to land on the screen, or a relabeled destination
-  // becomes unreachable for everyone who knows it by its old name.
-  await input.fill("Deals");
+  // "Pipeline" is the word this row used to print, kept as its alias — typing it
+  // still has to land on the screen, or a relabeled destination becomes
+  // unreachable for everyone who knows it by its old name.
+  await input.fill("Pipeline");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#\/deals$/);
 });
 
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
@@ -367,10 +431,12 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
 });
 
-// The account menu carries what belongs to the PERSON rather than to the page:
+// The account menu carries what belongs to the CONTACT rather than to the page:
 // the one door into Settings, the appearance they read in, and the way out. It
 // is the product's only settings door now — the sidebar carries destinations and
 // nothing else — so a second one appearing anywhere is the regression, not a
@@ -382,7 +448,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
 test("features/10 §7: the account menu holds the settings door, the appearance choice and the way out", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
@@ -400,20 +466,18 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(theme).toHaveAttribute("aria-expanded", "false");
   await theme.click();
   const choices = page.locator(".accountsub");
-  await expect(choices.getByRole("menuitemradio")).toHaveCount(3);
-  await choices.getByRole("menuitemradio", { name: "Dunkel" }).click();
+  await expect(choices.getByRole("radio")).toHaveCount(3);
+  await choices.getByRole("radio", { name: "Dunkel" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(
-    choices.getByRole("menuitemradio", { name: "Dunkel" }),
-  ).toHaveAttribute("aria-checked", "true");
+  await expect(choices.getByRole("radio", { name: "Dunkel" })).toBeChecked();
 });
 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
-  await expect(page.locator('nav.rail a[aria-label="Personen"]')).toBeVisible();
-  // The language is a preference of this person rather than a destination, so it
+  await page.goto("/#/home");
+  await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
+  // The language is a preference of this contact rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
   // the three places it can take you and nothing that changes a setting. Three
   // locales ship, so the control is a list rather than a toggle — a toggle
@@ -511,10 +575,16 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   // card for this deal is on the board", not "this text is the card".
   const boardCard = page.locator('[data-deal="d-fleet"]');
   await expect(boardCard).toBeVisible();
-  // The card IS the link — `data-deal` sits on the anchor — and the role is
-  // asserted rather than assumed, because that is the behaviour the change
-  // bought: a middle-click and an open-in-new-tab on a deal card.
-  await expect(boardCard).toHaveRole("link");
+  // The card HOLDS the link rather than being one. It carries two
+  // destinations now — the deal and the company behind it — and an anchor
+  // inside an anchor is invalid markup the browser unnests, so the deal's link
+  // is stretched over the card instead of wrapped around it.
+  //
+  // The link is still asserted, because it is the behaviour worth having: a
+  // middle-click and an open-in-new-tab on a deal card. It is asserted on the
+  // anchor that carries it, which is what a reader actually presses.
+  const boardLink = boardCard.getByRole("link", { name: /Fleet retrofit/ });
+  await expect(boardLink).toHaveAttribute("href", /#\/deals\/d-fleet/);
   await expect(boardCard).toContainText("Fleet retrofit");
   await page.getByRole("button", { name: "Tabelle" }).click();
   // The board is gone, so its card locator is the proof the view swapped
@@ -921,8 +991,8 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
 
 // The decision queue lives on Today now, one decision at a time: the focus lane
 // draws the staged proposal through the same ApprovalRow the retired Decisions
-// screen used, so the verb a person presses is unchanged and this asserts it
-// where a person now finds it.
+// screen used, so the verb a contact presses is unchanged and this asserts it
+// where a contact now finds it.
 test("AC-inbox: the staged decision is on the day's queue", async ({
   page,
 }) => {
@@ -1025,9 +1095,9 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // The audit log is the trail that proves the consent, retention and DSR
   // surfaces were honoured, on its own page because it answers to `audit_log`
   // where those answer to the consent registry and the retention policy. It
-  // names the PERSON behind each entry (AuditEntryLine, PD-002): the
+  // names the CONTACT behind each entry (AuditEntryLine, PD-002): the
   // signed-in human reads "Du", and a machine acting under someone's authority
-  // reads as THAT PERSON with the tool as a qualifier. An agent's own id is
+  // reads as THAT CONTACT with the tool as a qualifier. An agent's own id is
   // never the label — attribution exists so somebody can be asked about a
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
@@ -1066,9 +1136,9 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Agent passports are a credential the PERSON holds, so they live on the
+  // Agent passports are a credential the COLLEAGUE holds, so they live on the
   // "Your agents" entry beside autonomy and the tool catalog — not on the
-  // organization's AI page, which is spend, model prices and automations.
+  // company's AI page, which is spend, model prices and automations.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
   const revoked = page.locator('[data-passport="pp-2"]');
@@ -1113,8 +1183,13 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   const body = request.postDataJSON();
   // the wording the visitor SAW is byte-for-byte what was submitted
   expect(body.consent.wording).toBe(shownWording);
-  expect(body.consent.purpose_id).toBeTruthy();
   expect(body.consent.policy_version).toBeTruthy();
+  // And NO purpose id. Purpose ids are per-installation uuids minted at seed
+  // time with no anonymous read of them, so anything an anonymous page put here
+  // would be a value it was never given — which is what a stand-in id did, on
+  // every installation, until the door learned to resolve its own lane. The
+  // page names the wording it showed and nothing the server already knows.
+  expect(body.consent.purpose_id).toBeUndefined();
   // Exact: this build transmits nothing, so the card confirms the slot and
   // promises nothing beyond it. A substring is satisfied by a longer sentence
   // that does promise something, which is the claim this copy had removed.
@@ -1174,7 +1249,7 @@ test("AC-create-1: a contact is created from the list and lands on its 360", asy
   page,
 }) => {
   await page.goto("/#/contacts");
-  await page.getByRole("button", { name: "Neue Person" }).click();
+  await page.getByRole("button", { name: "Neuer Kontakt" }).click();
   await page.getByLabel("Vollständiger Name").fill("Peter Neu");
   // Email is now a repeatable row group (P-15): add a row, then fill it.
   await page.getByRole("button", { name: "E-Mail hinzufügen" }).click();
@@ -1211,326 +1286,13 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await stageSelect.click();
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
-  await page.getByLabel("Wert").fill("480");
+  // By ROLE, not by label: the rail's "Auswertung" group carries a real
+  // accessible name, and a label lookup for "Wert" matches inside it. The
+  // amount is a number input, so the role is what the query meant all along
+  // and a group can never answer to it.
+  await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Anlegen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
-});
-
-// B-EP09.23: the mock-overlay lane — proving the system-of-record mode swap
-// end to end against `mockApi(page, { sor: "overlay" })` rather than a real
-// HubSpot account. Each test re-seeds on top of the global (native)
-// beforeEach — Playwright resolves the most-recently-registered route first,
-// so the overlay routes take over for that test only.
-test.describe("B-EP09.23: overlay mode", () => {
-  test("AC-overlay-1: the mode chip marks an overlay installation (and is absent under the native seed)", async ({
-    page,
-  }) => {
-    // The native seed (this file's global beforeEach) never renders it.
-    await page.goto("/#/brief");
-    await expect(page.locator(".badge-accent")).toHaveCount(0);
-
-    // Same route both times, so a plain goto would be a same-document hash
-    // navigation the SPA never reloads for — reload forces the fresh /me
-    // read that actually picks up the newly-registered overlay routes.
-    await mockApi(page, { sor: "overlay" });
-    await page.reload();
-    const chip = page.getByRole("link", {
-      name: "Diese Installation liest Datensätze aus einem HubSpot-Spiegel statt aus nativen Tabellen. Öffne Einstellungen → Integrationen, um die Verbindung zu verwalten.",
-    });
-    await expect(chip).toBeVisible();
-    await expect(chip).toHaveText("Liest aus HubSpot");
-    // Integrations lives under the admin segment, which is the address the
-    // chip has to mint: the personal Connections entry now holds only a
-    // reader's own mailbox and network.
-    await expect(chip).toHaveAttribute("href", "#/settings/integrations");
-  });
-
-  test("AC-overlay-2: the card shows connection, sync rows and budget band", async ({
-    page,
-  }) => {
-    await mockApi(page, { sor: "overlay" });
-    await page.goto("/#/settings/integrations");
-    await expect(page.getByText("Verbunden", { exact: true })).toBeVisible();
-    await expect(page.getByText(/eu1/)).toBeVisible();
-    // Per-object sync rows: person + organization landed fresh; deal is still
-    // catching up — three distinct rows, not a collapsed summary.
-    await expect(page.getByText("person", { exact: true })).toBeVisible();
-    await expect(page.getByText("organization", { exact: true })).toBeVisible();
-    await expect(page.getByText("deal", { exact: true })).toBeVisible();
-    await expect(page.getByText("Aktuell")).toHaveCount(2);
-    await expect(page.getByText("Sync ausstehend")).toBeVisible();
-    // "Gesund" bands twice: the REST budget window and the per-second Search
-    // window, both seeded "ok".
-    await expect(page.getByText("Gesund")).toHaveCount(2);
-    // The server's own "can't attribute a share" sentinel prints verbatim —
-    // never a computed substitute.
-    await expect(page.getByText(/~unknown/)).toBeVisible();
-  });
-
-  test("AC-overlay-3: an ordinary edit succeeds in overlay mode — the mirror write-back seam accepts it", async ({
-    page,
-  }) => {
-    // Update writes back through the incumbent seam and succeeds
-    // (overlay/provider_writes.go) — so the deal 360's Edit affordance
-    // renders in overlay too (deals.tsx's DealBadges) and this drives it for
-    // real: click Edit, change the name, save, and see the 360 render the
-    // saved value — the same click path AC-deal-* exercises in native mode.
-    await mockApi(page, { sor: "overlay" });
-    await page.goto("/#/deals/d-fleet");
-    await page.getByTestId("edit-record").click();
-    const name = page.getByLabel("Deal-Name *");
-    // Wait for the modal's own prefill to land before typing over it — the
-    // form seeds its fields from the fetched record on open, and typing
-    // into it before that commits races the prefill, not the write-back
-    // this test is about.
-    await expect(name).toHaveValue("Fleet retrofit");
-    await name.fill("Fleet retrofit — expanded scope");
-    await page.getByRole("button", { name: "Speichern" }).click();
-    // The record's own heading, by ROLE — which is what "the edit landed"
-    // means, and what stays true when a panel, a toast or a breadcrumb also
-    // carries the name. The agent line in the rail already does: it says what
-    // it is reading, so a bare text match finds the saved name twice and
-    // cannot say which of them is the 360 rendering the write. A record page
-    // has exactly one level-1 heading and it is the record's own (AC-shell-1k).
-    //
-    // `exact`, because the assertion is about the WHOLE name: `name` matches by
-    // substring otherwise, and a heading still reading the pre-edit name would
-    // pass every renaming assertion whose new name merely extends the old one.
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: "Fleet retrofit — expanded scope",
-        exact: true,
-      }),
-    ).toBeVisible();
-  });
-
-  test("AC-overlay-4: an unsupported verb explains itself rather than failing", async ({
-    page,
-  }) => {
-    // Every refusable write affordance (advance/edit/merge/promote/
-    // disqualify/create/log-activity) is deliberately HIDDEN once the SPA
-    // knows it's in overlay mode — so there is no click path to a refused
-    // write verb in a freshly-loaded overlay session; a naive "click it and
-    // assert the copy" test is unwritable, and forcing one (or reading the
-    // raw response body off a direct fetch) would only prove the mock
-    // answers 422, not that the SPA does anything with it.
-    //
-    // The copy exists for exactly one real scenario: the stale-["me"]-cache
-    // race. A screen mounts while the installation is still native (its
-    // write affordances render, since the overlay gate reads the cached
-    // ["me"].system_of_record.mode); another process then flips the
-    // installation to overlay server-side. The SPA's own ["me"] read has a
-    // 5-minute staleTime and nothing here triggers a refetch of it, so the
-    // board still renders as native and the drag is still live — but the
-    // request now lands on a server that refuses it. That's reproduced here:
-    // load the board under the native seed (global beforeEach), THEN layer
-    // the overlay mock on top with no intervening navigation/reload/
-    // invalidate, so only the SERVER side (this mock's route table) has
-    // flipped — the mounted screen's own state has not.
-    await page.goto("/#/deals");
-    await expect(page.locator('[data-deal="d-fleet"]')).toBeVisible();
-    await mockApi(page, { sor: "overlay" });
-
-    // d-fleet (stage s2, "Proposal") → s3 ("Negotiation"), both open-semantic
-    // stages: an immediate advance, no confirm modal in the way (AC-deal-6
-    // covers the terminal-stage confirm path separately).
-    const card = page.locator('[data-deal="d-fleet"]');
-    const target = page.locator('[data-stage="s3"]');
-    await card.dragTo(target);
-
-    // The board never refetched ["me"] — the Advance affordance was real,
-    // still native as far as the SPA knew — but the request the server
-    // actually received hit the (now overlay) mock's refused
-    // POST /deals/{id}/advance, and the SPA renders the localized refusal
-    // (overlay.refused), not the raw sentinel and not a generic failure.
-    await expect(
-      page.getByText(
-        "Beim Lesen aus HubSpot nicht verfügbar — der Spiegel kann diesen Schreibvorgang nicht ausführen.",
-      ),
-    ).toBeVisible();
-    // The deal never actually moved (the mutation errored, so nothing
-    // invalidated the deals list) — the card is still in its origin column,
-    // not silently accepted into a state the mirror never agreed to.
-    await expect(
-      page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
-    ).toBeVisible();
-  });
-
-  test("overlay mode: an unsupported READ dial (list sort/filter) explains itself rather than failing", async ({
-    page,
-  }) => {
-    // Distinct from AC-overlay-4 above: sort/filter is a refused READ dial
-    // (unsupported_in_overlay_mode, compose/overlayread.go), not a refused
-    // write verb — a different server code path with its own copy
-    // (list.overlayReadOnly / t("overlay.filterUnsupported")), so it gets its
-    // own test rather than being folded into "an unsupported verb". The list
-    // toolbar never offers the controls in overlay (so the user never gets
-    // to click one that can only fail); it explains the gap in place
-    // instead. Search and the archived toggle are honestly still served, so
-    // only the sort/filter half disappears.
-    await mockApi(page, { sor: "overlay" });
-    await page.goto("/#/contacts");
-    await expect(
-      page.getByText("Sortierung und Filter laufen über HubSpot"),
-    ).toBeVisible();
-    // A PREFIX, because the dial has two names: it reads "Sortieren" with no
-    // order in force and "Sortierung: <Spalte>" with one. An assertion that no
-    // dial is offered has to be unable to miss either, or it passes by failing
-    // to look — which is what an equality test on the bare verb started doing
-    // the day the dial began naming the order it holds.
-    await expect(page.getByRole("combobox", { name: /^Sortier/ })).toHaveCount(
-      0,
-    );
-    await expect(page.getByRole("searchbox")).toBeVisible();
-    await expect(
-      page.getByRole("checkbox", { name: "Archivierte anzeigen" }),
-    ).toBeVisible();
-  });
-
-  test("AC-overlay-5: sync now reports a queued sweep", async ({ page }) => {
-    await mockApi(page, { sor: "overlay" });
-    await page.goto("/#/settings/integrations");
-    await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
-    await expect(page.getByText(/Abgleich eingereiht/)).toBeVisible();
-    // Distinct from the per-object "Backfill abgeschlossen" copy already on
-    // this page — this is specifically checking the sweep itself never
-    // claims to be finished.
-    await expect(page.getByText("Abgleich abgeschlossen")).toHaveCount(0);
-  });
-
-  test("AC-overlay-6: disconnect names the purge and the app returns to native", async ({
-    page,
-  }) => {
-    await mockApi(page, { sor: "overlay" });
-    await page.goto("/#/settings/integrations");
-    // The chip is the only accent badge that is a link; the mapping card on
-    // this tab wears the same badge on the row for the signed-in user, so an
-    // unqualified `.badge-accent` would be counting two different things.
-    const chip = page.locator("a.badge-accent");
-    await expect(chip).toBeVisible();
-    await page.getByRole("button", { name: "Trennen" }).click();
-    await expect(
-      page.getByText(
-        "Dies löscht die gespiegelten Daten und schaltet die Organisation zurück auf native Datensätze.",
-        { exact: false },
-      ),
-    ).toBeVisible();
-    // Two buttons now share the label (the card's own trigger, already
-    // clicked, and the modal's confirm) — the modal's is the last in the DOM,
-    // the same convention overlay.test.tsx's disconnect test uses.
-    const confirms = page.getByRole("button", { name: "Trennen" });
-    await confirms.last().click();
-    // The whole cache is invalidated on success (/me included) — the chip
-    // (driven purely off /me) disappears once the app re-reads native.
-    await expect(chip).toHaveCount(0);
-    // The connection row survives disconnect (revoked, never deleted —
-    // backend/internal/modules/overlay/teardown.go's revokeConnection), so
-    // the card's own re-read must show that, not vanish or revert to
-    // "active": the revoked badge plus a working Reconnect affordance.
-    await expect(page.getByText("Widerrufen")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Erneut verbinden" }),
-    ).toBeVisible();
-  });
-
-  test("AC-overlay-8: an admin unmaps a user and maps them back, and each write moves the card", async ({
-    page,
-  }) => {
-    // The whole round trip, not just the request: the seed's mapping handlers
-    // mutate their own state, so each assertion below is about what the write
-    // DID. A mock answering a bare 200 would let this pass having changed
-    // nothing, which is the one way a mapping workflow must not be able to
-    // look correct.
-    await mockApi(page, { sor: "overlay" });
-    await page.goto("/#/settings/integrations");
-
-    // Seeded state: the admin's own seat, matched to a HubSpot owner by email.
-    await expect(page.getByText("Über E-Mail zugeordnet")).toBeVisible();
-
-    await page.getByRole("button", { name: "Zuordnung aufheben" }).click();
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Zuordnung aufheben" })
-      .click();
-
-    // Unmapping is confirm-first and its own standing decision: the row now
-    // reports the admin's block, and the email match it replaced is gone.
-    await expect(page.getByText("Von Admin aufgehoben")).toBeVisible();
-    await expect(page.getByText("Über E-Mail zugeordnet")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Zuordnen" }).click();
-    await page.getByLabel("HubSpot-Nutzer suchen").fill("Lars");
-    await page
-      .getByRole("button", { name: "Lars Brandt · lars@brandt.example" })
-      .click();
-
-    // Mapping back is the admin's manual override, never a re-derived email
-    // match — the card has to say which of the two it is.
-    await expect(page.getByText("Manuell gesetzt")).toBeVisible();
-    await expect(page.getByText("Von Admin aufgehoben")).toHaveCount(0);
-  });
-
-  test("AC-overlay-7: every 360 panel renders its unavailable state, never an error box", async ({
-    page,
-  }) => {
-    await mockApi(page, { sor: "overlay" });
-    const unavailable = "In der HubSpot-Ansicht nicht verfügbar";
-    const errorBox = "Konnten diese Ansicht nicht laden.";
-
-    // Person 360 (overview tab, the default): timeline, relationship
-    // strength, the who-knows-them card, and the related-records context panel
-    // each read a native capability the mirror doesn't hold. The interaction
-    // projection is folded from natively captured participants, so an overlay
-    // workspace has none — and "nobody knows them" would be a lie rather than
-    // an empty answer.
-    await page.goto("/#/contacts/p-anna");
-    // The RECORD's own identity block, which is the page's one h1 — the shell's
-    // page head yields to it on a record route and prints the trail instead.
-    // `exact`, because the whole name is the assertion: `name` matches by
-    // substring, so without it a heading carrying the name plus anything else
-    // would pass as the record this navigation asked for.
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
-    ).toBeVisible();
-    // The person page V2 states a withheld section in its own vocabulary rather
-    // than the SoR-specific copy the other 360s use, so what is asserted here is
-    // what it actually promises today: the page renders, and no panel degrades
-    // into an error box. That it cannot yet say "HubSpot does not carry this" —
-    // a different fact from "you may not see this" — is issue #882.
-    await expect(page.getByTestId("person-readings")).toBeVisible();
-    await expect(page.getByText(errorBox)).toHaveCount(0);
-
-    // Deal 360: timeline, coverage, offers, the context panel, and the buying
-    // committee map. Coverage joins the interaction projection too, so it is
-    // unavailable for the same reason rather than reporting a clean deal.
-    //
-    // FIVE. Stakeholders is not a panel of its own — the seats and the findings
-    // about them are one card, and that card states the overlay case itself.
-    // The fifth is the committee MAP, which draws how the deal is threaded and
-    // where cover is missing: a working surface rather than a second listing of
-    // the same seats, and it refuses under overlay in the same words for the
-    // same reason. A picture of who is missing cannot be drawn from a store
-    // that does not carry the seats.
-    await page.goto("/#/deals/d-fleet");
-    // `exact`, and this is the case that shows why: another test in this file
-    // renames the same deal to "Fleet retrofit — expanded scope", and a
-    // substring match would accept that heading as this one.
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: "Fleet retrofit",
-        exact: true,
-      }),
-    ).toBeVisible();
-    // The stakeholder card is in the record's details column, which starts
-    // folded. Open it before counting that card alongside the four overview
-    // refusals; a closed pane is intentionally absent from the accessibility
-    // tree. The switch carries the word Details rather than a bare glyph.
-    await page.getByRole("button", { name: "Details" }).click();
-    await expect(page.getByText(unavailable)).toHaveCount(5);
-    await expect(page.getByText(errorBox)).toHaveCount(0);
-  });
 });
 
 test.describe("§3.8: 390px mobile", () => {
@@ -1568,13 +1330,18 @@ test.describe("§3.8: 390px mobile", () => {
   // 12vh with a 320px list had about two rows left under a software keyboard.
   // Its rows are thumb targets, which is the half a screenshot cannot assert.
   test("the palette is a workable sheet at 390px", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
     await expect(
       page.getByRole("dialog", { name: "Befehlspalette" }),
     ).toBeVisible();
+    // The sheet ARRIVES — it scales up from 0.96 (atoms.css) — and a row
+    // measured while it is still growing reports the size the box is passing
+    // through rather than the size a thumb meets. 44 × 0.964 is 42.4, which is
+    // what this read before the wait.
+    await settleAnimations(page);
     expect(await pageOverflow(page)).toEqual([]);
     const rows = page.locator(".palette-row");
     await expect(rows.first()).toBeVisible();
@@ -1631,10 +1398,16 @@ test.describe("§3.8: 390px mobile", () => {
       // draws none — an inline decision offers several equal answers — the
       // LOWEST control is measured instead, because a row is only workable
       // when the reader can reach all of it.
+      //
+      // Read off the ROW, never from a list of the containers it groups its
+      // verbs into. A selector naming those is a claim about which groups
+      // exist, and a renamed group leaves it matching nothing: this case then
+      // reports "the first row drew no action to measure" for a row that draws
+      // four, which is under-recognition and reads exactly like a pass. The
+      // rank is excluded because it opens the pane rather than answering the
+      // work; a title link is not a `.btn` and is not a verb.
       const controls = Array.from(
-        row.querySelectorAll(
-          ".worklist-row-verbs button, .worklist-row-verbs a, .worklist-row-dispositions button, .worklist-row-decision button",
-        ),
+        row.querySelectorAll("button:not(.worklist-rank-select), a.btn"),
       ).filter((element) => element.getBoundingClientRect().height > 0);
       if (controls.length === 0) {
         return null;
@@ -1678,17 +1451,20 @@ test.describe("§3.8: 390px mobile", () => {
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
     // Nothing to answer until it is opened: the queue draws no verdict button.
-    await expect(page.getByRole("button", { name: "Übernehmen" })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("button", { name: "E-Mail freigeben", exact: true }),
+    ).toHaveCount(0);
 
     await page.getByRole("button", { name: "Entscheiden" }).first().click();
 
-    const decision = page.getByRole("dialog");
+    const decision = page.getByRole("dialog", {
+      name: "Deine Entscheidung",
+      exact: true,
+    });
     await expect(decision).toBeVisible();
     // The same card the record page draws, with its verdicts on it.
     await expect(
-      decision.getByRole("button", { name: "Übernehmen" }),
+      decision.getByRole("button", { name: "E-Mail freigeben", exact: true }),
     ).toBeVisible();
   });
 
@@ -1739,7 +1515,8 @@ test.describe("§3.8: 390px mobile", () => {
     const tall = await page.evaluate(() => {
       return Array.from(document.querySelectorAll(".worklist-list li"))
         .map((row) => {
-          const decides = row.querySelector(".worklist-row-decision") !== null;
+          const decides =
+            row.querySelector("[data-testid='worklist-row-decision']") !== null;
           return {
             height: row.getBoundingClientRect().height,
             ceiling: decides ? 208 : 176,
@@ -1757,74 +1534,109 @@ test.describe("§3.8: 390px mobile", () => {
     expect(tall).toEqual([]);
   });
 
-  // The queue is WORKABLE with a thumb, not merely present.
-  //
-  // What stood here asserted that one text node was visible at 390px, and it
-  // passed for as long as the screen was unusable: the row is a three-column
-  // line whose verbs never yield width, so the title column was squeezed to a
-  // few characters while three buttons held their full size beside it. A test
-  // that cannot tell that from a working screen is part of the defect.
-  //
-  // So this measures the row itself — every row, not the first — and the
-  // targets a rep presses.
-  test("S-E11.2: the day's queue is workable with a thumb at 390px", async ({
-    page,
-  }) => {
-    await page.goto("/#/worklist");
-    await page.waitForLoadState("networkidle");
-    await expect(
-      page.getByText(/Send the follow-up to Anna Weber/).first(),
-    ).toBeVisible();
+  // A THUMB, not a mouse aimed at a phone-sized window. Every touch floor in
+  // this product is declared under `@media (pointer: coarse)`, and Chromium
+  // resolves that off touch emulation rather than off the viewport — so a run
+  // without it measures the desktop sizes and reports them as a phone's.
+  test.describe("under a coarse pointer", () => {
+    test.use({ hasTouch: true });
 
-    // Nothing runs off the side. The row wraps instead of pushing the page
-    // wider, which is the difference between a stacked layout and a squeezed
-    // one.
-    expect(await pageOverflow(page)).toEqual([]);
-
-    // The text column is wide enough to read a sentence in. Half the viewport
-    // is a low bar deliberately: it is the one this layout FAILED, at roughly a
-    // quarter, and a ceiling tuned to today's rows would break on tomorrow's
-    // longer verb.
-    const narrow = await page.evaluate(() => {
-      const floor = 390 / 2;
-      return Array.from(document.querySelectorAll(".worklist-row-text"))
-        .map((element) => ({
-          width: element.getBoundingClientRect().width,
-          text: (element.textContent ?? "").slice(0, 40),
-        }))
-        .filter(({ width }) => width < floor)
-        .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
-    });
-    expect(narrow).toEqual([]);
-
-    // Every verb in the QUEUE is a real target — the rows and the focus card
-    // above them, which is the work this screen exists for. The focus CTA is a
-    // full-size `.btn` and already clears the floor through `--control-h`; it
-    // is measured anyway, because a rule that holds only where somebody
-    // remembered to look is not a floor.
+    // The queue is WORKABLE with a thumb, not merely present.
     //
-    // The readings strip above is deliberately NOT measured. Its "open this
-    // lane" link is a 24px target on a phone and genuinely too small, but it
-    // belongs to the design system's StatCard rather than to this screen —
-    // fixing it here would size every reading card in the product from the
-    // worklist's stylesheet. Filed as #3961.
+    // What stood here asserted that one text node was visible at 390px, and it
+    // passed for as long as the screen was unusable: the row is a three-column
+    // line whose verbs never yield width, so the title column was squeezed to a
+    // few characters while three buttons held their full size beside it. A test
+    // that cannot tell that from a working screen is part of the defect.
     //
-    // Visible controls only: the page carries collapsed panels whose buttons
-    // lay out at zero height, and those are not targets a thumb can miss.
-    const small = await page.evaluate(() => {
-      const controls = document.querySelectorAll(
-        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button",
-      );
-      return Array.from(controls)
-        .filter((element) => element.getBoundingClientRect().height > 0)
-        .map((element) => ({
-          height: element.getBoundingClientRect().height,
-          label: (element.textContent ?? "").trim(),
-        }))
-        .filter(({ height }) => height < 44)
-        .map(({ height, label }) => `${label}: ${Math.round(height)}px`);
+    // So this measures the row itself — every row, not the first — and the
+    // targets a rep presses.
+    test("the day's queue is workable with a thumb at 390px", async ({
+      page,
+    }) => {
+      await page.goto("/#/worklist");
+      await page.waitForLoadState("networkidle");
+      await expect(
+        page.getByText(/Send the follow-up to Anna Weber/).first(),
+      ).toBeVisible();
+
+      // Nothing runs off the side. The row wraps instead of pushing the page
+      // wider, which is the difference between a stacked layout and a squeezed
+      // one.
+      expect(await pageOverflow(page)).toEqual([]);
+
+      // The text column is wide enough to read a sentence in. Half the viewport
+      // is a low bar deliberately: it is the one this layout FAILED, at roughly a
+      // quarter, and a ceiling tuned to today's rows would break on tomorrow's
+      // longer verb.
+      const narrow = await page.evaluate(() => {
+        const floor = 390 / 2;
+        return Array.from(document.querySelectorAll(".worklist-row-text"))
+          .map((element) => ({
+            width: element.getBoundingClientRect().width,
+            text: (element.textContent ?? "").slice(0, 40),
+          }))
+          .filter(({ width }) => width < floor)
+          .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
+      });
+      expect(narrow).toEqual([]);
+
+      // Every control this screen is FOR is a real target: the queue's rows and
+      // the readings strip above them, whose "Open →" is the way into a lane.
+      // The strip used to be left out of this sweep on the argument that its
+      // door belongs to the design system's StatCard rather than to this screen
+      // — true of where the fix goes, and no reason for the screen to stop
+      // measuring a control a rep presses on it.
+      //
+      // TWO censuses, not one list, and each reports what it FOUND before it
+      // reports what was too small. A selector that matches nothing returns an
+      // empty list of offenders — the same value a clean screen returns — so a
+      // renamed class would leave this sweep measuring half the page and still
+      // green. Counting first is what makes a region going missing a red.
+      //
+      // Both spellings of the strip are named: this route draws the Brief's
+      // readings today and the worklist's own strip is the same component in
+      // the same place, so whichever is present is the one a rep presses.
+      //
+      // Visible controls only: the page carries collapsed panels whose buttons
+      // lay out at zero height, and those are not targets a thumb can miss.
+      const targets = await page.evaluate(() => {
+        const census = (scopes: readonly string[]) => {
+          const found = scopes.flatMap((scope) =>
+            Array.from(
+              document.querySelectorAll(
+                `${scope} button, ${scope} a.btn, ${scope} .link-button`,
+              ),
+            ),
+          );
+          // One control can answer to two of those selectors (a `.link-button`
+          // that is a `<button>`), and a census that counted it twice would
+          // report a page busier than it is.
+          const visible = Array.from(new Set(found)).filter(
+            (element) => element.getBoundingClientRect().height > 0,
+          );
+          return {
+            counted: visible.length,
+            small: visible
+              .map((element) => ({
+                height: element.getBoundingClientRect().height,
+                label: (element.textContent ?? "").trim(),
+              }))
+              .filter(({ height }) => height < 44)
+              .map(({ height, label }) => `${label}: ${Math.round(height)}px`),
+          };
+        };
+        return {
+          readings: census([".brief-readings", ".worklist-readings"]),
+          queue: census([".worklist-list"]),
+        };
+      });
+
+      expect(targets.readings.counted).toBeGreaterThan(0);
+      expect(targets.readings.small).toEqual([]);
+      expect(targets.queue.counted).toBeGreaterThan(0);
+      expect(targets.queue.small).toEqual([]);
     });
-    expect(small).toEqual([]);
   });
 
   // The bar's centre cell and the panel it opens, neither of which exists above
@@ -1839,11 +1651,11 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel opens clear of the bar and fits 390px", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    await page.getByRole("button", { name: "Expand the agent panel" }).click();
+    await page.getByRole("button", { name: "Agentenbereich öffnen" }).click();
     const panel = page.locator(".arpanel");
     await expect(panel).toBeVisible();
     await settleAnimations(page);
@@ -1862,6 +1674,30 @@ test.describe("§3.8: 390px mobile", () => {
     await expectNoAaViolations(page, "brief — the agent's panel (390px)");
   });
 
+  // AC-shell-8, restated against the taskbar. It described the record-scoped Ask
+  // composer on a floating button, which the agent surfaces no longer offer —
+  // but the sentence that button carried is a promise about what the agent can
+  // REACH, and row scope still bounds it. Deleting the control deleted the
+  // promise from the product and left the property in place, which is the wrong
+  // direction: a guarantee nobody is told about is one nobody can rely on.
+  //
+  // So the criterion is now about the claim rather than about its container,
+  // and it is asserted on the surface a reader meets the agent on.
+  test("AC-shell-8: the agent's panel states what the agent can reach", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+
+    await page.getByRole("button", { name: "Agentenbereich öffnen" }).click();
+    await expect(
+      page
+        .locator(".arpanel")
+        .getByText("Margince liest nur, was du sehen kannst."),
+    ).toBeVisible();
+  });
+
   // The whole keyboard path this surface has: it opens from the bar, Escape
   // closes it from inside, and focus lands back on the control that opened it
   // rather than on <body> — from where the next Tab starts at the top of a page
@@ -1869,18 +1705,18 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel closes on Escape and hands focus back to the orb", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    const orb = page.getByRole("button", { name: "Expand the agent panel" });
+    const orb = page.getByRole("button", { name: "Agentenbereich öffnen" });
     await orb.click();
     await expect(page.locator(".arpanel")).toBeVisible();
 
     await page.keyboard.press("Escape");
     await expect(page.locator(".arpanel")).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "Expand the agent panel" }),
+      page.getByRole("button", { name: "Agentenbereich öffnen" }),
     ).toBeFocused();
   });
 });
@@ -1893,10 +1729,10 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
   test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
   test("no AA violations with the agent's panel open", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
-    await page.getByRole("button", { name: "Expand the agent panel" }).click();
+    await page.getByRole("button", { name: "Agentenbereich öffnen" }).click();
     await expect(page.locator(".arpanel")).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the agent's panel (390px, dark)");
@@ -1919,8 +1755,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
  * So the undecided findings are PRINTED, with axe's own reason attached, on a
  * line a human reading the run can see. That is a real gap and it is stated as
  * one: an incomplete `color-contrast` is a colour nobody has verified, and the
- * only thing standing behind those today is the token law in tokens.css — meta
- * text takes `--textMeta`, and `--textTertiary` is for marks.
+ * only thing standing behind those today is the token law in tokens.css — there
+ * are two neutral inks, `--textPrimary` and `--textSecondary`, and nothing
+ * quieter than the second.
  */
 // What a colour-contrast check carries when it could MEASURE the pair. Axe
 // types `data` as unknown and fills it per check, so a rule that is not
@@ -2032,8 +1869,8 @@ async function expectNoAaViolations(page: Page, screen: string) {
     const painted = await page.evaluate(() => ({
       dataTheme: document.documentElement.getAttribute("data-theme"),
       prefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
-      textMeta: getComputedStyle(document.documentElement)
-        .getPropertyValue("--textMeta")
+      textSecondary: getComputedStyle(document.documentElement)
+        .getPropertyValue("--textSecondary")
         .trim(),
       bgPage: getComputedStyle(document.documentElement)
         .getPropertyValue("--bgPage")
@@ -2177,7 +2014,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // every axe pass above measures a page with the dialog closed, so the
   // surface a reader reaches from any screen in the product was unmeasured.
   test("no AA violations with the command palette open", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
@@ -2217,7 +2054,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     // runs in it.
     await page.getByRole("button", { name: "Weitere Aktionen" }).click();
     await expect(
-      page.getByRole("button", { name: "Neue Person" }),
+      page.getByRole("button", { name: "Neuer Kontakt" }),
     ).toBeVisible();
     await expectNoAaViolations(page, "contacts (folded header)");
   });
@@ -2261,7 +2098,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // the fixed nav surface — so it gets its own test rather than reshaping that
   // list for one parameterised route.
   //
-  // This mock harness has no /organizations/{id}/360 route, and its fallback
+  // This mock harness has no /companies/{id}/360 route, and its fallback
   // answers an empty PAGE with 200 rather than 404 — so the read the record
   // depends on for its strip, tabs bodies and rail succeeds with a body that
   // carries none of the fields a 360 promises. The page renders in its own
@@ -2299,9 +2136,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   }) => {
     await page.goto("/#/leads/l-1");
     await page.waitForLoadState("networkidle");
-    await page
-      .getByRole("button", { name: "Qualifizieren", exact: true })
-      .click();
+    // The header's own verb, by testid: the rail's deal slice offers the same
+    // act, and the name alone no longer says which control was pressed.
+    await page.getByTestId("lead-qualify").click();
     await page
       .getByRole("dialog")
       .getByRole("button", { name: /^Qualifizieren/ })
@@ -2314,10 +2151,11 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     // and reaching it STOPS the withdrawal — a control that walks out from
     // under the focus ring three and a half seconds after a reader tabbed to it
     // is a control they cannot use (WCAG 2.2.1).
-    // A BUTTON, not a link: `EntityRef` opens the record through the app's own
-    // hash router rather than by navigating, so what the message carries is a
-    // control. Which is the point — it is focusable either way.
-    const carried = said.getByRole("button").first();
+    // A LINK: `EntityRef` is an anchor over the app's own hash route, so the
+    // record opens the ways a link does — a new tab, a bookmark, the keyboard.
+    // Which is the point here — it is focusable either way, and this test is
+    // about whether a keyboard reader can reach it and keep it.
+    const carried = said.getByRole("link").first();
     await carried.focus();
     await expect(carried).toBeFocused();
     await page.waitForTimeout(4000);
@@ -2394,7 +2232,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
         await expect(
           page.getByRole("heading", {
             level: 1,
-            name: "Bei Margince anmelden",
+            name: "Hallo, ich bin Margince.",
           }),
         ).toBeVisible();
         const overflow = await page.evaluate(
@@ -2479,7 +2317,10 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       await expect(
-        page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
+        page.getByRole("heading", {
+          level: 1,
+          name: "Hallo, ich bin Margince.",
+        }),
       ).toBeAttached();
       // The class, not the tag: see the note beside the other `.auth-task`
       // locator above — one `<main>` per screen, and it belongs to the frame.
@@ -2503,15 +2344,26 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     });
   }
 
-  // §6.4 / §12: one h1, and it is the TASK. A surface whose h1 is the system
-  // talking and whose h2 is "sign in" has inverted its own hierarchy — and the
-  // identity region's statement is set large enough that promoting it to a
-  // heading is a tempting mistake.
-  test("has exactly one h1, and it is the task", async ({ page }) => {
+  // §12: one h1, and it is the GREETING. What this surface is ABOUT is the
+  // system introducing itself; whichever of the four outcomes the frame is
+  // carrying is a section under that name, so the sign-in card's own title is an
+  // h2 — and `.sr-only`, because the greeting next to it has already said what
+  // the page is. Both halves are asserted: a view that promotes its card back to
+  // h1 leaves two, and one that drops the card's title leaves the form unnamed.
+  //
+  // The accessible NAME, not the text: the greeting is typed, so two of its
+  // three layers are `aria-hidden` copies — one holding the final height open,
+  // one carrying the partial string — and `textContent` would read all three.
+  test("has exactly one h1, and it is the greeting", async ({ page }) => {
     await page.goto("/");
     const headings = page.getByRole("heading", { level: 1 });
     await expect(headings).toHaveCount(1);
-    await expect(headings).toHaveText("Bei Margince anmelden");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
+    ).toBeAttached();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Bei Margince anmelden" }),
+    ).toBeAttached();
   });
 
   // The Core is decoration (WDS-CORE-4): every state it shows is also stated in
@@ -2593,7 +2445,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     // The rail-less surface has no shell to check for; its own h1 is the proof
     // the screen rendered, and the block above already asserts that.
     await expect(
-      page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
+      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "login");
@@ -2606,8 +2458,8 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // means the same thing on an idle laptop and on a CI box running six other jobs,
 // which no reading of a clock does.
 //
-// This case bounds `GET /people/{id}`, and the title says so because that is the
-// read it holds. The heading itself comes from `/people/{id}/360` — a record
+// This case bounds `GET /contacts/{id}`, and the title says so because that is the
+// read it holds. The heading itself comes from `/contacts/{id}/360` — a record
 // head that draws before ITS own read returns is the wider claim, and #2864
 // carries it, product half first.
 //
@@ -2616,7 +2468,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // shards. `make bench-mobile` owns the 300ms figure as a p95 over 20 samples on
 // a throttled Fast-3G profile — the harder of the two conditions, so a budget
 // that holds there holds unthrottled by construction.
-test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
+test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
   page,
 }) => {
   // Held, not slowed: the read cannot have answered when the assertion below
@@ -2632,7 +2484,7 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   // itself. `readStarted` is what tells the two apart.
   let readStarted = false;
   let readAnswered = false;
-  await page.route("**/people/p-anna", async (route) => {
+  await page.route("**/contacts/p-anna", async (route) => {
     readStarted = true;
     await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;
@@ -2645,10 +2497,10 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   // and the assertion times out as a phantom failure (twice-seen CI flake).
   await page.waitForLoadState("networkidle");
   // The list row that carries the name, by ROLE: the contacts list draws a
-  // person as a table row, and a bare text match would also take any other
+  // contact as a table row, and a bare text match would also take any other
   // element that legitimately repeats the name (the agent panel's spoken line,
   // a bulk-select label) without saying which one it clicked. Substring on
-  // purpose — a row's accessible name is every cell of it joined, so the person's
+  // purpose — a row's accessible name is every cell of it joined, so the contact's
   // name is a fragment of it by construction and `exact` could never match.
   const row = page.getByRole("row", { name: "Anna Weber" });
   await expect(row).toBeVisible();
@@ -2678,7 +2530,7 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
 // naming a criterion whose text nobody here can read would assert whatever I
 // guessed it said.
 test.describe("filters and views", () => {
-  // Every clause below is authored the way a person authors one — through the
+  // Every clause below is authored the way a contact authors one — through the
   // picker — rather than by seeding a tree in code. "A human can build this" is
   // the claim, and a tree set in code is one no human went through.
   async function authorIndustryIs(page: Page) {
@@ -2705,7 +2557,7 @@ test.describe("filters and views", () => {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
 
     // The field picker is the SERVER's vocabulary, not a list this screen keeps:
-    // `industry` and `lifecycle` are organization fields, `tag` is the leaf that
+    // `industry` and `lifecycle` are company fields, `tag` is the leaf that
     // is an EXISTS over a join rather than a column, and none of them is
     // spelled anywhere in the frontend.
     await page.getByRole("combobox", { name: "Feld" }).click();
@@ -2862,21 +2714,156 @@ test.describe("filters and views", () => {
       name: "Welche Datensätze gefiltert werden",
     });
     await expect(
-      objects.getByRole("button", { name: "Geschäfte", pressed: true }),
+      objects.getByRole("button", { name: "Deals", pressed: true }),
     ).toBeVisible();
 
-    // "Personen": `filters.tab.contacts` is a different KEY from the nav's,
-    // which is why it was read as out of the People ruling's reach — but the
-    // key is not the word, and the catalog moved this one too. The tab says
+    // "Kontakte": `filters.tab.contacts` is a different KEY from the nav's, and
+    // a key is not a word — the catalog moved this one with it. The tab says
     // what every other surface says.
-    await objects.getByRole("button", { name: "Personen" }).click();
+    await objects.getByRole("button", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
     await expect(
-      objects.getByRole("button", { name: "Personen", pressed: true }),
+      objects.getByRole("button", { name: "Kontakte", pressed: true }),
     ).toBeVisible();
+  });
+});
+
+test.describe("stage automation, in German", () => {
+  // The rule and the report the page draws. Routed rather than seeded, because
+  // what is under test is the German surface over a KNOWN state — a suspension
+  // with a reason, and a transition nobody has decided about — and neither is a
+  // state the seed happens to produce.
+  const SUSPENDED_REASON =
+    "ein Zug hat einen Datensatz außerhalb des eigenen Workspace erreicht";
+
+  async function stubStageAutomation(
+    page: Page,
+    options: { suspended?: boolean } = {},
+  ) {
+    const suspended = options.suspended ?? true;
+    await page.route("**/stage-automation/report**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          window_days: 30,
+          data: [
+            {
+              pipeline_id: "p1",
+              from_stage_id: "s1",
+              to_stage_id: "s2",
+              from_stage_name: "Erstkontakt",
+              to_stage_name: "Angebot",
+              reviewed: 240,
+              proposed: 0,
+              expired: 0,
+              superseded: 0,
+              accepted_clean: 236,
+              accepted_edited: 2,
+              rejected: 2,
+              auto_applied: 0,
+              unsafe: 1,
+              observation_days: 34,
+              clean_acceptance_rate: 0.98,
+              edit_rate: 0.01,
+              rejection_rate: 0.01,
+              // UNDER the 1% ceiling. The rule below is suspended for a SAFETY
+              // defect, which needs no volume — so the record has to be good,
+              // or the page would rightly draw "not earned yet" instead of the
+              // undo window this test is about.
+              unsafe_rate: 0.004,
+              evidence_kinds: [],
+            },
+          ],
+        }),
+      });
+    });
+    await page.route("**/stage-automation/policies/**", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: "{}",
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [
+            {
+              id: "r1",
+              pipeline_id: "p1",
+              from_stage_id: "s1",
+              to_stage_id: "s2",
+              mode: "auto",
+              clean_acceptance_threshold: 0.95,
+              correction_reversal_threshold: 0.01,
+              min_reviewed: 200,
+              min_observation_days: 28,
+              window_days: 30,
+              undo_window_hours: 72,
+              version: 3,
+              ...(suspended
+                ? {
+                    suspended_at: "2026-09-03T10:00:00Z",
+                    suspended_reason: SUSPENDED_REASON,
+                  }
+                : {}),
+            },
+          ],
+        }),
+      });
+    });
+  }
+
+  test("a suspended transition says in German why it stopped, and promises no undo while it is stopped", async ({
+    page,
+  }) => {
+    await stubStageAutomation(page);
+    await page.goto("/#/settings/stageautomation");
+    await page.waitForLoadState("networkidle");
+
+    // The switch carries the transition's own stage names, so an admin reading
+    // three rules can tell which move each one governs.
+    await expect(
+      page.getByRole("switch", { name: /Erstkontakt → Angebot/ }),
+    ).toBeVisible();
+
+    // The product's own reason, in the reader's language and unabridged. It is
+    // the entire basis for deciding whether to start the transition again.
+    await expect(page.getByText(SUSPENDED_REASON)).toBeVisible();
+
+    // A SUSPENDED rule promises no undo window, because it applies nothing —
+    // and a screen saying "Rückgängig für 72 h" beside "Margince hat das
+    // gestoppt" would offer an undo for moves that are not being made.
+    await expect(page.getByText(/Rückgängig für/)).toBeHidden();
+
+    // The way back is a deliberate act with its own confirmation, not a
+    // toggle: lifting a safety stop by mis-click is the failure this guards.
+    await page.getByRole("button", { name: "Wieder starten" }).click();
+    await expect(
+      page.getByText(/überspringt die Schwelle nicht/),
+    ).toBeVisible();
+  });
+
+  test("a running transition says in German how long a move can be taken back", async ({
+    page,
+  }) => {
+    await stubStageAutomation(page, { suspended: false });
+    await page.goto("/#/settings/stageautomation");
+    await page.waitForLoadState("networkidle");
+
+    // "Rückgängig", with the window a contact actually has. A screen that
+    // offered undo without saying how long it lasts leaves somebody to find
+    // out by trying it too late.
+    await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
+    // And nothing about a stop, because there is none.
+    await expect(page.getByText("Margince hat das gestoppt")).toBeHidden();
   });
 });

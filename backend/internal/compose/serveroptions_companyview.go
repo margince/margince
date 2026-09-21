@@ -23,10 +23,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
-	"github.com/margince/margince/backend/internal/compose/orgbrief"
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -44,15 +44,16 @@ import (
 // guarantee stays a dependency rather than a rule somebody remembers.
 func WithAccountDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		svc := accountdraft.NewService(s.org360Svc, brain).
+		svc := accountdraft.NewService(s.company360Svc, brain).
 			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithDossier(s.orgDossierSvc).
+			WithEmailSummaries(emailRows(pool)).
+			WithDossier(s.companyDossierSvc).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
-		s.accountDraftHandlers = accountdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
+		s.accountDraftHandlers = accountdraft.NewHandlers(svc)
 	}
 }
 
-// WithAccountBrief binds the summarize lane both of the company view's
+// WithCompanyBrief binds the summarize lane both of the company view's
 // grounded-prose surfaces are written by — the standing brief and the
 // prepared "Ask Margince" questions — and the routing version that
 // identifies the binding in every cached brief's fingerprint.
@@ -62,10 +63,11 @@ func WithAccountDraft(brain completer) Option {
 // tells the reader which of the two they have. routingVersion rides the
 // fingerprint so re-pointing this lane rewrites cached briefs instead of
 // leaving text attributed to a model that no longer writes it.
-func WithAccountBrief(brain completer, routingVersion string) Option {
+func WithCompanyBrief(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, brain, routingVersion, time.Now)
-		s.orgBriefHandlers = orgbrief.NewHandlers(s.orgBriefSvc, s.sorDispatch.isOverlay)
+		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, brain, routingVersion, time.Now).
+			WithEmailSummaries(emailRows(pool))
+		s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
 	}
 }
 
@@ -75,7 +77,7 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 //
 // Unlike the growth fit's, this lane is an improvement rather than a
 // precondition: the floor already describes the company from the same fields,
-// one restated value per sentence. What the model adds is prose a person reads
+// one restated value per sentence. What the model adds is prose a reader reads
 // before a call instead of a list they skim.
 //
 // It rebuilds the shared handler set from BOTH services for the reason
@@ -84,9 +86,10 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 // holds. Either option may run first.
 func WithCompanyDossier(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now)
-		s.orgDossierHandlers = orgdossier.NewHandlers(
-			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+		s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, brain, routingVersion, time.Now).
+			WithEmailSummaries(emailRows(pool))
+		s.companyDossierHandlers = companydossier.NewHandlers(
+			s.companyDossierSvc, s.companyGrowthFitSvc)
 	}
 }
 
@@ -106,10 +109,11 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 // longer holds.
 func WithGrowthFit(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
-			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now)
-		s.orgDossierHandlers = orgdossier.NewHandlers(
-			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+		s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
+			pool, s.contactsStore, offeringConfirmed(s.contactsStore), brain, routingVersion, time.Now).
+			WithEmailSummaries(emailRows(pool))
+		s.companyDossierHandlers = companydossier.NewHandlers(
+			s.companyDossierSvc, s.companyGrowthFitSvc)
 	}
 }
 
@@ -127,7 +131,7 @@ func WithMeetingBriefWriter(brain completer) Option {
 			return
 		}
 		s.meetingBriefHandlers = meetingbrief.NewHandlers(
-			s.meetingBriefSvc.WithLane(brain), s.sorDispatch.isOverlay)
+			s.meetingBriefSvc.WithLane(brain))
 	}
 }
 
@@ -162,10 +166,10 @@ func WithDealStatusWriter(brain completer, routingVersion string) Option {
 // absent instead of guessing.
 func WithRoleProposals(brain completer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		if s.org360Svc == nil {
+		if s.company360Svc == nil {
 			return
 		}
-		s.org360Handlers = s.WithRoleLane(brain)
+		s.company360Handlers = s.WithRoleLane(brain)
 	}
 }
 
@@ -178,10 +182,10 @@ func WithRoleProposals(brain completer) Option {
 // floor, because the only thing left to read one from is the job title.
 func WithIntroRequestDraft(brain completer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		if s.org360Svc == nil {
+		if s.company360Svc == nil {
 			return
 		}
-		s.org360Handlers = s.WithIntroLane(brain)
+		s.company360Handlers = s.WithIntroLane(brain)
 	}
 }
 

@@ -75,21 +75,47 @@ func (RecordFieldsResource) Resources(context.Context) []mcp.Resource {
 	}}
 }
 
+// RecordFieldsReader is the seam the describe tool reads through.
+type RecordFieldsReader interface {
+	RecordFieldsDocument(ctx context.Context) (json.RawMessage, error)
+}
+
 // ReadResource composes the document. An unknown URI answers ErrNotFound,
 // matching how every other read on this surface treats something the caller
 // cannot see.
-func (RecordFieldsResource) ReadResource(_ context.Context, uri string) (mcp.ResourceContents, error) {
+func (r RecordFieldsResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != RecordFieldsURI {
 		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
 	}
-	body, err := json.Marshal(recordFieldsDocument())
+	body, err := r.RecordFieldsDocument(ctx)
 	if err != nil {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: rendering the record write vocabulary: %w", err)
+		return mcp.ResourceContents{}, err
 	}
 	return mcp.ResourceContents{URI: uri, MIMEType: mimeApplicationJSON, Text: string(body)}, nil
 }
 
-var _ mcp.ResourceProvider = RecordFieldsResource{}
+// RecordFieldsDocument is the ONE composition, read by the resource above and
+// by describe_record_fields — so the two doors cannot drift into two answers to
+// one question.
+//
+// Held by: TestTheRecordFieldsResourceAndTheSeamServeTheSameBytes
+// (internal/modules/agents/recordfieldsdoc_test.go)
+//
+// The context is unused: the document is composed from the contract alone and
+// is the same for every caller in every workspace. It is in the signature
+// because the seam is what a composition root may decorate.
+func (RecordFieldsResource) RecordFieldsDocument(context.Context) (json.RawMessage, error) {
+	body, err := json.Marshal(recordFieldsDocument())
+	if err != nil {
+		return nil, fmt.Errorf("agents: rendering the record write vocabulary: %w", err)
+	}
+	return body, nil
+}
+
+var (
+	_ mcp.ResourceProvider = RecordFieldsResource{}
+	_ RecordFieldsReader   = RecordFieldsResource{}
+)
 
 // recordFieldsDoc is the published shape: one section per WRITE, because the
 // two disagree about more than their field lists. An activity's links are
@@ -174,26 +200,26 @@ func dealPipelineNote(shapes map[datasource.EntityType]reflect.Type) []string {
 
 // relationshipNote says what a relationship needs, because an edge's
 // requirements are per-KIND and invisible from a flat field list: `kind`,
-// `person_id`, `organization_id`, `deal_id` and `project_id` all read as equal
+// `contact_id`, `company_id`, `deal_id` and `project_id` all read as equal
 // optional siblings, and they are not. Which pair is required is decided by the
 // kind and enforced by a database CHECK, so a caller working from names alone
 // sends a plausible pair and gets a shape refusal it could not have predicted.
 //
 // Keyed on an ENDPOINT FIELD, not on the record type, because both shape maps
 // carry relationship — the patch half serves it too. Only the create shape
-// declares `counterparty_org_id`, so that is the honest test for "can the caller
+// declares `counterparty_company_id`, so that is the honest test for "can the caller
 // name an endpoint at all", which is what the pairing rule is about.
 func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
-	if !describesField(shapes, "counterparty_org_id") {
-		// The patch half still owes the reader the pointer, because a person's
+	if !describesField(shapes, "counterparty_company_id") {
+		// The patch half still owes the reader the pointer, because a contact's
 		// employer is the field they will look for first and not find.
-		return "A person's employer is NOT a field here: employment is a relationship, created and " +
+		return "A contact's employer is NOT a field here: employment is a relationship, created and " +
 			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched."
 	}
 	// REQUIRES, not "and rejects any other". The schema's shape CHECKs pin the
 	// pair each kind must have and forbid the endpoints that would contradict it,
 	// but they do not forbid every irrelevant one — an employment edge will accept
-	// a stray counterparty_org_id. Promising more than the constraints deliver
+	// a stray counterparty_company_id. Promising more than the constraints deliver
 	// would be a document a caller could disprove.
 	//
 	// The closing sentence deliberately does NOT say "no read tool serves an
@@ -201,11 +227,11 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	// not advertise one (the contract has no single-relationship GET), and a
 	// document a caller can disprove in one call costs more than the silence it
 	// replaced.
-	return "A person's employer is a relationship, not a field on the person: record_type=relationship " +
-		"with kind=employment, person_id and organization_id. Each kind REQUIRES its own endpoint pair, " +
-		"and a wrong pair is refused by name — employment: person + organization; deal_stakeholder: " +
-		"deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: " +
-		"organization + counterparty_org_id. An edge is not searchable, so keep the id a relationship " +
+	return "A contact's employer is a relationship, not a field on the contact: record_type=relationship " +
+		"with kind=employment, contact_id and company_id. Each kind REQUIRES its own endpoint pair, " +
+		"and a wrong pair is refused by name — employment: contact + company; deal_stakeholder: " +
+		"deal + contact; project_stakeholder: project + contact; partner_of, referred_by and co_sell_with: " +
+		"company + counterparty_company_id. An edge is not searchable, so keep the id a relationship " +
 		"write returns."
 }
 
@@ -312,7 +338,7 @@ func typesWithoutCustomFieldCarriage(shapes map[datasource.EntityType]reflect.Ty
 //
 // The field has always been accepted and inserted, and a task created over
 // this surface still arrived unassigned — because the only ids a caller could
-// obtain were person ids, and a person is a CONTACT. An assistant asked to
+// obtain were contact ids, and a contact is a CONTACT. An assistant asked to
 // give someone work searched the contacts, found a customer with a similar
 // name, and offered that. list_colleagues is what answers the other kind, and
 // this is where a caller filling the field finds out which kind it wants.
@@ -321,7 +347,7 @@ func assigneeNote(shapes map[datasource.EntityType]reflect.Type) []string {
 		return nil
 	}
 	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues " +
-		"answers those, whoami answers your own. A person id is a contact and is refused."}
+		"answers those, whoami answers your own. A contact id is a contact and is refused."}
 }
 
 // transcriptNote says the one value that turns a body into a transcript.
@@ -340,7 +366,7 @@ func transcriptNote(shapes map[datasource.EntityType]reflect.Type) []string {
 		"commitments; any other value stores the text and reads nothing."}
 }
 
-// descriptionNote says what an organization's `description` is FOR, which no
+// descriptionNote says what a company's `description` is FOR, which no
 // shape can show: it is the header's standing answer to what the company sells,
 // and the site read fills it from the company's own website.
 //
@@ -352,7 +378,7 @@ func descriptionNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "description") {
 		return nil
 	}
-	return []string{"An organization's `description` is the header's standing answer to what the " +
+	return []string{"A company's `description` is the header's standing answer to what the " +
 		"company SELLS, and a site read fills it from the company's own website. Omit it rather " +
 		"than summarising a meeting or a document into it; what one conversation covered belongs " +
 		"on that activity."}

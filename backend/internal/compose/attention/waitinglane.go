@@ -25,7 +25,7 @@ import (
 //
 // Its own reader rather than a filter over AtRisk, because a fresh inbound
 // makes a deal LESS quiet: deriving "waiting" from "quiet" loses the newest
-// cases, which are the ones a rep most needs. It also reaches a person with no
+// cases, which are the ones a rep most needs. It also reaches a contact with no
 // deal at all, whom the deal-shaped lanes never see.
 type Waiting interface {
 	// The bool reports that the read was CUT — the lane scanned to its own bound
@@ -106,9 +106,9 @@ type WaitingCustomer struct {
 	Since time.Time
 	// The record the thread is filed under, most specific first. Any may be
 	// zero: a message from a stranger names nobody.
-	PersonID       ids.UUID
-	OrganizationID ids.UUID
-	DealID         ids.UUID
+	ContactID ids.UUID
+	CompanyID ids.UUID
+	DealID    ids.UUID
 	// HasOpenDeal reports whether money this reader can see is still on this
 	// thread. It is what keeps a long wait in execution instead of sending it
 	// to review.
@@ -118,15 +118,27 @@ type WaitingCustomer struct {
 	// headers gives each message its own thread, so this demotes rather than
 	// hides.
 	Engaged bool
-	// AsksNothing says a classifier judged this message to inform rather than
-	// to ask — a report, a receipt, a statement.
+	// Threaded says the message belongs to a conversation, which decides which
+	// dispositions the row may offer: two of the three are keyed on the thread
+	// and a message without one can perform neither. See waitingDispositions.
+	Threaded bool
+	// AddressedElsewhere says every header recipient on this message names
+	// somebody OTHER than this reader — a thread they were copied on, or one on
+	// a record they own. That is real mail and stays on the page; it is simply
+	// not a customer waiting on THEM.
 	//
-	// A BOOLEAN, not the verdict word, and the difference is the point: an
-	// unjudged message and one judged to be asking must rank identically, so
-	// the two cases that leave the ranking alone collapse into one value here.
-	// A verdict string would put activities' vocabulary in this package and give
-	// the queue a second place to spell it.
+	// Phrased as the exception rather than the rule so its ZERO VALUE is the
+	// safe one. A caller that has not resolved the reader's addresses, and a
+	// fixture that says nothing about them, both mean "no evidence this is
+	// somebody else's" — which must not demote a live customer.
+	AddressedElsewhere bool
+	// AsksNothing is an explicit informational verdict. ActionUnconfirmed also
+	// covers missing or conflicting classification; neither claims Focus priority.
 	AsksNothing bool
+	// ConfirmedRequest lets a first message establish an obligation without reply history.
+	ConfirmedRequest bool
+	// ActionUnconfirmed keeps unclassified or conflicting evidence out of Focus.
+	ActionUnconfirmed bool
 	// OwnerID is who owes this reply, resolved by the module from the record
 	// the thread is filed under.
 	//

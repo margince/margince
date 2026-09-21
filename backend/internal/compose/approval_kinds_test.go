@@ -71,7 +71,7 @@ func (stubComms) DraftEmail(context.Context, ids.UUID, string) (string, string, 
 	return "", "", nil
 }
 
-func (stubComms) DraftAccountEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
+func (stubComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
 	return "", "", nil
 }
 
@@ -79,7 +79,7 @@ func (stubComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs) (age
 	return agents.SendEmailResult{}, nil
 }
 
-func (stubComms) SendAccountEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
+func (stubComms) SendCompanyEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
 	return agents.SendEmailResult{}, nil
 }
 
@@ -191,13 +191,12 @@ func TestCollidingEffectKindsAreCoveredByProvenance(t *testing.T) {
 // Every confirm-first row the CONTRACT declares has a decision mapping too —
 // including a verb no tool implements.
 //
-// The registry sweep above walks what is registered, which is why it could not
-// see #484: `connect_incumbent` was declared confirmation_required by an
-// operation with no registered tool at all, so an agent's call cleared the
-// admission gate, reached stageRefusal, found no mapping and answered 403. It
-// was fail-closed and it was also unreachable capability the contract kept
-// advertising — a shape only the generated policy table shows, since that table
-// is the contract's own reading of itself.
+// The registry sweep above walks what is REGISTERED, so it cannot see a verb
+// declared confirmation_required by an operation with no registered tool at
+// all: an agent's call clears the admission gate, reaches stageRefusal, finds
+// no mapping and answers 403. That is fail-closed, and it is also unreachable
+// capability the contract keeps advertising — a shape only the generated policy
+// table shows, since that table is the contract's own reading of itself.
 //
 // There is deliberately NO waiver. A verb that cannot honestly be staged has
 // the wrong annotation, and the fix is `x-agent-access: human-only` in
@@ -420,9 +419,10 @@ func collectStringConsts(file *ast.File, into map[string]string) {
 // gatekit:fixture the value each exported approvals kind constant carries —
 // resolved constant data, not a cost.
 var exportedApprovalKinds = map[string]string{
-	"KindVolumeRelease":     approvals.KindVolumeRelease,
-	"KindScheduledSendHeld": approvals.KindScheduledSendHeld,
-	"KindImportCommit":      approvals.KindImportCommit,
+	"KindVolumeRelease":       approvals.KindVolumeRelease,
+	"KindScheduledSendHeld":   approvals.KindScheduledSendHeld,
+	"KindImportCommit":        approvals.KindImportCommit,
+	"KindCommunicationReview": approvals.KindCommunicationReview,
 }
 
 // crossPackageKinds resolves a kind another module exports and compose stages
@@ -430,11 +430,12 @@ var exportedApprovalKinds = map[string]string{
 // gatekit:fixture the value each cross-package kind constant carries, keyed as
 // written at the call site — resolved constant data, not a cost.
 var crossPackageKinds = map[string]string{
-	"approvals.KindVolumeRelease":     approvals.KindVolumeRelease,
-	"approvals.KindScheduledSendHeld": approvals.KindScheduledSendHeld,
-	"deals.CloseDateCorrectionKind":   deals.CloseDateCorrectionKind,
-	"deals.FollowUpReconcileKind":     deals.FollowUpReconcileKind,
-	"deals.StageProgressionKind":      deals.StageProgressionKind,
+	"approvals.KindVolumeRelease":       approvals.KindVolumeRelease,
+	"approvals.KindScheduledSendHeld":   approvals.KindScheduledSendHeld,
+	"approvals.KindCommunicationReview": approvals.KindCommunicationReview,
+	"deals.CloseDateCorrectionKind":     deals.CloseDateCorrectionKind,
+	"deals.FollowUpReconcileKind":       deals.FollowUpReconcileKind,
+	"deals.StageProgressionKind":        deals.StageProgressionKind,
 }
 
 // isPackageQualifier reports whether an identifier names an imported package
@@ -443,7 +444,7 @@ var crossPackageKinds = map[string]string{
 // until somebody adds it here rather than silently skipped.
 func isPackageQualifier(name string) bool {
 	switch name {
-	case "approvals", "deals", "people", "activities", "agents":
+	case "approvals", "deals", "contacts", "activities", "agents":
 		return true
 	}
 	return false

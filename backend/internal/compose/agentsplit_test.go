@@ -9,16 +9,24 @@ package compose
 // a client that cannot read its own error.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // bufferedFor builds a buffered response already holding a status and headers,
@@ -138,11 +146,11 @@ func (allHumanOwned) HumanOwnedConflicts(_ context.Context, _ string, _ ids.UUID
 // with every field human-owned got a staged approval instead.
 func TestSplitAllHumanOwnedRefusesAnExternallyHeldRecord(t *testing.T) {
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "updatePerson", Access: accessTool, Tool: "update_record", RecordType: recordTypePerson}
-	personID := ids.NewV7()
+	pol := agentPolicy{Op: "updateContact", Access: accessTool, Tool: "update_record", RecordType: recordTypeContact}
+	contactID := ids.NewV7()
 	body := []byte(`{"full_name":"Overwritten"}`)
 
-	req := patchRequest("/v1/people", personID, body)
+	req := patchRequest("/v1/contacts", contactID, body)
 	rec := httptest.NewRecorder()
 	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Fatal("the handler ran — every field was human-owned, so nothing should have auto-executed")
@@ -185,11 +193,11 @@ func (m mixedHumanOwned) HumanOwnedConflicts(context.Context, string, ids.UUID, 
 // that reaches the residue path: before the ordering fix the handler ran first,
 // so this same call answered 422 with the agent-owned half already written.
 func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *testing.T) {
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
 	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
-	req := patchRequest("/v1/organizations", orgID, body)
+	req := patchRequest("/v1/companies", companyID, body)
 	rec := httptest.NewRecorder()
 	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		t.Error("the handler ran — the agent-owned half was written for a call this door then refused, " +
@@ -231,16 +239,16 @@ func TestTheResiduePathRefusesAnExternallyHeldRecordBeforeAnythingIsWritten(t *t
 // redeem — so what has to agree is the STAGED hash and the hash of a keyless
 // retry carrying the same residue.
 func TestAResidueStagedUnderAnIdempotencyKeyIsRedeemableByItsRetry(t *testing.T) {
-	orgID := ids.NewV7()
+	companyID := ids.NewV7()
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "updateOrganization", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
 	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
-	req := operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "", "", body)
+	req := operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "", "", body)
 	req.Header.Set(idempotencyKeyHeader, "01J0-agent-retry-key")
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"id":"` + orgID.String() + `","display_name":"Renamed GmbH","version":3}`))
+		_, _ = w.Write([]byte(`{"id":"` + companyID.String() + `","display_name":"Renamed GmbH","version":3}`))
 	})
 
 	admitAgentCall(httptest.NewRecorder(), req, next, admissionOutcome{
@@ -255,7 +263,7 @@ func TestAResidueStagedUnderAnIdempotencyKeyIsRedeemableByItsRetry(t *testing.T)
 	// The retry the staging note instructs: the withheld fields alone, the
 	// approval token, and NO idempotency key — the original is settled and a
 	// fresh one would be a different call.
-	retry := operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "", "",
+	retry := operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "", "",
 		[]byte(staging.last.ProposedChange))
 	_, retryHash, err := canonicalRESTCall(pol.Op, retry.URL.Path, retry.Header,
 		[]byte(`{"display_name":"Renamed GmbH"}`), keyBindsTheRetry)
@@ -344,4 +352,289 @@ func TestASubResourcePatchProbesTheRecordItWrites(t *testing.T) {
 		t.Errorf("status = %d, want %d (approval_required) — an agent silently overwriting a human-typed "+
 			"to-do is the §2.1 protection this test exists to hold", rec.Code, http.StatusForbidden)
 	}
+}
+
+// failingApprovals is the staging seam refusing after the auto-execute half has
+// already committed — the race the split cannot design away, because approvals
+// resolves its own target version inside the staging transaction and that
+// transaction can only run after the write it is staged against.
+type failingApprovals struct{ capturingApprovals }
+
+var errStagingRefused = errors.New("the record's authority moved between the two writes")
+
+func (failingApprovals) StageCall(context.Context, agents.StageRequest) (ids.ApprovalID, bool, error) {
+	return ids.ApprovalID{}, false, errStagingRefused
+}
+
+// A refusal that follows a committed write says so, so the key is not given
+// back.
+//
+// The split writes the agent-owned fields and then stages the human-owned
+// residue. A staging failure answers a refusal for a request that already
+// wrote, and the idempotency middleware reads every non-2xx the same way: it
+// releases the claim. The retry the caller is entitled to make then runs the
+// applied half a second time under the same key, which is the one thing the key
+// exists to prevent.
+//
+// So the handler reports the write, and this asserts the report — the middleware
+// is a layer up and settleClaim's own case covers what it does with it.
+func TestARefusalAfterTheAppliedHalfReportsThatItWrote(t *testing.T) {
+	companyID := ids.NewV7()
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
+	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
+	req := patchRequest("/v1/companies", companyID, body)
+	ctx, effect := withWriteEffect(req.Context())
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	// The agent-owned half commits, exactly as the real handler does.
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte(`{"id":"` + companyID.String() + `","version":2}`)); err != nil {
+			t.Fatalf("writing the applied half: %v", err)
+		}
+	})
+
+	admitAgentCall(rec, req, next, admissionOutcome{
+		staging: &failingApprovals{}, ownership: mixedHumanOwned{conflict: "display_name"},
+		commands: restCommandDeps{records: seamRecord{}}, pol: pol, body: body,
+		registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
+	})
+
+	if rec.Code >= 200 && rec.Code <= 299 {
+		t.Fatalf("a failed staging answered %d — the caller is told the whole patch landed", rec.Code)
+	}
+	if !effect.committed {
+		t.Error("the refusal did not report that it had written, so the idempotency layer gives the key back " +
+			"and the retry runs the applied half a second time under it")
+	}
+	// And the sentence still names what did land, which is the half a caller
+	// cannot discover any other way.
+	if !strings.Contains(rec.Body.String(), "display_name") {
+		t.Errorf("the refusal reads %q and does not name the withheld fields", rec.Body.String())
+	}
+}
+
+// The control, one outcome apart. Without it the case above would pass against
+// a door that reported a write on every path, which would strand the key of
+// every ordinary refusal — a caller unable to retry a call that changed nothing.
+func TestARefusalBeforeAnythingIsWrittenReportsNoWrite(t *testing.T) {
+	companyID := ids.NewV7()
+	pol := agentPolicy{Op: "updateCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
+	body := []byte(`{"display_name":"Renamed GmbH","industry":"software"}`)
+	req := patchRequest("/v1/companies", companyID, body)
+	ctx, effect := withWriteEffect(req.Context())
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Error("the handler ran for a call this door refuses before the write")
+	})
+
+	// An externally-held record: refused by the target resolver, ahead of the
+	// auto-execute half.
+	admitAgentCall(rec, req, next, admissionOutcome{
+		staging: &capturingApprovals{}, ownership: mixedHumanOwned{conflict: "display_name"},
+		commands: restCommandDeps{records: mirroredRecord{}}, pol: pol, body: body,
+		registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
+	})
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422", rec.Code)
+	}
+	if effect.committed {
+		t.Error("a refusal that wrote nothing reported a write, which strands the caller's idempotency key " +
+			"on a call they are entitled to retry unchanged")
+	}
+}
+
+// Every route the field split governs settles its refusals BEFORE the
+// auto-execute half runs — not only the one operation this was first proven for.
+//
+// Registering all the whole-record patch routes put patchResolver.Guards on
+// this path: a records.Read plus the external-system-of-record refusal that the
+// split path never ran on its own before. Deliberate, and until now exercised
+// for updateCompany alone, with the policy written as a literal beside the
+// assertion — so the rest carried the ordering on the strength of sharing a
+// code path, which is the argument that stops being true the moment one of them
+// stops sharing it.
+//
+// The corpus is production's OWN routing condition (reachesTheHumanOwnedSplit,
+// agentgateauto.go) over the generated policy table, and the policies are its
+// rows rather than literals. A route that joins this family is walked here
+// without anybody remembering to add it; one that leaves stops being walked at
+// the same moment it stops being routed. Nothing narrows it further.
+//
+// What each case proves is the ORDERING, which is the whole of #1073: a target
+// this door will not stage against must cost the caller a retry, never a
+// half-applied patch under a 4xx saying the change was refused. The handler
+// failing the test if it runs at all is that assertion — everything the door
+// can refuse on is a function of the policy, the path and the staged sub-patch,
+// all of which exist before dispatch.
+//
+// Every route lands on ONE of two positive assertions, and that is what keeps
+// the walk from reading a shrinking corpus as success: a served record type
+// must be refused before dispatch, and an unserved one — where Guards has no
+// seam row and so no refusal to make — must reach the handler. Silence is not
+// available to either.
+func TestEveryWholeRecordPatchRunsItsGuardsBeforeTheAutoExecuteHalf(t *testing.T) {
+	family := splitGovernedRoutes()
+	served := 0
+	for route, pol := range family {
+		// patchResolver.Guards refuses on the SEAM's answer about the row —
+		// unreadable, or held in another system of record — so a record type
+		// the seam does not serve has no such answer and no refusal to make.
+		//
+		// The exclusion is datasource's own list of served types, which is
+		// production data rather than a set written down here: a type that
+		// joins the seam joins this assertion in the same commit, with nobody
+		// to remember it. That is what stops this walk from quietly shrinking
+		// — the one failure mode a census does not report.
+		if !servedByTheRecordSeam(pol.RecordType) {
+			continue
+		}
+		// And a route that sends no patchable field has no human-owned one
+		// either, so the ownership probe finds no conflict and the call
+		// dispatches without ever reaching the staging arm Guards sits on.
+		// Read off the contract, the same place the body itself comes from.
+		conflict, body := patchBodyFromTheContract(t, pol.Op)
+		if body == nil {
+			continue
+		}
+		served++
+		t.Run(pol.Op, func(t *testing.T) {
+			staging := &capturingApprovals{}
+			rec := httptest.NewRecorder()
+			next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+				t.Errorf("%s: the handler ran for a record whose authority lives elsewhere — the "+
+					"agent-owned half was written for a call this door then refused", route)
+			})
+
+			admitAgentCall(rec, splitRequestFor(route, body), next, admissionOutcome{
+				staging: staging, ownership: mixedHumanOwned{conflict: conflict},
+				commands: restCommandDeps{records: mirroredRecord{}}, pol: pol, body: body,
+				registry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})),
+			})
+
+			if staging.last.Tool != "" {
+				t.Errorf("%s: an approval was staged against a record whose authority lives elsewhere — "+
+					"nobody could ever release it", route)
+			}
+			if rec.Code != http.StatusUnprocessableEntity {
+				t.Errorf("%s: an externally-held target answered %d, want %d (unsupported_by_sor)",
+					route, rec.Code, http.StatusUnprocessableEntity)
+			}
+		})
+	}
+	if served == 0 {
+		t.Fatal("no route the field split governs both targets a seam-served record type and patches a " +
+			"field — this walk drove nothing, and would pass against a guard that had stopped running " +
+			"on the path entirely")
+	}
+}
+
+// splitGovernedRoutes are the agent-reachable routes the field split governs,
+// asked of production's own condition rather than restated here.
+func splitGovernedRoutes() map[string]agentPolicy {
+	family := map[string]agentPolicy{}
+	for route, pol := range agentPolicies {
+		if pol.Access == accessTool && reachesTheHumanOwnedSplit(pol) {
+			family[route] = pol
+		}
+	}
+	return family
+}
+
+// splitRequestFor is the request the router would hand the gate for one route
+// of this family, carrying the body the contract declares.
+//
+// Built from the route TEMPLATE, so every path parameter is bound — not just
+// the routed {id}. Several of these operations name a second operand in the
+// path (the fact key, the profile field, the stakeholder), and a request that
+// left one unbound would be refused for the missing segment rather than by the
+// guard under test: a 500 that reads exactly like the refusal being asserted.
+func splitRequestFor(route string, body []byte) *http.Request {
+	req := syntheticOperandRequest(route, ids.NewV7())
+	if body == nil {
+		return req
+	}
+	withBody := req.Clone(req.Context())
+	withBody.Body = io.NopCloser(bytes.NewReader(body))
+	withBody.ContentLength = int64(len(body))
+	return withBody
+}
+
+// patchBodyFromTheContract builds one operation's minimal patch body out of
+// crm.yaml, and names which of its fields the ownership probe will call
+// human-owned.
+//
+// TWO fields where the schema has them, because the RESIDUE path is reached
+// only by a mixed patch: one field conflicts and is staged, the rest
+// auto-execute. A schema declaring one takes allHumanOwned's terminal branch
+// instead, which refuses the same way and for the same reason — this walk is
+// about the ordering both branches share, and neither may dispatch first.
+//
+// Read from the contract rather than written here because the split reasons
+// about field NAMES: a name this schema does not carry would exercise the walk
+// against a patch the route cannot receive, and the operation whose real fields
+// stopped matching would be the one case that quietly went on passing.
+func patchBodyFromTheContract(t *testing.T, op string) (conflict string, body []byte) {
+	t.Helper()
+	for _, item := range loadContract(t).Paths.Map() {
+		for _, candidate := range item.Operations() {
+			if candidate.OperationID != op || candidate.RequestBody == nil {
+				continue
+			}
+			schema := candidate.RequestBody.Value.Content.Get("application/json").Schema.Value
+			names := slices.Sorted(maps.Keys(schema.Properties))
+			if len(names) == 0 {
+				t.Fatalf("%s declares a request body with no patchable field, so the ownership probe "+
+					"below has nothing to name and this walk sends an empty patch", op)
+			}
+			fields := map[string]any{}
+			for _, name := range names[:min(2, len(names))] {
+				fields[name] = placeholderFor(schema.Properties[name].Value)
+			}
+			encoded, err := json.Marshal(fields)
+			if err != nil {
+				t.Fatalf("%s: encoding its own fields: %v", op, err)
+			}
+			return names[0], encoded
+		}
+	}
+	// No request body: the route sends no fields, so there is nothing for the
+	// ownership probe to be asked about and nothing to split. The refusal under
+	// test is Guards' own, which reads the ROW rather than the fields, so it is
+	// owed here exactly as it is for a route that patches columns.
+	return "", nil
+}
+
+// placeholderFor is a value of the type the contract declares for a field.
+//
+// The values are never read — every case here is decided before the patch
+// reaches a writer — but they are typed anyway, because an untyped placeholder
+// makes the body a shape the route does not accept, and the first case that DID
+// read one would be proven against a request no caller can send.
+//
+//craft:ignore naked-any a JSON value of whichever type the schema declares — the return is fed straight to json.Marshal, and any narrower type would be one of these cases spelled as a union
+func placeholderFor(schema *openapi3.Schema) any {
+	switch {
+	case len(schema.Enum) > 0:
+		return schema.Enum[0]
+	case schema.Type.Is("integer"), schema.Type.Is("number"):
+		return 1
+	case schema.Type.Is("boolean"):
+		return true
+	case schema.Type.Is("array"):
+		return []any{}
+	case schema.Type.Is("object"):
+		return map[string]any{}
+	default:
+		return "placeholder"
+	}
+}
+
+// servedByTheRecordSeam answers from datasource's own list, the same source
+// agents.servedByTheRecordSeam reads — not a copy of the types it names today.
+func servedByTheRecordSeam(rt agentRecordType) bool {
+	return slices.Contains(datasource.EntityTypes(), datasource.EntityType(rt))
 }

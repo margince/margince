@@ -32,7 +32,7 @@ import (
 func TestOutboundClientKeepsItsConnectionsHonest(t *testing.T) {
 	t.Parallel()
 
-	client := newOutboundClient()
+	client := newOutboundClient(providerAnthropic)
 	transport, ok := client.Transport.(*http.Transport)
 	if !ok {
 		t.Fatalf("the outbound client's transport is %T, so nothing retires a dead connection", client.Transport)
@@ -158,7 +158,7 @@ func routerWithEmbedder(t *testing.T, embedder model.Client) *Router {
 	// rather than mutating one another goroutine may be reading.
 	bound := *router.binding()
 	bound.embedder = embedder
-	router.bound.Store(&bound)
+	router.install(bound)
 	return router
 }
 

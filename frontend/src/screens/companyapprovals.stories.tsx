@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import { CompanyApprovalsPanel, DecisionsChip } from "./companyapprovals";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -10,7 +11,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // not empty — when nothing is waiting, which the Empty story below pins
 // deliberately: a demo account with a clean queue never shows it, so this
 // is the only place a reader sees the chip stay gone. The panel groups
-// same-kind proposals (a deep read stages one per person it found), which the
+// same-kind proposals (a deep read stages one per contact it found), which the
 // Populated story pins with two `send_email` rows under one heading.
 
 const meta: Meta = {
@@ -21,7 +22,7 @@ export default meta;
 
 type Story = StoryObj;
 type Approval = components["schemas"]["Approval"];
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -35,7 +36,7 @@ const approvals: Approval[] = [
     target_version: 3,
     on_behalf_of: "u-1",
     created_at: "2026-08-05T09:00:00Z",
-  } as unknown as Approval,
+  },
   {
     id: "ap-2",
     kind: "send_email",
@@ -45,7 +46,7 @@ const approvals: Approval[] = [
     target_version: 3,
     on_behalf_of: "u-1",
     created_at: "2026-08-05T09:05:00Z",
-  } as unknown as Approval,
+  },
   {
     id: "ap-3",
     kind: "advance_deal",
@@ -55,7 +56,7 @@ const approvals: Approval[] = [
     target_version: 1,
     on_behalf_of: "u-1",
     created_at: "2026-08-05T09:10:00Z",
-  } as unknown as Approval,
+  },
 ];
 
 function stubApprovals(data: Approval[]) {
@@ -70,7 +71,7 @@ function Panel({ approvals: data }: Readonly<{ approvals: Approval[] }>) {
   stubApprovals(data);
   return (
     <StoryProviders>
-      <CompanyApprovalsPanel orgId="o-1" onClose={() => {}} />
+      <CompanyApprovalsPanel companyId="o-1" onClose={() => {}} />
     </StoryProviders>
   );
 }
@@ -93,11 +94,10 @@ function Chip({ view }: Readonly<{ view?: View }>) {
 export const ChipOpen: Story = {
   render: () => (
     <Chip
-      view={
-        {
-          pending_approvals: { data: approvals, page },
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        pending_approvals: { data: approvals, page },
+      }}
     />
   ),
 };
@@ -111,7 +111,10 @@ export const ChipAbsent: Story = {
         Nothing waiting on this account — the chip renders nothing.
       </p>
       <Chip
-        view={{ pending_approvals: { data: [], page } } as unknown as View}
+        view={{
+          ...company360,
+          pending_approvals: { data: [], page },
+        }}
       />
     </div>
   ),

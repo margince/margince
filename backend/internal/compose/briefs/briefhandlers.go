@@ -134,12 +134,26 @@ func (h Handlers) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID
 	httperr.WriteJSON(w, http.StatusOK, briefItemToWire(item))
 }
 
+// UnsnoozeBriefItem takes back a snooze, returning the item to the queue.
+//
+// No body: there is one thing to say and the path already says it. The engine
+// refuses an item that is not snoozed, which reaches the client as 409 — the
+// same answer a second mark gets, for the same reason.
+func (h Handlers) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID openapi_types.UUID) {
+	item, err := h.engine.MarkUnsnoozed(r.Context(), ids.UUID(itemID))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, briefItemToWire(item))
+}
+
 // AnnotateMorningBrief writes the overnight pass's findings onto the acting
 // rep's own current run.
 //
 // 204 rather than the annotated run: the caller is the agent that just wrote
 // it, and handing the prose straight back is how a loop reads its own output as
-// new information and talks itself into a second pass. The person reads it
+// new information and talks itself into a second pass. The reader reads it
 // through GET /brief like everything else.
 func (h Handlers) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.AnnotateBriefRequest
@@ -189,7 +203,21 @@ func briefRunToWire(run BriefRun) crmcontracts.MorningBrief {
 		Narrative:           nullableText(run.Narrative),
 		AnnotatedAt:         run.AnnotatedAt,
 		Items:               items,
+		FactorsOmitted:      omittedFactorsWire(run.FactorsOmitted),
 	}
+}
+
+// omittedFactorsWire renders the run's withheld factors, never absent.
+//
+// An empty array and an absent field are different answers: the contract says
+// this is always present, so a client can render "the order does not account
+// for this" without first having to decide whether the server simply forgot.
+func omittedFactorsWire(stored []string) []crmcontracts.MorningBriefFactorsOmitted {
+	out := make([]crmcontracts.MorningBriefFactorsOmitted, 0, len(stored))
+	for _, factor := range stored {
+		out = append(out, crmcontracts.MorningBriefFactorsOmitted(factor))
+	}
+	return out
 }
 
 // nullableText serves empty prose as JSON null rather than "".

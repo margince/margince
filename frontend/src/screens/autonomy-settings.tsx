@@ -14,7 +14,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // Which kinds of proposal answer themselves, for the reader and nobody else.
 //
 // It sits on the AGENTS page rather than beside the admin cards because the
-// answer is one person's: an admin does not decide how much of a rep's queue
+// answer is one colleague's: an admin does not decide how much of a rep's queue
 // applies without asking, so there is no role gating here and no refusal copy.
 // Under the tier reference it is written in terms of, on the page about agents
 // deciding without you.
@@ -26,7 +26,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type KindAutonomy = components["schemas"]["KindAutonomy"];
 
-export function useAutonomy() {
+function useAutonomy() {
   return useQuery({
     queryKey: ["autonomy"],
     queryFn: async () => {
@@ -147,9 +147,9 @@ const KIND_COPY: Readonly<
     label: "autonomy.kind.close_date_correction.label",
     help: "autonomy.kind.close_date_correction.help",
   },
-  org_name_promotion: {
-    label: "autonomy.kind.org_name_promotion.label",
-    help: "autonomy.kind.org_name_promotion.help",
+  company_name_promotion: {
+    label: "autonomy.kind.company_name_promotion.label",
+    help: "autonomy.kind.company_name_promotion.help",
   },
   lifecycle_change: {
     label: "autonomy.kind.lifecycle_change.label",
@@ -197,14 +197,7 @@ export function AutonomySettingsCard() {
   );
 }
 
-/**
- * The switches themselves, one per kind, each writing the moment it moves.
- * Shared by the settings card and the onboarding's preferences act, so the
- * two cannot disagree about what a row says or when it writes. `rows` is the
- * loaded, non-empty set: the caller decides what an empty one means on its
- * own surface (the card says so, the onboarding says nothing).
- */
-export function AutonomyChoices({
+function AutonomyChoices({
   rows,
 }: Readonly<{ rows: readonly KindAutonomy[] }>) {
   const t = useT();
@@ -213,7 +206,13 @@ export function AutonomyChoices({
   return (
     <>
       {noneDecidedYet(rows) && (
-        <Callout tone="info">{t("autonomy.noneDecidedYet")}</Callout>
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("autonomy.noneDecidedYetTitle")}
+        >
+          {t("autonomy.noneDecidedYet")}
+        </Callout>
       )}
       <SettingList>
         {rows.map((row) => (
@@ -239,7 +238,11 @@ export function AutonomyChoices({
         ))}
       </SettingList>
       {update.isError && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("autonomy.updateFailed")}
+        >
           {problemMessageOf(update.error, t)}
         </Callout>
       )}

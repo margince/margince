@@ -14,12 +14,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -88,12 +90,17 @@ type facts struct {
 	health    *deals.DealHealth
 	timeline  []crmcontracts.Activity
 	openTasks []activities.OpenTask
+	requests  []crmcontracts.Activity
 	// moreTasks says the open-task read was cut at its window, so the count
 	// is a floor rather than the number.
 	moreTasks bool
-	room      *crmcontracts.DealRoom
-	threads   []crmcontracts.DealRoomThread
-	// seats are the people on the deal with their roles. Empty when nobody is
+	// nextMeeting is the soonest thing booked with the deal, asked of the
+	// database rather than taken off the timeline page: nil means nothing is
+	// booked at all, which the timeline could only ever suggest.
+	nextMeeting *activities.BookedMeeting
+	room        *crmcontracts.DealRoom
+	threads     []crmcontracts.DealRoomThread
+	// seats are the contacts on the deal with their roles. Empty when nobody is
 	// named AND when the reader may not read the stakeholder edge — the card
 	// cannot tell those apart and says nothing about seats in either case,
 	// which is the honest answer for both.
@@ -125,27 +132,96 @@ type stored struct {
 // cached. A refresh forces the rewrite: the reader asking for a second
 // opinion.
 func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crmcontracts.DealStatusCard, error) {
-	userID, err := actingUser(ctx)
+	return s.readCard(ctx, dealID, cardReadPolicy{refresh: refresh})
+}
+
+// ReadFacts refreshes the card and its shared move cache without asking a model.
+func (s *Service) ReadFacts(ctx context.Context, dealID ids.DealID) (crmcontracts.DealStatusCard, error) {
+	return s.readCard(ctx, dealID, cardReadPolicy{factsOnly: true})
+}
+
+type cardReadPolicy struct {
+	refresh   bool
+	factsOnly bool
+}
+
+func (s *Service) readCard(ctx context.Context, dealID ids.DealID, policy cardReadPolicy) (crmcontracts.DealStatusCard, error) {
+	// The object question at the entry point. gather below reaches
+	// deals.GetDeal, which asks it and the row question both, and that is
+	// still what refuses an unreadable deal — but the card is also served
+	// from a CACHE keyed on the user, and an admission that lives only in the
+	// path that fills the cache is one refactor away from being skipped by
+	// the path that reads it.
+	//
+	// It stays HERE, on the public entry point, rather than moving down into
+	// get with the rest of the body: this is the door, and the reason above is
+	// about the door being asked rather than about where the work happens.
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return crmcontracts.DealStatusCard{}, err
+	}
+	card, timeline, err := s.cardAndTimeline(ctx, dealID, policy)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
+	}
+	// After the write, never before it, and out of rows the caller already
+	// holds. The card is FILED on the deal and read by whoever opens it, while
+	// an email summary is assembled out of one reader's own audience and
+	// content grants — so a stored card carrying one would hand the writer's
+	// access to every later reader. The timeline was gathered under this
+	// caller's own scope moments ago and carries the canonical summary they are
+	// entitled to, so opening the cited messages costs no further read.
+	if err := briefevidence.Attach(ctx, briefevidence.FromActivities(timeline), cardEvidence(&card)); err != nil {
+		return crmcontracts.DealStatusCard{}, err
+	}
+	return card, nil
+}
+
+// cardEvidence collects the card's citations that could name a message: the
+// three prose sections, the verdict's reasons, and the recommended move's own
+// basis — which is a different wire shape carrying the same activity.
+func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
+	targets := briefevidence.FromSentences(card.Story.Sentences)
+	for _, section := range []*crmcontracts.DealStatusCardSection{card.Blocker, card.Buyer} {
+		if section != nil {
+			targets = append(targets, briefevidence.FromSentences(section.Sentences)...)
+		}
+	}
+	if card.Verdict != nil {
+		targets = append(targets, briefevidence.FromSentences(card.Verdict.Because.Sentences)...)
+	}
+	if card.Next != nil {
+		targets = append(targets, briefevidence.FromDealMove(card.Next.Evidence)...)
+	}
+	return targets
+}
+
+// cardAndTimeline is the card itself, and the rows it was gathered from. The
+// two travel together because the caller enriches from the second — reading the
+// deal's messages again would ask the same gate the same question.
+func (s *Service) cardAndTimeline(
+	ctx context.Context, dealID ids.DealID, policy cardReadPolicy,
+) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	// Gathered FIRST, and under the caller's row scope: a deal they cannot
 	// read refuses here, before any cache is consulted.
 	f, err := s.gather(ctx, dealID)
 	if err != nil {
-		return crmcontracts.DealStatusCard{}, err
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	mv := decideMove(f)
 	in := project(f, mv)
 	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.lang)
 	if err != nil {
-		return crmcontracts.DealStatusCard{}, err
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, refresh, f.now)
+	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
 	if verdict.serve {
-		return verdict.card, nil
+		return verdict.card, append(f.timeline, f.requests...), nil
 	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel)
+	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly)
 	if laneFailed {
 		// The lane was wired and did not answer: a timeout, a budget, an
 		// unparseable reply. The reader gets the floor, which is a working
@@ -158,7 +234,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 		// the fingerprint now, so an installation that switches to German mints
 		// a new key, and a lane that happens to be down while it does would
 		// freeze the ENGLISH floor as that installation's German card.
-		return card, nil
+		return card, append(f.timeline, f.requests...), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
 		Fingerprint: fingerprint,
@@ -166,9 +242,9 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 		GeneratedBy: card.GeneratedBy,
 		Card:        card,
 	}); err != nil {
-		return crmcontracts.DealStatusCard{}, err
+		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	return card, nil
+	return card, append(f.timeline, f.requests...), nil
 }
 
 // cacheVerdict says what to do with the stored card.
@@ -233,7 +309,11 @@ func (s *Service) write(
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)
 	defer cancel()
-	written, err := s.ask(laneCtx, in, f.lang)
+	// The deal the card is about. Its request carries the deal's own timeline —
+	// the buyer's words, quoted — so an erasure reaching a contact on this deal
+	// reaches these payloads through the deal it names.
+	written, err := s.ask(ai.WithSubject(laneCtx, ids.From[ids.DealKind](ids.UUID(f.deal.Id)).Ref(), in.Deal.Name),
+		in, f.lang)
 	if err != nil {
 		// The degrade is declared, but a SILENT one is indistinguishable from
 		// a lane nobody wired: the reader sees a deterministic card either
@@ -278,13 +358,43 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
 	}
 	f.timeline = timeline
+	requestKind := "email"
+	requests, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
+		RequestReviewAsOf: &f.now, Kind: &requestKind,
+	})
+	if err != nil {
+		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
+	}
+	f.requests = requests
+	// System-minted work is excluded because the card reads an open task as the
+	// next step somebody AGREED. A forecast-assurance review or a check-in
+	// reminder is the product filing work about the deal, and reading one as an
+	// agreed step let housekeeping outrank the advice this card exists to give:
+	// a deal three weeks silent was told to go tick off a forecast input. The
+	// exclusion is the module's own SQL predicate, so the answer is
+	// authoritative rather than a page filtered after it was read.
 	open, more, err := s.activities.ListOpenTasks(ctx, activities.ListOpenTasksInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: timelineWindow,
+		ExcludeSystemMinted: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading the deal's open tasks: %w", err)
 	}
 	f.openTasks, f.moreTasks = open, more
+	// Asked of the database rather than read off the timeline page above: that
+	// page holds 25 rows newest-first, so a busy deal hides its own booked
+	// meeting behind newer notes, and the card would tell a rep to arrange what
+	// they have already arranged.
+	meeting, booked, err := s.activities.NextBookedMeeting(ctx, activities.NextBookedMeetingInput{
+		EntityType: entityType, EntityID: dealID.UUID, After: f.now,
+	})
+	if err != nil {
+		return facts{}, fmt.Errorf("deal status: reading the deal's next booked meeting: %w", err)
+	}
+	if booked {
+		f.nextMeeting = &meeting
+	}
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
 	}
@@ -353,6 +463,11 @@ func (s *Service) cached(ctx context.Context, userID ids.UserID, dealID ids.Deal
 }
 
 func (s *Service) save(ctx context.Context, userID ids.UserID, dealID ids.DealID, card stored) error {
+	// The second lock on the one reader-scoped field this row could carry.
+	// Get attaches summaries only after this call, so nothing should reach
+	// here holding one — and a later writer that reorders the two would
+	// otherwise file one reader's access as everybody's, silently.
+	briefevidence.Strip(cardEvidence(&card.Card))
 	payload, err := json.Marshal(card)
 	if err != nil {
 		return fmt.Errorf("encode the deal status payload: %w", err)

@@ -82,7 +82,7 @@ func (h connectorHandlers) providerWired(provider string) bool {
 // one without the other.
 //
 // Checked here so that gap answers the declared 501 at the gate, rather than
-// letting a person through the vendor's consent screen and failing afterwards
+// letting a contact through the vendor's consent screen and failing afterwards
 // with "connector not registered" — a refusal they cannot act on, having already
 // granted access.
 func (h connectorHandlers) canRunConsent(provider string) bool {
@@ -93,15 +93,38 @@ func (h connectorHandlers) canRunConsent(provider string) bool {
 	if !h.signer.usable() {
 		return false
 	}
+	return h.hasConnector(provider)
+}
+
+// hasConnector reports whether name is registered on this role's capture
+// registry.
+func (h connectorHandlers) hasConnector(name string) bool {
 	if h.registry == nil {
 		return false
 	}
 	for _, d := range h.registry.Connectors() {
-		if d.Name == provider {
+		if d.Name == name {
 			return true
 		}
 	}
 	return false
+}
+
+// connectorDescriptor returns the registered connector's own descriptor, or
+// the zero value if name is not registered — the live source for anything
+// that needs a connector's declared scopes without constructing a throwaway
+// instance of it (e.g. one built with a nil dependency) just to read a
+// static value.
+func (h connectorHandlers) connectorDescriptor(name string) connector.Descriptor {
+	if h.registry == nil {
+		return connector.Descriptor{}
+	}
+	for _, d := range h.registry.Connectors() {
+		if d.Name == name {
+			return d
+		}
+	}
+	return connector.Descriptor{}
 }
 
 // storedApp resolves the installation's STORED app for one vendor.

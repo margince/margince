@@ -18,14 +18,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -37,13 +35,14 @@ import (
 // the unit's own row and the core record it writes are in the same transaction,
 // so they commit together or not at all.
 type extensionCore struct {
-	// tx is the CALLER's transaction, held rather than taken as a parameter —
-	// which is also why this file is outside what backend/gates/txseamacquire_test.go
-	// can see. That gate walks functions that TAKE a pgx.Tx; nothing here does,
-	// so a verb added below that reaches for a connection of its own would pass
-	// it green and deadlock under a saturated pool. It happened once already in
-	// this file's own history. Every verb runs on this handle and asks for
-	// nothing else.
+	// tx is the CALLER's transaction, held rather than taken as a parameter.
+	// Every verb runs on this handle and asks for nothing else: a second
+	// connection taken inside somebody's open transaction commits separately
+	// and deadlocks undetectably against a lock that transaction holds. It
+	// happened once in this file's own history, and the field is what
+	// backend/gates/txseamacquire_test.go now reads to judge the verbs below —
+	// it walks a receiver holding a pgx.Tx as well as a function taking one, so
+	// a verb added here that reaches for the pool fails that gate.
 	tx pgx.Tx
 	// authority re-binds the INVOCATION's workspace, actor, correlation and
 	// attribution onto whatever context a verb is handed. It is the Runtime's
@@ -104,17 +103,10 @@ func (a extensionActivities) Create(ctx context.Context, in crm.CreateActivityRe
 	if err != nil {
 		return crm.Activity{}, err
 	}
-	// The caller's own grant for the write, BEFORE the workspace's mode is
-	// consulted. The store checks it again and that check is the invariant;
-	// this one is about ordering. Refusing on mode first would answer
-	// ErrOverlayUnsupported to a caller who is not allowed to make the write at
-	// all, which tells them something about the installation that their refusal
-	// should not.
+	// The caller's own grant for the write. The store checks it again and that
+	// check is the invariant; this one is about ordering.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crm.Activity{}, portRefusal(err)
-	}
-	if err := a.core.refuseOverlay(ctx); err != nil {
-		return crm.Activity{}, err
 	}
 	request, transcodeErr := transcode[crmcontracts.CreateActivityRequest](in)
 	err = transcodeErr
@@ -187,42 +179,9 @@ func (c extensionCore) refuseUnattended() error {
 	return nil
 }
 
-// refuseOverlay refuses a core write in a workspace whose records live
-// somewhere else.
-func (c extensionCore) refuseOverlay(ctx context.Context) error {
-	workspace, bound := principal.WorkspaceID(ctx)
-	if !bound {
-		return database.ErrNoWorkspace
-	}
-	// FRESH, never cached, and for the reason the dispatcher's own uncached read
-	// carries: a write routed on a stale mode is silent divergence rather than a
-	// stale screen. An overlay workspace's native tables are not the live ones,
-	// so this write would land where nothing reads it.
-	//
-	// Read on the CALLER'S transaction, which is both safer and stronger than a
-	// connection of its own. Safer: a second acquire inside a borrowed
-	// transaction is the deadlock shape this programme removed from the store
-	// seams. Stronger: the mode and the write it guards are then the same
-	// transaction, so the answer cannot go stale between them — the dispatcher's
-	// own read narrows that window and cannot close it.
-	overlaid, err := overlayModeOf(ctx, c.tx)
-	if err != nil {
-		// Logged here and NOT returned: the text of a failed workspace read is
-		// a relation name and a SQL state, and a unit is not a reader those are
-		// written for. What it gets is that the write was refused.
-		slog.Default().ErrorContext(ctx, "compose: resolving the workspace record mode for an extension core write",
-			"workspace", workspace.String(), "error", err)
-		return errors.New("extension: the core could not establish where this workspace's records live, so nothing was written")
-	}
-	if overlaid {
-		return extension.ErrOverlayUnsupported
-	}
-	return nil
-}
-
 // portRefusal maps a core error onto the published refusal classes.
 //
-// It maps rather than wraps, and that is the point: a unit is other people's
+// It maps rather than wraps, and that is the point: a unit is other contacts's
 // code, so the core's own error text — a table name, a constraint, a SQL state,
 // the shape of an internal type — must not reach it. What survives is the
 // class, which is the only part a unit can act on.

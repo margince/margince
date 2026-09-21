@@ -22,6 +22,18 @@
   flex-wrap: wrap;
   align-items: flex-start;
   gap: inherit;
+  /* AND IT MAY BE NARROWER THAN WHAT IS IN IT. A flex item's automatic minimum
+     size is its content's min-content width, and a row wrapped here can hold
+     one line that does not wrap — `EmailEntry`'s subject and preview are
+     `white-space: nowrap` with their own ellipsis, so their min-content is the
+     WHOLE line. Without this floor the wrapper refused to shrink to its card:
+     the worklist's waiting row was laid out hundreds of pixels wider than the
+     panel, which clipped it, and everything inside was drawn against that
+     phantom width — a meta line that never wrapped because it had room it could
+     not show, and verbs that never wrapped for the same reason.
+     It belongs HERE rather than on each host: a host cannot see this box, and
+     the line that does not wrap belongs to a component further in still. */
+  min-width: 0;
 }
 
 /* What a finished drag staged, and the two ways out of it. It sits IN the flow

@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { Badge, DataTable, EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -165,15 +166,15 @@ function RungTable({
 function LastCell({ row, zone }: Readonly<{ row: RungHealth; zone: string }>) {
   const { locale } = useLocale();
   return (
-    <span className="cell-stack">
+    <CellStack>
       {row.last_call_at ? (
         <span>{formatDateTime(row.last_call_at, locale, zone)}</span>
       ) : (
-        <span className="t-caption">—</span>
+        <span>—</span>
       )}
       {row.last_sentinel ? (
-        <span className="t-caption t-mono">{row.last_sentinel}</span>
+        <span className="t-caption">{row.last_sentinel}</span>
       ) : null}
-    </span>
+    </CellStack>
   );
 }

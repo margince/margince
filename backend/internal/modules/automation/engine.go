@@ -134,19 +134,11 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 	if err != nil {
 		return err
 	}
-	ev := workflow.Event{
-		ID:          env.EventID,
-		Type:        env.Type,
-		WorkspaceID: ws.UUID,
-		OccurredAt:  env.OccurredAt,
-		Entity:      datasource.EntityRef{Type: datasource.EntityType(env.Entity.Type), ID: env.Entity.ID},
-		Payload:     env.Payload,
-	}
+	ev := workflowEvent(env, ws.UUID)
 	// Workflows are deterministic system automations; their writes are
 	// attributed to the system actor and grouped per trigger event.
 	runCtx := principal.WithWorkspaceID(ctx, ws.UUID)
-	runCtx = principal.WithActor(runCtx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
-	runCtx = principal.WithCorrelationID(runCtx, ids.NewV7())
+	runCtx = principal.SystemActing(runCtx, systemActor)
 	runCtx = principal.WithCausationEvent(runCtx, env.EventID)
 
 	instances, err := e.liveInstances(runCtx)

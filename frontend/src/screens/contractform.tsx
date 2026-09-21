@@ -1,19 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
-// The installation read every form shares: one query, one key, so the currency
-// this form writes is the same fact the settings screen shows.
 import { useInstallationSettings } from "../app/uploadlimit";
-import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Button, Field, Modal } from "../design-system/atoms";
 import { FileDropzoneControl } from "../design-system/filedropzone";
-import { MoneyInput } from "../design-system/moneyinput";
-import { Select } from "../design-system/select";
+import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine } from "./common";
+import { ContractCustomFields } from "./contractcustomfields";
+import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
+import { contractTermsBody } from "./contracttermsbody";
+import { ContractTermsFields } from "./contracttermsfields";
+import { createContract, patchContract } from "./contractwrites";
+// The installation read every form shares: one query, one key, so the currency
+// this form writes is the same fact the settings screen shows.
+import { useObjectCustomFields } from "./customfields.form";
 
 // Recording an agreement.
 //
@@ -27,7 +31,7 @@ import { paperState, useContractPaper } from "./contractpaper";
 // can never silently activate a contract.
 
 type Contract = components["schemas"]["Contract"];
-type ValueBasis = NonNullable<
+export type ValueBasis = NonNullable<
   components["schemas"]["CreateContractRequest"]["value_basis"]
 >;
 
@@ -36,25 +40,37 @@ type ValueBasis = NonNullable<
 // installation stated, never a default this file picked on their behalf.
 //
 // Exported: RenewContractRequest's terms are the same shape minus
-// organization_id, so contractlifecycle.tsx's renewal form reuses this type,
+// company_id, so contractlifecycle.tsx's renewal form reuses this type,
 // contractTermsBody and ContractTermsFields rather than a second copy of each.
 export type ContractDraft = {
   title: string;
   contractNumber: string;
   valueMinor: number;
+  // The recurring half of what the agreement is worth, annual, in the same
+  // currency as valueMinor. Zero means "not priced recurring", which is what
+  // the paired money columns hold as NULL.
+  arrMinor: number;
   currency: string;
   valueBasis: ValueBasis;
   startsOn: string;
   endsOn: string;
   renewalOn: string;
   noticePeriodDays: string;
+  paymentTermDays: string;
   signedOn: string;
+  // The workspace's own fields on this agreement, keyed by cf_ column, holding
+  // what the CONTROLS hold: a currency field's major units, a boolean's
+  // "true". The stored shape is derived at the write, the way every other
+  // custom-field surface does it — seeding raw minor units here and writing
+  // them back out multiplied them by the currency's scale a second time.
+  customValues: Record<string, string>;
 };
 
 const EMPTY_DRAFT: ContractDraft = {
   title: "",
   contractNumber: "",
   valueMinor: 0,
+  arrMinor: 0,
   // No currency of its own. There is no currency control on this form, so
   // whatever stands here is written to the record unseen — and a literal would
   // label every installation's agreements in one country's money. The unit
@@ -65,16 +81,18 @@ const EMPTY_DRAFT: ContractDraft = {
   endsOn: "",
   renewalOn: "",
   noticePeriodDays: "",
+  paymentTermDays: "",
   signedOn: "",
+  customValues: {},
 };
 
 export function ContractForm({
-  orgId,
+  companyId,
   contract,
   open,
   onClose,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   contract?: Contract;
   open: boolean;
   onClose: () => void;
@@ -89,6 +107,17 @@ export function ContractForm({
   // read is in flight and if it never answers, and undefined stays undefined:
   // guessing a unit is the failure this whole pairing exists to prevent.
   const baseCurrency = useInstallationSettings().data?.base_currency;
+  const cf = useObjectCustomFields("contract");
+  // What the custom fields held when this form opened, raw. The patch is a
+  // DIFF against it rather than a snapshot of the whole slice: no cf_ column
+  // is clearable, so sending every untouched empty field would be sending a
+  // clear the server refuses.
+  // The RAW stored slice the form opened on, not the converted strings the
+  // controls hold. customFieldsToPatch puts the baseline through
+  // customFieldFormValue itself, so handing it an already-converted value
+  // converts a currency twice: a stored 10000 became "100", was re-converted
+  // to "1", and a genuine edit to 1 then compared EQUAL and vanished.
+  const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
 
   // The scale the amount field reads and writes in. A recorded agreement keeps
   // its OWN currency (draftOf preserves it); a new one takes the installation's
@@ -111,9 +140,40 @@ export function ContractForm({
   useEffect(() => {
     if (open) {
       setDraft(draftOf(contract));
+      setOpenedCustom({});
       setFile(undefined);
     }
   }, [open, contract?.id]);
+
+  // The custom half, seeded SEPARATELY from the terms above.
+  //
+  // Two reasons it cannot ride in the effect beside them. The catalog can land
+  // after the form opens — the schema read runs beside the contract's — so an
+  // agreement's existing answers would be missing from a form that opened
+  // first. And re-running the whole seed when it arrives would throw away the
+  // terms the reader had already typed, and the file they had already picked.
+  //
+  // The custom half, seeded SEPARATELY from the terms above: the catalog is a
+  // second read, and what a reader has already typed has to survive its arrival.
+  useSeededCustomFields({
+    open,
+    recordId: contract?.id ?? null,
+    stored: cf.recordSlice(contract ?? {}),
+    formFields: cf.formFields,
+    catalogKey: cf.fields.map((field) => field.column_name).join(","),
+    values: draft.customValues,
+    replace: (values, baseline) => {
+      setOpenedCustom(baseline);
+      setDraft((current) => ({ ...current, customValues: values }));
+    },
+    add: (values, baseline) => {
+      setOpenedCustom((current) => ({ ...current, ...baseline }));
+      setDraft((current) => ({
+        ...current,
+        customValues: { ...current.customValues, ...values },
+      }));
+    },
+  });
 
   // The draft is a VARIABLE, never a closure over render state: a click that
   // lands before React re-arms the mutation's options would otherwise submit
@@ -121,8 +181,16 @@ export function ContractForm({
   const save = useMutation({
     mutationFn: async (submitted: { draft: ContractDraft; file?: File }) => {
       const id = contract
-        ? await patchContract(contract, submitted.draft)
-        : await createContract(orgId, submitted.draft);
+        ? await patchContract(
+            contract,
+            submitted.draft,
+            cf.toPatch(submitted.draft.customValues, openedCustom),
+          )
+        : await createContract(
+            companyId,
+            submitted.draft,
+            cf.toBody(submitted.draft.customValues),
+          );
       if (submitted.file) {
         // A SECOND request, which can fail on its own. The agreement is saved
         // by then, so a failure here says the FILE did not attach rather than
@@ -132,7 +200,7 @@ export function ContractForm({
         // so the signed paper also appears in the account's own library rather
         // than only under the contract.
         await uploadAttachment(
-          { entityType: "organization", entityId: orgId },
+          { entityType: "company", entityId: companyId },
           submitted.file,
           { contract_id: id },
         );
@@ -140,14 +208,26 @@ export function ContractForm({
       return id;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orgContracts", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["orgDocuments", orgId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
+      // The project 360 draws this agreement too. Without this a value saved
+      // here reaches the account and not the delivery it belongs to, and the
+      // project keeps serving the pre-save row from cache.
+      if (contract?.project_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["project", contract.project_id],
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: ["companyDocuments", companyId],
+      });
       // The paper list this form and the contract row BOTH read. Without it an
       // upload lands on the server and neither surface shows it: the row keeps
       // the pre-upload list, and reopening the form serves the same stale cache
       // while it refetches behind.
-      queryClient.invalidateQueries({ queryKey: ["contractPaper", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["contractPaper", companyId] });
       onClose();
     },
   });
@@ -156,9 +236,9 @@ export function ContractForm({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>
+      <Heading size="large" id={titleId}>
         {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
-      </h2>
+      </Heading>
 
       <ContractTermsFields
         draft={draft}
@@ -166,18 +246,20 @@ export function ContractForm({
         currency={contractCurrency}
       />
 
+      <ContractCustomFields
+        fields={cf.formFields}
+        values={draft.customValues}
+        onChange={(customValues) => setDraft({ ...draft, customValues })}
+      />
+
       <SignedFileField
-        orgId={orgId}
+        companyId={companyId}
         contractID={contract?.id}
         file={file}
         onPick={setFile}
       />
 
-      {save.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(save.error, t)}
-        </p>
-      )}
+      {save.error && <RefusalLine error={save.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -202,6 +284,7 @@ export function ContractForm({
 // draftOf reads an existing agreement back into the form's shape, so correcting
 // one starts from what is recorded rather than from a blank the reader has to
 // retype — and might get wrong a second time.
+
 function draftOf(contract: Contract | undefined): ContractDraft {
   if (!contract) {
     return EMPTY_DRAFT;
@@ -210,6 +293,7 @@ function draftOf(contract: Contract | undefined): ContractDraft {
     title: contract.title,
     contractNumber: contract.contract_number ?? "",
     valueMinor: contract.value_minor ?? 0,
+    arrMinor: contract.arr_minor ?? 0,
     // A recorded agreement keeps its OWN currency. The two money columns are
     // paired by the database, so an agreement carrying none carries no amount
     // either: it is being priced here for the first time, exactly like a new
@@ -223,7 +307,16 @@ function draftOf(contract: Contract | undefined): ContractDraft {
       contract.notice_period_days == null
         ? ""
         : String(contract.notice_period_days),
+    paymentTermDays:
+      contract.payment_term_days == null
+        ? ""
+        : String(contract.payment_term_days),
     signedOn: contract.signed_on ?? "",
+    // The catalog is not readable from a module function, so the stored
+    // custom values are seeded by the form itself once the schema lands.
+    // Empty here rather than absent: the member is required, and a draft that
+    // omitted it would be a draft the form could not construct.
+    customValues: {},
   };
 }
 
@@ -247,165 +340,9 @@ function draftOf(contract: Contract | undefined): ContractDraft {
  * date — shared between recording one (this file) and renewing one
  * (contractlifecycle.tsx's ContractRenewModal). Both write the same shape of
  * request (RenewContractRequest's terms are CreateContractRequest's minus
- * organization_id), so this is the one place the fields are drawn rather than
+ * company_id), so this is the one place the fields are drawn rather than
  * a second, driftable copy of each.
  */
-export function ContractTermsFields({
-  draft,
-  setDraft,
-  currency,
-}: Readonly<{
-  draft: ContractDraft;
-  setDraft: (draft: ContractDraft) => void;
-  currency: string;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <Field label={t("contracts.form.name")} required>
-        {(props) => (
-          <TextInput
-            {...props}
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.number")}>
-        {(props) => (
-          <TextInput
-            {...props}
-            value={draft.contractNumber}
-            onChange={(e) =>
-              setDraft({ ...draft, contractNumber: e.target.value })
-            }
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.value")}>
-        {(props) => (
-          // MoneyInput rather than a TextInput this file scales itself, and the
-          // reasons are the two defects the hand-rolled version had.
-          //
-          // It keeps the typed text as its OWN state, so a fractional amount is
-          // not reformatted between keystrokes — typing "12.345" into a
-          // three-decimal currency lost its tail when every keystroke was
-          // scaled and echoed back.
-          //
-          // And it re-seeds when the CURRENCY changes, which this form needs
-          // more than any other: the installation read that supplies the code
-          // may land after the reader has already typed. Scaling on each
-          // keystroke against a currency still in flight recorded the amount at
-          // the two-digit fallback and then reinterpreted the same integer at
-          // the real scale, with nothing on screen to say it had moved.
-          <MoneyInput
-            {...props}
-            min={0}
-            currency={currency}
-            valueMinor={draft.valueMinor}
-            // An agreement on record may carry no value at all — the two money
-            // columns are paired and both NULL until somebody prices it — so an
-            // unpriced one shows an empty field, not a nought nobody typed.
-            blankWhenZero
-            onChangeMinor={(valueMinor) => setDraft({ ...draft, valueMinor })}
-          />
-        )}
-      </Field>
-
-      {/* The basis is asked HERE, next to the amount, because it changes what
-          the amount means. An open-ended agreement has no finite total, so it
-          records twelve months and says so — and a figure whose basis was
-          picked on another screen is a figure nobody checked. */}
-      <Field label={t("contracts.form.basis")} required>
-        {(props) => (
-          <Select
-            {...props}
-            value={draft.valueBasis}
-            onChange={(value) =>
-              setDraft({ ...draft, valueBasis: value as ValueBasis })
-            }
-            options={[
-              { value: "total", label: t("contracts.basis.total") },
-              { value: "annualized_12m", label: t("contracts.basis.annual") },
-            ]}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.startsOn")}>
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.startsOn}
-            onChange={(e) => setDraft({ ...draft, startsOn: e.target.value })}
-          />
-        )}
-      </Field>
-
-      {/* Empty means open-ended, which is a real shape rather than a missing
-          answer — and it is exactly the case the annualized basis exists for. */}
-      <Field
-        label={t("contracts.form.endsOn")}
-        hint={t("contracts.form.endsOnHint")}
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.endsOn}
-            onChange={(e) => setDraft({ ...draft, endsOn: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field label={t("contracts.form.renewalOn")}>
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.renewalOn}
-            onChange={(e) => setDraft({ ...draft, renewalOn: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.form.noticeDays")}
-        hint={t("contracts.form.noticeDaysHint")}
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="number"
-            min={0}
-            value={draft.noticePeriodDays}
-            onChange={(e) =>
-              setDraft({ ...draft, noticePeriodDays: e.target.value })
-            }
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("contracts.form.signedOn")}
-        hint={t("contracts.form.signedOnHint")}
-      >
-        {(props) => (
-          <TextInput
-            {...props}
-            type="date"
-            value={draft.signedOn}
-            onChange={(e) => setDraft({ ...draft, signedOn: e.target.value })}
-          />
-        )}
-      </Field>
-    </>
-  );
-}
-
 export function pricedIn(
   draft: ContractDraft,
   baseCurrency: string | undefined,
@@ -446,18 +383,18 @@ export function pricedIn(
  * and merely made invisible.
  */
 export function SignedFileField({
-  orgId,
+  companyId,
   contractID,
   file,
   onPick,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   contractID?: string;
   file?: File;
   onPick: (file: File) => void;
 }>) {
   const t = useT();
-  const filed = useContractPaper(orgId, contractID);
+  const filed = useContractPaper(companyId, contractID);
 
   const paper = filed.data;
   const onFile = paper?.documents ?? [];
@@ -528,54 +465,6 @@ export function SignedFileField({
   );
 }
 
-async function createContract(
-  orgId: string,
-  draft: ContractDraft,
-): Promise<string> {
-  const { data, error } = await api.POST("/contracts", {
-    body: contractBody(orgId, draft),
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data?.id ?? "";
-}
-
-// A correction sends nulls for the fields a human cleared: once somebody has
-// removed a value, "I typed this by mistake" and "we never agreed one" are the
-// same answer, and leaving the old value in place would keep asserting the
-// mistake.
-async function patchContract(
-  contract: Contract,
-  draft: ContractDraft,
-): Promise<string> {
-  const { error } = await api.PATCH("/contracts/{id}", {
-    params: { path: { id: contract.id } },
-    body: {
-      title: draft.title.trim(),
-      contract_number: draft.contractNumber.trim() || null,
-      value_minor: draft.valueMinor > 0 ? draft.valueMinor : null,
-      // Same pairing as a create, and the same refusal to complete it with a
-      // guess: an amount whose currency the form does not hold goes out as the
-      // half it is, for the server to refuse in the open.
-      currency:
-        draft.valueMinor > 0 && draft.currency !== "" ? draft.currency : null,
-      value_basis: draft.valueBasis,
-      starts_on: draft.startsOn || null,
-      ends_on: draft.endsOn || null,
-      renewal_on: draft.renewalOn || null,
-      notice_period_days: draft.noticePeriodDays
-        ? Number(draft.noticePeriodDays)
-        : null,
-      signed_on: draft.signedOn || null,
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return contract.id;
-}
-
 // What the form refuses before the server has to.
 //
 // These mirror the database's own constraints rather than adding rules of their
@@ -613,49 +502,22 @@ export type ContractTermsFragment = Pick<
   components["schemas"]["CreateContractRequest"],
   | "contract_number"
   | "value_minor"
+  | "arr_minor"
   | "currency"
   | "starts_on"
   | "ends_on"
   | "renewal_on"
   | "notice_period_days"
+  | "payment_term_days"
   | "signed_on"
 >;
 
-export function contractTermsBody(draft: ContractDraft): ContractTermsFragment {
-  const body: ContractTermsFragment = {};
-  if (draft.contractNumber.trim() !== "") {
-    body.contract_number = draft.contractNumber.trim();
-  }
-  if (draft.valueMinor > 0) {
-    body.value_minor = draft.valueMinor;
-    if (draft.currency !== "") {
-      body.currency = draft.currency;
-    }
-  }
-  if (draft.startsOn !== "") {
-    body.starts_on = draft.startsOn;
-  }
-  if (draft.endsOn !== "") {
-    body.ends_on = draft.endsOn;
-  }
-  if (draft.renewalOn !== "") {
-    body.renewal_on = draft.renewalOn;
-  }
-  if (draft.noticePeriodDays !== "") {
-    body.notice_period_days = Number(draft.noticePeriodDays);
-  }
-  if (draft.signedOn !== "") {
-    body.signed_on = draft.signedOn;
-  }
-  return body;
-}
-
 export function contractBody(
-  orgId: string,
+  companyId: string,
   draft: ContractDraft,
 ): components["schemas"]["CreateContractRequest"] {
   return {
-    organization_id: orgId,
+    company_id: companyId,
     title: draft.title.trim(),
     value_basis: draft.valueBasis,
     // Stated rather than defaulted: whether an agreement renews itself is a

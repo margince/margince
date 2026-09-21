@@ -87,29 +87,31 @@ describe("comparisonText", () => {
 // own comment said so. These are about the two halves of that promise moving
 // together: where the composer opens, and what the label is allowed to claim.
 
-function replyRow(subject: { type: string; id: string } | undefined) {
+function replyRow(subject: WorklistItem["subject"]): WorklistItem {
   return {
     id: "r1",
-    source: "waiting_customer",
+    source: "customer_waiting",
+    level: 1,
     category: "customer_waiting",
     title: "Aster Handel",
     because: [],
+    consequence: "buyer_waits",
     actions: ["open"],
     dispositions: [],
     overdue: false,
     subject,
     move: { action: "draft_reply", activity_id: "a-1" },
-  } as unknown as WorklistItem;
+  };
 }
 
 describe("moveHref — the draft_reply move", () => {
-  // The composer lives on the person page and drafts to the person. A link
+  // The composer lives on the contact page and drafts to the contact. A link
   // asking for it there is a link that does what its label says.
-  it("opens the composer on a person's record", () => {
-    const href = moveHref(replyRow({ type: "person", id: "p-1" }));
+  it("opens the composer on a contact's record", () => {
+    const href = moveHref(replyRow({ type: "contact", id: "p-1" }));
     expect(href).toContain("#/contacts/p-1");
     expect(href).toContain("compose=reply");
-    expect(moveOpensComposer(replyRow({ type: "person", id: "p-1" }))).toBe(
+    expect(moveOpensComposer(replyRow({ type: "contact", id: "p-1" }))).toBe(
       true,
     );
   });
@@ -117,7 +119,7 @@ describe("moveHref — the draft_reply move", () => {
   // A deal has no composer to open, so a link claiming to draft there would
   // promise what the click cannot do. It reaches the record and says so.
   it("reaches the record, and claims no draft, where there is no composer", () => {
-    for (const type of ["deal", "organization"]) {
+    for (const type of ["deal", "company"] as const) {
       const item = replyRow({ type, id: "x-1" });
       expect(moveHref(item)).not.toContain("compose=");
       expect(moveHref(item)).toBeTruthy();
@@ -125,11 +127,11 @@ describe("moveHref — the draft_reply move", () => {
     }
   });
 
-  // WHICH message, not just which person. A contact reachable two ways would
+  // WHICH message, not just which contact. A contact reachable two ways would
   // otherwise have the reply drafted into whichever they lead with — the reason
   // this link returned a bare record href until the composer could honour it.
   it("names the message the row is about", () => {
-    const href = moveHref(replyRow({ type: "person", id: "p-1" }));
+    const href = moveHref(replyRow({ type: "contact", id: "p-1" }));
     expect(href).toContain("thread=a-1");
   });
 
@@ -137,10 +139,10 @@ describe("moveHref — the draft_reply move", () => {
   // conversation rather than continuing one, so a thread id here would anchor
   // it on something the reader is not answering.
   it("names no thread for a move that opens a conversation", () => {
-    const fresh = {
-      ...replyRow({ type: "person", id: "p-1" }),
+    const fresh: WorklistItem = {
+      ...replyRow({ type: "contact", id: "p-1" }),
       move: { action: "draft_email" },
-    } as unknown as WorklistItem;
+    };
     expect(moveHref(fresh)).toContain("compose=reply");
     expect(moveHref(fresh)).not.toContain("thread=");
   });
@@ -152,12 +154,12 @@ describe("moveHref — the draft_reply move", () => {
   // A row with no move suggests no step, and a control drawn for one would be
   // pressable with nothing behind it.
   it("offers no move where the row suggests no step", () => {
-    const noMove = {
-      ...replyRow({ type: "person", id: "p-1" }),
+    const noMove: WorklistItem = {
+      ...replyRow({ type: "contact", id: "p-1" }),
       move: undefined,
     };
-    expect(moveHref(noMove as unknown as WorklistItem)).toBeUndefined();
-    expect(moveOpensComposer(noMove as unknown as WorklistItem)).toBe(false);
+    expect(moveHref(noMove)).toBeUndefined();
+    expect(moveOpensComposer(noMove)).toBe(false);
   });
 });
 
@@ -171,20 +173,20 @@ describe("moveHref — the draft_reply move", () => {
 // The shapes the server really sends, not a bare action. `draft_reply` always
 // names the message it answers — that is what makes it a reply — and the other
 // verbs name whatever their own operand is, or nothing.
-function movingRow(action: string, activityId?: string) {
-  const row = replyRow({ type: "person", id: "p-1" }) as unknown as {
-    move: unknown;
-  };
+function movingRow(
+  action: NonNullable<WorklistItem["move"]>["action"],
+  activityId?: string,
+): WorklistItem {
   const move =
     action === "draft_reply"
       ? { action, activity_id: activityId ?? "a-1" }
       : { action, ...(activityId ? { activity_id: activityId } : {}) };
-  return { ...row, move } as unknown as WorklistItem;
+  return { ...replyRow({ type: "contact", id: "p-1" }), move };
 }
 
 describe("the verbs the row can and cannot take a reader to", () => {
   // A first outreach reaches the same composer a reply does — the composer
-  // picks its own transport from the person, so the address is the same.
+  // picks its own transport from the contact, so the address is the same.
   it("opens the composer for a fresh message too", () => {
     const item = movingRow("draft_email");
     expect(moveHref(item)).toContain("compose=");
@@ -199,7 +201,7 @@ describe("the verbs the row can and cannot take a reader to", () => {
       ...movingRow("open_task", "task-1"),
       subject: { type: "deal", id: "d-1" },
     };
-    expect(moveLabel(item, t)).toBe("Open existing task");
+    expect(moveLabel(item, t)).toBe("Open task");
     expect(moveHref(item)).toBeDefined();
   });
 
@@ -211,10 +213,10 @@ describe("the verbs the row can and cannot take a reader to", () => {
   // And the label still follows the ROUTE. A deal has no composer, so the same
   // verb reaching only the record must not claim to draft anything.
   it("claims only to open where the composer cannot", () => {
-    const onADeal = {
-      ...(movingRow("draft_email") as unknown as { subject: unknown }),
+    const onADeal: WorklistItem = {
+      ...movingRow("draft_email"),
       subject: { type: "deal", id: "d-1" },
-    } as unknown as WorklistItem;
+    };
     expect(moveLabel(onADeal, t)).toBe("Open to write");
   });
 
@@ -224,11 +226,11 @@ describe("the verbs the row can and cannot take a reader to", () => {
   //
   // `open_meeting_brief` was on this list and no longer is. It reads as a
   // drawer, so it looked unaddressable — but the way IN is an address: the
-  // brief opens as `?prep=<activity>` on a person's record. It is covered by
+  // brief opens as `?prep=<activity>` on a contact's record. It is covered by
   // its own describe block below, including the case where the row names
   // nobody and correctly draws nothing.
   it("draws no link for a verb no address can perform", () => {
-    for (const action of ["create_task", "reconnect", "none"]) {
+    for (const action of ["create_task", "reconnect", "none"] as const) {
       const item = movingRow(action);
       expect(moveHref(item)).toBeUndefined();
       expect(moveOpensComposer(item)).toBe(false);
@@ -240,10 +242,10 @@ describe("the verbs the row can and cannot take a reader to", () => {
   // nothing to answer, and the contract says a client draws a control only where
   // the operand its verb needs is present.
   it("draws no reply where the move names no message", () => {
-    const noMessage = {
-      ...(movingRow("draft_email") as unknown as { move: unknown }),
+    const noMessage: WorklistItem = {
+      ...movingRow("draft_email"),
       move: { action: "draft_reply" },
-    } as unknown as WorklistItem;
+    };
     expect(moveHref(noMessage)).toBeUndefined();
     // And the LABEL agrees. A move refused a link must not still be described
     // as one that drafts, or the row says two things about one control.
@@ -328,12 +330,22 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
   // both: `cause` is the identity the group was formed on, opaque and never
   // rendered, and `label` is what it identifies in words. A fixture carrying
   // only the field the code reads could not catch the code reading the other.
-  const incident = (batch: { cause?: string; label?: string }): WorklistItem =>
-    ({
-      id: "i-1",
-      source: "automation_run",
-      batch: { key: "system_incident", count: 8, ...batch },
-    }) as unknown as WorklistItem;
+  const incident = (batch: {
+    cause?: string;
+    label?: string;
+  }): WorklistItem => ({
+    id: "i-1",
+    source: "automation_run",
+    level: 3,
+    category: "system",
+    title: "",
+    because: [],
+    // Required on the wire, and `none` is a real value: an incident row costs
+    // nothing to leave, which is not the same as costing nothing to have.
+    consequence: "none",
+    actions: [],
+    batch: { key: "system_incident", count: 8, ...batch },
+  });
 
   const REF = "automation_run:01a065e8-617c-74ec-a4da-b41010b2a5b0";
 
@@ -439,10 +451,10 @@ describe("an unavailable source", () => {
 });
 
 // The brief is not a page of its own: it opens as `?prep=<activity>` on a
-// PERSON's record, so the address needs both ids and the row's subject — the
+// CONTACT's record, so the address needs both ids and the row's subject — the
 // meeting — carries only one.
-describe("moveHref — the open_meeting_brief move", () => {
-  it("opens the brief on the person the meeting names", () => {
+describe("the open_meeting_brief move", () => {
+  it("opens the brief on the contact the meeting names", () => {
     const href = moveHref(briefRow("p-9"));
     expect(href).toContain("#/contacts/p-9");
     expect(href).toContain("prep=a-7");
@@ -461,20 +473,64 @@ describe("moveHref — the open_meeting_brief move", () => {
   it("is not a draft", () => {
     expect(moveOpensComposer(briefRow("p-9"))).toBe(false);
   });
+
+  // A meeting row's move opens a brief, not a composer — the label must say
+  // so on its own rather than borrow the reply wording, which is only the
+  // fall-through for a verb with no words of its own.
+  it("names itself as the brief, not as a reply", () => {
+    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for the meeting");
+  });
 });
 
-function briefRow(withPerson: string | undefined) {
+function briefRow(withContact: string | undefined): WorklistItem {
   return {
     id: "m1",
     source: "meeting",
+    level: 2,
     category: "meetings",
     title: "Fleet retrofit review",
     because: [],
+    // A meeting with a brief behind it costs nothing to leave; the lane says
+    // `meeting_unprepared` only where it could actually tell there is nothing
+    // written down (compose/attention/meeting.go).
+    consequence: "none",
     actions: [],
     dispositions: [],
     overdue: false,
     subject: { type: "activity", id: "a-7" },
-    with_person: withPerson,
+    with_contact: withContact,
     move: { action: "open_meeting_brief", activity_id: "a-7" },
-  } as unknown as WorklistItem;
+  };
 }
+
+describe("moveHref — the reconnect move", () => {
+  // A lapsed relationship offers a draft with no thread behind it: nobody is
+  // waiting on a reply, so the composer opens on the contact and starts one.
+  it("opens the composer on the contact with no thread anchored", () => {
+    // Category, level and consequence as `classifyDecay` actually sets them: a
+    // lapsed relationship is filed under `system` at the routine level and says
+    // the RECORD drifts, not the deal. The cast this fixture used to carry was
+    // hiding all three — `relationship_cools` is not a consequence the contract
+    // has ever held.
+    const row: WorklistItem = {
+      id: "p-9",
+      source: "relationship_decay",
+      category: "system",
+      level: 6,
+      consequence: "data_drifts",
+      title: "Marta Feld",
+      because: [],
+      actions: ["open", "dismiss"],
+      subject: { type: "contact", id: "p-9" },
+      move: { action: "draft_email" },
+    };
+
+    const href = moveHref(row);
+    expect(href).toContain("#/contacts/p-9");
+    expect(href).toContain("compose=reply");
+    // No thread parameter: anchoring one would open the composer on a
+    // conversation this row is not about.
+    expect(href).not.toContain("thread=");
+    expect(moveOpensComposer(row)).toBe(true);
+  });
+});

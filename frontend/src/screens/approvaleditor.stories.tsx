@@ -15,7 +15,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The two slots a decision row hands out: the dialog that reads the WHOLE
 // proposal, and the inline editor that rewrites the part of it this
-// installation lets a person change.
+// installation lets a contact change.
 //
 // The editor's shape comes from the kind, not from the payload, and that is
 // what the three editor stories below are for. A `held_draft` offers the words
@@ -33,7 +33,7 @@ export default meta;
 type Story = StoryObj;
 type Approval = components["schemas"]["Approval"];
 
-const detail = {
+const detail: Approval = {
   id: "ap-1",
   kind: "held_draft",
   status: "pending",
@@ -49,7 +49,7 @@ const detail = {
   target_version: 3,
   created_at: "2026-08-20T09:00:00Z",
   expires_at: "2026-08-21T09:00:00Z",
-} as unknown as Approval;
+};
 
 export const DetailModal: Story = {
   render: () => {

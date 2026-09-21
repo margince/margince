@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer describes a successful tag removal action (archiving Strategic Account) and never claims that Margince lacks the capability to remove tags from records.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes.",
+  "answer": "I read the full tag assignments on Vorort Systeme KG first: Strategic Account, plus K5 Conference 2025, which is retired and so never appears on the record row.\n\nThen I archived Strategic Account, which took it off Vorort Systeme KG and out of the vocabulary in one go — one action instead of two."
+}

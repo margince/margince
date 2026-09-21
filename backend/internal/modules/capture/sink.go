@@ -52,6 +52,23 @@ type Sink struct {
 	// nameParticipants completes a resolved attendee's name from the name the
 	// invitation gave them. Nil names nobody.
 	nameParticipants ParticipantNamer
+	// cancelMeeting closes a captured meeting the calendar says is off — called
+	// off by its organizer, or declined by the seat whose calendar it is. Nil
+	// captures meetings and cancels none.
+	cancelMeeting MeetingCloser
+	// takeOverAsserted writes this connector's reading of a message over a row
+	// an importer asserted. Nil leaves an asserted incumbent alone, which is
+	// the behaviour that predates the take-over.
+	takeOverAsserted AssertedTakeOver
+	// mailIdentityKind is activities.IdentityKindMail, and the two identity
+	// seams below are that module's own resolve and claim. All three are set
+	// together by WithMessageIdentity or none is: an empty kind is what
+	// identityOfRecord reads as "this sink files no cross-door identity".
+	mailIdentityKind    string
+	meetingIdentityKind string
+	meetingIdentityKey  MeetingIdentityKeyer
+	resolveIdentity     IdentityResolver
+	claimIdentity       IdentityClaimer
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for
@@ -131,6 +148,18 @@ func (s *Sink) WithStager(stager MergeStager) *Sink {
 
 var _ connector.Sink = (*Sink)(nil)
 
+// And the calendar verb, asserted HERE rather than left to the runtime.
+//
+// meetingmap.CaptureOne reaches cancellation through a type assertion, and its
+// miss is a no-op by design — a Sink that cannot cancel drops the event, which
+// is what a fixture does. That makes breaking this the quietest change in the
+// tree: a signature edit on CancelMeeting compiles, syncs, captures, and turns
+// every cancellation back into the silent drop this whole path exists to
+// replace. Nothing but the integration lane would notice.
+//
+// This line is what makes that a compile error instead.
+var _ connector.MeetingCanceller = (*Sink)(nil)
+
 // Upsert lands one normalized record: raw original + domain row +
 // audit + captured event, one transaction, idempotent on the natural
 // key. Replays return the existing row and write NOTHING new — an
@@ -186,7 +215,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			// BEFORE the activity is captured, so a message that completes the
 			// corroboration is judged under the claim it just proved rather
 			// than being the last one read as mail from a stranger.
-			if err := noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
+			if err := s.noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
 				return err
 			}
 			var err error
@@ -219,13 +248,22 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// a fault here is logged for the link_reconcile sweep rather than
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, decision)
-		// The project ladder runs on the same terms and for the same reasons:
-		// after the commit, in its own transaction, never failing the capture.
-		// It is independent of the counterparty decision — a message from a
-		// sender no record was created for still belongs to the project its
-		// subject names.
-		s.attributeProject(ctx, rec, ref)
 	}
+	// The project ladder runs on the same terms as the counterparty step —
+	// after the commit, in its own transaction, never failing the capture —
+	// and on EVERY capture of the activity rather than only the first.
+	//
+	// A transient fault used to leave the message unfiled forever: the ladder
+	// ran only on creation, so every later replay found the activity present
+	// and skipped it, and the reconcile the comment promised has no caller.
+	// Running it again is the retry. It is safe by construction —
+	// linkActivityToProject is ON CONFLICT DO NOTHING and stamps either way —
+	// and cheap because an activity already filed under a project stops on one
+	// indexed read before the rungs.
+	//
+	// Independent of the counterparty decision: a message from a sender no
+	// record was created for still belongs to the project its subject names.
+	s.attributeProject(ctx, rec, ref)
 	if dedupeHit != nil && s.stager != nil {
 		// Staged OUTSIDE the capture transaction on purpose: the capture
 		// itself wrote nothing (the collision blocked it), and the

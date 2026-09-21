@@ -1,19 +1,15 @@
-/** @vitest-environment jsdom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+/** @vitest-environment happy-dom */
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
-import { formatMoney, MONEY_ABSENT } from "../format/format";
-import { LocaleProvider } from "../i18n";
+import {
+  formatMoney,
+  formatMoneyCompact,
+  MONEY_ABSENT,
+} from "../format/format";
 import { en } from "../i18n/en";
+import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 type Stage = components["schemas"]["Stage"];
 
@@ -23,8 +19,8 @@ import {
   derivationCellCurrency,
   derivationColumns,
   parseDerivationQuery,
-  sectionFromAddress,
 } from "./analytics";
+import { sectionFromAddress } from "./analytics.address";
 
 // D2 acceptance: a report picker over deals-by-stage (unchanged), forecast
 // (unweighted category tiles + a weighted-vs-unweighted banner), and
@@ -36,182 +32,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-const render = (ui: ReactNode) => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-};
-
-type ReportsStubOpts = {
-  onRun?: (key: string, body: Record<string, unknown>) => void;
-  // Model a server that sends only PART of the frame — an installation
-  // mid-upgrade, which is the one place a partial result actually arrives.
-  // Dropping the whole frame would be a weaker fixture: a guard that checks
-  // only one of the three fields passes against it, and the caption then
-  // renders with an undefined zone.
-  partialFrame?: boolean;
-  stageRows?: Record<string, unknown>[];
-  forecastRows?: Record<string, unknown>[];
-  companyRows?: Record<string, unknown>[];
-  winLossRows?: Record<string, unknown>[];
-  stageAgeRows?: Record<string, unknown>[];
-  meetingRows?: Record<string, unknown>[];
-  phaseRows?: Record<string, unknown>[];
-  commitmentRows?: Record<string, unknown>[];
-  quietRows?: Record<string, unknown>[];
-  // The coverage read: a payload, a status (403 for a seat without the ops
-  // grant, 404 for a fresh installation), or omitted for the default 403.
-  coverage?: { status: number; body?: unknown };
-  derivation?: Record<string, unknown>;
-  onDerivation?: (url: string) => void;
-  context?: Record<string, unknown>;
-};
-
-function reportsStub(opts: ReportsStubOpts = {}) {
-  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = String(request ? request.url : input);
-    const method = request ? request.method : (init?.method ?? "GET");
-    // Every Analytics surface reads its frame first: which population these
-    // numbers cover, and whether this reader may publish a forecast. A stub
-    // without it leaves the screen waiting and the assertions below looking
-    // like a rendering bug.
-    if (url.endsWith("/me")) {
-      return jsonResponse(
-        meFixture({
-          roles: ["rep"],
-          allow: {
-            data_coverage:
-              opts.coverage !== undefined && opts.coverage.status !== 403
-                ? ["read"]
-                : [],
-          },
-        }),
-      );
-    }
-    if (url.includes("/analytics/coverage")) {
-      const cov = opts.coverage ?? { status: 403 };
-      return jsonResponse(
-        cov.body ?? { title: "Forbidden", status: cov.status },
-        cov.status,
-      );
-    }
-    if (url.includes("/analytics/context")) {
-      return jsonResponse(
-        opts.context ?? {
-          default_scope: { kind: "workspace", label: "Whole workspace" },
-          allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
-          capabilities: {
-            view_manager_forecast: true,
-            submit_manager_forecast: true,
-          },
-          as_of: "2026-09-04T00:00:00Z",
-          timezone: "Europe/Berlin",
-          base_currency: "EUR",
-        },
-      );
-    }
-    if (method === "GET" && url.includes("/derivation")) {
-      opts.onDerivation?.(url);
-      return jsonResponse(opts.derivation ?? {});
-    }
-    if (url.includes("/pipelines")) {
-      return jsonResponse({
-        data: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages: [
-              {
-                id: "pl-s1",
-                pipeline_id: "pl",
-                name: "Qualify",
-                position: 1,
-                semantic: "open",
-                win_probability: 20,
-              },
-            ],
-          },
-        ],
-        page: { next_cursor: null },
-      });
-    }
-    if (method === "POST" && url.includes("/reports/")) {
-      const match = url.match(/\/reports\/([^/?]+)/);
-      const key = match ? match[1] : "";
-      const body = request
-        ? await request.json()
-        : JSON.parse(String(init?.body));
-      opts.onRun?.(key, body);
-      const rows =
-        key === "forecast"
-          ? (opts.forecastRows ?? [])
-          : key === "activities-by-kind"
-            ? (opts.meetingRows ?? [])
-            : key === "projects-by-phase"
-              ? (opts.phaseRows ?? [])
-              : key === "project-commitments"
-                ? (opts.commitmentRows ?? [])
-                : key === "projects-gone-quiet"
-                  ? (opts.quietRows ?? [])
-                  : key === "win-loss"
-                    ? (opts.winLossRows ?? [])
-                    : key === "stage-age"
-                      ? (opts.stageAgeRows ?? [])
-                      : key === "open-deals-per-company"
-                        ? (opts.companyRows ?? [])
-                        : (opts.stageRows ?? [
-                            {
-                              stage_id: "pl-s1",
-                              raw_minor: 100000,
-                              deal_count: 2,
-                              currency: "EUR",
-                            },
-                          ]);
-      return jsonResponse({
-        report: key,
-        plan: {},
-        columns: [],
-        rows,
-        // The frame the server sends with every result. A fixture that omits
-        // it models a response no live server produces, and the screen would
-        // then be tested against a shape it never meets.
-        as_of: "2026-03-04T09:00:00Z",
-        ...(opts.partialFrame
-          ? {}
-          : {
-              timezone: "Europe/Berlin",
-              base_currency: "EUR",
-              fiscal_year_start_month: 1,
-            }),
-        derivation_url: `/v1/reports/${key}/derivation?by=stage_id&agg=sum:amount_minor:raw_minor&stage_id=pl-s1`,
-      });
-    }
-    return jsonResponse({ data: [], page: { next_cursor: null } });
-  });
-}
-
 // The pipeline reports live behind their own tab now, and Forecast is the
 // section a reader lands on. A test that wants deals-by-stage opens the tab
 // the way a reader does, rather than asserting against a default that moved.
 async function openPipeline() {
   await userEvent
     .setup()
-    .click(await screen.findByRole("button", { name: "Pipeline" }));
+    .click(await screen.findByRole("button", { name: "Deals" }));
 }
 
 async function openPerformance() {
@@ -355,7 +182,7 @@ describe("the data coverage section", () => {
     const fetch = reportsStub({ coverage: { status: 403 } });
     vi.stubGlobal("fetch", fetch);
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline" });
+    await screen.findByRole("button", { name: "Deals" });
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: "Data coverage" }),
@@ -370,19 +197,6 @@ describe("the data coverage section", () => {
     ).toBe(false);
   });
 });
-
-// A context whose default lens is one seat: the rep's own.
-const ownLensContext = {
-  default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
-  allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
-  capabilities: {
-    view_manager_forecast: false,
-    submit_manager_forecast: false,
-  },
-  as_of: "2026-09-04T00:00:00Z",
-  timezone: "Europe/Berlin",
-  base_currency: "EUR",
-};
 
 describe("the my-outcomes section", () => {
   it("shows the tab under an owner lens and answers with the seat's own facts", async () => {
@@ -406,9 +220,7 @@ describe("the my-outcomes section", () => {
 
     // The meetings card states current standing, not a funnel.
     expect(
-      await screen.findByText(
-        "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
-      ),
+      await screen.findByText(en["analytics.meetingsAsTheyStand"]),
     ).toBeTruthy();
     expect(screen.getByText("Held")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
@@ -443,12 +255,10 @@ describe("the my-outcomes section", () => {
     try {
       render(<AnalyticsScreen />);
       expect(
-        await screen.findByText(
-          "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
-        ),
+        await screen.findByText(en["analytics.outcomesOwnLensOnly"]),
       ).toBeTruthy();
       // And it fetched nothing: numbers under this heading would have
-      // measured the default population, not the person.
+      // measured the default population, not the contact.
       expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
         false,
       );
@@ -457,10 +267,49 @@ describe("the my-outcomes section", () => {
     }
   });
 
+  // A reading with no way out. Both figures are one row of the pipeline report,
+  // and the section that draws that report is on this very screen — a rep who
+  // wanted the deals behind "4" had to find the tab themselves.
+  it("opens the pipeline section from each of the seat's readings", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        context: ownLensContext,
+        stageRows: [{ deal_count: 4, raw_minor: 250000 }],
+      }),
+    );
+    const user = userEvent.setup();
+    try {
+      render(<AnalyticsScreen />);
+      await user.click(
+        await screen.findByRole("button", { name: "My outcomes" }),
+      );
+      await screen.findByText("4");
+
+      // TWO doors, and every door in the product carries the same word — so
+      // what tells them apart for a screen reader is each one's own reading.
+      // The meetings cards below read from a different report and offer none.
+      const doors = screen.getAllByRole("button", { name: "Open" });
+      expect(doors).toHaveLength(2);
+      expect([
+        screen.getByRole("button", { name: "Open", description: "Open deals" }),
+        screen.getByRole("button", {
+          name: "Open",
+          description: "Deal value · EUR",
+        }),
+      ]).toEqual(doors);
+
+      await user.click(doors[0]);
+      expect(window.location.hash).toBe("#/analytics/pipeline");
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
   it("hides the tab when the lens covers more than one seat", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline" });
+    await screen.findByRole("button", { name: "Deals" });
     expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
   });
 });
@@ -561,9 +410,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
       bodies.some(
@@ -608,9 +455,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
 
@@ -649,13 +494,13 @@ describe("AnalyticsScreen", () => {
     expect(screen.queryByText("€49.37")).toBeNull();
   });
 
-  it("switching to Open deals per company groups by organization_id and renders a table", async () => {
+  it("switching to Open deals per company groups by company_id and renders a table", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
         companyRows: [
           {
-            organization_id: "o1",
+            company_id: "o1",
             raw_minor: 250000,
             deal_count: 4,
             currency: "EUR",
@@ -664,9 +509,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("o1")).toBeTruthy());
   });
 
@@ -677,7 +520,7 @@ describe("AnalyticsScreen", () => {
   // proves the link appears would pass a version that always draws it.
   describe("a count opens exactly the deals it counted", () => {
     const openPipelineTab = async () =>
-      userEvent.click(await screen.findByRole("button", { name: "Pipeline" }));
+      userEvent.click(await screen.findByRole("button", { name: "Deals" }));
 
     it("addresses a company trading in one currency, and says the deals are open", async () => {
       vi.stubGlobal(
@@ -685,7 +528,7 @@ describe("AnalyticsScreen", () => {
         reportsStub({
           companyRows: [
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 250000,
               deal_count: 4,
               currency: "EUR",
@@ -696,7 +539,7 @@ describe("AnalyticsScreen", () => {
       render(<AnalyticsScreen />);
       await openPipelineTab();
       const door = await screen.findByRole("link", { name: "4" });
-      expect(door.getAttribute("href")).toContain("organization_id=o1");
+      expect(door.getAttribute("href")).toContain("company_id=o1");
       expect(door.getAttribute("href")).toContain("status=open");
     });
 
@@ -706,13 +549,13 @@ describe("AnalyticsScreen", () => {
         reportsStub({
           companyRows: [
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 250000,
               deal_count: 4,
               currency: "EUR",
             },
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 900000,
               deal_count: 3,
               currency: "VND",
@@ -888,7 +731,7 @@ describe("reports never sum money across currencies", () => {
   // and nothing on the server enforces that — a measure named `amount_cents`
   // would sum across currencies with this test still green. Two things would
   // have to happen for that: somebody adds a money measure AND spells it
-  // outside the convention. If you are that person, the fix is #4131's — the
+  // outside the convention. If you are that contact, the fix is #4131's — the
   // server refusing the combination — not a longer suffix list here.
   it("groups every native money plan by currency", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
@@ -981,7 +824,7 @@ describe("reports never sum money across currencies", () => {
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -1160,15 +1003,15 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
-      await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
+      await screen.findByText(formatMoneyCompact(202_720_000, "EUR", "en")),
     ).toBeTruthy();
     // And never folded into a named category: the two totals added together
     // is the number that must NOT appear anywhere.
     expect(
-      screen.queryByText(formatMoney(261_580_000, "EUR", "en")),
+      screen.queryByText(formatMoneyCompact(261_580_000, "EUR", "en")),
     ).toBeNull();
   });
 
@@ -1203,13 +1046,12 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
-    // Both categories, both figures, all in the one base currency.
-    expect(
-      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
-    ).toBeTruthy();
-    expect(screen.getByText(formatMoney(920_000, "EUR", "en"))).toBeTruthy();
+    // Both categories, both figures, in the one base currency and compact.
+    const compact = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+    expect(await screen.findByText(compact(2_500_000))).toBeTruthy();
+    expect(screen.getByText(compact(920_000))).toBeTruthy();
 
     // The plan asks for converted money and does NOT group by currency: those
     // two go together, and a request that changed one without the other would
@@ -1248,18 +1090,22 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
-      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
+      await screen.findByText(formatMoneyCompact(2_500_000, "EUR", "en")),
     ).toBeTruthy();
-    // The count rides on the tile's second line beside the weighted figure.
-    expect(screen.getByText((text) => text.includes("Deals: 2"))).toBeTruthy();
-    // The priced count reaches the screen too (margince#4201) — without it
-    // the €2,500,000 total reads as covering both deals when it covers one.
-    expect(
-      screen.getByText((text) => text.includes("1 of 2 priced")),
-    ).toBeTruthy();
+    // FRAGMENTS on the tile's second line, never "Label: value" pairs — a
+    // caption is read as one sentence about the figure above it. Where the
+    // money covers every deal the count says so plainly; here it does not, so
+    // the count states the GAP, without which the total reads as covering both
+    // deals when it covers one.
+    const [detail] = screen.getAllByText((text) =>
+      text.includes("weighted · "),
+    );
+    expect(detail.textContent).toBe(
+      `${formatMoneyCompact(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
+    );
   });
 
   // An installation whose deals are all categorised should not be shown an empty
@@ -1280,9 +1126,11 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
-      expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
+      expect(
+        screen.getByText(formatMoneyCompact(1000, "EUR", "en")),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText("No category yet")).toBeNull();
   });

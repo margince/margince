@@ -22,7 +22,7 @@ func (e *resolveEnv) allows(t *testing.T, exception *messaging.MarketingExceptio
 	var out bool
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = existingCustomerAllows(e.ctx, tx, e.person.String(), exception)
+		out, err = existingCustomerAllows(e.ctx, tx, e.contact.String(), exception)
 		return err
 	}); err != nil {
 		t.Fatalf("asking the exception: %v", err)
@@ -30,13 +30,13 @@ func (e *resolveEnv) allows(t *testing.T, exception *messaging.MarketingExceptio
 	return out
 }
 
-// flag records a sale. person_id is the primary key, so this is the row.
+// flag records a sale. contact_id is the primary key, so this is the row.
 func (e *resolveEnv) flag(t *testing.T, saleRef, goods string) {
 	t.Helper()
 	if _, err := e.owner.Exec(e.ctx, `
 		INSERT INTO consent_existing_customer_flag
-		    (person_id, sale_reference, collected_at, similar_goods_note, optout_notice_given)
-		VALUES ($1, $2, now(), $3, true)`, e.person, saleRef, goods); err != nil {
+		    (contact_id, sale_reference, collected_at, similar_goods_note, optout_notice_given)
+		VALUES ($1, $2, now(), $3, true)`, e.contact, saleRef, goods); err != nil {
 		t.Fatalf("recording the sale: %v", err)
 	}
 }

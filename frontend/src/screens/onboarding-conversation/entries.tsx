@@ -82,7 +82,7 @@ const JUMP_PULSE_MS = 1600;
 // carrying `data-finding-id` before this function looks for anything to
 // focus inside it, so a row that renders its control only once expanded
 // (confirm-card.tsx's FieldRow) gets the chance to open first. A row that
-// never listens — settled rows, a person or fact entry with nothing to
+// never listens — settled rows, a contact or fact entry with nothing to
 // edit — simply ignores it, and the fallback below still focuses the row
 // itself.
 export const FINDING_EXPAND_EVENT = "ob:expand-finding";
@@ -228,7 +228,7 @@ export function ActivityGroup({
         <ul>
           {entries.map((entry) =>
             entry.findingIds !== undefined && entry.findingIds.length > 0 ? (
-              <li key={entry.id} className="t-caption">
+              <li key={entry.id}>
                 <button
                   type="button"
                   onClick={() => jumpToFindings(entry.findingIds ?? [])}
@@ -237,9 +237,7 @@ export function ActivityGroup({
                 </button>
               </li>
             ) : (
-              <li key={entry.id} className="t-caption">
-                {textOf(entry)}
-              </li>
+              <li key={entry.id}>{textOf(entry)}</li>
             ),
           )}
         </ul>
@@ -399,7 +397,6 @@ export function QuestionCard({
           return (
             <Button
               key={option.value}
-              small
               className="ob-conv-option"
               // The chip clamps long values visually (CSS line-clamp); the
               // full text stays the accessible name via content and here as
@@ -409,9 +406,7 @@ export function QuestionCard({
             >
               <span>{label}</span>
               {option.detailKey && (
-                <small className="t-caption">
-                  {t(option.detailKey, option.params)}
-                </small>
+                <small>{t(option.detailKey, option.params)}</small>
               )}
             </Button>
           );
@@ -419,7 +414,6 @@ export function QuestionCard({
       </div>
       {question.dismissLabelKey !== undefined && onDismiss !== undefined && (
         <Button
-          small
           variant="ghost"
           className="ob-conv-question-dismiss"
           onClick={() => onDismiss(question.id)}

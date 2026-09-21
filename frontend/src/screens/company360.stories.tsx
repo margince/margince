@@ -3,15 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import {
   CommercialPanel,
   DealsCard,
   NextSteps,
   ProposedNextSteps,
   StateStrip,
+  SuggestionsSection,
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
-import { CompanyWorkCard } from "./companywork";
 import {
   installFetchStub,
   jsonResponse,
@@ -37,14 +38,15 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type View = components["schemas"]["Company360"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const page = { has_more: false, next_cursor: null };
 
-const populated = {
+const populated: View = {
+  ...company360,
   as_of: "2026-07-13T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     lifecycle: "customer",
@@ -74,10 +76,10 @@ const populated = {
       evidence: [{ entity_type: "activity", entity_id: "a-1" }],
     },
   ],
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         primary_email: "dana@brandt.example",
@@ -95,7 +97,7 @@ const populated = {
         },
       },
       {
-        person_id: "p-2",
+        contact_id: "p-2",
         full_name: "Kim Ops",
         title: "Operations",
         deal_roles: [],
@@ -181,6 +183,11 @@ const populated = {
         direction: "outbound",
         subject: "Re: retrofit timeline",
         occurred_at: "2026-07-12T10:00:00Z",
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-07-12T10:00:00Z",
+        updated_at: "2026-07-12T10:00:00Z",
         links: [{ entity_type: "deal", entity_id: "d-1" }],
       },
     ],
@@ -194,7 +201,7 @@ const populated = {
         due_at: "2026-07-01T09:00:00Z",
         overdue: true,
         linked_deal_id: null,
-        linked_person_id: null,
+        linked_contact_id: null,
         assignee_id: null,
       },
       {
@@ -203,14 +210,14 @@ const populated = {
         due_at: "2026-08-04T09:00:00Z",
         overdue: false,
         linked_deal_id: null,
-        linked_person_id: null,
+        linked_contact_id: null,
         assignee_id: null,
       },
     ],
     page,
   },
   pending_approvals: { data: [], page },
-  tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
+  tags: [{ id: "t-1", name: "Key account" }],
   since_last_visit: {
     baseline_at: "2026-07-10T09:00:00Z",
     new_activities: 2,
@@ -271,29 +278,31 @@ const populated = {
     single_threaded: false,
     open_commitments: 1,
   },
-} as unknown as View;
+};
 
-// The same account read by someone whose role cannot see deals, people or
+// The same account read by someone whose role cannot see deals, contacts or
 // the state strip: each card says so rather than reading as an account with
 // no pipeline, no contacts and no standing. This is the state no seeded demo
 // account can reach — every one of them grants the viewer full RBAC — so
 // this gallery is the only place a reader ever sees it rendered.
-const withheld = {
+const withheld: View = {
+  ...company360,
   ...populated,
   deals: undefined,
-  people: undefined,
+  contacts: undefined,
   state_strip: undefined,
-  sections_omitted: ["deals", "people", "state_strip"],
+  sections_omitted: ["deals", "contacts", "state_strip"],
   // The reasons are a separate grant from the rows: this reader can list the
   // projects and cannot read the conversations behind them, so the card shows
   // the rows and says the statuses are incomplete.
   attention_withheld: true,
-} as unknown as View;
+};
 
 // An account nobody has worked yet — every card in its own empty state.
-const empty = {
+const empty: View = {
+  ...company360,
   ...populated,
-  people: { data: [], page },
+  contacts: { data: [], page },
   deals: {
     data: [],
     page,
@@ -314,17 +323,17 @@ const empty = {
     deal_stage_moves: 0,
     pending_proposals: 0,
   },
-} as unknown as View;
+};
 
 function Cards({ view }: Readonly<{ view: View }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /signals": () => jsonResponse({ data: [], page }),
     // The prepared questions answer from the account; the story serves the
     // deterministic floor, which is what a deployment with no model lane shows.
-    "POST /organizations/o-1/ask": () =>
+    "POST /companies/o-1/ask": () =>
       jsonResponse({
-        organization_id: "o-1",
+        company_id: "o-1",
         question: "whats_open",
         generated_at: "2026-07-13T09:00:00Z",
         generated_by: "deterministic",
@@ -344,10 +353,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        {/* The overview's lead card. The live page always wires an opener,
-            so the commitment lines here can link to the conversation they
-            were read from; without one they render as plain sentences. */}
-        <CompanyWorkCard view={view} onOpenRecord={() => {}} />
         {/* The contract standing rides in the panel's `extra` slot, which is
             the SAME component the Deals tab draws — an account's contracted
             value and renewal must not be able to say two things on two
@@ -381,7 +386,8 @@ export const NothingYet: Story = { render: () => <Cards view={empty} /> };
 // No seeded demo account reaches this pairing, and for a structural reason:
 // every one of them already carries an open task, which is exactly the
 // condition that silences the rule.
-const recommending = {
+const recommending: View = {
+  ...company360,
   ...populated,
   next_steps: { data: [], page },
   suggestions: [
@@ -403,18 +409,18 @@ const recommending = {
       },
     },
   ],
-} as unknown as View;
+};
 
 function RecommendedStep() {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
   });
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <NextSteps
           view={recommending}
-          proposed={<ProposedNextSteps orgId="o-1" view={recommending} />}
+          proposed={<ProposedNextSteps companyId="o-1" view={recommending} />}
         />
       </div>
     </StoryProviders>
@@ -423,6 +429,39 @@ function RecommendedStep() {
 
 export const NextStepRecommended: Story = {
   render: () => <RecommendedStep />,
+};
+
+// The same advice in its own panel, which is the chrome the rows are read in
+// wherever the merged daily brief is not what mounted them. Indigo rather than
+// accent: a rule wrote every row under this head, so the tint is the panel's
+// claim about WHO wrote it, and the badge in the band says it in words for a
+// reader who cannot tell the tints apart.
+function Suggestions() {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
+  });
+  return (
+    <StoryProviders>
+      <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
+        <SuggestionsSection
+          companyId="o-1"
+          view={recommending}
+          onOpenRecord={() => {}}
+          onOpenTasks={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  );
+}
+
+export const MargincesSuggestions: Story = { render: () => <Suggestions /> };
+
+// The indigo head, the tinted rows and the filled verb are all color-mix() of
+// tokens that lift with the dark accent, so the panel can be right in light
+// and wrong here.
+export const MargincesSuggestionsDark: Story = {
+  ...MargincesSuggestions,
+  globals: { theme: "dark" },
 };
 
 // A connected finance source, shaped exactly like companyfinance.stories.tsx's
@@ -437,7 +476,7 @@ export const NextStepRecommended: Story = {
 // than one year's worth of it, and a slot that reached for the wrong window
 // would be visibly wrong rather than plausibly wrong.
 const connectedFinance: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
   last_synced_at: "2026-08-10T06:00:00Z",
@@ -451,7 +490,7 @@ const connectedFinance: FinanceSummary = {
 // The two lookups below are keyed on the real wire enums (Lifecycle,
 // RelationshipType), but StateStrip's own label props take a bare `string` —
 // StateStrip: the record's own readings row, above the tabs — FIVE slots on
-// every account, drawn by the shared StatStrip the person record uses.
+// every account, drawn by the shared StatStrip the contact record uses.
 //
 // Three of the four stories are states nothing seeded reaches. Withheld is the
 // whole-strip permission boundary, which no demo account carries. Connected is
@@ -464,23 +503,23 @@ const connectedFinance: FinanceSummary = {
 // `Strip` itself returns `<StoryProviders>`, so it sits outside the
 // LocaleProvider it renders and cannot call `useT` directly; `StripBody`
 // is the inner component that mounts inside that context, mirroring the
-// real caller's label wiring (organizations.tsx's CompanyBand) rather than
+// real caller's label wiring (companies.tsx's CompanyBand) rather than
 // the identity functions that used to stand in for it and rendered the raw
 // wire enum instead of its copy.
 function StripBody({ view }: Readonly<{ view?: View }>) {
-  return <StateStrip orgId="o-1" view={view} />;
+  return <StateStrip companyId="o-1" view={view} />;
 }
 
 function Strip({
   view,
-  finance = { organization_id: "o-1", state: "no_connection" },
+  finance = { company_id: "o-1", state: "no_connection" },
 }: Readonly<{ view?: View; finance?: FinanceSummary }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
+    "GET /me": meRoute({ company: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
     // the same query the finance card and the payment health dimension run —
     // so a customer story with nothing stubbed here fires a real request the
     // static build has nowhere to send.
-    "GET /organizations/o-1/finance-summary": () => jsonResponse(finance),
+    "GET /companies/o-1/finance-summary": () => jsonResponse(finance),
   });
   return (
     <StoryProviders>
@@ -521,21 +560,124 @@ export const StateStripConnected: Story = {
 export const StateStripUnanswered: Story = {
   render: () => (
     <Strip
-      view={
-        {
-          ...populated,
-          health: undefined,
-          state_strip: {
-            account: { lifecycle: "prospect", relationship_types: [] },
-            commercial: {
-              open_count: 0,
-              stalled_count: 0,
-              priced_count: 0,
-              converted_count: 0,
-            },
+      view={{
+        ...company360,
+        ...populated,
+        health: undefined,
+        state_strip: {
+          account: { lifecycle: "prospect", relationship_types: [] },
+          commercial: {
+            open_count: 0,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
           },
-        } as unknown as View
-      }
+        },
+      }}
+    />
+  ),
+};
+
+// Silence with nothing sent, and silence after we wrote. The reading carries
+// only the inbound side, so the two used to collapse into one sentence — and
+// the second of them, the account that is being ignored, is the one a rep acts
+// on. The outbound date is what tells them apart and what dates the reading.
+// The two silences, drawn one after the other: the first carries NO tone,
+// because an account nobody has approached is a fact about how far it has been
+// worked rather than bad news, and the second does.
+export const StateStripNoExchange: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        last_inbound_at: undefined,
+        last_outbound_at: undefined,
+        health: { days_since_last_inbound: null },
+      }}
+    />
+  ),
+};
+
+export const StateStripUnansweredExchange: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        last_inbound_at: undefined,
+        last_outbound_at: "2026-08-08T09:00:00Z",
+        health: { days_since_last_inbound: null },
+      }}
+    />
+  ),
+};
+
+// A quiet account. The slot says how long nothing has come back, in the same
+// words the unanswered slot uses — a share of the exchange would describe a
+// conversation that has stopped, so the reading carries one and does not say
+// it. The live rows below are where the share belongs.
+export const StateStripQuiet: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: { days_since_last_inbound: 62, reply_balance: 0.18 },
+      }}
+    />
+  ),
+};
+
+// The same balance on a relationship that is still running, which is the row
+// the share is a reading of: below a third coming from them is us talking to
+// ourselves, whatever the dates say.
+export const StateStripOneSided: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: { days_since_last_inbound: 3, reply_balance: 0.18 },
+      }}
+    />
+  ),
+};
+
+// The row at phone width, where every slot is one full-width ROW: label and
+// basis leading, figure on the trailing edge, one hairline between and no
+// boxes at all. Two-up here, a ten-character value ellipsized in the middle of
+// itself — "No exch…" — and the money made it worse, which is where decision
+// 13 came from. The figure is compact everywhere now and the fold does the
+// rest.
+export const StateStripPhone: Story = {
+  tags: ["uat-phone"],
+  render: () => <Strip view={populated} finance={connectedFinance} />,
+};
+
+// A former customer whose accounting IS connected and has billed nothing in
+// the window. The stage under the word is read rather than assumed — this slot
+// used to say "Customer" on an account that had stopped buying.
+export const StateStripFormerCustomerNothingBilled: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: {
+          account: {
+            lifecycle: "former_customer",
+            relationship_types: ["customer"],
+          },
+          commercial: {
+            open_count: 0,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
+          },
+        },
+      }}
+      finance={{ company_id: "o-1", state: "connected" }}
     />
   ),
 };
@@ -543,13 +685,12 @@ export const StateStripUnanswered: Story = {
 export const StateStripWithheld: Story = {
   render: () => (
     <Strip
-      view={
-        {
-          ...populated,
-          state_strip: undefined,
-          sections_omitted: ["state_strip"],
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: undefined,
+        sections_omitted: ["state_strip"],
+      }}
     />
   ),
 };

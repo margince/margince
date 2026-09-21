@@ -37,7 +37,7 @@ import (
 // whoever the workflow happened to run as, which would file the work under a
 // system principal and hide it from everybody.
 func taskCreateEffectFor(
-	ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID,
+	ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID, key *taskNaturalKey,
 ) (workflow.Effect, error) {
 	fields := map[string]any{
 		fieldKind: "task",
@@ -50,6 +50,10 @@ func taskCreateEffectFor(
 	if owner != nil {
 		fields["assignee_id"] = *owner
 	}
+	if key != nil {
+		fields["source_system"] = key.System
+		fields["source_id"] = key.ID
+	}
 	args, err := json.Marshal(fields)
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the task: %w", err)
@@ -59,14 +63,38 @@ func taskCreateEffectFor(
 	}}}, nil
 }
 
-// anchorReminderTaskEffect is the clock handlers' view of taskCreateEffect:
-// a reminder due AT the anchor moment (ev.OccurredAt), anchored on the
-// fired entity, with the caller's own wording — no_activity_reminder,
-// check_in_cadence, and renewal_reminder all plan through it.
+// taskNaturalKey is the identity a reminder carries so the SQL draw can see it
+// (activities/lasttouch.go's openReminderHoldsEntity) and a redelivery of the
+// same occurrence resolves to the row already written rather than a second one.
+//
+// The ID must include the anchor. replayedActivity resolves (source_system,
+// source_id) WITHOUT an archived_at filter, so a key naming only the entity
+// would match a reminder somebody archived months ago and the account would
+// never be asked about again.
+type taskNaturalKey struct{ System, ID string }
+
+// reminderDueInDays is how far ahead a quiet-account reminder falls due.
+//
+// A reminder due AT its anchor is late the moment it is written: the anchor is
+// the last touch, which is by definition already past the staleness threshold,
+// so every task arrived overdue and the queue could not tell a real slip from
+// the clock's own arithmetic. Three days is the same shape as
+// defaultRouteLeadDueInDays — long enough to be actionable, short enough that
+// the reminder still belongs to this week.
+const reminderDueInDays = 3
+
+// anchorReminderTaskEffect is the quiet-account handlers' view of
+// taskCreateEffect: a reminder due reminderDueInDays after the firing, anchored
+// on the entity that fired, carrying the handler's own occurrence key.
+//
+// no_activity_reminder and check_in_cadence plan through it. renewal_reminder
+// does NOT: its anchor is a renewal date that can be today, so a fixed horizon
+// would file the task three days after the renewal it exists to warn about.
 func anchorReminderTaskEffect(
-	ctx context.Context, ex Executors, ev workflow.Event, subject string,
+	ctx context.Context, ex Executors, ev workflow.Event, subject string, h workflow.Handler,
 ) (workflow.Effect, error) {
-	return ownedTaskEffect(ctx, ex, ev, subject, ev.OccurredAt)
+	key := taskNaturalKey{System: h.Spec().Name, ID: h.IdempotencyKey(ev)}
+	return ownedTaskEffect(ctx, ex, ev, subject, ev.OccurredAt.AddDate(0, 0, reminderDueInDays), &key)
 }
 
 // ownedTaskEffect mints a task belonging to whoever owns the record that fired.
@@ -83,23 +111,33 @@ func anchorReminderTaskEffect(
 //
 // A deleted target skips the firing; other read failures must not create work
 // under an unknown owner.
-func ownedTaskEffect(
+// ownedTaskEffectNoKey mints an owned task carrying no occurrence identity, for
+// the starters whose effect is claimed by the runtime's own effect claim rather
+// than by a natural key on the row — the event-driven follow-ups, and the
+// renewal reminder whose due date stays on its anchor.
+func ownedTaskEffectNoKey(
 	ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time,
 ) (workflow.Effect, error) {
+	return ownedTaskEffect(ctx, ex, ev, subject, dueAt, nil)
+}
+
+func ownedTaskEffect(
+	ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time, key *taskNaturalKey,
+) (workflow.Effect, error) {
 	if ex.Provider == nil {
-		return taskCreateEffectFor(ev, subject, dueAt, nil)
+		return taskCreateEffectFor(ev, subject, dueAt, nil, key)
 	}
 	owner, err := recordOwner(ctx, ex, ev)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return taskCreateEffectFor(ev, subject, dueAt, owner)
+	return taskCreateEffectFor(ev, subject, dueAt, owner, key)
 }
 
 // recordOwner reads who answers for the record that fired, or nil.
 //
 // One shape for every record type the task-minting handlers fire on: deal,
-// lead, person and organization all spell their owner `owner_id`, so one decode
+// lead, contact and company all spell their owner `owner_id`, so one decode
 // answers all four and a per-type switch would be four spellings of one fact.
 func recordOwner(ctx context.Context, ex Executors, ev workflow.Event) (*ids.UUID, error) {
 	rec, err := ex.Provider.Read(ctx, ev.Entity)

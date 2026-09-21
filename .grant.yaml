@@ -46,7 +46,7 @@ allow:
 # license.
 ignore-packages:
   - github.com/margince/margince/* # our own Go modules
-  - example.margince.dev/* # committed extension stubs (ADR-0069), first-party
+  - example.margince.dev/* # committed extension stubs (ADR-0120), first-party
   - SonarSource/sonarqube-scan-action # LGPL-3.0-only CI scanner action, runs in CI only, never shipped
   # Local composite actions under .github/actions/ — first-party files carrying
   # the repo's own BUSL-1.1, not a third-party dependency. They cannot be handled

@@ -8,18 +8,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   ProjectLinks,
   type ProjectLinksAdapter,
 } from "../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";
 
-type Organization360Project = components["schemas"]["Organization360Project"];
+type Company360 = components["schemas"]["Company360"];
+type Company360Project = components["schemas"]["Company360Project"];
 
 // What a company can BE to a project, PARTNER FIRST because the first role is
 // the picker's default and a default is a claim.
@@ -29,7 +32,7 @@ type Organization360Project = components["schemas"]["Organization360Project"];
 // attaches its company as the customer. So a company joining afterwards is a
 // partner or a subcontractor; defaulting it to customer would hand a project two
 // customers on a reader who took the default, which is what the reports group
-// by and what organization_id resolves to.
+// by and what company_id resolves to.
 export const COMPANY_ROLES = ["partner", "subcontractor", "customer"] as const;
 
 // The message key for one role, spelled once so the picker and any row that
@@ -46,14 +49,14 @@ export function roleKey(role: string): MessageKey {
 }
 
 export function CompanyProjects({
-  organizationId,
+  companyId,
   projects,
   readOnly,
   onCreate,
   bare,
 }: Readonly<{
-  organizationId: string;
-  projects: readonly Organization360Project[] | undefined;
+  companyId: string;
+  projects: readonly Company360Project[] | undefined;
   readOnly?: boolean;
   onCreate?: () => void;
   // As a group inside the pane the caller holds — see ProjectLinks.
@@ -67,7 +70,7 @@ export function CompanyProjects({
   // would show the reader the state before their own change.
   const settled = () => {
     queryClient.invalidateQueries({
-      queryKey: ["organization360", organizationId],
+      queryKey: ["company360", companyId],
     });
     queryClient.invalidateQueries({ queryKey: ["projects"] });
     // And any project page open behind this one: the company just joined or
@@ -87,7 +90,7 @@ export function CompanyProjects({
     }) => {
       const { error } = await api.PUT("/projects/{id}/companies", {
         params: { path: { id: projectId } },
-        body: { organization_id: organizationId, role },
+        body: { company_id: companyId, role },
       });
       if (error) {
         throwProblem(error);
@@ -99,9 +102,9 @@ export function CompanyProjects({
   const detach = useMutation({
     mutationFn: async (projectId: string) => {
       const { error } = await api.DELETE(
-        "/projects/{id}/companies/{organization_id}",
+        "/projects/{id}/companies/{company_id}",
         {
-          params: { path: { id: projectId, organization_id: organizationId } },
+          params: { path: { id: projectId, company_id: companyId } },
         },
       );
       if (error) {
@@ -138,6 +141,70 @@ export function CompanyProjects({
       emptyBody="companyProjects.empty"
       bare={bare}
     />
+  );
+}
+
+/**
+ * CompanyProjectsPanel is the account's projects as their own Panel, for a
+ * caller that has not already proven the 360's `projects` section is
+ * readable: the Deals tab, which mounts this beside the pipeline.
+ *
+ * The guard used to live inside the money pane this section moved out of: an
+ * absent list handed straight to `CompanyProjects` drew "No projects yet"
+ * with an Attach verb while the 360 was still on its way, an invitation to
+ * act on a section that had not answered.
+ */
+export function CompanyProjectsPanel({
+  companyId,
+  view,
+  loading,
+  failed,
+  readOnly,
+}: Readonly<{
+  companyId: string;
+  view?: Company360;
+  // The composite read's own states, handed down rather than inferred from an
+  // absent `view`: a read still running and a read that failed are different
+  // answers, and `sectionState` can tell neither from the other on its own.
+  loading?: boolean;
+  failed?: boolean;
+  readOnly?: boolean;
+}>) {
+  const t = useT();
+  const projects = view?.projects;
+  const state = failed
+    ? "failed"
+    : sectionState(
+        view,
+        "projects",
+        Boolean(projects),
+        projects?.length ?? 0,
+        loading,
+      );
+  // NOT bare: the section draws its own Panel titled "Projects" here, unlike
+  // its mount in `CompanyProjects` bare, which stands inside a caller's own
+  // panel and would otherwise repeat the title on a second heading.
+  if (state === "ready" || state === "empty") {
+    return (
+      <CompanyProjects
+        companyId={companyId}
+        projects={projects}
+        readOnly={readOnly}
+      />
+    );
+  }
+  return (
+    <Panel title={t("companyProjects.title")}>
+      <PanelBody>
+        <SurfaceState
+          loadingLabel={t("companyProjects.title")}
+          state={state}
+          emptyLabel={t("projectLinks.emptyTitle")}
+        >
+          {null}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 

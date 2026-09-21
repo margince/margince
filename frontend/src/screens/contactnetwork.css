@@ -1,0 +1,414 @@
+/* The contact's network tab: the verdict, the readings under it, the working
+   grid, and the picture. Every colour is a token, so the tab follows the
+   theme the rest of the page follows. */
+
+/* The tab is a size container: the details rail and the sidebar change how
+   wide this column is without changing the viewport, so every fold below is
+   a container query on the tab itself, never a media query. */
+.pn-stack {
+  display: grid;
+  gap: var(--space-4);
+  container-type: inline-size;
+  container-name: network;
+}
+.pn-route {
+  margin: 0;
+}
+/* The ways in, best first. An ordered list because the order is the meaning:
+   the first row is the recommendation, and a reader who has to work out which
+   one that is has lost what the ranking was for. */
+.pn-routes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pn-route-row + .pn-route-row {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+/* One route as a row: rank, face, who and how, strength, the ask. */
+.pn-route-line {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.pn-route-rank {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5em;
+}
+.pn-route-who {
+  min-width: 0;
+}
+.pn-route-blocked .pn-route-who,
+.pn-route-blocked .pn-meter {
+  opacity: 0.6;
+}
+/* The strength bucket as three bars and its word. The word is the fact; the
+   bars are for a reader scanning the column. */
+.pn-meter {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+.pn-meter-bars {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-end;
+  height: 14px;
+}
+.pn-meter-bars i {
+  display: block;
+  width: 5px;
+  border-radius: var(--r-xs);
+  corner-shape: round;
+  background: var(--borderStrong);
+}
+.pn-meter-bars i:nth-child(1) {
+  height: 6px;
+}
+.pn-meter-bars i:nth-child(2) {
+  height: 10px;
+}
+.pn-meter-bars i:nth-child(3) {
+  height: 14px;
+}
+.pn-meter[data-band="strong"] i,
+.pn-meter[data-band="moderate"] i:nth-child(-n + 2),
+.pn-meter[data-band="weak"] i:nth-child(1) {
+  background: var(--accent);
+}
+/* The strength band beside whom an edge joins, in the map's edge detail. */
+.pn-band {
+  margin: 0;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.pn-counts {
+  margin: var(--space-1) 0 0;
+}
+/* The one write the edge detail offers names the peer it records, and the
+ * detail rides a narrow panel slot, so a long name has to fit. It WRAPS inside
+ * the card rather than ending in an ellipsis: the name is the object of the
+ * write, and a verb that hid whom it records would ask for a click on trust.
+ * The button only stops at the card's edge; the wrap, and the leading two lines
+ * need, belong to the label's own element, since the button's type is set
+ * where the button is declared. */
+.pn-suggest > .btn {
+  max-inline-size: 100%;
+}
+.pn-suggest-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.pn-receipts {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  overflow-wrap: anywhere;
+}
+/* A read that failed. Danger, because the reader is being told the answer on
+   screen is not the answer — not merely that there is none. */
+.pn-failed {
+  margin: 0;
+  color: var(--dangerText);
+}
+
+/* The verdict's two halves: the move, and the figures it rests on. Both
+   halves may shrink: a half that could not would overflow the panel and be
+   clipped at its edge, which is how the readings lost their last letters. */
+.pn-verdict {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(17.5rem, 1fr);
+}
+.pn-verdict > * {
+  min-width: 0;
+}
+.pn-verdict-main {
+  padding: var(--space-4) var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.pn-evidence {
+  padding: var(--space-4) var(--space-5);
+  border-left: 1px solid var(--accentMed);
+  background: var(--accentLight);
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.pn-readings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: var(--space-3) var(--space-5);
+}
+.pn-reading {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  min-width: 0;
+}
+.pn-reading b {
+  font-family: var(--fontFamilyHeading);
+  font-variant-numeric: tabular-nums;
+}
+.pn-reading b small {
+  font-family: var(--fontFamilyBody);
+  margin-left: var(--space-1);
+}
+/* Who sent what: the target's share in full accent, the colleague's in the
+   lighter one, and the counts in words under it. */
+.pn-split {
+  display: flex;
+  height: 6px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  overflow: hidden;
+  background: var(--borderSubtle);
+}
+.pn-split i {
+  display: block;
+  height: 100%;
+}
+.pn-split-in {
+  background: var(--accent);
+}
+.pn-split-out {
+  background: var(--accentMed);
+}
+.pn-split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+.pn-split-legend > span {
+  min-width: 0;
+}
+.pn-split-key-in::before,
+.pn-split-key-out::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-xs);
+  corner-shape: round;
+  margin-right: var(--space-1);
+  vertical-align: middle;
+  background: var(--accent);
+}
+.pn-split-key-out::before {
+  background: var(--accentMed);
+}
+.pn-evidence-receipts {
+  display: grid;
+  gap: var(--space-1);
+}
+.pn-evidence-receipts .pn-receipts {
+  margin-top: 0;
+}
+
+/* The two-column working grid: the alternatives on the left, the handoff and
+   what moved on the right. One column below the fold breakpoint, because a
+   side column narrower than its content is a column nobody reads. */
+.pn-work-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(285px, 0.75fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.pn-main-column,
+.pn-side-column {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.pn-side-only .pn-side-column {
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  align-items: start;
+}
+
+/* The route chain, read left to right: who asks, through whom, to whom. */
+.pn-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  corner-shape: round;
+  border: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
+}
+.pn-hero-who {
+  min-width: 0;
+}
+.pn-hero-who p {
+  margin: var(--space-1) 0 0;
+}
+.pn-hero-arrow {
+  color: var(--accent);
+}
+.pn-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.pn-verdict-actions {
+  margin: var(--space-1) 0 0;
+}
+
+/* The handoff, as a connected stepper. The rail between the rings fills as
+   steps complete; the state is in words beside every ring, so colour is never
+   the only thing carrying it. */
+.pn-relay {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.pn-relay-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding-bottom: var(--space-4);
+}
+.pn-relay-step:last-child {
+  padding-bottom: 0;
+}
+.pn-relay-step::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 26px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--borderSubtle);
+}
+.pn-relay-step:last-child::before {
+  display: none;
+}
+.pn-relay-done::before {
+  background: var(--success);
+}
+.pn-relay-step strong {
+  display: block;
+}
+.pn-relay-step small {
+  display: block;
+}
+.pn-relay-current small {
+  color: var(--accentText);
+}
+.pn-relay-num {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  corner-shape: round;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--borderStrong);
+  background: var(--bgElevated);
+  font-variant-numeric: tabular-nums;
+}
+.pn-relay-done .pn-relay-num {
+  background: var(--successText);
+  border-color: var(--successText);
+  color: var(--textOnStatusControl);
+}
+.pn-relay-current .pn-relay-num {
+  border-color: var(--accent);
+  color: var(--accentText);
+  box-shadow: 0 0 0 4px var(--accentLight);
+}
+.pn-relay-owner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-control);
+  corner-shape: round;
+  background: var(--bgChip);
+}
+.pn-relay-due {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The carrying ink, because the date lands ON the fill above. `.t-caption`
+   sets the supporting ink with its size, and that ink is measured over the
+   page's grounds rather than over this one — chipfill.test.ts is what says so.
+   Both classes rather than one: `.t-caption` sets its colour at a single class
+   of specificity, so a rule naming only `.pn-relay-due` would win or lose on
+   whichever sheet the bundler put last. */
+.pn-relay-owner .pn-relay-due {
+  color: var(--textPrimary);
+}
+/* What moved: a dated list, newest first. A column of dates because it is a
+   chronology, and a reader scans it rather than reads it. */
+.pn-moments {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pn-moment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+}
+.pn-moment + .pn-moment {
+  border-top: 1px solid var(--borderSubtle);
+}
+/* A row, so the flag on the head change keeps its distance from the sentence
+   and sits on its baseline, wrapping under it when the line is full. */
+.pn-moment p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  margin: 0;
+}
+.pn-moment:first-child p {
+  color: var(--textPrimary);
+}
+.pn-moment-when {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Folds. 56rem is where the side column would drop under the 285px its
+   cards need; 46rem is where the verdict's plate would, and where a route row
+   can no longer hold its five columns on one line. */
+@container network (max-width: 56rem) {
+  .pn-work-grid {
+    grid-template-columns: 1fr;
+  }
+  .pn-side-only .pn-side-column {
+    grid-template-columns: 1fr;
+  }
+}
+@container network (max-width: 46rem) {
+  .pn-verdict {
+    grid-template-columns: 1fr;
+  }
+  .pn-evidence {
+    border-left: 0;
+    border-top: 1px solid var(--accentMed);
+  }
+  .pn-route-line {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+  .pn-route-line > .pn-meter,
+  .pn-route-line > .btn {
+    grid-column: 3;
+  }
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -111,35 +112,47 @@ func (s *Store) SetRaw(ctx context.Context, key string, next json.RawMessage) er
 // several settings, or a value mirrored onto a column a reader has not moved
 // off yet.
 func (s *Store) SetRawTx(ctx context.Context, tx pgx.Tx, key string, next json.RawMessage) error {
+	_, err := s.SetRawTxReceipt(ctx, tx, key, next)
+	return err
+}
+
+// WriteReceipt links a domain event to the audit row in the caller's transaction.
+type WriteReceipt struct {
+	Changed bool
+	AuditID ids.UUID
+}
+
+// SetRawTxReceipt lets an owner attach an outbox event to this same audit and transaction.
+func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next json.RawMessage) (WriteReceipt, error) {
 	// Through the registry, not off a caller-supplied entry: an entry a module
 	// declares but compose never registers would otherwise be writable while
 	// invisible to every catalog gate — and unreadable through Raw, which does
 	// resolve through the registry.
 	def, err := s.lookup(key)
 	if err != nil {
-		return err
+		return WriteReceipt{}, err
 	}
 	if err := auth.Require(ctx, def.Object(), principal.ActionUpdate); err != nil {
-		return err
+		return WriteReceipt{}, err
 	}
 	if err := def.ValidateJSON(next); err != nil {
-		return err
+		return WriteReceipt{}, err
 	}
 	if err := LockForWrite(ctx, tx, key); err != nil {
-		return err
+		return WriteReceipt{}, err
 	}
 	{
 		stored, err := hasRow(ctx, tx, key)
 		if err != nil {
-			return err
+			return WriteReceipt{}, err
 		}
 		before, err := currentJSON(ctx, tx, def)
 		if err != nil {
-			return err
+			return WriteReceipt{}, err
 		}
 		canonical, err := def.CanonicalJSON(before)
 		if err != nil {
-			return err
+			return WriteReceipt{}, err
 		}
 		// Three cases, and the middle one is why `stored` is consulted at all.
 		//
@@ -156,7 +169,7 @@ func (s *Store) SetRawTx(ctx context.Context, tx pgx.Tx, key string, next json.R
 		// nothing.
 		unchanged := string(canonical) == string(next)
 		if stored && unchanged {
-			return nil
+			return WriteReceipt{}, nil
 		}
 		if !unchanged {
 			// Probed only for a REAL change: re-asserting the value a frozen
@@ -166,28 +179,29 @@ func (s *Store) SetRawTx(ctx context.Context, tx pgx.Tx, key string, next json.R
 			// row, so the probe stays inside this branch.
 			frozen, why, err := def.Frozen(ctx, tx)
 			if err != nil {
-				return fmt.Errorf("settings: probing %s: %w", key, err)
+				return WriteReceipt{}, fmt.Errorf("settings: probing %s: %w", key, err)
 			}
 			if frozen {
-				return FrozenValue{Setting: key, Reason: why}
+				return WriteReceipt{}, FrozenValue{Setting: key, Reason: why}
 			}
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO setting (key, value) VALUES ($1, $2)
 			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
 			key, next); err != nil {
-			return fmt.Errorf("settings: writing %s: %w", key, err)
+			return WriteReceipt{}, fmt.Errorf("settings: writing %s: %w", key, err)
 		}
 		// Through the entry's own image, so a setting holding the address of a
 		// secret is redacted here rather than at each writer — there is only one
 		// writer today, and the next one would not know to.
-		if _, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
+		auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
 			map[string]any{key: def.AuditImage(before)},
-			map[string]any{key: def.AuditImage(next)}); err != nil {
-			return fmt.Errorf("settings: auditing %s: %w", key, err)
+			map[string]any{key: def.AuditImage(next)})
+		if err != nil {
+			return WriteReceipt{}, fmt.Errorf("settings: auditing %s: %w", key, err)
 		}
+		return WriteReceipt{Changed: true, AuditID: auditID}, nil
 	}
-	return nil
 }
 
 // LockForWrite serializes writers of ONE key for the rest of the transaction.
@@ -400,33 +414,6 @@ func RequireTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 	}
 	if err != nil {
 		return zero, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
-	}
-	var out T
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
-	}
-	return out, nil
-}
-
-// ApplyTx reads a setting inside the caller's transaction WITHOUT the entry's
-// read gate — for MACHINERY applying a workspace posture to its own write
-// (the capture sink stamping a freshly captured row's audience), where the
-// posture must bind whoever the acting principal happens to be: a posture a
-// narrow principal could not read would simply not apply to what they
-// capture, which is the opposite of a control. Never for a surface that
-// ANSWERS the value to a caller — those go through Get/GetTx, whose gate is
-// the only control on the un-RLS'd setting table. The restriction is
-// enforced, not asked politely: only an entry declared MachineryApplied at
-// Define time is readable here, so a convenient ungated read of any other
-// setting refuses at the first test that exercises it.
-func ApplyTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
-	var zero T
-	if !e.machineryApplied {
-		return zero, fmt.Errorf("settings: %s is not declared MachineryApplied — read it through Get/GetTx and its gate", e.Key())
-	}
-	raw, err := currentJSON(ctx, tx, e)
-	if err != nil {
-		return zero, err
 	}
 	var out T
 	if err := json.Unmarshal(raw, &out); err != nil {

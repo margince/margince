@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import {
+  day,
+  jsonResponse,
+  renderWorklist,
+  row,
+  stub,
+} from "./worklist.testkit";
 
 // One morning, drawn ONCE.
 //
@@ -34,7 +40,7 @@ function aTask(over = {}) {
     actions: ["complete", "snooze"],
     primary_action: "complete",
     subject: {
-      type: "person",
+      type: "contact",
       id: "01a05500-0000-7000-8000-000000000011",
       label: "Alice Müller",
     },
@@ -141,7 +147,7 @@ describe("the day is one panel", () => {
             source: "customer_waiting",
             category: "customer_waiting",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000aa",
               label: "Kirsten Vogel",
             },
@@ -156,10 +162,30 @@ describe("the day is one panel", () => {
     await waitFor(() => {
       expect(screen.getByRole("complementary")).toBeTruthy();
     });
-    // Exactly one row marked, and it is the person row rather than the deal.
+    // Exactly one row marked, and it is the contact row rather than the deal.
     const marked = container.querySelectorAll(".worklist-row-selected");
     expect(marked).toHaveLength(1);
     expect(marked[0].textContent).toContain("Kirsten replied");
+  });
+
+  // No LIST on a clear day either, which is one half of "no panel is drawn to
+  // report a zero" — worklist.test.tsx holds the other, that no day TITLE is
+  // drawn. Counted rather than named, exactly as the full-day case above: the
+  // words the old focus cards used are gone from every catalog, so asserting
+  // their absence would test nothing a regression could fail.
+  it("draws no list of its own on a day with no rows", async () => {
+    stub(
+      day({
+        queue: [],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    // Waited on the sentence a clear day DOES draw, so this is not a case that
+    // passes because the page had not finished rendering.
+    await screen.findByText(/Nothing is waiting on you/);
+    expect(container.querySelectorAll("ol.worklist-list")).toHaveLength(0);
   });
 
   // A clear day has no first row to put in hand, and asking for one must not
@@ -179,9 +205,75 @@ describe("the day is one panel", () => {
   });
 });
 
+// WHOSE day is clear.
+//
+// The unqualified sentence says "on YOU", and on a colleague's queue that named
+// the reader over somebody else's empty day — a lead reading Rep One's morning
+// was told nothing was waiting on themselves. The name comes from the roster
+// the owner picker already reads, so these serve it.
+describe("a clear day says whose it is", () => {
+  const REP = "01a05500-0000-7000-8000-0000000000f1";
+
+  function stubClearDayFor(roster: readonly { id: string; name: string }[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/worklist")) {
+          return jsonResponse(
+            day({
+              queue: [],
+              scope_options: ["mine", "team"],
+              summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
+            }),
+          );
+        }
+        if (url.includes("/users")) {
+          return jsonResponse({
+            data: roster.map((entry) => ({
+              id: entry.id,
+              display_name: entry.name,
+            })),
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+  }
+
+  it("names the colleague rather than the reader", async () => {
+    stubClearDayFor([{ id: REP, name: "Rep One" }]);
+    renderWorklist("en", REP);
+
+    expect(
+      await screen.findByText("Nothing is waiting on Rep One."),
+    ).toBeTruthy();
+    // The reader is not the subject of somebody else's empty day.
+    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+  });
+
+  // A colleague the roster cannot name falls back to the sentence that names
+  // nobody. An id in the sentence would be worse than one word too general,
+  // and the reader is still not the subject.
+  it("falls back to the general sentence when the name has not landed", async () => {
+    stubClearDayFor([]);
+    renderWorklist("en", REP);
+
+    expect(await screen.findByText("Nothing is waiting on you.")).toBeTruthy();
+    expect(screen.queryByText(new RegExp(REP))).toBeNull();
+  });
+});
+
 describe("a task is finished where the reader is standing", () => {
   it("submits once however fast the reader presses", async () => {
+    const user = userEvent.setup();
+    let release: ((value: Response) => void) | undefined;
+    const response = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
     let patches = 0;
+    let completed = false;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -189,48 +281,38 @@ describe("a task is finished where the reader is standing", () => {
         const url = String(request?.url ?? input);
         if (request?.method === "PATCH") {
           patches += 1;
-          // HELD, the way a real network holds it. A PATCH that resolves in
-          // the same tick never lets the button paint its busy state, so the
-          // test would be measuring the mock rather than the guard.
-          await new Promise((settle) => setTimeout(settle, 20));
-          return new Response(null, { status: 204 });
+          return response;
         }
         if (url.includes("/worklist")) {
-          return new Response(
-            JSON.stringify(
-              day({
-                queue: [aTask()],
-                summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
-              }),
-            ),
-            { status: 200, headers: { "content-type": "application/json" } },
+          return jsonResponse(
+            day({
+              queue: completed ? [] : [aTask()],
+              summary: {
+                urgent: 0,
+                due: 0,
+                lower_priority: completed ? 0 : 1,
+                total: completed ? 0 : 1,
+              },
+            }),
           );
         }
-        return new Response(JSON.stringify({ data: [] }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+        return jsonResponse({ data: [] });
       }),
     );
     renderWorklist();
 
     const done = await screen.findByRole("button", { name: "Done" });
-    // Two presses with no wait between them. The mutation holds the button
-    // pending until the refetch it triggered has settled, so the second press
-    // lands on a disabled control — without that the row sits there finished
-    // and pressable, and the second PATCH answers for a task already done.
-    await userEvent.click(done);
-    await userEvent.click(done);
-
-    // ONE write, however many presses. `Button` drops its `onClick` while
-    // `pending`, and the mutation stays pending until the refetch it triggered
-    // has settled — so the finished row is never both on screen and pressable.
-    // ONE write, and exactly one: `toBe(1)` excludes the second press getting
-    // through AND excludes neither press landing, so a button wired to nothing
-    // fails here just as a double-submitting one does.
-    await waitFor(() => {
+    try {
+      await user.click(done);
+      await user.click(done);
       expect(patches).toBe(1);
-    });
+    } finally {
+      completed = true;
+      release?.(new Response(null, { status: 204 }));
+    }
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Done" })).toBeNull(),
+    );
   });
 
   it("completes it rather than navigating to it", async () => {

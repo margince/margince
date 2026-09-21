@@ -4,7 +4,7 @@
 // One act's proposals, decided together. A bundle is a GROUPING over approval
 // rows — `bundle_id`, no table, no entity, no lifecycle of its own (R7). It
 // exists because one act routinely proposes several things at once (a site read
-// stages the company's facts plus a lead per person it published) and the inbox
+// stages the company's facts plus a lead per contact it published) and the inbox
 // otherwise shows them as unrelated questions.
 //
 // What it is NOT is a second authority object. ADR-0036 puts the authority in
@@ -53,7 +53,7 @@ type BundleMember struct {
 
 // bundleDecisionCap bounds how many members one bundle decision covers. Bundles
 // are minted by producers, never by a caller, and the largest today is a site
-// read's company proposal plus a lead per published person — well inside this.
+// read's company proposal plus a lead per published contact — well inside this.
 //
 // Past the cap the decision is REFUSED rather than applied to a prefix: a
 // partial decision reported as a whole one is the silent half-effect this file
@@ -185,7 +185,7 @@ func decidableMembers(ctx context.Context, tx pgx.Tx, p principal.Principal, row
 // the older clock, which would see it as still pending and answer
 // "already_decided" — telling a human somebody decided a question nobody did.
 func (s *Service) decideMemberInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, a row, approve bool, reason *string) (BundleMember, error) {
-	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, decidedByPerson)
+	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, decidedByContact)
 	if err == nil {
 		return BundleMember{Approval: decided, Outcome: BundleDecided}, nil
 	}
@@ -214,10 +214,17 @@ func outcomeOf(status string) BundleOutcome {
 // the decision transaction has committed.
 //
 // A failure is that member's outcome and no one else's. The decisions are
-// committed, so there is nothing to roll back and nothing to retry: the member
-// reads approved-and-unredeemed, its audit trail says how far it got, and the
-// caller is told which one did not land. The cause goes to the log because the
-// wire deliberately carries no internals to a client.
+// committed, so there is nothing to roll back here: the member reads
+// approved-and-unredeemed, its audit trail says how far it got, and the caller
+// is told which one did not land. The cause goes to the log because the wire
+// deliberately carries no internals to a client.
+//
+// It is no longer a dead end, which it used to be. Approving that member
+// singly re-drives its effect rather than answering already-decided
+// (effectIsStillOwed, decide.go), so the failure this reports is one a caller
+// can act on. This function does not re-drive on its own: a bundle call is
+// "decide these", and a member it did not decide keeps the outcome that says
+// so.
 func (s *Service) releaseDecidedMembers(ctx context.Context, members []BundleMember, approve bool) {
 	if !approve {
 		return // a rejection releases nothing

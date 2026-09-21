@@ -209,12 +209,14 @@ done
 check "none" "$(dev_seed_override "" "" "" "-dry-run -limit 5")" \
       "the flags a seed run actually passes are still passed — the check is about -api, not about SEED_ARGS"
 
-# And the Makefile still ASKS, with the flags. The rule refusing in a library
-# nothing calls is the same as no rule, and this is the seam the recipes go
-# through; a prelude that dropped the fourth argument would silently stop
-# checking the flag path while every case above kept passing.
-check "1" "$(grep -q 'seed_override=.*dev_seed_override.*SEED_ARGS' "$root/Makefile" && echo 1 || echo 0)" \
-      "the seed prelude asks the library about the pass-through flags too"
+# The Makefile no longer asks, because nothing in THIS repo seeds a dataset any
+# more: the demo-dataset loader moved to the repo that carries the data, and its
+# recipes went with it. dev_seed_override stays because the rule it encodes — a
+# stack is an API base, a database and a bucket, so an override is all three or
+# none — is a property of this dev-stack library, and the cases above still
+# exercise it. What was removed is the assertion that a specific Makefile recipe
+# consumes it; asserting a caller that was deliberately deleted is a test of
+# nothing.
 
 lift port_listeners
 lift read_registry

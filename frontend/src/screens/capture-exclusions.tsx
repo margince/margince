@@ -12,6 +12,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -20,7 +21,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
 // store at all. Two scopes on one card, because a reader sees both kinds of
-// rule that bind their mailbox: the organization's (admin/ops change those) and
+// rule that bind their mailbox: the company's (admin/ops change those) and
 // their own (anyone may keep their own correspondent out of a shared CRM).
 
 type CaptureExclusion = components["schemas"]["CaptureExclusion"];
@@ -28,9 +29,15 @@ type Scope = components["schemas"]["CaptureExclusionScope"];
 type Kind = components["schemas"]["CaptureExclusionKind"];
 
 const SCOPES: readonly Scope[] = ["user", "workspace"];
+// The kinds this card OFFERS, which is not every kind a rule can have.
+// `container` is missing on purpose: a container rule names a provider's own
+// token — a Gmail label id, a Graph folder id — and asking somebody to type one
+// would be asking them to look it up. It arrives here as a picker once a
+// connector can hand over the list of names to choose from. A container rule
+// that already exists still renders, labelled like any other.
 const KINDS: readonly Kind[] = ["address", "domain"];
 
-/** The organization-wide rules, which are the ones a plain seat may not touch. */
+/** The company-wide rules, which are the ones a plain seat may not touch. */
 function bindsEveryone(rule: CaptureExclusion): boolean {
   return rule.scope === "workspace";
 }
@@ -98,6 +105,7 @@ function useRuleWords() {
   const kind: Record<Kind, string> = {
     address: t("captureExclusions.kind.address"),
     domain: t("captureExclusions.kind.domain"),
+    container: t("captureExclusions.kind.container"),
   };
   return { scope, kind };
 }
@@ -108,7 +116,7 @@ export function CaptureExclusionsCard() {
   const query = useExclusions();
   const remove = useRemoveExclusion();
   const [excluding, setExcluding] = useState(false);
-  // Said once and pointed at (see own-domains.tsx): an organization-wide rule
+  // Said once and pointed at (see own-domains.tsx): a company-wide rule
   // is admin/ops work, and `Button`'s `reasonId` refuses the verb AND names
   // the sentence, so every refused row points at one line rather than
   // printing it per row. The id is minted unconditionally, because a hook may
@@ -132,7 +140,7 @@ export function CaptureExclusionsCard() {
       // their OWN correspondent out — the dialog refuses the scope that binds
       // everyone, where that choice is made.
       titleAction={
-        <Button small onClick={() => setExcluding(true)}>
+        <Button onClick={() => setExcluding(true)}>
           {t("captureExclusions.addOpen")}
         </Button>
       }
@@ -170,13 +178,13 @@ export function CaptureExclusionsCard() {
             }
           />
         </SettingList>
-        {refusesARow && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -212,7 +220,7 @@ function ExclusionRows({
 }: Readonly<{
   list: CaptureExclusion[];
   canManageWorkspace: boolean;
-  /** The one sentence saying why an organization-wide rule is not this reader's. */
+  /** The one sentence saying why a company-wide rule is not this reader's. */
   denialId: string;
   pending: boolean;
   onRemove: (id: string) => void;
@@ -240,7 +248,6 @@ function ExclusionRows({
           value={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
           control={
             <Button
-              small
               variant="ghost"
               aria-label={t("captureExclusions.remove", { value: rule.value })}
               disabled={pending}
@@ -251,7 +258,7 @@ function ExclusionRows({
               }
               onClick={() => onRemove(rule.id)}
             >
-              <Trash2 aria-hidden size={16} />
+              <Trash2 aria-hidden />
             </Button>
           }
         />
@@ -281,9 +288,9 @@ function ExcludeDialog({
   const value = draft.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("captureExclusions.addLabel")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -320,22 +327,21 @@ function ExcludeDialog({
           aria-describedby={refused ? denialId : undefined}
           onChange={(event) => setDraft(event.target.value)}
         />
-        {refused && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || value === ""}

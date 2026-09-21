@@ -43,7 +43,7 @@ func addOfferLineItemCommand(_ agentPolicy, deps restCommandDeps, r *http.Reques
 // lineItemID reads the offer line item's {lineItemId} path parameter — the
 // route's SECOND parameter, beyond the offer's own {id} — through the same
 // pathOperand + ids.Parse composition removeStakeholderCommand uses for
-// person_id (agentcommandoperand.go): a missing segment answers 422
+// contact_id (agentcommandoperand.go): a missing segment answers 422
 // "missing", a non-empty malformed one answers 422 "invalid". Neither is
 // routedID's existence-hiding 404 — a line item's shape being wrong is the
 // caller's mistake, not a fact about whether the offer exists.

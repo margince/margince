@@ -59,6 +59,17 @@ type API interface {
 	// Telegram refuses getUpdates while a webhook exists, so clearing whatever a
 	// bot arrives carrying is what makes it pollable at all.
 	DeleteWebhook(ctx context.Context, token string) error
+	// WebhookRegistered reports whether this bot currently has a webhook, which
+	// is the one question deleteWebhook cannot answer: it is idempotent and
+	// returns ok whether or not anything was there.
+	//
+	// Named for the question rather than for getWebhookInfo, because that is
+	// what the caller needs. Telegram refuses getUpdates for two different
+	// reasons — a registered webhook, or another consumer holding the same bot
+	// — and without this the two are indistinguishable after the fact: a clear
+	// followed by a successful poll reads as "the webhook was the cause" even
+	// when there was never a webhook and a rival simply went away.
+	WebhookRegistered(ctx context.Context, token string) (bool, error)
 	// GetUpdates long-polls for the next batch after offset, returning each
 	// update's raw JSON — the subject and normalize passes both read raw bytes
 	// — and the highest update_id in the batch (0 when the batch is empty).
@@ -132,15 +143,6 @@ func (a *httpAPI) GetMe(ctx context.Context, token string) (Bot, error) {
 		return Bot{}, fmt.Errorf("getMe answered without a bot id: %w", ErrRequestRejected)
 	}
 	return Bot{ID: out.ID, Username: out.Username}, nil
-}
-
-// DeleteWebhook clears any webhook registered against the bot.
-//
-// drop_pending_updates is deliberately NOT sent: its default is false, and those
-// pending updates are the customer's messages — the first poll after a connect is
-// meant to collect them.
-func (a *httpAPI) DeleteWebhook(ctx context.Context, token string) error {
-	return a.call(ctx, token, "deleteWebhook", nil, nil)
 }
 
 // longPollSlack is the headroom a long poll gets on top of the interval it asks

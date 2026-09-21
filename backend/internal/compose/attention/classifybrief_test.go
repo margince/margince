@@ -93,8 +93,8 @@ func TestClassifyBriefItemNamesTheCloseDateLikeItsRiskLaneSibling(t *testing.T) 
 	if hasReasonKind(got.item.Because, "overdue") {
 		t.Fatalf("because = %+v, overdue is the badge's job (item.Overdue), not a because reason here", got.item.Because)
 	}
-	if !hasReasonKind(got.item.Because, "closing_soon") {
-		t.Fatalf("because = %+v, wanted closing_soon — the same reason classifyRisk gives the identical fact", got.item.Because)
+	if hasReasonKind(got.item.Because, "closing_soon") {
+		t.Fatalf("a close date three months out is not closing soon: %+v", got.item.Because)
 	}
 	if got.deadlineAt.IsZero() {
 		t.Fatal("deadlineAt is zero even with a close date set; a far-future date must still reach the ordering")
@@ -108,4 +108,60 @@ func hasReasonKind(reasons []crmcontracts.WorklistReason, kind crmcontracts.Work
 		}
 	}
 	return false
+}
+
+// A deal the night liked is not announced as a deal going wrong.
+//
+// Every brief entry used to carry "deal_drifts" whatever the ranking found, so
+// an attractive opportunity was reported as a fault. The consequence now comes
+// from the night's own signal: a date about to arrive genuinely slips, a stalled
+// deal genuinely drifts, and a winnable one has nothing pending — saying it does
+// invents a problem out of a good position.
+//
+// The CATEGORY stays deals_at_risk on every branch. It is the queue's grouping
+// rather than a claim, the sibling risk row for the same deal carries it, and
+// moving an opportunity out of it would split one deal across two rows.
+func TestABriefItemsConsequenceComesFromItsSignal(t *testing.T) {
+	cases := []struct {
+		signal string
+		want   crmcontracts.WorklistItemConsequence
+	}{
+		{"closing_soon", "deal_slips_past_close"},
+		{"stalled", "deal_drifts"},
+		{"opportunity", "none"},
+		{"moved", "none"},
+	}
+	for _, c := range cases {
+		row := classifyBriefItem(
+			item("b1", "brief_item", withKind(c.signal)), rankInstant, dayMoney{})
+		if row.item.Consequence != c.want {
+			t.Errorf("signal %q: consequence = %q, want %q",
+				c.signal, row.item.Consequence, c.want)
+		}
+		if row.item.Category != "deals_at_risk" {
+			t.Errorf("signal %q: category = %q, want the queue's own grouping",
+				c.signal, row.item.Category)
+		}
+	}
+
+	// A run stored before the signal existed carries none, and gets the answer
+	// it always got rather than a guess.
+	old := classifyBriefItem(item("b2", "brief_item"), rankInstant, dayMoney{})
+	if old.item.Consequence != "none" {
+		t.Errorf("a signalless entry = %q, must not invent drift without a signal", old.item.Consequence)
+	}
+}
+
+func TestAnOverdueCloseIsNeverDescribedAsComingSoon(t *testing.T) {
+	overdue := true
+	date := rankInstant.Add(-30 * 24 * time.Hour)
+	item := crmcontracts.AttentionItem{Source: "brief_item", DueAt: &date, Overdue: &overdue}
+	for _, row := range []ranked{classifyBriefItem(item, rankInstant, dayMoney{}), classifyRisk(item, rankInstant, materialBar{}, dayMoney{})} {
+		if hasReasonKind(row.item.Because, "closing_soon") {
+			t.Fatalf("an overdue close was described as upcoming: %+v", row.item.Because)
+		}
+		if row.item.Overdue == nil || !*row.item.Overdue {
+			t.Fatal("the overdue close lost its overdue state")
+		}
+	}
 }

@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { mockApi } from "./seed";
 
 /**
- * The lead surface end to end (ADR-0118/A169, ADR-0119/A170): the list names
- * the owner and opens the LEAD's own page (never the person's), the page can
+ * The lead surface end to end (ADR-0118, ADR-0119): the list names
+ * the owner and opens the LEAD's own page (never the contact's), the page can
  * be worked (a note logged against the lead), and promotion says what it will
  * do before it does it. German chrome, as the app renders it.
  */
@@ -19,10 +19,10 @@ test("AC-leads-list: a row names its owner and opens the lead's own page", async
   const row = page.getByRole("row", { name: /Jonas Petersen/ });
   await expect(row).toBeVisible();
   // The owner column answers "whose lead is this" — the same column the
-  // people and company lists carry, never "typed by a person".
+  // contacts and company lists carry, never "typed by a person".
   await expect(row).toContainText("Lena Fischer");
   // The link's accessible name also carries the company, while the row's
-  // selection checkbox carries the same person's name. Role plus a
+  // selection checkbox carries the same contact's name. Role plus a
   // start-anchored name selects the route without coupling to the company.
   await row.getByRole("link", { name: /^Jonas Petersen/ }).click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
@@ -39,27 +39,29 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
       request.url().endsWith("/v1/activities") && request.method() === "POST",
   );
   await page.goto("/#/leads/l-1");
-  // The composer is inline on the lead page (ADR-0118/A169), not behind a
-  // button: working the lead is the page's job.
+  // The composer opens from the header's own verb, beside Add task: the lead
+  // page reads as a reading with its verbs at the top, and a form standing
+  // open in the middle of it was a page half filled in before anybody asked.
+  await page.getByRole("button", { name: "Aktivität erfassen" }).click();
   await page.getByLabel("Betreff *").fill("Rückruf vereinbart");
-  await page.getByRole("button", { name: "Erfassen" }).click();
+  await page.getByRole("button", { name: "Erfassen", exact: true }).click();
   const request = await posted;
   const body = request.postDataJSON();
   expect(body.subject).toBe("Rückruf vereinbart");
-  // The link is the LEAD, not a person: this is what activity_link's lead arm
+  // The link is the LEAD, not a contact: this is what activity_link's lead arm
   // (migration 0038) exists for.
   expect(body.links).toEqual([{ entity_type: "lead", entity_id: "l-1" }]);
 });
 
-test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, then the page stays and names the person", async ({
+test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, then the page stays and names the contact", async ({
   page,
 }) => {
   await page.goto("/#/leads/l-1");
-  await page
-    .getByRole("button", { name: "Qualifizieren", exact: true })
-    .click();
+  // The header's own verb, by testid: the rail's deal slice offers the same
+  // act, and the name alone no longer says which control the reader pressed.
+  await page.getByTestId("lead-qualify").click();
   await expect(
-    page.getByText("Die Übernahme legt eine neue Person an."),
+    page.getByText("Die Übernahme legt einen neuen Kontakt an."),
   ).toBeVisible();
   // The reason is derived, not asked for: the seeded lead has no captured
   // engagement, so it is the rep's own call.
@@ -69,5 +71,5 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
     .getByRole("button", { name: /^Qualifizieren/ })
     .click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
-  await expect(page.getByText(/ist jetzt eine Person:/)).toBeVisible();
+  await expect(page.getByText(/ist jetzt ein Kontakt:/)).toBeVisible();
 });

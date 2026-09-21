@@ -105,6 +105,9 @@ func WriteOfferError(w http.ResponseWriter, r *http.Request, err error) {
 // writeStoreErr maps this module's typed store errors onto the wire
 // codes the contract names, then falls through to the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
+	if writeUndoConflict(w, r, err) {
+		return
+	}
 	if writeOfferTemplateConflict(w, r, err) {
 		return
 	}
@@ -123,6 +126,26 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	httperr.Write(w, r, err)
+}
+
+// writeUndoConflict maps a refused stage-move undo onto the wire.
+//
+// The REASON travels, because the three ways this declines call for three
+// different things from the reader: a closed window means move the deal by
+// hand, a human-decided move means there was never anything automatic to take
+// back, and an already-reversed one means somebody got there first. One
+// generic "cannot undo" would send all three to look for the same thing.
+func writeUndoConflict(w http.ResponseWriter, r *http.Request, err error) bool {
+	var undo *UndoWindowClosedError
+	if !errors.As(err, &undo) {
+		return false
+	}
+	httperr.Write(w, r, &httperr.DetailedError{
+		Status: http.StatusConflict,
+		Code:   "undo_window_closed",
+		Detail: undo.Reason,
+	})
+	return true
 }
 
 // writeOfferTemplateConflict maps the two offer_template pre-checked

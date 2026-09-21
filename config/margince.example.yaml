@@ -6,7 +6,7 @@
 # — so your edits persist across `make dev-stop` / `make dev`. To reset, delete
 # config/margince.yaml and re-run `make dev`.
 #
-# The api bootstraps the demo organization + admin from this file the first time
+# The api bootstraps the demo company + admin from this file the first time
 # it boots against an empty database; an existing installation just reads it.
 #
 # This is the BASE. MARGINCE_ENV selects an overlay beside it —
@@ -25,10 +25,10 @@ version: 1
 # But base_currency stops being changeable once anything has converted against
 # it (a closed deal, a sent offer, a mirrored invoice, a loaded rate sheet), so
 # it is the one worth checking twice.
-organization:
+workspace:
   name: Demo Workspace
   base_currency: EUR
-  # The language AI writes in for the whole team — en, de or vi. Not a person's
+  # The language AI writes in for the whole team — en, de or vi. Not a contact's
   # display language, which each user picks for themselves.
   base_language: en
   timezone: Europe/Berlin
@@ -41,7 +41,7 @@ bootstrap_admin:
   # repo root the api is launched from.
   #
   # This is the OPERATOR's password, and the admin it creates reaches nothing
-  # but the change-password route until the person using the account replaces
+  # but the change-password route until the colleague using the account replaces
   # it. `make seed-dev` performs that first login and chooses the password the
   # docs name — so the value here is spent once and never signed in with again.
   #
@@ -65,7 +65,7 @@ bootstrap_admin:
   password_file: config/margince-admin-password
 
 # Retention posture at first boot (optional). Consumed ONCE, when the api
-# bootstraps the organization against an empty database — it is not re-read, and
+# bootstraps the company against an empty database — it is not re-read, and
 # an admin can change the posture afterwards on the privacy settings screen.
 #
 #   standard    (or omitted) the shipped storage-limitation ladder runs: an
@@ -163,6 +163,28 @@ bootstrap_admin:
 # (ai_call_payload) — OFF by default because it stores special-category-adjacent
 # content that then ages under the retention engine and the Art. 17 erasure
 # cascade. Honored by both the api and worker roles (both take --config).
+#
+# IF YOU TURN THIS ON, SET THE WINDOW DELIBERATELY. The `ai_call_payload` /
+# `content` retention policy is an admin-editable row, seeded at bootstrap at
+# 365 days, and it is the whole of the bound on this exposure. Three things
+# decide what the number should be:
+#
+#   WHAT IT BOUNDS. How long a captured transcript, contract or draft — the
+#   model's whole request — stays on disk after the work is done. For a reading
+#   of a meeting transcript, that request IS the transcript: the largest copy of
+#   somebody's words this product holds.
+#
+#   WHAT IT IS FOR. Debugging a call and auditing what was sent are
+#   days-to-weeks questions. A year of them is a year of somebody's words kept
+#   for a lane nobody is reading.
+#
+#   WHAT IT DOES NOT BOUND. An Art. 17 erasure reaches these payloads two ways:
+#   by the record a call cited, and by matching the subject's addresses in the
+#   text. A call that names no record and whose text spells no address is
+#   reached by neither, and for those this window is the guaranteed end — which
+#   is exactly the case a shorter one is for.
+#   docs/explanation/privacy-and-consent.md, "What an erasure reaches in the AI
+#   telemetry, and what it does not".
 # ai:
 #   capture_payloads: true
 
@@ -300,3 +322,10 @@ company_context:
 #   # not consent to erase what is in it. Not a `setting` row either — an admin
 #   # must not be able to arm their own tenant's purge through the API.
 #   allow_data_reset: true
+#
+#   # Arms the test_mailbox connector: a QC-only, no-network fake mailbox that
+#   # can both capture and send synthetic mail, reachable only through
+#   # POST /connectors/test_mailbox/connect once this is set. Never true on a
+#   # real deployment — a fake send that reads as a real one to a customer is
+#   # a worse failure than the capability merely existing.
+#   allow_test_mailbox: false

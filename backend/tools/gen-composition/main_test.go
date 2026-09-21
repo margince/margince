@@ -252,7 +252,7 @@ func TestScanExtensions(t *testing.T) {
 
 func TestComposedWorkListsMembersSorted(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "go.work"), []byte("go 1.26.5\n\nuse (\n\t./backend\n\t./cli/craft\n)\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "go.work"), []byte("go 1.26.5\n\nuse (\n\t./backend\n\t./backend/tools\n)\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	writeUnit(t, root, "zeta", map[string]string{"go.mod": "module example.test/ext/z\n\ngo 1.26.5\n", "z.go": "package z\n"})
@@ -267,7 +267,7 @@ func TestComposedWorkListsMembersSorted(t *testing.T) {
 	if goVersion != "1.26.5" {
 		t.Fatalf("go version = %q", goVersion)
 	}
-	want := "use (\n\t../../backend\n\t../../cli/craft\n\t../../extensions/zeta\n\t./backend\n)\n"
+	want := "use (\n\t../../backend\n\t../../backend/tools\n\t../../extensions/zeta\n\t./backend\n)\n"
 	if !strings.HasSuffix(string(work), want) {
 		t.Fatalf("go.work = %q, want use block %q", work, want)
 	}

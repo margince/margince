@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -37,6 +38,8 @@ const progressionEntity = "stage_progression_outcome"
 const (
 	progressionOutcomeKey = "outcome"
 	progressionDealKey    = "deal_id"
+	progressionFromKey    = "from_stage_id"
+	progressionToKey      = "to_stage_id"
 )
 
 // The outcome vocabulary, mirroring stage_progression_outcome.outcome.
@@ -85,7 +88,7 @@ type StageProgressionChange struct {
 	//
 	// It is the APPROVER's to supply, through the card's editable field.
 	// Nothing the product read can answer why a deal was won without paper —
-	// that is an argument a person makes, and a proposer filling it in would be
+	// that is an argument a contact makes, and a proposer filling it in would be
 	// inventing the argument the bound exists to demand.
 	//
 	// PRESENT AND EMPTY on such a proposal, never absent, and the difference is
@@ -259,13 +262,14 @@ func (s *Store) RecordProgressionDecided(
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return recordProgressionDecidedTx(ctx, tx, approvalID, outcome, reason, edited)
+		return recordProgressionDecidedTx(
+			ctx, tx, approvalID, outcome, reason, edited, s.clock())
 	})
 }
 
 func recordProgressionDecidedTx(
 	ctx context.Context, tx pgx.Tx, approvalID ids.UUID,
-	outcome string, reason *string, edited bool,
+	outcome string, reason *string, edited bool, now time.Time,
 ) error {
 	if !progressionOutcomes[outcome] {
 		return fmt.Errorf("deals: %q is not a stage progression outcome", outcome)
@@ -277,14 +281,34 @@ func recordProgressionDecidedTx(
 	}
 	var id ids.UUID
 	var dealID ids.DealID
+	// The transition comes back with the row rather than from a second read:
+	// the sweep below needs it, and the row already carries it.
+	var moved TransitionRef
+	// decided_by_system is derived from the outcome rather than taken as a
+	// second parameter. The two would otherwise be free to disagree, and a row
+	// saying auto_applied with the column false is one the report and the
+	// column would answer differently about the same move.
 	err := tx.QueryRow(ctx, `
-		UPDATE stage_progression_outcome
+		UPDATE stage_progression_outcome o
 		   SET outcome = $2, rejection_reason = $3, evidence_corrected = $4,
-		       decided_at = now()
-		 WHERE approval_id = $1 AND outcome = $5
-		RETURNING id, deal_id`,
-		approvalID, outcome, reason, edited, ProgressionProposed).
-		Scan(&id, &dealID)
+		       decided_by_system = ($2 = $6), decided_at = now(),
+		       -- The undo window is frozen HERE, on an automatic move only,
+		       -- because this is when the promise is made. Read live at undo
+		       -- time it would be whatever the rule says then, so an admin
+		       -- shortening it would close the window on moves already made
+		       -- and lengthening it would reopen ones contacts were told had
+		       -- closed.
+		       undo_window_hours = CASE WHEN $2 = $6 THEN (
+		           SELECT p.undo_window_hours FROM stage_progression_policy p
+		            WHERE p.pipeline_id = o.pipeline_id
+		              AND p.from_stage_id = o.from_stage_id
+		              AND p.to_stage_id = o.to_stage_id
+		       ) END
+		 WHERE o.approval_id = $1 AND o.outcome = $5
+		RETURNING o.id, o.deal_id, o.pipeline_id, o.from_stage_id, o.to_stage_id`,
+		approvalID, outcome, reason, edited, ProgressionProposed,
+		ProgressionAutoApplied).
+		Scan(&id, &dealID, &moved.PipelineID, &moved.FromStageID, &moved.ToStageID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either nothing was proposed under this approval, or it was already
 		// decided. Both are ordinary on an at-least-once path — a redelivered
@@ -308,7 +332,21 @@ func recordProgressionDecidedTx(
 	if err != nil {
 		return fmt.Errorf("audit the stage move's outcome: %w", err)
 	}
-	return emitProgressionChanged(ctx, tx, auditID, dealID)
+	if err := emitProgressionChanged(ctx, tx, auditID, dealID); err != nil {
+		return err
+	}
+	// Asked on EVERY decision, not only on the ones that look bad. A rule
+	// crosses its ceiling when a reversal lands, but it also crosses it when
+	// the clean approvals that were holding the rate down age out of the
+	// window — so a sweep that only ran on reversals would leave a transition
+	// running automatically on a record that had already failed.
+	//
+	// Including on an automatic apply. The rates it re-counts exclude
+	// auto_applied from their denominator, so the autopilot's own moves cannot
+	// improve or worsen the record they are judged against — but a reversal
+	// that lands while a transition is running automatically must be able to
+	// stop it, and this is the path every decision takes.
+	return suspendIfRecordWentBadTx(ctx, tx, moved, now)
 }
 
 // progressionOutcomes is the vocabulary the column's CHECK holds, spelled here

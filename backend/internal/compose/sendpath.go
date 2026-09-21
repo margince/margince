@@ -34,8 +34,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -129,6 +129,15 @@ func (p SendPath) withPoolDefaults(pool *pgxpool.Pool) SendPath {
 // the reconciliation must be able to build one.
 func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	send := s.send.withPoolDefaults(pool)
+	// The directed send is wired HERE for this file's whole reason: it needs
+	// both the send path and the delivery machinery, and a deployment that had
+	// one without the other would answer a recorded decision by sending
+	// nothing. A composition with no delivery leaves it nil, and the route
+	// answers not-implemented like every other unwired surface.
+	if send.Delivery != nil {
+		directed := newDirectedSendService(pool, send.Delivery, send)
+		s.directedSendHandlers = directedSendHandlers{directed: &directed}
+	}
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
 		WithRuntimeEnvironment(send.Environment).
@@ -150,6 +159,17 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// works on one transport and silently 500s on the next.
 		WithScheduleTimer(send.ScheduleTimer).
 		WithHeldNotifier(send.HeldNotifier).
+		// Wired unconditionally, so a deployment cannot forget it and leave a
+		// settled message's review standing in front of a decider.
+		//
+		// IT CARRIES THE ROUTER, for consentGateFor's reason: closing a review
+		// has to retract the card it was handed to, or somebody is still being
+		// asked to send a message that is cancelled, moved or already gone.
+		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
+		// The other half of the same seam: closing a review is what a settled
+		// message does, and FINDING one is what a held message needs so a rep
+		// can reach the work that would unstop it.
+		WithReviewLookup(reviewLookup{pool: pool}).
 		// Wired unconditionally, like the unsubscribe linker below: it needs
 		// nothing but the caller's transaction, so a deployment cannot forget
 		// it and leave an account-started send unable to resolve anyone.
@@ -174,14 +194,20 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 //
 // Every send in this process must ask the same gate the same way: a second
 // construction that differed — a different store, a different db handle — would
-// be a second answer to "may this person be written to", and the surface that
+// be a second answer to "may this contact be written to", and the surface that
 // got the wrong one would look identical to the one that got the right one.
 //
 // The concrete gate rather than the activities.ConsentGate seam it satisfies:
 // this is composition naming a dependency, every caller assigns it into the
 // seam itself, and widening here would only hide which gate was built.
 func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
-	return consent.NewGate(consent.NewStore(InstallationDB(pool))).
+	return consent.NewGate(consent.NewStore(InstallationDB(pool)).
+		// THE SAME SEAM THE HANDLERS HOLD, wired here too because this is the
+		// store that CLOSES a review when its message goes — and closing one
+		// has to retract the card somebody was asked to decide. A gate without
+		// it would resolve the review and leave a live card asking about a
+		// message that has already been sent.
+		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)})).
 		// Where the installation is established, which selects the messaging
 		// rules a decision is taken under. Injected rather than read directly
 		// because the setting belongs to identity and consent may not import a
@@ -235,6 +261,23 @@ func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, sen
 		svc.WithEffect(kind, late.effect(svc, store, gate, send.Delivery))
 		svc.WithPrecheck(kind, late.precheck(store, gate, send.Delivery))
 	}
+	// APPROVING A ROUTED REFUSAL SENDS THE MESSAGE, so it is registered here
+	// with the others that send rather than beside the ordinary kinds: an
+	// executor registered there would put out mail with no signature and no
+	// unsubscribe linker.
+	//
+	// It is wired separately from the table above because it needs the whole
+	// directed-send service — the consent store, the gate and the delivery
+	// machinery together — rather than the three the table's shape carries.
+	if send.Delivery != nil {
+		svc.WithEffect(approvals.KindCommunicationReview,
+			reviewDecisionEffect(svc, newDirectedSendService(pool, send.Delivery, send)))
+		// SAYING NO AND SAYING NOTHING both end the asking, and both have to
+		// move the review — a rep left reading "waiting for a decision" would
+		// be waiting on an answer that is never coming.
+		svc.WithDeclinedEffect(approvals.KindCommunicationReview, reviewDecisionDeclined())
+		svc.WithExpiredEffect(approvals.KindCommunicationReview, reviewDecisionExpired())
+	}
 }
 
 var lateApprovalEffects = map[string]lateApprovalEffect{
@@ -254,6 +297,14 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 	send = send.withPoolDefaults(pool)
 	return activities.NewStore(InstallationDB(pool)).
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		// The disclosures a jurisdiction demands, put into the body that owes
+		// them. See compose/disclosurefooter.go.
+		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
+			// WITH THE COUNTRY READER, which decides which pack applies. A bare
+			// store answers no country, so applicableRules finds no pack and
+			// every message silently owes nothing — the failure this seam
+			// exists to end, arriving through the wiring instead.
+			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
 		WithPublicBaseURL(send.PublicBaseURL).
 		WithRuntimeEnvironment(send.Environment).
 		WithSendAuthority(send.SendAuthority).
@@ -268,12 +319,23 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		// makes one a REST credential too) must not lose their signature merely
 		// because the request arrived on the tool surface. An agent principal
 		// still signs nothing — signedBody decides that, not this wiring.
-		WithSignature(people.NewStore(InstallationDB(pool))).
+		WithSignature(contacts.NewStore(InstallationDB(pool))).
 		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
 		})).
 		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
+		// Wired unconditionally, so a deployment cannot forget it and leave a
+		// settled message's review standing in front of a decider.
+		//
+		// IT CARRIES THE ROUTER, for consentGateFor's reason: closing a review
+		// has to retract the card it was handed to, or somebody is still being
+		// asked to send a message that is cancelled, moved or already gone.
+		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
+		// The other half of the same seam: closing a review is what a settled
+		// message does, and FINDING one is what a held message needs so a rep
+		// can reach the work that would unstop it.
+		WithReviewLookup(reviewLookup{pool: pool}).
 		WithDraftOutcome(send.DraftOutcome)
 }
 
@@ -285,7 +347,9 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 // The automation executors pass a zero SendPath, which is a statement rather
 // than an omission: only DraftEmail is reachable through automation.Comms, so
 // that surface has no send to configure.
-func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath) commsAdapter {
+func newCommsAdapter(
+	pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath,
+) commsAdapter {
 	return commsAdapter{
 		store:         sendStore(pool, send),
 		gate:          consentGateFor(pool),
@@ -293,6 +357,7 @@ func newCommsAdapter(pool *pgxpool.Pool, drafter activities.EmailDrafter, send S
 		stager:        send.Delivery,
 		channelStager: send.Delivery,
 		timer:         send.ScheduleTimer,
+		calendars:     calendarBackingResolver(pool),
 		own:           capture.NewOwnDomainStore(InstallationDB(pool)),
 	}
 }

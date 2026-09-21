@@ -33,7 +33,7 @@ var withheldFromTheTool = gatekit.Waive(map[string]string{
 	"Narrative": "the agent's OWN sentence about the night, withheld from the agent. It is the " +
 		"only field here the tool's caller wrote rather than read, and handing it back is how a " +
 		"loop reads its own output as new information — a second pass would summarize the " +
-		"summary. The person reads it on Home, which is who it was written for",
+		"summary. The reader reads it on Home, which is who it was written for",
 	"AnnotatedAt": "the stamp on the agent's own write, withheld for the same reason as Narrative: " +
 		"it answers 'has a pass run', and the only caller asking is the pass",
 
@@ -63,9 +63,10 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
 		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
 		CandidateCount: 17, RevenueNormMinor: 918_273, RevenueNormCurrency: "CHF",
-		Narrative:   "Two replies overnight, one deal went quiet.",
-		AnnotatedAt: &annotatedAt,
-		PreviousDay: time.Date(2026, 8, 7, 0, 0, 0, 0, time.UTC),
+		FactorsOmitted: []string{"warmth"},
+		Narrative:      "Two replies overnight, one deal went quiet.",
+		AnnotatedAt:    &annotatedAt,
+		PreviousDay:    time.Date(2026, 8, 7, 0, 0, 0, 0, time.UTC),
 		Items: []briefs.BriefRunItem{{
 			ID: itemID, DealID: dealID, Rank: 3, Composite: 0.815,
 			Features: briefs.BriefFeatureVector{
@@ -119,6 +120,9 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		// it — the structural version of the guarantee the digits above only
 		// have by probability.
 		"RevenueNormCurrency": "CHF",
+		// Served, not withheld: it says the ORDER the agent is reading is not
+		// the order, which no other field on the run can say.
+		"FactorsOmitted": `"factors_omitted":["warmth"]`,
 		// The items are covered field by field below; what this row asserts is
 		// that the list itself arrived.
 		"Items": `"deal_id":"` + dealID.String(),
@@ -131,7 +135,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
 		// Served, not withheld: without the condition a snooze carrying no
 		// moment reads to an agent as one that never lifts, and it would report
-		// a deal as abandoned when the person is waiting for a reply.
+		// a deal as abandoned when the contact is waiting for a reply.
 		"ReopenOn": `"reopen_on":"meeting"`, "ReopenRef": `"reopen_ref":"` + meetingID.String(),
 		"Finding": "He asked about the delivery date yesterday.",
 		"Lineage": `"dismissed_on":"2026-08-05"`,

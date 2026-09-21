@@ -15,7 +15,7 @@ package dealrooms
 // The division: OPENING a room is auto-execute, because a room nobody has been
 // invited to is readable by nobody. Everything an outside party can then reach
 // — the wording, the documents, who holds a seat, how long they hold it — is a
-// person's. A room is live from creation, so there is no longer a draft an
+// contact's. A room is live from creation, so there is no longer a draft an
 // agent could shape unseen.
 
 import (
@@ -90,9 +90,9 @@ func TestAnAgentMayNotMoveWhatABuyerCanReach(t *testing.T) {
 			return err
 		}},
 		// Who may come into the room, and who may be put out of it. An agent
-		// deciding which outside person reads a deal's material is the same
+		// deciding which outside contact reads a deal's material is the same
 		// class of act as publishing to them, and refused on the same ground.
-		{"admit an outside person to the room", func() error {
+		{"admit an outside contact to the room", func() error {
 			_, err := store.InviteParticipant(ctx, roomID, InviteInput{
 				FullName: "Probe", Email: "probe@example.com", Capability: capabilityView, Source: "probe",
 			})
@@ -102,7 +102,7 @@ func TestAnAgentMayNotMoveWhatABuyerCanReach(t *testing.T) {
 			_, err := store.ResendInvitation(ctx, roomID, participantID)
 			return err
 		}},
-		{"take a person's access away", func() error {
+		{"take a contact's access away", func() error {
 			_, err := store.RevokeParticipant(ctx, roomID, participantID)
 			return err
 		}},
@@ -131,7 +131,7 @@ func TestAnAgentMayStillOpenARoomNobodyIsInYet(t *testing.T) {
 	// Opening a room is the write that stayed auto-execute, and the reason is
 	// the one the whole division now rests on: a room nobody has been invited
 	// to is readable by nobody. The moment an outside party can read it — the
-	// wording, the documents, who holds a seat — it is a person's act.
+	// wording, the documents, who holds a seat — it is a colleague's act.
 	//
 	// A nil store panics once the call gets past the authority checks, so
 	// reaching the database IS the pass condition here: it says the agent was

@@ -11,7 +11,7 @@ import { ProblemError, throwProblem } from "./common";
 // that show it: the contract form's signed-document field and the contract row
 // on the account page.
 //
-// THE ENDPOINT PAGINATES, AND A PAGE IS NOT A LIST. `/organizations/{id}/
+// THE ENDPOINT PAGINATES, AND A PAGE IS NOT A LIST. `/companies/{id}/
 // documents` answers 50 rows by default and 200 at most, with `page.has_more`
 // saying whether that was everything. Both surfaces used to keep `data.data`
 // and drop the envelope, so an agreement with more filed documents than fit in
@@ -56,13 +56,13 @@ type PaperPage = {
 };
 
 async function paperPage(
-  orgId: string,
+  companyId: string,
   contractId: string | undefined,
   cursor: string | undefined,
 ): Promise<PaperPage> {
-  const { data, error } = await api.GET("/organizations/{id}/documents", {
+  const { data, error } = await api.GET("/companies/{id}/documents", {
     params: {
-      path: { id: orgId },
+      path: { id: companyId },
       query: { contract_id: contractId, limit: PAPER_PAGE_LIMIT, cursor },
     },
   });
@@ -91,10 +91,10 @@ async function paperPage(
  * there is no way onward from there, and looping would be the same page over.
  */
 export async function fetchFiledPaper(
-  orgId: string,
+  companyId: string,
   contractId: string | undefined,
 ): Promise<FiledPaper> {
-  const first = await paperPage(orgId, contractId, undefined);
+  const first = await paperPage(companyId, contractId, undefined);
   if (!first.hasMore) {
     return { documents: first.documents, remaining: 0 };
   }
@@ -104,7 +104,7 @@ export async function fetchFiledPaper(
     if (!cursor) {
       return { documents: first.documents };
     }
-    const tail = await paperPage(orgId, contractId, cursor);
+    const tail = await paperPage(companyId, contractId, cursor);
     counted += tail.documents.length;
     if (!tail.hasMore) {
       return { documents: first.documents, remaining: counted };
@@ -122,13 +122,13 @@ export async function fetchFiledPaper(
  * a request for the documents of a record that does not exist yet.
  */
 export function useContractPaper(
-  orgId: string,
+  companyId: string,
   contractId: string | undefined,
 ) {
   return useQuery({
-    queryKey: ["contractPaper", orgId, contractId],
+    queryKey: ["contractPaper", companyId, contractId],
     enabled: Boolean(contractId),
-    queryFn: () => fetchFiledPaper(orgId, contractId),
+    queryFn: () => fetchFiledPaper(companyId, contractId),
   });
 }
 

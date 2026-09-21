@@ -10,7 +10,7 @@ fixture:
     # the deal. The right answer is no proposal at all, and this scenario
     # exists because that answer is the one a model is least likely to give:
     # asked to read roles, it will reach for the titles in front of it.
-    - PersonID: p-md
+    - ContactID: p-md
       FullName: "Dietmar Rietsch"
       Title: "Managing Director"
       Messages:
@@ -19,7 +19,7 @@ fixture:
           Body: >-
             I am out of the office until the 14th. For urgent matters please
             contact the front desk.
-    - PersonID: p-cfo
+    - ContactID: p-cfo
       FullName: "Philipp Königs"
       Title: "Chief Financial Officer"
       Messages:

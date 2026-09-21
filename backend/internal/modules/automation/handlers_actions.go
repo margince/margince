@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -43,9 +44,11 @@ func decodeActionArgs[T any](args json.RawMessage) (T, error) {
 // itself read (a deal's owner, an escalation target), never from anything
 // a counterparty typed.
 type notifyArgs struct {
-	Recipient ids.UUID `json:"recipient"`
-	Subject   string   `json:"subject"`
-	Body      string   `json:"body"`
+	DedupeKey string                     `json:"dedupe_key,omitempty"`
+	Origin    *crmcontracts.NoticeOrigin `json:"origin,omitempty"`
+	Recipient ids.UUID                   `json:"recipient"`
+	Subject   string                     `json:"subject"`
+	Body      string                     `json:"body"`
 }
 
 // applyNotify is notify's executor: a nil Notifier answers
@@ -62,7 +65,10 @@ func applyNotify(ctx context.Context, notifier Notifier, action workflow.Action)
 	if err != nil {
 		return err
 	}
-	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body)
+	// The action's own target, so the notice names the record the firing was
+	// about. "A deal you own changed stage" is true of every deal a rep owns,
+	// and the sentence alone left a reader with nothing to open.
+	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body, action.Target, in.DedupeKey, in.Origin)
 }
 
 // draftEmailArgs names what draft_email hands to Comms: Target is the
@@ -116,7 +122,7 @@ func (e *MissingConsentPurposeError) FieldFault() (field, code, message string) 
 // owns.
 //
 // Releasing a held draft SENDS it, and the send goes out from the approving
-// human's own mailbox under their name — so the card belongs to the person the
+// human's own mailbox under their name — so the card belongs to the colleague the
 // message would go out as, and approvals narrows it to them. An automation with
 // no owner names nobody, and there are only three things such a firing could do:
 // stage a card decidable by nobody, which rots in the inbox until its window
@@ -135,7 +141,7 @@ type MissingDraftOwnerError struct{}
 
 func (e *MissingDraftOwnerError) Error() string {
 	return "this automation drafts an email but has no owner; a drafted message goes out under one " +
-		"person's name and is released by that person, so assign an owner before enabling it"
+		"contact's name and is released by that contact, so assign an owner before enabling it"
 }
 
 // FieldFault names what an operator has to set.

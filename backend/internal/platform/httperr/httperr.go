@@ -51,11 +51,7 @@ var mapping = []struct {
 	{apperrors.ErrSeatLimitReached, http.StatusForbidden, "seat_limit_reached"},
 	{apperrors.ErrConsentNotGranted, http.StatusConflict, "consent_not_granted"},
 	{apperrors.ErrBudgetExceeded, http.StatusTooManyRequests, "rate_limited"},
-	{apperrors.ErrModeNotOverlay, http.StatusNotFound, "mode_not_overlay"},
 	{apperrors.ErrUnsupportedBySoR, http.StatusUnprocessableEntity, "unsupported_by_sor"},
-	{apperrors.ErrIncumbentAlreadyConnected, http.StatusConflict, "incumbent_already_connected"},
-	{apperrors.ErrOverlayFlipBlocked, http.StatusConflict, "overlay_flip_blocked"},
-	{apperrors.ErrIncumbentBudgetExhausted, http.StatusServiceUnavailable, "incumbent_budget_exhausted"},
 	{apperrors.ErrBaseCurrencyLocked, http.StatusConflict, "base_currency_locked"},
 	{apperrors.ErrProviderUnusable, http.StatusBadGateway, "provider_unusable"},
 	{apperrors.ErrRetentionHold, http.StatusLocked, "locked"},
@@ -158,11 +154,15 @@ func clientInputValidation(err error) (error, bool) {
 // wrapped driver message through. Long enough for a real explanation, short
 // enough that nothing large rides out.
 //
-// Exported as a shared FIGURE, not a promise: the MCP renderer bounds the
-// message it echoes and borrows this number rather than inventing a second,
-// but this package applies it only on the module-declared path — a Message
-// from a direct Validation call arrives unbounded, and escaping can push one
-// that was inside it back over. The echoing surface does its own bounding.
+// Exported as a shared FIGURE, not a promise: this package applies it only on
+// the module-declared path — a Message from a direct Validation call arrives
+// unbounded, and escaping can push one that was inside it back over — so the
+// echoing surface does its own bounding, and the MCP renderer borrows this
+// number for the per-field remedy it writes.
+//
+// It is one of three figures the tool surface applies, each answering a
+// different question about whose words are being echoed.
+// agents.faultExplanation is where that table lives.
 const MaxFaultText = 300
 
 // boundFaultText caps one caller-facing value from a module-declared fault.
@@ -214,7 +214,10 @@ func moduleDeclaredFault(err error) (error, bool) {
 		return &DetailedError{
 			Status: http.StatusUnprocessableEntity,
 			Code:   "validation_error",
-			Detail: fieldFaults.Error(),
+			// Bounded like every other value on this path. It was the one that
+			// was not, and it is the value most likely to be long: a type
+			// carrying a list has a sentence naming all of them.
+			Detail: boundFaultText(fieldFaults.Error()),
 			Fields: fields,
 		}, true
 	}
@@ -281,6 +284,7 @@ type Fault struct {
 var transientCodes = map[string]struct{}{
 	"rate_limited":               {},
 	"incumbent_budget_exhausted": {},
+	schemaChangedCode:            {},
 }
 
 // Transient reports whether repeating the same call unchanged could succeed
@@ -304,6 +308,36 @@ func (f Fault) Transient() bool {
 // named it. One tree and two renderers means the surfaces cannot drift apart
 // again.
 func Classify(err error) (Fault, bool) {
+	// A REFUSAL THAT CARRIES A REFERENCE renders it as a field rather than
+	// leaving it in prose.
+	//
+	// BEFORE the sentinel table and after nothing, because the sentinel is
+	// still what decides the STATUS: this branch changes what a caller is
+	// handed, never what they are told happened. A surface reading `details`
+	// gets an id it can act on; one reading only the message gets exactly what
+	// it got before.
+	//
+	// It exists for the tool surface. An agent handed "consent not granted" in
+	// a sentence can do nothing with it; the same refusal naming the review it
+	// opened can hand the question to a human.
+	var referenced apperrors.ReferencedFault
+	if errors.As(err, &referenced) {
+		if fault, ok := Classify(referenced.Unreferenced()); ok {
+			fault.Details = referenced.FaultReference()
+			// AND THE MESSAGE KEEPS THE REFERENCE TOO. Classifying the
+			// unreferenced cause is what preserves the status, and it also
+			// answers the CAUSE's own text — which no longer names the review.
+			//
+			// A human reading the prose must not lose what a machine just
+			// gained. Both carry it: the sentence for whoever reads it, the
+			// field for whatever parses it.
+			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
+				fault.Detail = detail
+			}
+			return fault, true
+		}
+	}
+
 	var withDetails *DetailedError
 	if errors.As(err, &withDetails) {
 		return Fault{
@@ -333,9 +367,12 @@ func Classify(err error) (Fault, bool) {
 		}
 	}
 
-	// A constraint the DATABASE enforced that no path above translated. Last,
-	// so every typed refusal a module wrote wins over this — it is the net, not
-	// the answer.
+	// A statement the DATABASE refused that no path above translated. Last, so
+	// every typed refusal a module wrote wins over these two — they are the
+	// net, not the answer.
+	if fault, ok := stalePlanFault(err); ok {
+		return fault, true
+	}
 	if fault, ok := constraintFault(err); ok {
 		return fault, true
 	}

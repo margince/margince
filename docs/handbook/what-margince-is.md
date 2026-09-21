@@ -1,6 +1,6 @@
 # What Margince is
 
-Margince is a CRM — a place to keep track of the people you sell to, the
+Margince is a CRM — a place to keep track of the contacts you sell to, the
 companies they work for, the deals you are working on, and the work you deliver
 afterwards.
 
@@ -11,23 +11,26 @@ to use it.
 
 Most CRMs bolt AI on as a panel that summarises what you typed in yourself.
 
-In Margince, an AI agent connects to your organization properly and gets a set of
+In Margince, an AI agent connects to your company properly and gets a set of
 governed tools. It can look things up, draft replies, read a document for you,
 enrich a company, move a deal along. Everything it does is recorded and
 attributed.
 
 The governing rule is one sentence:
 
-> An agent can do what the person behind it could do unaided — and nothing more.
-> It is checked against that person on every call.
+> An agent can do what the colleague behind it could do unaided — and nothing
+> more. It is checked against that colleague on every call.
 
-An agent has no identity of its own. It acts on behalf of a person, using a
-credential that person minted and can revoke. If you cannot see a record, neither
+An agent has no identity of its own. It acts on behalf of a colleague, using a
+credential they minted and can revoke. If you cannot see a record, neither
 can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
-configured — chief among them: **an agent may never approve an action, including
-its own.**
+configured — chief among them: **an agent never releases a proposal that is not
+its own business.** It may not approve the card its own credential staged, nor
+one staged for a different colleague. It may answer a card staged for the
+colleague it acts for, which is exactly what they could have answered
+themselves; and it may always reject its own proposal.
 
 [What the AI does, and what it does not →](what-the-ai-does.md)
 
@@ -36,7 +39,7 @@ its own.**
 You should not have to type into a CRM what you already wrote in an email.
 
 Connect your mailbox and your calendar, and Margince files what arrives against
-the right people, companies, deals and projects — by exact rules, not by
+the right contacts, companies, deals and projects — by exact rules, not by
 guesswork. Where the rules cannot decide, it asks you rather than picking.
 
 [How conversations get in →](capture.md)
@@ -70,8 +73,8 @@ You are meant to be able to check it. That is the design.
 
 Five kinds of record:
 
-- **Contacts** — people
-- **Companies** — the organizations they work for
+- **Contacts** — the individuals you sell to
+- **Companies** — the companies they work for
 - **Leads** — prospects, kept deliberately apart from contacts
 - **Deals** — pieces of business moving toward won or lost
 - **Projects** — the work itself, which starts during the deal and outlives it
@@ -83,26 +86,36 @@ all of them, and the documents that accumulate along the way.
 
 ## Getting around
 
-**Home** sits on its own at the top. Below it the navigation is grouped in three:
+**Home** sits on its own at the top. Below it the navigation is grouped in
+three:
 
-**Records** — Contacts, Companies, Leads, Filtered lists
+**Records** — Contacts, Companies, Leads, Deals
 
-**Work** — Worklist, Pipeline, Projects
+**Work** — Projects, Filters & views
 
-**Intelligence** — Reports, Ask Margince
+**Intelligence** — Analytics, Ask Margince
 
 **Settings** is in the account menu, not on the navigation rail.
 
+The **Deals** row is the pipeline board; there is no separate Pipeline row.
+
 Two screens are worth knowing on day one.
 
-**Worklist** is your day, and the only door to work that waits on a person:
-decisions to answer, tasks to finish, duplicates to merge, today's meetings,
-deals going quiet, promises you made, and what ran on its own overnight. When
-there is nothing, it says "Your day is clear" rather than showing you an empty
-grid.
+**Home** is where your day starts, and the door to the **Worklist** — the work
+that waits on a human: decisions to answer, tasks to finish, duplicates to
+merge, today's meetings, deals going quiet, promises you made, and what ran on
+its own overnight. The Worklist has no navigation row of its own; you open it
+from Home. When there is nothing, it says "Nothing is waiting on you" rather
+than showing you an empty grid.
 
 **Ask Margince** is the question box, reachable from anywhere with a keyboard
-shortcut.
+shortcut. The same shortcut opens the command palette — "Find everything or get
+answers from Margince" — which is the fastest way to any screen.
+
+**Search** groups what it finds by kind: Contacts, Companies, Deals, Leads,
+Projects, Activities, Products, Offer templates and Tags. A result that came
+from a connected system says so, rather than looking like something somebody
+here typed.
 
 You will notice no counters or badges on the navigation. That is deliberate: the
 queues that would carry them are lanes inside Worklist, which reports its own
@@ -110,19 +123,21 @@ numbers on the page rather than nagging from the edge of the screen.
 
 ## Words this handbook uses
 
-**Organization** — your tenant. The whole of your company's data in Margince. One
-installation serves one organization.
+**Company** — the word does double duty, and the screen always makes clear
+which is meant. Your *own* company is the tenant: the whole of your data in
+Margince, and what a setting marked "Company" changes. A *company record* is
+someone you do business with, listed under Companies.
 
 **Installation** — the running deployment. Whoever operates it decides things
-like upload limits and whether sends need confirming.
+like upload limits and whether sends need confirming. One installation serves
+one company.
 
-**Company** — a record type. The word "organization" is the underlying name for
-it and shows through on a few screens, which is confusing; when a search result
-group says "Organizations", it means companies.
+**Contact** — an individual you do business with. One word everywhere: the
+screen, the address bar and the data behind them all say contact.
 
-**Passport** — the credential a person mints so an AI agent can act as them.
+**Passport** — the credential a colleague mints so an AI agent can act as them.
 
-**Staged** — an action that has not happened, and is waiting for a person to
+**Staged** — an action that has not happened, and is waiting for a human to
 decide.
 
 **Archived** — removed from the live lists, still there. Almost everything in

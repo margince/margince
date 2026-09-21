@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -17,14 +17,14 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompanyRail } from "./companyrail";
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
 // The rail's own honesty rules: a section the caller's role withheld says so
 // rather than drawing the empty state that would read as "there is none",
 // and a field the record does not carry still draws its row — an unfilled
 // field is a fact worth showing, not one this grid hides.
 
-const org = {
+const company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -38,7 +38,15 @@ const org = {
   size_band: "51-200" as const,
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -49,29 +57,29 @@ const org = {
 const emptyPage = { has_more: false, next_cursor: null };
 
 // No test in this file asserts on where a header link sends the reader —
-// that is organizations.test.tsx's own claim, since the callback only makes
+// that is companies.test.tsx's own claim, since the callback only makes
 // sense wired to the real tab strip it switches.
 const onTab = () => {};
 
-// Built loosely and cast once here, matching company360.test.tsx's own
-// fixture: a hand-typed 360 payload restates the generated schema by hand,
-// and the two would silently drift the moment the contract grows a field
-// this suite never needed.
-function view(overrides: Record<string, unknown> = {}): Organization360 {
+// The 360 this suite reads: every section present and empty, so a case names
+// only the one it is about. Typed as the contract declares it, never cast.
+function view(overrides: Record<string, unknown> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
-    organization: org,
+    company: company,
     sections_omitted: [],
-    people: { data: [], page: emptyPage },
+    contacts: { data: [], page: emptyPage },
     deals: {
       data: [],
       page: emptyPage,
       won_lifetime: { amount_minor: 0, currency: null },
       lost_count: 0,
     },
+    projects: [],
+    projects_page: emptyPage,
     tags: [],
     ...overrides,
-  } as unknown as Organization360;
+  };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -99,16 +107,15 @@ function render(ui: ReactNode) {
 
 type RailProps = ComponentProps<typeof CompanyRail>;
 
-// Every site below wants the same rail: a writable view, not loading,
-// composer closed, and a no-op tab switch. `overrides` supplies whatever the
-// test is actually varying.
+// Every site below wants the same rail: a writable view, not loading, and a
+// no-op tab switch. `overrides` supplies whatever the test is actually
+// varying.
 function renderRail(overrides: Partial<RailProps> = {}) {
   return render(
     <CompanyRail
-      orgId="o-1"
+      companyId="o-1"
       view={view()}
       loading={false}
-      composerOpen={false}
       onTab={onTab}
       {...overrides}
     />,
@@ -135,7 +142,7 @@ function stub(
         }
       }
       if (pathname.endsWith("/finance-summary")) {
-        return jsonResponse({ organization_id: "o-1", state: "no_connection" });
+        return jsonResponse({ company_id: "o-1", state: "no_connection" });
       }
       if (pathname.endsWith("/users")) {
         return jsonResponse({
@@ -149,7 +156,7 @@ function stub(
       // about the controls it names.
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
       if (pathname.endsWith("/signals")) {
@@ -161,22 +168,19 @@ function stub(
 }
 
 describe("CompanyRail", () => {
-  it("renders nothing while the composer holds the column", () => {
-    stub();
-    renderRail({ composerOpen: true });
-    expect(screen.queryByText("Details")).not.toBeInTheDocument();
-  });
-
   it("draws the details grid from the fields the record actually carries", async () => {
     stub();
     renderRail();
-    expect(screen.getByText("Brandt Automotive GmbH")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Brandt Automotive GmbH")[0],
+    ).toBeInTheDocument();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51-200")).toBeInTheDocument();
-    // Address draws one row per part now rather than one combined "Munich, DE"
-    // summary.
-    expect(screen.getByText("Munich")).toBeInTheDocument();
-    expect(screen.getByText("DE")).toBeInTheDocument();
+    // Address draws as postal lines now, city then country on their own line
+    // (recordfieldvalues.ts's `postalLines`), rather than one combined
+    // "Munich, DE" summary. The default text normalizer collapses that line
+    // break to a single space, so the two parts still read as one match.
+    expect(screen.getByText("Munich DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner cell resolves through the roster read, same as EntityRef
     // does everywhere else: not shown until the read lands.
@@ -188,7 +192,7 @@ describe("CompanyRail", () => {
   it("still draws every known row when the record carries no value for it", () => {
     stub();
     const bare = {
-      ...org,
+      ...company,
       legal_name: null,
       industry: null,
       size_band: null,
@@ -197,7 +201,7 @@ describe("CompanyRail", () => {
       domains: [],
       owner_id: null,
     };
-    renderRail({ view: view({ organization: bare }) });
+    renderRail({ view: view({ company: bare }) });
     // Every row's LABEL still draws: an absent field is a fact about the
     // record, not a reason to hide the row that would say so. Both Industry
     // (InlineText, which draws no label of its own) and Company size
@@ -208,11 +212,10 @@ describe("CompanyRail", () => {
     // part; City stands in for the other five.
     expect(screen.getByText("Industry")).toBeInTheDocument();
     expect(screen.getByText("Company size")).toBeInTheDocument();
-    expect(screen.getByText("City")).toBeInTheDocument();
+    expect(screen.getByText("Address")).toBeInTheDocument();
     // No /me grant in this stub, so every field renders its read-only
     // fallback rather than a control — owner and every address part share
     // the same "Not set"/"Unassigned" absence text the grid always used.
-    expect(screen.getByText("Unassigned")).toBeInTheDocument();
     expect(screen.getAllByText("Not set").length).toBeGreaterThan(0);
   });
 
@@ -223,18 +226,18 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -266,7 +269,7 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
@@ -280,12 +283,12 @@ describe("CompanyRail", () => {
           ],
           page: emptyPage,
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -302,7 +305,7 @@ describe("CompanyRail", () => {
   it("surfaces the server's refusal on the owner control rather than swallowing it", async () => {
     // A stale roster entry (a user removed between page load and save) is the
     // one way an accepted-looking choice still fails: the wire FK on
-    // organization.owner_id (core 0019) rejects it as a reference the server
+    // company.owner_id (core 0019) rejects it as a reference the server
     // cannot resolve, and the rail's owner control must show that sentence
     // next to itself — the same generic refusal path InlineChoice already
     // proves in design-system/inlinechoice.test.tsx, exercised here through
@@ -312,7 +315,7 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
@@ -326,7 +329,7 @@ describe("CompanyRail", () => {
           ],
           page: emptyPage,
         }),
-      "/organizations/o-1": (request) => {
+      "/companies/o-1": (request) => {
         if (request.method === "PATCH") {
           return jsonResponse(
             {
@@ -339,7 +342,7 @@ describe("CompanyRail", () => {
             422,
           );
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -369,18 +372,18 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
@@ -398,7 +401,7 @@ describe("CompanyRail", () => {
   it("renames the primary domain while preserving every other domain on the account", async () => {
     let patchBody: unknown;
     const threeDomains = {
-      ...org,
+      ...company,
       domains: [
         { domain: "brandt.example", is_primary: true, source: "manual" },
         { domain: "brandt.de", is_primary: false, source: "manual" },
@@ -414,13 +417,13 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
           return jsonResponse({ ...threeDomains, version: 2 });
@@ -428,13 +431,14 @@ describe("CompanyRail", () => {
         return jsonResponse(threeDomains);
       },
     });
-    renderRail({ view: view({ organization: threeDomains }) });
+    renderRail({ view: view({ company: threeDomains }) });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: "Change Domains" }),
     );
-    const input = screen.getByLabelText("Domain");
+    const input = screen.getByDisplayValue("brandt.example");
     await userEvent.clear(input);
-    await userEvent.type(input, "brandt-gmbh.example{Enter}");
+    await userEvent.type(input, "brandt-gmbh.example");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(patchBody).toBeTruthy());
     // The other two domains survive untouched, and only the renamed primary
     // changed — sending just the edited entry would have silently dropped
@@ -455,39 +459,34 @@ describe("CompanyRail", () => {
     expect((patchBody as { domains: unknown[] }).domains).toHaveLength(3);
   });
 
-  it("refuses to clear the domain field rather than deleting the primary domain", async () => {
+  it("removes the final domain only through the grouped replace-set save", async () => {
     const onSave = vi.fn();
     stub({
       "/me": () =>
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           onSave(await request.json());
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: "Change Domains" }),
     );
-    const input = screen.getByLabelText("Domain");
-    await userEvent.clear(input);
-    await userEvent.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        "cannot be cleared here",
-      ),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /^Remove row/ }));
     expect(onSave).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ domains: [] }));
   });
 
   it("edits an address part by sending the whole address back with only that part changed", async () => {
@@ -497,27 +496,28 @@ describe("CompanyRail", () => {
         jsonResponse({
           user: { id: "u-1", display_name: "Mira Voss" },
           authorization: {
-            objects: { organization: { update: true } },
+            objects: { company: { update: true } },
             // A full seat: the licensing ceiling is checked before RBAC, and the
             // grid's controls issue a PATCH.
             seat_type: "full",
           },
         }),
-      "/organizations/o-1": async (request) => {
+      "/companies/o-1": async (request) => {
         if (request.method === "PATCH") {
           patchBody = await request.json();
-          return jsonResponse({ ...org, version: 2 });
+          return jsonResponse({ ...company, version: 2 });
         }
-        return jsonResponse(org);
+        return jsonResponse(company);
       },
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change City" }),
+      await screen.findByRole("button", { name: "Change Address" }),
     );
     const input = screen.getByLabelText("City");
     await userEvent.clear(input);
-    await userEvent.type(input, "Stuttgart{Enter}");
+    await userEvent.type(input, "Stuttgart");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(patchBody).toMatchObject({
         // `country` survives from the record's existing address even though
@@ -530,21 +530,21 @@ describe("CompanyRail", () => {
 
   it("marks a withheld section restricted instead of drawing it empty", () => {
     stub();
-    renderRail({ view: view({ sections_omitted: ["people"] }) });
+    renderRail({ view: view({ sections_omitted: ["contacts"] }) });
     expect(
       screen.getAllByText("Hidden — your role cannot read this").length,
     ).toBeGreaterThan(0);
     // A withheld section carries no header link: a count would have nothing
     // true to show, and an "Add" would offer to write into a section the
-    // reader cannot even see. Scoped to People's own panel — Deals is
+    // reader cannot even see. Scoped to Contacts's own panel — Deals is
     // unrelated and legitimately shows its own "Add" for its own empty read.
-    const peoplePanel = screen
-      .getByRole("heading", { name: "Their key people" })
+    const contactsPanel = screen
+      .getByRole("heading", { name: "Their key contacts" })
       .closest<HTMLElement>("details");
-    expect(peoplePanel).not.toBeNull();
+    expect(contactsPanel).not.toBeNull();
     expect(
-      peoplePanel &&
-        within(peoplePanel).queryByRole("button", { name: /All \d|^Add$/ }),
+      contactsPanel &&
+        within(contactsPanel).queryByRole("button", { name: /All \d|^Add$/ }),
     ).toBeNull();
   });
 
@@ -552,10 +552,10 @@ describe("CompanyRail", () => {
     stub();
     renderRail({
       view: view({
-        people: {
+        contacts: {
           data: [
             {
-              person_id: "p-1",
+              contact_id: "p-1",
               full_name: "Dana Buyer",
               title: "VP Procurement",
               strength: {
@@ -588,7 +588,7 @@ describe("CompanyRail", () => {
     // Named again for anyone not reading the stacked avatars as monograms:
     // the sr-only text beside them, not the face itself.
     expect(screen.getByText("Ravi Shah")).toBeInTheDocument();
-    // The rail names people it cannot say anything more about; the row is the
+    // The rail names contacts it cannot say anything more about; the row is the
     // way to the record that can.
     expect(
       screen.getByRole("link", { name: "Dana Buyer" }).getAttribute("href"),
@@ -738,7 +738,7 @@ describe("CompanyRail", () => {
     // no compare at all.
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     expect(names).toEqual([
       "Support renewal",
       "Berlin expansion",
@@ -793,7 +793,7 @@ describe("CompanyRail", () => {
     }
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     // The larger EUR figure leads; the unpriced deal ranks after the priced.
     expect(names).toEqual([
       "Fleet renewal",
@@ -806,13 +806,13 @@ describe("CompanyRail", () => {
     stub();
     renderRail({
       view: view({
-        people: {
+        contacts: {
           data: [
-            { person_id: "p-1", full_name: "Dana Buyer" },
-            { person_id: "p-2", full_name: "Erik Voss" },
-            { person_id: "p-3", full_name: "Farah Lund" },
-            { person_id: "p-4", full_name: "Gita Reyes" },
-            { person_id: "p-5", full_name: "Hugo Berg" },
+            { contact_id: "p-1", full_name: "Dana Buyer" },
+            { contact_id: "p-2", full_name: "Erik Voss" },
+            { contact_id: "p-3", full_name: "Farah Lund" },
+            { contact_id: "p-4", full_name: "Gita Reyes" },
+            { contact_id: "p-5", full_name: "Hugo Berg" },
           ].map((contact) => ({
             ...contact,
             deal_roles: [],
@@ -827,20 +827,20 @@ describe("CompanyRail", () => {
         },
       }),
     });
-    const peoplePanel = screen
-      .getByRole("heading", { name: "Their key people" })
+    const contactsPanel = screen
+      .getByRole("heading", { name: "Their key contacts" })
       .closest<HTMLElement>("details");
-    expect(peoplePanel).not.toBeNull();
-    if (!peoplePanel) {
-      throw new Error("the people panel has no wrapper");
+    expect(contactsPanel).not.toBeNull();
+    if (!contactsPanel) {
+      throw new Error("the contacts panel has no wrapper");
     }
     expect(
-      within(peoplePanel).getAllByRole("link", {
+      within(contactsPanel).getAllByRole("link", {
         name: /Buyer|Voss|Lund|Reyes|Berg/,
       }).length,
     ).toBe(3);
     expect(
-      within(peoplePanel).getByRole("button", { name: "All 5" }),
+      within(contactsPanel).getByRole("button", { name: "All 5" }),
     ).toBeInTheDocument();
   });
 
@@ -991,7 +991,7 @@ describe("CompanyRail", () => {
       }),
     });
     expect(
-      screen.getByText("Nothing open — only closed history."),
+      screen.getByText("Nothing open, only closed history."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
     // between two of them rather than never having started. The way to the
@@ -1012,25 +1012,26 @@ describe("CompanyRail", () => {
     const spy = vi.fn();
     stub();
     renderRail({ onTab: spy });
-    expect(screen.getByText(en["co.rail.people.empty"])).toBeInTheDocument();
+    expect(screen.getByText(en["co.rail.contacts.empty"])).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: en["co.rail.people.add"] }),
+      screen.getByRole("button", { name: en["co.rail.contacts.add"] }),
     );
-    expect(spy).toHaveBeenCalledWith("people");
+    expect(spy).toHaveBeenCalledWith("contacts");
     // That is the empty roster's one verb: no second "Add" under it.
-    const peoplePanel = screen
-      .getByRole("heading", { name: "Their key people" })
+    const contactsPanel = screen
+      .getByRole("heading", { name: "Their key contacts" })
       .closest<HTMLElement>("details");
-    expect(peoplePanel).not.toBeNull();
+    expect(contactsPanel).not.toBeNull();
     expect(
-      peoplePanel && within(peoplePanel).queryByRole("button", { name: "Add" }),
+      contactsPanel &&
+        within(contactsPanel).queryByRole("button", { name: "Add" }),
     ).toBeNull();
   });
 
-  it("drops the count once the server has cut the page, on people and deals alike", () => {
+  it("drops the count once the server has cut the page, on contacts and deals alike", () => {
     stub();
     const contacts = Array.from({ length: 25 }, (_, i) => ({
-      person_id: `p-${i + 1}`,
+      contact_id: `p-${i + 1}`,
       full_name: `Contact ${i + 1}`,
       deal_roles: [],
       strength: { score: 40, bucket: "moderate", factors: {}, inbound_90d: 1 },
@@ -1045,7 +1046,10 @@ describe("CompanyRail", () => {
     }));
     renderRail({
       view: view({
-        people: { data: contacts, page: { has_more: true, next_cursor: "c" } },
+        contacts: {
+          data: contacts,
+          page: { has_more: true, next_cursor: "c" },
+        },
         deals: {
           data: deals,
           page: { has_more: true, next_cursor: "c" },
@@ -1056,7 +1060,7 @@ describe("CompanyRail", () => {
     });
     // Twenty-five is where the server cut, not how many there are: the
     // summary carries no badge and the verb no figure, on both sections.
-    for (const name of ["Their key people", "Active deals"]) {
+    for (const name of ["Their key contacts", "Active deals"]) {
       const panel = screen
         .getByRole("heading", { name })
         .closest<HTMLElement>("details");
@@ -1088,7 +1092,7 @@ describe("CompanyRail", () => {
     stub();
     renderRail({
       view: view({
-        organization: { ...org, archived_at: "2026-06-02T00:00:00Z" },
+        company: { ...company, archived_at: "2026-06-02T00:00:00Z" },
       }),
     });
     // The values themselves still draw (this suite's own empty-badges test
@@ -1104,7 +1108,7 @@ describe("CompanyRail", () => {
   // when told the composite read is still running — otherwise it reads the
   // exact same undefined `view` as "unavailable", the words a real outage
   // shows. Before `loading` was threaded through, every ordinary page open
-  // flashed "could not be loaded" on Health/People/Tags for as long as the
+  // flashed "could not be loaded" on Health/Contacts/Tags for as long as the
   // read was in flight. Pinned here as two DIFFERENT renders rather than one
   // happy-path check, because a fix that only makes the loading case not
   // crash is not the fix — it has to render DIFFERENTLY from the failed case.

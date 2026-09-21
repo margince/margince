@@ -36,9 +36,6 @@
    one form do not disagree about which is more important. */
 .choicelist-legend {
   padding: 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
 }
 
 /* An option whose label is two lines wants its control at the TOP of them, not
@@ -55,13 +52,6 @@
 
 .choicelist-label {
   color: var(--textPrimary);
-}
-
-/* The consequence of choosing, one step quieter than the answer itself: it is
-   read after the label, never instead of it. */
-.choicelist-note {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 
 /*

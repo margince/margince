@@ -8,8 +8,8 @@ package integration
 // The offer render seam's store-level coverage: PrepareRender gathers the
 // PDF renderer's inputs without ever opening blob storage — the buyer
 // legal block mirrors SendOffer's own snapshot rule (the frozen
-// buyer_snapshot once sent, the LIVE organization while still draft, nil
-// when there is no buyer org at all), the locale AND layout resolve
+// buyer_snapshot once sent, the LIVE company while still draft, nil
+// when there is no buyer company at all), the locale AND layout resolve
 // together through offer.template_id → offer_template, and the issuer
 // name prefers the frozen issuer_snapshot the same way. SetPdfAssetRef is
 // the standard audited-update write shape, fenced on the row version
@@ -30,8 +30,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -45,9 +45,16 @@ import (
 var offerRenderDeskPerms = principal.Permissions{
 	RoleKeys: []string{"deal_desk"},
 	Objects: map[string]principal.ObjectGrant{
-		"deal":                  {Create: true, Read: true, Update: true},
-		"offer":                 {Create: true, Read: true, Update: true},
-		"offer_template":        {Create: true, Read: true},
+		"deal":           {Create: true, Read: true, Update: true},
+		"offer":          {Create: true, Read: true, Update: true},
+		"offer_template": {Create: true, Read: true},
+		// The buyer block names a company, and a seat with no
+		// company grant is refused that reference everywhere else on this
+		// surface — GetOffer and even CreateOffer's own response answer
+		// buyer_company_id as null for it. The cases below are about which block
+		// the render resolves (live while draft, frozen once sent), not about
+		// who may see one, so the seat holds the grant that question assumes.
+		"company":               {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,
@@ -134,7 +141,7 @@ func renderOneLineOfferOn(ctx context.Context, t *testing.T, store *deals.Store,
 	return created
 }
 
-func TestOfferRenderPrepareRender_DraftNoBuyerOrg_DefaultsLocaleAndOmitsBuyerBlock(t *testing.T) {
+func TestOfferRenderPrepareRender_DraftNoBuyerCompany_DefaultsLocaleAndOmitsBuyerBlock(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render fixture deal", pipeline, open, &e.Rep1)
@@ -148,7 +155,7 @@ func TestOfferRenderPrepareRender_DraftNoBuyerOrg_DefaultsLocaleAndOmitsBuyerBlo
 		t.Fatalf("prepare render: %v", err)
 	}
 	if ing.BuyerBlock != nil {
-		t.Fatalf("a buyer-org-less draft must render with a nil buyer block, got %+v", ing.BuyerBlock)
+		t.Fatalf("a buyer-company-less draft must render with a nil buyer block, got %+v", ing.BuyerBlock)
 	}
 	if ing.Locale != "de-DE" {
 		t.Fatalf("an offer with no template must default to locale de-DE, got %q", ing.Locale)
@@ -164,19 +171,19 @@ func TestOfferRenderPrepareRender_DraftNoBuyerOrg_DefaultsLocaleAndOmitsBuyerBlo
 	}
 }
 
-func TestOfferRenderPrepareRender_DraftWithBuyerOrg_UsesLiveOrgNotAFrozenSnapshot(t *testing.T) {
+func TestOfferRenderPrepareRender_DraftWithBuyerCompany_UsesLiveCompanyNotAFrozenSnapshot(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	dealID := e.SeedDeal(t, "Render live-org deal", pipeline, open, &e.Rep1)
+	dealID := e.SeedDeal(t, "Render live-company deal", pipeline, open, &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 
-	org, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{DisplayName: "Acme GmbH"})
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme GmbH"})
 	if err != nil {
-		t.Fatalf("seed organization: %v", err)
+		t.Fatalf("seed company: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{BuyerOrgID: &orgID})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{BuyerCompanyID: &companyID})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 
 	ing, err := e.Deals.PrepareRender(ctx, offerID)
@@ -184,21 +191,21 @@ func TestOfferRenderPrepareRender_DraftWithBuyerOrg_UsesLiveOrgNotAFrozenSnapsho
 		t.Fatalf("prepare render: %v", err)
 	}
 	if ing.BuyerBlock == nil || ing.BuyerBlock["display_name"] != "Acme GmbH" {
-		t.Fatalf("a draft with a buyer org must render the live org's display_name, got %+v", ing.BuyerBlock)
+		t.Fatalf("a draft with a buyer company must render the live company's display_name, got %+v", ing.BuyerBlock)
 	}
 
-	// Renaming the org must show up on the NEXT render — while still
-	// draft, the block is the live org, never a frozen copy.
+	// Renaming the company must show up on the NEXT render — while still
+	// draft, the block is the live company, never a frozen copy.
 	renamed := "Acme Renamed GmbH"
-	if _, err := e.People.UpdateOrganization(e.Admin(), orgID, people.UpdateOrganizationInput{DisplayName: &renamed}); err != nil {
-		t.Fatalf("rename organization: %v", err)
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), companyID, contacts.UpdateCompanyInput{DisplayName: &renamed}); err != nil {
+		t.Fatalf("rename company: %v", err)
 	}
 	after, err := e.Deals.PrepareRender(ctx, offerID)
 	if err != nil {
 		t.Fatalf("prepare render after rename: %v", err)
 	}
 	if after.BuyerBlock["display_name"] != renamed {
-		t.Fatalf("a still-draft offer must reflect the org's LIVE name, got %+v", after.BuyerBlock)
+		t.Fatalf("a still-draft offer must reflect the company's LIVE name, got %+v", after.BuyerBlock)
 	}
 }
 
@@ -208,24 +215,24 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 	dealID := e.SeedDeal(t, "Render sent deal", pipeline, open, &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 
-	org, err := e.People.CreateOrganization(e.Admin(), people.CreateOrganizationInput{DisplayName: "Frozen Co"})
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Frozen Co"})
 	if err != nil {
-		t.Fatalf("seed organization: %v", err)
+		t.Fatalf("seed company: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{BuyerOrgID: &orgID})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{BuyerCompanyID: &companyID})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 
 	if _, err := e.Deals.SendOffer(ctx, offerID, nil); err != nil {
 		t.Fatalf("send offer: %v", err)
 	}
 
-	// Renaming the org AFTER send must not move the sent offer's block:
+	// Renaming the company AFTER send must not move the sent offer's block:
 	// the frozen buyer_snapshot is the legal record from here on.
 	renamed := "Renamed After Send"
-	if _, err := e.People.UpdateOrganization(e.Admin(), orgID, people.UpdateOrganizationInput{DisplayName: &renamed}); err != nil {
-		t.Fatalf("rename organization: %v", err)
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), companyID, contacts.UpdateCompanyInput{DisplayName: &renamed}); err != nil {
+		t.Fatalf("rename company: %v", err)
 	}
 
 	// Renaming the INSTALLATION (the issuer side) after send must equally
@@ -560,5 +567,79 @@ func TestOfferRenderHandler_AnotherSeatsDealDeniedBeforeAnyBlobWrite(t *testing.
 	}
 	if !bytes.Equal(survived, sent) {
 		t.Fatalf("the owner's PDF must be byte-identical after a denied render, got %d bytes want %d", len(survived), len(sent))
+	}
+}
+
+// seedAnchorLegalName plants the installation's own company with a legal name,
+// and says whether it has been confirmed. Both rows, because the sidecar is
+// where the provenance lives and the column is where the value does — that
+// split is the whole subject of this pair.
+func seedAnchorLegalName(t *testing.T, e *Env, legalName string, confirmed bool) {
+	t.Helper()
+	anchor := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, display_name, legal_name, is_anchor, source, captured_by)
+		VALUES ($1, 'Anchor Display', $2, true, 'manual', 'human:x')`, anchor, legalName)
+	verified := `NULL::timestamptz, NULL::uuid`
+	if confirmed {
+		verified = `now(), $3`
+	}
+	args := []any{anchor, legalName}
+	if confirmed {
+		args = append(args, e.AdminUser)
+	}
+	e.WsExec(t, `INSERT INTO company_profile_field
+		(company_id, field, value, source, captured_by, evidence_snippet, source_url, confidence,
+		 verified_at, verified_by)
+		VALUES ($1, 'legal_name', $2, 'site_read', 'agent:enrich', 'Impressum: `+legalName+`',
+		        'https://anchor.test/impressum', 0.9, `+verified+`)`, args...)
+}
+
+// The issuer of an offer is the one making the legal claim on it, and until the
+// anchor company could answer, it was the only name on the page with no
+// provenance behind it — while the BUYER block on the same page read a
+// confirmed record.
+//
+// The pair is the point: the same installation, the same anchor legal name, and
+// the only thing that moves is whether it was confirmed by a human.
+func TestOfferRenderIssuerPrefersAConfirmedLegalName(t *testing.T) {
+	e := Setup(t)
+	seedAnchorLegalName(t, e, "Anchor Holding GmbH", true)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Issuer name fixture", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{})
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	if ing.IssuerName != "Anchor Holding GmbH" {
+		t.Errorf("a draft rendered as %q, want the confirmed legal name — the issuer block must "+
+			"mirror the buyer block it shares a page with", ing.IssuerName)
+	}
+}
+
+func TestOfferRenderIssuerIgnoresAnUnconfirmedLegalName(t *testing.T) {
+	e := Setup(t)
+	// The same name, proposed by a site read and confirmed by no one. Printing
+	// it would let a public web page re-brand the next quote this installation
+	// sends, which is the change nobody would see happen.
+	seedAnchorLegalName(t, e, "Anchor Holding GmbH", false)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Issuer name fixture", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{})
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	if ing.IssuerName == "Anchor Holding GmbH" {
+		t.Error("an unconfirmed proposal reached a document; only a human confirmation may change " +
+			"what an installation issues under")
+	}
+	if ing.IssuerName == "" {
+		t.Error("nothing was printed at all — the settings name is what an installation goes on " +
+			"issuing under until somebody confirms another")
 	}
 }

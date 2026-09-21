@@ -19,22 +19,18 @@ import (
 const StreamPrefix = "gw:events:crm:"
 
 const (
-	personStreamEntity       = "person"
-	organizationStreamEntity = "organization"
-	dealStreamEntity         = "deal"
-	leadStreamEntity         = "lead"
-	activityStreamEntity     = "activity"
-	approvalStreamEntity     = "approval"
-	captureStreamEntity      = "capture"
-	coldstartStreamEntity    = "coldstart"
-	auditStreamEntity        = "audit"
-	identityStreamEntity     = "identity"
-	voiceStreamEntity        = "voice"
+	contactStreamEntity   = "contact"
+	companyStreamEntity   = "company"
+	dealStreamEntity      = "deal"
+	leadStreamEntity      = "lead"
+	activityStreamEntity  = "activity"
+	approvalStreamEntity  = "approval"
+	captureStreamEntity   = "capture"
+	coldstartStreamEntity = "coldstart"
+	auditStreamEntity     = "audit"
+	identityStreamEntity  = "identity"
+	voiceStreamEntity     = "voice"
 )
-
-// streamOverlay is the §5.10 overlay-mirror stream's entity segment — named
-// once because the catalog below repeats it across every mirror.* entry.
-const streamOverlay = "overlay"
 
 // extensionStreamEntity is the one stream every EXTENSION-authored event rides,
 // whichever unit published it.
@@ -56,6 +52,8 @@ const extensionStreamEntity = "extension"
 // mutated records. Enumerated by Streams() all the same, because a stream the
 // purge does not unlink is one that outlives a data reset.
 const aiTaskStreamEntity = "aitask"
+
+const aiBudgetStreamEntity = "aibudget"
 
 // briefStreamEntity is the stream every brief.* product-telemetry event rides.
 //
@@ -108,14 +106,12 @@ func IsExtensionType(eventType string) bool {
 }
 
 // streamEntities are the V1 family streams from events.md, plus the §5.6a
-// identity/access-revocation stream, the voice owner-private lifecycle
-// stream, and the §5.10 overlay-mirror stream (overlay-mode-only).
-// Workspace is a field inside the envelope, never a stream —
+// identity/access-revocation stream and the voice owner-private lifecycle
+// stream. Workspace is a field inside the envelope, never a stream —
 // per-tenant streams would explode key count at multi-tenant scale.
 var streamEntities = []string{
-	personStreamEntity, organizationStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
+	contactStreamEntity, companyStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
 	approvalStreamEntity, captureStreamEntity, coldstartStreamEntity, auditStreamEntity, identityStreamEntity, voiceStreamEntity,
-	streamOverlay,
 }
 
 // Streams returns the full stream key set, sorted, for the ops surface to
@@ -128,7 +124,7 @@ func Streams() []string {
 		out = append(out, StreamPrefix+e)
 	}
 	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity,
-		StreamPrefix+briefStreamEntity)
+		StreamPrefix+briefStreamEntity, StreamPrefix+aiBudgetStreamEntity)
 	sort.Strings(out)
 	return out
 }

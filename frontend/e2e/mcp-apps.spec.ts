@@ -19,7 +19,7 @@ import { expect, test } from "@playwright/test";
 // warning, on a malformed payload, or when the host changes the theme.
 
 const VIEWS = [
-  { file: "account-brief" },
+  { file: "company-brief" },
   { file: "relationship-map" },
 ] as const;
 
@@ -44,7 +44,7 @@ const BRIEF = {
 };
 
 const NETWORK = {
-  person_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   colleagues: [
     {
       display_name: "Dana Okafor",
@@ -62,9 +62,9 @@ const NETWORK = {
 
 /** The five payload/host states each view is driven through. */
 function states(view: (typeof VIEWS)[number]) {
-  const populated = view.file === "account-brief" ? BRIEF : NETWORK;
+  const populated = view.file === "company-brief" ? BRIEF : NETWORK;
   const empty =
-    view.file === "account-brief"
+    view.file === "company-brief"
       ? { candidate_count: 0, items: [] }
       : { colleagues: [] };
   return [

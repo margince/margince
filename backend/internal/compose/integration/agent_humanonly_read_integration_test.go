@@ -68,7 +68,7 @@ func TestAgentBearerIsRefusedOnHumanOnlyReads(t *testing.T) {
 		"/v1/oauth/consent-request?client_id=night-agent&scope=read",
 		// The pre-flip export bundle: a full-estate read, audit log
 		// included, in a single GET.
-		"/v1/overlay/export",
+		"/v1/exports/bundle",
 		// The domains this installation refuses a company, and why: capture
 		// posture, and an inventory of who the workspace corresponds with.
 		"/v1/capture/blocked-domains",
@@ -89,7 +89,7 @@ func TestAgentBearerIsRefusedOnHumanOnlyReads(t *testing.T) {
 
 	// The gate narrows the annotated exceptions, it does not close the read
 	// surface: an ordinary agent-readable route still answers.
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
-		t.Errorf("agent GET /v1/people → %d, want 200 — an unannotated read stays agent-readable", status)
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
+		t.Errorf("agent GET /v1/contacts → %d, want 200 — an unannotated read stays agent-readable", status)
 	}
 }

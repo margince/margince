@@ -67,33 +67,7 @@
 }
 
 .pref-label {
-  font-weight: 600;
   color: var(--textPrimary);
-}
-
-.pref-lock-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--textSecondary);
-}
-
-.pref-lock-badge {
-  font-size: var(--fs-eyebrow);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textSecondary);
-  background: var(--bgCard);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 2px 8px; /* ds:ignore the Badge atom's own box, not rhythm */
-}
-
-.pref-state {
-  color: var(--textSecondary);
-}
-
-.pref-locked-why {
-  color: var(--textTertiary);
 }
 
 .pref-save-bar {
@@ -108,13 +82,12 @@
 }
 
 .pref-not-saved {
-  font-weight: 600;
   color: var(--textPrimary);
 }
 
 .pref-partial-banner {
   margin-top: var(--space-4);
-  color: var(--warn);
+  color: var(--warningText);
 }
 
 .pref-unsub {
@@ -126,7 +99,7 @@
 }
 
 .pref-unsub-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .pref-unsub-banner {
@@ -142,7 +115,6 @@
    like one product rather than two. */
 .unsub-lead {
   margin: 0 0 var(--space-5);
-  color: var(--textSecondary);
 }
 
 .unsub-kind {
@@ -150,7 +122,6 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-4);
-  font-weight: 600;
 }
 
 .unsub-actions {
@@ -163,8 +134,6 @@
 
 .unsub-privacy {
   margin-top: var(--space-5);
-  color: var(--textTertiary);
-  font-size: var(--fs-sm);
 }
 
 .unsub-done {
@@ -208,8 +177,6 @@
   justify-content: center;
   gap: var(--space-2);
   margin: var(--space-8) 0 0;
-  color: var(--textTertiary);
-  font-size: var(--fs-sm);
 }
 
 /* The row's control, enlarged and given a target.

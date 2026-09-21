@@ -26,8 +26,9 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { ModelRatePlate } from "./ai-rates";
-import { problemMessageOf, throwProblem, useMe } from "./common";
+import { throwProblem, useMe, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
+import { AiBindRefused } from "./installation-setup.notices";
 import {
   RedirectUris,
   useOAuthApp,
@@ -88,7 +89,7 @@ export function useInstallationSetup() {
 
 /**
  * The steps this screen has a panel for, in the order the server reports
- * them: the model binding, which blocks, and the organisation's OAuth app,
+ * them: the model binding, which blocks, and the company's OAuth app,
  * which does not — held by TestOnlyTheModelBindingBlocksFirstRun.
  *
  * It is read by `outstandingStep` rather than only by the render, and that is
@@ -102,7 +103,7 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
 /**
  * Where "Not now" on the platform question is remembered.
  *
- * The app step is asked of the person running the cold start, once. The server
+ * The app step is asked of the contact running the cold start, once. The server
  * has no word for "asked and declined" — the step is simply unconfigured until
  * an app is stored, from here or from Settings — so the decline lives in this
  * browser.
@@ -111,9 +112,9 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
  * the installation it was about: a machine that had run one cold start carried
  * that answer into the next, and the second installation's setup skipped the
  * platform question with nothing on screen to say why — the one step that asks
- * for the organization's OAuth app, silently gone, on the run that most needed
+ * for the company's OAuth app, silently gone, on the run that most needed
  * it. A re-claimed installation mints its own administrator, so its cold start
- * asks again; the same person on the same installation is still asked once.
+ * asks again; the same contact on the same installation is still asked once.
  */
 const PLATFORM_DECLINED_KEY = "margince.first-run.platform-declined";
 
@@ -395,7 +396,6 @@ function AiStep({
     .map(([, label]) => label);
   const ready = missing.length === 0;
   const [attempted, setAttempted] = useState(false);
-  const failure = saveKey.error ?? bind.error;
 
   // The KEY first, then the binding. A binding whose vendor has no key is an
   // installation that reads as configured and fails on its first real call; a
@@ -460,9 +460,7 @@ function AiStep({
       </StageActions>
       <Panel>
         <PanelBody>
-          {failure && (
-            <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
-          )}
+          <AiBindRefused keyError={saveKey.error} bindError={bind.error} />
           <Field label={t("firstRun.ai.provider")}>
             {(control) => (
               <Select
@@ -579,11 +577,11 @@ function AiStep({
 }
 
 /**
- * What the organization runs on — ONE answer covering mail and sign-in.
+ * What the company runs on — ONE answer covering mail and sign-in.
  *
  * They are separate mechanisms in the server and the same fact about a
- * company: an organization on Workspace reads mail through a Google app and
- * signs its people in with Google accounts, through that same app and the same
+ * company: a company on Workspace reads mail through a Google app and
+ * signs its contacts in with Google accounts, through that same app and the same
  * console entry. Two questions would ask somebody to state one fact twice and
  * then keep the two answers agreeing.
  */
@@ -629,7 +627,7 @@ function AppRedirectUris({
   const t = useT();
   return (
     <>
-      <Callout tone="info" title={t("firstRun.platform.redirectTitle")}>
+      <Callout kind="standing" title={t("firstRun.platform.redirectTitle")}>
         <p>{t("firstRun.platform.redirectHint")}</p>
       </Callout>
       <RedirectUris uris={uris} sub={t(vendorCopy[vendor].redirectSub)} />
@@ -654,12 +652,12 @@ function GoogleAppHelp() {
         <li>{t("firstRun.google.helpStep3")}</li>
         <li>{t("firstRun.google.helpStep4")}</li>
       </ol>
-      <p className="ob-fr-help-note">
+      <p className="ob-fr-help-note t-sub">
         <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
           {t("firstRun.google.helpConsole")}
         </OffsiteLink>
       </p>
-      <p className="ob-fr-help-note">{t("firstRun.google.helpDocs")}</p>
+      <p className="ob-fr-help-note t-sub">{t("firstRun.google.helpDocs")}</p>
     </Disclosure>
   );
 }
@@ -715,19 +713,19 @@ function VendorAppFields({
         <GoogleAppHelp />
       ) : (
         <>
-          <p className="ob-fr-help-note">{t("firstRun.microsoft.note")}</p>
+          <p className="ob-fr-help-note t-sub">
+            {t("firstRun.microsoft.note")}
+          </p>
           {/* The pin below is also the directory sign-in runs on, which the
               Google form has no equivalent of: said here, because an admin
               who leaves it empty gets working mailboxes and no sign-in, and
               nothing else on this screen would say why. */}
-          <p className="ob-fr-help-note">
+          <p className="ob-fr-help-note t-sub">
             {t("firstRun.microsoft.helpSignIn")}
           </p>
         </>
       )}
-      {save.error && (
-        <Callout tone="danger">{problemMessageOf(save.error, t)}</Callout>
-      )}
+      <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
       <Field
         label={t("oauthApp.clientId")}
         error={needed(clientId.trim() === "")}
@@ -839,7 +837,7 @@ function StepNeeds({
 
 /**
  * The platform step: which vendor's app mailboxes and calendars connect
- * through, asked once, of the person running the cold start. IMAP is an
+ * through, asked once, of the contact running the cold start. IMAP is an
  * answer too — each mailbox carries its own credentials — and so is
  * "not now": the step does not block, and Settings keeps the same form.
  */
@@ -877,10 +875,10 @@ function PlatformStep({
           />
           {platform === "imap" ? (
             <>
-              <p className="ob-fr-help-note">
+              <p className="ob-fr-help-note t-sub">
                 {t("firstRun.platform.imapNote")}
               </p>
-              {/* The same standing connect Settings makes, for the person on
+              {/* The same standing connect Settings makes, for the contact on
                   screen. There is no installation-wide IMAP app to store, so a
                   confirmed mailbox and "not now" both answer the question. */}
               <ImapMailboxForm

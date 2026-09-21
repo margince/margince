@@ -123,7 +123,7 @@ func TestSkipReasonCancelledSkips(t *testing.T) {
 func TestExternallyOrganizedMeetingIsCaptured(t *testing.T) {
 	// A client organizes; the owner attends. There is an external party, so it
 	// is a real customer touch → captured.
-	raw := eventJSON(t, "evt-ext-org", "confirmed", "Vendor review", "2026-07-16T14:00:00Z",
+	raw := eventJSON(t, "evt-ext-company", "confirmed", "Vendor review", "2026-07-16T14:00:00Z",
 		"host@acme.com", gcalOwner, "host@acme.com")
 	m := mustParse(t, raw)
 	if _, skip := m.SkipReason(); skip {
@@ -138,7 +138,7 @@ func TestExternalOrganizerWithOnlyOwnerAttendeeIsCaptured(t *testing.T) {
 	// An external party organizes and only the owner is listed as an attendee.
 	// The external organizer alone makes it a customer touch → captured, not
 	// dropped as all-internal.
-	raw := eventJSON(t, "evt-org-only", "confirmed", "Client-hosted call", "2026-07-16T15:00:00Z",
+	raw := eventJSON(t, "evt-company-only", "confirmed", "Client-hosted call", "2026-07-16T15:00:00Z",
 		"host@acme.com", gcalOwner)
 	if reason, skip := mustParse(t, raw).SkipReason(); skip {
 		t.Fatalf("external organizer with only the owner attending must be captured, got skip %q", reason)
@@ -336,9 +336,73 @@ func TestABookedRoomIsNeitherAnAddressNorAParticipant(t *testing.T) {
 // bytes, then apply the shared meeting rules — so a fixture asserts on the
 // result rather than on either half.
 func classifyRaw(raw []byte, owner string) (meetingmap.Meeting, error) {
-	ev, err := decodeEvent(raw)
+	ev, err := decodeEvent(raw, owner)
 	if err != nil {
 		return meetingmap.Meeting{}, err
 	}
 	return meetingmap.Classify(ev, owner), nil
+}
+
+// Google's iCal UID reaches the neutral event, and stays distinct from the
+// provider's own event id.
+//
+// The two are easy to conflate and mean opposite things: `id` is what THIS
+// calendar numbered the meeting, so two colleagues syncing one meeting carry
+// two of them, while the UID is what every calendar calls it. Keying on `id`
+// would dedupe nothing.
+//
+// This does NOT pin the JSON spelling. encoding/json matches field names case
+// insensitively, so `iCalUID` and `iCalUId` both decode either vendor's
+// payload — verified by mutation, and the reason neither tag is a correctness
+// boundary.
+func TestGoogleICalUIDReachesTheNeutralEvent(t *testing.T) {
+	raw, err := json.Marshal(map[string]any{
+		"id":        "goog-evt-1",
+		"iCalUID":   "series-42@google.com",
+		"status":    "confirmed",
+		"summary":   "Quarterly review",
+		"start":     map[string]string{"dateTime": "2026-09-23T10:00:00+02:00"},
+		"organizer": map[string]string{"email": "pat@counterparty.example"},
+		"attendees": []map[string]string{{"email": "rep@ws.example"}},
+	})
+	if err != nil {
+		t.Fatalf("building the event: %v", err)
+	}
+	ev, err := decodeEvent(raw, "rep@ws.example")
+	if err != nil {
+		t.Fatalf("decoding the event: %v", err)
+	}
+	if ev.ICalUID != "series-42@google.com" {
+		t.Fatalf("ICalUID is %q, want the series Google stated", ev.ICalUID)
+	}
+	// And the provider's own event id stays separate: it is what THIS calendar
+	// numbered the meeting, not what every calendar calls it.
+	if ev.ID != "goog-evt-1" {
+		t.Fatalf("ID is %q, want Google's own event id", ev.ID)
+	}
+}
+
+// An event stating no UID carries no identity, and none is invented.
+//
+// A synthesized identity would collide two unrelated meetings, which is worse
+// than the duplicate it set out to prevent.
+func TestAnEventWithNoICalUIDCarriesNoIdentity(t *testing.T) {
+	raw, err := json.Marshal(map[string]any{
+		"id":        "goog-evt-2",
+		"status":    "confirmed",
+		"summary":   "Quarterly review",
+		"start":     map[string]string{"dateTime": "2026-09-23T10:00:00+02:00"},
+		"organizer": map[string]string{"email": "pat@counterparty.example"},
+		"attendees": []map[string]string{{"email": "rep@ws.example"}},
+	})
+	if err != nil {
+		t.Fatalf("building the event: %v", err)
+	}
+	ev, err := decodeEvent(raw, "rep@ws.example")
+	if err != nil {
+		t.Fatalf("decoding the event: %v", err)
+	}
+	if ev.ICalUID != "" {
+		t.Fatalf("ICalUID is %q, want empty — nothing stated one", ev.ICalUID)
+	}
 }

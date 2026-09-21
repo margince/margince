@@ -51,16 +51,16 @@ func bootstrapInternalMailWorkspace(t *testing.T, ownDomains ...string) (context
 		// claims these domains. That claim, not a row in the capture registry,
 		// is what makes them count.
 		if err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
-			orgID := ids.NewV7()
+			companyID := ids.NewV7()
 			if _, err := tx.Exec(wsCtx, `
-				INSERT INTO organization (id, display_name, is_anchor, source, captured_by)
-				VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, orgID); err != nil {
+				INSERT INTO company (id, display_name, is_anchor, source, captured_by)
+				VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, companyID); err != nil {
 				return err
 			}
 			for i, d := range ownDomains {
 				if _, err := tx.Exec(wsCtx, `
-					INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-					VALUES ($1, $2, $3, 'manual', 'human:test')`, orgID, d, i == 0); err != nil {
+					INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+					VALUES ($1, $2, $3, 'manual', 'human:test')`, companyID, d, i == 0); err != nil {
 					return err
 				}
 			}
@@ -83,7 +83,7 @@ func mailSinkContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"capture"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true},
-				"person":   {Create: true},
+				"contact":  {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -285,7 +285,7 @@ func TestAMessageReportingNoAddressesIsCaptured(t *testing.T) {
 }
 
 // A subdomain of a registered domain is internal. The workspace registered
-// acme.com; mail among people at mail.acme.com is still colleague mail.
+// acme.com; mail among contacts at mail.acme.com is still colleague mail.
 func TestMailAmongSubdomainsOfARegisteredDomainIsInternal(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
@@ -351,7 +351,7 @@ func TestADomainTheCompanyNoLongerClaimsStopsSuppressingMail(t *testing.T) {
 
 	// The company corrects itself: acme.com was never theirs.
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE organization_domain SET domain = 'acmecorp.com'`)
+		_, err := tx.Exec(ctx, `UPDATE company_domain SET domain = 'acmecorp.com'`)
 		return err
 	}); err != nil {
 		t.Fatalf("correcting the company's domain: %v", err)

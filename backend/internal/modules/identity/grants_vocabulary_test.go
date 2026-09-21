@@ -19,8 +19,8 @@ func TestTheGrantRecordTypesMatchTheContractEnum(t *testing.T) {
 	for _, rt := range []crmcontracts.CreateRecordGrantRequestRecordType{
 		crmcontracts.CreateRecordGrantRequestRecordTypeDeal,
 		crmcontracts.CreateRecordGrantRequestRecordTypeLead,
-		crmcontracts.CreateRecordGrantRequestRecordTypeOrganization,
-		crmcontracts.CreateRecordGrantRequestRecordTypePerson,
+		crmcontracts.CreateRecordGrantRequestRecordTypeCompany,
+		crmcontracts.CreateRecordGrantRequestRecordTypeContact,
 		crmcontracts.CreateRecordGrantRequestRecordTypeProject,
 	} {
 		if !shareableRecordTypes[string(rt)] {

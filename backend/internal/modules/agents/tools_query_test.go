@@ -64,16 +64,16 @@ func TestAPlanDocumentReachesTheGrammarVerbatim(t *testing.T) {
 // row scope are re-applied. A tool that assembled rows itself would answer with
 // an envelope claiming nothing had been read.
 func TestEveryAdmittedRefIsReadBackThroughTheSeam(t *testing.T) {
-	first, second, org := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	first, second, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		first:  recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
-		second: recordAt(datasource.EntityDeal, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), true),
-		org:    recordAt(datasource.EntityOrganization, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
+		first:   recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		second:  recordAt(datasource.EntityDeal, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), true),
+		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	answer := QueryAnswer{
 		Refs: []QueryRef{
 			{Type: "deal", ID: first, Score: 0.9, Evidence: []QueryEvidence{{
-				Relation: "organization_id", RecordType: "organization", ID: org, Title: "Kärcher",
+				Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher",
 			}}},
 			{Type: "deal", ID: second},
 		},
@@ -102,18 +102,18 @@ func TestEveryAdmittedRefIsReadBackThroughTheSeam(t *testing.T) {
 }
 
 // A page of rows sharing one hop reads that hop ONCE. Without the cache, 200
-// deals at one organization would read the same organization 200 times over.
+// deals at one company would read the same company 200 times over.
 func TestRowsSharingAHopReadItOnce(t *testing.T) {
-	org := ids.NewV7()
+	company := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		org: recordAt(datasource.EntityOrganization, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
+		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	answer := QueryAnswer{Coverage: CoverageCompleteExact, Limit: 25}
 	for range 3 {
 		id := ids.NewV7()
 		provider.records[id] = recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
 		answer.Refs = append(answer.Refs, QueryRef{Type: "deal", ID: id, Evidence: []QueryEvidence{{
-			Relation: "organization_id", RecordType: "organization", ID: org, Title: "Kärcher",
+			Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher",
 		}}})
 	}
 
@@ -124,7 +124,7 @@ func TestRowsSharingAHopReadItOnce(t *testing.T) {
 	}
 	var hopReads int
 	for _, ref := range provider.read {
-		if ref.ID == org {
+		if ref.ID == company {
 			hopReads++
 		}
 	}
@@ -134,20 +134,20 @@ func TestRowsSharingAHopReadItOnce(t *testing.T) {
 }
 
 // A hop that can no longer be read takes its row with it. Serving the row alone
-// would tell the caller a deal sits at an organization they may not know
+// would tell the caller a deal sits at a company they may not know
 // exists — the disclosure the hop's own row scope refused at selection time.
 func TestARowWhoseHopBecameUnreadableIsDropped(t *testing.T) {
-	deal, org := ids.NewV7(), ids.NewV7()
+	deal, company := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
 		records: map[ids.UUID]datasource.Record{
 			deal: recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 		},
-		fail: map[ids.UUID]error{org: apperrors.ErrPermissionDenied},
+		fail: map[ids.UUID]error{company: apperrors.ErrPermissionDenied},
 	}
 
 	result := handleQuery(t, provider, QueryAnswer{
 		Refs: []QueryRef{{Type: "deal", ID: deal, Evidence: []QueryEvidence{{
-			Relation: "organization_id", RecordType: "organization", ID: org, Title: "Kärcher",
+			Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher",
 		}}}},
 		Coverage: CoverageCompleteExact, Limit: 25,
 	})
@@ -161,24 +161,24 @@ func TestARowWhoseHopBecameUnreadableIsDropped(t *testing.T) {
 	}
 }
 
-// A mirror-backed hop is labelled where the caller reads it. Evidence is a
+// A non-authoritative hop is labelled where the caller reads it. Evidence is a
 // reason to act, so it carries the same trust label the record it names does.
 func TestAMirrorBackedHopIsMarkedExternal(t *testing.T) {
-	deal, org := ids.NewV7(), ids.NewV7()
+	deal, company := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		deal: recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
-		org:  recordAt(datasource.EntityOrganization, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), false),
+		deal:    recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), false),
 	}}
 
 	result := handleQuery(t, provider, QueryAnswer{
 		Refs: []QueryRef{{Type: "deal", ID: deal, Evidence: []QueryEvidence{{
-			Relation: "organization_id", RecordType: "organization", ID: org, Title: "Kärcher",
+			Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher",
 		}}}},
 		Coverage: CoverageCompleteExact, Limit: 25,
 	})
 
 	if len(result.Rows) != 1 {
-		t.Fatalf("got %d rows, want the deal with its mirror-backed hop", len(result.Rows))
+		t.Fatalf("got %d rows, want the deal with its non-authoritative hop", len(result.Rows))
 	}
 	if got := result.Rows[0].Evidence[0].TrustTier; got != "external" {
 		t.Errorf("the hop's trust_tier = %q, want %q — its title is content and reads as a reason to act", got, "external")
@@ -215,22 +215,22 @@ func TestTheDroppedRowNoteNeverStatesHowMany(t *testing.T) {
 	}
 }
 
-// A mirror-backed record taints the row it becomes, at the one place that taint
+// A non-authoritative record taints the row it becomes, at the one place that taint
 // is applied. Reaching the seam is not enough — the answer has to CARRY what
 // the seam said about where the record came from.
 func TestAMirrorBackedRowIsMarkedExternal(t *testing.T) {
 	mirrored := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		mirrored: recordAt(datasource.EntityOrganization, time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC), false),
+		mirrored: recordAt(datasource.EntityCompany, time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC), false),
 	}}
 
 	result := handleQuery(t, provider, QueryAnswer{
-		Refs:     []QueryRef{{Type: "organization", ID: mirrored}},
+		Refs:     []QueryRef{{Type: "company", ID: mirrored}},
 		Coverage: CoverageCompleteExact, Limit: 25,
 	})
 
 	if len(result.Rows) != 1 {
-		t.Fatalf("got %d rows, want the mirror-backed record — a panic here would report the wrong "+
+		t.Fatalf("got %d rows, want the non-authoritative record — a panic here would report the wrong "+
 			"thing about the wrong line", len(result.Rows))
 	}
 	if got := result.Rows[0].Record.TrustTier; got != "external" {
@@ -448,16 +448,16 @@ func (p *queryProbeProvider) Read(_ context.Context, ref datasource.EntityRef) (
 // does, which is exactly why it is asserted here — a future rewrite that
 // assembled rows itself would serve them for free.
 func TestAQueryIsChargedPerRecordIncludingItsHops(t *testing.T) {
-	org := ids.NewV7()
+	company := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		org: recordAt(datasource.EntityOrganization, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
+		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	answer := QueryAnswer{Coverage: CoverageCompleteExact, Limit: 25}
 	for range 3 {
 		id := ids.NewV7()
 		provider.records[id] = recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
 		answer.Refs = append(answer.Refs, QueryRef{Type: "deal", ID: id, Evidence: []QueryEvidence{{
-			Relation: "organization_id", RecordType: "organization", ID: org, Title: "Kärcher",
+			Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher",
 		}}})
 	}
 	tool := queryWorkspace{p: provider, run: func(context.Context, json.RawMessage) (QueryAnswer, error) {
@@ -469,7 +469,7 @@ func TestAQueryIsChargedPerRecordIncludingItsHops(t *testing.T) {
 		t.Fatalf("invoking query_workspace: %v", err)
 	}
 
-	// Three rows and the one organization they were all admitted through: the
+	// Three rows and the one company they were all admitted through: the
 	// hop is served content too, so it is counted once, not three times and
 	// not zero.
 	if charger.reads() != 4 {
@@ -489,24 +489,24 @@ func TestAQueryIsChargedPerRecordIncludingItsHops(t *testing.T) {
 // `rows` describes an answer that does not exist — while disclosing the id of
 // something the caller was denied.
 func TestADroppedRowIsNeitherChargedNorNamed(t *testing.T) {
-	kept, keptOrg := ids.NewV7(), ids.NewV7()
-	dropped, goneOrg := ids.NewV7(), ids.NewV7()
+	kept, keptCompany := ids.NewV7(), ids.NewV7()
+	dropped, goneCompany := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
 		records: map[ids.UUID]datasource.Record{
-			kept:    recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
-			keptOrg: recordAt(datasource.EntityOrganization, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
-			dropped: recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+			kept:        recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+			keptCompany: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
+			dropped:     recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 		},
-		fail: map[ids.UUID]error{goneOrg: apperrors.ErrPermissionDenied},
+		fail: map[ids.UUID]error{goneCompany: apperrors.ErrPermissionDenied},
 	}
-	hop := func(org ids.UUID) []QueryEvidence {
-		return []QueryEvidence{{Relation: "organization_id", RecordType: "organization", ID: org, Title: "Kärcher"}}
+	hop := func(company ids.UUID) []QueryEvidence {
+		return []QueryEvidence{{Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher"}}
 	}
 	tool := queryWorkspace{p: provider, run: func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{
 			Refs: []QueryRef{
-				{Type: "deal", ID: kept, Evidence: hop(keptOrg)},
-				{Type: "deal", ID: dropped, Evidence: hop(goneOrg)},
+				{Type: "deal", ID: kept, Evidence: hop(keptCompany)},
+				{Type: "deal", ID: dropped, Evidence: hop(goneCompany)},
 			},
 			Coverage: CoverageCompleteExact, Limit: 25,
 		}, nil
@@ -519,14 +519,14 @@ func TestADroppedRowIsNeitherChargedNorNamed(t *testing.T) {
 	}
 	env := sealedEnvelope(t, out)
 
-	// The served row and its organization, and nothing for the row that was
+	// The served row and its company, and nothing for the row that was
 	// dropped — not the deal that WAS readable, and not the hop that was not.
 	if charger.reads() != 2 {
 		t.Errorf("charged %d records, want 2 — the served row and its hop, and nothing for the dropped row",
 			charger.reads())
 	}
 	for _, ref := range env.Evidence {
-		if ref.RecordID == dropped || ref.RecordID == goneOrg {
+		if ref.RecordID == dropped || ref.RecordID == goneCompany {
 			t.Errorf("the envelope names %s, which is not in the answer", ref.RecordID)
 		}
 	}

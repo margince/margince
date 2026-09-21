@@ -26,7 +26,20 @@ import (
 // fields are ignored — the raw original is stored verbatim as evidence
 // (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID          string       `json:"id"`
+	ID string `json:"id"`
+	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
+	// Graph's own numbering, so the same meeting read from Graph and from
+	// Google carries two ids and would dedupe as two meetings.
+	//
+	// The tag is Microsoft's own spelling, `iCalUId`, where Google writes
+	// `iCalUID`. Both decode either payload — encoding/json matches field names
+	// case INSENSITIVELY — so each tag documents its vendor's wire format rather
+	// than guarding correctness, and no test can tell the two apart.
+	//
+	// The calendarView delta (client.go) reports occurrences rather than series
+	// masters, and every occurrence of one series carries the same value — so it
+	// names the series and the occurrence's start names the meeting within it.
+	ICalUID     string       `json:"iCalUId"` //nolint:tagliatelle // Microsoft's wire format
 	Subject     string       `json:"subject"`
 	BodyPreview string       `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	IsCancelled bool         `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
@@ -36,9 +49,16 @@ type rawEvent struct {
 	Attendees   []graphActor `json:"attendees"`
 	// Removed is Graph's tombstone on a delta round: an event deleted since the
 	// last pull arrives carrying this and little else. It is read as a
-	// cancellation because that is what it is to a calendar, and the shared
-	// rules already drop a cancelled meeting.
+	// cancellation because that is what it is to a calendar.
 	Removed *struct{} `json:"@removed"`
+	// ResponseStatus is the RSVP of the calendar this event was read from —
+	// Graph states the owner's own answer at the top level, so it needs no
+	// search through the attendee list the way Google's does.
+	ResponseStatus struct {
+		// Response is "none" | "organizer" | "tentativelyAccepted" |
+		// "accepted" | "declined" | "notResponded".
+		Response string `json:"response"`
+	} `json:"responseStatus"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 }
 
 // graphTime is a Graph calendar timestamp: a local wall time plus the zone it
@@ -50,7 +70,7 @@ type graphTime struct {
 
 // graphActor is one organizer/attendee. Microsoft nests the address one level
 // down and states an attendee's KIND separately — "resource" is a booked room
-// or device rather than a person.
+// or device rather than a contact.
 type graphActor struct {
 	Type         string `json:"type"`
 	EmailAddress struct {
@@ -64,7 +84,11 @@ type graphActor struct {
 
 // decodeEvent reads one raw Graph event resource into the neutral shape — this
 // connector's whole contribution to the calendar mapping.
-func decodeEvent(raw []byte) (meetingmap.Event, error) {
+//
+// The owner is part of the shared Decode signature and unread here: Graph
+// states the connected calendar's own RSVP at the top level of the event, so
+// this connector needs no help identifying which answer is the owner's.
+func decodeEvent(raw []byte, _ string) (meetingmap.Event, error) {
 	var ev rawEvent
 	if err := json.Unmarshal(raw, &ev); err != nil {
 		return meetingmap.Event{}, fmt.Errorf("graphcal: parsing calendar event: %w", err)
@@ -83,13 +107,18 @@ func decode(ev rawEvent) meetingmap.Event {
 		})
 	}
 	return meetingmap.Event{
-		ID:          ev.ID,
-		Cancelled:   ev.IsCancelled || ev.Removed != nil,
-		Subject:     ev.Subject,
-		Description: ev.BodyPreview,
-		StartsAt:    parseStart(ev.Start, ev.IsAllDay),
-		Organizer:   meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
-		Attendees:   attendees,
+		ID:        ev.ID,
+		ICalUID:   strings.TrimSpace(ev.ICalUID),
+		Cancelled: ev.IsCancelled || ev.Removed != nil,
+		// Only "declined". A tentative answer is an attendance somebody may yet
+		// make and "notResponded" is an invitation nobody has read, so neither
+		// takes the meeting off the schedule.
+		OwnerDeclined: strings.EqualFold(strings.TrimSpace(ev.ResponseStatus.Response), "declined"),
+		Subject:       ev.Subject,
+		Description:   ev.BodyPreview,
+		StartsAt:      parseStart(ev.Start, ev.IsAllDay),
+		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
+		Attendees:     attendees,
 	}
 }
 
@@ -98,6 +127,12 @@ func decode(ev rawEvent) meetingmap.Event {
 // participants were recorded.
 func ParticipantsOf(raw []byte, owner string) ([]connector.MessageParticipant, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
+}
+
+// SettlementOf answers what one stored event resource settles as, for the
+// backfill that closes meetings captured before the RSVP was read.
+func SettlementOf(raw []byte, owner string) (meetingmap.Settlement, error) {
+	return meetingmap.SettlementOf(raw, owner, decodeEvent)
 }
 
 // graphLocalLayouts are the wall-clock forms Graph states a calendar time in.

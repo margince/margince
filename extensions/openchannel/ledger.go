@@ -118,11 +118,17 @@ func endpointImage(e *endpoint) (json.RawMessage, error) {
 // the state and the attempt count — which the audit action and this detail
 // already say, while what a reader actually wants is why it stopped, and that is
 // context about the write rather than a field of the record.
-func recordParked(ctx context.Context, tx extension.Tx, req queued, class extension.FailureClass) error {
+func recordParked(ctx context.Context, tx extension.Tx, req queued, class extension.FailureClass, reason string) error {
+	// The reason is the CORE's own complaint about the record, carried through
+	// from the ingest — omitted when there is none, so a row parked for a fault
+	// that speaks for itself does not carry an empty field. It is what turns
+	// "the CRM refused this" into something the sender can act on: the class
+	// says which wall was hit, and this says what about the message hit it.
 	detail, err := json.Marshal(struct {
 		Class    string `json:"class"`
 		Attempts int    `json:"attempts"`
-	}{Class: class.Class, Attempts: req.attempts + 1})
+		Reason   string `json:"reason,omitempty"`
+	}{Class: class.Class, Attempts: req.attempts + 1, Reason: reason})
 	if err != nil {
 		return err
 	}

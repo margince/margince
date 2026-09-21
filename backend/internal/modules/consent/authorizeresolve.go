@@ -25,6 +25,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -43,6 +45,18 @@ type resolution struct {
 	Supported bool
 	// Reason is the code an unsupported resolution carries.
 	Reason string
+	// EvidenceChecked reports that this resolution went through validate, and
+	// therefore through refuseUnreadableEvidence — the caller was shown to hold
+	// the grants for every record they named.
+	//
+	// It gates what may be written to the decision row for the transmit phase
+	// to re-read. The thread and live-deal arms answer BEFORE validate runs, so
+	// a message allowed by one of them has evidence ids nobody has checked the
+	// caller may see. Carrying those forward would hand them to the transmit
+	// phase, which runs under the system principal — auth.Require returns nil
+	// for it — and so would turn an unchecked id into an authorization the
+	// sender could not have obtained themselves.
+	EvidenceChecked bool
 }
 
 // resolveCategory works out what this message is for one recipient.
@@ -204,14 +218,20 @@ func resolutionForClass(class Class) resolution {
 // at once. A single row taken for the whole delivery would judge every
 // recipient by whichever one the query happened to return.
 //
-// Only the CLAIM is carried forward, never the engine's earlier resolution.
-// Carrying the resolution would let a message ride an answer the record no
-// longer supports — a thread can be archived and a deal can close while a
-// delivery waits in the queue — and it would carry one recipient's answer onto
-// another's.
+// Only the CLAIM and the EVIDENCE POINTERS are carried forward, never the
+// engine's earlier resolution. Carrying the resolution would let a message ride
+// an answer the record no longer supports — a thread can be archived and a deal
+// can close while a delivery waits in the queue — and it would carry one
+// recipient's answer onto another's.
+//
+// The evidence is a different thing from the resolution: an invoice id is a
+// question to ask again, not an answer to reuse, and every check that ran at
+// staging runs again here against the record as it is now. Without it the
+// document validators arrive at transmit with a zero id and refuse a message
+// they had supported minutes earlier. See authorizeevidencecarry.go.
 func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category
+		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence
 		  FROM communication_decision
 		 WHERE delivery_id = $1 AND phase = 'staging'
 		 -- id, not decided_at: every row of one staging transaction carries the
@@ -227,13 +247,15 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 	for rows.Next() {
 		var address string
 		var claimed *string
-		if err := rows.Scan(&address, &claimed); err != nil {
+		var evidence []byte
+		if err := rows.Scan(&address, &claimed, &evidence); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
 		var out stagedClaim
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
+		out.evidence = evidenceFrom(evidence)
 		claims[address] = out
 	}
 	if err := rows.Err(); err != nil {
@@ -249,35 +271,58 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 // right answer for a delivery staged before this code shipped, and it refuses
 // nothing that used to send.
 //
-// The thread key comes from the delivery rather than the claim, because it
-// describes the message and not one recipient of it.
-func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string) commsauthz.Request {
+// The thread key and the links both come from the delivery rather than the
+// claim, because they describe the message and not one recipient of it.
+func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string, links []ids.UUID) commsauthz.Request {
 	staged := claims[decisionRecipientKey(r)]
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
 		Context:          staged.category,
 		LegacyPurposeKey: req.PurposeKey,
+		// The records this recipient's message was staged on. Re-validated
+		// here, never trusted: a voided invoice or an ended employment refuses
+		// at transmit exactly as it would have at staging.
+		Evidence: staged.evidence,
 		// The conversation, carried from the delivery row. Without it the thread
 		// arm cannot run at transmit and a reply authorized at staging parks.
 		ThreadKey: threadKey,
-		Subject:   req.Subject,
-		Body:      req.Body,
+		// The records this message is filed under, carried the same way.
+		// Without it the live-deal arm can never fire at transmit, and a
+		// message resolved through a staked deal rather than a thread parks
+		// the moment it reaches the ladder.
+		Links:   links,
+		Subject: req.Subject,
+		Body:    req.Body,
 	}
 }
 
-// deliveryThreadKey reads the conversation a delivery belongs to.
+// deliveryThreadKey reads the conversation a delivery's activity belongs to,
+// so the transmit phase can name it without communication_decision having to
+// store an anchor of its own.
 //
-// comms_outbound.thread_key is written when the message is staged, from the
-// same origin the anchor came from, so it names the conversation at transmit
-// without communication_decision having to store an anchor of its own.
+// Read off the ACTIVITY rather than comms_outbound.thread_key: that column is
+// populated when a mail message stages, but comms_outbound_shape forces it
+// NULL for a channel delivery (1788759372 — the same migration that keeps
+// channel_provider off activity_participant, for the identical reason: an
+// account id is only unique within its provider, and duplicating a fact the
+// activity already carries is one more place for it to drift). Reading
+// comms_outbound.thread_key directly therefore answered mail correctly and
+// silently starved every channel reply of thread evidence at transmit — the
+// exact "stages clean, parks at send" shape closing the purpose-key escape
+// hatch was supposed to fix, just moved one phase later.
 func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, error) {
 	var key *string
-	err := tx.QueryRow(ctx,
-		`SELECT thread_key FROM comms_outbound WHERE id = $1`, deliveryID).Scan(&key)
+	err := tx.QueryRow(ctx, `
+		SELECT a.thread_key
+		  FROM comms_outbound o
+		  JOIN activity a ON a.id = o.activity_id
+		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// The delivery is gone. Not this function's answer to give: the caller
-		// asks the evidence question with no thread, which refuses rather than
-		// inventing one.
+		// The delivery (or its activity) is gone, or the activity is held under
+		// a statutory retention restriction. Either way, not this function's
+		// answer to give: the caller asks the evidence question with no
+		// thread, which refuses rather than reading a hold this transaction
+		// runs under the system principal specifically to avoid bypassing.
 		return "", nil
 	}
 	if err != nil {
@@ -289,6 +334,32 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 	return *key, nil
 }
 
+// deliveryLinks reads the deal ids the delivery's activity is filed under —
+// the transmit-phase twin of deliveryThreadKey, and for the same reason:
+// TransmitRequest carries no Links of its own (the dispatcher holds a
+// delivery row, not the compose window that produced it), so without this the
+// live-deal arm can never fire at transmit and every reply resolved through a
+// staked deal rather than a thread parks the moment it reaches the ladder.
+// activity_link is read directly rather than carried on comms_outbound
+// (deliveryThreadKey's column) because it is already the one place the links
+// live — a copy here would be a second place for the set to drift from the
+// activity's own.
+//
+// Only deal ids: liveDealInLinks is what reads Request.Links, and a deal id
+// is the only shape it asks about.
+func deliveryLinks(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT l.deal_id
+		  FROM comms_outbound o
+		  JOIN activity a ON a.id = o.activity_id
+		  JOIN activity_link l ON l.activity_id = o.activity_id AND l.deal_id IS NOT NULL
+		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID)
+	if err != nil {
+		return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
+	}
+	return storekit.ScanUUIDColumn(rows, "consent: read the delivery's linked records")
+}
+
 // stagedClaim is what one recipient's staging decision said.
 //
 // The category only: communication_decision records no anchor, so the transmit
@@ -296,5 +367,7 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 // written at STAGING, where the anchor is still in hand — see recordBasis's
 // caller.
 type stagedClaim struct {
+	// evidence is the ids the message was staged on, re-asked at transmit.
+	evidence commsauthz.Evidence
 	category commsauthz.Category
 }

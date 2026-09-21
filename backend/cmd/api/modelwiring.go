@@ -46,8 +46,16 @@ func routingVersionOf(cfg ai.RoutingConfig) string { return cfg.RoutingVersion()
 // modelPathSpec names the boot knobs resolveModelPath switches on, so a call
 // site labels each flag instead of passing anonymous booleans.
 type modelPathSpec struct {
-	routingPath     string
-	fakeBrain       bool
+	routingPath string
+	fakeBrain   bool
+	// What this DEPLOYMENT declares, carried so a boot can plant the binding on
+	// an installation that holds none. Not a second source of routing: the
+	// write is insert-only, so it answers only where nobody has answered yet.
+	//
+	// Held as deployconfig.Seeds rather than the yaml.Node inside it: `cmd` may
+	// not depend on a YAML library (arch-lint), and naming that type here would
+	// make it. The node travels as a value through this field instead.
+	seeds           deployconfig.Seeds
 	capturePayloads bool
 }
 
@@ -58,6 +66,7 @@ func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSp
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
+		seeds:           deployCfg.Seeds,
 		capturePayloads: deployCfg.AI.CapturePayloads,
 	}
 }
@@ -68,6 +77,13 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	// a question about this process. They are separated so the second stays
 	// answerable without a database — the wiring switch is what a unit test can
 	// pin, and it is where a silently-picked default would hide.
+	// BEFORE the resolve, so an installation that holds no binding comes up on
+	// the one its deployment declares rather than on the fake. Insert-only: an
+	// installation that has one is untouched, and an admin's later change is
+	// never reverted by a file.
+	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
+		return nil, "", ai.PublicProfile{}, "", err
+	}
 	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
 	if err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
@@ -150,7 +166,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 	if modelPath == nil {
 		return nil
 	}
-	// The read-back and per-org enrichment share the fetch + extraction
+	// The read-back and per-company enrichment share the fetch + extraction
 	// seam, so both light up together on the one resolved model path;
 	// the Morning-Brief L2 re-order rides its own routed lane.
 	fetch := compose.NewWebFetcher()
@@ -158,18 +174,18 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		compose.WithColdStart(fetch, modelPath.ColdStart),
 		compose.WithScrape(fetch, modelPath.ColdStart),
 		compose.WithBrief(modelPath.BriefRanking),
-		compose.WithAccountBrief(modelPath.Summarize, routingVersion),
+		compose.WithCompanyBrief(modelPath.Summarize, routingVersion),
 		compose.WithCompanyDossier(modelPath.Summarize, routingVersion),
 		compose.WithGrowthFit(modelPath.GrowthFit, routingVersion),
 		compose.WithReplyDraft(modelPath.DraftReply),
 		// The account-started draft rides the same draft_reply lane as the
 		// reply-side one: it is the same task with a different input shape.
 		compose.WithAccountDraft(modelPath.DraftReply),
-		// The person-side draft rides the same lane for the same reason: one
+		// The contact-side draft rides the same lane for the same reason: one
 		// drafting task, a different input shape.
-		compose.WithPersonDraft(modelPath.DraftReply),
+		compose.WithContactDraft(modelPath.DraftReply),
 		// And the lead-side one. Same lane again, and the same writer behind
-		// it — a lead is the person-draft's own shape, one recipient on the
+		// it — a lead is the contact-draft's own shape, one recipient on the
 		// record itself, so what differs is the fold and nothing downstream.
 		compose.WithLeadDraft(modelPath.DraftReply),
 		compose.WithDealStatusWriter(modelPath.DealHealth, routingVersion),
@@ -182,7 +198,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// The relationship brief rides it too, for the same reason: grounded
 		// prose over records the caller can already see. It caches, so unlike
 		// the meeting brief it carries the routing version.
-		compose.WithPersonBrief(modelPath.Summarize, routingVersion),
+		compose.WithContactBrief(modelPath.Summarize, routingVersion),
 		compose.WithRoleProposals(modelPath.ProposeRoles),
 		// The ask to a colleague rides the drafting lane: it is the same task
 		// with a different reader, which is what a site is for.
@@ -276,7 +292,7 @@ type queueGates struct {
 // single-requester rule enforceable — several api replicas may queue, exactly
 // one worker asks. Which is also why an unset variable HERE has to stop the
 // queueing rather than being left to the worker: the worker's nil-provider
-// path does answer honestly, but what it writes is people.GeocodeFailed, and
+// path does answer honestly, but what it writes is contacts.GeocodeFailed, and
 // an operator asking why geocoding does not work then reads a lookup failure
 // on every address when the truth is that no provider was ever configured for
 // the role that queued it. A wrong answer delivered confidently is worse for
@@ -291,8 +307,8 @@ func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Opti
 // vatCheckEnqueueOptions wires the VAT-check enqueue only when
 // vatcheck.Configured says this installation consults a register — the same
 // predicate cmd/worker's vatCheckerFor gates its own client on. Unset, this
-// is answered by the existing people.ErrNoVatRegisterConfigured refusal
-// (organization_vat_check.go) instead of a queued consultation no worker
+// is answered by the existing contacts.ErrNoVatRegisterConfigured refusal
+// (company_vat_check.go) instead of a queued consultation no worker
 // will ever service.
 func vatCheckEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
 	if !vatcheck.Configured(baseURL) {

@@ -138,11 +138,19 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 	}
 
 	for _, family := range []string{
-		"margince_process_goroutines",
-		"margince_process_heap_bytes",
-		"margince_process_heap_sys_bytes",
-		"margince_process_gc_cycles_total",
+		// The runtime collectors, which say which PROCESS is wedged.
+		"go_goroutines",
+		"go_memstats_heap_alloc_bytes",
+		"go_gc_duration_seconds",
+		"process_cpu_seconds_total",
 		"margince_relay_published_total",
+		// The AI counters. This role resolves a model path and runs the briefs,
+		// the sweeps and the embedding lane through it, and every Router in the
+		// binary increments one process-wide collector — so a worker that
+		// renders none of it counts its own calls and tells nobody.
+		"margince_ai_calls_total",
+		"margince_ai_call_duration_seconds",
+		"margince_ai_tokens_total",
 	} {
 		if !strings.Contains(body, "# TYPE "+family+" ") {
 			t.Errorf("the worker publishes no %s; it is process-local and served nowhere else\ngot:\n%s", family, body)
@@ -205,5 +213,59 @@ func TestTheWorkerMetricsOmitThePoolSectionRatherThanZeroingIt(t *testing.T) {
 	_, body := get(t, startForTest(t)+"/metrics")
 	if strings.Contains(body, "margince_pgxpool_conns") {
 		t.Errorf("a nil pool produced pool gauges, which read as an idle pool rather than as no pool\ngot:\n%s", body)
+	}
+}
+
+// TestTheWorkerServesItsOwnAICounters — an AI call is routed by ONE process,
+// so its counter is a property of that process and no other role can report
+// it. With this section absent the api's exposition is the only one, and a
+// per-tier error rate computed over it describes api traffic while appearing
+// to describe the installation's: the lanes in this binary do the bulk of the
+// routing, so the denominator is short by most of its calls.
+func TestTheWorkerServesItsOwnAICounters(t *testing.T) {
+	_, body := get(t, startForTest(t)+"/metrics")
+
+	if !strings.Contains(body, "# TYPE margince_ai_calls_total counter") {
+		t.Errorf("the worker serves no AI section, so every call its lanes route is missing from the "+
+			"AI panels\ngot:\n%s", body)
+	}
+	// Additive, not a replacement: the process section this listener exists
+	// for still has to be there beside it.
+	if !strings.Contains(body, "go_goroutines") {
+		t.Errorf("the process section went missing beside the AI section\ngot:\n%s", body)
+	}
+}
+
+// The invariant behind "declared or absent", stated as what actually protects a
+// rate: a process that has routed nothing must serve no SAMPLE, or a per-tier
+// error rate computed over it reads as a healthy tier rather than as no tier.
+//
+// The family HEADER may be present — it is, from boot, because the collector is
+// process-wide and needs no model path to exist. A header carries no sample, so
+// rate() and increase() see nothing either way; it is the sample that would
+// lie, and there is none until a call is made.
+func TestTheWorkerServesNoAISampleBeforeAnyCallIsRouted(t *testing.T) {
+	_, body := get(t, startForTest(t)+"/metrics")
+
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "margince_ai_") {
+			t.Errorf("a worker that has routed no call served an AI sample, which a rate reads as a "+
+				"healthy tier: %s", line)
+		}
+	}
+}
+
+// Off is the default for this listener, and the AI section is wired at
+// construction — so an off surface must still be a legitimate configuration
+// that renders nothing rather than a boot that fails or a nil that panics.
+func TestTheAISectionIsHarmlessWhenTheSurfaceIsOff(t *testing.T) {
+	observe, err := startObserveListener(t.Context(), workerConfig{}, nil, nil, &bootGate{}, quietLog())
+	if err != nil {
+		t.Fatalf("an empty --observe-addr must be a legitimate configuration, got: %v", err)
+	}
+	t.Cleanup(observe.Stop)
+
+	if observe.Addr != "" {
+		t.Errorf("an off surface bound %q; nothing should be listening", observe.Addr)
 	}
 }

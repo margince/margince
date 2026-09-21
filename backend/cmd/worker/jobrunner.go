@@ -15,17 +15,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/certlog"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
 )
 
@@ -66,18 +64,15 @@ func graphWatchConfig(cfg workerConfig) compose.GraphWatchConfig {
 // drain — what the bare tickers lacked. The domain logic (Sweep/Reconcile)
 // is unchanged; only the scheduler is River now. The returned stop function
 // drains in-flight jobs on shutdown.
-func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, overlayBudget overlaybudget.Config, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
+func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
 	// The sweep registry is always live — the standing IMAP connector needs
 	// no deployment config; gmail joins it when the OAuth app is configured.
 	// The vault holds every connection's sealed credential (the standing
 	// flavors resolve through it), so it is wired here regardless. The SAME
-	// vault is the credential custodian of the two pollers this role runs — the
-	// overlay reconcile (the only one that can resolve a connected workspace's
-	// sealed HubSpot token, overlay.DueOverlayConnections' CredentialRef) and
-	// the Telegram getUpdates poll (a bot's sealed token) — and it is the
-	// boot's, not a second resolution of it; when none is configured it is nil,
-	// so an unconfigured deployment never fails worker boot over pollers it has
-	// no connected workspace to run anyway.
+	// vault is the credential custodian of the Telegram getUpdates poll (a
+	// bot's sealed token), and it is the boot's, not a second resolution of
+	// it; when none is configured it is nil, so an unconfigured deployment
+	// never fails worker boot over a poller it has no connection to run.
 	// THIS is the role that pulls mailboxes, so the object store a captured
 	// file is written to has to reach the config the sync registry and the job
 	// lanes are built from. Wired in the api role alone, every inbound
@@ -121,7 +116,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
-	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, vault, lanes, rdb, overlayBudget, modelPath, boundModels, weeklyMail)
+	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, vault, lanes, modelPath, boundModels, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +152,8 @@ const jobCancelWindow = 5 * time.Second
 // The drain is bounded, and River's Stop RETURNS on that deadline rather than
 // enforcing it — in-flight job goroutines keep running. Shutdown does not wait
 // for them: run() closes the bus and then the pool as its deferred calls
-// unwind, so an overrun used to leave a job writing an overlay budget meter
-// into a closed Redis client, or reading through a closed pool. The failure
+// unwind, so an overrun used to leave a job writing into a closed Redis
+// client, or reading through a closed pool. The failure
 // lands in whatever the job logs, at shutdown, where it reads as a symptom of
 // stopping rather than of a job that was never stopped.
 //
@@ -193,7 +188,7 @@ func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger) {
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, rdb *redis.Client, overlayBudget overlaybudget.Config, modelPath compose.ModelPath, boundModels map[string]map[string]bool, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
+func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, boundModels map[string]map[string]bool, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -230,7 +225,11 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// The registry that resolves a staged delivery's mailbox: the SAME
 		// sweep registry the capture polls use, so the connector set that
 		// syncs a mailbox is the one that transmits from it.
-		SendRegistry:      captureReg,
+		SendRegistry: captureReg,
+		// The origin a fired message builds its unsubscribe link on — the same
+		// pair sendPath hands the api's immediate send, so a message scheduled
+		// for later carries the link a message sent now would.
+		SendOrigin:        compose.SendOrigin{PublicBaseURL: cfg.publicBaseURL, Environment: cfg.posture},
 		SendPacing:        compose.SendPacing{Limit: cfg.sendRateLimit, Window: cfg.sendRateWindow, MaxAge: cfg.sendMaxAge},
 		CloseDateInterval: cfg.closeDateInterval,
 		ReconcileInterval: cfg.reconcileInterval,
@@ -260,13 +259,13 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// Telegram ingress pulls, so the WORKER role owns it end to end: the
 		// dispatcher and the poll jobs both need the vault that holds each bot's
 		// sealed token. Without a configured vault there is no token to unseal
-		// and the poller stays off by omission, the same posture the overlay
-		// poller takes one field below.
+		// and the poller stays off by omission.
 		ChannelVault: vault,
 		// The classify + enrich passes run only where a model is
 		// configured; without one both are absent by omission.
 		ClassifyBrain:        modelPath.CaptureClassify,
 		OwedBrain:            modelPath.OwedVerdict,
+		SettlementBrain:      modelPath.RequestSettlement,
 		VerdictBrain:         modelPath.CaptureCounterpartyVerdict,
 		ConfidentialityBrain: modelPath.CaptureConfidentialityVerdict,
 		EnrichBrain:          modelPath.Enrich,
@@ -288,14 +287,6 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		AccountScanBrain:          modelPath.AccountScan,
 		AccountScanRoutingVersion: modelPath.RoutingVersion,
 		DocumentExtractBrain:      modelPath.DocumentExtract,
-		OverlayVault:              vault,
-		OverlayInterval:           cfg.overlayInterval,
-		OverlayBackfillLimit:      cfg.overlayBackfillLimit,
-		// The poller's OVB meter records against the SAME Redis the relay
-		// uses (rdb) so the worker's poller spend and the api's force-fresh
-		// spend land on one shared per-workspace-per-incumbent count. Built
-		// here in cmd (the raw-Redis dependency stays out of compose).
-		OverlayMeter: overlaybudget.New(rdb, overlayBudget),
 		// The deep-read worker registers regardless: without a model path
 		// (nil SiteExtract) it fails a picked-up read honestly rather than
 		// leaving it queued behind a job no one can work.
@@ -356,7 +347,7 @@ func technicalEnricherFor(cfg workerConfig, pool *pgxpool.Pool) *compose.Technic
 	return compose.NewTechnicalEnricher(
 		dnsread.New(dnsread.NewPacer(dnsReadInterval)),
 		certlog.NewCrtSh(baseURL, nil),
-		people.NewStore(compose.InstallationDB(pool)),
+		contacts.NewStore(compose.InstallationDB(pool)),
 		nil,
 	)
 }

@@ -37,6 +37,36 @@ export function focusableWithin(root: HTMLElement): HTMLElement[] {
   );
 }
 
+/**
+ * The dialog's own way OUT, which `Modal` marks so this file can tell it from
+ * the controls the dialog is FOR.
+ */
+const WAY_OUT = "[data-dialog-close]";
+
+/**
+ * Where focus lands when a dialog opens: the first stop that is not the door.
+ *
+ * The door is a tab STOP — the last one — but it is never where a reader is put
+ * down, and the difference is not a nicety. A dialog whose body is prose or an
+ * empty list has exactly one control, the door, and landing on it made the
+ * close control name itself in a tip; the tip then answered the reader's first
+ * Escape and the dialog stayed open. One press doing nothing, in front of a
+ * surface covering the page, is a keyboard trap however briefly it lasts.
+ *
+ * Nothing to land on is an honest answer: the box itself takes focus, which is
+ * what its `tabIndex={-1}` is for, and the reader's first Tab reaches the door
+ * from there.
+ */
+function firstControlIn(dialog: HTMLElement | null): HTMLElement | null {
+  if (dialog === null) {
+    return null;
+  }
+  return (
+    focusableWithin(dialog).find((stop) => stop.closest(WAY_OUT) === null) ??
+    null
+  );
+}
+
 // Keep Tab inside the dialog. `aria-modal` tells a screen reader the rest of
 // the page is inert; it does nothing for the Tab key, so without this a
 // keyboard reader walks straight out of the dialog into the page behind it and
@@ -87,7 +117,10 @@ function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
 // prose, and a trap holding a container it cannot move focus within answers
 // every Tab by swallowing it. Falling back to the dialog leaves the panel on
 // screen and the reader still able to walk what is behind it.
-function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
+function openPanelIn(
+  dialog: HTMLElement | null,
+  needsTabStops = true,
+): HTMLElement | null {
   const panels = [
     ...(dialog?.querySelectorAll<HTMLElement>(
       '[aria-expanded="true"][aria-controls]',
@@ -100,7 +133,17 @@ function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
   const active = document.activeElement;
   const held = panels.find((panel) => panel.contains(active));
   const panel = held ?? panels[0];
-  return panel && focusableWithin(panel).length > 0 ? panel : null;
+  return panel && (!needsTabStops || focusableWithin(panel).length > 0)
+    ? panel
+    : null;
+}
+
+function ownsKeyboard(container: HTMLElement | null): boolean {
+  const layers = document.querySelectorAll<HTMLElement>(
+    '[role="dialog"][aria-modal="true"]',
+  );
+  const top = layers[layers.length - 1];
+  return !top || top === container || openPanelIn(top) === container;
 }
 
 /**
@@ -116,11 +159,13 @@ export function useDialogFocus({
   onClose,
   container,
   returnFocusTo,
+  initialFocusTo,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   container: React.RefObject<HTMLElement | null>;
   returnFocusTo?: () => HTMLElement | null;
+  initialFocusTo?: () => HTMLElement | null;
 }>) {
   // Held in a ref so the restore below calls the CURRENT resolver. The focus
   // effect is keyed on `open` alone — re-running it whenever an inline callback
@@ -128,9 +173,11 @@ export function useDialogFocus({
   // render of the page behind it — so the closure it captures is otherwise the
   // one from the render that opened the dialog.
   const returnFocus = useRef(returnFocusTo);
+  const initialFocus = useRef(initialFocusTo);
   useEffect(() => {
     returnFocus.current = returnFocusTo;
-  }, [returnFocusTo]);
+    initialFocus.current = initialFocusTo;
+  }, [returnFocusTo, initialFocusTo]);
 
   // A LAYOUT effect, because a passive one is scheduled after the browser
   // paints: between the commit that puts this dialog on screen and a passive
@@ -146,11 +193,20 @@ export function useDialogFocus({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      // A reader above a composer owns the keyboard until it closes. Marking
+      // Escape handled also prevents a lower listener closing after that unmount.
+      if (
+        !container.current ||
+        event.defaultPrevented ||
+        !ownsKeyboard(container.current)
+      )
+        return;
+      if (event.key === "Escape" && !openPanelIn(container.current, false)) {
+        event.preventDefault();
         onClose();
         return;
       }
-      if (event.key === "Tab" && container.current) {
+      if (event.key === "Tab") {
         keepTabInside(
           event,
           openPanelIn(container.current) ?? container.current,
@@ -169,8 +225,11 @@ export function useDialogFocus({
       return;
     }
     const opener = document.activeElement;
-    const stops = container.current ? focusableWithin(container.current) : [];
-    (stops[0] ?? container.current)?.focus();
+    (
+      initialFocus.current?.() ??
+      firstControlIn(container.current) ??
+      container.current
+    )?.focus();
     return () => {
       // A named target outranks the opener even while the opener is still
       // attached: a caller names one precisely because the mutation this dialog

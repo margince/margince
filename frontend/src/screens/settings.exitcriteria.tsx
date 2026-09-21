@@ -91,10 +91,26 @@ export function StageExitCriteria({
     <div className="form-stack">
       <p className="settings-panel-sub">{t("stage.criteria.sub")}</p>
       {criteria.some((c) => BUYER_KINDS.includes(c.kind)) && (
-        <Callout tone="info">{t("stage.criteria.buyerCallout")}</Callout>
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("stage.criteria.buyerCalloutTitle")}
+        >
+          {t("stage.criteria.buyerCallout")}
+        </Callout>
       )}
       {query.isError && (
-        <Callout tone="danger">{t("stage.criteria.unreadable")}</Callout>
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("stage.criteria.unreadableTitle")}
+        >
+          {/* The server's own account of the failure, the way every sibling
+              read on this card reports one — a fixed sentence here would throw
+              away the one detail that says whether reloading can help. */}
+          <p>{problemMessageOf(query.error, t)}</p>
+          <p>{t("stage.criteria.unreadable")}</p>
+        </Callout>
       )}
       {/* "Nothing yet" is a claim about the stage, so it is only honest once
           the read has actually answered. A failed read says so above instead:
@@ -131,9 +147,9 @@ function CriterionRow({
   return (
     <li className="criterion-row">
       <span className="criterion-label">{criterion.label}</span>
-      <span className="t-mono t-caption">{criterion.key}</span>
+      <span className="t-caption">{criterion.key}</span>
       <Badge>{t(KIND_LABEL[criterion.kind])}</Badge>
-      <Badge tone={criterion.required ? "warn" : undefined}>
+      <Badge tone={criterion.required ? "warning" : undefined}>
         {criterion.required
           ? t("stage.criteria.required")
           : t("stage.criteria.optional")}
@@ -214,7 +230,6 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
   return (
     <>
       <Button
-        small
         data-testid={`new-criterion-${stageId}`}
         onClick={() => setOpen(true)}
       >
@@ -265,7 +280,7 @@ function CriterionRemove({
   });
   return (
     <>
-      <Button small variant="ghost" onClick={() => setOpen(true)}>
+      <Button variant="ghost" onClick={() => setOpen(true)}>
         {t("stage.criteria.remove")}
       </Button>
       <ConfirmModal

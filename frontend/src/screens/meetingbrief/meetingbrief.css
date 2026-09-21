@@ -24,8 +24,6 @@
 /* Who the brief is for, under the dialog's title. */
 .mb-prepared-for {
   margin: var(--space-1) 0 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 .mb-meeting-line {
@@ -45,23 +43,12 @@
   color: var(--textPrimary);
 }
 
-.mb-meeting-text span {
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
-}
-
 .mb-badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-
-/* The meeting's own line, above the panels. It carries no panel chrome
-   because it is the answer to "which meeting is this", read once. */
-.mb-glance {
-  font-size: var(--fs-sm);
 }
 
 .mb-background {
@@ -73,37 +60,6 @@
 
 .mb-failed-detail {
   margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
-}
-
-/* The risks carry a section heading of their own: the callout inside titles
-   itself with a paragraph, which is right for an inline alert and wrong for a
-   named part of a document a reader navigates by heading. */
-.mb-risks {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.mb-section-title {
-  margin: 0;
-  color: var(--textPrimary);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-}
-
-/* A citation chip inside the risk callout takes the body ink rather than the
-   meta ink.
- *
- * --textMeta is tuned against a panel's own ground. The callout lays a tinted
- * amber wash over that ground, and in the dark theme the pair lands at 4.1:1 —
- * under AA, on the one section a reader must not skim. The chip is still
- * quieter than the sentence it follows: it is 11px and dotted-underlined, and
- * the contrast it needs is a floor rather than an emphasis. */
-.mb-risks .co-brief-cite-flat,
-.mb-risks .co-brief-cite {
-  color: var(--textContent);
 }
 
 /* The outcome to earn, with its icon in a column of its own so a two-line
@@ -132,25 +88,21 @@
 
 .mb-caveat {
   margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
-/* The suggested opener, set apart as the quotation it is. Its rule and ground
-   follow the panel's own tint for the same reason the icon does. */
+/* The suggested opener, set apart as the quotation it is.
+ *
+ * NEUTRAL, and that is the point: the panel around it already carries who
+ * wrote it, in its border and its head band, so a second tint in here restates
+ * that claim as decoration — and painting only the indigo half would leave a
+ * model-written opener unframed while a composition's kept its frame. The
+ * recessed ground is the plate's, so the block reads as inset rather than as a
+ * card inside a card. */
 .mb-open {
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
-}
-
-.panel-ai .mb-open {
-  border-inline-start: 2px solid var(--ai);
-  background: var(--aiLight);
-}
-
-.panel-accent .mb-open {
-  border-inline-start: 2px solid var(--accent);
-  background: var(--accentLight);
+  border-inline-start: 2px solid var(--borderSubtle);
+  background: var(--bgCard);
 }
 
 .mb-arc-row {
@@ -161,7 +113,7 @@
 }
 
 .mb-arc-row time {
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .mb-arc-row strong {
@@ -189,11 +141,6 @@
   }
 }
 
-.mb-unknown {
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-}
-
 .mb-ask {
   display: flex;
   flex-direction: column;
@@ -214,8 +161,6 @@
 
 .mb-ask-prepare {
   margin: 0;
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }
 
 /* The branch and what to do about it. A grid rather than a flex row so the
@@ -228,11 +173,6 @@
   width: 100%;
 }
 
-.mb-path-row > span {
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
-}
-
 @container (max-width: 26rem) {
   .mb-path-row {
     grid-template-columns: 1fr;
@@ -242,12 +182,8 @@
 .mb-coach-lead {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
 }
 
 .mb-coach-mode {
   margin: var(--space-2) 0 var(--space-4);
-  color: var(--textSecondary);
-  font-size: var(--fs-sm);
 }

@@ -33,7 +33,9 @@ package customfields
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -144,7 +146,7 @@ func TestCustomFieldsHTTP(t *testing.T) {
 		assertStructuralChangeRefused(t, e)
 	})
 
-	t.Run("injection label sanitized, catalog label preserved, person table survives", func(t *testing.T) {
+	t.Run("injection label sanitized, catalog label preserved, contact table survives", func(t *testing.T) {
 		assertInjectionLabel(t, e)
 	})
 
@@ -195,4 +197,109 @@ func TestCustomFieldsHTTP(t *testing.T) {
 	t.Run("501 when the server has no schema pool wired", func(t *testing.T) {
 		assertUnwired501(t)
 	})
+}
+
+// The admin field table offers a sort control, and the server now honours it —
+// the surface declared `sort` and ignored it, so a client that offered the
+// control showed an order the server never applied (#827).
+//
+// Against a real database because the whole question is SQL: the order, the
+// keyset that continues it, and the refusal of a token minted under another
+// one.
+func TestTheCustomFieldTableIsOrderedByTheSortItIsAsked(t *testing.T) {
+	e := schemaWiredEnv(t)
+	for _, label := range []string{"Gamma", "Alpha", "Beta"} {
+		status, _, problem := createCustomField(t, e, integration.AnyMap{
+			"object": "contact", "label": label, "type": "text", "source": "ui",
+		})
+		if status != http.StatusCreated {
+			t.Fatalf("seeding %q = %d %+v", label, status, problem)
+		}
+	}
+
+	labels := func(t *testing.T, query string) []string {
+		t.Helper()
+		var page customFieldListWire
+		if status := e.Call(t, "GET", "/v1/custom-fields?object=contact"+query, nil, nil, &page); status != http.StatusOK {
+			t.Fatalf("list%s = %d", query, status)
+		}
+		out := make([]string, 0, len(page.Data))
+		for _, f := range page.Data {
+			out = append(out, f.Label)
+		}
+		return out
+	}
+
+	ascending := labels(t, "&sort=label")
+	if !slices.IsSorted(ascending) {
+		t.Errorf("sort=label came back %v", ascending)
+	}
+	descending := labels(t, "&sort=-label")
+	slices.Reverse(descending)
+	if !slices.Equal(ascending, descending) {
+		t.Errorf("sort=-label is not the reverse of sort=label: %v against %v", descending, ascending)
+	}
+}
+
+// A page continues in the order it was asked for, and a cursor minted under one
+// sort cannot resume another — which is the property that makes offering the
+// dial safe rather than the property that makes it look offered.
+func TestASortedCustomFieldPageContinuesInItsOwnOrder(t *testing.T) {
+	e := schemaWiredEnv(t)
+	for _, label := range []string{"Gamma", "Alpha", "Beta"} {
+		if status, _, problem := createCustomField(t, e, integration.AnyMap{
+			"object": "contact", "label": label, "type": "text", "source": "ui",
+		}); status != http.StatusCreated {
+			t.Fatalf("seeding %q = %d %+v", label, status, problem)
+		}
+	}
+
+	var first customFieldListWire
+	if status := e.Call(t, "GET", "/v1/custom-fields?object=contact&sort=label&limit=2",
+		nil, nil, &first); status != http.StatusOK {
+		t.Fatalf("first page = %d", status)
+	}
+	if len(first.Data) != 2 || !first.Page.HasMore || first.Page.NextCursor == nil {
+		t.Fatalf("first page = %d row(s), has_more=%v, cursor=%v — the limit was not honoured",
+			len(first.Data), first.Page.HasMore, first.Page.NextCursor)
+	}
+
+	var second customFieldListWire
+	if status := e.Call(t, "GET",
+		"/v1/custom-fields?object=contact&sort=label&cursor="+url.QueryEscape(*first.Page.NextCursor),
+		nil, nil, &second); status != http.StatusOK {
+		t.Fatalf("second page = %d", status)
+	}
+	if len(second.Data) == 0 || second.Data[0].Label <= first.Data[1].Label {
+		t.Errorf("the second page starts at %+v, which does not continue the first's order",
+			second.Data)
+	}
+
+	// The same token under a different sort names an axis this page is not
+	// ordered by. Resuming it would hand back the wrong rows silently.
+	var problem customFieldProblem
+	if status := e.Call(t, "GET",
+		"/v1/custom-fields?object=contact&sort=-label&cursor="+url.QueryEscape(*first.Page.NextCursor),
+		nil, nil, &problem); status != http.StatusUnprocessableEntity {
+		t.Errorf("a cursor replayed under another sort = %d, want 422 (%+v)", status, problem)
+	}
+}
+
+// A field nobody publishes is not an axis, and saying so is the difference
+// between a refusal and a page ordered by something the caller did not ask for.
+func TestAnUnknownCustomFieldSortIsRefused(t *testing.T) {
+	e := schemaWiredEnv(t)
+	var problem customFieldProblem
+	status := e.Call(t, "GET", "/v1/custom-fields?object=contact&sort=column_name", nil, nil, &problem)
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("sort=column_name = %d, want 422 (%+v)", status, problem)
+	}
+	// The machine code rides the validation envelope's per-field list, keyed to
+	// the parameter it is about — the house shape for a typed refusal, so a
+	// client can tell an unknown sort field from an unknown filter one.
+	if len(problem.Details.Errors) != 1 ||
+		problem.Details.Errors[0].Field != "sort" ||
+		problem.Details.Errors[0].Code != "sort_field_not_allowed" {
+		t.Errorf("refusal = %+v, want one sort/sort_field_not_allowed error", problem.Details.Errors)
+	}
 }

@@ -17,14 +17,14 @@ contract-generated** payload (`backend/api/public-events.yaml` → `internal/con
 scheme — the same convention used by Anthropic, OpenAI, Stripe, and Svix — so any off-the-shelf SW
 verifier library works unmodified.
 
-> **Single-organization installation.** One installation serves one organization; the
-> server resolves its singleton organization itself, so no request selects a tenant — there is no
+> **Single-company installation.** One installation serves one company; the
+> server resolves its singleton company itself, so no request selects a tenant — there is no
 > `X-Workspace-Slug` header. The `curl`s below carry only the session cookie. ("Workspace" still names
 > the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
 
 ## Prerequisites
 
-- **Admin or ops RBAC.** Managing subscriptions is organization-wide integration config (the same
+- **Admin or ops RBAC.** Managing subscriptions is company-wide integration config (the same
   posture as custom fields), gated `admin`/`ops`-only; every role may *read* a subscription and its
   deliveries.
 - **A deployment signing key must be configured** — `MARGINCE_WEBHOOK_KEY` (see step 1). Without it the
@@ -64,7 +64,7 @@ curl -X POST http://localhost:8080/v1/webhook-subscriptions \
   -H 'Content-Type: application/json' \
   -d '{
         "target_url": "https://example.test/hooks/margince",
-        "event_types": ["deal.stage_changed", "person.created"]
+        "event_types": ["deal.stage_changed", "contact.created"]
       }'
 ```
 
@@ -228,8 +228,8 @@ A paused subscription holds its retries until it resumes; an archived one stops 
    receiver's `data` field against that event's `PublicEvent<Event>` schema in
    `backend/api/public-events.yaml` — they must agree field-for-field (the compile-time seam that
    guarantees this is [explanation/outbound-webhooks.md §3](../explanation/outbound-webhooks.md)).
-7. **A ratified deferred-delivery type stays honestly silent.** Subscribe to `mirror.conflict` or
-   `retention.applied` and trigger the underlying overlay/retention action — confirm you receive nothing
+7. **A ratified deferred-delivery type stays honestly silent.** Subscribe to
+   `retention.applied` and trigger the underlying retention action — confirm you receive nothing
    for it; this is a documented gap ([explanation/outbound-webhooks.md §5](../explanation/outbound-webhooks.md)),
    not a bug in your setup.
 8. **The UI mirrors the API.** Everything above also works from Settings → Integrations — the create

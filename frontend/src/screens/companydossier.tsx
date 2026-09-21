@@ -10,7 +10,7 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import { SentenceList, WrittenBy } from "./record360";
 
-type Dossier = components["schemas"]["OrganizationDossier"];
+type Dossier = components["schemas"]["CompanyDossier"];
 type SectionKind = Dossier["sections"][number]["kind"];
 
 // Typed against the contract's own enum, so a section kind added upstream fails
@@ -37,14 +37,15 @@ const SECTION_LABELS: Record<SectionKind, MessageKey> = {
  * open the evidence rather than take the sentence on trust.
  */
 export function DossierPanel({
-  orgId,
-  enabled,
+  companyId,
   onOpenRecord,
+  onOpenEmail,
   nameOf,
 }: Readonly<{
-  orgId: string;
-  enabled: boolean;
+  companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
   // The account's own names for the records this prose cites, from the page
   // that already holds them. The writer names what it had at hand; this is how
   // "contact" becomes the contact.
@@ -55,11 +56,10 @@ export function DossierPanel({
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const dossier = useQuery({
-    queryKey: ["org-dossier", orgId],
-    enabled,
+    queryKey: ["company-dossier", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/dossier", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/dossier", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -69,22 +69,17 @@ export function DossierPanel({
   });
   const rewrite = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/organizations/{id}/dossier", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.POST("/companies/{id}/dossier", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
-    onSuccess: (data) => queryClient.setQueryData(["org-dossier", orgId], data),
+    onSuccess: (data) =>
+      queryClient.setQueryData(["company-dossier", companyId], data),
   });
-
-  // A workspace reading from an incumbent mirror holds none of the facts this
-  // is assembled from, so the panel is absent rather than empty.
-  if (!enabled) {
-    return null;
-  }
 
   const written = dossier.data;
   // A payload this build cannot read is not a company we know nothing about.
@@ -106,31 +101,43 @@ export function DossierPanel({
       : undefined;
 
   const footer = readable && (
-    <>
-      <WrittenBy by={readable.generated_by} />
-      {readable.needs_refresh && (
-        /* Said out loud BESIDE the content, never instead of it: a stale
-           dossier is more useful than none, and hiding it would leave the
-           reader with nothing rather than with something dated. */
-        <Badge tone="warn">{t("co.dossier.stale")}</Badge>
-      )}
-      <span className="t-caption">
-        {t("co.brief.generatedAt", {
-          when: formatDateTime(readable.generated_at, locale, recordZone),
-        })}
+    <div className="co-brief-foot">
+      <span className="co-brief-meta">
+        <WrittenBy by={readable.generated_by} />
+        {readable.needs_refresh && (
+          /* Said out loud BESIDE the content, never instead of it: a stale
+             dossier is more useful than none, and hiding it would leave the
+             reader with nothing rather than with something dated. */
+          <Badge tone="warning">{t("co.dossier.stale")}</Badge>
+        )}
+        <span className="t-caption">
+          {t("co.brief.generatedAt", {
+            when: formatDateTime(readable.generated_at, locale, recordZone),
+          })}
+        </span>
       </span>
       <Button
-        small
+        // The writer's own verb, inside a panel already tinted for it: quiet
+        // rather than filled, because a filled indigo control on indigo ground
+        // reads as the panel's call to action when it is its footnote.
+        variant="aiQuiet"
         onClick={() => rewrite.mutate()}
         pending={rewrite.isPending}
         busyLabel={t("co.dossier.rewriting")}
       >
         {t("co.dossier.rewrite")}
       </Button>
-    </>
+    </div>
   );
   return (
-    <Panel title={t("co.dossier.title")} footer={footer}>
+    <Panel
+      title={t("co.dossier.title")}
+      footer={footer}
+      // The prose under this head is written, not recorded: the tint says a
+      // machine wrote it, and the badge in the band says so in words.
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+    >
       <PanelBody className="co-brief-body">
         {dossier.isPending && <Skeleton width="100%" height={64} />}
         {!dossier.isPending && !readable && (
@@ -164,6 +171,7 @@ export function DossierPanel({
               (section) => section.sentences,
             )}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
             citations="collected"
             // The block's own read leads it. The facts underneath are already
             // on the cards above, so what this block ADDS is what Margince

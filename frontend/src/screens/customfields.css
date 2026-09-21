@@ -47,12 +47,6 @@
   gap: var(--space-2);
 }
 
-/* The badge states a fact about the whole builder, so it must not be squeezed
-   to a second line by the sentence beside it. */
-.cf-builder-head > .badge {
-  flex: none;
-}
-
 /* The rename and archive buttons in a field row, which shipped as an
    undeclared class doing nothing: the pair ran together on the browser's
    inter-word space. */
@@ -61,13 +55,9 @@
   gap: var(--gapActions);
 }
 
-/* This screen's hint line. It wears `.t-caption` for its type — meta, not
-   tertiary: this is prose a reader is meant to READ, and tertiary is the
-   de-emphasis ink that clears 3:1 for incidental text rather than the 4.5:1
-   body text owes — and owns only the interval a hint keeps to its field. */
+/* This screen's hint line. All it owns is the interval a hint keeps to its
+   field. */
 .cf-hint {
-  line-height: 1.45;
-  /* ds:ignore a field's hint sits tighter than a caption standing alone */
   margin: var(--space-1) 0;
 }
 
@@ -100,15 +90,12 @@
 }
 
 /* The refusal banner and the confirm gate are Callouts now — they were the
-   `danger` and `warn` tones hand-drawn, off by a pixel on both axes and with
+   `danger` and `warning` tones hand-drawn, off by a pixel on both axes and with
    the radius token's VALUE typed in rather than the token. */
 
 .cf-ddl {
   display: inline-block;
   margin-top: var(--space-2);
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
   background: var(--bgElevated);
   border-radius: var(--r-sm);
   padding: var(--space-1) var(--space-2);
@@ -121,7 +108,7 @@
 }
 
 /* Field cell: a type-glyph tile, then the human label with the immutable API
-   key on its own muted mono line beneath it — never run together. */
+   key on its own muted line beneath it — never run together. */
 .cf-fieldcell {
   display: flex;
   align-items: center;
@@ -132,8 +119,7 @@
   width: 30px;
   height: 30px;
   border-radius: var(--r-sm);
-  background: var(--bgCard);
-  color: var(--textSecondary);
+  background: var(--bgChip);
   display: grid;
   place-items: center;
   flex: none;
@@ -157,49 +143,20 @@
   gap: 8px;
 }
 
-/* The field's API key, 11px — the string an integrator copies into a payload.
- * Nothing on this page has to be read more exactly, so it takes the AA
- * small-text role rather than the 3:1 mark role. */
+/* The field's API key — the string an integrator copies into a payload. */
 .cf-key {
   display: block;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
-}
-
-/* Type chip: a soft pill echoing the mockup's .ftype, with the type glyph. */
-.cf-typechip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--fs-meta);
-  font-weight: 500;
-  color: var(--textSecondary);
-  background: var(--bgCard);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: var(--space-1) var(--space-3);
-}
-
-.cf-typechip svg {
-  width: 12px;
-  height: 12px;
-  flex: none;
 }
 
 /* just-added optimistic row, pending the server commit. The italic carries the
- * staged-ness; the colour only has to stay readable, so it is --textMeta —
- * dimming a row below AA would make "not committed yet" cost the reader the
- * row's contents. */
+ * staged-ness. */
 .cf-cell-staged {
-  color: var(--textMeta);
   font-style: italic;
 }
 
-/* archived field: dimmed but still legible in the audit-retained list — and
- * "still legible" is the whole claim of the comment, so the colour has to be
- * one that holds AA at this size. The strike-through says archived. */
+/* archived field, still legible in the audit-retained list. The strike-through
+ * says archived. */
 .cf-cell-retired {
-  color: var(--textMeta);
   text-decoration: line-through;
 }
 

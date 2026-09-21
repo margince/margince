@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -51,8 +52,8 @@ func verdictRequest(row capture.PendingCounterparty) model.Request {
 	// wrapped spans for a subject and a body to close between them. The text
 	// goes in exactly as it was received — the boundary is the nonce, so
 	// nothing in the sender's own bytes can end it.
-	sender := fmt.Sprintf("From: %s (%s)\nSubject: %s\n%s",
-		row.DisplayName, row.Email, row.Subject, row.Body)
+	sender := fmt.Sprintf("%s\nSubject: %s\n%s",
+		addressLine(row), row.Subject, row.Body)
 	prompt.WriteString(fence.WrapAttr("id", row.ID.String(), sender) + "\n")
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry for the supplied id, where "verdict" is the sender kind.`)
 
@@ -62,6 +63,38 @@ func verdictRequest(row capture.PendingCounterparty) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: verdictSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+	}
+}
+
+// addressLine says WHO REACHED WHOM, which the judgment turns on and the model
+// cannot infer from the text.
+//
+// Every sender used to be rendered "From:", including the ones the mailbox
+// owner had written TO. A property manager the founder emailed was therefore
+// judged as a stranger writing in, and a service desk reads very differently
+// depending on the direction: an address that wrote to us is a correspondent,
+// while one we wrote to and that has never answered is an intention.
+//
+// The answer-back fact travels with it because it is the half that separates a
+// real relationship from a hopeful one. An unknown direction — a ledger row
+// written before this was recorded — says nothing rather than guessing, and the
+// model falls back to judging the text as it did before.
+func addressLine(row capture.PendingCounterparty) string {
+	switch row.Direction {
+	case connector.DirectionOutbound:
+		answered := "and this address has never written back"
+		if row.WroteBack {
+			answered = "and this address has written back"
+		}
+		return fmt.Sprintf(
+			"To: %s (%s) — the mailbox owner wrote this TO the address, %s. "+
+				"Judge the RECIPIENT.",
+			row.DisplayName, row.Email, answered)
+	case connector.DirectionInbound:
+		return fmt.Sprintf("From: %s (%s) — this address wrote to the mailbox owner.",
+			row.DisplayName, row.Email)
+	default:
+		return fmt.Sprintf("Correspondent: %s (%s)", row.DisplayName, row.Email)
 	}
 }
 

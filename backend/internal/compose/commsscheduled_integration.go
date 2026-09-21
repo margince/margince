@@ -38,12 +38,15 @@ import (
 //
 // A snooze is not an error: a message whose moment has moved reports one, and
 // the lane reads the ROW to see what happened rather than the return.
-func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID) error {
+func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, origin SendOrigin) error {
 	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		return err
 	}
-	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, SendPacing{})
+	// The origin the worker role composes. Without it this harness assembles a
+	// worker production does not have, and a message carrying an unsubscribe
+	// link refuses here for a reason no deployment would hit.
+	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, SendPacing{}, origin)
 	err = worker.Work(ctx, &river.Job[ScheduledSendArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: scheduledSendMaxAttempts},
 		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},
@@ -60,8 +63,8 @@ func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspac
 // HoldScheduledSendForTest drives the store's hold under an observed row
 // version, standing in for a worker whose attempt failed and is now holding
 // what it saw. The lane needs it to prove a STALE observation declines.
-func HoldScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, reason string, observed int64) error {
-	store := sendStore(pool, SendPath{})
+func HoldScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, reason string, observed int64, origin SendOrigin) error {
+	store := sendStore(pool, origin.sendPath())
 	return store.HoldScheduledSend(sendWorkerScope(principal.WithWorkspaceID(ctx, workspace)), id, reason, observed)
 }
 
@@ -81,12 +84,13 @@ func ScheduleAsAgentForTest(
 	anchor ids.ActivityID,
 	in activities.SendEmailInput,
 	at time.Time,
+	origin SendOrigin,
 ) (activities.SendOutcome, error) {
 	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		return activities.SendOutcome{}, err
 	}
-	store := sendStore(pool, SendPath{})
+	store := sendStore(pool, origin.sendPath())
 	agentCtx := principal.WithCorrelationID(
 		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor), ids.NewV7())
 	return store.SendOrSchedule(agentCtx, activities.FromActivity(anchor), in,
@@ -102,13 +106,13 @@ func ScheduleAsAgentForTest(
 // tenant, so a helper that supplied one would prove the HELPER works while
 // production resolved nothing. The worker resolves the installation itself,
 // which is the behaviour under test.
-func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool) error {
+func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool, origin SendOrigin) error {
 	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		return err
 	}
 	worker := newScheduledSendRecoveryWorker(
-		identity.NewService(pool), sendStore(pool, SendPath{}), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler))
+		identity.NewService(pool), sendStore(pool, origin.sendPath()), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler))
 	return worker.Work(ctx, &river.Job[ScheduledSendRecoveryArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})

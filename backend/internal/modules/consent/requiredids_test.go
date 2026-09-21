@@ -35,49 +35,29 @@ func TestAnOmittedPurposeIsNamed(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := store.Record(ctx, RecordInput{
-		PersonID: ids.New[ids.PersonKind](), NewState: "granted",
+		ContactID: ids.New[ids.ContactKind](), NewState: "granted",
 		PolicyText: &grantWording,
 	})
 	faulttest.AssertNamesOmittedID(t, err, "purpose_id")
 }
 
-// IssueDoubleOptInJSONBody.purpose_id is probed at the HANDLER, because that is
-// where the operation now ends: issuance refuses outright, so there is no store
-// method left to guard. The probe still has to run — a caller who omitted the
-// purpose sent a malformed request whichever way the endpoint answers, and the
-// refusal it gets must name the missing id rather than swallowing it behind the
-// conflict.
+// IssueDoubleOptInJSONBody.purpose_id is probed at the HANDLER as well as in
+// IssueConsentLink, because requiredbodyids holds every required id to a probe
+// at the transport: an endpoint that validated only in its store would be the
+// one place a missing id goes unnamed. What the caller is owed either way is a
+// 422 that says which field was missing, rather than a fault from further in.
 func TestAnOmittedPurposeIsNamedOnTheIssuanceRefusal(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := strings.NewReader(`{"purpose_id":"00000000-0000-0000-0000-000000000000"}`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/people/x/consent/double-opt-in", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in", body)
 	req.Header.Set("Content-Type", "application/json")
 
-	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.PersonKind]().UUID))
+	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.ContactKind]().UUID))
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("an omitted purpose is a 422 naming the field, got %d: %s", rec.Code, rec.Body.String())
 	}
 	if !strings.Contains(rec.Body.String(), "purpose_id") {
 		t.Errorf("the refusal must name purpose_id, got %s", rec.Body.String())
-	}
-}
-
-// And the refusal itself: a well-formed request is answered with a conflict that
-// explains the endpoint mints nothing, rather than a token.
-func TestIssuanceRefusesAndReturnsNoToken(t *testing.T) {
-	rec := httptest.NewRecorder()
-	body := strings.NewReader(`{"purpose_id":"` + ids.New[ids.PurposeKind]().String() + `"}`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/people/x/consent/double-opt-in", body)
-	req.Header.Set("Content-Type", "application/json")
-
-	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.PersonKind]().UUID))
-
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("issuance refuses with a conflict, got %d: %s", rec.Code, rec.Body.String())
-	}
-	// The whole point: no capability leaves this endpoint.
-	if strings.Contains(rec.Body.String(), "doi_") {
-		t.Errorf("the refusal must carry no token material, got %s", rec.Body.String())
 	}
 }

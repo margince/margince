@@ -471,7 +471,7 @@ func TestRenewalReminderIdempotencyKeyIsAnchorDerived(t *testing.T) {
 // the same "prove the contract directly against a hand-built payload"
 // posture every other clock-handler test in this file already takes.
 func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
-	entity := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	entity := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 	h := renewalReminder{}
 
 	// A birthday on August 1st: year one's scan projects it onto 2026,
@@ -548,14 +548,14 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 // TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor pins the property the
 // claim's UNIQUE (workspace_id, handler, idempotency_key) makes
 // load-bearing: two DIFFERENT records that went quiet at the SAME instant
-// — one captured mail linked to a person and to their employer leaves
+// — one captured mail linked to a contact and to their employer leaves
 // exactly that — must claim two different rows, or only the first of them
 // is ever reminded about.
 func TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor(t *testing.T) {
 	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
 	anchor := now.AddDate(0, 0, -40)
-	person := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
-	employer := datasource.EntityRef{Type: datasource.EntityOrganization, ID: ids.NewV7()}
+	contact := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
+	employer := datasource.EntityRef{Type: datasource.EntityCompany, ID: ids.NewV7()}
 
 	handlers := map[string]workflow.Handler{
 		noActivityReminderName: noActivityReminder{},
@@ -563,16 +563,16 @@ func TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor(t *testing.T) {
 	}
 	for name, h := range handlers {
 		t.Run(name, func(t *testing.T) {
-			personKey := h.IdempotencyKey(touchEvent(t, now, anchor, person))
+			contactKey := h.IdempotencyKey(touchEvent(t, now, anchor, contact))
 			employerKey := h.IdempotencyKey(touchEvent(t, now, anchor, employer))
-			if personKey == employerKey {
-				t.Fatalf("both entities produced the key %q — the second record's reminder would be absorbed by the first record's claim", personKey)
+			if contactKey == employerKey {
+				t.Fatalf("both entities produced the key %q — the second record's reminder would be absorbed by the first record's claim", contactKey)
 			}
-			if !strings.Contains(personKey, person.ID.String()) {
-				t.Errorf("key %q does not carry the entity id %s", personKey, person.ID)
+			if !strings.Contains(contactKey, contact.ID.String()) {
+				t.Errorf("key %q does not carry the entity id %s", contactKey, contact.ID)
 			}
-			if !strings.Contains(personKey, string(person.Type)) {
-				t.Errorf("key %q does not carry the entity type %s", personKey, person.Type)
+			if !strings.Contains(contactKey, string(contact.Type)) {
+				t.Errorf("key %q does not carry the entity type %s", contactKey, contact.Type)
 			}
 		})
 	}
@@ -607,5 +607,72 @@ func TestAnchorKeyErrorBranchStillSeparatesEntities(t *testing.T) {
 	secondKey := anchorIdempotencyKey(noActivityReminderName, second, time.Time{}, anchorErr)
 	if firstKey == secondKey {
 		t.Fatalf("two entities' decode failures produced the same key %q", firstKey)
+	}
+}
+
+// A reminder due AT its anchor is late the moment it is written — the anchor is
+// already past the staleness threshold — so every task arrived overdue and the
+// queue could not tell a real slip from the clock's own arithmetic.
+func TestTheQuietAccountRemindersAreDueThreeDaysOut(t *testing.T) {
+	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+	anchor := now.AddDate(0, 0, -10)
+	entity := datasource.EntityRef{Type: datasource.EntityLead, ID: ids.NewV7()}
+	ev := touchEvent(t, now, anchor, entity)
+
+	for _, h := range []workflow.Handler{noActivityReminder{}, checkInCadence{}} {
+		eff, err := h.Plan(context.Background(), ev)
+		if err != nil {
+			t.Fatalf("[%s] Plan: %v", h.Spec().Name, err)
+		}
+		var args struct {
+			DueAt        time.Time `json:"due_at"`
+			SourceSystem string    `json:"source_system"`
+			SourceID     string    `json:"source_id"`
+		}
+		if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+			t.Fatalf("[%s] decoding action args: %v", h.Spec().Name, err)
+		}
+		// Three days spelled out rather than reminderDueInDays: an expectation
+		// computed from the constant under test asserts only that the code
+		// agrees with itself, and passes just as happily when the horizon is
+		// zero and every task is born overdue again.
+		if want := ev.OccurredAt.AddDate(0, 0, 3); !args.DueAt.Equal(want) {
+			t.Errorf("[%s] due_at = %s, want %s — a reminder due at its anchor is born overdue", h.Spec().Name, args.DueAt, want)
+		}
+		// The identity the SQL draw reads to hold the entity out while this
+		// reminder is still open.
+		if args.SourceSystem != h.Spec().Name {
+			t.Errorf("[%s] source_system = %q, want the handler's own name", h.Spec().Name, args.SourceSystem)
+		}
+		if args.SourceID != h.IdempotencyKey(ev) {
+			t.Errorf("[%s] source_id = %q, want the occurrence key %q", h.Spec().Name, args.SourceID, h.IdempotencyKey(ev))
+		}
+	}
+}
+
+// The renewal reminder deliberately keeps its anchor as its due date: the
+// renewal it warns about can be today, so a horizon would file the task after
+// the date it exists to get ahead of.
+func TestTheRenewalReminderStaysDueOnItsAnchor(t *testing.T) {
+	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
+	ev := renewalEvent(t, now, now, entity)
+
+	eff, err := (renewalReminder{}).Plan(context.Background(), ev)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	var args struct {
+		DueAt        time.Time `json:"due_at"`
+		SourceSystem string    `json:"source_system"`
+	}
+	if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+		t.Fatalf("decoding action args: %v", err)
+	}
+	if !args.DueAt.Equal(ev.OccurredAt) {
+		t.Errorf("due_at = %s, want the anchor %s — a renewal warning must not fall due after the renewal", args.DueAt, ev.OccurredAt)
+	}
+	if args.SourceSystem != "" {
+		t.Errorf("source_system = %q, want empty — renewal_reminder carries no natural key", args.SourceSystem)
 	}
 }

@@ -12,7 +12,7 @@
    unengaged seat is a name on a list, and a line to one would claim a
    conversation that never happened. */
 .dc-thread {
-  stroke: var(--accent);
+  stroke: var(--success);
   stroke-width: 2;
 }
 
@@ -22,7 +22,7 @@
 }
 
 .dc-seat-engaged {
-  fill: var(--accent);
+  fill: var(--success);
 }
 
 /* A seat with a name and no two-way exchange. Hollow, because the gap is the
@@ -34,7 +34,7 @@
 }
 
 /* Our side. Teal, NOT the indigo family — indigo marks what an agent decided,
-   and the colleagues carrying a deal are people. */
+   and the colleagues carrying a deal are contacts. */
 .dc-seat-ours {
   fill: var(--tealText);
 }
@@ -43,7 +43,7 @@
    because absence is the insight this map exists to carry. */
 .dc-ghost {
   fill: none;
-  stroke: var(--warn);
+  stroke: var(--warning);
   stroke-width: 2;
   stroke-dasharray: 3 3;
 }
@@ -72,7 +72,7 @@
 }
 
 .dc-swatch-engaged {
-  background: var(--accent);
+  background: var(--success);
 }
 
 .dc-swatch-quiet {
@@ -81,29 +81,5 @@
 }
 
 .dc-swatch-gap {
-  border: 2px dashed var(--warn);
-}
-
-.dc-seats {
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-2);
-}
-
-.dc-seat-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-sm);
-}
-
-.dc-seat-name {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.dc-role {
-  color: var(--textMeta);
+  border: 2px dashed var(--warning);
 }

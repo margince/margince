@@ -8,18 +8,16 @@ package compose
 
 import (
 	"context"
-	"errors"
 
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // offeringConfirmed reports whether this installation has described what it
 // sells well enough for a growth fit to be measured against it (DOSS-AC-13).
 //
-// "Confirmed" is the anchor organization's own `minimum_complete`: a display
+// "Confirmed" is the anchor company's own `minimum_complete`: a display
 // name, an offer summary and an ideal-customer profile, each written by a
 // human through the company form. That is the same bar onboarding uses to
 // decide the installation has finished describing itself, so the growth fit
@@ -29,20 +27,24 @@ import (
 // rather than as an error. The 404 from GetCompany is the onboarding signal,
 // not a fault, and a workspace mid-onboarding should still get capped bands
 // with the reason spelled out — not a broken panel.
-func offeringConfirmed(store *people.Store) orgdossier.SelfOffering {
-	return func(ctx context.Context) (orgdossier.Offering, error) {
-		company, err := store.GetCompany(ctx)
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return orgdossier.Offering{}, nil
-		}
+func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
+	return func(ctx context.Context) (companydossier.Offering, error) {
+		// The STANDING, not the profile. The growth fit is a reading aid any
+		// human seat opens, and the administered profile read is an
+		// administrator's — asking it here would refuse the page to every
+		// other seat, for a fact that is a yes/no about ourselves.
+		exists, complete, err := store.AnchorProfileStanding(ctx)
 		if err != nil {
-			return orgdossier.Offering{}, err
+			return companydossier.Offering{}, err
+		}
+		if !exists {
+			return companydossier.Offering{}, nil
 		}
 		fingerprint, err := offeringFingerprint(ctx, store)
 		if err != nil {
-			return orgdossier.Offering{}, err
+			return companydossier.Offering{}, err
 		}
-		return orgdossier.Offering{Confirmed: company.MinimumComplete, Fingerprint: fingerprint}, nil
+		return companydossier.Offering{Confirmed: complete, Fingerprint: fingerprint}, nil
 	}
 }
 
@@ -60,7 +62,7 @@ func offeringConfirmed(store *people.Store) orgdossier.SelfOffering {
 // The content never leaves as text — a fit derived from what WE sell is an
 // assessment about THEM and must still cite their records (DOSS-AC-6). Only the
 // digest travels, onto a cache key nothing renders.
-func offeringFingerprint(ctx context.Context, store *people.Store) (string, error) {
+func offeringFingerprint(ctx context.Context, store *contacts.Store) (string, error) {
 	scopes, err := companyContextScopesFor(ai.TaskGrowthFit)
 	if err != nil {
 		return "", err

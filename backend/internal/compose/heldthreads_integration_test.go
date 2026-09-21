@@ -13,11 +13,16 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -288,4 +293,73 @@ func seedVerdictWithActivity(t *testing.T, e *integration.Env, user ids.UUID,
 	}); err != nil {
 		t.Fatalf("seeding a verdict: %v", err)
 	}
+}
+
+// THE CLOCK ON THIS PAGE COMES FROM THE QUEUE, through the seam that keeps
+// capture from learning to read river_job.
+//
+// A page that says "pending" and nothing else leaves a member unable to tell a
+// ten-minute wait from a stopped worker. This drives the REAL seam against the
+// real table rather than a function the test wrote: a seam wired to a kind no
+// runner registers reads a queue nobody writes and answers "no pass is coming"
+// forever, which on the screen is indistinguishable from a deployment that
+// composed no queue at all.
+func TestTheHeldThreadsPageCarriesTheThreadVerdictClock(t *testing.T) {
+	e := integration.Setup(t)
+	seedVerdict(t, e, e.Rep1, "thread-waiting", "pending", "", 0)
+
+	body := listHeldThreads(t, e, e.Rep1, verdictPass(e.Pool, ConfidentialityVerdictArgs{}.Kind()))
+	if body.ThreadVerdict == nil {
+		t.Fatal("the page carries no schedule, so a pending row can say only that it is pending")
+	}
+	if body.ThreadVerdict.EverySeconds != 600 {
+		t.Errorf("the pass runs every %ds, want the ten minutes api/jobs.yaml declares — the "+
+			"cadence comes off the compiled declaration, not off a number beside the screen",
+			body.ThreadVerdict.EverySeconds)
+	}
+}
+
+// A queue this read could not ask still leaves a page that works: the threads
+// are the answer and the clock is decoration on it. Failing the read instead
+// would take the list away over a field nobody asked for, on precisely the
+// deployment where the queue is what is broken.
+func TestAScheduleReadThatFailsStillListsTheHeldThreads(t *testing.T) {
+	e := integration.Setup(t)
+	seedVerdict(t, e, e.Rep1, "thread-listed", "held", "legal", 1)
+
+	refused := func(context.Context) (capture.VerdictClock, error) {
+		return capture.VerdictClock{}, errors.New("the queue is not readable from here")
+	}
+	body := listHeldThreads(t, e, e.Rep1, refused)
+	if body.ThreadVerdict != nil {
+		t.Errorf("a failed schedule read reported %+v — a clock nothing answered for", *body.ThreadVerdict)
+	}
+	if len(body.Data) != 1 {
+		t.Errorf("the page lists %d threads, want the one seeded", len(body.Data))
+	}
+}
+
+// listHeldThreads drives the page through its transport, which is the only
+// place the clock is attached.
+func listHeldThreads(t *testing.T, e *integration.Env, user ids.UUID,
+	pass capture.VerdictPass,
+) crmcontracts.HeldThreadListResponse {
+	t.Helper()
+	handlers := captureSenderHandlers{
+		db:         InstallationDB(e.Pool),
+		store:      capture.NewSenderOverrideStore(InstallationDB(e.Pool)),
+		threadPass: pass,
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/v1/capture/held-threads", nil).
+		WithContext(purgeCtx(e, user))
+	handlers.ListHeldThreads(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", w.Code, w.Body.String())
+	}
+	var body crmcontracts.HeldThreadListResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding the page: %v", err)
+	}
+	return body
 }

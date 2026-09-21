@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
@@ -98,7 +98,7 @@ describe("PageTitle", () => {
 
   // Whose state the page changes, beside its heading. Only a settings entry
   // carries a scope, and every settings page declares one in the catalog — the
-  // field had no reader at all until this, so a person could not tell a toggle
+  // field had no reader at all until this, so a contact could not tell a toggle
   // that changes their own signature from one that changes everybody's mail
   // routing.
   it("names whose state a settings page changes, beside its heading", () => {
@@ -249,7 +249,7 @@ describe("PageTitle", () => {
   // top-level headings is no document outline at all. Same yield-whole rule as
   // a record route below, for the same reason.
   it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "brief" }} />);
+    const { container } = render(<PageTitle route={{ screen: "home" }} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
@@ -265,7 +265,7 @@ describe("PageTitle", () => {
   // says where it may not appear.
   it("renders nothing at all on a record route", () => {
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     const { container } = renderWith(
       client,
       <PageTitle route={{ screen: "contacts", id: "p-anna" }} />,
@@ -494,7 +494,7 @@ describe("Shell", () => {
   it("claims the page exactly once on a record, with the sidebar's row yielding", () => {
     window.location.hash = "#/contacts/p-anna";
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     const { container } = renderWith(
       client,
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
@@ -503,7 +503,7 @@ describe("Shell", () => {
     expect(claims).toHaveLength(1);
     expect(claims[0].textContent).toBe("Anna Weber");
     const row = container.querySelector("nav.rail a.navitem.active");
-    expect(row?.textContent).toBe("People");
+    expect(row?.textContent).toBe("Contacts");
     expect(row?.getAttribute("aria-current")).toBe("true");
   });
 
@@ -518,12 +518,12 @@ describe("Shell", () => {
     );
     const claims = [...container.querySelectorAll('[aria-current="page"]')];
     expect(claims.map((claim) => claim.textContent)).toEqual([
-      "People",
-      "People",
+      "Contacts",
+      "Contacts",
     ]);
     expect(
       container.querySelector("nav.rail a.navitem.active")?.textContent,
-    ).toBe("People");
+    ).toBe("Contacts");
   });
 
   // The a11y hole this restructure closes: the page's name used to be a span in
@@ -536,18 +536,49 @@ describe("Shell", () => {
   // thing separating them is the id. The marker is what the stylesheet keys the
   // cap on, so a route landing in the wrong family is a layout regression that
   // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
-  // (keyed on an id) and GRIDDED_SCREENS (the id-less half, which is Brief).
+  // (keyed on an id) and GRIDDED_SCREENS (the id-less half: the screens that
+  // read down without ever being a record).
   it.each([
     ["#/settings/account", true],
+    // Every record page keeps the one measure, so a walk from a company to the
+    // deal on it to the lead behind it never changes column.
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
+    ["#/leads/l-1", true],
+    // A lead whose id is the word "new" is a record like any other: the create
+    // segment is the deals screen's, not every screen's.
+    ["#/leads/new", true],
+    ["#/deals/d-1", true],
+    ["#/projects/pr-1", true],
+    // The deal room is a page OF the deal, so it keeps the deal's column.
+    ["#/deals/d-1/room", true],
     // Brief carries no id and is capped anyway: it reads down, and its decision
     // cards carry drafted prose somebody has to read before deciding.
     ["#/", true],
+    // The rest of the id-less half, each read top to bottom rather than
+    // scanned across: a queue of work, a list of saved views, a column of
+    // report sections, and a settings-like page of stacked choices.
+    ["#/worklist", true],
+    ["#/filters", true],
+    ["#/analytics", true],
+    ["#/ai", true],
+    // Analytics' old address parses to the same screen, so it inherits the
+    // same column: a bookmark cannot land on a differently laid-out page.
+    ["#/reports", true],
     ["#/companies", false],
     ["#/contacts", false],
     ["#/deals", false],
-    ["#/reports", false],
+    ["#/leads", false],
+    // The one list that IS capped, asked for by name: its table is the narrowest
+    // of the five and the page a reader most often meets is its first-run plate,
+    // which uncapped stood alone in the corner of a wide display. The four rows
+    // above are the arrangement it left, not an oversight in them.
+    ["#/projects", true],
+    // `#/deals/new` carries the create segment rather than a record id: it is
+    // the deals LIST with its form open, and a list is scanned across. The
+    // segment belongs to deals alone, so the lead row above it keeps the
+    // column.
+    ["#/deals/new", false],
     // A composed unit's page keeps the settings LEVEL (below) but not the
     // reading column: the column is a claim about the page's own content, and a
     // unit lays its own surface out.
@@ -559,6 +590,37 @@ describe("Shell", () => {
     );
     const main = container.querySelector("main");
     expect(main?.className.includes("main-gridded")).toBe(capped);
+  });
+
+  // A record page carries `main-record` on top of the cap: the class adds no
+  // width and only NAMES the column as a container, which is what lets the
+  // record's tab strip measure the column it spans.
+  //
+  // The name comes off the ROUTE rather than off whether a strip is drawn, so a
+  // page deeper INSIDE a record keeps it: `#/deals/<id>/room` is still that
+  // deal's column, and a container named on arrival cannot go missing on the
+  // one page of a record that reaches for it late. A page that is not a record
+  // at all names none — a list with its create form open, settings, the
+  // worklist.
+  it.each([
+    ["#/companies/o-1", true],
+    ["#/contacts/p-1", true],
+    ["#/leads/l-1", true],
+    ["#/deals/d-1", true],
+    ["#/projects/pr-1", true],
+    ["#/deals/d-1/room", true],
+    // Off the deals screen the create segment is an ordinary record id.
+    ["#/leads/new", true],
+    ["#/deals/new", false],
+    ["#/settings/account", false],
+    ["#/worklist", false],
+  ])("names the record column as a container: %s", (hash, record) => {
+    window.location.hash = String(hash);
+    const { container } = render(
+      <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+    );
+    const main = container.querySelector("main");
+    expect(main?.className.includes("main-record")).toBe(record);
   });
 
   // A unit's page is REACHED from settings and its trail says so
@@ -630,7 +692,9 @@ describe("Shell", () => {
     // topbar.test.tsx; that the shell still shows one here is the shell's.
     const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(
-      within(trail).getByRole("link", { name: "People" }).getAttribute("href"),
+      within(trail)
+        .getByRole("link", { name: "Contacts" })
+        .getAttribute("href"),
     ).toBe("#/contacts");
   });
 
@@ -651,7 +715,7 @@ describe("Shell", () => {
     const title = container.querySelector(".pagetitle");
     expect(scroller?.contains(title ?? null)).toBe(true);
     // And the bar's own passengers are mounted, which is all the shell owes
-    // them: their behaviour is account.test.tsx's and sormodechip.test.tsx's.
+    // them: their behaviour is account.test.tsx's.
     expect(
       within(bar ?? container).getByRole("button", { name: "Account" }),
     ).toBeTruthy();

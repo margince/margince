@@ -1,51 +1,42 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import {
   Button,
-  Card,
   Checkbox,
   Field,
   Modal,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  type ActivityDraft,
+  activityRequestBody,
+  KINDS_WITH_A_CONTACT,
+} from "./activitybody";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
+import { TaskAssigneeField } from "./assigneepicker";
+import { problemMessageOf, throwProblem, useMe } from "./common";
 
-// Log a note or task from a 360 (person/company/deal/lead): the contract's
+// Log a note or task from a 360 (contact/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
 // at submit, source=manual. On success every read that renders this record's
 // timeline is invalidated (see activitykeys) so the fresh entry appears
 // without a reload. Server-side validation is the truth — a 422 renders its
 // RFC 7807 detail verbatim.
-
-type ActivityDraft = {
-  kind: "note" | "task" | "meeting" | "call";
-  subject: string;
-  body: string;
-  // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
-  // due date, otherwise the day the note or meeting happened.
-  day: string;
-  // A meeting's body is ordinary notes UNLESS this is explicitly checked —
-  // otherwise "discussed pricing, follow up Tuesday" typed while logging a
-  // meeting would silently carry source_system: transcript, which the
-  // backend documents as meaning pasted/uploaded transcript TEXT and which
-  // the activity/transcript retention scope sweeps on a different schedule
-  // than an ordinary meeting note. Meaningless outside kind: meeting.
-  asTranscript: boolean;
-};
 
 const EMPTY_DRAFT: ActivityDraft = {
   kind: "note",
@@ -53,6 +44,7 @@ const EMPTY_DRAFT: ActivityDraft = {
   body: "",
   day: "",
   asTranscript: false,
+  assigneeId: "",
 };
 
 // Only a plain-text paste round-trips through normalizeTranscript's line
@@ -99,113 +91,32 @@ function freshDraft(
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
-// The instant a logged activity carries. The picked day left on today — or, for
-// a note, pushed into the future, which nothing can have occurred in — means the
-// actual moment of logging, so entries logged in sequence keep their timeline
-// order. A backdated day becomes that day's noon in the record zone. Either way the
-// entry files under the day the writer picked, because both branches and the
-// timeline's day headings read the same clock. A task's picked day is its DUE
-// date instead — the task itself occurred now.
-function occurredInstant(input: ActivityDraft, recordZone: string): string {
-  const now = new Date();
-  const today = calendarDay(now, recordZone);
-  if (input.kind === "task" || input.day === "" || input.day >= today) {
-    return now.toISOString();
-  }
-  return middayInstant(input.day, recordZone);
-}
-
-// A meeting and a call are WITH A PERSON, and the server refuses either one
-// filed against a company — per link, so naming the company alongside the
-// person is refused too, and the company is reached through the attendee's
-// employer instead (activities/activitylinks.go, migration
-// "a meeting is with a person again").
-//
-// So a form opened on a company has to ask WHO was in the room before it can
-// send one of these kinds at all. It offered no way to say, and the reader met
-// a 422 with no field to correct.
-const KINDS_WITH_A_PERSON = new Set(["meeting", "call"]);
-
 // The company's own contacts, narrowed by what the reader typed.
 //
-// Scoped to the company rather than searching every person in the installation:
+// Scoped to the company rather than searching every contact in the installation:
 // the question is who from THIS account was in the room, and an unscoped search
 // would offer contacts of other companies as equally likely answers to it.
 async function searchCompanyContacts(
-  organizationID: string,
+  companyID: string,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/people", {
-    params: { query: { organization_id: organizationID, q, limit: 20 } },
+  const { data, error } = await api.GET("/contacts", {
+    params: { query: { company_id: companyID, q, limit: 20 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((person) => ({
-    id: person.id,
+  return data.data.map((contact) => ({
+    id: contact.id,
     // full_name, which the contract documents as always present. display_name
-    // belongs to a USER; a person has neither the field nor a fallback for it.
-    name: person.full_name,
+    // belongs to a USER; a contact has neither the field nor a fallback for it.
+    name: contact.full_name,
   }));
-}
-
-// The wire body one drafted entry becomes.
-function activityRequestBody(
-  input: ActivityDraft,
-  entityType: EntityKind,
-  entityId: string,
-  recordZone: string,
-  // Who was in the room, when the form is open on a company and the kind is one
-  // that needs a person. Null everywhere else.
-  attendee: RecordPickerCandidate | null,
-) {
-  // source_system: transcript is what routes the body through the
-  // server's ADR-0058 normalizer and what the activity/transcript
-  // retention scope keys its sweep on (see backend logActivity's
-  // `transcript` example) — only when the writer has explicitly marked
-  // this text as one (asTranscript), never inferred from kind: meeting
-  // alone, or ordinary meeting notes would carry a marker meaning
-  // something else and sweep on a different retention schedule.
-  const isTranscript = input.kind === "meeting" && input.asTranscript;
-  // A transcript is sent RAW, not trimmed: the server's normalizer
-  // (transcriptnorm.go) is the one place line-1-indexing gets decided,
-  // and it only trims trailing whitespace per line — a leading blank
-  // line or leading indentation the client stripped first would make a
-  // transcript pasted here normalize to different stored text (and
-  // different line numbers) than the identical paste sent by an agent
-  // or another client straight to the API.
-  const outgoingBody = isTranscript ? input.body : input.body.trim();
-  return {
-    kind: input.kind,
-    subject: input.subject.trim(),
-    body: outgoingBody || null,
-    occurred_at: occurredInstant(input, recordZone),
-    // A due date becomes the instant that day ENDS on the RECORD's clock
-    // (format/calendarday), which is the same zone the worklist buckets
-    // overdue in and the same one the task detail renders. Minting it in the
-    // writer's own zone instead is what let an approved 9 September come back
-    // as a task due the 10th for a colleague sitting further east.
-    ...(input.kind === "task" && input.day
-      ? { due_at: dueInstant(input.day, recordZone) }
-      : {}),
-    // Held: a hand-logged meeting already took place (the date caps at
-    // today), and held is what the lead ladder reads as engagement.
-    ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
-    ...(isTranscript ? { source_system: "transcript" } : {}),
-    // The attendee REPLACES the company link rather than joining it. The
-    // server refuses an organization link on a meeting or a call whichever
-    // else are present, and the company still reaches the activity: the
-    // employer walk carries it there through the person who was named.
-    links: attendee
-      ? [{ entity_type: "person" as const, entity_id: attendee.id }]
-      : [{ entity_type: entityType, entity_id: entityId }],
-    source: "manual",
-  };
 }
 
 /**
  * LogActivityForm is the composer itself, without a frame, so the same fields
- * serve the standing card on the person and deal screens and the modal the
+ * serve the standing card on the contact and deal screens and the modal the
  * company screen opens.
  */
 export function LogActivityForm({
@@ -245,10 +156,10 @@ export function LogActivityForm({
   }
   const [fileError, setFileError] = useState<string | null>(null);
   // Who was in the room. Only ever asked on a company, and only for the kinds
-  // that are with a person — see KINDS_WITH_A_PERSON.
+  // that are with a contact — see KINDS_WITH_A_CONTACT.
   const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
   const needsAttendee =
-    entityType === "organization" && KINDS_WITH_A_PERSON.has(draft.kind);
+    entityType === "company" && KINDS_WITH_A_CONTACT.has(draft.kind);
 
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created
@@ -288,12 +199,12 @@ export function LogActivityForm({
         queryClient.invalidateQueries({ queryKey });
       }
       // The attendee's OWN timeline too. The activity is filed against the
-      // person, so the company screen this form sits on reaches it through the
-      // employer walk while the person's page holds it directly — and a reader
+      // contact, so the company screen this form sits on reaches it through the
+      // employer walk while the contact's page holds it directly — and a reader
       // who logs a meeting here and opens the contact expects to find it.
       if (input.attendee) {
         for (const queryKey of entityTimelineKeys(
-          "person",
+          "contact",
           input.attendee.id,
         )) {
           queryClient.invalidateQueries({ queryKey });
@@ -368,8 +279,16 @@ export function LogActivityForm({
           )}
         </Field>
       </div>
+      {/* WHO owes this task, asked beside when it is due. Only a task is held
+          by a colleague; the field renders nothing for a note or meeting, and
+          defers its roster walk to that same condition. */}
+      <TaskAssigneeField
+        active={draft.kind === "task"}
+        value={draft.assigneeId}
+        onChange={(value) => setField({ assigneeId: value })}
+      />
       {/* WHO was in the room, asked before what was said. A meeting or a call
-          is with a person and the server refuses one filed against a company,
+          is with a contact and the server refuses one filed against a company,
           so on a company this is the field that decides whether the entry can
           be sent at all — not a refinement of one that could. */}
       {needsAttendee && (
@@ -444,11 +363,10 @@ export function LogActivityForm({
         </Field>
       )}
       {log.isError && (
-        <p className="t-caption form-error">{problemMessageOf(log.error, t)}</p>
+        <p className="form-error">{problemMessageOf(log.error, t)}</p>
       )}
       <div className="form-actions">
         <Button
-          small
           variant="primary"
           type="submit"
           // An unnamed attendee is refused by the server with a 422 the reader
@@ -471,7 +389,7 @@ export function LogActivityForm({
 }
 
 /**
- * LogActivity is the standing composer card the person and deal screens keep
+ * LogActivity is the standing composer card the contact and deal screens keep
  * open in their rail.
  */
 export function LogActivity({
@@ -491,7 +409,7 @@ export function LogActivity({
   const t = useT();
   // useCanWrite, not useCan: the form issues a POST, and a read seat is
   // refused before RBAC is consulted — the same rule the header verbs on
-  // personpage.tsx state for the identical write. The card stays and says so
+  // contactpage.tsx state for the identical write. The card stays and says so
   // rather than vanishing: a rep whose role may not log a call needs to learn
   // that from the page, not from the absence of a form the product has.
   //
@@ -501,30 +419,26 @@ export function LogActivity({
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefused = me.data?.authorization !== undefined && !canLog;
-  // Logging an activity writes to a mirrored record; in overlay every write
-  // answers unsupported_by_sor, so the form would only fail on submit. Guarded
-  // to render nothing rather than an affordance that can't work (P1/A107,
-  // ADR-0018).
-  const overlay = useSorMode() === "overlay";
-  if (overlay) {
-    return null;
-  }
   if (logRefused) {
     return (
-      <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>
-        <p className="t-caption">{t("record.logActivityRefused")}</p>
-      </Card>
+      <Panel title={t("log.title")}>
+        <PanelBody>
+          <p>{t("record.logActivityRefused")}</p>
+        </PanelBody>
+      </Panel>
     );
   }
   return (
-    <Card className="card-stack" title={t("log.title")} sub={t("log.sub")}>
-      <LogActivityForm
-        entityType={entityType}
-        entityId={entityId}
-        askedKind={askedKind}
-        onLogged={onLogged}
-      />
-    </Card>
+    <Panel title={t("log.title")}>
+      <PanelBody>
+        <LogActivityForm
+          entityType={entityType}
+          entityId={entityId}
+          askedKind={askedKind}
+          onLogged={onLogged}
+        />
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -538,9 +452,11 @@ export function LogActivityAction({
   askedKind,
   openOnMount,
   triggerLabel,
+  triggerIcon,
   disabled,
   disabledReasonId,
   onClose,
+  onLogged,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
@@ -556,6 +472,13 @@ export function LogActivityAction({
   // own verb; two buttons both reading "Log activity" is a toolbar that has
   // stopped telling the reader anything.
   triggerLabel?: MessageKey;
+  // The glyph the trigger leads with, beside the words rather than instead of
+  // them — a header strip of label-only buttons reads as a list, and the verb
+  // a reader is scanning for is found by its shape before it is read. Optional
+  // because a caller that only wants the form (`openOnMount`) draws no trigger
+  // at all, and a caller with no glyph for its verb must not be made to invent
+  // one. `aria-hidden` at the call site: the words are the name.
+  triggerIcon?: ReactNode;
   // Blocks the press while carrying no explanation — for a caller whose grant
   // has not resolved yet. Claiming a refusal the server has not decided is
   // worse than a control that is briefly quiet; separate from
@@ -567,42 +490,46 @@ export function LogActivityAction({
   // such button" learns nothing from the absence.
   disabledReasonId?: string;
   onClose?: () => void;
+  // Fires once the form actually LOGGED, ahead of the close every dismissal
+  // triggers, for a caller with its own re-read to schedule off a write
+  // rather than off the drawer merely shutting (a cancel or an Escape closes
+  // it too, and has nothing to re-read).
+  onLogged?: () => void;
 }>) {
   const t = useT();
   const titleId = useId();
   const [open, setOpen] = useState(Boolean(openOnMount));
-  const overlay = useSorMode() === "overlay";
   const close = () => {
     setOpen(false);
     onClose?.();
   };
-  if (overlay) {
-    return null;
-  }
   return (
     <>
       {!openOnMount && (
         <Button
-          small
           disabled={disabled}
           reasonId={disabledReasonId}
           onClick={() => setOpen(true)}
         >
+          {triggerIcon}
           {t(triggerLabel ?? "log.title")}
         </Button>
       )}
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId} className="t-h2 modal-title">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {/* The heading answers the verb that opened it. Titled "log an
               activity" regardless, a reader who pressed "Add task" was shown
               a different form's name and read it as the wrong dialog. */}
           {t(triggerLabel ?? "log.title")}
-        </h2>
+        </Heading>
         <LogActivityForm
           entityType={entityType}
           entityId={entityId}
           askedKind={askedKind}
-          onLogged={close}
+          onLogged={() => {
+            onLogged?.();
+            close();
+          }}
         />
       </Modal>
     </>

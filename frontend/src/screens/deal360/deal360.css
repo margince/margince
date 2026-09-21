@@ -4,25 +4,51 @@
  *
  * It sits in RecordView's `pulse` slot, which is styled as a meta line —
  * right for the company page's identity facts, wrong for a headline. The
- * override is scoped to this class, so the slot keeps its own size everywhere
- * else. The lead half carries the weight and the rest stays quiet, because the
- * two answer different questions: "whose move" is the verdict a scanner needs,
- * "when they wrote" is the evidence under it. */
+ * override is scoped to this class, so the slot keeps its own type everywhere
+ * else. */
 .d360-pulse {
   margin: var(--space-2) 0 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  line-height: var(--lh-snug);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   text-wrap: balance;
 }
 
-.d360-pulse-lead {
-  font-weight: var(--fw-semibold);
+/* What the close-confirmation dialog asks for before a terminal stage is
+   allowed: the lost reason, or the won vocabulary and its detail. A stack of
+   its own, because the `Field` carries no interval outside itself and the
+   dialog's other children are prose paragraphs on the paragraph rhythm — so
+   without this the reasons sat flush against the sentence above them. */
+.advance-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.d360-pulse-rest {
-  font-weight: var(--fw-regular);
-  color: var(--textSecondary);
+/* Outcome review — what a closed deal recorded about how it went. One block per
+   review, the question above its answer, because a reader scans the questions
+   to find the one they came for. */
+.outcome-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.outcome-review + .outcome-review {
+  margin-top: var(--space-4);
+}
+.outcome-review-head,
+.review-template-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* The settings card listing what those questions are. */
+.review-template + .review-template {
+  margin-top: var(--space-4);
+}
+.review-template-questions {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
 }

@@ -24,7 +24,7 @@ import (
 // reads its own --microsoft-signin-tenant, which falls back to --graph-tenant
 // when that already names one directory rather than an authority alias. An
 // installation running `common` capture therefore gets no Microsoft sign-in
-// until it says which directories its people are in, and the boot log says so.
+// until it says which directories its contacts are in, and the boot log says so.
 //
 // DIRECTORIES, plural, because a flag holding exactly one made "any Entra
 // tenant" mean "no sign-in at all". Each entry is a directory whose
@@ -37,16 +37,8 @@ import (
 // the SPA are different origins, and Microsoft's redirect_uri must reach the api
 // while the human-facing landing must reach the SPA.
 func microsoftSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, error) {
-	redirectBase, postLogin, failure := signInURLs(cfg)
-	ssoCfg := compose.MicrosoftSignInConfig{
-		ClientID:     cfg.graphClientID,
-		ClientSecret: cfg.graphClientSecret,
-		Tenant:       microsoftSignInTenant(cfg),
-		StateKey:     cfg.connectorStateKey,
-		RedirectBase: redirectBase,
-		PostLoginURL: postLogin,
-		FailureURL:   failure,
-	}
+	redirectBase, _, _ := signInURLs(cfg)
+	ssoCfg := microsoftSignInConfig(cfg)
 	if ssoCfg.Enabled() {
 		if err := validateSignInBases(cfg, "microsoft"); err != nil {
 			return nil, err
@@ -71,6 +63,22 @@ func microsoftSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, 
 			compose.MicrosoftSignInRedirectURI(redirectBase))
 	}
 	return []compose.Option{compose.WithMicrosoftSignIn(ssoCfg)}, nil
+}
+
+// microsoftSignInConfig is the deployment's Microsoft sign-in wiring, built
+// where the option is built and read again by the boot check that asks whether
+// ANY method remains — googleSignInConfig carries why that is one function.
+func microsoftSignInConfig(cfg apiConfig) compose.MicrosoftSignInConfig {
+	redirectBase, postLogin, failure := signInURLs(cfg)
+	return compose.MicrosoftSignInConfig{
+		ClientID:     cfg.graphClientID,
+		ClientSecret: cfg.graphClientSecret,
+		Tenant:       microsoftSignInTenant(cfg),
+		StateKey:     cfg.connectorStateKey,
+		RedirectBase: redirectBase,
+		PostLoginURL: postLogin,
+		FailureURL:   failure,
+	}
 }
 
 // microsoftSignInTenant resolves the directories sign-in accepts: its own flag,

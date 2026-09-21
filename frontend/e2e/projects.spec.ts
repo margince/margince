@@ -52,14 +52,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // SHOW the key it was given. This is the half a create form could not prove
   // once the field was removed: without it, a create that came back with no key
   // at all would look exactly like a success.
-  // Scoped to the mono chip: the key also appears in the prose that explains
-  // what a key is for, and a bare text match would pass on the explanation
-  // alone — which renders whether or not the project actually got a key.
-  await expect(
-    page
-      .locator(".t-mono")
-      .filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
-  ).toBeVisible();
+  // Scoped to the key chip — the element whose hover text explains what THIS
+  // key is for — and asserted to read the key alone: a bare text match would
+  // pass on the explanation, which renders whether or not the project actually
+  // got a key.
+  const keyChip = page.getByTitle(`[${MOCK_MINTED_KEY}]`);
+  await expect(keyChip).toBeVisible();
+  await expect(keyChip).toHaveText(MOCK_MINTED_KEY);
   await expect(
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),
   ).toBeVisible();
@@ -67,11 +66,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // The current phase is the one step rendered as text, not as a button.
   const current = phase.locator('[aria-current="step"]');
   await expect(current).toHaveText("Initiative");
-  // The phase history lives in the details column, which starts closed: the
-  // reader opens it from the Details switch before the birth row is on screen.
-  // A project record carries no tab row, so its switch stands with the head's
-  // verbs rather than at the end of the tabs.
-  await page.getByRole("button", { name: "Details" }).click();
+  // The phase history lives in the details column, which is open on arrival,
+  // so the birth row is on screen without a press.
   await expect(page.getByText("Gestartet in Initiative")).toBeVisible();
   await expect(
     page.getByText("Unter diesem Projekt ist noch nichts abgelegt", {
@@ -79,13 +75,12 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     }),
   ).toBeVisible();
 
-  // 2. Attach a deal on the deal's own form — the project picker offers the
-  // company's live projects by name.
+  // 2. Attach through the company/project group in the deal's Details pane.
   await page.goto("/#/deals/d-fleet");
-  await page.getByRole("button", { name: "Deal bearbeiten" }).click();
+  await page.getByRole("button", { name: "Firma ändern", exact: true }).click();
   await choose(
     page,
-    dialog.getByRole("combobox", { name: "Projekt" }),
+    page.getByRole("combobox", { name: "Projekt", exact: true }),
     "Brandt ERP",
   );
   const patched = page.waitForRequest(
@@ -93,17 +88,71 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
       request.url().endsWith("/v1/deals/d-fleet") &&
       request.method() === "PATCH",
   );
-  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
 
   // 3. Log something on the deal, then win it. The note is filed under the
   // deal, not the project — the project timeline picks it up in step 5.
-  await page.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
-  await page.getByRole("button", { name: "Erfassen" }).click();
+  //
+  // Through the head's own verb: the deal page carries no standing log form,
+  // because a form open on every read asks for a note nobody came to write.
+  await page
+    .getByRole("button", { name: "Aktivität erfassen", exact: true })
+    .click();
+  // Inside the dialog, and exactly: the head's own verb is still on the page
+  // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.
+  const logDialog = page.getByRole("dialog");
+  await logDialog.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
+  // The write itself is the claim here — that the note is filed UNDER THE DEAL
+  // — so it is read off the request rather than off a rendering of it. Reading
+  // it back needs the chronology tab, and pressing that on the page the write
+  // just invalidated races the refetch that remounts the record; step 5 opens
+  // the tab from a fresh arrival, where there is no such race, and the project
+  // timeline there is what proves the note travelled.
+  const filed = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/activities") &&
+      response.ok(),
+  );
+  await logDialog
+    .getByRole("button", { name: "Erfassen", exact: true })
+    .click();
+  expect((await filed).request().postDataJSON().subject).toBe(
+    "Kickoff mit Brandt IT",
+  );
+  // The deal's chronology is its own tab now, not a block under the overview:
+  // what was said about the deal and what was changed on it are one order of
+  // events, read in one place. Every arrival at the deal opens on the overview,
+  // so each read of the chronology asks for the tab first.
   const timeline = page.getByRole("region", { name: "Verlauf" });
-  await expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible();
+  // The write lands, the dialog closes, and the reads it invalidated come back
+  // — and a record remounted by one of those refetches opens on its first tab
+  // again. So what the chronology is being read FOR is checked inside the
+  // retry, not after it: the tab standing open for one moment is not the same
+  // claim as the row being there to read, and a remount between the two puts
+  // the panel back behind the overview with the row still in the document.
+  const historyTab = () =>
+    page
+      .getByTestId("record-tabs")
+      .getByRole("button", { name: "Verlauf", exact: true });
+  const onDealHistory = async (read: () => Promise<unknown>) => {
+    await expect(logDialog).toBeHidden();
+    await expect(async () => {
+      // At rest before pressing: the strip is sticky, so a scrolled record
+      // pins it over the head and the press lands on whatever is pinned above
+      // the tab. The shell scrolls an inner container rather than the window.
+      await page.evaluate(() => {
+        for (const box of document.querySelectorAll(".scroll")) {
+          box.scrollTop = 0;
+        }
+      });
+      await historyTab().click();
+      await read();
+    }).toPass();
+  };
 
   await page
     .getByRole("group", { name: "Phase" })
@@ -148,10 +197,12 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // 5. The timeline accumulates what is filed under the project: relink the
   // deal's note to the project and it appears here with the coverage count.
   await page.goto("/#/deals/d-fleet");
-  await timeline.getByRole("button", { name: "Neu verknüpfen" }).click();
+  const relink = timeline.getByRole("button", { name: "Neu verknüpfen" });
+  await onDealHistory(() => expect(relink).toBeVisible({ timeout: 2000 }));
+  await relink.click();
   await dialog
     .getByRole("searchbox", {
-      name: "Person, Organisation, Deal, Lead oder Projekt suchen",
+      name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",
     })
     .fill("Brandt ERP");
   await dialog.getByRole("button", { name: "Brandt ERP" }).click();

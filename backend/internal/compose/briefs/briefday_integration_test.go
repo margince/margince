@@ -151,7 +151,7 @@ func TestAskingForTodaysBriefAgainReadsItRatherThanReRanking(t *testing.T) {
 	// served — and ranking again would spend a model call to produce an order
 	// the insert then discards, leaving her waiting for an answer nobody uses.
 	calls := 0
-	api := NewBriefEngine(b.Pool, b.People).WithL2Ranker(countingBrain{calls: &calls}, nil)
+	api := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(countingBrain{calls: &calls}, nil)
 	served, assembled, err := api.SnapshotRunForDay(b.repCtx, briefClock.Add(2*time.Hour))
 	if err != nil {
 		t.Fatalf("asking for today's brief again failed: %v", err)

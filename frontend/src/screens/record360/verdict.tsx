@@ -16,13 +16,13 @@
 // its rule's own words instead — never nothing, which would read as a signal
 // somebody cleared.
 //
-// Entity-agnostic on purpose. Company360 and Person360 answer the same
+// Entity-agnostic on purpose. Company360 and Contact360 answer the same
 // question about a different record, and the day they grow a verdict they take
 // this one rather than a second shaped like it.
 
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -41,7 +41,7 @@ import "./record360.css";
  * for a word nobody could interpret. It renders neutral instead — the card
  * shows the call it was given and does not pretend to grade it.
  */
-export type StandingTone = "danger" | "warn" | "accent" | "calm" | "unknown";
+export type StandingTone = "danger" | "warning" | "accent" | "calm" | "unknown";
 
 /**
  * One reading the call was made from: what it said, and which reading said it.
@@ -78,6 +78,7 @@ export function VerdictHead({
   tone,
   because,
   restsOn,
+  scale = "record",
 }: Readonly<{
   label: string;
   tone: StandingTone;
@@ -88,10 +89,20 @@ export function VerdictHead({
   // anything a reader could be shown — which is a real state, and different
   // from a call resting on nothing.
   restsOn?: readonly Grounding[];
+  // The word's own size. "record" is the kit's default — the loudest type on
+  // the pane, for a card with no other claim of authorship in its head.
+  // "compact" is the record ladder's own heading size, for a caller whose
+  // head already carries a claim of its own (a "Last update" line, a byline)
+  // and so does not need its verdict shouting a second one. Absent behaves as
+  // "record", so a caller that does not opt in draws byte-identical to
+  // before.
+  scale?: "record" | "compact";
 }>) {
   return (
     <PanelBody>
-      <div className="r360-verdict">
+      <div
+        className={`r360-verdict${scale === "compact" ? " r360-verdict-compact" : ""}`}
+      >
         <span className={`r360-standing r360-standing-${tone}`}>{label}</span>
         {/* Three columns, not a row that wraps: the word, the line that says
             why, and the working at the far end where the head has room for it.
@@ -155,8 +166,12 @@ export function Proof({
   }
   return (
     <>
-      <button
-        type="button"
+      {/* The working behind a machine's claim, so the trigger wears the
+          machine's own quiet variant — tinted and outlined, which is what the
+          head's hand-rolled chip was drawing for itself. The class is all
+          that is left of it: where the control sits in the head's grid. */}
+      <Button
+        variant="aiQuiet"
         className="r360-rests-toggle"
         onClick={() => setOpen((shown) => !shown)}
         aria-expanded={open}
@@ -165,15 +180,15 @@ export function Proof({
         <Caret aria-hidden="true" />
         {label}
         {count ? (
-          <span className="r360-rests-count">
-            <span className="t-mono">{formatNumber(items.length, locale)}</span>{" "}
+          <span>
+            <span className="t-num">{formatNumber(items.length, locale)}</span>{" "}
             {/* The unit as a word, not a bare figure. "What this rests on 2"
                 asks the reader to guess what was counted; the count is only
                 worth putting on a shut block if it says what it counts. */}
             {plural("record.restsOn.source", items.length)}
           </span>
         ) : null}
-      </button>
+      </Button>
       {open ? (
         <div className="r360-rests" id={panelId}>
           {items.map((item) => (
@@ -194,7 +209,7 @@ export function Proof({
  * loud element on the card and answers a different question — including
  * "I do not recognise this word", which a badge never has to say.
  */
-export type SignalTone = "danger" | "warn" | "accent" | undefined;
+export type SignalTone = "danger" | "warning" | "accent" | undefined;
 
 /** One scannable finding, stating the number that tripped it. */
 export type Signal = {
@@ -227,7 +242,7 @@ export function SignalStrip({ signals }: Readonly<{ signals: Signal[] }>) {
           <li key={signal.key}>
             <Badge tone={signal.tone}>{signal.label}</Badge>
             {signal.figure ? (
-              <span className="t-mono r360-figure">{signal.figure}</span>
+              <span className="r360-figure">{signal.figure}</span>
             ) : null}
           </li>
         ))}

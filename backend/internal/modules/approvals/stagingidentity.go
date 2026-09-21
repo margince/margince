@@ -59,7 +59,7 @@ const lockOrder = `ORDER BY created_at, id`
 // payload order.
 //
 // EVERY KIND THE ACT STAGES, in ONE statement, which is why kinds is variadic
-// and not a second call. A site read stages the company's facts and the people
+// and not a second call. A site read stages the company's facts and the contacts
 // its team page published, and re-proposing REBUNDLES what it joins — so a
 // bundle holds members of both kinds with different ages, and a decision walks
 // them in one interleaved (created_at, id) sequence. Locking one kind and then
@@ -224,7 +224,7 @@ func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 // Both discriminators are scoped by subjectScope for a shape whose proposal is
 // one member's (stagingsubject.go). Unscoped, the memory is the WORKSPACE's: one
 // member's refusal would refuse a colleague's proposal, for exactly the kinds
-// whose own gate says a row is one person's business — and the colleague would
+// whose own gate says a row is one colleague's business — and the colleague would
 // see no offer and no reason for its absence.
 func declinedProbeSQL(byIdentity bool, subject string) string {
 	const prefix = `SELECT status FROM approval
@@ -318,26 +318,69 @@ func (s *Service) RejectedChangesForTx(ctx context.Context, tx pgx.Tx, kind stri
 // this commits and then decides the offer this joined, or this reads the row as
 // already rejected and stages nothing.
 func (s *Service) StageUnlessDeclined(ctx context.Context, in StageInput) (ids.ApprovalID, bool, error) {
-	// Canonicalized HERE as well as in Stage: the lock discriminator, the
-	// containment probe below and supersession must all agree on what "same
-	// identity" means, and an uncanonicalized identity differs from the stored
-	// one by key order alone — which reads as a different proposal.
-	if len(in.Identity) > 0 {
-		if !in.JoinPending {
-			return ids.ApprovalID{}, false, errors.New("crmapprovals: Identity staging requires JoinPending")
-		}
-		canonical, err := canonicalIdentity(in.Identity, in.ProposedChange)
-		if err != nil {
-			return ids.ApprovalID{}, false, err
-		}
-		in.Identity = canonical
-	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	prepared, err := s.prepareUnlessDeclined(ctx, in)
+	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}
 	var id ids.ApprovalID
 	staged := false
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var txErr error
+		id, staged, txErr = s.stageUnlessDeclinedInTx(ctx, tx, prepared)
+		return txErr
+	})
+	return id, staged, err
+}
+
+// StageUnlessDeclinedTx is StageUnlessDeclined inside a transaction the CALLER
+// owns, for a stager whose proposals must commit — or roll back — together with
+// something else it writes.
+//
+// The transcript reader is that caller: its quotations and the record of the
+// reading that produced them are one fact, and staging them in transactions of
+// their own is what let an erasure land between the two and leave quotations of
+// a destroyed body standing with no reading to explain them.
+//
+// It takes the same identity lock the pooled door does, because that lock is
+// about a concurrent DECISION on the same proposal and is owed whichever
+// transaction the staging runs in.
+func (s *Service) StageUnlessDeclinedTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.ApprovalID, bool, error) {
+	prepared, err := s.prepareUnlessDeclined(ctx, in)
+	if err != nil {
+		return ids.ApprovalID{}, false, err
+	}
+	return s.stageUnlessDeclinedInTx(ctx, tx, prepared)
+}
+
+// prepareUnlessDeclined canonicalizes the identity and checks the stager is
+// attributable — the half of StageUnlessDeclined that runs outside any
+// transaction, so both doors do it once and identically.
+//
+// Canonicalized HERE as well as in Stage: the lock discriminator, the
+// containment probe and supersession must all agree on what "same identity"
+// means, and an uncanonicalized identity differs from the stored one by key
+// order alone — which reads as a different proposal.
+func (s *Service) prepareUnlessDeclined(ctx context.Context, in StageInput) (StageInput, error) {
+	if len(in.Identity) > 0 {
+		if !in.JoinPending {
+			return StageInput{}, errors.New("crmapprovals: Identity staging requires JoinPending")
+		}
+		canonical, err := canonicalIdentity(in.Identity, in.ProposedChange)
+		if err != nil {
+			return StageInput{}, err
+		}
+		in.Identity = canonical
+	}
+	if err := stagerIsAttributable(ctx); err != nil {
+		return StageInput{}, err
+	}
+	return in, nil
+}
+
+func (s *Service) stageUnlessDeclinedInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.ApprovalID, bool, error) {
+	var id ids.ApprovalID
+	staged := false
+	err := func() error {
 		wsID, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			return errors.New("crmapprovals: no workspace bound to context")
@@ -390,6 +433,6 @@ func (s *Service) StageUnlessDeclined(ctx context.Context, in StageInput) (ids.A
 		}
 		staged = true
 		return nil
-	})
+	}()
 	return id, staged, err
 }

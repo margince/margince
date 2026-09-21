@@ -63,7 +63,7 @@ describe("the provider status vocabulary", () => {
 
   it("gives every state its own sentence", () => {
     // Two states sharing one message is how "the budget ran out" comes to
-    // read as "this person is not eligible" — a fact about the wallet
+    // read as "this contact is not eligible" — a fact about the wallet
     // rendered as a fact about the human.
     const messages = PROFILE_STATES.map((state) => en[profileLabel(state)]);
     expect(new Set(messages).size).toBe(PROFILE_STATES.length);
@@ -119,7 +119,7 @@ describe("the provider status vocabulary", () => {
   });
 
   it("does not claim an installation-wide pause on one contact's failed run", () => {
-    // The person page's provider_error is reached two ways: the CONNECTION is
+    // The contact page's provider_error is reached two ways: the CONNECTION is
     // degraded, or this contact's newest run failed under a healthy one. The
     // copy used to assert the first for both — "Automatic lookups are paused;
     // a free check that gets through resumes them" — and on a healthy
@@ -160,18 +160,18 @@ describe("the provider status vocabulary", () => {
     expect(connectionTone("disconnected")).toBeUndefined();
     expect(connectionTone("connected")).toBe("success");
     // Recoverable vendor conditions warn rather than alarm.
-    expect(connectionTone("rate_limited")).toBe("warn");
-    expect(connectionTone("insufficient_credits")).toBe("warn");
+    expect(connectionTone("rate_limited")).toBe("warning");
+    expect(connectionTone("insufficient_credits")).toBe("warning");
   });
 
   it("warns on a charge with nothing to show for it", () => {
     // Paid, and the values never arrived. Neither a success nor a failure,
     // and the one state somebody has to actually see.
-    expect(profileTone("completed_claims_unwritten")).toBe("warn");
+    expect(profileTone("completed_claims_unwritten")).toBe("warning");
     // The outcome was never learned, and the run may have been charged.
-    expect(profileTone("submission_unknown")).toBe("warn");
+    expect(profileTone("submission_unknown")).toBe("warning");
     // Bought earlier and no longer refreshable — real data, stale label.
-    expect(profileTone("stale")).toBe("warn");
+    expect(profileTone("stale")).toBe("warning");
     expect(profileTone("completed")).toBe("success");
   });
 

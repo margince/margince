@@ -89,7 +89,7 @@ func versionedTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue
@@ -119,7 +119,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
-	"internal/modules/people:touchRevertedPerson": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this person FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
+	"internal/modules/contacts:touchRevertedContact": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct
 	// storekit.LockRow call this witness's AST walk can see: a row a plain
@@ -143,7 +143,24 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// audit row would describe two transactions as one. A zero-row result
 	// arrives as pgx.ErrNoRows, which the caller handles as the decline it is
 	// rather than as a failure.
-	"internal/modules/people:bindSiteReadLogo": "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+	"internal/modules/contacts:bindSiteReadLogo": "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+	// The same shape again, for the same reason, on both halves of one switch.
+	// Suspending is conditioned on suspended_at IS NULL and resuming on IS NOT
+	// NULL, so a second caller racing either one gets ErrNoRows and treats it
+	// as the decline it is: the FIRST suspension's reason stands (it is the one
+	// that stopped the automation, and a later sweep would overwrite it with a
+	// consequence), and one clearing is one clearing. Both send the conditional
+	// UPDATE through QueryRow so the row the write produced is the row the
+	// audit describes.
+	// A reversal, from both doors that can make one: the undo verb and the
+	// detection of a manual move back. Both LOCK the ledger row first (FOR
+	// UPDATE OF o in lockReversibleMove and in the detection query), and the
+	// write is conditioned on reversed_at IS NULL on top of that — so a second
+	// caller gets ErrNoRows and treats it as the decline it is. One reversal
+	// counted twice would double the safety rate that governs the transition.
+	"internal/modules/deals:markMoveReversed":          "the caller holds the row (FOR UPDATE) and the write is conditioned on reversed_at IS NULL; ErrNoRows means somebody reversed it first, which is a decline rather than a failure",
+	"internal/modules/deals:suspendTransitionPolicyTx": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
+	"internal/modules/deals:ResumeTransitionPolicy":    "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",
 
 	// The second of that shape, and the reason it is ratified rather than
 	// taught to the witness: crediting a bare mention of pgx.ErrNoRows would
@@ -159,7 +176,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// That rationale answers "do two archives race each other", and it is
 	// still true of every entry below. It does NOT answer "did this archive
 	// land on the record the decider judged" — and for the six types
-	// archive_record stages a human confirmation for (person, organization,
+	// archive_record stages a human confirmation for (contact, company,
 	// deal, project, relationship, activity) that is the question, because a
 	// concurrent UPDATE in the window between a released approval and the
 	// write changes the record without racing the archive at all. Those six
@@ -179,7 +196,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// invalidateGeocodeInTx only ever moves a status TOWARD stale, never away,
 	// and it runs inside the address writer's own transaction — the row is
 	// already locked by the patch that changed the address.
-	"internal/modules/people:recordGeocodeAfter":    "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
+	"internal/modules/contacts:recordGeocodeAfter":  "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
 	"internal/modules/automation:Archive":           "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
 	"internal/modules/collections:ArchiveList":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveSavedView": "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
@@ -198,9 +215,9 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/deals:ArchiveOffer":                       "runs under the offer row lock taken by visibleOfferLocked, and the write itself is an absolute archive transition",
 	"internal/modules/deals:UpdateOfferLineItem":                "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
 	"internal/modules/deals:recomputeOfferTotals":               "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
-	"internal/modules/people:absorbOrgReferences":               "runs under the merge pair lock (storekit.LockPair on both organization rows) taken by MergeOrganization",
+	"internal/modules/contacts:absorbCompanyReferences":         "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
 	"internal/modules/signals:dropUnattributable":               "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
-	"internal/modules/signals:resolveToOrg":                     "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
+	"internal/modules/signals:resolveToCompany":                 "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:flagAmbiguous":                    "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/ai:SetBuildStage":                         "stage is display-only forward progress; the status=running predicate makes a raced write a harmless no-op",
 	"internal/modules/ai:DeferBuild":                            "the status=running predicate is the CAS: a build already finished or re-claimed matches zero rows and the deferral is dropped",
@@ -217,7 +234,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:archiveActivity":            "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":                "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
 	"internal/modules/privacy:eraseActivityContent":       "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
-	"internal/modules/privacy:anonymizePersonRecord":      "terminal absolute write: the sweep's person/anonymize action overwrites the PII columns regardless of concurrent state, by design",
+	"internal/modules/privacy:anonymizeContactRecord":     "terminal absolute write: the sweep's contact/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 
 	// A function the package-level folding attributes a statement to without its
 	// also executing it. Ratified here rather than smoothed away in the reader,
@@ -225,7 +242,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// executor by value instead of by name, and a reader taught to excuse it
 	// would excuse the writers that DO need judging along with it.
 	//
-	// The lock this names is the ORGANIZATION row's, not the workspace row's.
+	// The lock this names is the COMPANY row's, not the workspace row's.
 	// SaveCompany also takes lockCompanyState — `SELECT id FROM workspace … FOR
 	// UPDATE` — and that one is deliberately not what ratifies this: it names a
 	// different table from the one being written, which is exactly the free
@@ -317,7 +334,7 @@ func lockedByRead(lit string) []string {
 // package rather than one per function inspected.
 //
 // Both spellings are live in this tree — storekit.LockRow(ctx, tx, "stage", …)
-// and storekit.LockRow(ctx, tx, entityPerson, …) — and a witness that only
+// and storekit.LockRow(ctx, tx, entityContact, …) — and a witness that only
 // understood the literal form would credit every constant-form lock for free.
 // That is the same over-recognition this narrowing exists to remove, arriving
 // through the back door.
@@ -347,8 +364,8 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 // and the guard is that function's to carry. Reading only the body's literals
 // left those statements outside the census entirely — not reported as a gap but
 // silently absent, which is the one way a census must not fail. The sibling
-// census in orgrenamerecheck_test.go already folds them; this one had stayed
-// narrower, and eight organization writes were sitting in the difference.
+// census in companyrenamerecheck_test.go already folds them; this one had stayed
+// narrower, and eight company writes were sitting in the difference.
 //
 // A name the function DECLARES is its own, whatever the package calls something
 // of the same name — attributing by spelling alone hands a package-level
@@ -546,7 +563,7 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		return nil
 	case *ast.SelectorExpr:
 		// `spec.update` names a FIELD, not this package's `update`, so the Sel
-		// is not read as a local name. But `storekit.ProbeRenameOrg` is a
+		// is not read as a local name. But `storekit.ProbeRenameCompany` is a
 		// statement held one import away, and dropping the Sel outright left
 		// that silence exactly where this change closed the same one inside a
 		// package. So the Sel is looked up in what the file's in-module imports
@@ -571,7 +588,7 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		return nil
 	case *ast.AssignStmt:
 		// `statement += " FOR UPDATE"` is the third spelling of the same
-		// assembly, and the one anchorOrganization uses to add the row lock that
+		// assembly, and the one anchorCompany uses to add the row lock that
 		// guards the company form. Each half is read on its own below; this
 		// folds them so the whole is read too.
 		if n.Tok == token.ADD_ASSIGN && len(n.Lhs) == 1 && len(n.Rhs) == 1 {

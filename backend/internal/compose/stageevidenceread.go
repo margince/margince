@@ -44,7 +44,7 @@ import (
 )
 
 // stageEvidenceReadActor is what the audit trail names as the writer of these
-// rows. A model produced them and no human asked, so binding the last person to
+// rows. A model produced them and no human asked, so binding the last contact to
 // touch the deal would put their name on a reading they never made.
 const stageEvidenceReadActor = "system:stage-evidence-read"
 
@@ -102,7 +102,12 @@ func (r *StageEvidenceReader) Read(
 		}
 		return 0, err
 	}
-	claims, err := r.ask(actorCtx, criteria, facts.spans)
+	// The deal whose exit criteria are being read. The request quotes spans
+	// from that deal's own messages, so an erasure reaching a contact on it
+	// reaches these payloads through the deal it names. No label: this reading
+	// is queued from an activity and never loads the deal's name, and a second
+	// query for one would spend a round trip on a word the rail can do without.
+	claims, err := r.ask(ai.WithSubject(actorCtx, dealID.Ref(), ""), criteria, facts.spans)
 	if err != nil {
 		return 0, err
 	}
@@ -366,11 +371,7 @@ func (r *StageEvidenceReader) write(
 // pass is its own unit of work: the job that runs it is enqueued by a trigger
 // whose own trace ended when the activity was written.
 func stageEvidenceReadCtx(ctx context.Context) context.Context {
-	actorCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   stageEvidenceReadActor,
-	})
-	return principal.WithCorrelationID(actorCtx, ids.NewV7())
+	return principal.SystemActing(ctx, stageEvidenceReadActor)
 }
 
 // readActivityText answers the lines of an activity that its OWN sender wrote.
@@ -383,7 +384,7 @@ func stageEvidenceReadCtx(ctx context.Context) context.Context {
 // that exist to require the buyer's own word. textlang.CurrentMessage is the
 // cut the correspondence gate already makes against the same hazard, and its
 // own doc comment states the rule: a forwarded original stays in the activity
-// and is not presented as the forwarding person's statement.
+// and is not presented as the forwarding contact's statement.
 //
 // The line numbers a claim cites are the numbers of THIS text, which is what
 // reaches the model — so a citation still resolves against exactly what was

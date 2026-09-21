@@ -2,10 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { OnboardingBackread } from "./onboarding-backread";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 // The backread step for the fe-uat render gate — one story per honest branch:
 // the window pick with its scope, a failed estimate that still allows the read,
@@ -15,10 +20,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 
-function backreadStory(
-  initial: BackfillStatus,
-  routes: Record<string, (body: unknown) => Response> = {},
-) {
+function backreadStory(initial: BackfillStatus, routes: RouteMap = {}) {
   return () => {
     installFetchStub(routes);
     return (
@@ -39,6 +41,7 @@ const preview =
     jsonResponse({
       window: "6m",
       estimated_messages: 4820,
+      after_date: "2026-01-31",
       computed_at: "2026-07-31T09:12:00Z",
       ...extra,
     });
@@ -61,6 +64,24 @@ export const Pick: Story = {
       }),
     },
   ),
+};
+
+// The count is still running. The scope says so and the read is offered
+// anyway: the window is what the reader picked and what bounds the run, so
+// nothing about the start is waiting on the number.
+export const Counting: Story = {
+  render: backreadStory(
+    { state: "none" },
+    // Never settles, which is the steady state this story is about.
+    { "POST /connectors/gmail/backfill/preview": () => new Promise(() => {}) },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/Counting the messages/i);
+    await expect(
+      canvas.getByRole("button", { name: /Connect and read/i }),
+    ).toBeEnabled();
+  },
 };
 
 // A cold-start workspace has no priced call history, so the estimate is a
@@ -107,8 +128,8 @@ export const Running: Story = {
       messages_scanned: 1960,
       captured: 730,
       skipped: 1230,
-      people_created: 214,
-      organizations_created: 58,
+      contacts_created: 214,
+      companies_created: 58,
     },
     updated_at: "2026-07-31T09:20:00Z",
   }),
@@ -143,8 +164,8 @@ export const Done: Story = {
       messages_scanned: 4820,
       captured: 1804,
       skipped: 3016,
-      people_created: 512,
-      organizations_created: 143,
+      contacts_created: 512,
+      companies_created: 143,
     },
     completed_at: "2026-07-31T09:41:00Z",
   }),
@@ -161,7 +182,7 @@ export const Failed: Story = {
 export const Cancelled: Story = {
   render: backreadStory({
     state: "cancelled",
-    counts: { messages_scanned: 300, captured: 96, people_created: 31 },
+    counts: { messages_scanned: 300, captured: 96, contacts_created: 31 },
   }),
 };
 
@@ -207,4 +228,27 @@ export const Stopping: Story = {
     );
     await canvas.findByText(/Nothing was written/i);
   },
+};
+
+export const CappedHistory: Story = {
+  render: backreadStory(
+    { state: "none" },
+    {
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          after_date: "2026-01-31",
+          computed_at: "2026-07-23T10:00:00Z",
+          estimated_messages: 20000,
+          estimate_is_floor: true,
+          estimated_cost_minor: 300,
+          currency: "USD",
+        }),
+    },
+  ),
+};
+
+export const CappedHistoryDark: Story = {
+  ...CappedHistory,
+  globals: { theme: "dark" },
 };

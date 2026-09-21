@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -90,7 +92,24 @@ func requireGenuineTrigger(trigger string) error {
 	if validTriggers[trigger] {
 		return nil
 	}
-	return &BadArgsError{Cause: fmt.Errorf("trigger %q is not genuine engagement", trigger)}
+	// The four that count ride in Guidance, which is ours, and the caller's word
+	// in Cause, which is bounded. Naming none of them left an agent guessing at
+	// a closed set of four, while the REST twin (contacts.handlers_lead) spelled
+	// it out — one door taught the vocabulary and the other refused without it.
+	return &BadArgsError{
+		Cause:    fmt.Errorf("trigger %q is not genuine engagement", trigger),
+		Field:    "trigger",
+		Guidance: "promotion rests on one of: " + strings.Join(genuineTriggerNames(), ", "),
+	}
+}
+
+// genuineTriggerNames is the closed set, derived from the predicate that admits
+// it rather than restated beside it: a second list is how the sentence and the
+// check come to disagree about what promotes a lead.
+func genuineTriggerNames() []string {
+	names := slices.Collect(maps.Keys(validTriggers))
+	slices.Sort(names)
+	return names
 }
 
 // DisqualifyLeadCommand is one lead retirement, whichever door asked for it.
@@ -129,6 +148,70 @@ func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLead
 
 func (r *disqualifyLeadResolver) Guards(ctx context.Context, cmd DisqualifyLeadCommand) error {
 	return r.lead.refuse(ctx, cmd.LeadID)
+}
+
+// DemoteLeadCommand is one reversal of a promotion, whichever door asked for
+// it.
+//
+// Reason travels because both questions read it: Guards refuses an empty one
+// before a human is ever asked, and the contract requires it on the wire. It
+// is not in the approval's summary — the line a human reads names the record
+// and the act, and a free-text reason there would be the caller's words
+// standing where the system's should.
+type DemoteLeadCommand struct {
+	LeadID ids.UUID
+	Reason string
+}
+
+// NewDemoteLeadCall binds one reversal to the resolver that answers for it.
+//
+//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
+func NewDemoteLeadCall(records datasource.SystemOfRecordProvider, cmd DemoteLeadCommand) GovernedCall {
+	return bind[DemoteLeadCommand](&demoteLeadResolver{
+		lead: anchoredRecord{records: records, entityType: datasource.EntityLead},
+	}, cmd)
+}
+
+type demoteLeadResolver struct {
+	lead anchoredRecord
+}
+
+func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand) (StageInfo, error) {
+	rec, err := r.lead.row(ctx, cmd.LeadID)
+	if err != nil {
+		return StageInfo{}, err
+	}
+	return StageInfo{
+		TargetType:    string(datasource.EntityLead),
+		TargetID:      cmd.LeadID,
+		TargetVersion: &rec.Version,
+		Summary:       fmt.Sprintf("Reverse the promotion of lead %s", recordLabel(rec)),
+	}, nil
+}
+
+// Guards refuses a reversal with no reason before it can reach the inbox, and
+// then the lead itself, the same two ways the other lead resolvers do.
+func (r *demoteLeadResolver) Guards(ctx context.Context, cmd DemoteLeadCommand) error {
+	if err := requireDemotionReason(cmd.Reason); err != nil {
+		return err
+	}
+	return r.lead.refuse(ctx, cmd.LeadID)
+}
+
+// requireDemotionReason admits a reversal that says why.
+//
+// One function for both doors, for the reason requireGenuineTrigger states: the
+// staging path asks it through Guards and the execution path through
+// demoteLead.Handle, which an approved retry re-enters without passing Guards.
+// The contract requires the field; asking here is what makes a caller who omits
+// it read a refusal about the reversal rather than a schema complaint from the
+// store.
+func requireDemotionReason(reason string) error {
+	if strings.TrimSpace(reason) != "" {
+		return nil
+	}
+	return &BadArgsError{Cause: errors.New("a demotion states why: an undo nobody explained is " +
+		"indistinguishable later from a mistake")}
 }
 
 // AdvanceProjectPhaseCommand is one project phase transition, whichever door
@@ -192,7 +275,14 @@ func (r *advanceProjectPhaseResolver) Guards(ctx context.Context, cmd AdvancePro
 // costs a human's yes.
 func requireProjectPhase(toPhase string, reason *string) error {
 	if !projectPhases[toPhase] {
-		return &BadArgsError{Cause: fmt.Errorf("to_phase %q is not a project phase", toPhase)}
+		// The ladder rides in Guidance, which is ours, and the caller's word in
+		// Cause, which is bounded. Naming no phase at all left an agent guessing
+		// at a closed set of four.
+		return &BadArgsError{
+			Cause:    fmt.Errorf("to_phase %q is not a project phase", toPhase),
+			Field:    "to_phase",
+			Guidance: "the phases are: " + strings.Join(projectPhaseNames(), ", "),
+		}
 	}
 	if toPhase == projectPhaseClosed && (reason == nil || strings.TrimSpace(*reason) == "") {
 		return &BadArgsError{Cause: errors.New("reason is required when to_phase is closed")}

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -14,10 +14,15 @@ import { LocaleProvider } from "../i18n";
 import { UsersAdminCard } from "./users-admin";
 
 // The admin-issued set-password link. What matters here is WHEN the action is
-// offered: an installation that mails the link, or a member who could not
+// offered: an installation that cannot build a link, or a member who could not
 // redeem one, must not show a control whose only outcome is a refusal — and a
 // link that fails to mint must not leave the admin believing the invite
 // finished.
+//
+// The screen renders what `/me` says and never re-derives it. Which postures
+// make the capability false is the server's question, and it changed: a
+// configured mailer used to be one of them, on the reasoning that such an
+// installation mails the link — which is true only while the mail arrives.
 
 const LINK_URL = "https://crm.example.test/#/reset-password?token=raw-token";
 
@@ -171,14 +176,15 @@ async function clickLinkAction(name = "Ada Active") {
 }
 
 describe("admin-issued set-password link", () => {
-  it("offers no link action where the installation mails the link", async () => {
+  it("offers no link action where the server says this seat cannot issue one", async () => {
     vi.stubGlobal("fetch", backend({ adminPasswordLink: false }));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    // Where email works the invite carries the link, so this control would only
-    // ever 409 — an admin must not be shown it at all. Asserted with Ada's menu
-    // OPEN: a closed menu renders none of its items, so the same query against a
-    // shut one would pass whatever the installation can do.
+    // A false capability means the call would only ever refuse — no public base
+    // URL to build against, no grant, or a read seat — so an admin must not be
+    // shown the control at all. Asserted with Ada's menu OPEN: a closed menu
+    // renders none of its items, so the same query against a shut one would
+    // pass whatever the installation can do.
     const verbs = await rowMenu("Ada Active");
     expect(
       verbs.queryByRole("button", { name: /set-password link/i }),
@@ -285,10 +291,12 @@ describe("admin-issued set-password link", () => {
     await clickLinkAction();
     await screen.findByLabelText("Set-password link");
     await userEvent.click(screen.getByRole("button", { name: /copy link/i }));
-    // The admin is told to copy by hand rather than left with a dead button.
+    // The admin is told to copy by hand rather than left with a dead button:
+    // the heading says the copy did not happen, the body says what to do.
     expect(
-      await screen.findByText(/could not copy automatically/i),
+      await screen.findByText(/the link could not be copied/i),
     ).toBeTruthy();
+    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
   });
 
   it("recovers from a transport failure instead of hanging on pending", async () => {

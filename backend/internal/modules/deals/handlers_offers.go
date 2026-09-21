@@ -97,6 +97,9 @@ func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
 		v := formatPct(*in.TaxRate)
 		row.TaxRate = &v
 	}
+	model, months := billingClassificationOf(in.BillingModel, in.BillingIntervalMonths)
+	row.BillingModel, row.BillingIntervalMonths = model, months
+	row.IntervalCount = in.IntervalCount
 	return row
 }
 
@@ -146,12 +149,12 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		}
 	}
 	in := CreateOfferInput{
-		Currency:   req.Currency,
-		BuyerOrgID: idArg[ids.OrganizationKind](req.BuyerOrgId),
-		IntroText:  req.IntroText,
-		TermsText:  req.TermsText,
-		TemplateID: idArg[ids.OfferTemplateKind](req.TemplateId),
-		Source:     req.Source,
+		Currency:       req.Currency,
+		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
+		IntroText:      req.IntroText,
+		TermsText:      req.TermsText,
+		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		Source:         req.Source,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")
@@ -194,12 +197,12 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	in := UpdateOfferInput{
-		Currency:   req.Currency,
-		BuyerOrgID: idArg[ids.OrganizationKind](req.BuyerOrgId),
-		IntroText:  req.IntroText,
-		TermsText:  req.TermsText,
-		TemplateID: idArg[ids.OfferTemplateKind](req.TemplateId),
-		IfVersion:  ifVersion,
+		Currency:       req.Currency,
+		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
+		IntroText:      req.IntroText,
+		TermsText:      req.TermsText,
+		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		IfVersion:      ifVersion,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")
@@ -270,6 +273,20 @@ func (h Handlers) UpdateOfferLineItem(w http.ResponseWriter, r *http.Request, id
 	if req.TaxRate != nil {
 		v := formatPct(*req.TaxRate)
 		in.TaxRate = &v
+	}
+	// The classification is written whenever the caller names EITHER half, so
+	// that naming one and omitting the other cannot leave the pair half-stated
+	// — and so that a caller who means "not specified" can say it by sending
+	// the model as null beside a cadence they also null. Omitting both leaves
+	// the line's classification exactly as it was.
+	if req.BillingModel != nil || req.BillingIntervalMonths != nil {
+		in.Classified = true
+		model, months := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
+		in.BillingModel, in.BillingIntervalMonths = model, months
+	}
+	if req.IntervalCount != nil {
+		in.IntervalCountSet = true
+		in.IntervalCount = req.IntervalCount
 	}
 	offer, err := h.store.UpdateOfferLineItem(r.Context(), pathID[ids.OfferKind](id), ids.UUID(lineItemId), in)
 	if err != nil {

@@ -3,7 +3,7 @@
 
 // Command migrate is the schema-migration process role (ADR-0054,
 // amended §2): applies the embedded core + custom namespaces (ADR-0017)
-// and the composed extension set's namespaces (ADR-0069) with the
+// and the composed extension set's namespaces (ADR-0120) with the
 // owner-role DSN. Thin main, a testable run().
 package main
 
@@ -16,7 +16,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"syscall"
 
@@ -35,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/migrations"
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func main() {
@@ -50,7 +48,7 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|org-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
+		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>]")
 	}
 	direction := args[0]
 
@@ -93,7 +91,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 
 	switch direction {
 	case "up":
-		exts, err := extensionNamespaces(composition.Extensions())
+		exts, err := dbmigrate.ExtensionNamespaces(composition.Extensions())
 		if err != nil {
 			return err
 		}
@@ -108,12 +106,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return dropDB(ctx, conn, *name, stdout)
 	case "db-exists":
 		return dbExists(ctx, conn, *name, stdout)
-	case "org-exists":
-		return orgExists(ctx, conn, stdout)
+	case "workspace-exists":
+		return workspaceExists(ctx, conn, stdout)
 	case "setup-token":
 		return rotateSetupToken(ctx, resolved, stdout)
 	default:
-		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or org-exists)", direction)
+		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or workspace-exists)", direction)
 	}
 }
 
@@ -163,7 +161,9 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if err != nil {
 		return err
 	}
-	riverPool, err := database.NewPool(ctx, dsn)
+	// No request ceiling: River's own migrator and the index below are DDL,
+	// and this is the role that runs it.
+	riverPool, err := database.NewPool(ctx, database.WithoutRequestCeilings(dsn))
 	if err != nil {
 		return fmt.Errorf("migrate: opening river pool: %w", err)
 	}
@@ -213,49 +213,6 @@ const upSummaryFormat = "applied %d core+custom+extension + %d river migration(s
 const riverWorkspaceArgIndex = `
 CREATE INDEX IF NOT EXISTS river_job_workspace_arg
     ON river_job ((args ->> 'workspace_id'))`
-
-// extensionNamespaces turns the composed extension set into migration
-// namespaces — one per unit that ships a migrations layer, each tracked in
-// its own schema_migrations_ext_<name>.
-//
-// The bytes come from the unit's own embedded FS, so this works in the
-// deployed image, where there is no extensions/ tree to read (the api image
-// ships the binary alone).
-//
-// Sorted by unit name. No unit's schema may depend on another's — each owns
-// only its ext_<name>_ tables — so the order is not a correctness
-// requirement; it is that two runs of one composition must produce the same
-// migration log, and the composed slice's order belongs to the generator.
-func extensionNamespaces(exts []extension.Extension) ([]dbmigrate.Namespace, error) {
-	ordered := make([]extension.Extension, len(exts))
-	copy(ordered, exts)
-	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Name < ordered[j].Name })
-
-	namespaces := make([]dbmigrate.Namespace, 0, len(ordered))
-	for _, e := range ordered {
-		if e.Migrations == nil {
-			continue // a unit that owns no tables, which is the common case
-		}
-		// NamespaceFor, not a local derivation: the tracking table, the
-		// ext_<name>_ table prefix and the ext_<name> role are ONE namespace,
-		// and a second spelling is how they start disagreeing. It validates
-		// the unit name too, so a name that could not be a SQL identifier is
-		// refused before any DDL runs.
-		namespace, err := dbmigrate.NamespaceFor(string(e.Name))
-		if err != nil {
-			return nil, fmt.Errorf("migrate: extension %q: %w", e.Name, err)
-		}
-		loaded, err := dbmigrate.Load(e.Migrations, extension.MigrationsDir)
-		if err != nil {
-			return nil, fmt.Errorf("migrate: extension %q: %w", e.Name, err)
-		}
-		if len(loaded) == 0 {
-			return nil, fmt.Errorf("migrate: extension %q embeds %s/ but it holds no NNNN_name.up.sql/.down.sql pair — a declared-but-empty layer reads as a schema that applied, so leave Migrations nil for a unit that owns no tables", e.Name, extension.MigrationsDir)
-		}
-		namespaces = append(namespaces, dbmigrate.Namespace{Name: namespace, Migrations: loaded})
-	}
-	return namespaces, nil
-}
 
 // reportExtensionNamespaces names the extension lanes BEFORE they are
 // applied, and says so explicitly when there are none.
@@ -413,7 +370,7 @@ func resetPassword(ctx context.Context, conn *pgx.Conn, email string, stdin io.R
 	return nil
 }
 
-// singletonWorkspace resolves the one active organization — the same
+// singletonWorkspace resolves the one active company — the same
 // 0/1/>1 state machine every process role applies (A107/ADR-0061).
 func singletonWorkspace(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error) {
 	rows, err := tx.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL LIMIT 2`)
@@ -434,11 +391,11 @@ func singletonWorkspace(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error)
 	}
 	switch len(found) {
 	case 0:
-		return ids.WorkspaceID{}, errors.New("migrate reset-password: no active organization — bootstrap the installation first")
+		return ids.WorkspaceID{}, errors.New("migrate reset-password: no active company — bootstrap the installation first")
 	case 1:
 		return found[0], nil
 	default:
-		return ids.WorkspaceID{}, errors.New("migrate reset-password: more than one active workspace — resolve the single-organization invariant first")
+		return ids.WorkspaceID{}, errors.New("migrate reset-password: more than one active workspace — resolve the single-company invariant first")
 	}
 }
 

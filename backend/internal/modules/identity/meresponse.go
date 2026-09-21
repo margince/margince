@@ -12,6 +12,8 @@ package identity
 // other.
 
 import (
+	"context"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -23,11 +25,8 @@ import (
 // deployment posture, whether this caller may issue set-password links — is
 // wiring the composition root injected onto Handlers, so passing them
 // alongside would be a row of anonymous booleans at each call site.
-func (h Handlers) meResponse(
-	id Identity,
-	sorMode crmcontracts.MeResponseSystemOfRecordMode,
-) crmcontracts.MeResponse {
-	adminPasswordLink := h.canIssuePasswordLink(id)
+func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
+	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
 	roles := id.Roles
 	if roles == nil {
 		roles = []string{}
@@ -46,18 +45,15 @@ func (h Handlers) meResponse(
 			// The round trip was built at both ends and severed here. Signup
 			// captures the browser's zone, ParseTimezone validates it, and the
 			// row stores it — and this response then dropped it, so nothing
-			// downstream could localize an instant to the person reading it.
+			// downstream could localize an instant to the reader reading it.
 			// The twelve hard-coded "Europe/Berlin" literals on the frontend
 			// are what a caller does when no correct answer is served.
 			// margince/margince#26.
 			Timezone: optionalString(id.Timezone),
 		},
-		Roles:         roles,
-		Teams:         teams,
-		WorkspaceName: id.WorkspaceName,
-		SystemOfRecord: &struct {
-			Mode crmcontracts.MeResponseSystemOfRecordMode `json:"mode"`
-		}{Mode: sorMode},
+		Roles:              roles,
+		Teams:              teams,
+		WorkspaceName:      id.WorkspaceName,
 		NonProduction:      h.nonProduction,
 		DataResetAvailable: &h.dataResetAvailable,
 		AdminPasswordLink:  adminPasswordLink,

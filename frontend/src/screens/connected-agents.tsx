@@ -72,7 +72,7 @@ async function fetchConnectorState(): Promise<ConnectorState> {
 }
 
 // One command per client, because "point your agent at the URL" is exactly the
-// instruction people cannot act on. All four reach the same place: the client
+// instruction contacts cannot act on. All four reach the same place: the client
 // registers itself, and the consent screen asks which of the five scopes to
 // grant.
 //
@@ -152,7 +152,7 @@ function ConnectGuide() {
                   label={guide.name}
                   description={guide.note && t(guide.note)}
                   control={
-                    <code className="t-mono t-caption agents-guide-command">
+                    <code className="agents-guide-command">
                       {guide.command(connector.url)}
                     </code>
                   }
@@ -266,7 +266,6 @@ function endVerb(
   if (!state.ended) {
     return (
       <Button
-        small
         variant="danger"
         aria-label={t("agents.disconnectNamed", { client })}
         onClick={onEnd}
@@ -280,7 +279,6 @@ function endVerb(
   }
   return (
     <Button
-      small
       aria-label={t("agents.revokeGrantNamed", { client })}
       onClick={onEnd}
     >

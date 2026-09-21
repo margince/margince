@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { throwProblem } from "./common";
+
+type Carriage = components["schemas"]["ChannelProviderEntry"]["attachments"];
 
 // The transport directory (ADR-0107/A158). Which messaging providers exist is a
 // DEPLOYMENT fact, so the generated types carry no enum to render from — the
@@ -10,8 +13,10 @@ import { throwProblem } from "./common";
 // One cache key for every surface that needs a label, because the answer is
 // identical for every caller and changes only on deploy: a second fetch would
 // be a second copy of a value that cannot differ.
-export function useChannelProviders() {
+export function useChannelProviders(enabled = true) {
   return useQuery({
+    // Off for a surface that is mounted but not showing — see useVoiceProfile.
+    enabled,
     queryKey: ["channel-providers"],
     queryFn: async () => {
       const { data, error } = await api.GET("/channel-providers");
@@ -56,4 +61,25 @@ export function useProviderLabel(): (provider: string) => string {
     }
   }
   return (provider: string) => named.get(provider) ?? provider;
+}
+
+// useProviderCarriage returns a function that reads a transport's carriage
+// bounds from the directory, or undefined for one the directory does not name.
+//
+// A selector beside useProviderLabel because both read the ONE directory fetch:
+// a second caller of useChannelProviders would be a second copy of an answer
+// that changes only on deploy. Mail is deliberately absent — it is not a channel
+// provider — so a composer that asks about the mail transport gets undefined and
+// falls to the mail path's own limits rather than a channel's.
+export function useProviderCarriage(
+  enabled = true,
+): (provider: string) => Carriage | undefined {
+  const directory = useChannelProviders(enabled);
+  const byProvider = new Map(
+    (directory.data?.data ?? []).map((entry) => [
+      entry.provider,
+      entry.attachments,
+    ]),
+  );
+  return (provider: string) => byProvider.get(provider);
 }

@@ -109,7 +109,8 @@ posture, never a licence:
   picked-up row fails with an actionable message instead of rotting queued. The **same** dependency
   takes different postures on different kinds — `Embedder` registers nothing for the embed drift
   sweep and anyway for a reindex — which is why the posture is per kind and never per field. A
-  posture declared with no condition to be absent from fails generation.
+  posture declared with no condition to be absent from fails generation, and the census holds the
+  wiring to what each kind declares by withholding one dependency at a time (§8).
 - **`fault: {nil_after_logging: …}`** — this worker logs a failure and returns `nil`, and the text is
   the durable retry policy that makes a green River row honest (the connector sidecar's
   `next_sync_at`, a build row's own `deferred` state). Omitted, the worker must return what went
@@ -276,8 +277,8 @@ the one dispatcher a hand-maintained comment forgot to list.
 one `InsertMany`. A per-workspace loop of single inserts that fails partway leaves some children
 queued and then fails the dispatcher; by the time it retries, those children may already have
 `completed` — and `activeSweepStates` deliberately excludes `completed`, so `ByArgs` uniqueness does
-**not** suppress them. The retry would silently re-run those workspaces: a second overlay reconcile
-spending incumbent API quota, a second AI-backed capture pass spending model budget. What this does
+**not** suppress them. The retry would silently re-run those workspaces: a second AI-backed capture
+pass spending model budget. What this does
 not buy is exactly-once — River is at-least-once, and the bound on that is the workspace passes
 themselves, each re-reading its own backlog.
 
@@ -333,10 +334,10 @@ func (f *fault) Error() string { return f.sentence }   // fixed
 func (f *fault) Unwrap() error { return f.cause }      // still classifies
 ```
 
-The vocabulary maps the shared sentinel registry (`internal/shared/apperrors`) to fifteen sentences,
+The vocabulary maps the shared sentinel registry (`internal/shared/apperrors`) to sixteen sentences,
 each saying what went wrong **and** what it means for the job — an operator reading a failure list
 needs to know whether to retry, wait, or fix something (`"the record this job names no longer
-exists"`, `"the incumbent CRM's API budget is spent; the poller will catch up"`). An unclassified
+exists"`, `"the provider refused the credential; reconnect the account"`). An unclassified
 cause logs at ERROR with the caller's context and becomes one fixed fallback sentence that says where
 the diagnosis went.
 
@@ -455,7 +456,7 @@ read green. (The census carries its own, `declaredJobKindFloor`, beside the asse
 | `jobwirekey_test.go` | a workspace key spelled anything but `json:"workspace_id"`, of any type but `ids.UUID`, absent, embedded, or duplicated at one depth — and, the other direction, a **dispatcher** shipping a workspace key at all. Both failures look exactly like the reassuring answer to `args->>'workspace_id'` |
 | `jobbinding_test.go` | a `Work` body that binds its own workspace inline instead of through `workspaceJobCtx` — which could declare one field and bind another, with the role gate still green |
 | `jobfleetwide_test.go` | a `FleetWide` dispatcher that never fans out, that fans out around the three chokepoints, that issues a tenant write, or that no worker runs at all |
-| `jobfleetwideshapes_test.go` | the gate above, falsified: every dispatch shape the tree actually uses proven **accepted**, and the two shapes it exists to reject proven rejected. A gate that blocks a legitimate author gets weakened by the person it stopped |
+| `jobfleetwideshapes_test.go` | the gate above, falsified: every dispatch shape the tree actually uses proven **accepted**, and the two shapes it exists to reject proven rejected. A gate that blocks a legitimate author gets weakened by the contact it stopped |
 | `jobfleetscan_test.go` | a `FROM workspace` collection read outside the ratified sites, each of which must name which of four things it is (a dispatcher's enumeration, a pure read, a boot path, or tenant resolution for an untenanted inbound request) |
 | `jobfault_test.go` | a `Work` return, or an assignment to a named error result, that is not `nil`, `jobs.Fault(…)` or a River control return — plus a worker that logs an error and returns `nil` without a ratified `fault:` waiver |
 | `jobargscontent_test.go` | an args field the contract does not declare, a scalar with no rationale, and a content-sounding field name declared `id` with nothing said about it |
@@ -467,6 +468,15 @@ The census is the only gate that holds **both** ends of the contract at once. Ev
 single end: the union stops an undeclared kind compiling, `MustBeTotal` refuses a boot that got one in
 anyway, `Govern` makes the declared timeout the one River applies — none of them can see a kind that
 was declared and never wired.
+
+It reads a **maximally-configured** role, which is the only way to see the contract's full extent and
+is exactly why it needs a second pass for the registration postures: with every dependency supplied,
+the question `absent:` answers never comes up. `jobcensusposture.go` withholds one declared
+dependency at a time, rebuilds the wiring, and holds what got registered to what `registers()` says
+should have. Both directions are findings — a kind declaring *registers anyway* that no guard
+registers is a row refused at insert with a message about River's worker bundle, and a kind declaring
+*registers nothing* that a guard registers anyway is a worker waiting for rows the schedule half will
+never enqueue.
 
 ---
 
@@ -503,7 +513,7 @@ was declared and never wired.
 | The ONE fleet enumeration + the three fan-out helpers | `internal/compose/dispatch.go` |
 | Workspace binding | `internal/compose/workspacejob.go` |
 | Schedule resolution from the declared cadence | `internal/compose/jobschedule.go` |
-| The census (contract ⟷ wiring, both directions) | `internal/compose/jobcensus.go`, `jobcensusconfig.go` |
+| The census (contract ⟷ wiring, both directions) | `internal/compose/jobcensus.go`, `jobcensusconfig.go`, `jobcensusposture.go` |
 | Per-concern workers and args types | `internal/compose/jobs_*.go` |
 | The fitness gates | `backend/job*_test.go` |
 

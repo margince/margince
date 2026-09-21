@@ -11,7 +11,7 @@ import {
 } from "./story-utils";
 
 // The three sources side by side, because telling them apart is the card's whole
-// job: a model verdict, a heuristic, and a person who deliberately let a domain
+// job: a model verdict, a heuristic, and a contact who deliberately let a domain
 // back in. The admitted row carries a company id — the McKinsey case, where
 // unblocking re-asked the company question and one landed.
 const BY_VERDICT = {
@@ -20,7 +20,7 @@ const BY_VERDICT = {
   reason: "a newsletter platform, not a customer",
   source: "verdict",
   decided_at: "2026-07-30T09:12:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HEURISTIC = {
   domain: "expensify.example",
@@ -28,7 +28,7 @@ const BY_HEURISTIC = {
   reason: "bulk sender: no reply address, list-unsubscribe header",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HUMAN = {
   domain: "mckinsey.example",
@@ -36,7 +36,29 @@ const BY_HUMAN = {
   reason: "they became a client in July",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
-  organization_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_id: "018f3a1b-0000-7000-8000-00000000c001",
+};
+// The two open questions that reach this list: the ones belonging to nobody.
+// Nothing decided them, their retry cursor is cleared, and no colleague's queue
+// can carry them — a question is addressed by the mailbox that raised it, and
+// these have none left. Without this surface they would be visible to nobody.
+const UNEVIDENCED = {
+  domain: "pwc.example",
+  admission: "undecided",
+  reason:
+    "Nothing on the site named a company, and the sender's name did not explain the domain.",
+  source: "unevidenced",
+  decided_at: "2026-08-14T11:20:00Z",
+  company_id: null,
+};
+const STALE = {
+  domain: "oldclient.example",
+  admission: "undecided",
+  reason:
+    "The newest mail from this domain is too old to trust today's site as evidence about it.",
+  source: "stale_evidence",
+  decided_at: "2026-08-15T06:40:00Z",
+  company_id: null,
 };
 
 function story(
@@ -59,9 +81,9 @@ function story(
   };
 }
 
-// Reading is every human role's; changing an entry is organization:update.
-const OPS = { organization: ["read", "update"] } as const;
-const READER = { organization: ["read"] } as const;
+// Reading is every human role's; changing an entry is company:update.
+const OPS = { company: ["read", "update"] } as const;
+const READER = { company: ["read"] } as const;
 
 const meta: Meta<typeof BlockedDomainsCard> = {
   title: "Settings/Data/Capture rules/Refused domains",
@@ -72,6 +94,14 @@ type Story = StoryObj<typeof BlockedDomainsCard>;
 
 export const Populated: Story = {
   render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN], 3, OPS),
+};
+
+// Decisions and ownerless open questions in one list, which is the case the card
+// exists for: an operator hunting a company that never appeared has to be able to
+// tell "we refused this" from "nobody ever answered". The undecided rows carry a
+// different verb — asking again, not deciding — and a neutral badge.
+export const WithOpenQuestions: Story = {
+  render: story([UNEVIDENCED, STALE, BY_HEURISTIC, BY_HUMAN], 4, OPS),
 };
 
 // Nothing refused yet. It has to read as a fact about the installation rather
@@ -98,5 +128,5 @@ export const ReadOnly: Story = {
 export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN], 3, OPS),
+  render: story([UNEVIDENCED, BY_HEURISTIC, BY_HUMAN], 3, OPS),
 };

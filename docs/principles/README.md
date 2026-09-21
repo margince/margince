@@ -8,8 +8,8 @@ statement about the shape of this codebase that settles a class of arguments
 before they start, plus the method for checking whether the tree still holds it.
 
 These pages explain; they do not enforce. The binding rules live in `AGENTS.md`
-at the repository root, and the gates that hold them live in tests and in
-`cli/craft`. The rulebook links down to these pages; they do not link back up to
+at the repository root, and the gates that hold them live in tests and in the
+craftsmanship gate. The rulebook links down to these pages; they do not link back up to
 it, so a heading it renames cannot leave a dead anchor here. When a principle
 here and a gate disagree, the gate is the record of current behaviour — fix one
 or the other, and say which.
@@ -23,8 +23,8 @@ or the other, and say which.
 | [Derive the obligation](derive-the-obligation.md) | Why a rule is held by a gate rather than by memory, and how to write one that actually holds rather than one that reads green over its own defect — including the two ways a gate becomes the duplicate it forbids. The shapes a gate comes in are cataloged in [reference/gate-patterns.md](../reference/gate-patterns.md), and the gates themselves are generated into [reference/gate-inventory.md](../reference/gate-inventory.md). | *Rules learned from the review loop* |
 | [Nothing here is private](nothing-here-is-private.md) | Who the public reader is, what never appears in the tree, and why a working exploit takes the private path. | *This repository is public* |
 
-The rulebook sections stay where they are. `cli/craft` feeds the nearest
-`AGENTS.md`'s **`## Craftsmanship` section** into its gate prompt, so a rule
+The rulebook sections stay where they are. The craftsmanship gate feeds the
+nearest `AGENTS.md`'s **`## Craftsmanship` section** into its gate prompt, so a rule
 moved out of that section stops reaching the gate — these pages carry the
 reasoning and the method, the rulebook carries the binding short form. Every `CLAUDE.md` holds nothing but an
 `@AGENTS.md` import, so no rule has a second copy to drift from. A directory may

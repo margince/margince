@@ -12,11 +12,12 @@ import {
   truncate,
 } from "./relationshipmap.layout";
 import "./relationshipmap.css";
+import { Heading } from "./heading";
 
 // The account's routes, drawn.
 //
 // A picture earns its place here by showing what a list cannot: which of our
-// colleagues can reach which of their people, how warm each of those routes is,
+// colleagues can reach which of their contacts, how warm each of those routes is,
 // and where the buying team has a hole. The previous diagram on this page was
 // unlabeled dots hidden from screen readers — it showed that the account had
 // many connections, which the page already said in words.
@@ -77,14 +78,12 @@ export function RelationshipMap({
   // would push the whole account back for a selection that is not there.
   const dimming = focusId !== null && related.size > 0;
 
-  // One tab stop for the whole picture, then the arrow keys walk it. A map of
-  // thirty nodes that took thirty tab stops would be a reason to skip the tab
-  // rather than a way through it.
+  // One tab stop for the whole picture, then arrow keys walk it. Thirty nodes
+  // at thirty tab stops would be a reason to skip the map, not a way through it.
   //
   // The cursor is an ID, not an index. An index into the placed list is stale
-  // the moment a lane expands — the row the reader was standing on is replaced
-  // by the people it was hiding — and an index that survives into a different
-  // list silently points at somebody else.
+  // the moment a lane expands, and one that survives into a different list
+  // silently points at somebody else.
   const order = placement.placed.map((node) => node.id);
   const [cursorId, setCursorId] = useState<string | null>(null);
   const focused = cursorId && order.includes(cursorId) ? cursorId : order[0];
@@ -106,7 +105,7 @@ export function RelationshipMap({
 
   // Focus FOLLOWS the cursor. Moving only the tabindex leaves the ring, the
   // screen reader and Enter all pointing at the node the reader walked away
-  // from — the arrow keys look like they work and activate the wrong person.
+  // from — the arrow keys look like they work and activate the wrong contact.
   useEffect(() => {
     if (!moved.current || !focused) {
       return;
@@ -129,9 +128,8 @@ export function RelationshipMap({
 
   const openLane = (id: string) => {
     const lane = id.slice("more:".length);
-    // The row the reader is standing on is about to be replaced by the people
-    // it was hiding, so the cursor moves to the first of them — otherwise
-    // focus falls out of the map entirely.
+    // The row the reader stands on is replaced by the contacts it hid, so the
+    // cursor moves to the first of them, or focus falls out of the map.
     const firstHidden = model.lanes
       .find((candidate) => candidate.id === lane)
       ?.nodeIds.find((nodeId) => !order.includes(nodeId));
@@ -367,7 +365,7 @@ function Node({
         y={placed.y}
         width={placed.w}
         height={placed.h}
-        rx={placed.kind === "organization" ? 12 : 8}
+        rx={placed.kind === "company" ? 12 : 8}
       />
       <text className="rmap-name" x={placed.x + 12} y={placed.y + 22}>
         {truncate(node.label)}
@@ -379,7 +377,7 @@ function Node({
       )}
       {node.engagementLabel && (
         <text
-          className={`rmap-pill rmap-pill-${node.engagement ?? "untried"}`}
+          className={`rmap-pill-${node.engagement ?? "untried"}`}
           x={placed.x + 12}
           y={placed.y + 54}
         >
@@ -416,7 +414,7 @@ function Panel({
   const best = route
     ? model.edges.find((e) => e.id === route.edgeIds[0])
     : null;
-  // A route runs colleague → person, so which END is the reader's depends on
+  // A route runs colleague → contact, so which END is the reader's depends on
   // which they selected. Reading it one way round printed "Lars Meyer → Lars
   // Meyer" for a colleague focus and listed none of their other routes.
   const fromColleague = node.kind === "user";
@@ -430,7 +428,9 @@ function Panel({
     model.nodes.find((candidate) => candidate.id === id)?.label ?? id;
   return (
     <div>
-      <h3 className="rmap-panel-title">{node.label}</h3>
+      <Heading size="medium" className="rmap-panel-title">
+        {node.label}
+      </Heading>
       {node.sublabel && <p className="rmap-panel-sub">{node.sublabel}</p>}
       <p className="rmap-panel-label t-eyebrow">{labels.bestRoute}</p>
       {best ? (
@@ -459,7 +459,6 @@ function Panel({
             <Button
               key={action.id}
               variant={action.primary ? "primary" : "ghost"}
-              small
               onClick={() => onAction?.(node.id, action.id)}
             >
               {action.label}

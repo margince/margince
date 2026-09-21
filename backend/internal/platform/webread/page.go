@@ -26,6 +26,9 @@ type Page struct {
 	// host may only forward.
 	FinalURL string
 	Text     string
+	// Sections keeps heading boundaries for callers attributing details to
+	// one of several entities on a page. Each section uses Text's reduction.
+	Sections []string
 	Links    []string
 	Bytes    int
 	// OGImage is the og:image the page declared (absolute), or "" when it
@@ -33,6 +36,12 @@ type Page struct {
 	OGImage string
 	// Icons are the icons the page's <link rel> declared, in document order.
 	Icons []IconRef
+	// Logos are the pictures the page calls its LOGO, absolute and in the order
+	// the page offers them: what its JSON-LD names as one, then the <img>
+	// elements it labels as one. This is the lockup — the wordmark an expanded
+	// sidebar has room for — where Icons and OGImage are the square badge and
+	// the sharing card. Read from the body, deliberately (logoimages.go).
+	Logos []string
 	// Fingerprint is what this page declared about the software serving it,
 	// read from the same response the text above came from.
 	//
@@ -52,7 +61,7 @@ type Page struct {
 	//
 	// The JSON-LD half is here rather than in a field of its own because it
 	// answers the same question and every reader of this one already asks it:
-	// a schema.org block naming the organization is the page's claim about
+	// a schema.org block naming the company is the page's claim about
 	// itself exactly as a meta description is, and a separate field would have
 	// to be threaded through the crawl's dedupe, its prose and its emptiness
 	// test one call site at a time.
@@ -81,7 +90,7 @@ type Page struct {
 // This is a real shape, not a defensive one. A site can announce its language
 // choice this way — an empty document whose whole content is
 // `<meta http-equiv="refresh" content="0; URL=/de">` — and a browser lands on
-// the real site without the person ever seeing the shell. A reader that stops
+// the real site without the contact ever seeing the shell. A reader that stops
 // at the shell sees a page with nothing on it, which is indistinguishable from
 // a parked domain and gets judged as one.
 func (p Page) MetaRefreshOnly() bool {
@@ -155,10 +164,12 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		URL:             rawURL,
 		FinalURL:        base.String(),
 		Text:            StripTags(body),
+		Sections:        HeadingSections(body),
 		Links:           extractLinks(body, base),
 		Bytes:           len(body),
 		OGImage:         head.ogImage,
 		Icons:           head.icons,
+		Logos:           declaredLogos(body, base),
 		Refresh:         head.refresh,
 		HeadText:        append(head.text, linkedDataClaims(body)...),
 		ExternalScripts: external,

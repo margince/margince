@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -202,7 +203,7 @@ func (s Server) writeLicenseMetrics(w io.Writer) {
 		if state == posture.State {
 			value = 1
 		}
-		fmt.Fprintf(&section, "margince_license_posture{state=%q} %d\n", string(state), value)
+		fmt.Fprintf(&section, "margince_license_posture{state=%s} %d\n", httpserver.Label(string(state)), value)
 	}
 	// Omitted rather than zeroed when the license caps nothing: a gauge reading
 	// zero seats is a license that permits none, which is the opposite of what an
@@ -215,5 +216,5 @@ func (s Server) writeLicenseMetrics(w io.Writer) {
 	// Assembled first and written once, so a refused write cannot leave half a
 	// gauge family in the exposition.
 	//craft:ignore swallowed-errors the renderer httpserver.Metrics takes for this section has no error return; the job section, which does, is a separate parameter that reports its own
-	_, _ = io.WriteString(w, section.String())
+	httpserver.WriteLine(w, "%s", section.String())
 }

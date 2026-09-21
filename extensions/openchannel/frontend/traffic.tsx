@@ -23,7 +23,7 @@ import {
 
 // What arrived, and what left. Two listings rather than one, because who has
 // been messaging a member and who that member has been messaging are two
-// questions an operator answers for two different sets of people — which is
+// questions an operator answers for two different sets of contacts — which is
 // why they are two RBAC objects, and why each list is asked for only by a seat
 // that holds its own.
 //
@@ -54,11 +54,11 @@ const STATE_COPY: Readonly<Record<string, `ext${string}`>> = {
 };
 
 /** Which states read as settled, as caution, and as stopped. */
-const STATE_TONE: Readonly<Record<string, "success" | "warn" | "danger">> = {
-  pending: "warn",
+const STATE_TONE: Readonly<Record<string, "success" | "warning" | "danger">> = {
+  pending: "warning",
   ingested: "success",
   failed: "danger",
-  withdrawn: "warn",
+  withdrawn: "warning",
 };
 
 const OUTCOME_COPY: Readonly<Record<string, `ext${string}`>> = {
@@ -67,10 +67,10 @@ const OUTCOME_COPY: Readonly<Record<string, `ext${string}`>> = {
   unknown: "extOpenchannel.outcome.unknown",
 };
 
-const OUTCOME_TONE: Readonly<Record<string, "success" | "warn" | "danger">> = {
+const OUTCOME_TONE: Readonly<Record<string, "success" | "warning" | "danger">> = {
   sent: "success",
   refused: "danger",
-  unknown: "warn",
+  unknown: "warning",
 };
 
 /**
@@ -107,10 +107,8 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
   });
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.inbound.title")}
-        sub={t("extOpenchannel.inbound.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.inbound.title")} />
+      <p>{t("extOpenchannel.inbound.sub")}</p>
       {canRead ? (
         <QueryStates
           query={inbound}
@@ -126,7 +124,7 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                   key: "state",
                   header: t("extOpenchannel.inbound.state"),
                   render: (row) => (
-                    <Badge quiet tone={STATE_TONE[row.state]}>
+                    <Badge tone={STATE_TONE[row.state]}>
                       {t(
                         STATE_COPY[row.state] ?? "extOpenchannel.state.other",
                         { state: row.state },
@@ -197,10 +195,8 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
   );
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.outboundList.title")}
-        sub={t("extOpenchannel.outboundList.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.outboundList.title")} />
+      <p>{t("extOpenchannel.outboundList.sub")}</p>
       {canRead ? (
         <QueryStates
           query={outbound}
@@ -216,7 +212,7 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                   key: "outcome",
                   header: t("extOpenchannel.outboundList.outcome"),
                   render: (row) => (
-                    <Badge quiet tone={OUTCOME_TONE[row.outcome]}>
+                    <Badge tone={OUTCOME_TONE[row.outcome]}>
                       {t(
                         OUTCOME_COPY[row.outcome] ??
                           "extOpenchannel.outcome.other",

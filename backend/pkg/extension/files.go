@@ -182,7 +182,7 @@ func DeclaredTypeDisagreement(declared, sniffed string) string {
 // Three classes go, and each is a real attack rather than tidiness. Path
 // separators stop a name from ever reading as a path. Line breaks stop a name
 // from rewriting a log line it appears in. Bidirectional overrides stop a name
-// from rendering as an extension it does not have — the name a person reads and
+// from rendering as an extension it does not have — the name a reader reads and
 // the extension the file has must be the same string. (A name ending "gpj.exe"
 // with a RIGHT-TO-LEFT OVERRIDE before it renders as "...jpg".)
 //
@@ -264,4 +264,13 @@ type Carriage struct {
 	// counted in CHARACTERS because a caption cap is a provider's rune count and
 	// not a byte budget.
 	MaxBodyWithFiles int
+	// MaxTotalBytes bounds what one message may carry ACROSS its files, where
+	// the provider has an aggregate of its own. Zero means it has none — not
+	// that nothing may go — and the product's own send budget applies instead.
+	//
+	// It is a separate bound because MaxFiles and MaxBytesPerFile cannot express
+	// it between them: ten files each under the per-file cap can total ten times
+	// what a send may carry, which is a message the composer called fine and the
+	// send refuses.
+	MaxTotalBytes int64
 }

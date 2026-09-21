@@ -14,12 +14,8 @@
   margin-bottom: 0;
 }
 
-/* The field's NAME, in the reader's own language — so it is set as a label
- * rather than as the identifier it used to be: a mono, upper-cased,
- * letter-spaced treatment reads as a column name however the word is spelled,
- * which is the thing this heading stopped being. */
+/* The field's NAME, in the reader's own language. */
 .fgroup-head {
-  font-weight: 600;
   margin-bottom: var(--space-2);
 }
 
@@ -81,10 +77,6 @@
 .entry-field > .field-diff {
   flex: 1 1 12rem;
   min-width: 0;
-}
-
-.entry-field-name {
-  font-weight: 600;
 }
 
 /* The verb on one entry, and the sentence a refused press comes back with.

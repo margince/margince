@@ -251,7 +251,7 @@ func seedHeldThreadMail(t *testing.T, e *integration.Env, threadKey, from, subje
 
 func TestOneSeatsVerdictDoesNotPublishAColleaguesHeldMessage(t *testing.T) {
 	// The per-owner model, at the point where it is easiest to break. A thread
-	// reaching two mailboxes is two people's correspondence: each seat gets its
+	// reaching two mailboxes is two contacts's correspondence: each seat gets its
 	// own ledger row, each may conclude differently, and the message ends at
 	// the STRICTEST of their answers.
 	//
@@ -359,112 +359,6 @@ func countThreadQuestions(t *testing.T, e *integration.Env, threadKey string) in
 		t.Fatalf("counting thread questions: %v", err)
 	}
 	return n
-}
-
-// A personal verdict withdraws the contact capture already made.
-//
-// The verdict almost always arrives AFTER the contact: capture creates on
-// commit and classification reads the thread later. In one real mailbox every
-// contact on a personal thread — forty-six of them, a founder's aunt among them
-// — predated the verdict about it, so refusing at creation time alone would
-// have prevented none of them.
-func TestAPersonalVerdictRetractsTheContactCaptureAlreadyMade(t *testing.T) {
-	e := integration.Setup(t)
-	const aunt = "aunt@family.test"
-	activityID := seedHeldThreadMail(t, e, "thread-family", aunt, "Geburtstag")
-	threadID := seedThreadQuestion(t, e, "thread-family", activityID)
-	personID := seedCapturedContact(t, e, aunt)
-
-	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
-
-	if !personIsArchived(t, e, personID) {
-		t.Fatal("a contact whose only correspondence is a private conversation is still in the CRM — " +
-			"the classifier decided this is not the workspace's business")
-	}
-}
-
-// A contact who ALSO writes about business survives. They are a business
-// contact who happens to have a private thread too, and retracting them would
-// lose a real counterparty.
-func TestAPersonalVerdictKeepsAContactWhoAlsoWritesAboutBusiness(t *testing.T) {
-	e := integration.Setup(t)
-	const both = "cousin@family.test"
-	privateActivity := seedHeldThreadMail(t, e, "thread-private", both, "Familie")
-	threadID := seedThreadQuestion(t, e, "thread-private", privateActivity)
-	// A second conversation with the same person that nothing judged personal.
-	seedHeldThreadMail(t, e, "thread-business", both, "Angebot")
-	personID := seedCapturedContact(t, e, both)
-
-	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
-
-	if personIsArchived(t, e, personID) {
-		t.Fatal("a contact who also writes about business was retracted — one private " +
-			"conversation does not make somebody's whole correspondence private")
-	}
-}
-
-// A record a human touched is theirs. A classifier's opinion about one
-// conversation does not overrule somebody having decided they want it.
-func TestAPersonalVerdictKeepsAContactAHumanEdited(t *testing.T) {
-	e := integration.Setup(t)
-	const edited = "friend@family.test"
-	activityID := seedHeldThreadMail(t, e, "thread-edited", edited, "Privat")
-	threadID := seedThreadQuestion(t, e, "thread-edited", activityID)
-	personID := seedCapturedContact(t, e, edited)
-	seedHumanEdit(t, e, personID)
-
-	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
-
-	if personIsArchived(t, e, personID) {
-		t.Fatal("a contact a human edited was retracted — an edit is somebody saying they want this record")
-	}
-}
-
-// seedCapturedContact lands the contact shape capture creates: owner-scoped,
-// captured_by a connector, with the address on it.
-func seedCapturedContact(t *testing.T, e *integration.Env, email string) ids.PersonID {
-	t.Helper()
-	var id ids.PersonID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, source, captured_by, owner_id, visibility)
-			VALUES ($1, 'gmail:seed', 'connector:gmail', $2, 'owner')
-			RETURNING id`, email, e.Rep1).Scan(&id); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, source, captured_by)
-			VALUES ($1, $2, 'gmail:seed', 'connector:gmail')`, id.UUID, email)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the captured contact: %v", err)
-	}
-	return id
-}
-
-// seedHumanEdit lands the audit row a person's own edit leaves behind.
-func seedHumanEdit(t *testing.T, e *integration.Env, id ids.PersonID) {
-	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
-			VALUES ('human', $1, 'update', 'person', $2)`, e.Rep1.String(), id.UUID)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the human edit: %v", err)
-	}
-}
-
-func personIsArchived(t *testing.T, e *integration.Env, id ids.PersonID) bool {
-	t.Helper()
-	var archived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT archived_at IS NOT NULL FROM person WHERE id = $1`, id.UUID).Scan(&archived)
-	}); err != nil {
-		t.Fatalf("reading whether the contact was retracted: %v", err)
-	}
-	return archived
 }
 
 // TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing pins the
@@ -955,7 +849,7 @@ func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
 // TestAnOwnersSharedThreadIsNotReopenedByTheRepair holds the owner's decision
 // against the repair.
 //
-// A person clicking "share this thread" ends the question: no later pass
+// A contact clicking "share this thread" ends the question: no later pass
 // re-asks, because a classifier that could overturn them would make the click
 // advisory. The repair applies the OWNER's answer to the messages that never
 // took it — and must not, on finding a party the owner's decision predates,
@@ -987,7 +881,7 @@ func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
 	}
 
 	if got := threadStatus(t, e, threadID); got != capture.VerdictSharedByOwner {
-		t.Fatalf("thread status = %q, want shared_by_owner: the repair handed a person's "+
+		t.Fatalf("thread status = %q, want shared_by_owner: the repair handed a contact's "+
 			"decision back to the classifier, which makes the click advisory", got)
 	}
 	// And the message the owner never spoke for stays held rather than being

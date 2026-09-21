@@ -9,19 +9,19 @@ import { problemCode, throwProblem } from "./common";
 
 // The licensed-data-provider status vocabulary, in one place because two
 // surfaces render it: the Settings card says whether the connection works,
-// and the person page says what happened to one subject's enrichment. The
+// and the contact page says what happened to one subject's enrichment. The
 // same word must mean the same thing on both — a card reading "connected"
-// beside a person page reading "not connected" is a bug the reader cannot
+// beside a contact page reading "not connected" is a bug the reader cannot
 // diagnose.
 //
 // Extracted as a pure module, like connector-status.ts, so the mapping can be
 // tested without rendering anything.
 
 type ProviderConnection = components["schemas"]["ProviderConnection"];
-type PersonProviderProfile = components["schemas"]["PersonProviderProfile"];
+type ContactProviderProfile = components["schemas"]["ContactProviderProfile"];
 
 export type ProviderConnectionStatus = ProviderConnection["status"];
-export type ProviderProfileState = PersonProviderProfile["state"];
+export type ProviderProfileState = ContactProviderProfile["state"];
 
 /** The tone a status carries, in the design system's own Badge vocabulary so
  *  a caller passes it straight through rather than mapping twice.
@@ -29,7 +29,7 @@ export type ProviderProfileState = PersonProviderProfile["state"];
  *  `undefined` is the neutral tone and is deliberately NOT `danger`: a
  *  provider nobody connected is a configuration, not a fault, and colouring
  *  it red tells an operator to fix something that is not broken. */
-export type StatusTone = "success" | "warn" | "danger" | undefined;
+export type StatusTone = "success" | "warning" | "danger" | undefined;
 
 const CONNECTION_TONE: Record<ProviderConnectionStatus, StatusTone> = {
   connected: "success",
@@ -40,9 +40,9 @@ const CONNECTION_TONE: Record<ProviderConnectionStatus, StatusTone> = {
   invalid_credentials: "danger",
   // Recoverable provider conditions. The connection is intact and the key is
   // good; the vendor is refusing this moment's work.
-  insufficient_credits: "warn",
-  rate_limited: "warn",
-  provider_error: "warn",
+  insufficient_credits: "warning",
+  rate_limited: "warning",
+  provider_error: "warning",
 };
 
 const CONNECTION_LABEL: Record<ProviderConnectionStatus, MessageKey> = {
@@ -63,8 +63,8 @@ export function connectionLabel(status: ProviderConnectionStatus): MessageKey {
   return CONNECTION_LABEL[status];
 }
 
-// The person page's fifteen states. Four of them mean "nothing here" and they
-// are deliberately four: nobody connected a provider, this person is not
+// The contact page's fifteen states. Four of them mean "nothing here" and they
+// are deliberately four: nobody connected a provider, this contact is not
 // eligible for one, this record carries nothing to look them up by, and nobody
 // has asked yet are different answers to "why is this empty". Two of them are
 // something the reader can act on, and the actions differ.
@@ -82,18 +82,18 @@ const PROFILE_TONE: Record<ProviderProfileState, StatusTone> = {
   no_match: undefined,
   // The data is real but old enough that the platform will not vouch for it —
   // or the provider was disconnected and it can no longer be refreshed.
-  stale: "warn",
+  stale: "warning",
   invalid_credentials: "danger",
-  insufficient_credits: "warn",
-  rate_limited: "warn",
-  provider_error: "warn",
+  insufficient_credits: "warning",
+  rate_limited: "warning",
+  provider_error: "warning",
   // The outcome was never learned, and the run may have been charged for.
-  submission_unknown: "warn",
+  submission_unknown: "warning",
   // Paid, and the values never reached the record. Its own state because it
   // is neither a success nor a failure: somebody was charged and has nothing
-  // to show for it, which a person needs to SEE rather than discover as
+  // to show for it, which a contact needs to SEE rather than discover as
   // missing data.
-  completed_claims_unwritten: "warn",
+  completed_claims_unwritten: "warning",
 };
 
 const PROFILE_LABEL: Record<ProviderProfileState, MessageKey> = {
@@ -132,7 +132,7 @@ export function profileLabel(state: ProviderProfileState): MessageKey {
  *  empty, padded element behind. */
 export function roleOf(
   contact: Pick<
-    components["schemas"]["Organization360Contact"],
+    components["schemas"]["Company360Contact"],
     "title" | "provider_title"
   >,
 ): string {
@@ -191,7 +191,7 @@ export function canEnrichNow(
 
 /** What a provider connection costs, per category, as both surfaces read it:
  *  the settings card naming the free ones as safe to switch on, and a buy
- *  button on the person page stating a price before anybody presses it. */
+ *  button on the contact page stating a price before anybody presses it. */
 export type ConnectionsResult = {
   /** True when this build carries no adapter at all. Not an error: it is the
    *  supported "no provider" configuration, and the card says so plainly
@@ -200,9 +200,9 @@ export type ConnectionsResult = {
   connections: ProviderConnection[];
 };
 
-/** The connections, shared by the settings card and the person page.
+/** The connections, shared by the settings card and the contact page.
  *
- *  HERE rather than in either screen: the person page needs the price catalog
+ *  HERE rather than in either screen: the contact page needs the price catalog
  *  to label a buy button, and a second copy of this read would be a second
  *  answer to "what does this provider charge". */
 export function useProviderConnections() {

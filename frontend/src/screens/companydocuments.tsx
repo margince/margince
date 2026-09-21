@@ -75,7 +75,9 @@ const STATE_LABELS: Record<DocState, MessageKey> = {
 
 // Superseded is the one state that changes how a row should READ: it is history,
 // not a candidate. The rest are equal citizens and get no tone.
-const STATE_TONE: Partial<Record<DocState, "warn">> = { superseded: "warn" };
+const STATE_TONE: Partial<Record<DocState, "warning">> = {
+  superseded: "warning",
+};
 
 // A FILTERED read that found nothing is not an empty account. SectionCard's
 // empty state replaces the whole body — filters included — so reporting it here
@@ -130,10 +132,10 @@ function supersededBase(shown: boolean): PluralBase {
 }
 
 export function CompanyDocumentsCard({
-  orgId,
+  companyId,
   refusedReasonId,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   // The id of the page's sentence about why this account takes no changes,
   // while it does not. The upload hangs a file on the account through the
   // account's own write gate, so it is refused by the same fact as Edit.
@@ -161,10 +163,10 @@ export function CompanyDocumentsCard({
   // made from a request that never asked about the other kinds. The account's
   // library is a page of rows, not a feed.
   const query = useQuery({
-    queryKey: ["orgDocuments", orgId],
+    queryKey: ["companyDocuments", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/documents", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/documents", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -199,11 +201,7 @@ export function CompanyDocumentsCard({
       // library is the state this verb exists to leave, and hiding it there
       // would withhold the control exactly when it is wanted.
       titleAction={
-        <Button
-          small
-          reasonId={refusedReasonId}
-          onClick={() => setAdding(true)}
-        >
+        <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
           {t("docs.add.action")}
         </Button>
       }
@@ -219,7 +217,6 @@ export function CompanyDocumentsCard({
               })}
             </span>
             <Button
-              small
               className="rec-foot-action"
               aria-pressed={showSuperseded}
               onClick={() => setShowSuperseded(!showSuperseded)}
@@ -235,7 +232,7 @@ export function CompanyDocumentsCard({
       }
     >
       <AddDocumentDialog
-        anchor={{ record: "organization", id: orgId }}
+        anchor={{ record: "company", id: companyId }}
         open={adding}
         onClose={() => setAdding(false)}
       />
@@ -309,7 +306,7 @@ function DocumentRow({
   // the filenames the reader came for.
   const [reading, setReading] = useState(false);
   // Only a deal-scoped file is offered one, because a deal is the only record
-  // the accept can write to — offering it on a person's CV would be offering
+  // the accept can write to — offering it on a contact's CV would be offering
   // an act that can only be refused.
   const offersReading = doc.entity_type === "deal";
 
@@ -361,7 +358,6 @@ function DocumentRow({
           )}
           {offersReading && (
             <Button
-              small
               aria-expanded={reading}
               onClick={() => setReading(!reading)}
             >

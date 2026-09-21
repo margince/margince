@@ -17,9 +17,9 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  /* The list surface is one card, and takes the card shadow: the same plate
-     rule as `.card`, `Panel` and the readings strip. */
-  box-shadow: var(--shadow-card);
+  /* The list surface is one card, and takes the resting shadow: the same
+     plate rule as `.card`, `Panel` and the readings strip. */
+  box-shadow: var(--shadow-rest);
   overflow: hidden;
 }
 
@@ -41,8 +41,7 @@
 .lt-title {
   flex: none;
   margin: 0;
-  font-family: var(--f-display);
-  line-height: 1.15;
+  font-family: var(--fontFamilyHeading);
 }
 
 .lt-views {
@@ -51,16 +50,18 @@
 }
 
 .lt-vtab {
+  /* A tab is a control in the header's row of controls, so it stands at the one
+     control height. The flex box is what centres the name in it: `.lt-views` is
+     a row, so a bare button blockifies and hangs its label at the top. */
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--controlHeight);
   /* A saved view's name is what a reader identifies it by, so the tab keeps its
      width: squeezed by the header's other content it lost the end of every
      name, and two views truncated to the same prefix are one tab drawn twice. */
   flex-shrink: 0;
   border: 0;
   background: transparent;
-  color: var(--textSecondary);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
   corner-shape: round;
@@ -81,17 +82,24 @@
   /* Holds its line while the rows are loading, so the header does not resize
    * under the reader when the count appears. */
   min-height: 1em;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
-.lt-caption {
+/* Any sentence laid straight onto the surface's ground takes the surface's own
+   inset: the caption above the toolbar, and equally a sentence handed to the
+   body slot with no element of its own around it — a board's caveat about a
+   read that failed, standing above the rows it qualifies. One rule for both,
+   because the reason is the same and two of them drift; without it the second
+   kind printed against the card's border, which is the obligation
+   `.panel > .surfacestate-empty` meets for a state sentence dropped straight
+   into a pane. */
+.lt-caption,
+.lt > p {
   margin: 0;
   padding: var(--space-2) var(--space-4);
+}
+.lt-caption {
   border-bottom: 1px solid var(--borderSubtle);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* ---- toolbar: search, chips, column picker, density ---- */
@@ -110,106 +118,90 @@
   flex: 1;
 }
 
+/* The toolbar's own field shell, and a text field is ONE box: it stands at
+   --inputHeight like the field in a form and like the palette this toolbar's
+   magnifier promises, because 30px here and 40px there was the same control
+   twice. A floor rather than a height, so the box cannot clip what it holds.
+   Nothing on the row has to be re-aligned for it — the select triggers beside
+   this are the same box (`.select-control` in atoms.css), and the buttons that
+   are shorter sit on the middle line `.lt-tools` centres them on. */
 .lt-search {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  height: 30px;
+  min-block-size: var(--inputHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  color: var(--textTertiary);
 }
 .lt-search:focus-within {
   border-color: var(--accent);
   color: var(--accentText);
 }
 
+/* A place to type inside the toolbar's own pill, so it wears the field's type
+ * rather than the engine's: the app reset hands a form control the body FAMILY
+ * and nothing else, which left this box at the browser's default size beside a
+ * `.input` sized by the house. The shell around it owns the box. */
 .lt-search-input {
   border: 0;
   outline: 0;
-  background: transparent;
   font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textPrimary);
+  background: transparent;
+  color: inherit;
   width: 180px;
 }
-/* Placeholder text is still text: SC 1.4.3 exempts inactive controls, pure
- * decoration and invisible text, and a placeholder painted inside a live search
- * field is none of the three. --textTertiary is the 3:1 mark role and measures
- * 2.52:1 here, so it does not even carry a mark's floor — the AA small-text
- * role is what a word a reader reads asks for. (The --textMuted named
- * "placeholder-grade" in tokens.css is 1.54:1 and defensible nowhere paint
- * lands.) The magnifier beside it keeps --textTertiary from .lt-search: that
- * one IS a mark. */
 .lt-search-input::placeholder {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 
 /* Controls a body brings with it (the deals pipeline picker and its stage and
  * company selects). A bare `.input` is a full-width form control; in the
- * toolbar it is one item in a row of pills, so it takes the same height and
- * silhouette as the chips beside it instead of claiming its own line. */
+ * toolbar it is one item in a row of pills, so it shrinks to its content and
+ * takes the pill silhouette instead of claiming its own line. Silhouette only:
+ * the HEIGHT and the INSET are not the toolbar's to choose — a control here is
+ * the same control as one in a form, and a field that is 40px in a form and
+ * something else here is two answers to what a field is. --inputHeight, for the
+ * trigger as much as for the text box, arrives from atoms.css. */
 .lt-tools .select-control.input,
 .lt-tools input.input {
   width: auto;
-  height: 30px;
-  padding: 0 var(--space-3);
-  font-size: var(--fs-sm);
   border-radius: var(--r-full);
   corner-shape: round;
   border-color: var(--borderSubtle);
 }
 
-.lt-note {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
-.lt-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
-  cursor: pointer;
-}
-/* Sized like every other tick in the product. Its box sits outside a
-   `.checkfield`, so unsized it was whatever the engine draws — 13px in Blink,
-   beside 16px boxes on the same screen. */
-.lt-toggle input[type="checkbox"] {
-  inline-size: var(--space-4);
-  block-size: var(--space-4);
-}
-/* Its box is native and sits outside a `.checkfield`, so without this it took
-   the PLATFORM's ring — the one control in a toolbar of eight drawing the blue
-   this product otherwise refuses, beside a tick already painted in the accent.
-   Same shape as the toolbar's other rings below: inset, because the toolbar
-   clips its own overflow. */
-.lt-toggle input:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: -2px;
-}
-
 /* The toolbar's buttons carry a pill silhouette so the row reads as one kind
- * of thing rather than several. */
+ * of thing rather than several. The SILHOUETTE is the only thing the toolbar
+ * chooses: the BOX is the control's own — --controlHeight, the control's inset,
+ * the control's icon-to-label gap, and the medium a label takes beside a line
+ * glyph — because a verb in a toolbar is the same object as a verb in a form,
+ * and a 30px pill beside a 32px button was one control answering the question
+ * of its own height twice. */
 .lt-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 30px;
-  padding: 0 var(--space-3);
+  gap: var(--controlGap);
+  min-block-size: var(--controlHeight);
+  padding: 0 var(--controlPaddingX);
+  font-weight: var(--fontWeightMedium);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
   cursor: pointer;
   white-space: nowrap;
+}
+/* The one line this pill ADDS rather than inherits, and it is here because
+ * `.lt-btn` is a bare <button> and not a `.btn`: nothing above it sizes a glyph.
+ * Every call site passes a lucide icon with no `size=`, so the toolbar drew the
+ * library's own 24px default beside a 16px icon on the button next to it. */
+.lt-btn svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
 }
 .lt-btn:hover {
   border-color: var(--borderStrong);
@@ -233,7 +225,12 @@
   padding: 0;
   display: inline-flex;
   align-items: stretch;
-  height: 30px;
+  /* Four segments read as ONE control, so the row stands at the control height
+   * every other pill on this line stands at. A floor rather than a height: a
+   * condition or a value long enough to need a second line grows the row rather
+   * than being clipped by it, and `align-items: stretch` still hands whatever
+   * the row ends up at to each segment. */
+  min-block-size: var(--controlHeight);
   background: var(--bgElevated);
   border: 1px solid var(--accentMed);
   border-radius: var(--r-full);
@@ -243,7 +240,6 @@
    * open inside it and are simply never seen. The end segments carry the
    * rounding instead, so the row still reads as one control. */
   overflow: visible;
-  font-size: var(--fs-sm);
 }
 .lt-frow > :first-child {
   border-top-left-radius: var(--r-full);
@@ -259,10 +255,12 @@
 .lt-frow-attr {
   display: inline-flex;
   align-items: center;
+  /* The row's segments are controls and this one is the name they belong to, so
+     it stands at the control height rather than at whatever its own text makes. */
+  block-size: var(--controlHeight);
   padding: 0 var(--space-3);
   background: var(--accentLight);
   color: var(--accentText);
-  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -274,9 +272,6 @@
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -286,7 +281,6 @@
 }
 
 .lt-frow-value {
-  font-weight: 600;
   color: var(--textPrimary);
 }
 
@@ -298,6 +292,18 @@
    * stretches, so without this the button is as tall as its glyph — 15px, under
    * the 24px a pointer target owes — and the ratio below squares THAT. */
   height: 100%;
+  /* And a floor under that, because the height above is a PERCENTAGE of a
+   * wrapper the row stretches: whenever that chain gives way the target shrinks
+   * to the glyph, which is how this segment has twice been measured under WCAG
+   * 2.2 AA 2.5.8 (at 15px, then at 20px on a row that had not yet claimed
+   * --controlHeight). The 24px the rule asks for and not the row's 32px: the
+   * row is 32px OUTSIDE its border, so a segment that claimed the same would
+   * push the pill to 34px and off the line of controls it stands in.
+   * `padding: 0` so the button's own box is the target's box and the platform's
+   * default inset is not part of the arithmetic. */
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
+  padding: 0;
   /* Square by construction, not by arithmetic. The row stretches this segment
    * to its own inner height; the ratio turns that into the width, so the "⋮"
    * cannot become a rectangle when the row's height or its border moves. A
@@ -306,7 +312,6 @@
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
-  color: var(--textSecondary);
   cursor: pointer;
 }
 .lt-frow-more:hover {
@@ -319,11 +324,9 @@
 .lt-fvalue-status {
   margin: 0;
   padding: var(--space-2) var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 .lt-fvalue-status.error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* ---- popover menus ---- */
@@ -334,22 +337,29 @@
   align-items: center;
 }
 
+/* THE MENU ANATOMY, and every option list in the product wears it: this one,
+ * the Select's popup, the suggestion list, the overflow panel, the account
+ * menu. The numbers live in tokens.css — `--menuMinInlineSize`,
+ * `--menuMaxBlockSize` and `--controlGap` for the inset — because a surface
+ * that spells its own is a second answer to how wide a menu is, and the five
+ * had five. `menu-anatomy.test.ts` is what holds them to it.
+ *
+ * A fieldset carries its own margin, which is reset before the look applies;
+ * the min-inline-size the UA gives it is replaced by the anatomy's own floor
+ * rather than zeroed. */
 .lt-menu {
-  /* A fieldset carries its own margin and a min-inline-size that would fight
-   * the popup's own width — both reset before its look applies. */
   margin: 0;
-  min-inline-size: 0;
   position: absolute;
   top: calc(100% + var(--space-1));
   left: 0;
   z-index: 20;
   display: none;
-  min-width: 180px;
+  min-inline-size: var(--menuMinInlineSize, 250px);
   /* A workspace has more companies than fit on a screen, so the menu scrolls
    * rather than running off the bottom of the page. */
-  max-height: 300px;
+  max-block-size: var(--menuMaxBlockSize, 400px);
   overflow-y: auto;
-  padding: var(--space-1);
+  padding: var(--controlGap);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -363,13 +373,12 @@
   display: block;
 }
 
+/* WHAT THIS MENU IS ASKING, above its options. The anatomy's own inset down the
+   block axis, and the weight every label inside a component wears — a head that
+   reads at the same weight as the rows below it is not a head. */
 .lt-mhead {
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
+  padding: var(--controlGap) var(--space-2);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* The attribute search, at the top of the Filter button's first step. Full
@@ -379,33 +388,42 @@
   display: block;
   padding: var(--space-1) var(--space-2);
 }
+/* A text field, so it takes the field's box and the field's type — the same
+ * three numbers `.input` spends, spelled here rather than borrowed because this
+ * one draws in the MENU's ground (`--bgPage` reads as a well inside a
+ * `--bgElevated` popup, where the field ground would read as another sheet of
+ * the same paper) and `.input` and this class would tie on specificity. */
 .lt-fsearch-input {
   width: 100%;
-  padding: var(--space-1) var(--space-2);
+  min-block-size: var(--inputHeight);
+  padding: var(--inputPaddingY) var(--inputPaddingX);
+  font: inherit;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgPage);
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textPrimary);
+  color: inherit;
+}
+.lt-fsearch-input::placeholder {
+  color: var(--textSecondary);
 }
 .lt-fsearch-input:focus {
   outline: 0;
   border-color: var(--accent);
 }
 
+/* ONE ENTRY, and it stands --controlHeight tall like every other option row in
+   the product: the anatomy's inset above and below a --fontBody line is
+   6 + 20 + 6. Written as the inset rather than as a height, because a label
+   that wraps has to grow rather than clip. */
 .lt-mi {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--controlGap) var(--space-2);
   border: 0;
   background: transparent;
   border-radius: var(--r-sm);
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
   text-align: left;
   cursor: pointer;
 }
@@ -420,47 +438,15 @@
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
-  color: var(--textSecondary);
 }
 
-/* WHICH ORDER IS IN FORCE, on the right edge where a reader checks it. Always
- * laid out and only its glyph appears, for the reason the tick box beside it
- * carries: a mark that inserted itself would shift every label in the menu on
- * selection. */
-.lt-mi-mark {
-  display: inline-flex;
-  align-items: center;
-  margin-inline-start: auto;
-  flex: none;
-  color: var(--accentText);
-  visibility: hidden;
-}
-.lt-mi.on .lt-mi-mark {
-  visibility: visible;
-}
-
-/* The tick box is always laid out, and only its glyph appears when selected —
- * a checkmark that inserts itself would shift every label on selection. */
-.lt-cb {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  height: 14px;
-  flex: none;
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-xs);
-  color: var(--textOnAccent);
-}
-.lt-mi .lt-cb > svg {
-  visibility: hidden;
-}
-.lt-mi.on .lt-cb {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.lt-mi.on .lt-cb > svg {
-  visibility: visible;
+/* A menu row that is a CHOICE is a `Checkbox` or a `Radio` — the product's one
+ * tick — wearing this row's box. Both classes are named, so the display wins
+ * whichever order the route split loads the two stylesheets in; everything else
+ * the row needs (its inset, its width, its hover, its ring) is already above and
+ * reaches the label unchanged. */
+.lt-mi.checkfield {
+  display: flex;
 }
 
 /* WHAT THIS LIST IS SHOWING, where its picker would stand — the pipeline on the
@@ -476,8 +462,6 @@
    for in the first place. */
 .lt-scope {
   align-self: center;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -548,7 +532,6 @@
    * scrolls under it. Zero spacing keeps the grid looking the same. */
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--fs-body);
 }
 
 /* With explicit widths in play a cell clips rather than growing a row: the row
@@ -562,17 +545,63 @@
   text-overflow: ellipsis;
 }
 
+/* `CellStrip` — several pills in one cell, on one line. A strip that grew a
+ * second line would push every row below it down; clipped at the column edge
+ * the reader widens the column instead, which is the answer this table already
+ * gives for a value too long for its share. */
+.lt-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  max-inline-size: 100%;
+  overflow: hidden;
+}
+
+/* What gives way first, and how. A flex item keeps its content width by
+ * default, so text beside a badge ran past the strip and was cut mid-word with
+ * no ellipsis — `text-overflow` on the cell never reaches a flex item's text.
+ * Each item therefore truncates itself: a badge inside `.badge-label`, and any
+ * other child here — which is why text in a strip sits in an element, since a
+ * bare text node is an anonymous flex item no rule can reach.
+ *
+ * The TEXT goes first. The badge is the value the column is about — a score, a
+ * stalled flag — and the words beside it only gloss it, so a narrow column
+ * keeps "72" whole and ends the reason in "…". The weight is lopsided rather
+ * than the badge rigid: a badge that refused to shrink would be cut at the
+ * strip edge once the text is gone, which is the defect again one item over.
+ * Below the text's share every badge ellipsises in turn. */
+.lt-strip > :not(.badge) {
+  flex-shrink: 1000;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The floor under a cell's strip. The `nowrap` above governs TEXT, not the
+ * layout of a flex container inside the cell: `.chip` is nowrap only by
+ * flexbox's own default, and a strip that took a second line here would cost
+ * every row below it its place. Stated on the TABLE as well as on `.rowtags`
+ * and `.lt-strip`, so an edit to one of those sheets cannot give it up in a
+ * cell without saying so. `.badge` holds its own line in atoms.css. */
+.lt-table td .chip,
+.lt-table td .rowtags,
+.lt-table td .lt-strip {
+  flex-wrap: nowrap;
+}
+
 /* The header is a quiet label row in sentence case: a table's headers are
  * read once, and set as shouting caps they competed with the rows for the
- * eye. A hairline under them, the same rule every row draws. */
+ * eye. Its WEIGHT is the `thead th` rule in app.css, which every table in the
+ * product reads — a copy here would be this table's own answer to a question
+ * the document already answers. A hairline under them, the same rule every row
+ * draws. */
 .lt-table th {
   position: sticky;
   top: 0;
   z-index: 1;
   text-align: left;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   padding: var(--space-2) var(--space-3);
   background: var(--bgElevated);
   border-bottom: 1px solid var(--borderSubtle);
@@ -591,7 +620,6 @@
    * carrying one line of text read as the same row rather than two. */
   vertical-align: middle;
   border-bottom: 1px solid var(--borderSubtle);
-  color: var(--textContent);
 }
 
 /* Column dividers. The rows already have horizontal rules, so the verticals turn
@@ -662,7 +690,6 @@
  * as a link — the row already says it is clickable. */
 .lt-cellink {
   display: block;
-  color: inherit;
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -745,12 +772,12 @@
  *
  * This is the ONE avatar size a prop cannot carry — density is the table's
  * decision and the chip arrives already built from a caller's cell renderer,
- * which knows nothing about it. The values are `avatar-xs` from atoms.css and
- * must move with it. */
+ * which knows nothing about it. It is also the only place a chip is drawn below
+ * `Avatar`'s smallest rung: the scale starts at `sm`, so this 20 belongs to the
+ * dense table and to nothing else. */
 .lt-table.dense .avatar {
   width: 20px;
   height: 20px;
-  font-size: var(--fs-eyebrow);
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -813,10 +840,6 @@
   padding: 0;
   border: 0;
   background: transparent;
-  font: inherit;
-  color: inherit;
-  text-transform: inherit;
-  letter-spacing: inherit;
   cursor: pointer;
 }
 .lt-sort:hover {
@@ -848,14 +871,12 @@
 .lt-empty td {
   padding: var(--space-6);
   text-align: center;
-  color: var(--textSecondary);
 }
 
 .lt-linkish {
   border: 0;
   background: transparent;
   padding: 0;
-  font: inherit;
   color: var(--accentText);
   text-decoration: underline;
   cursor: pointer;
@@ -870,8 +891,6 @@
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
   background: var(--bgPage);
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
 }
 
 /* The paging slot the caller fills with its keyset "Load more". */
@@ -901,14 +920,17 @@
 }
 
 .lt-pager button {
-  min-width: 26px;
-  height: 26px;
+  /* A page step is a control, so it takes the control height in both axes —
+     square until a three-digit page number widens it. It had a rung of its own
+     at 26, which is the drift `controlheight.test.ts` exists to stop. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   padding: 0 var(--space-2);
   border: 0;
   background: none;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textSecondary);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -921,10 +943,8 @@
   /* A filled control, so it takes the control foreground: dark mode lightens
      the accent fill, and the non-control token goes thin against it. */
   color: var(--textOnAccentControl);
-  font-weight: 600;
 }
 .lt-pager button:disabled {
-  color: var(--textTertiary);
   cursor: default;
 }
 /* The pages this row is not showing. Sized like a page button so the row keeps
@@ -936,8 +956,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-sm);
-  color: var(--textTertiary);
   user-select: none;
 }
 
@@ -950,18 +968,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-sm);
-  color: var(--textTertiary);
 }
 
+/* Colour and corner only. The INSET is the trigger's own (`.select-control` in
+ * atoms.css), and the two classes here were beating it with a second answer —
+ * the one control in the footer sitting on a different inset from every other
+ * trigger in the product. */
 .lt-perpage .select-control {
-  font: inherit;
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  padding: var(--space-1) var(--space-2);
   cursor: pointer;
 }
 
@@ -1039,19 +1055,20 @@
   .lt-table td::before {
     content: attr(data-label);
     flex: 0 0 38%;
-    font-size: var(--fs-eyebrow);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-eyebrow);
-    color: var(--textMeta);
   }
 
   /* The identity cell is the card's heading: no label, full width, and it reads
-   * as the thing you tapped rather than as one field among several. */
+   * as the thing you tapped rather than as one field among several.
+   *
+   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
+   * slide under — so the desktop column's chrome comes off here. Its opaque
+   * ground was still being painted over the card's translucent one, which put a
+   * patch of a slightly different white behind every card's title. */
   .lt-table td.lt-identity {
     display: block;
+    position: static;
+    background: none;
     padding-bottom: var(--space-2);
-    font-size: var(--fs-lead);
-    font-weight: 600;
     color: var(--textPrimary);
   }
   .lt-table td.lt-identity::before {
@@ -1105,7 +1122,6 @@
      page this is. */
   .lt-title {
     width: 100%;
-    font-size: var(--fs-h2);
   }
 
   /* The count stops competing with the tabs for the same line. */
@@ -1139,9 +1155,13 @@
     width: 100%;
   }
 
+  /* `.lt > p` is carried here beside `.lt-caption` for specificity as much as
+     for rhythm: it is the selector that sets the inset above, and left out, it
+     would go on winning over this narrower one. */
   .lt-head,
   .lt-tools,
   .lt-caption,
+  .lt > p,
   .lt-agg,
   .lt-foot {
     padding-left: var(--space-3);

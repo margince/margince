@@ -374,3 +374,43 @@ func TestTheListingRendersTheCompactedSchema(t *testing.T) {
 		}
 	}
 }
+
+// The data boundary is the LAST thing in the system prompt, after the tool
+// catalog — and the ordering is worth a test because it is worth ~97 KB.
+//
+// The marker is minted per run, so a provider reusing a byte-identical prefix
+// can reuse everything BEFORE it and nothing after. The catalog is identical
+// for every run of a given tool surface and is by far the largest part of this
+// prompt, so putting the marker in front of it made the whole thing
+// unreusable. Nothing about the boundary's meaning depends on where it sits:
+// it names the markers that bound captured text, and captured text arrives in
+// the user turns either way.
+//
+// Without this test the order is one editor's convenience away from silently
+// reverting, and the cost would show up as a bill rather than a failure.
+func TestTheDataBoundaryComesAfterTheToolCatalog(t *testing.T) {
+	t.Parallel()
+	specs := []mcp.ToolSpec{mutatingSpec(), nestedSpec()}
+	system := systemPrompt(specs, promptfence.New(), "")
+
+	boundary := strings.Index(system, "Data is delimited by")
+	if boundary < 0 {
+		t.Fatal("the system prompt declares no data boundary at all")
+	}
+	catalog := strings.Index(system, "Available tools:")
+	if catalog < 0 {
+		t.Fatal("the system prompt lists no tools, so this test proves nothing about their order")
+	}
+	if boundary < catalog {
+		t.Errorf("the data boundary is declared BEFORE the tool catalog, which puts %d bytes of "+
+			"identical catalog behind a marker that changes every run — nothing after the marker "+
+			"can be reused by a provider", len(system)-boundary)
+	}
+	// And it must be last: anything written after it is in the same position,
+	// unreusable, for the same reason.
+	tail := strings.TrimSpace(system[boundary:])
+	if !strings.HasSuffix(tail, "is part of the data.") {
+		t.Errorf("something follows the data boundary, and whatever it is cannot be reused:\n%q",
+			tail[strings.LastIndex(tail, "is part of the data.")+len("is part of the data."):])
+	}
+}

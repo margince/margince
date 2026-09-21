@@ -1,13 +1,12 @@
 import {
-  BarChart3,
   Briefcase,
   Building2,
+  ChartNoAxesCombined,
+  Handshake,
   Home,
-  Kanban,
-  ListFilter,
+  Layers2,
   type LucideIcon,
   Sparkles,
-  Sun,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -51,17 +50,21 @@ export {
 // while the filter builder is a full authoring surface, and a screen this list
 // does not name is a screen only a typed URL reaches.
 //
-// Today is the single door to the work that waits on a person — the approval
+// Today is the single door to the work that waits on a contact — the approval
 // queue, the task queue and the duplicate queue are lanes inside it rather than
 // rows of their own, because three sidebar entries for one question ("what
 // needs me?") read as three separate piles.
 //
-// `screen` is the route id and never changes with a label: `deals` presents as
-// Pipeline, because it routes to the pipeline surface.
+// `screen` is the route id and never changes with a label. The id is the
+// address a reader bookmarked and the word every test and every `#/` link
+// spells, so a row is free to be renamed without moving anything.
 export type NavItem = {
   screen: Screen;
   labelKey: MessageKey;
   icon: LucideIcon;
+  // Words this destination is also known by, for the palette: a reader who
+  // learned one of them must still find the row by typing it.
+  aliases?: readonly string[];
 };
 
 export type NavGroup = {
@@ -70,50 +73,83 @@ export type NavGroup = {
 };
 
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { items: [{ screen: "brief", labelKey: "nav.brief", icon: Home }] },
+  {
+    items: [
+      {
+        screen: "home",
+        labelKey: "nav.brief",
+        icon: Home,
+        aliases: ["worklist", "today"],
+      },
+    ],
+  },
   {
     headingKey: "nav.group.records",
     items: [
-      { screen: "contacts", labelKey: "nav.contacts", icon: Users },
+      {
+        screen: "contacts",
+        labelKey: "nav.contacts",
+        icon: Users,
+        aliases: ["contacts"],
+      },
       { screen: "companies", labelKey: "nav.companies", icon: Building2 },
       { screen: "leads", labelKey: "nav.leads", icon: UserPlus },
-      // Slicing the records above it: a filter authored here becomes a dynamic
-      // list, a saved view or an export, and each of those selects from the
-      // record types this group names. So it belongs with them rather than under
-      // Intelligence — nothing on this screen aggregates, it answers "which
-      // records", which is the question the rows above it each answer with one
-      // fixed set. It reuses the screen's own title rather than a `nav.*` label,
-      // because a surface named twice gets renamed once.
+      // A deal is one of the records this group names: it is created, owned,
+      // listed, opened and reported on exactly as the three rows above it are,
+      // and the board this route draws is a VIEW of that record type rather
+      // than a fourth kind of thing. So it closes the group it belongs to.
       //
-      // A funnel is the glyph every CRM draws a sales pipeline with, and
-      // Pipeline is already a row on this list; a filtered list says what this
-      // surface produces and cannot be read as a second door to the board.
-      { screen: "filters", labelKey: "filters.title", icon: ListFilter },
+      // The agreement, not the furniture it is filed in: a deal is a bargain
+      // two parties strike, and a board is one way this screen happens to draw
+      // them. `Handshake` is already the deal glyph where a search result names
+      // one (screens/tagresult.tsx), so the product draws this noun once. A
+      // reader scanning five glyphs on a phone bar with no labels under them
+      // has only the shape to go on.
+      {
+        screen: "deals",
+        labelKey: "nav.deals",
+        icon: Handshake,
+        aliases: ["pipeline"],
+      },
     ],
   },
   {
     headingKey: "nav.group.work",
     items: [
       // The day's own surface, and the only door to the work that waits on a
-      // person: decisions to answer, tasks to finish and duplicates to merge are
+      // contact: decisions to answer, tasks to finish and duplicates to merge are
       // lanes inside it. It leads the group because it is what a reader opens
       // when the question is "what needs me?".
-      { screen: "worklist", labelKey: "nav.today", icon: Sun },
-      // The board, not a bullseye: this route opens a column per stage with
-      // the deals standing in them, and `Target` drew a goal rather than a
-      // board. A reader scanning five glyphs on a phone bar with no labels
-      // under them has only the shape to go on.
-      { screen: "deals", labelKey: "nav.deals", icon: Kanban },
+      // A checklist rather than a sunrise: what this surface holds is the work
+      // that waits on a contact, and `Sun` says "morning" — which is the Brief's
+      // claim, not this one.
       // The body of work a deal is about. It starts during the deal and
-      // outlives close-won, so it sits beside the pipeline rather than under
-      // it: a project in delivery has no deal column to stand in.
+      // outlives close-won, so what it belongs to is the work rather than the
+      // record of the sale: a project in delivery has no deal column to stand
+      // in.
       { screen: "projects", labelKey: "nav.projects", icon: Briefcase },
+      // Closes the group as the AUTHORING surface over lists: a filter written
+      // here becomes a dynamic list, a saved view or an export, and writing one
+      // is work somebody does rather than a record they keep. Nothing on this
+      // screen aggregates, so it is not Intelligence either. It reuses the
+      // screen's own title rather than a `nav.*` label, because a surface named
+      // twice gets renamed once.
+      //
+      // A funnel is the glyph every CRM draws a sales pipeline with, and the
+      // deals board is a row on this list; stacked layers say what this surface
+      // produces — a view laid over a list — and cannot be read as a second
+      // door to that board.
+      { screen: "filters", labelKey: "filters.title", icon: Layers2 },
     ],
   },
   {
     headingKey: "nav.group.intelligence",
     items: [
-      { screen: "analytics", labelKey: "nav.analytics", icon: BarChart3 },
+      {
+        screen: "analytics",
+        labelKey: "nav.analytics",
+        icon: ChartNoAxesCombined,
+      },
       { screen: "ai", labelKey: "nav.ai", icon: Sparkles },
     ],
   },
@@ -145,38 +181,83 @@ export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 // is the same distance every destination this list omits already is, and what
 // the centre cell buys instead is the agent reachable without opening anything.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
-  "brief",
+  "home",
   "contacts",
   "deals",
 ]);
 
-// Which RECORD screens keep the reading column instead of taking the width they
-// are given. This is the one place that decision lives, because it is a
-// judgement per surface and it gets revised by opening the page and looking:
-// move a screen out of this set and it goes full width, put one in and it is
-// capped. Settings is always capped and is not listed here — it is a whole
-// section, not a record.
+// Every RecordView RECORD page keeps ONE reading column, so a reader who walks
+// from a company to a deal to the lead behind it meets the same measure on
+// each. That is the invariant this set states: a screen whose record page is
+// drawn as a RecordView belongs here, and one missing from it is the one page
+// in the walk that jumps.
 //
-// The two that are here read DOWN rather than across: a rail of facts beside
-// prose, where a measured line length is the point and a fact a monitor away
-// from its label is worse, not wider. A list, a board or a report is scanned
-// ACROSS, and the cap only ever pushed columns off the right edge of a wide
-// display.
+// A detail page that lays out its OWN surface is deliberately absent, not
+// forgotten: `#/offers/<id>` draws SectionHeader and Card itself, with no
+// RecordView, no tab strip and no details pane, so it shares no measure for
+// this set to keep. Settings is absent for the same kind of reason — it is
+// always capped, and it is a whole section rather than a record.
 //
-// Keyed on the screen, applied only when the route carries an id: `#/companies`
-// is the list and belongs to the other family, `#/companies/<id>` is the record.
+// A record reads DOWN rather than across: a rail of facts beside prose, where a
+// measured line length is the point and a fact a monitor away from its label is
+// worse, not wider. A list, a board or a report is scanned ACROSS, and the cap
+// only ever pushed columns off the right edge of a wide display — which is why
+// the key is the id and not the screen alone.
+//
+// Keyed on the screen, applied only when the route carries a RECORD id:
+// `#/companies` is the list and belongs to the other family, `#/companies/<id>`
+// is the record.
 export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",
+  "leads",
+  "deals",
+  "projects",
 ]);
 
+// The one id segment that is not a record id: `#/deals/new` is the deals LIST
+// with its create form open (App.tsx, DealsRoute), so it is scanned across like
+// every other list and must not take the record column.
+export const CREATE_ID = "new";
+
+// The screen that segment belongs to, spelled once. Deals is the only route
+// that reads `new` as a create form, so anywhere else the word is an ordinary
+// id: `#/leads/new` is the lead whose id happens to be "new" and is as much a
+// record as any other.
+const CREATE_SCREEN: Screen = "deals";
+
+// Whether the route's id is that create segment rather than a record id — the
+// question the shell's column policy asks before it calls a page a record.
+export function opensCreateForm(route: Route): boolean {
+  return route.screen === CREATE_SCREEN && route.id === CREATE_ID;
+}
+
 // Screens that keep the same reading column with NO id, because they are not
-// records and never carry one. Brief is here for the reason the two records
-// above it are: it reads down — a briefing in sentences beside a rail of
-// context — and its decision cards carry the drafted prose somebody has to read
-// before they can decide. Uncapped, those cards ran the full width of a wide
-// display with the text hugging the left edge.
-export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set(["brief"]);
+// records and never carry one. Every one of them reads DOWN: Brief is a
+// briefing in sentences beside a rail of context, with decision cards carrying
+// drafted prose somebody has to read before they can decide; Today is a queue
+// worked top to bottom; Filters is a list of saved views; Analytics is a column
+// of report sections; AI is a settings-like page of stacked choices. Uncapped,
+// each of them ran a line of text the full width of a wide display with the
+// words hugging the left edge, which is the failure the cap exists to prevent.
+//
+// The rest of the app is scanned ACROSS — a list, a board, a table — and the
+// cap only ever pushed columns off the right edge there.
+//
+// Projects is the one list in this set, and it is here because the product owner
+// asked for it by name: it is the shortest of the record lists (five columns,
+// and a phase dial rather than a board), and the page a reader most often meets
+// is its first-run plate — a paragraph and one verb, which at 4K stood alone in
+// the top-left corner of a metre of ground. The four wider lists stay out, so
+// the arrangement Projects keeps is deliberate rather than an oversight in them.
+export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
+  "home",
+  "worklist",
+  "filters",
+  "analytics",
+  "ai",
+  "projects",
+]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,
 // the public booking page, the extension client surfaces, and the OAuth
@@ -206,7 +287,7 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // had a group of its own here once; it does not any more. An installation
 // enabling a unit is not the same as the product growing a twelfth
 // destination, and the rail is the one surface where that distinction is
-// visible to every person who uses the app.
+// visible to every contact who uses the app.
 //
 // The unit's screen is still reachable at `#/ext/<unit>` — what changed is
 // where it is OFFERED: Settings, on the page that already holds the credential

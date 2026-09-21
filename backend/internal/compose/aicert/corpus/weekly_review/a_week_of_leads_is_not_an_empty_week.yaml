@@ -1,0 +1,42 @@
+name: a_week_of_leads_and_meetings_is_described_rather_than_called_quiet
+task: weekly_review
+site: narrative
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  week_start: "2026-07-13"
+  counts:
+    tasks_due: 0
+    tasks_done: 0
+    tasks_carried_over: 0
+    deals_moved: 0
+    deals_won: 0
+    deals_lost: 0
+    proposals_accepted: 0
+    proposals_rejected: 0
+    brief_items_acted: 0
+    brief_items_dismissed: 0
+    leads_routed: 6
+    leads_answered_in_target: 5
+    leads_breached: 1
+    meetings_held: 3
+    meetings_with_next_step: 2
+  deals: []
+expect:
+  outcome: accepted
+  answer:
+    must_mention: []
+    # The failure this case exists for: reading a row of zeroed DEAL counts as
+    # an empty week. This rep answered five of six new leads inside the target
+    # and sat in three meetings — a full week by any reading, and the one shape
+    # an SDR's week most often takes. Calling it quiet tells them their work
+    # did not count.
+    must_not_mention: ["quiet", "nothing happened", "uneventful", "slow week"]
+  bands: { certified_min: 70, degraded_min: 50, floor: 40 }
+  rubric: >
+    The week held real work: six leads routed, five answered inside the target,
+    one missed, three meetings held and two of them producing a next step. A
+    good sentence says what was done — the lead responses, the meetings, or
+    both. It must not call the week quiet or empty, because the deal counts
+    being zero is not the same as nothing happening. Saying that no deal moved
+    or closed is TRUE and welcome; saying the week was quiet is not.

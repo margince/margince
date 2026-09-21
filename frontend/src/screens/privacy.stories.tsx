@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import type { GrantSpec } from "../app/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import {
-  installFetchStub,
   jsonResponse,
-  meRoute,
   type RouteMap,
   StoryProviders,
+  stubWithSession,
 } from "./story-utils";
 
 // The DSR inbox (the settings/privacy tab's PrivacyInboxCard): the G-2 open
@@ -25,7 +25,7 @@ const DSRS = {
     {
       id: "d1",
       kind: "erasure",
-      subject_ref: "8f3a-person-uuid",
+      subject_ref: "8f3a-contact-uuid",
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       created_at: "2026-07-01T00:00:00Z",
@@ -43,14 +43,27 @@ const DSRS = {
   page: { next_cursor: null, has_more: false },
 };
 
-// The subject-request queue is the admin's alone (useHoldsAdminRole), so the
-// session is what decides whether these stories show the queue at all: without
-// it every one of them drew "this is admin only" under a name promising rows.
+// The card asks three separate object grants, and a session holding none of
+// them draws "seeing subject requests needs permission" under every name here —
+// rows, form and confirm alike. A role name does not stand in for them:
+// `meFixture` seats an admin by default, so a session naming only a role reads
+// as fully authorised while every `useCan` on it answers false.
+//
+//   privacy_request:read   — the queue itself (consent/dsr.go), and the query
+//                            is disabled without it, so no row ever arrives
+//   privacy_request:update — the transition verbs and the erasure fulfil
+//   contact:update          — OPENING a request, which writes the contact named
+//
+// Every story here is an officer working the queue, so every one holds all
+// three; the refusals each grant governs are privacy.test.tsx's subject.
+const WORKS_SUBJECT_REQUESTS: GrantSpec = {
+  privacy_request: ["read", "update"],
+  contact: ["update"],
+};
+
 function inbox(routes: RouteMap) {
   return () => {
-    installFetchStub({ "GET /me": meRoute({}), ...routes }, () =>
-      jsonResponse(DSRS),
-    );
+    stubWithSession(routes, WORKS_SUBJECT_REQUESTS);
     return (
       <StoryProviders>
         <PrivacyInboxCard />
@@ -100,12 +113,12 @@ export const Inbox: Story = {
 export const RowExpanded: Story = {
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
   play: async ({ canvasElement }) => {
-    await expandRow(canvasElement, "8f3a-person-uuid");
+    await expandRow(canvasElement, "8f3a-contact-uuid");
   },
 };
 
 // The narrow render of the row privacy.css's `.dsr-row-toggle` rule exists for:
-// a kind badge, a mono subject reference, a status badge, a due date and an
+// a kind badge, a subject reference, a status badge, a due date and an
 // overdue badge are five nowrap children in one flex line, and before the wrap
 // they pushed the card's scroll width past the phone viewport. That comment
 // describes a fix no story has ever pictured. Expanded, because the case-work
@@ -116,7 +129,7 @@ export const RowExpandedPhone: Story = {
   tags: ["uat-phone"],
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
   play: async ({ canvasElement }) => {
-    await expandRow(canvasElement, "8f3a-person-uuid");
+    await expandRow(canvasElement, "8f3a-contact-uuid");
   },
 };
 
@@ -141,10 +154,10 @@ export const NewRequestForm: Story = {
 // nobody had confirmed. webhooks.stories.tsx carries the same note over its own
 // clickTestIds for the same reason.
 async function armErasureConfirm(canvasElement: HTMLElement) {
-  await expandRow(canvasElement, "8f3a-person-uuid");
+  await expandRow(canvasElement, "8f3a-contact-uuid");
   const canvas = within(canvasElement);
   await userEvent.type(await canvas.findByLabelText(/resolution/i), "verified");
-  const row = await findRow(canvasElement, "8f3a-person-uuid");
+  const row = await findRow(canvasElement, "8f3a-contact-uuid");
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
   await userEvent.type(await screen.findByLabelText(/type erase/i), "ERASE");
 }
@@ -170,7 +183,7 @@ const legalHoldRoutes: RouteMap = {
         title: "Conflict",
         status: 409,
         code: "conflict",
-        detail: "erasing a person under legal hold: conflict",
+        detail: "erasing a contact under legal hold: conflict",
       },
       409,
     ),
@@ -199,7 +212,7 @@ export const LegalHoldBlocked: Story = {
 // that this is a documented refusal and not a routine note, so if the danger
 // surface flattens into the card behind it the refusal stops reading as one. The
 // row underneath is still expanded, so the callout is judged against the panel,
-// the transition verbs and the mono subject reference it interrupts.
+// the transition verbs and the subject reference it interrupts.
 export const LegalHoldBlockedDark: Story = {
   globals: { theme: "dark" },
   render: inbox(legalHoldRoutes),

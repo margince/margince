@@ -1,17 +1,24 @@
-/** @vitest-environment jsdom */
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+/** @vitest-environment happy-dom */
+import {
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import {
   type BoardColumn,
   type BoardMoneyColumn,
   DealCard,
   PipelineBoard,
-  RecordView,
 } from "./composed";
+import { RecordView } from "./recordview";
 
 // B-EP09.3b acceptance: the composed surfaces consume the 3a primitives and
 // the staged / real / human-typed three-way distinction carries through.
@@ -28,7 +35,7 @@ describe("DealCard + PipelineBoard", () => {
   const deal = {
     id: "d1",
     name: "Fleet retrofit",
-    org: "Brandt Automotive",
+    company: "Brandt Automotive",
     valueMinor: 4_800_000,
     currency: "EUR",
     ageMs: 62 * 86_400_000,
@@ -41,8 +48,39 @@ describe("DealCard + PipelineBoard", () => {
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     expect(screen.getByText("€48,000.00")).toBeTruthy();
-    expect(screen.getByText("stalled")).toBeTruthy();
+    expect(screen.getByText("Stalled")).toBeTruthy();
     expect(screen.getByRole("link").className).not.toContain("stalled");
+  });
+
+  // Two destinations on one card, and the reader picks. The whole card used to
+  // be one anchor to the deal, so a rep looking at a board could not reach the
+  // account behind any deal without opening the deal first.
+  it("opens the deal and the company separately", () => {
+    render(
+      <DealCard
+        deal={{ ...deal, companyHref: "#/companies/o-1" }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+      />,
+    );
+
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((each) => each.getAttribute("href"));
+    expect(hrefs).toContain("#/deals/d1");
+    expect(hrefs).toContain("#/companies/o-1");
+  });
+
+  // The refusal case, and the reason the card takes an href rather than an id:
+  // a caller with no address for the company is saying it cannot be linked,
+  // and prose is the honest rendering of that.
+  it("draws the company as prose when the caller gives no address", () => {
+    render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
+
+    expect(screen.getByText("Brandt Automotive")).toBeTruthy();
+    expect(
+      screen.getAllByRole("link").map((each) => each.getAttribute("href")),
+    ).toEqual(["#/deals/d1"]);
   });
 
   // A company has three readings on a card and only one of them is blank. The
@@ -59,7 +97,7 @@ describe("DealCard + PipelineBoard", () => {
   it("draws the mask over a withheld company, never words for it", () => {
     const { container } = render(
       <DealCard
-        deal={{ ...deal, org: "", orgWithheld: true }}
+        deal={{ ...deal, company: "", companyWithheld: true }}
         href="#/deals/d1"
         zone="Europe/Berlin"
       />,
@@ -67,7 +105,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByLabelText(MASK)).toBeTruthy();
     // No name and no mark beside it: a monogram cut from the word for
     // "withheld" would be a mark no company has.
-    expect(container.querySelector(".deal-org-name")).toBeNull();
+    expect(container.querySelector(".deal-company-name")).toBeNull();
     expect(container.querySelector(".avatar")).toBeNull();
   });
 
@@ -97,13 +135,60 @@ describe("DealCard + PipelineBoard", () => {
   it("draws no company slot at all for a deal that names none", () => {
     const { container } = render(
       <DealCard
-        deal={{ ...deal, org: "" }}
+        deal={{ ...deal, company: "" }}
         href="#/deals/d1"
         zone="Europe/Berlin"
       />,
     );
     expect(screen.queryByLabelText(MASK)).toBeNull();
-    expect(container.querySelector(".deal-org")).toBeNull();
+    expect(container.querySelector(".deal-company")).toBeNull();
+  });
+
+  // The foot of the card is when mail last moved and which way. Spoken as
+  // "Last email" to a screen reader, drawn as a glyph to everyone else; absent
+  // altogether on a deal nobody has mailed about, because "no mail yet" on
+  // every fresh card is a row nobody triages by.
+  it("dates the last email on the card, and draws no mail line without one", () => {
+    const { unmount } = render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: { agoMs: 10 * 86_400_000, direction: "outbound" },
+        }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+      />,
+    );
+    expect(screen.getByText("10 d ago")).toBeTruthy();
+    expect(screen.getByText("Last email:")).toBeTruthy();
+    // No aside was given, so the line is text: nothing to press.
+    expect(screen.queryByRole("button")).toBeNull();
+    unmount();
+
+    render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
+    expect(screen.queryByText("Last email:")).toBeNull();
+  });
+
+  // Given an aside, the line is a flyout's trigger: what the caller read from
+  // the timeline opens under a settled pointer and closes when it leaves. The
+  // content is the caller's — this tier fetches nothing.
+  it("opens the caller's mail aside when the pointer settles on the line", async () => {
+    render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: { agoMs: 2 * 86_400_000, direction: "inbound" },
+        }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        mailAside={(d) => <p>Three mails on {d.name}</p>}
+      />,
+    );
+    expect(screen.queryByText("Three mails on Fleet retrofit")).toBeNull();
+    fireEvent.pointerEnter(screen.getByRole("button", { name: /Last email/ }));
+    await waitFor(() =>
+      expect(screen.getByText("Three mails on Fleet retrofit")).toBeTruthy(),
+    );
   });
 
   it("a staged deal renders visibly distinct from a real one", () => {
@@ -289,6 +374,63 @@ describe("DealCard + PipelineBoard", () => {
   });
 });
 
+describe("RecordView's chrome", () => {
+  /** The element the class draws, or a failure naming what was missing. */
+  const chrome = (selector: string): Element => {
+    const found = document.querySelector(selector);
+    if (!found) {
+      throw new Error(`no ${selector} in the record`);
+    }
+    return found;
+  };
+
+  const precedes = (first: Element, second: Element) =>
+    Boolean(
+      first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+  it("draws the tab strip above the band, and the band above the columns", () => {
+    render(
+      <RecordView
+        name="Fleet retrofit"
+        zone="UTC"
+        tabs={<Button>Overview</Button>}
+        band={<p>Kick-off pending</p>}
+      />,
+    );
+
+    const tabs = chrome("[data-testid='record-tabs']");
+    const band = chrome(".record-band");
+    // The work column, which every shape of `PageZones` draws; the grid class
+    // itself is absent on a record that has neither rail nor aside.
+    const zones = chrome(".page-zones-main");
+    expect(precedes(tabs, band), "the band is drawn above the strip").toBe(
+      true,
+    );
+    expect(precedes(band, zones), "the band is drawn below the columns").toBe(
+      true,
+    );
+  });
+
+  it("draws the tab strip on a record that carries no band", () => {
+    render(
+      <RecordView
+        name="Fleet retrofit"
+        zone="UTC"
+        tabs={<Button>Overview</Button>}
+      />,
+    );
+
+    expect(document.querySelector(".record-band")).toBeNull();
+    expect(
+      precedes(
+        chrome("[data-testid='record-tabs']"),
+        chrome(".page-zones-main"),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("RecordView + timeline", () => {
   it("renders the header and provenance-tagged timeline in the workspace zone", () => {
     render(
@@ -319,7 +461,7 @@ describe("RecordView + timeline", () => {
     ).toBeTruthy();
     expect(screen.getByText("12/06/2026")).toBeTruthy();
     expect(screen.getByText("Automated by capture")).toBeTruthy();
-    expect(screen.getByText("typed by you")).toBeTruthy();
+    expect(screen.getByText("Typed by you")).toBeTruthy();
   });
 
   it("keeps the whole message in the document, clamped but never cut", () => {
@@ -551,7 +693,7 @@ describe("TimelineText on a mail row", () => {
   it("keeps the correspondents' addresses above the message", () => {
     // The preamble says who wrote to whom, which is part of reading a mail on
     // a record. It is the row TITLE that must not lead with it — see the
-    // timelineTitle rule in people.tsx — not the message body.
+    // timelineTitle rule in contacts.tsx — not the message body.
     render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
     const body = document.querySelector(".tl-text-clamp")?.textContent ?? "";
     expect(body).toContain("anna@kunde.de");

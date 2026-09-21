@@ -29,13 +29,13 @@ import (
 )
 
 var schemaObjects = []datasource.ObjectDef{
-	{Type: datasource.EntityPerson, Label: "Person", Fields: []datasource.FieldDef{
+	{Type: datasource.EntityContact, Label: "Contact", Fields: []datasource.FieldDef{
 		{Name: "full_name", Type: "text"},
 		{Name: "owner_id", Type: "uuid", Nullable: true},
 		{Name: "source", Type: "text"},
 		{Name: "created_at", Type: "timestamptz"},
 	}},
-	{Type: datasource.EntityOrganization, Label: "Organization", Fields: []datasource.FieldDef{
+	{Type: datasource.EntityCompany, Label: "Company", Fields: []datasource.FieldDef{
 		{Name: "display_name", Type: "text"},
 		{Name: "legal_name", Type: "text", Nullable: true},
 		{Name: "industry", Type: "text", Nullable: true},
@@ -49,7 +49,7 @@ var schemaObjects = []datasource.ObjectDef{
 		{Name: "status", Type: "text"},
 		{Name: "pipeline_id", Type: "uuid"},
 		{Name: "stage_id", Type: "uuid"},
-		{Name: "organization_id", Type: "uuid", Nullable: true},
+		{Name: paramCompanyID, Type: "uuid", Nullable: true},
 		{Name: "owner_id", Type: "uuid", Nullable: true},
 		{Name: "expected_close_date", Type: "date", Nullable: true},
 		{Name: "created_at", Type: "timestamptz"},
@@ -72,7 +72,7 @@ var schemaObjects = []datasource.ObjectDef{
 	{Type: datasource.EntityProject, Label: "Project", Fields: []datasource.FieldDef{
 		{Name: "name", Type: "text"},
 		{Name: "key", Type: "text", Nullable: true},
-		{Name: "organization_id", Type: "uuid"},
+		{Name: paramCompanyID, Type: "uuid"},
 		{Name: "owner_id", Type: "uuid", Nullable: true},
 		{Name: "phase", Type: "text"},
 		{Name: "started_at", Type: "date", Nullable: true},
@@ -81,6 +81,14 @@ var schemaObjects = []datasource.ObjectDef{
 		{Name: "created_at", Type: "timestamptz"},
 	}},
 }
+
+// The column names this package's schema shapes and audit payloads reach for
+// in more than one place.
+const (
+	paramCompanyID = "company_id"
+	paramOwnerID   = "owner_id"
+	paramKind      = "kind"
+)
 
 func schemaFields(entity datasource.EntityType) ([]datasource.FieldDef, bool) {
 	for _, obj := range schemaObjects {

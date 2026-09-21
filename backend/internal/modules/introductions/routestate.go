@@ -15,7 +15,7 @@ package introductions
 // is the privacy of the thing: "Lena has already been asked about this
 // contact" is a fact the rep needs in order not to waste the ask, while "Sofia
 // asked her, and here is what Sofia wrote" is between Sofia and Lena.
-// ForPerson serves the second question and stays scoped to the parties; this
+// ForContact serves the second question and stays scoped to the parties; this
 // one serves the first, and is deliberately blind.
 
 import (
@@ -45,7 +45,7 @@ type RouteKey struct {
 	// A value and not a pointer: a struct with a pointer field is compared by
 	// pointer identity, so two keys naming the same intermediary would be
 	// different map keys and every indirect route would read as unasked.
-	Through ids.PersonID
+	Through ids.ContactID
 }
 
 // RouteState is what the tab may know about a route it did not ask about.
@@ -71,20 +71,25 @@ const (
 // The compensating limit is the payload: a state, never a name. See the file
 // header for why the two reads differ.
 func (s *Store) RouteStates(
-	ctx context.Context, personID ids.PersonID,
+	ctx context.Context, contactID ids.ContactID,
 ) (map[RouteKey]RouteState, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// A caller with no person behind it has no tab to render, and this read
+	// A caller with no contact behind it has no tab to render, and this read
 	// reports on asks the caller is not party to — so it answers only a
-	// principal that IS somebody.
+	// principal that IS somebody, and only a human.
 	//
-	// This does not exclude an agent: a passport-backed agent carries its
-	// granting human's UserID, so it passes here. What keeps agents off this
-	// read is the route itself — getPersonGraph is annotated human-only, and
-	// the agent gate refuses it before the handler runs. Wiring RouteStates to
-	// any agent-reachable caller would need that decision made again.
+	// The human arm is load-bearing and belongs HERE rather than on the route.
+	// A passport-backed agent carries its granting human's UserID, so an
+	// id-presence check admits one. The REFUSAL arm below is per-requester —
+	// a declined route is reported only to the rep who was declined — so an
+	// agent admitted here reads its human being turned down. This gate used to
+	// be the route's annotation, which made the answer depend on which door the
+	// read came through rather than on what it discloses.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}
@@ -94,15 +99,15 @@ func (s *Store) RouteStates(
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The contact gate, on the read that discloses about them. Without it
 		// a rep could probe which of their colleagues have been asked about a
-		// person they may not open.
-		if err := auth.EnsureVisibleLive(ctx, tx, "person", personID.UUID); err != nil {
+		// contact they may not open.
+		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT introducer_user_id, through_person_id, status, requester_user_id
+			SELECT introducer_user_id, through_contact_id, status, requester_user_id
 			  FROM intro_request
-			 WHERE person_id = $1 AND archived_at IS NULL
-			   AND status = ANY($2)`, personID, statesWorthReporting())
+			 WHERE contact_id = $1 AND archived_at IS NULL
+			   AND status = ANY($2)`, contactID, statesWorthReporting())
 		if err != nil {
 			return fmt.Errorf("introductions: reading which routes are taken: %w", err)
 		}
@@ -113,7 +118,7 @@ func (s *Store) RouteStates(
 			// The column is nullable and the key is not: a direct route stores
 			// NULL and keys on the zero id, which is the collapse the guard
 			// index spells as COALESCE.
-			var through *ids.PersonID
+			var through *ids.ContactID
 			var requester ids.UUID
 			if err := rows.Scan(&key.Introducer, &through, &status, &requester); err != nil {
 				return fmt.Errorf("introductions: reading a route's state: %w", err)
@@ -134,7 +139,7 @@ func (s *Store) RouteStates(
 			// promise an ask the server rejects. A refusal blocks nothing: the
 			// route stays askable, so naming it to a third rep buys no
 			// collision-avoidance and gives away that this colleague turned
-			// somebody down over this contact. ForPerson calls that the
+			// somebody down over this contact. ForContact calls that the
 			// introducer's answer to give, and this read does not overrule it.
 			if requester != actor.UserID {
 				continue

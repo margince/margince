@@ -55,7 +55,7 @@ func TestExplainKeepsSentinelGuidance(t *testing.T) {
 		err  error
 		want string
 	}{
-		{fmt.Errorf("advance: %w", apperrors.ErrRequiresApproval), "a person answers it"},
+		{fmt.Errorf("advance: %w", apperrors.ErrRequiresApproval), "a contact answers it"},
 		{fmt.Errorf("scope: %w", apperrors.ErrScopeExceeded), "scope"},
 		// "Refused on authority" rather than "not permitted": the same sentinel
 		// now carries two bounds — what the human may do, and what they lent
@@ -98,10 +98,6 @@ func TestExplainClassifiesEveryCallerFacingRefusal(t *testing.T) {
 		{"seat tier", fmt.Errorf("seat: %w", apperrors.ErrSeatTierInsufficient), "seat_tier_insufficient", false},
 		{"consent", fmt.Errorf("send: %w", apperrors.ErrConsentNotGranted), "consent_not_granted", false},
 		{"budget", fmt.Errorf("quota: %w", apperrors.ErrBudgetExceeded), "rate_limited", true},
-		{"not overlay", fmt.Errorf("mode: %w", apperrors.ErrModeNotOverlay), "mode_not_overlay", false},
-		{"incumbent connected", fmt.Errorf("connect: %w", apperrors.ErrIncumbentAlreadyConnected), "incumbent_already_connected", false},
-		{"flip blocked", fmt.Errorf("flip: %w", apperrors.ErrOverlayFlipBlocked), "overlay_flip_blocked", false},
-		{"incumbent budget", fmt.Errorf("read: %w", apperrors.ErrIncumbentBudgetExhausted), "incumbent_budget_exhausted", true},
 		{"bad fields", &datasource.FieldDecodeError{Cause: &datasource.UnknownFieldError{Fields: []string{"subjekt"}}}, "invalid_field", false},
 		{"unserved entity", &datasource.UnsupportedEntityError{Type: "invoice"}, "unsupported_entity_type", false},
 		{"malformed cursor", &storekit.MalformedCursorError{}, "malformed_cursor", false},

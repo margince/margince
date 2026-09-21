@@ -78,6 +78,13 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+# A module the proxy cannot serve is not a broken build: the PIPE falls through
+# to the source on any error, where Go's default comma falls through only on a
+# 404. Why that distinction reached `main` as a product break:
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
 jobs:
   vuln:
     # The DAILY cadence. Spelled per job because a job with no `if` runs on
@@ -223,7 +230,7 @@ jobs:
   #
   # It records NOTHING. MARGINCE_BENCH_RECORD stays unset, so the suite gates and
   # prints; `make bench-perf` is the only thing that writes into
-  # docs/reference/perfbench/, and it is run by a person. A machine writing its
+  # docs/reference/perfbench/, and it is run by a contact. A machine writing its
   # own numbers into the tree is the failure that switch exists to prevent.
   perf-budgets:
     name: perf budgets (PERF-3/PERF-7, SMB tier)
@@ -517,8 +524,11 @@ jobs:
       # The browser only. `make bench-mobile-check` runs the install and the
       # build itself, so doing them here as well would install twice and leave
       # two spellings of the lane's setup to drift apart.
+      # Bounded because `--with-deps` shells out to apt inside the runner, and
+      # an unresponsive mirror hangs with no output.
       - name: Install the Playwright Chromium browser
         working-directory: frontend
+        timeout-minutes: 6
         run: pnpm exec playwright install --with-deps chromium
       # The step separates "the budget breached" from "the lane could not run",
       # exactly as perf-budgets does and for the same reason: a failed install,
@@ -624,16 +634,18 @@ jobs:
   report:
     name: report
     needs: [vuln, quality-gate, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
+    # Every result, not only the failures — see the same condition in
+    # main-health.yml for why. In short: the reporter now retracts a finding
+    # whose check came back green, and a job gated on a failure is never reached
+    # on the run that would do it.
+    #
+    # This lane's two weekly jobs are the reason the condition says `!cancelled()`
+    # rather than `always()`: perf-budgets and perf-mobile are `skipped` on the
+    # daily cron, and a skipped check is the absence of a verdict. The reporter
+    # reads it as neither red nor green, which is only true if it arrives as
+    # `skipped` rather than being turned into one by this expression.
     if: >-
       !cancelled()
-      && (needs.vuln.result == 'failure'
-        || needs.quality-gate.result == 'failure'
-        || needs.backend-lane.result == 'failure'
-        || needs['fe-clock-drift'].result == 'failure'
-        || needs.perf-budgets.result == 'failure'
-        || needs['perf-mobile'].result == 'failure'
-        || needs['llm-use-cases'].result == 'failure'
-        || needs.reap-caches.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

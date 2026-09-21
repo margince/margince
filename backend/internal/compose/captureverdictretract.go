@@ -6,12 +6,12 @@ package compose
 // A noise verdict reaches the RECORD the sender already has, not only their
 // mail. The verdict often arrives after the contact: capture creates on
 // commit, the ledger is drained later, and a sender judged noise today may
-// have been minted a person under an earlier, looser creation rule. Hiding
-// their mail while their contact stands leaves "receipts@" on the people list
+// have been minted a contact under an earlier, looser creation rule. Hiding
+// their mail while their contact stands leaves "receipts@" on the contacts list
 // forever — the exact junk the verdict said does not belong there.
 //
 // The two halves stay in their own modules, on the pattern the confidentiality
-// engine set: compose asks which records the address still holds, and people
+// engine set: compose asks which records the address still holds, and contacts
 // archives them through its own writer, so the write shape holds and a
 // retraction lands an audit row exactly like a human's archive.
 
@@ -26,36 +26,56 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// retractSendersContacts withdraws the capture-only records of a sender a
-// noise verdict just covered, on the verdict's own transaction — a row cannot
-// read `noise` while the contact it disowns survives a failed second write.
+// The two bounds a caller can put on whose records a verdict may withdraw.
 //
-// The caller has already established the sender is NOT one the workspace
+// retractEveryOwners is for an answer about the ADDRESS: a newsletter is noise
+// in every mailbox it reaches, so a colleague's copy of the record goes too.
+// retractOwnersOnly is for an answer about one SEAT — the owner's own keep_out,
+// and the `personal` kind, which says this mailbox's correspondence with the
+// address is private. Neither says anything about a colleague who genuinely
+// does business with them, and archiving a colleague's contact on one seat's
+// private conversation would be this feature causing the harm it exists to
+// prevent.
+//
+// TestAKeepOutRetractsOnlyTheDecidersOwnContact holds the narrow bound. It
+// cannot be held twice over: `uq_contact_email_dedupe` makes an address unique
+// across live records, so a second seat's copy of one address is a state this
+// installation cannot reach — the bound matters for the OTHER shapes a
+// colleague's record takes, which is why it is a constant rather than a
+// comment.
+const (
+	retractEveryOwners = false
+	retractOwnersOnly  = true
+)
+
+// retractSendersContacts withdraws the machine-made records of a sender a
+// verdict just covered, on the verdict's own transaction — a row cannot read
+// `noise` while the contact it disowns survives a failed second write.
+//
+// The NOISE caller has already established the sender is not one the workspace
 // corresponds with; an address it has provably written to keeps its record
-// whatever the classifier called one message.
+// whatever the classifier called one message. The `personal` caller draws no
+// such bound, for the reason its arm gives.
 //
-// ownerSaidSo narrows it further. A `keep out` is a statement about the
-// decider's own mailbox, so it may retract only the record minted for THEM —
-// a colleague who captured the same address keeps theirs, exactly as their
-// mail keeps arriving.
+// ownersOnly narrows it to one seat, per the constants above.
 func (e *CounterpartyVerdictEngine) retractSendersContacts(
-	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, ownerSaidSo bool,
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, ownersOnly bool,
 ) error {
-	holders, err := e.people.CaptureOnlyHoldersOfAddressTx(ctx, tx, row.Email)
+	holders, err := e.contacts.CaptureOnlyHoldersOfAddressTx(ctx, tx, row.Email)
 	if err != nil {
 		return err
 	}
 	for _, h := range holders {
-		if ownerSaidSo && h.OwnerID != row.OwnerID {
+		if ownersOnly && h.OwnerID != row.OwnerID {
 			continue
 		}
-		retracted, err := e.people.RetractCaptureOnlyPersonTx(ctx, tx, h.PersonID, h.OwnerID)
+		retracted, err := e.contacts.RetractCaptureOnlyContactTx(ctx, tx, h.ContactID, h.OwnerID)
 		if err != nil {
 			return err
 		}
 		if retracted {
-			e.log.InfoContext(ctx, "counterparty verdict: retracted the contact a noise sender had been given",
-				"person", h.PersonID.String())
+			e.log.InfoContext(ctx, "counterparty verdict: withdrew the contact a disowned sender had been given",
+				"contact", h.ContactID.String())
 		}
 	}
 	return nil
@@ -92,15 +112,22 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 			// The scan committed before this transaction opened, so both the
 			// answer that selected the contact and the correspondence bound
 			// are re-read here, where the archive can still be called off.
-			stands, err := w.pending.NoiseJudgedStandsTx(ctx, tx, c.Email, c.OwnerID)
-			if err != nil || !stands {
+			standing, err := w.pending.NoiseJudgedStandsTx(ctx, tx, c.Email, c.OwnerID)
+			if err != nil || !standing.Stands {
 				return err
 			}
-			corresponds, err := w.pending.CorrespondsWith(ctx, tx, c.Email)
-			if err != nil || corresponds {
-				return err
+			// Correspondence is the bound that can change after a NOISE
+			// answer, and only after one. A `personal` verdict is about whose
+			// life the mail belongs to, and a later reply from the owner is
+			// what that correspondence looks like rather than evidence
+			// against it.
+			if standing.Kind != capture.KindPersonal {
+				corresponds, err := w.pending.CorrespondsWith(ctx, tx, c.Email)
+				if err != nil || corresponds {
+					return err
+				}
 			}
-			done, err := w.store.RetractCaptureOnlyPersonTx(ctx, tx, c.PersonID, c.OwnerID)
+			done, err := w.store.RetractCaptureOnlyContactTx(ctx, tx, c.ContactID, c.OwnerID)
 			if err != nil {
 				return err
 			}
@@ -109,7 +136,64 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 			}
 			return nil
 		}); err != nil {
-			failed = errors.Join(failed, fmt.Errorf("retracting %s: %w", c.PersonID, err))
+			failed = errors.Join(failed, fmt.Errorf("retracting %s: %w", c.ContactID, err))
+		}
+	}
+	return retracted, failed
+}
+
+// retractPrivateThreadPerTick bounds the threads one tick re-checks, on the
+// same reasoning as the noise bound above: the population shrinks as it is
+// worked, so a small bound costs one probe a tick once it is empty.
+const retractPrivateThreadPerTick = 200
+
+// retractPrivateThreadContacts withdraws the contacts a private thread earned
+// AFTER the verdict about it had already retracted.
+//
+// ConfidentialityVerdictEngine.retractPrivateContactsTx runs once, in the
+// transaction that settles the thread, which is right for every contact that
+// exists by then. It is the whole of the coverage, and one ordering of two
+// background passes escapes it: the thread verdict settles first and retracts,
+// the SENDER verdict lands second, and createContactForVerdict mints a fresh
+// owner-scoped record — ThreadHoldsItsCounterparty is true of a settled
+// `personal` thread, so it takes the narrow arm rather than refusing. Nothing
+// looks at that record again.
+//
+// The record is owner-scoped, so no colleague sees it. The promise is that a
+// private correspondent gets no record at all, which is what this keeps.
+//
+// The bound is re-read per thread inside the retraction's own transaction,
+// because the scan committed before it opened and because the bound can change:
+// an ordinary conversation at the same address, arriving between the two, makes
+// them a business contact who also has a private thread — and that contact
+// stays.
+func (w *linkReconcileWorker) retractPrivateThreadContacts(ctx context.Context) (int, error) {
+	threads, err := w.pending.SettledPersonalThreads(ctx, retractPrivateThreadPerTick)
+	if err != nil {
+		return 0, err
+	}
+	retracted := 0
+	var failed error
+	for _, thread := range threads {
+		// Per thread, each on its own transaction, like every drain in this
+		// job: one thread's failure costs that thread, not the sweep.
+		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+			orphaned, err := capture.ContactsOrphanedByPrivacyTx(ctx, tx, thread.ThreadKey, thread.UserID)
+			if err != nil {
+				return err
+			}
+			for _, contact := range orphaned {
+				done, err := w.store.RetractCaptureOnlyContactTx(ctx, tx, contact.ContactID, contact.OwnerID)
+				if err != nil {
+					return err
+				}
+				if done {
+					retracted++
+				}
+			}
+			return nil
+		}); err != nil {
+			failed = errors.Join(failed, fmt.Errorf("retracting the contacts of %s: %w", thread.ThreadKey, err))
 		}
 	}
 	return retracted, failed

@@ -135,7 +135,7 @@ func extractionSubjectLabel(ctx context.Context, tx pgx.Tx, attachment ids.UUID)
 // without an entity ref at all.
 func logExtractionActivity(ctx context.Context, tx pgx.Tx, read ExtractionRead) error {
 	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
-		"source": ExtractionActivitySource, "occurrence_key": read.ID.String(),
+		ledgerSourceKey: ExtractionActivitySource, "occurrence_key": read.ID.String(),
 		"state": read.Status, "attempt": read.Attempt,
 	})
 	if err != nil {
@@ -143,6 +143,11 @@ func logExtractionActivity(ctx context.Context, tx pgx.Tx, read ExtractionRead) 
 	}
 	return emitExtractionActivity(ctx, tx, ledgerID, read)
 }
+
+// ledgerSourceKey names the reporting source in a state-change ledger row. The
+// two carriers in this package write the same field, and a second spelling
+// would file one of them under a key nothing reads.
+const ledgerSourceKey = "source"
 
 // ptrOrNil is the payload's optional-string spelling: absent means absent, and
 // an empty string in an optional field reads as present to every consumer.

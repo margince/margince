@@ -1,4 +1,5 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { isValidElement, type ReactNode } from "react";
@@ -147,11 +148,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // subscribers, and this is one of them.
     await user.click(screen.getByRole("button", { name: "Account" }));
     await user.click(screen.getByRole("menuitem", { name: "Theme" }));
-    expect(
-      screen
-        .getByRole("menuitemradio", { name: "Dark" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
+    expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
   // Identity, credential, sign-off and language are ONE card, not four: a
@@ -190,10 +187,38 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(within(card).getAllByRole("heading", { level: 2 })).toHaveLength(1);
   });
 
+  // THE DRAFT IS DISCARDED ON THE NEXT OPENING, not on the way out.
+  //
+  // The dialog outlives its own close so it can animate out, and a draft
+  // cleared at close snapped the box back to the stored sign-off in front of a
+  // reader still watching the dialog leave. Moving the discard to the opening
+  // keeps that frame honest and has to keep this promise too: a sign-off
+  // half-typed and walked away from is not an edit anybody is coming back to.
+  it("reopens the sign-off dialog on a clean form, not on an abandoned draft", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsBackend());
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    const draft = await screen.findByRole("textbox", { name: "Your sign-off" });
+    await user.type(draft, "half a sign-off nobody meant to keep");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    const reopened = await screen.findByRole("textbox", {
+      name: "Your sign-off",
+    });
+    if (!(reopened instanceof HTMLTextAreaElement)) {
+      throw new Error("the sign-off box is not a textarea");
+    }
+    expect(reopened.value).not.toContain("nobody meant to keep");
+  });
+
   // A member correcting the name their colleagues see them by. Until this row
   // existed there was no way to: `display_name` was written by the invite and
   // by nothing else, so a name typed wrong stayed wrong on every record that
-  // person touched.
+  // contact touched.
   it("saves a corrected name to the caller's own seat", async () => {
     const user = userEvent.setup();
     const sent: { path: string; body: unknown }[] = [];
@@ -332,7 +357,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     // spent nothing — a statement about the data, where the truth is only about
     // who may read it. No request is made for it, so a rep never hits a 403
     // error box (GET /ai/usage).
-    expect(await screen.findByText("AI usage & budget")).toBeTruthy();
+    expect(
+      await screen.findByText("Estimated AI spend & usage history"),
+    ).toBeTruthy();
     expect(
       await screen.findByText(
         /only an operator can see what the AI runtime spent/i,
@@ -479,15 +506,15 @@ describe("SettingsScreen restructured pages", () => {
       ).toBe("page"),
     );
     // A passport is minted by the HUMAN who holds it, so the surface that mints
-    // and lists one opens for a seat holding no org grant and no writing
-    // licence at all — gating it behind the org group would have meant only
+    // and lists one opens for a seat holding no company grant and no writing
+    // licence at all — gating it behind the company group would have meant only
     // admins could mint one.
     expect(
       await screen.findByRole("heading", { name: "Agent passports" }),
     ).toBeTruthy();
     expect(screen.getByText("Scout")).toBeTruthy();
     // And the autonomy table the passports sit under, which came off the
-    // organization's AI entry with them.
+    // company's AI entry with them.
     expect(
       screen.getByRole("heading", { name: "Autonomy tiers" }),
     ).toBeTruthy();
@@ -504,8 +531,8 @@ describe("SettingsScreen restructured pages", () => {
       mergedEntryBackend({
         roles: ["admin"],
         allow: {
-          person: ["read"],
-          // What opens Privacy now. `person:read` still reaches the purposes
+          contact: ["read"],
+          // What opens Privacy now. `contact:read` still reaches the purposes
           // list — that endpoint's gate is unchanged — but it no longer opens
           // the page, because every seeded role holds it.
           //
@@ -539,7 +566,7 @@ describe("SettingsScreen restructured pages", () => {
       mergedEntryBackend({
         roles: ["admin"],
         allow: {
-          person: ["read"],
+          contact: ["read"],
           audit_log: ["read"],
         },
       }),
@@ -608,7 +635,7 @@ describe("SettingsScreen restructured pages", () => {
   it("withholds the trail from a reader without the read, and asks the server for nothing", async () => {
     const backend = mergedEntryBackend({
       roles: ["ops"],
-      allow: { person: ["read"] },
+      allow: { contact: ["read"] },
     });
     vi.stubGlobal("fetch", backend);
     // Rendered directly: without the grant the catalog gives this reader no
@@ -688,13 +715,13 @@ describe("SettingsScreen restructured pages", () => {
 // Where a settings card LIVES is a claim about WHOSE setting it is, and the
 // catalog says that in two fields: the group names the subject, and `scope` says
 // whose state the page changes — `self` for a credential or connection the
-// reader personally holds, `workspace` or `installation` for the organization's
+// reader personally holds, `workspace` or `installation` for the company's
 // posture.
 //
 // The Google app is one app per installation, supplied by whoever operates it,
 // and every rep's mailbox is connected through it. It shipped on `connections`
 // — a `self` page — which put installation configuration on a page holding a
-// person's own mailbox and their own LinkedIn network. The server gates the read
+// contact's own mailbox and their own LinkedIn network. The server gates the read
 // on capture_settings, so a rep saw a refused card rather than the operator's
 // client id; the defect was that the page offered them a setting that was never
 // theirs.
@@ -732,14 +759,14 @@ describe("installation-wide cards live off the personal pages", () => {
     return walk(tabContent(id));
   }
 
-  it("puts the vendor OAuth apps on an installation page, not beside a person's own connections", () => {
+  it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
     const hosts = SETTINGS_PAGES.filter((page) =>
       pageRenders(page.id, "OAuthAppCard"),
     );
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");
     // And the group with it: `scope` alone would be satisfied by any page the
-    // organization owns, while the claim is that this card belongs beside the
+    // company owns, while the claim is that this card belongs beside the
     // sign-in policy the same OAuth client now serves.
     expect(hosts[0]?.group).toBe("company");
   });

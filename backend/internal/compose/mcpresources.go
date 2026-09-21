@@ -67,8 +67,8 @@ func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.Reso
 	// margince://schema/query splits exactly this way — unguarded resource,
 	// guarded door — and it is the precedent this follows.
 	// margince://schema/record-fields is NOT a clean precedent for it, though it
-	// looks like one: the overlay provider serves no CREATE but does serve some
-	// UPDATE, so that document describes verbs a caller may partly still use.
+	// looks like one: a provider may serve some verbs of a record and refuse
+	// others, so that document describes verbs a caller may partly still use.
 	// This one describes a verb that is refused outright.
 	providers := []mcp.ResourceProvider{
 		capabilities, vocabulary,

@@ -16,7 +16,7 @@
 // That matters more here than for retention. A pack that could decide a send
 // would be country-specific code on the path of every outbound message, and the
 // one thing this product cannot afford is two answers to "may we write to this
-// person". So a pack states its jurisdiction's rules and the engine applies
+// contact". So a pack states its jurisdiction's rules and the engine applies
 // them, in one place, the same way for every country.
 //
 // These types are frozen published API from their first external consumer; they
@@ -27,6 +27,8 @@ package messaging
 
 import (
 	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
@@ -42,12 +44,40 @@ type Rules struct {
 	// Jurisdiction is whose rules these are, lower-case ISO 3166-1 alpha-2.
 	Jurisdiction jurisdiction.Code
 
-	// Version is the rule set's own version, stamped onto every decision taken
-	// under it. A decision a subject later asks about must be readable against
-	// the rules that were live when it was taken, and those rules change — so
-	// the number is recorded rather than re-derived from whatever the code says
-	// today.
+	// Version is the rule set's own version. A decision a subject later asks
+	// about must be readable against the rules that were live when it was
+	// taken, and those rules change, so the number is meant to be recorded
+	// rather than re-derived from whatever the code says today.
+	//
+	// APPLIED: consent.rulesetStamp writes it onto every staging and transmit
+	// decision, beside the codes that produced it. A fold of two jurisdictions
+	// carries NO version — Strictest zeroes it rather than misnaming the fold
+	// with one country's number — and the recorded codes are what answers in
+	// that case. Held by TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
+	// (backend/gates/messagingruleapplied_test.go).
 	Version int
+
+	// Instruments are the laws and decrees this version states, each with the
+	// date it took effect.
+	//
+	// A VERSION NUMBER IS OPAQUE on its own. A decision recording "vn version 2"
+	// says which rule set judged it and nothing about what that rule set was.
+	// The instruments say what the number stands for, in the words a regulator
+	// uses.
+	//
+	// WHAT THIS DOES NOT YET DO, said plainly because the gap is easy to read
+	// past: the instruments are not persisted with the decision. Only the
+	// version and the jurisdiction codes are, and the registry keeps one rule
+	// set per jurisdiction — the current one. So a pack that has since moved to
+	// version 3 leaves a version-2 decision still needing the old source tree
+	// to interpret. Closing that means writing the citations onto the decision
+	// or keeping published rule sets by version, and neither is built.
+	//
+	// Declared for the reader, never consulted by the engine: no obligation
+	// here binds a send, and a pack that put one here would be stating law the
+	// engine cannot apply. EffectiveFrom is the instrument's own commencement
+	// date, not the date this product learned about it.
+	Instruments []Instrument
 
 	// ReplyWindow is how long an inbound message keeps making a reply a reply
 	// when there is no thread to continue. Zero means the core default.
@@ -69,10 +99,20 @@ type Rules struct {
 	MarketingExceptions []MarketingException
 
 	// Disclosures are what a first message to somebody must carry.
+	//
+	// DECLARED, NOT YET APPLIED: no consumer renders a disclosure into a
+	// message body. Held by TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
+	// (backend/gates/messagingruleapplied_test.go), which fails when a pack
+	// declares an obligation the engine does not discharge and no entry
+	// records why.
 	Disclosures []Disclosure
 
-	// SubjectPrefix is prepended to an advertising message's subject, exactly
-	// once. Empty means none.
+	// SubjectPrefix is the marking an advertising message's subject must carry,
+	// exactly once. Empty means none.
+	//
+	// DECLARED, NOT YET APPLIED: nothing prepends it. No send path consults a
+	// pack's prefix before composing a subject. Held by the same gate as
+	// Disclosures.
 	SubjectPrefix string
 
 	// FrequencyCap bounds advertising to one address in a window. Nil means
@@ -80,7 +120,10 @@ type Rules struct {
 	FrequencyCap *FrequencyCap
 
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
-	// message. False means none is sent, which is the default.
+	// message. False means none is owed, which is the default.
+	//
+	// DECLARED, NOT YET APPLIED: nothing sends the acknowledgement. Held by the
+	// same gate as Disclosures.
 	OptOutAcknowledgement bool
 }
 
@@ -114,7 +157,7 @@ func (k ExceptionKind) Validate() error {
 type MarketingException struct {
 	Kind ExceptionKind
 
-	// RequiresSaleEvidence: there must be a recorded sale to this person.
+	// RequiresSaleEvidence: there must be a recorded sale to this contact.
 	RequiresSaleEvidence bool
 
 	// RequiresCollectionTimeOptOut: the address must have been collected with
@@ -122,7 +165,7 @@ type MarketingException struct {
 	RequiresCollectionTimeOptOut bool
 
 	// RequiresSimilarity: the advertised goods must be similar to what was
-	// bought. Checked per message, not once per person: a customer who bought
+	// bought. Checked per message, not once per contact: a customer who bought
 	// one product has not opened the door to every catalogue the seller has.
 	RequiresSimilarity bool
 
@@ -146,8 +189,12 @@ func (e MarketingException) Validate() error {
 }
 
 // DisclosureKind names something a first message must carry. Closed for the
-// reason ExceptionKind is: the engine renders each kind it knows, and one it
-// does not know would be an obligation nothing discharges.
+// reason ExceptionKind is: a pack may only name an obligation the engine can
+// be held to, and one outside this set is an obligation nothing could ever
+// discharge.
+//
+// The set being closed is not a claim that the kinds are rendered. None of them
+// is today — see Disclosures above for what holds that gap visible.
 type DisclosureKind string
 
 const (
@@ -170,7 +217,7 @@ func (k DisclosureKind) Validate() error {
 	case ControllerIdentity, PrivacyContact, ObjectionRoute, AdvertiserContact:
 		return nil
 	}
-	return fmt.Errorf("disclosure %q is not one the engine renders", string(k))
+	return fmt.Errorf("disclosure %q is not one this contract defines", string(k))
 }
 
 // Disclosure is one obligation a message carries, and where it binds.
@@ -199,6 +246,34 @@ type FrequencyCap struct {
 	Window time.Duration
 }
 
+// Instrument is one law or decree a rule set states, and when it took effect.
+//
+// It is DOCUMENTATION IN THE RECORD, not an obligation. A decision records the
+// ruleset version it was judged under; this says what that number meant. Two
+// instruments with different commencement dates may both be live, which is the
+// ordinary case when a decree amends rather than replaces — Vietnam's Decree
+// 91/2020 and Law 91/2025 sit that way — so this is a list and the pack states
+// every instrument its obligations rest on.
+type Instrument struct {
+	// Name is the instrument as a regulator cites it, e.g.
+	// "Decree 91/2020/ND-CP". Not translated: a citation is the same string
+	// in every locale, and translating one would make it unfindable.
+	Name string
+
+	// EffectiveFrom is the instrument's own commencement date, never the date
+	// this product learned about it. Zero means the pack did not state one,
+	// which is legal and says less rather than saying "the epoch".
+	EffectiveFrom time.Time
+}
+
+// Validate refuses an instrument that names nothing.
+func (i Instrument) Validate() error {
+	if strings.TrimSpace(i.Name) == "" {
+		return fmt.Errorf("an instrument carries no name — a commencement date with nothing to commence names no law")
+	}
+	return nil
+}
+
 // Validate refuses a cap that cannot bind.
 func (c FrequencyCap) Validate() error {
 	if c.Messages <= 0 {
@@ -220,6 +295,14 @@ func (r Rules) Validate() error {
 	if r.Version <= 0 {
 		return fmt.Errorf("messaging rules for %q carry version %d — a decision records the version it was taken under, and zero names nothing", string(r.Jurisdiction), r.Version)
 	}
+	// AND IT MUST FIT WHERE IT IS RECORDED. communication_decision.ruleset_version
+	// is a Postgres int, so a larger number would register here and then fail
+	// at the insert — refusing every send under an otherwise valid pack, at the
+	// send rather than at boot. The preflight is where a pack the engine cannot
+	// apply gets refused.
+	if r.Version > math.MaxInt32 {
+		return fmt.Errorf("messaging rules for %q carry version %d — a decision records the version on a 32-bit column, so a larger number would refuse every send under this pack rather than being recorded", string(r.Jurisdiction), r.Version)
+	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))
 	}
@@ -228,6 +311,11 @@ func (r Rules) Validate() error {
 	// is: the fold would have to pick, and a weaker duplicate silently
 	// replacing a stronger one is an exception applied on terms the pack never
 	// declared.
+	for _, in := range r.Instruments {
+		if err := in.Validate(); err != nil {
+			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+		}
+	}
 	seen := map[ExceptionKind]bool{}
 	for _, e := range r.MarketingExceptions {
 		if err := e.Validate(); err != nil {

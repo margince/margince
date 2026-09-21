@@ -82,9 +82,13 @@ type OAuth interface {
 	AuthCodeURL(state, redirectURI string) string
 }
 
-// sentLabelID is Gmail's system label for the mailbox owner's own sent mail.
-// System label ids are stable strings, not localized names.
-const sentLabelID = "SENT"
+// sentLabelID is Gmail's system label for the mailbox owner's own sent mail,
+// and draftLabelID the one for a message still being composed. System label ids
+// are stable strings, not localized names.
+const (
+	sentLabelID  = "SENT"
+	draftLabelID = "DRAFT"
+)
 
 // Message is one fetched Gmail message: the decoded RFC822 bytes plus the one
 // thing the bytes cannot honestly tell us — whether Gmail itself filed the
@@ -97,6 +101,11 @@ type Message struct {
 	// wrote it — mailmap composes it with the message's authorship before any
 	// attestation is claimed.
 	FiledAsSent bool
+	// Labels are Gmail's own label IDS for this message, not their display
+	// names: a system label is its name (INBOX, SENT, CATEGORY_PROMOTIONS) and
+	// a user label is an opaque "Label_<n>". They ride the same messages.get
+	// response FiledAsSent is read from, so they cost no extra call.
+	Labels []string
 }
 
 // API is the read-only Gmail surface the connector uses. All calls take a
@@ -115,7 +124,9 @@ type API interface {
 	GetRaw(ctx context.Context, accessToken, msgID string) (Message, error)
 	// EstimateAfter returns the provider-side message count for a query
 	// (resultSizeEstimate) — the backfill preview's number.
-	EstimateAfter(ctx context.Context, accessToken, query string) (int, error)
+	// The bool says the count HIT THE PAGE CAP, so it is a floor rather than
+	// a total — see EstimateAfter's own doc for why that has to travel.
+	EstimateAfter(ctx context.Context, accessToken, query string) (int, bool, error)
 	// ListAfter returns one page of message ids matching query.
 	ListAfter(ctx context.Context, accessToken, query, pageToken string, pageSize int) (ids []string, next string, err error)
 	// Watch registers (or renews) a users.watch against the given Pub/Sub
@@ -298,7 +309,7 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 	if err != nil {
 		return Message{}, fmt.Errorf("gmail: decoding raw message %s: %w", msgID, ErrUnreachable)
 	}
-	return Message{RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs)}, nil
+	return Message{RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs}, nil
 }
 
 // hasSentLabel reports whether Gmail filed this message under SENT — the
@@ -308,6 +319,14 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 // why the T1 correspondence gate (ADR-0072 §1) reads this and not the header.
 func hasSentLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, sentLabelID)
+}
+
+// hasDraftLabel reports whether Gmail filed this message under DRAFT — a
+// message the owner is still writing and has not sent. The provider's own word
+// for it, like SENT above: the RFC822 bytes of a draft are indistinguishable
+// from those of a message that went, so the header cannot tell us.
+func hasDraftLabel(labelIDs []string) bool {
+	return slices.Contains(labelIDs, draftLabelID)
 }
 
 // Watch registers a users.watch so Gmail publishes change notifications for

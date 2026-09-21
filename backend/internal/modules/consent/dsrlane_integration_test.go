@@ -75,7 +75,7 @@ func TestTheLaneReadIsRefusedForANonAdmin(t *testing.T) {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true},
+				"contact": {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

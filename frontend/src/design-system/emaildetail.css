@@ -7,7 +7,6 @@
 .emaildetail__title {
   margin: 0;
   min-width: 0;
-  font-size: var(--fs-h3);
 }
 
 .emaildetail__body {
@@ -20,8 +19,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
-  color: var(--textContent);
 }
 
 .emaildetail__party {
@@ -33,45 +30,27 @@
 .emaildetail__partyLabel {
   display: inline-block;
   min-width: 5.5rem;
-  color: var(--textSecondary);
+}
+
+/* A name on an envelope line that is also a way to the record. It keeps the
+   line's own type and colour until it is hovered, so a header reads as a
+   header rather than as a row of links. */
+.emaildetail__party .entity-link {
+  text-decoration: underline;
+  text-decoration-color: var(--borderStrong);
+  text-underline-offset: 2px;
+}
+.emaildetail__party .entity-link:hover {
+  color: var(--accentText);
+  text-decoration-color: currentcolor;
 }
 
 .emaildetail__party--withheld {
-  color: var(--textSecondary);
   font-style: italic;
 }
 
 /* The sender's own words. Wrapped, not clamped: this is the reading surface,
  * and the row is what had to stay one line. */
-.emaildetail__main {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-/* The sender's sign-off: their own words, so it reads as part of the message
- * rather than as metadata. Quieter than the sentence above and separated from
- * it, but SHOWN — it used to sit behind a control promising quoted history,
- * which is not what a sign-off is. */
-.emaildetail__signoff {
-  margin: var(--space-3) 0 0;
-  color: var(--textSecondary);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.emaildetail__quoted > summary {
-  color: var(--accent);
-  cursor: pointer;
-}
-
-.emaildetail__quoted > p {
-  margin: var(--space-2) 0 0;
-  color: var(--textSecondary);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 /* The heading and the way out, on one line. */
 .emaildetail__head {
   display: flex;
@@ -83,10 +62,23 @@
      margin on the type would have sat between the subject and its badges
      instead of under both. */
   margin-bottom: var(--space-3);
+  /* Room at the end for the dialog's own close, which is drawn over this
+     corner. Without it the reply verb sits under the glyph. */
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
 }
 
-/* The subject with its access line under it, as one block beside the close
-   button. Stacked rather than inline: a subject runs to a line and a half on a
+/* Answer the message — the header's verb, at its far end. It does not shrink:
+   the subject beside it wraps, and a Reply that gave up its width to a long one
+   would ellipsize into a verb nobody can read. */
+.emaildetail__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* The subject with its access line under it, as one block beside the header's
+   verbs. Stacked rather than inline: a subject runs to a line and a half on a
    narrow drawer, and a mark sharing that line would sit wherever it happened
    to end. */
 .emaildetail__heading {
@@ -108,10 +100,6 @@
   gap: var(--space-2);
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
-}
-.emaildetail__filesLabel {
-  font-size: var(--fs-meta);
-  color: var(--textSecondary);
 }
 .emaildetail__fileList {
   display: flex;

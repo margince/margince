@@ -254,6 +254,30 @@ func (c *Connector) backfill(ctx context.Context, access string) ([]string, stri
 // only a real Sink write fault returns a non-nil error (which stops the pull).
 // It is a package function (no receiver) so a pull holds no shared state.
 func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounces connector.BounceSink, owner string) (captured bool, err error) {
+	// A DRAFT was never sent, so putting one on a customer's timeline records
+	// a message that does not exist — and reads as one that does, because an
+	// outbound row with no delivery beside it IS a send as far as every reader
+	// downstream is concerned.
+	//
+	// Checked HERE rather than at either enumeration because both paths meet
+	// here: the initial backfill's messages.list and the incremental
+	// history.list. A rule spelled at one of them is a rule the other puts
+	// back.
+	//
+	// The Graph connector keeps the same invariant by walking delta per
+	// well-known folder rather than /me/messages/delta, and says why in the
+	// same words (capture/graph/client.go). Gmail has no folders to walk, so
+	// the label is where the rule lives on this side.
+	//
+	// Gmail mints a NEW message id on every autosave, so one message under
+	// composition arrives as a stream of distinct ids — which is why the
+	// reported symptom was five "sent" rows in eleven minutes for one email
+	// nobody had sent, rather than a single wrong row.
+	//
+	// Before the parse: a draft needs no reading to be refused.
+	if hasDraftLabel(fetched.Labels) {
+		return false, nil
+	}
 	msg, err := mailmap.Parse(fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)
@@ -262,7 +286,14 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 		return false, mailmap.RecordIfBounce(ctx, fetched.RFC822, bounces)
 	}
 	msg = msg.AttestSentByOwner(fetched.FiledAsSent)
-	if _, err := sink.Upsert(ctx, msg.ToRecord(connectorName, fetched.RFC822)); err != nil {
+	rec := msg.ToRecord(connectorName, fetched.RFC822)
+	// Where Gmail filed it, so an owner who keeps a label out of the CRM is
+	// answered before the message is stored. Set here rather than in
+	// mailmap.ToRecord because a label is provider metadata off the
+	// messages.get response and not in the RFC822 bytes — which is also why
+	// Normalize, the pure re-parse of those bytes, carries none.
+	rec.Containers = labelContainers(fetched.Labels)
+	if _, err := sink.Upsert(ctx, rec); err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return false, nil
 		}
@@ -371,6 +402,18 @@ func scopeStrings(scopes []principal.Scope) []string {
 	out := make([]string, 0, len(scopes))
 	for _, s := range scopes {
 		out = append(out, string(s))
+	}
+	return out
+}
+
+// labelContainers qualifies Gmail's label ids for the exclusion match.
+func labelContainers(labels []string) []string {
+	if len(labels) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(labels))
+	for _, label := range labels {
+		out = append(out, connector.Container(connectorName, label))
 	}
 	return out
 }

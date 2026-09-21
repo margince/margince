@@ -7,8 +7,8 @@ import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { namedSiteReadKind } from "./common";
 import { skipReasonText } from "./onboarding";
+import { namedSiteReadKind, stopIsConfigured } from "./sitereadkind";
 import "./onboarding-live-panel.css";
 
 // The coverage card: what a company site read covered and what it could not,
@@ -71,9 +71,11 @@ export function DossierCard({
  * What kind of gap a coverage row is. A page the crawler chose not to fetch is
  * routine housekeeping, a page it could not fetch is a hole in the read, and a
  * warning is a caveat about the read as a whole — three different things a
- * reader must be able to tell apart at a glance.
+ * reader must be able to tell apart at a glance. A note is the fourth: a bound
+ * the read was configured with, which limits coverage without anything having
+ * gone wrong.
  */
-type CoverageKind = "warn" | "skip" | "fail";
+type CoverageKind = "note" | "warning" | "skip" | "fail";
 
 type StoppedReason = NonNullable<
   components["schemas"]["CompanySiteRead"]["stopped_reason"]
@@ -117,11 +119,21 @@ function coverageRows(
   // A read that ran out of budget covered the site as far as it was allowed,
   // not as far as the site goes. Without this the page counts read as a whole
   // site — the same "covered everything" impression a silent skip gives.
+  //
+  // Which of the two it was decides the row's KIND, not whether it appears. A
+  // page cap, a byte cap and a wall-clock deadline are all the size this read
+  // was configured for, reached as designed, so each is a note about coverage;
+  // `budget` is something that got in the way, and a later run gets further
+  // once somebody has topped the workspace up.
   if (stoppedReason !== undefined && stoppedReason !== null) {
     rows.push({
       id: `stopped:${stoppedReason}`,
-      kind: "warn",
-      label: t("ob.live.coverageStopped"),
+      kind: stopIsConfigured(stoppedReason) ? "note" : "warning",
+      label: t(
+        stopIsConfigured(stoppedReason)
+          ? "ob.live.coverageCapped"
+          : "ob.live.coverageStopped",
+      ),
       reason: t(STOPPED_REASON_COPY[stoppedReason]),
     });
   }
@@ -129,7 +141,7 @@ function coverageRows(
     seq += 1;
     rows.push({
       id: `warning:${seq}`,
-      kind: "warn",
+      kind: "warning",
       label: t("ob.live.coverageWarning"),
       reason: warning,
     });
@@ -209,7 +221,7 @@ export function CoverageCard({
                   {row.url}
                 </span>
               )}
-              <span className="ob-live-coverage-reason">{row.reason}</span>
+              <span>{row.reason}</span>
             </li>
           ))}
         </ul>

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -11,8 +11,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
+import { CREATE_ID } from "./nav";
 import {
-  ASK_QUERY_KEY,
   type Command,
   CommandPalette,
   paletteHotkeyCaps,
@@ -20,13 +20,14 @@ import {
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
-// acceptance. B-EP09.6 (AC-shell-8) covered the record-scoped Ask composer,
-// which the agent surfaces that carried it no longer offer.
+// acceptance. AC-shell-8 is no longer about this file: it covered the
+// record-scoped Ask composer, and now covers the claim that composer carried
+// about what the agent can reach — asserted on the panel that carries it, in
+// frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
 
 afterEach(() => {
   cleanup();
   window.location.hash = "";
-  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -59,8 +60,8 @@ const render = (ui: ReactNode) => {
 const commands: Command[] = [
   {
     id: "screen:deals",
-    label: "Pipeline",
-    keywords: ["deals"],
+    label: "Deals",
+    keywords: ["pipeline"],
     type: "screen",
     route: { screen: "deals" },
   },
@@ -68,7 +69,7 @@ const commands: Command[] = [
     id: "action:new-deal",
     label: "New deal",
     type: "action",
-    route: { screen: "deals", id: "new" },
+    route: { screen: "deals", id: CREATE_ID },
   },
   {
     id: "record:brandt",
@@ -109,19 +110,20 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
-    expect(screen.getByText("Pipeline")).toBeTruthy();
+    expect(screen.getByText("Deals")).toBeTruthy();
     expect(screen.getByText("Record")).toBeTruthy(); // type tag rendered
   });
 
-  // A nav label is a presentation choice; the domain word outlives it. Typing
-  // "deals" has to reach Pipeline, or renaming a destination quietly removes it
-  // from the palette for everyone who knows it by its older name.
+  // A nav label is a presentation choice; the word a reader already learned
+  // outlives it. Typing "pipeline" has to reach the Deals row, or relabelling a
+  // destination quietly removes it from the palette for everyone who knows it by
+  // its older name.
   it("matches a keyword the row does not display, without showing it", async () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.type(screen.getByRole("searchbox"), "pipeline");
     const rows = screen.getAllByRole("button");
-    expect(rows[0].textContent).toContain("Pipeline");
-    expect(rows[0].textContent).not.toContain("deals");
+    expect(rows[0].textContent).toContain("Deals");
+    expect(rows[0].textContent).not.toContain("pipeline");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
@@ -147,15 +149,36 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
-  it("the Ask-AI row stores the query and lands on the AI surface (AC-shell-4)", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+  // The question rides in the ADDRESS, which is the only carrier the AI surface
+  // can be relied on to read: a reader already standing there changes no path,
+  // so nothing remounts, and a question held anywhere else is one nothing on
+  // that screen ever looks at.
+  it("the Ask-AI row carries the query in the address and lands on the AI surface (AC-shell-4)", async () => {
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
     await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
     // rows are [see-all, ask-ai] here (no builtin/record matches): step past
     // the see-all row to reach Ask-AI.
     await userEvent.keyboard("{ArrowDown}");
     await userEvent.keyboard("{Enter}");
-    expect(window.location.hash).toBe("#/ai");
-    expect(sessionStorage.getItem(ASK_QUERY_KEY)).toBe("zzz nothing matches");
+    expect(window.location.hash).toBe("#/ai?q=zzz+nothing+matches");
+    // And nowhere else. The address is the whole carrier, so there is no
+    // second copy for a reader's next tab to inherit.
+    expect(sessionStorage.length).toBe(0);
+    // Closing is the palette's own answer to a selection and not something it
+    // waits for the address to trigger: a reader already standing on the AI
+    // surface changes no path, and the palette still has to get out of the way.
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("closes on a selection that lands on the address it is already at", async () => {
+    window.location.hash = "#/deals";
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/deals");
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("Esc closes; opening clears the previous query (AC-shell-3)", async () => {
@@ -186,7 +209,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const user = userEvent.setup();
     // Where the arrow keys put a reader — and where Escape used to do nothing,
     // because the handler belonged to the input this focus has left.
-    const row = screen.getByRole("button", { name: /Pipeline/ });
+    const row = screen.getByRole("button", { name: /Deals/ });
     row.focus();
     expect(document.activeElement).toBe(row);
     await user.keyboard("{Escape}");
@@ -244,7 +267,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          data: [{ type: "person", id: "p1", title: "Dana Buyer at Acme" }],
+          data: [{ type: "contact", id: "p1", title: "Dana Buyer at Acme" }],
           page: { next_cursor: null, has_more: false },
         }),
       ),
@@ -283,11 +306,11 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // failed RECORD search leaves the command list working, not that it leaves
     // the previous query matching something it never matched.
     await userEvent.clear(screen.getByRole("searchbox"));
-    await userEvent.type(screen.getByRole("searchbox"), "Pipeline");
+    await userEvent.type(screen.getByRole("searchbox"), "Deals");
     expect(
       screen
         .getAllByRole("button")
-        .some((row) => row.textContent?.includes("Pipeline")),
+        .some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
   });
 
@@ -298,7 +321,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          data: [{ type: "organization", id: "o1", title: "Brandt GmbH" }],
+          data: [{ type: "company", id: "o1", title: "Brandt GmbH" }],
           page: { next_cursor: null, has_more: false },
         }),
       ),
@@ -309,7 +332,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // The row's OWN second line, read exactly: asserting on page text would
     // pass off the fixture command list's subtitle, and asserting `contains`
     // would pass on the wire word itself once the label is capitalised.
-    expect(row.querySelector(".sub")?.textContent).toBe("Organization");
+    expect(row.querySelector(".sub")?.textContent).toBe("Company");
   });
 
   // A catalog row has no page of its own — it lives on the data-model settings
@@ -363,10 +386,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
             id: "pr-2",
             name: "Rollout",
             key: null,
-            organization_id: "o-9",
+            company_id: "o-9",
           });
         }
-        if (url.endsWith("/organizations/o-9")) {
+        if (url.endsWith("/companies/o-9")) {
           return jsonResponse({ id: "o-9", display_name: "Brandt Automotive" });
         }
         return jsonResponse({ data: [], page: { next_cursor: null } });
@@ -409,6 +432,56 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 // rail row is a ⌘K command with no registration of its own — and a screen with
 // neither is reachable only by typing its hash. That derivation is what these
 // assert, end to end: the word a reader types, and the address they land on.
+// The palette is not a `Modal` — it draws its own box — but it keeps the same
+// two contracts every dialog here keeps, and this is the second one: it stays
+// on the page while its exit plays, and while it does it is a picture of a
+// palette and nothing a reader or a pointer can reach.
+describe("a palette that is leaving", () => {
+  it("stays on the page, inert and out of the accessibility tree", () => {
+    const exit = new Promise<void>(() => undefined);
+    const animations = vi
+      .spyOn(HTMLElement.prototype, "getAnimations")
+      // The two properties `usePresence` reads: whether this animation can end
+      // at all, and when it did.
+      .mockReturnValue([
+        {
+          finished: exit,
+          effect: { getComputedTiming: () => ({ iterations: 1 }) },
+        } as unknown as Animation,
+      ]);
+    try {
+      const onClose = vi.fn();
+      const { baseElement, rerender } = render(
+        <CommandPalette open onClose={onClose} commands={commands} />,
+      );
+      rerender(
+        <CommandPalette open={false} onClose={onClose} commands={commands} />,
+      );
+
+      const overlay = baseElement.querySelector(".palette-overlay");
+      expect(overlay?.getAttribute("data-state")).toBe("closing");
+      expect(overlay?.hasAttribute("inert")).toBe(true);
+      expect(overlay?.getAttribute("aria-hidden")).toBe("true");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally {
+      animations.mockRestore();
+    }
+  });
+
+  it("renders nothing at all where nothing animates", () => {
+    // Reduced motion, and jsdom: no animation means nothing to wait for, so the
+    // palette goes on the render that dismissed it, exactly as it did before it
+    // had an exit.
+    const { baseElement, rerender } = render(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    rerender(
+      <CommandPalette open={false} onClose={() => {}} commands={commands} />,
+    );
+    expect(baseElement.querySelector(".palette-overlay")).toBeNull();
+  });
+});
+
 describe("useBuiltinCommands", () => {
   function Probe() {
     return (
@@ -446,7 +519,7 @@ describe("useBuiltinCommands", () => {
             // The write, which is what Company profile asks: the read is held
             // by every seat and stopped opening the page when the four
             // configuration pages moved off the reads.
-            allow: { organization: ["read", "update"] },
+            allow: { company: ["read", "update"] },
             settingsAvailability:
               opts.companyContext === null
                 ? null
@@ -492,6 +565,26 @@ describe("useBuiltinCommands", () => {
       expect(screen.queryByText("Company profile")).toBeNull();
     });
   });
+
+  // The two destinations that carry a word the rail no longer prints. A reader
+  // who learned "Contacts" or "Pipeline" types it, and the row it named must be
+  // what answers — against the REAL rail rows, because the alias lives on the
+  // nav item and a fixture command list would only prove the fixture.
+  it.each([
+    ["contacts", "Contacts", "#/contacts"],
+    ["pipeline", "Deals", "#/deals"],
+  ])(
+    "reaches %s's destination by the name it used to print",
+    async (typed, label, hash) => {
+      const user = userEvent.setup();
+      renderProbe();
+      await user.type(screen.getByRole("searchbox"), typed);
+      const rows = screen.getAllByRole("button");
+      expect(rows[0].textContent).toContain(label);
+      await user.keyboard("{Enter}");
+      expect(window.location.hash).toBe(hash);
+    },
+  );
 
   it("reaches the filter builder by the name the screen prints", async () => {
     const user = userEvent.setup();

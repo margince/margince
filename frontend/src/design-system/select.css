@@ -1,25 +1,33 @@
 /* The Margince select — the trigger's face and its portalled popup.
  *
  * The trigger reads `.input` (atoms.css) on top of this: a dropdown and a text
- * input are the same field on screen, so the surface — font, fill, border,
- * padding, focus ring — is declared once there, and only the layout the button
- * needs lives here.
+ * input are the same FACE on screen, so the surface — fill, border, radius,
+ * focus ring, and the resting depth that makes this one a face rather than a
+ * well — is declared once there, and only the layout the button needs lives
+ * here. The BOX is the field's as well: a trigger holds a closed face rather
+ * than a caret, but it stands in a form column where a text box would, so
+ * `.select-control` in atoms.css keeps --inputHeight and overrides `.input` only
+ * on the inset and the weight a component's own label is set at.
  *
  * The popup is `position: fixed` and portalled to the body, so nothing in this
  * sheet may assume a positioned ancestor: every coordinate arrives as an inline
  * style from select.tsx, measured against the viewport. */
 
+/* The closed face takes its box — height, inset, weight — from the
+   `.select-control` rule in atoms.css, which has to sit beside `.input` to beat
+   it on source order. What is left, and what lives here, is the ROW: the label,
+   whatever marks it, and the chevron. The gap is the control's icon-to-label
+   gap, the same one a button spends between its glyph and its verb. */
 .select-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--controlGap);
   text-align: left;
   cursor: pointer;
 }
 .select-control:disabled {
   cursor: not-allowed;
-  color: var(--textTertiary);
   background: var(--bgCard);
 }
 /* The face never pushes the chevron out of the control: a long label ellipsizes
@@ -34,18 +42,8 @@
      three children and the swatch drifts off its own label. */
   flex: 1 1 auto;
 }
-/* A placeholder is not a value, and it must not read like one — but it is text a
-   reader has to be able to read, so it stops at --textMeta, the canonical AA
-   small-text role, rather than the decorative tier below it. This is text on an
-   active control, so 1.4.3's inactive-control exemption does not cover it: the
-   axe sweep failed on `.select-face-placeholder` the moment a screen shipped a
-   control resting on its placeholder. */
-.select-face-placeholder {
-  color: var(--textMeta);
-}
 .select-chevron {
   flex: none;
-  color: var(--textSecondary);
 }
 /* The turn itself is unconditional — it is the state, and a reader who asked for
    less motion still needs the chevron to point at an open list. Only the tween is
@@ -65,27 +63,49 @@
 .select-popup {
   position: fixed;
   z-index: 70;
+  /* THE LIST IS AS WIDE AS WHAT IS IN IT, and the trigger is only its floor
+     (`min-width`, handed in by select.tsx). Pinned to the trigger's width, a
+     short closed face truncated every option behind it — "My own d…" over
+     "Dr. Kathari…" — so a reader could not tell the choices apart in the one
+     place the control exists to tell them apart. The FACE still ellipsizes,
+     because a trigger that grew with its value would move the toolbar around
+     it; the list carries no such duty.
+     The cap is a MEASUREMENT rather than a fraction: `--popupRoom` is the space
+     left to the viewport's trailing margin (anchoredpopup.ts), so a control at
+     the right edge draws its list to that edge and no further. The fallback
+     covers a popup rendered by something that mints no room. 24rem is where a
+     dropdown stops being a list and becomes a panel. */
+  width: max-content;
+  max-width: min(24rem, var(--popupRoom, 90vw));
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
-  padding: var(--space-1);
+  /* The MENU ANATOMY's inset (listtable.css, .lt-menu): one option list is one
+     surface, whichever control opened it. Its floor and its ceiling are the two
+     parts this list does NOT share — both arrive as inline styles measured
+     against the trigger and the viewport, above — and menu-anatomy.test.ts
+     carries that exception with its reason. */
+  padding: var(--controlGap);
 }
 .select-list {
   display: flex;
   flex-direction: column;
 }
+/* ONE ENTRY, at the anatomy's own height: the inset above and below a
+   --fontBody line is what makes every option row in the product
+   --controlHeight tall. The inline inset stays optical — a list's words stand
+   a hair further in than the 8 the block axis spends. */
 .select-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 7px 9px;
+  padding: var(--controlGap) 9px;
   border-radius: var(--r-sm);
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -118,7 +138,6 @@
 }
 .select-option[aria-selected="true"] {
   color: var(--accentText);
-  font-weight: 500;
 }
 .select-option[aria-selected="true"].is-active {
   background: var(--accentLight);
@@ -127,7 +146,6 @@
    cannot make right now is information — but it takes no hover treatment,
    because a highlight is a promise that a click will do something. */
 .select-option.is-disabled {
-  color: var(--textTertiary);
   cursor: not-allowed;
   background: none;
 }

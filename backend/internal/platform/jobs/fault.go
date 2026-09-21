@@ -30,6 +30,11 @@ import (
 // This is the comms faultReason posture (a fixed sentence chosen by what
 // the cause IS, never the cause's own text) applied at the seam every
 // worker shares rather than in one module.
+//
+// The cause may be READ to choose among those sentences: technicalfault.go
+// inspects its SHAPE — type, sentinel, a status integer — and picks from a
+// closed authored set, so an operator learns that a host did not resolve without
+// the host's name travelling with it. What may never travel is the cause's TEXT.
 func Fault(err error) error { return FaultContext(context.Background(), err) }
 
 // FaultContext is Fault with the caller's context on the log line, so an
@@ -125,6 +130,20 @@ func faultFor(ctx context.Context, kind string, err error) error {
 			return &fault{sentence: known.sentence, cause: err}
 		}
 	}
+	// AFTER the sentinels, because a cause carrying one has already been named
+	// in the product's own terms and that name is the more useful of two true
+	// statements: "the record this job names no longer exists" tells an
+	// operator what to do, "the provider answered with a server error" tells
+	// them where it happened.
+	//
+	// The cause is READ here and never projected — the shape decides, the
+	// sentence is authored (technicalfault.go). An operator whose job failed
+	// because a host did not resolve now reads that, instead of being sent to
+	// a log to find out.
+	if technical, ok := technicalFaultFor(err); ok {
+		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(ctx, kind, technical.class, err)...)
+		return &fault{sentence: technical.sentence, cause: err}
+	}
 	// The SAME attributes as the two classified lines above. This is the branch
 	// whose sentence tells an operator the diagnosis is in the process log, so it
 	// is the one line that must be findable — and it was the one carrying neither
@@ -158,14 +177,11 @@ func faultFor(ctx context.Context, kind string, err error) error {
 // enough not to be one and short enough that no unit meaning "as soon as
 // possible" is meaningfully denied.
 //
-// A CALLER STAYING UNDER THE CEILING IS NOT LEFT TO PROSE. It used to say the
-// ceiling "sits well above any cadence a connector declares", which was a claim
-// about one day's tree that nothing enforced — and it hid the inversion it was
-// meant to reassure about, since a unit declaring a cadence above this bound
-// reconciles its delay against that cadence perfectly and then gets clamped to
-// less, polling a refusing provider harder during an outage than in health.
-// backend/gates/pollcadenceparity_test.go reads this bound out of this file and holds
-// every postponing unit under it.
+// A CALLER STAYING UNDER THE CEILING IS NOT LEFT TO PROSE. A unit declaring a
+// cadence above this bound reconciles its delay against that cadence perfectly
+// and is then clamped to less, polling a refusing provider harder during an
+// outage than in health. backend/gates/pollcadenceparity_test.go reads this bound
+// out of this file and holds every postponing unit under it.
 const (
 	minRescheduleDelay = time.Second
 	maxRescheduleDelay = 15 * time.Minute
@@ -201,15 +217,11 @@ func rescheduleFor(ctx context.Context, kind, class string, in time.Duration, er
 // faultLogAttrs is what every fault log line carries, spelled once so the three
 // branches cannot describe the same failure three different ways.
 //
-// THE CORRELATION ID IS THE HANDLER'S, and it is not attached here. It used to
-// be, because no process role installed its own handler as the default and a
-// package-level slog call therefore reached a bare one that enriched nothing —
-// so the id had to be attached by hand or it appeared on no fault line at all.
-// Every serving role now installs a correlation-aware default
-// (httpserver.InstallProcessLogger), which makes the hand-attachment not merely
-// redundant but wrong: both halves would stamp the same key and a JSON line
-// would carry correlation_id twice. One thing stamps it, and it is the handler
-// that stamps it for every other package-level call in the tree.
+// THE CORRELATION ID IS THE HANDLER'S, and it is not attached here. Every
+// serving role installs a correlation-aware default
+// (httpserver.InstallProcessLogger), so attaching it by hand would have both
+// halves stamp the same key and a JSON line carry correlation_id twice. One
+// thing stamps it, for every package-level call in the tree.
 //
 // THE WORKSPACE STILL IS attached here, because nothing else knows it. The
 // handler reads the correlation id off the context and only that; a job's
@@ -243,13 +255,12 @@ func faultLogAttrs(ctx context.Context, kind, class string, err error) []any {
 // trade — its audience and its retention are the operator's own — so this is
 // where the cause is supposed to be legible.
 //
-// THE TYPE CHAIN IS THE FIELD THAT EARNS ITS PLACE, and it is not in the
-// message. The branch that most needs this line is the unclassified one, whose
-// stored sentence says only that the diagnosis is in the process log — and what
-// the reader of that line needs is which error a unit returned, so it can be
-// given a class. err.Error() answers what the provider said; the chain answers
-// which code said it. The same holds for a postponement, which River records no
-// attempt error for at all, so this line is the entire trail.
+// THE TYPE CHAIN EARNS ITS PLACE, and it is not in the message. The branch that
+// most needs this line is the unclassified one, whose stored sentence says only
+// that the diagnosis is in the process log; what its reader needs is which error
+// a unit returned, so it can be given a class. err.Error() answers what the
+// provider said, the chain answers which code said it. A postponement records no
+// attempt error at all, so this line is its entire trail.
 //
 // Outermost first, matching the order errors.As resolves in, and bounded by the
 // wrapping depth an error actually has — a chain is walked with Unwrap and stops
@@ -385,16 +396,12 @@ var vocabulary = []struct {
 	{apperrors.ErrInvalidArgument, "invalid_argument", "the job's own input was invalid or malformed", "Nothing to re-queue as-is: the input that produced this job needs correcting at its source before another attempt can succeed."},
 	{apperrors.ErrConsentNotGranted, "consent_missing", "consent for this purpose is not granted, so the job stopped before acting", "Nothing to fix in the job. The record's owner grants consent, or the work is not meant to happen."},
 	{apperrors.ErrBudgetExceeded, "budget_spent", "the budget for this work is spent; the job will run once it refreshes", "Wait for the window to refresh, or raise the budget if the work matters more than the cap."},
-	{apperrors.ErrIncumbentBudgetExhausted, "incumbent_budget_spent", "the incumbent CRM's API budget is spent; the poller will catch up", "Nothing to do: the poller resumes on the next window. Persistent exhaustion means the sync cadence is above what the incumbent's plan allows."},
 	{apperrors.ErrRequiresApproval, "staged_for_approval", "this action needs human approval and was staged rather than executed", "Somebody approves or rejects the staged action; the job itself needs no re-queue."},
 	{apperrors.ErrSeatTierInsufficient, "seat_tier_insufficient", "the granting seat's tier does not admit this action", "Raise the granting seat's tier, or stop asking this job for an action that tier is not meant to take."},
 	{apperrors.ErrSeatLimitReached, "seat_limit_reached", "the installation's licensed full seats are all in use, so no seat was created", "Free a seat or license another, then re-queue."},
 	{apperrors.ErrScopeExceeded, "scope_exceeded", "the passport's scope does not cover this action", "Re-issue the passport with the scope the action needs, or narrow what the job attempts."},
 	{apperrors.ErrApprovalTokenInvalid, "approval_token_spent", "the approval token was invalid or already spent", "Ask for the approval again. A token is single-use, so a replayed one lands here."},
-	{apperrors.ErrModeNotOverlay, "not_overlay_mode", "this workspace is no longer in overlay mode", "Nothing to do: the work belonged to overlay mode and the workspace has left it."},
 	{apperrors.ErrUnsupportedBySoR, "unsupported_by_sor", "the system of record does not support this operation", "Nothing to fix here; the operation has to happen in the system of record itself."},
-	{apperrors.ErrIncumbentAlreadyConnected, "incumbent_already_connected", "an incumbent connection already exists for this workspace", "Disconnect the existing incumbent first if this job was meant to replace it."},
-	{apperrors.ErrOverlayFlipBlocked, "overlay_flip_blocked", "the overlay flip preflight is unsatisfied", "Read the flip preflight for what is outstanding, satisfy it, then re-queue."},
 	{apperrors.ErrBaseCurrencyLocked, "base_currency_locked", "the base currency is locked by frozen conversion rates", "Nothing to do in the job: a base currency stops being changeable once rates are frozen against it."},
 	{apperrors.ErrProviderUnusable, "provider_unusable", "an outside service gave no usable answer, so nothing was learned", "Check the provider is reachable, is not rate-limiting this installation, and answers in the expected shape, then re-queue. A request with no answer says nothing about its subject."},
 	{apperrors.ErrRetentionHold, "retention_hold", "the record is held under a statutory retention obligation", "Nothing to do, and nothing to force: the hold outranks this job. The record becomes workable when the obligation lapses."},

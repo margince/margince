@@ -50,11 +50,27 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	if !ok {
 		return false
 	}
+	// A Deal Room participant holds no tool authority at all — auth.Gate.Admit
+	// refuses every tool for a Buyer outright, not on the scope axis but by
+	// kind (admit.go: "a Deal Room participant holds no tool authority").
+	// Checked before the "not an Agent" fast path below, or a Buyer would be
+	// offered the whole surface and refused every one of them.
+	if p.Type == principal.PrincipalBuyer {
+		return false
+	}
 	// Humans and the system principal do not ride the scope model — their
 	// authority is their RBAC, enforced at the store — so filtering them by a
 	// passport scope they never carry would hide the whole surface.
 	if p.Type != principal.PrincipalAgent {
 		return true
+	}
+	// A HumanOnly tool requests no agent authority and RequireHuman refuses
+	// this same principal at Invoke — offering it here would advertise a call
+	// the gate can only ever deny, exactly the lie this function exists to
+	// prevent. Ordered first rather than relying on it never co-occurring
+	// with SelfDescribing, so the rule reads plainly.
+	if spec.HumanOnly {
+		return false
 	}
 	// A tool answering who the caller is stays offered whatever the passport
 	// is scoped to do; mcp.ToolSpec.SelfDescribing says why, and the
@@ -90,14 +106,14 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	// TierAutoExecute as confirm-first, so a tier added without updating this
 	// switch must not be advertised as running unattended. The same posture
 	// tierWire takes on the REST side, for the same reason.
-	tier := "a person approves every call before it runs"
+	tier := "a human approves every call before it runs"
 	switch spec.Tier {
 	case mcp.TierAutoExecute:
 		tier = "runs immediately"
 	case mcp.TierConfirmationRequired:
-		tier = "a person approves every call before it runs"
+		tier = "a human approves every call before it runs"
 	case mcp.TierDynamic:
-		tier = "some calls run immediately and others a person approves first, decided per call from its arguments"
+		tier = "some calls run immediately and others a human approves first, decided per call from its arguments"
 	}
 	return fmt.Sprintf("%s (Governance: %s; requires passport scope %q.)", spec.Description, tier, spec.RequiredScope)
 }

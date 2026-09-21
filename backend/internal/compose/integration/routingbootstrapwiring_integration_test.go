@@ -52,7 +52,7 @@ func TestADeclaredBindingReachesTheDatabaseThroughTheRealBootstrap(t *testing.T)
 	// is how the pointer-typed spelling of this field passed its tests while
 	// refusing every real binding.
 	cfg, err := deployconfig.Parse([]byte(`version: 1
-organization:
+workspace:
   name: Bootstrap Wiring
 bootstrap_admin:
   email: admin@wiring.test

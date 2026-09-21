@@ -229,7 +229,7 @@ export function SettingsSearchBox({
                   go(index);
                 }}
               >
-                <span className="settingssearch-label">{hit.label}</span>
+                <span>{hit.label}</span>
                 {/* Where it lives AND whose state it changes. The scope comes
                     off the hit's own page, which the hit has carried all along
                     — a reader searching "domain" gets two hits on two pages and

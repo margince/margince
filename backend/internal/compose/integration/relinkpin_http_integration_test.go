@@ -27,7 +27,7 @@ import (
 func TestARelinkIsRefusedWhenTheActivityMovedUnderIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Relink pin", "pin@fable.test", "Admin")
-	personID, taskID := seedTaskAndTarget(t, e)
+	contactID, taskID := seedTaskAndTarget(t, e)
 
 	var read struct {
 		Version int64 `json:"version"`
@@ -42,7 +42,7 @@ func TestARelinkIsRefusedWhenTheActivityMovedUnderIt(t *testing.T) {
 	// The control: the version it was read at still moves it, so this case
 	// cannot pass by the pin refusing everything.
 	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink",
-		AnyMap{"entity_type": "person", "entity_id": personID},
+		AnyMap{"entity_type": "contact", "entity_id": contactID},
 		map[string]string{"If-Match": strconv.FormatInt(read.Version, 10)}, nil); status != http.StatusOK {
 		t.Fatalf("relink on the version it was read at → %d, want 200", status)
 	}
@@ -58,7 +58,7 @@ func TestARelinkIsRefusedWhenTheActivityMovedUnderIt(t *testing.T) {
 		Code string `json:"code"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink",
-		AnyMap{"entity_type": "person", "entity_id": personID, "replace_existing_of_type": true},
+		AnyMap{"entity_type": "contact", "entity_id": contactID, "replace_existing_of_type": true},
 		map[string]string{"If-Match": strconv.FormatInt(read.Version, 10)}, &problem); status != http.StatusConflict ||
 		problem.Code != "version_skew" {
 		t.Fatalf("relink on a stale version → %d (%s), want 409 version_skew — the pin the gate bound is what "+
@@ -73,7 +73,7 @@ func TestARelinkIsRefusedWhenTheActivityMovedUnderIt(t *testing.T) {
 func TestABatchRelinkRefusesAVersionPinRatherThanIgnoringIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Batch pin", "batch@fable.test", "Admin")
-	personID, taskID := seedTaskAndTarget(t, e)
+	contactID, taskID := seedTaskAndTarget(t, e)
 
 	var read struct {
 		Version int64 `json:"version"`
@@ -85,7 +85,7 @@ func TestABatchRelinkRefusesAVersionPinRatherThanIgnoringIt(t *testing.T) {
 		Code string `json:"code"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities/relink-bulk",
-		AnyMap{"activity_ids": []string{taskID}, "entity_type": "person", "entity_id": personID},
+		AnyMap{"activity_ids": []string{taskID}, "entity_type": "contact", "entity_id": contactID},
 		map[string]string{"If-Match": strconv.FormatInt(read.Version, 10)}, &problem); status != http.StatusUnprocessableEntity ||
 		problem.Code != "pin_not_supported" {
 		t.Fatalf("a pinned batch relink → %d (%s), want 422 pin_not_supported — a version that cannot "+

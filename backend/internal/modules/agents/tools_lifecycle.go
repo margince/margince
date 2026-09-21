@@ -18,6 +18,8 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -34,12 +36,14 @@ func RegisterLifecycleTools(
 	p datasource.SystemOfRecordProvider,
 	relinker ActivityRelinker,
 	disqualifier LeadDisqualifier,
+	demoter LeadDemoter,
 	advancer ProjectPhaseAdvancer,
 ) {
 	r.Register(relinkActivity{relinker: relinker, p: p})
 	r.Register(relinkThread{relinker: relinker, p: p})
 	r.Register(relinkActivities{relinker: relinker, p: p})
 	r.Register(disqualifyLead{p: p, disqualifier: disqualifier})
+	r.Register(demoteLead{p: p, demoter: demoter})
 	r.Register(advanceProjectPhase{p: p, advancer: advancer})
 }
 
@@ -56,8 +60,28 @@ type ActivityRelinker interface {
 
 // LeadDisqualifier retires a lead: status disqualified + archived_at, the row
 // surviving so it stays fetchable by id.
+//
+// ifVersion carries the version the write must be conditioned on, exactly as
+// ProjectPhaseAdvancer's does. It is a parameter and not an omission because
+// this verb STAGES a target version at approval time: a pin staged and never
+// applied is a guarantee the approvals surface advertises and the write does
+// not keep.
 type LeadDisqualifier interface {
-	DisqualifyLead(ctx context.Context, id ids.UUID) (json.RawMessage, error)
+	DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error)
+}
+
+// LeadDemoter reverses a promotion: the lead returns to the open ladder and
+// the contact the promotion created is archived. It answers the reversal's own
+// shape rather than a bare record, because WHICH unwind happened — the contact
+// archived, or only the lineage cleared — is the part a caller acts on.
+//
+// ifVersion carries the version the write must be conditioned on, for the
+// reason LeadDisqualifier's does: this verb STAGES a target version at approval
+// time, and a pin staged and never applied is a guarantee the approvals surface
+// advertises and the write does not keep. A reversal is where that costs most —
+// unpinned, it can unwind a promotion the approval was not describing.
+type LeadDemoter interface {
+	DemoteLead(ctx context.Context, id ids.UUID, reason string, ifVersion *int64) (json.RawMessage, error)
 }
 
 // ProjectPhaseAdvancer steps a project along the phase ladder, recording the
@@ -72,11 +96,11 @@ type ProjectPhaseAdvancer interface {
 // relinkTargets is the link-target vocabulary, mirroring the contract enum so a
 // target the store would refuse is refused before it reaches the store.
 var relinkTargets = map[string]bool{
-	string(datasource.EntityPerson):       true,
-	string(datasource.EntityOrganization): true,
-	string(datasource.EntityDeal):         true,
-	string(datasource.EntityLead):         true,
-	string(datasource.EntityProject):      true,
+	string(datasource.EntityContact): true,
+	string(datasource.EntityCompany): true,
+	string(datasource.EntityDeal):    true,
+	string(datasource.EntityLead):    true,
+	string(datasource.EntityProject): true,
 }
 
 type relinkActivityArgs struct {
@@ -108,7 +132,7 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		OpenAPIOp:    "relinkActivity",
 		InputSchema: schema(`{"type":"object","required":["activity_id","entity_type","entity_id"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured activity to re-associate"},
-			"entity_type":{"type":"string","enum":["person","organization","deal","lead","project"]},
+			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid","description":"The record to link it to"},
 			"replace_existing_of_type":{"type":"boolean","default":false,
 				"description":"Replace the existing link of the same entity_type (move) rather than adding one (associate)"},
@@ -145,7 +169,7 @@ func (t relinkActivity) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 // because an unpinned write would run unattended — and this tool answered no
 // version at all. The resolver's own contract says it "raises a relink onto a
 // PROJECT to confirm-first and leaves every other destination auto-executing";
-// that second half was unreachable, so relinking to a person, a company or a
+// that second half was unreachable, so relinking to a contact, a company or a
 // deal cost a human decision the app itself does not ask for.
 //
 // The version comes from the same read the staging path already performs
@@ -246,8 +270,76 @@ func (t disqualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	// nil, because this tool takes no if_version of its own: the pin it applies
+	// is the one the approval was released against, or the one the auto-execute
+	// gate read the record at.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
-	return t.disqualifier.DisqualifyLead(ctx, args.LeadID)
+	return t.disqualifier.DisqualifyLead(ctx, args.LeadID, pin)
+}
+
+// --- demote_lead (🟡 write — reverses a promotion) ---
+
+type demoteLeadArgs struct {
+	LeadID ids.UUID `json:"lead_id"`
+	Reason string   `json:"reason"`
+}
+
+type demoteLead struct {
+	p       datasource.SystemOfRecordProvider
+	demoter LeadDemoter
+}
+
+func (t demoteLead) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
+		Description:   demoteLeadCopy.render(),
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "demoteLead",
+		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
+			"lead_id":{"type":"string","format":"uuid","description":"The lead whose promotion is being reversed"},
+			"reason":{"type":"string","minLength":1,
+				"description":"Why the promotion is being reversed; recorded in the audit trail, because an undo nobody explained is indistinguishable later from a mistake"},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"additionalProperties":false}`),
+		OutputSchema: schemaFor[DemoteLeadResult](),
+	}
+}
+
+// StageInfo decodes this door's arguments into the reversal command and
+// delegates: the refusals and the staged subject live in the resolver
+// (commandlifecycle.go), where the REST door reaches the same ones for the
+// same operation.
+func (t demoteLead) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
+	var args demoteLeadArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return StageInfo{}, err
+	}
+	return StageSubject(ctx, NewDemoteLeadCall(t.p, DemoteLeadCommand(args)))
+}
+
+func (t demoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args demoteLeadArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	// Re-asked HERE as well as in Guards, because an approved retry re-enters
+	// through this door without passing staging: a reason the staging refused
+	// must not become one the execution accepts.
+	if err := requireDemotionReason(args.Reason); err != nil {
+		return nil, err
+	}
+	// nil, because this tool takes no if_version of its own: the pin it applies
+	// is the one the approval was released against, as disqualifyLead's is.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
+	return t.demoter.DemoteLead(ctx, args.LeadID, args.Reason, pin)
 }
 
 // --- advance_project_phase (🟡 write) ---
@@ -342,4 +434,21 @@ func (t advanceProjectPhase) readArgs(in json.RawMessage) (advanceProjectPhaseAr
 		return advanceProjectPhaseArgs{}, err
 	}
 	return args, nil
+}
+
+// projectPhaseNames is the ladder as a refusal names it, derived from the
+// membership test rather than restated beside it: a second list is how the
+// sentence and the check come to disagree about what a phase is.
+func projectPhaseNames() []string {
+	names := slices.Collect(maps.Keys(projectPhases))
+	slices.Sort(names)
+	return names
+}
+
+// relinkTargetNames is the link-target vocabulary as a refusal names it,
+// derived for the same reason.
+func relinkTargetNames() []string {
+	names := slices.Collect(maps.Keys(relinkTargets))
+	slices.Sort(names)
+	return names
 }

@@ -36,10 +36,12 @@ import (
 	"log/slog"
 	"maps"
 	"regexp"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
@@ -166,10 +168,34 @@ func (p *Provider) Prime(ctx context.Context) error {
 		// missing" is the operator-visible fact and the per-view lines are the
 		// detail. A view that silently never appears is the failure this design
 		// must not have.
-		p.log.Warn("mcp apps: some views are not served; the advertised set is fixed until this api restarts",
-			"held", len(admitted), "catalog", len(catalog))
+		//
+		// WHICH views, and WHAT TO DO, both in the line. The counts alone say
+		// something is wrong and leave an operator to reconstruct the rest from
+		// per-view lines that may be pages away — and the remedy is the whole
+		// point of the line: this set does not repair itself. There is no
+		// stream to announce a later arrival on (see Dispatcher.capabilities),
+		// so a view that missed the boot stays missing for the life of the
+		// process however healthy the web tier becomes.
+		p.log.Warn("mcp apps: some views are not served, and this api will not pick them up on its own — "+
+			"restart it once the web tier is serving them",
+			"held", len(admitted), "catalog", len(catalog), "missing", missingURIs(refused))
 	}
 	return nil
+}
+
+// missingURIs names the views that did not answer, sorted so two boots of the
+// same broken deployment log the same line.
+//
+// The URIs rather than the count: an operator reading "held 1, catalog 2" knows
+// something is wrong and not which host will fail, and the per-view lines that
+// would tell them are separate records a log search has to find.
+func missingURIs(refused map[string]error) []string {
+	out := make([]string, 0, len(refused))
+	for uri := range refused {
+		out = append(out, uri)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // primeUntilDeadline reads every catalog view, re-attempting the ones that have
@@ -369,30 +395,30 @@ func (p *Provider) originForLog() string {
 // AI counters use, so no seventh argument is added to the handler that already
 // says it has enough.
 func (p *Provider) WriteMetrics(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_view_held Whether this api is serving each MCP App view document.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_view_held gauge\n")
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_view_held Whether this api is serving each MCP App view document.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_view_held gauge\n")
 	for _, v := range catalog {
 		serving := 0
 		if p.Holds(v.uri) {
 			serving = 1
 		}
-		_, _ = fmt.Fprintf(w, "margince_mcp_app_view_held{uri=%q} %d\n", v.uri, serving)
+		httpserver.WriteLine(w, "margince_mcp_app_view_held{uri=%s} %d\n", httpserver.Label(v.uri), serving)
 	}
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_fetch_failures_total View document fetches that did not arrive.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_fetch_failures_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_mcp_app_fetch_failures_total %d\n", p.fetchFailures.Load())
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_admission_failures_total View documents that arrived and were refused.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_admission_failures_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_mcp_app_admission_failures_total %d\n", p.admissionFailures.Load())
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_title_mismatches_total Served documents whose title differs from the catalog's.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_title_mismatches_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_mcp_app_title_mismatches_total %d\n", p.titleMismatches.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_fetch_failures_total View document fetches that did not arrive.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_fetch_failures_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_fetch_failures_total %d\n", p.fetchFailures.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_admission_failures_total View documents that arrived and were refused.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_admission_failures_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_admission_failures_total %d\n", p.admissionFailures.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_title_mismatches_total Served documents whose title differs from the catalog's.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_title_mismatches_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_title_mismatches_total %d\n", p.titleMismatches.Load())
 	// DERIVED from the documents currently held rather than recorded as one
 	// process-wide flag. Skew is per-view — a rollout replaces one document
 	// before the other — and a single reading would be whichever view was read
 	// last, which is a number that changes for reasons nobody can trace.
-	_, _ = fmt.Fprintf(w, "# HELP margince_mcp_app_build_skew The held view was built from a different revision than this api.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_mcp_app_build_skew gauge\n")
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_build_skew The held view was built from a different revision than this api.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_build_skew gauge\n")
 	for _, v := range catalog {
 		doc, holding := p.served(v.uri)
 		if !holding {
@@ -402,6 +428,6 @@ func (p *Provider) WriteMetrics(w io.Writer) {
 		if buildinfo.SkewBetween(buildinfo.Revision, documentRevision(doc)) {
 			skewed = 1
 		}
-		_, _ = fmt.Fprintf(w, "margince_mcp_app_build_skew{uri=%q} %d\n", v.uri, skewed)
+		httpserver.WriteLine(w, "margince_mcp_app_build_skew{uri=%s} %d\n", httpserver.Label(v.uri), skewed)
 	}
 }

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 // Fitness function for a list that claims an ordering it cannot have.
 //
 // `/partners` accepts a `sort` parameter and its handler never reads it: the
-// store orders by organization id, which is its keyset. The screen opened on a
+// store orders by company id, which is its keyset. The screen opened on a
 // tab labelled "Newest", sent `sort=-created_at`, and drew rows in uuid order.
 // Nothing failed. The reader was simply told an ordering the list did not have,
 // which is worse than being told none — a wrong order looks like data, and a
@@ -80,7 +80,7 @@ describe("a list claims no ordering its endpoint cannot give", () => {
   it("finds the list screens rather than trusting a list written here", () => {
     // The census IS the directory. A hand-kept list would be the thing that
     // went stale, which is the failure this test exists to prevent.
-    expect(listScreens()).toContain("people.tsx");
+    expect(listScreens()).toContain("contacts.tsx");
     expect(listScreens()).toContain("partners.tsx");
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });

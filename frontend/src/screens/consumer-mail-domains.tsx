@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -25,12 +26,12 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import "./consumer-mail-domains.css";
 
 // This installation's own consumer-mail list (CAP-PARAM-5). Mail from a consumer
-// domain still creates the person; what it never creates is a company. The
+// domain still creates the contact; what it never creates is a company. The
 // shipped baseline is a third-party dataset of some 8 700 domains, right far
 // more often than a hand-typed list and still wrong sometimes in both
 // directions — so this is where an operator adds what it missed and takes back
 // what it wrongly claimed. Every role reads it, and every role may search the
-// shipped baseline itself, so the capture posture stays legible to the people
+// shipped baseline itself, so the capture posture stays legible to the contacts
 // whose mail it governs. The write split mirrors the server's: any seat with
 // capture_settings:create adds a consumer domain the baseline missed (`extra`),
 // while `never` carve-outs and removal stay on capture_settings:update
@@ -38,8 +39,7 @@ import "./consumer-mail-domains.css";
 
 // The two things an entry can say, as ONE list: the type is derived from it and
 // the control's options are built from it, so the offered choices, their labels
-// and the runtime narrowing cannot drift apart (same shape as overlay.tsx's
-// region list).
+// and the runtime narrowing cannot drift apart.
 const KINDS = ["extra", "never"] as const;
 type Kind = (typeof KINDS)[number];
 const kindLabel: Record<Kind, MessageKey> = {
@@ -177,7 +177,7 @@ function BaselineRow() {
               onChange={(e) => setQ(e.target.value)}
             />
             {needle !== "" && result && result.matched === 0 && (
-              <p className="t-caption">{t("consumerMail.baselineNone")}</p>
+              <p>{t("consumerMail.baselineNone")}</p>
             )}
             {needle !== "" && result && result.matched > 0 && (
               <>
@@ -186,9 +186,7 @@ function BaselineRow() {
                   data-testid="consumer-mail-baseline-list"
                 >
                   {result.data.map((domain) => (
-                    <li key={domain} className="t-mono t-caption">
-                      {domain}
-                    </li>
+                    <li key={domain}>{domain}</li>
                   ))}
                 </ul>
                 {result.matched > result.data.length && (
@@ -247,7 +245,6 @@ export function ConsumerMailDomainsCard() {
       // which is the one that knows WHICH of the two grants is missing.
       titleAction={
         <Button
-          small
           reasonId={canAdd ? undefined : denialId}
           onClick={() => setAdding(true)}
         >
@@ -291,13 +288,12 @@ export function ConsumerMailDomainsCard() {
                           control={
                             <Button
                               variant="ghost"
-                              small
                               aria-label={t("consumerMail.remove")}
                               disabled={remove.isPending}
                               reasonId={canManage ? undefined : denialId}
                               onClick={() => remove.mutate(entry.id)}
                             >
-                              <Trash2 aria-hidden size={16} />
+                              <Trash2 aria-hidden />
                             </Button>
                           }
                         />
@@ -316,13 +312,13 @@ export function ConsumerMailDomainsCard() {
             <BaselineRow />
           </Disclosure>
         </SettingList>
-        {denial && (
-          <p className="t-caption" id={denialId}>
-            {denial}
-          </p>
-        )}
+        {denial && <p id={denialId}>{denial}</p>}
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("consumerMail.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -357,9 +353,9 @@ function AddConsumerMailDialog({
   const typed = domain.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("consumerMail.addTitle")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(e) => {
@@ -400,22 +396,21 @@ function AddConsumerMailDialog({
             />
           )}
         </Field>
-        {!canManage && (
-          <p className="t-caption" id={carveOutDenialId}>
-            {t("consumerMail.addOnly")}
-          </p>
-        )}
+        {!canManage && <p id={carveOutDenialId}>{t("consumerMail.addOnly")}</p>}
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("consumerMail.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || typed === ""}

@@ -157,18 +157,31 @@ func forecastWonInWindow(
 	baseValue := BaseValueSQL(
 		fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d")
 
+	// The conversion series is a sum of won deals, so a masked figure must not
+	// reach it: the history beside a forecast is read as the same money over
+	// time, and a total that counted a withheld amount would disclose it one
+	// window at a time. FILTER rather than a null, because BaseValueSQL renders
+	// the fold and this statement composes it rather than the column.
+	maskClause, masked, err := auth.MaskExcludedClause(ctx, tableDeal, "amount_minor", "d", arg)
+	if err != nil {
+		return 0, err
+	}
+	summable := sqlUnnarrowed
+	if masked {
+		summable = maskClause
+	}
 	sql := fmt.Sprintf(`
-		SELECT COALESCE(sum(%s), 0)
+		SELECT COALESCE(sum(%[1]s) FILTER (WHERE %[6]s), 0)
 		FROM deal d
 		WHERE d.archived_at IS NULL
 		  AND d.status = 'won'
 		  AND d.closed_at IS NOT NULL
-		  AND (timezone($%d, d.closed_at))::date BETWEEN $%d AND $%d
-		  AND %s
-		  AND %s`,
+		  AND (timezone($%[2]d, d.closed_at))::date BETWEEN $%[3]d AND $%[4]d
+		  AND %[5]s
+		  AND %[7]s`,
 		baseValue,
 		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate),
-		scopeClause, populationClause)
+		scopeClause, summable, populationClause)
 
 	var won int64
 	if err := tx.QueryRow(ctx, sql, args...).Scan(&won); err != nil {
@@ -194,8 +207,10 @@ func forecastHistoryClauses(
 	if scopeClause == "" {
 		scopeClause = sqlUnnarrowed
 	}
+	// Excludes unowned rows even from the caller's own default — the same
+	// forecast-is-a-commitment reasoning ForecastDeals carries (forecastseam.go).
 	_, populationClause, err := AnalyticsPopulationClause(
-		ctx, tx, requestedFromForecastScope(scope), "d", arg)
+		ctx, tx, requestedFromForecastScope(scope), "d", arg, unownedIsExcluded)
 	if err != nil {
 		return "", "", err
 	}

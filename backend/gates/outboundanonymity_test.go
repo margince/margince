@@ -45,20 +45,11 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// Past this module. Neither can import internal/platform/outbound — they
 	// are separate Go modules — and neither needs to.
 	"../extensions/openchannel/client.go:func post": "posts a document signed with a secret the RECEIVER issued, over a nonce and a timestamp they check; the signature names the sender to them more exactly than an agent could, and to anyone else the request is unverifiable whatever it claims",
-	"../cli/craft/gate/anthropic.go:func Complete":  "carries the developer's own x-api-key, which is the identity that provider bills and throttles — the same ground as the model providers below",
 
 	// This product's own origin, and the harnesses that drive it.
 	"internal/modules/agents/apps/fetch.go:func Fetch":         "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
 	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
 	"internal/compose/integration/apptest/mcp.go:func rpc":     "drives a server the test itself started, in the same process tree, for the length of one test",
-	"tools/seed-demo/apiclient.go:func delete":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func get":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func patch":                  "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func patchGuarded":           "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func post":                   "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func postGuarded":            "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/apiclient.go:func put":                    "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
-	"tools/seed-demo/documents.go:func upload":                 "seeds a demo estate through this product's own API, run by hand against a deployment the operator chose",
 
 	// The model providers. Each call carries the customer's own API key, which
 	// is the account the provider bills, rate-limits and revokes; an agent
@@ -74,17 +65,17 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/ai/modellist.go:func getListBody": "carries the customer's own provider key, which is the identity that provider bills and throttles — a local runner aside, where the operator already knows what is calling the host they configured",
 
 	// The capture connectors. Every one of these is an OAuth or token session
-	// the person themselves granted, so the provider knows the grant, the app
+	// the contact themselves granted, so the provider knows the grant, the app
 	// it was granted to, and the account it was granted on.
-	"internal/modules/capture/gmail/client.go:func Watch":           "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/client.go:func get":             "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/send.go:func postJSON":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/transport.go:func writeJSON":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/sendclient.go:func SendMIME":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graphcal/client.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func Watch":           "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func get":             "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/send.go:func postJSON":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/transport.go:func writeJSON":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/sendclient.go:func SendMIME":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graphcal/client.go:func get":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/oauthflow/oauthflow.go:func token":    "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",
 	"internal/modules/capture/telegram/api.go:func request":         "calls a bot API under the bot's own token, and the bot IS the identity there",
 	"internal/modules/capture/telegram/sendfiles.go:func SendFiles": "calls a bot API under the bot's own token, and the bot IS the identity there",
@@ -144,7 +135,7 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 // and a census that stopped at the backend's edge would have claimed "every
 // outbound request" over trees it never read.
 var outboundSurfaceRoots = []string{
-	".", "../extensions", "../cli", "../desktop", "../fixtures",
+	".", "../extensions", "../desktop", "../fixtures",
 }
 
 // outboundBuilderFloor is what the walk found when this census landed.

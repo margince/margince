@@ -70,11 +70,10 @@ type Namespace struct {
 // read as another: without it a version ending in a digit and a name starting
 // with one would hash the same as the pair that splits them differently.
 //
-// Up STAMPS this and judges nothing. Making the production migrate path REFUSE
-// a version whose recorded digest no longer matches — the way assertLedgerMatches
-// already refuses a renamed one — decides how a live installation fails at boot,
-// which is a product call rather than a test-lane one: #2141 carries it, with
-// Down (running the wrong rollback) as the sharper half.
+// Both directions read it. Up refuses to migrate PAST a version whose recorded
+// digest no longer matches, and Down refuses to revert one — the same answer
+// assertLedgerMatches already gives a renumber, for the same reason: neither
+// can be repaired forward.
 func Digest(m Migration) string {
 	var framed strings.Builder
 	for _, part := range []string{m.Version, m.Name, m.UpSQL, m.DownSQL} {
@@ -188,10 +187,22 @@ func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied i
 			return applied, err
 		}
 
+		// EVERY migration is judged before ANY is applied. Judged inside the
+		// apply loop, a namespace whose third migration disagrees with the
+		// ledger applies the first two and then stops — so the operator learns
+		// one defect per boot, and each boot moves the database somewhere new
+		// before refusing. The ledger is already in hand; asking it twice costs
+		// nothing and the answer cannot change under the advisory lock.
 		for _, m := range ns.Migrations {
 			if err := assertLedgerMatches(ns.Name, done, m); err != nil {
 				return applied, err
 			}
+			if err := assertContentMatches(ns.Name, done, m); err != nil {
+				return applied, err
+			}
+		}
+
+		for _, m := range ns.Migrations {
 			if _, isDone := done[m.Version]; isDone {
 				continue
 			}
@@ -241,6 +252,12 @@ func Down(ctx context.Context, conn *pgx.Conn, ns Namespace, n int) (reverted in
 		if _, isDone := done[m.Version]; !isDone {
 			continue
 		}
+		// After the not-applied skip: a version this database never ran has no
+		// content to disagree about, and reporting one would refuse a rollback
+		// over a migration that is not there.
+		if err := assertContentMatches(ns.Name, done, m); err != nil {
+			return reverted, err
+		}
 		if err := inTx(ctx, conn, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, m.DownSQL); err != nil {
 				return err
@@ -274,50 +291,6 @@ func NamespaceFor(unit string) (string, error) {
 	return ns, nil
 }
 
-func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (string, error) {
-	// Digits are admitted because an extension namespace carries them
-	// (`ext_foo_1`); the set stays exactly what an unquoted SQL identifier
-	// holds, since the namespace is interpolated into the statement below and
-	// cannot be a parameter.
-	for i, r := range namespace {
-		digit := r >= '0' && r <= '9'
-		if (r < 'a' || r > 'z') && r != '_' && !digit {
-			return "", fmt.Errorf("pgmigrate: namespace %q: want lower-case letters, digits and underscores", namespace)
-		}
-		if digit && i == 0 {
-			return "", fmt.Errorf("pgmigrate: namespace %q: an identifier cannot start with a digit", namespace)
-		}
-	}
-	if namespace == "" {
-		return "", fmt.Errorf("pgmigrate: empty namespace: it keys the tracking table")
-	}
-	table := "schema_migrations_" + namespace
-	_, err := conn.Exec(ctx, fmt.Sprintf(
-		`CREATE TABLE IF NOT EXISTS %s (
-			version        text PRIMARY KEY,
-			name           text NOT NULL,
-			applied_at     timestamptz NOT NULL DEFAULT now(),
-			content_digest text
-		)`, table))
-	if err != nil {
-		return "", fmt.Errorf("pgmigrate: creating %s: %w", table, err)
-	}
-	// The tracking tables are created by this function and never by a
-	// migration, so a database that already has one predates the column and
-	// CREATE TABLE IF NOT EXISTS will not add it. This does.
-	//
-	// NULLABLE, and it stays that way: a row written before the digest existed
-	// records a version whose content nobody can now recover, and back-filling
-	// it here would stamp a fingerprint over content this binary never applied
-	// — which is precisely the divergence the column exists to expose. A NULL
-	// means "unverifiable", and every reader must treat it as such.
-	if _, err := conn.Exec(ctx, fmt.Sprintf(
-		`ALTER TABLE %s ADD COLUMN IF NOT EXISTS content_digest text`, table)); err != nil {
-		return "", fmt.Errorf("pgmigrate: adding %s.content_digest: %w", table, err)
-	}
-	return table, nil
-}
-
 // appliedVersions returns version → the NAME it was applied under.
 //
 // The name is read, not just the version, because the ledger is the only place
@@ -325,22 +298,36 @@ func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (strin
 // database that applied some other migration in that slot — and matching on
 // the version alone makes the two indistinguishable, so the migration actually
 // sitting there is skipped silently and forever.
-func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[string]string, error) {
-	rows, err := conn.Query(ctx, fmt.Sprintf(`SELECT version, name FROM %s`, table))
+func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[string]appliedRow, error) {
+	rows, err := conn.Query(ctx, fmt.Sprintf(`SELECT version, name, content_digest FROM %s`, table))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	done := map[string]string{}
+	done := map[string]appliedRow{}
 	for rows.Next() {
-		var version, name string
-		if err := rows.Scan(&version, &name); err != nil {
+		var version string
+		var applied appliedRow
+		if err := rows.Scan(&version, &applied.name, &applied.digest); err != nil {
 			return nil, err
 		}
-		done[version] = name
+		done[version] = applied
 	}
 	return done, rows.Err()
+}
+
+// appliedRow is what the ledger recorded for one version: the name it was
+// applied under, and the digest of the content that was applied.
+//
+// The digest is a POINTER because NULL is a real and permanent answer — a row
+// written before the column existed records no fingerprint, and back-filling
+// one would stamp a fingerprint over content nobody can recover, which is the
+// divergence the column exists to expose. Unverifiable is not the same as
+// matching, and the two must never collapse into one another.
+type appliedRow struct {
+	name   string
+	digest *string
 }
 
 // assertLedgerMatches refuses when a version was applied under a different
@@ -353,16 +340,66 @@ func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[str
 // permanently missing whatever the skipped migration created, with no failure
 // to point at it. A renumbered migration cannot be reconciled forward: the
 // database has to be rebuilt (make dev-fresh).
-func assertLedgerMatches(namespace string, done map[string]string, m Migration) error {
+func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migration) error {
 	recorded, ok := done[m.Version]
-	if !ok || recorded == m.Name {
+	if !ok || recorded.name == m.Name {
 		return nil
 	}
 	return fmt.Errorf(
 		"pgmigrate: %s %s: applied as %q, but the source at that version is %q — this database "+
 			"applied a migration that has since been renumbered, so %q would be skipped as done. "+
 			"It cannot be repaired forward; rebuild the database (make dev-fresh)",
-		namespace, m.Version, recorded, m.Name, m.Name)
+		namespace, m.Version, recorded.name, m.Name, m.Name)
+}
+
+// assertContentMatches refuses a version whose recorded digest is not the
+// content this binary holds. Both directions ask it.
+//
+// The two consequences differ and both are in the message, because an operator
+// reading it does not yet know which way they were going. Up SKIPS an edited
+// migration as done, so whatever the edit added is absent on this database and
+// present on every fresh installation — and every later migration is then
+// applied on top of a schema the source cannot describe. Down runs the CURRENT
+// rollback against a schema the OLD up-migration built, which is a schema
+// CHANGE made on a false premise: it drops what this version's down names
+// rather than what the database has, then deletes the row that was the only
+// record of what it did have.
+//
+// REFUSING RATHER THAN WARNING, and the objection is real: an edit to a comment
+// stops a live installation at boot. Three things settle it. The rule is that
+// an applied migration is never edited at all (CLAUDE.md), not that it is never
+// edited meaningfully — a digest that forgave comments would have to parse SQL,
+// and a check whose rules are fiddly gets worked around rather than fixed.
+// assertLedgerMatches already refuses a renumber here, which is the same defect
+// with the same "cannot be repaired forward" property, so warning about one and
+// refusing the other would be two answers to one question. And the failure this
+// prevents is the silent one: continuing to migrate compounds the divergence a
+// boot at a time, while stopping is loud and reversible by reverting the edit.
+//
+// A NULL digest is admitted, permanently. It means the row predates the column,
+// so there is no fingerprint to disagree with — refusing there would strand
+// every installation that migrated before the column existed with no way
+// forward, and back-filling one would invent the evidence. Unverifiable is its
+// own answer.
+func assertContentMatches(namespace string, done map[string]appliedRow, m Migration) error {
+	recorded, ok := done[m.Version]
+	current := Digest(m)
+	if !ok || recorded.digest == nil || *recorded.digest == current {
+		return nil
+	}
+	for _, eq := range equivalentContent[namespace][m.Version] {
+		if *recorded.digest == eq.applied && current == eq.source {
+			return nil
+		}
+	}
+	return fmt.Errorf(
+		"pgmigrate: %s %s_%s: applied content does not match the source — this database ran a "+
+			"different version of this migration. Migrating past it skips the edit here while "+
+			"every fresh installation gets it; reverting it would drop what the source names "+
+			"rather than what the database has, and delete the only record of what it applied. "+
+			"Applied core migrations are never edited (CLAUDE.md); rebuild the database "+
+			"(make dev-fresh), or revert the edit to the migration's committed content",
+		namespace, m.Version, m.Name)
 }
 
 func inTx(ctx context.Context, conn *pgx.Conn, fn func(pgx.Tx) error) error {

@@ -30,8 +30,8 @@ package gates
 // a file for some other reason, months later.
 //
 // The class is broader than prose, and the sharpest example is one rung more
-// concrete: an e2e spec asserted the relink search box reads "Person,
-// Organisation, Deal, Lead oder Projekt suchen". Projects joined the searchable
+// concrete: an e2e spec asserted the relink search box reads "Contact,
+// Firma, Deal, Lead oder Projekt suchen". Projects joined the searchable
 // kinds, the string grew a fifth, and nothing derived either the sentence or
 // the spec's copy of it from the set they both describe. It surfaced five
 // merges later, in an unrelated lane.
@@ -44,7 +44,7 @@ package gates
 // question about the whole tree, and the tree holds hundreds of them. What it
 // does is make the class stop GROWING, which is the half a test can hold:
 //
-//   - A claim that names its gate is held. `Held by: TestName (path)` in the
+//   - A claim that names its gate is held. `Held by: Test… (path)` in the
 //     same doc comment, and this file checks that test exists.
 //   - Every other claim in the tree today is in `uniquenessclaims.txt`, which
 //     is a DEBT REGISTER and not a permission. It can only shrink: a claim that
@@ -163,7 +163,7 @@ func readRegister(t *testing.T) []string {
 	return keys
 }
 
-// testFunctions returns every `func TestX` in the repo, keyed by name, with the
+// testFunctions returns every `func Test…` in the repo, keyed by name, with the
 // files it is declared in. A `Held by:` is checked against this rather than
 // against a path the author typed, so a rename that leaves the binding behind
 // is a failure rather than a comment nobody reads.
@@ -284,7 +284,7 @@ func declaredInAGateArm(paths []string) (string, bool) {
 // namesTheFile reports whether one of `paths` is the file the binding named.
 //
 // A PATH-SEGMENT suffix, not a string suffix. A bare `strings.HasSuffix`
-// matched inside a FILENAME: `Held by: TestX (claims_test.go)` bound against
+// matched inside a FILENAME: `Held by: Test… (claims_test.go)` bound against
 // `uniquenessclaims_test.go`, a file that does not exist, and `currency_test.go`
 // bound against `employmentcurrency_test.go`. A binding that resolves to a file
 // nobody named is worse than no binding, because it reads as checked.
@@ -460,11 +460,11 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // a row falling, so the two kinds of progress are told apart by which number
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
-	"cannot-drift":   165,
-	"once":           176,
-	"one-of-a-kind":  175,
-	"is-every-named": 91,
-	"only-noun":      12,
+	"cannot-drift":   157,
+	"once":           160,
+	"one-of-a-kind":  160,
+	"is-every-named": 86,
+	"only-noun":      9,
 	"no-second":      11,
 	"never-twice":    7,
 	"is-every":       4,
@@ -589,7 +589,7 @@ func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
 			t.Errorf("%s is registered twice — one debt, one line", key)
 		}
 		seen[key] = true
-		// Sorted, so a diff of this file is readable and two people adding the
+		// Sorted, so a diff of this file is readable and two authors adding the
 		// last removals never conflict on the same line for no reason.
 		if i > 0 && keys[i-1] > key {
 			t.Errorf("the register is out of order at line %d: %q sorts before %q", i+1, key, keys[i-1])
@@ -717,7 +717,7 @@ func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing
 		t.Fatal("the only-noun shape is gone, so the cases below prove nothing about it")
 	}
 	compounds := []string{
-		"letting a bare status edit set them lets a lead:update-only caller skip the person mint",
+		"letting a bare status edit set them lets a lead:update-only caller skip the contact mint",
 		"a Go-only definition of live would drift from the config layer the product reads",
 		"the empty single-row read, through a stdlib-only implementation",
 		"that is the defect the old body-only reader had in mirroring",
@@ -823,7 +823,7 @@ func TestTheBindingIsReadOffTheCommentRatherThanGuessedAt(t *testing.T) {
 	}{
 		{"Held by: TestFoo (backend/foo_test.go)", "TestFoo", "backend/foo_test.go"},
 		{"prose above\n// Held by:  TestBarBaz  ( backend/bar_test.go )\nmore prose", "TestBarBaz", "backend/bar_test.go"},
-		{"Held by: TestX (cli/craft/x_test.go) and see also the sibling", "TestX", "cli/craft/x_test.go"},
+		{"Held by: TestX (backend/gates/x_test.go) and see also the sibling", "TestX", "backend/gates/x_test.go"},
 	}
 	for _, c := range binds {
 		match := heldBy.FindStringSubmatch(c.comment)

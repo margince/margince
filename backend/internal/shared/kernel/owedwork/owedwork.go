@@ -12,7 +12,7 @@
 //
 // WHY A PACKAGE RATHER THAN A HELPER ON ONE SIDE. The two sources live in
 // tables owned by different modules — `activity` in activities,
-// `conversation_claim` in people — and a module never imports a sibling, so
+// `conversation_claim` in contacts — and a module never imports a sibling, so
 // neither side can host a comparison over both. Ranking them is not a
 // database question anyway: it is a pure function of due dates, and putting it
 // where every tier may import it is what stops the next surface from writing a
@@ -24,6 +24,7 @@
 package owedwork
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -68,6 +69,25 @@ type Item struct {
 // Overdue reports whether this promise is behind its date. Undated work is
 // never overdue: nothing with no date can have missed it.
 func (i Item) Overdue(now time.Time) bool { return deadline.Passed(i.DueAt, now) }
+
+// LateWords says how late an overdue promise is, in the reader's terms, and
+// whether it is late at all. Both record pages' task cards read it, so the
+// same lateness is worded the same way whichever record it is seen from.
+//
+// Hours late is late by no whole days, and "0 days ago" reads as a counter
+// that broke rather than as a date that just passed. Not "today" either: a
+// promise due at 23:00 is in that state at 01:00, and that is yesterday's
+// date on the reader's calendar.
+func LateWords(due *time.Time, now time.Time) (string, bool) {
+	past, ok := deadline.DaysPast(due, now)
+	if !ok {
+		return "", false
+	}
+	if past == 0 {
+		return "Due less than a day ago and still open.", true
+	}
+	return fmt.Sprintf("Due %d days ago and still open.", past), true
+}
 
 // MostRecentlySlipped is the overdue promise whose date passed LAST, and
 // whether any is overdue at all.

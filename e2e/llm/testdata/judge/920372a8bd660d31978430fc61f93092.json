@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly names the disagreement by stating the post-mortem note puts the complaint in October while the record shows 18 September 2025, and directly tells the reader they conflict by saying 'which the record does not support.'",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 5. The answer tells the reader that the post-mortem note and the CRM record disagree about when the complaint was raised: it names the disagreement, or calls the note's October date wrong or loosely recalled, or says that no October complaint exists in the system. Answer no in each of these three shapes: the answer never compares the two dates at all; it silently picks one and leaves the reader unaware there was a conflict; or it states both dates, or quotes the note beside the record, WITHOUT telling the reader they are in conflict. Carrying both dates is not the finding — reconciling them into one story is the opposite of it, so an answer that harmonises them ('raised in September, restated in October') answers no. The reader must be left knowing the two sources cannot both be right. It does not matter which words carry the finding, whether it is split over several sentences, or which language it is in.",
+  "answer": "Yes — three accounts, all autumn 2025. Reply Deutschland raised this on 18 September 2025; the post-mortem note puts it in October, which the record does not support. valantic AG and Koerber Digital saw the same thing on 4 November 2025."
+}

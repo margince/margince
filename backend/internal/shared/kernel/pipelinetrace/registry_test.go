@@ -15,7 +15,7 @@ func TestEveryStageIsRegistered(t *testing.T) {
 	all := []Stage{
 		StageConnectorFilter, StageIngressGate, StageErasureCheck,
 		StageInternalDrop, StageActivityWrite, StageTierLadder,
-		StagePersonCreate, StageVerdict, StageCompanyTriage,
+		StageContactCreate, StageVerdict, StageCompanyTriage,
 		StageAttentionLabel, StageMaterialEvents, StageClaimExtraction,
 	}
 	for _, stage := range all {
@@ -49,6 +49,14 @@ func TestEveryRegistrationExplainsItself(t *testing.T) {
 		if r.has(SourcePlanned) && r.Issue == "" {
 			t.Errorf("%s is planned with no issue ref, which makes the state an "+
 				"excuse rather than a tracked debt", r.Stage)
+		}
+		// A stage answered elsewhere still ANSWERS, so it closes its reason set
+		// like any other — the surface that does report it interpolates those
+		// into catalog keys, and an open set there is the same raw-value defect
+		// TestAnsweringStagesCarryReasons exists to stop on this ladder.
+		if r.has(SourceAnsweredElsewhere) && len(r.Reasons) == 0 {
+			t.Errorf("%s is answered on another surface and closes no reason set, so that "+
+				"surface has nothing to hold its wording to", r.Stage)
 		}
 	}
 }

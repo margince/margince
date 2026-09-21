@@ -6,7 +6,9 @@ import type { Envelope } from "../types";
  *
  * MIRRORED BY HAND from agents.WhatsSlippingResult / agents.SlippingDealItem —
  * see the account brief's fixture for why that is hand work rather than
- * generated, and issue 808 for the gate that does not exist yet.
+ * generated. It is HELD to that struct by
+ * backend/gates/appviewfixtures_test.go, which compares every member here
+ * against the tool's own output schema.
  *
  * The third deal carries NO amount, which is a real state the view has to keep
  * honest: a deal can be worked before it is priced, and a blank amount

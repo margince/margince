@@ -51,8 +51,13 @@ func ForecastDeals(
 	// unset scope means they named nothing, which is a rep's own records and a
 	// manager's teams — never the installation, which is what this read
 	// answered before and why a rep's forecast was somebody else's.
+	//
+	// Excludes unowned rows even from the caller's own default: a forecast is
+	// a commitment number, and nobody has committed to a deal nobody has
+	// claimed. Widening it would make a manager's team total stop reconciling
+	// with the sum of naming each member by id.
 	resolved, populationClause, err := AnalyticsPopulationClause(
-		ctx, tx, requestedFromForecastScope(scope), "d", arg)
+		ctx, tx, requestedFromForecastScope(scope), "d", arg, unownedIsExcluded)
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
@@ -77,8 +82,18 @@ func ForecastDeals(
 	// the session timezone — which on a worker connection is not the
 	// installation's, and a deal closing just after local midnight would fall
 	// out of both readings with no bucket to explain where it went.
+	// A forecast is a sum of these rows, so a mask that withholds a deal's
+	// figure has to withhold it here: this is the surface the issue's own first
+	// line names — a rep's forecast including amounts they cannot see on the
+	// row. A masked deal arrives with a null amount and forecasting.Compute
+	// already excludes an unpriced deal from the total while still counting it,
+	// so the number narrows and the population does not silently shrink.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, tableDeal, "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return nil, forecasting.Scope{}, false, err
+	}
 	sql := fmt.Sprintf(`
-		SELECT d.id, d.owner_id, d.amount_minor, d.currency, %s,
+		SELECT d.id, d.owner_id, %[9]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
 		       d.status = 'won', d.forecast_category,
 		       COALESCE(s.win_probability, 0), d.stage_id
@@ -90,12 +105,12 @@ func ForecastDeals(
 		     OR (d.closed_at IS NOT NULL
 		         AND (timezone($%d, d.closed_at))::date BETWEEN $%d AND $%d)
 		      )
-		  AND %s
-		  %s`,
+		  AND %[7]s
+		  %[8]s`,
 		baseValue,
 		arg(period.StartDate), arg(period.EndDate),
 		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate),
-		scopeClause, "AND "+populationClause)
+		scopeClause, "AND "+populationClause, amountSQL)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {

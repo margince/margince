@@ -28,7 +28,7 @@ func newOpenAIForTest(t *testing.T, handler http.HandlerFunc) model.Client {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	client, err := SelectBrain(ProviderConfig{Provider: providerOpenAI, BaseURL: srv.URL, Model: "gpt-x"}, cloudKeyFor("openai", testOpenAIKey))
+	client, err := selectLocalBrain(ProviderConfig{Provider: providerOpenAI, BaseURL: srv.URL, Model: "gpt-x"}, cloudKeyFor("openai", testOpenAIKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestOpenAIMapsPDFAttachmentToInputFilePart(t *testing.T) {
 	})
 	if _, err := client.Complete(context.Background(), model.Request{
 		Messages:    []model.Message{{Role: "user", Content: "read this"}},
-		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: []byte("%PDF"), Name: "contract.pdf"}},
+		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: pdfSample, Name: "contract.pdf"}},
 	}); err != nil {
 		t.Fatal(err)
 	}

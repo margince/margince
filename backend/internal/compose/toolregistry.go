@@ -32,11 +32,11 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	// counters would step an agent up against a number nothing was charging.
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
 		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)),
-		s.replyDrafter, s.resolveOverlayIncumbent(pool), s.send, companyEnricher{srv: s},
+		s.replyDrafter, s.send, companyEnricher{srv: s},
 		s.retrievalEmbedder, s.transcriptOnLanding, importsFor(s),
 		// The SERVER's brief service, not a second one built from the pool: the
 		// model lane is bound to that instance, so a fresh service here would
-		// serve agents the deterministic floor while the person page got prose.
+		// serve agents the deterministic floor while the contact page got prose.
 		meetingBriefReader(s.meetingBriefSvc), s.log,
 		agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter))
 }

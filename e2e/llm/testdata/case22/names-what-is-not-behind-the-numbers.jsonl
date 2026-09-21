@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__data_coverage"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__data_coverage", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Short version: this installation draws on nothing outside itself.\n\nThere is no mail, no calendar and no incumbent mirror behind these numbers. The coverage read walks each source and returns a state; only a source it actually got into carries a date, and not one of them does.\n\nSo the figures are an honest report of what people typed in, and nobody here can currently tell a silent customer from a connector that was never wired up."}

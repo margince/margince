@@ -130,12 +130,16 @@ func TestAFoldedSetClaimsNoSingleJurisdiction(t *testing.T) {
 // Strictest reports that it found nothing rather than returning an empty set
 // that reads as "no obligations".
 func TestAnUnknownJurisdictionIsNotAnAnswer(t *testing.T) {
-	_, unknown, ok := Strictest("zz")
+	_, applied, ok := Strictest("zz")
 	if ok {
 		t.Error("an unknown jurisdiction reported rules — the caller would read the zero set as 'nothing required'")
 	}
-	if len(unknown) != 1 {
-		t.Errorf("unknown codes = %v, want the one that could not be resolved", unknown)
+	if len(applied.Unknown) != 1 {
+		t.Errorf("unknown codes = %v, want the one that could not be resolved", applied.Unknown)
+	}
+	if len(applied.Codes) != 0 {
+		t.Errorf("applied codes = %v; an unknown jurisdiction bound nothing and must not be "+
+			"recorded as though it judged the message", applied.Codes)
 	}
 }
 
@@ -150,6 +154,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 		Jurisdiction: "qa", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
+		Instruments:         []Instrument{{Name: "Decree 1/2020"}},
 	})
 
 	got, ok := For("qa")
@@ -158,6 +163,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	}
 	got.MarketingExceptions[0].RequiresSimilarity = false
 	got.FrequencyCap.Messages = 1000
+	got.Instruments[0].Name = "something else entirely"
 
 	again, _ := For("qa")
 	if !again.MarketingExceptions[0].RequiresSimilarity {
@@ -166,19 +172,34 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	if again.FrequencyCap.Messages != 3 {
 		t.Errorf("a caller rewrote the registered cap to %d", again.FrequencyCap.Messages)
 	}
+	// The citation a decision is read back against. A caller rewriting it would
+	// leave every later decision recorded under a law the pack never stated.
+	if again.Instruments[0].Name != "Decree 1/2020" {
+		t.Errorf("a caller rewrote the registered citation to %q", again.Instruments[0].Name)
+	}
 }
 
 // Registering is a copy too, so a caller that keeps its literal and mutates it
 // afterwards does not reach in.
 func TestRegisteringTakesACopy(t *testing.T) {
 	exceptions := []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}}
-	Register(Rules{Jurisdiction: "qb", Version: 1, MarketingExceptions: exceptions})
+	instruments := []Instrument{{Name: "Decree 1/2020"}}
+	Register(Rules{
+		Jurisdiction: "qb", Version: 1,
+		MarketingExceptions: exceptions,
+		Instruments:         instruments,
+	})
 
 	exceptions[0].RequiresSaleEvidence = false
+	instruments[0].Name = "something else entirely"
 
 	got, _ := For("qb")
 	if !got.MarketingExceptions[0].RequiresSaleEvidence {
 		t.Error("mutating the caller's own slice reached into the registry")
+	}
+	if got.Instruments[0].Name != "Decree 1/2020" {
+		t.Errorf("mutating the caller's own citation reached into the registry: %q",
+			got.Instruments[0].Name)
 	}
 }
 
@@ -258,16 +279,58 @@ func TestStrictestReportsTheJurisdictionsItCouldNotResolve(t *testing.T) {
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}},
 	})
 
-	got, unknown, ok := Strictest("qc", "zz")
+	got, applied, ok := Strictest("qc", "zz")
 	if !ok {
 		t.Fatal("a known jurisdiction reported nothing")
 	}
-	if len(unknown) != 1 || unknown[0] != "zz" {
-		t.Fatalf("unknown = %v, want the code that could not be resolved", unknown)
+	if len(applied.Unknown) != 1 || applied.Unknown[0] != "zz" {
+		t.Fatalf("unknown = %v, want the code that could not be resolved", applied.Unknown)
+	}
+	// The unresolvable code is NOT an applied one. A decision recording it
+	// would name a jurisdiction that bound nothing.
+	if len(applied.Codes) != 1 || applied.Codes[0] != "qc" {
+		t.Fatalf("applied = %v, want only the jurisdiction that contributed", applied.Codes)
+	}
+	if applied.Folded() {
+		t.Error("one contributing jurisdiction reported as a fold — Rules.Version is " +
+			"meaningful here and would be discarded")
 	}
 	// The rules still come back — the caller decides what to do about a partial
 	// answer — but it can no longer mistake one for a complete fold.
 	if len(got.MarketingExceptions) != 1 {
 		t.Error("the resolvable jurisdiction's rules were lost")
+	}
+}
+
+// TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot.
+//
+// stricter() zeroes Jurisdiction and Version whenever two countries fold: a
+// fold is nobody's rule set, and stamping it with one country's number would
+// misname the rules a decision was taken under. That left a folded decision
+// with nothing to say about what judged it. The applied codes are the answer,
+// and they are the reason Strictest returns them at all.
+func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
+	Register(Rules{Jurisdiction: "fa", Version: 7, ReplyWindow: 30 * 24 * time.Hour})
+	Register(Rules{Jurisdiction: "fb", Version: 9, ReplyWindow: 365 * 24 * time.Hour})
+
+	got, applied, ok := Strictest("fa", "fb")
+	if !ok {
+		t.Fatal("two known jurisdictions reported nothing")
+	}
+	if got.Version != 0 || got.Jurisdiction != "" {
+		t.Errorf("the fold kept version %d and jurisdiction %q — it belongs to neither",
+			got.Version, got.Jurisdiction)
+	}
+	if !applied.Folded() {
+		t.Error("two contributing jurisdictions did not report as a fold")
+	}
+	if len(applied.Codes) != 2 || applied.Codes[0] != "fa" || applied.Codes[1] != "fb" {
+		t.Errorf("applied = %v, want both contributing jurisdictions in the order asked — "+
+			"this is the only record of which rules judged a folded decision", applied.Codes)
+	}
+	// And the fold is still the stricter answer, so the codes are not a
+	// consolation prize for having lost the rules.
+	if got.ReplyWindow != 30*24*time.Hour {
+		t.Errorf("reply window = %s, want the shorter one", got.ReplyWindow)
 	}
 }

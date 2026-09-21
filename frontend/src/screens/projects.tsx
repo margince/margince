@@ -7,11 +7,13 @@ import { api } from "../api/client";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useMe, useSorMode } from "./common";
+import { throwProblem, useMe } from "./common";
 import { CreateAction } from "./create";
+import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -74,7 +76,7 @@ async function fetchProjectsPage(
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
   return (
-    <Badge tone={phase === "closed" ? undefined : "success"} quiet>
+    <Badge tone={phase === "closed" ? undefined : "success"}>
       {t(PHASE_LABEL[phase])}
     </Badge>
   );
@@ -82,22 +84,25 @@ export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
 
 /**
  * The key as a fact chip. A key is the handle a human writes in a subject
- * line, so it draws in the mono face beside the name rather than as a status.
+ * line, so it draws as a fact beside the name rather than as a status.
  */
 export function ProjectKeyChip({
   projectKey,
-}: Readonly<{ projectKey: string }>) {
+  dense,
+}: Readonly<{
+  projectKey: string;
+  // The chip's badge geometry, for the list's name column: the key sits beside
+  // the archived badge there. See `Chip`.
+  dense?: boolean;
+}>) {
   const t = useT();
   return (
-    <Chip icon={Hash}>
+    <Chip icon={Hash} dense={dense}>
       {/* What the key is FOR, on the chip rather than as a line of its own.
         A reader learns it once by hovering the code they are already looking
         at; a permanent sentence under the title pays every day for a lesson
         taught once, which is what it was doing. */}
-      <span
-        className="t-mono"
-        title={t("project.keyMinted", { key: projectKey })}
-      >
+      <span title={t("project.keyMinted", { key: projectKey })}>
         {projectKey}
       </span>
     </Chip>
@@ -110,9 +115,9 @@ export function ProjectKeyChip({
  */
 export function useCompanyOptions(): ProjectCompanyOption[] {
   const companies = useQuery({
-    queryKey: ["organizations"],
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -124,9 +129,12 @@ export function useCompanyOptions(): ProjectCompanyOption[] {
   return companies.data?.data ?? [];
 }
 
-async function createProject(values: Record<string, string>): Promise<Project> {
+async function createProject(
+  values: Record<string, string>,
+  custom: Record<string, unknown>,
+): Promise<Project> {
   const { data, error } = await api.POST("/projects", {
-    body: mapProjectCreate(values),
+    body: { ...mapProjectCreate(values), ...custom },
   });
   if (error) {
     throwProblem(error);
@@ -144,19 +152,23 @@ function NewProjectAction({
   me,
 }: Readonly<{ companies: ProjectCompanyOption[]; me: string }>) {
   const t = useT();
+  const cf = useObjectCustomFields("project");
   return (
     <CreateAction
       label={t("project.new")}
       invalidate="projects"
       screen="projects"
-      create={createProject}
+      create={(values) => createProject(values, cf.toBody(values))}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
-      fields={projectFields(t, {
-        companies,
-        me,
-        currentOwner: null,
-        mode: "create",
-      })}
+      fields={[
+        ...projectFields(t, {
+          companies,
+          me,
+          currentOwner: null,
+          mode: "create",
+        }),
+        ...cf.formFields,
+      ]}
     />
   );
 }
@@ -170,7 +182,6 @@ export function ProjectsScreen() {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const me = useMe();
-  const overlay = useSorMode() === "overlay";
   const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
@@ -183,7 +194,7 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !overlay && !state.isPending && (
+  const createAction = !state.isPending && (
     <NewProjectAction companies={companies} me={me.data?.user.id ?? ""} />
   );
   // The first-run plate: nothing exists yet, and nothing is narrowing the
@@ -206,6 +217,16 @@ export function ProjectsScreen() {
   if (firstRun) {
     return (
       <div className="wrap">
+        {/* The page's own name, at the size and the level the populated arm
+            prints it at inside the table's header. The shell prints none on
+            this screen — Projects heads itself (SELF_HEADED_SCREENS), which the
+            table's `title` below honours — so without this the plate REPLACED
+            the page's name instead of standing under it and the route carried
+            no h1 at all. A first run is exactly when a reader most needs to be
+            told where they are. */}
+        <Heading size="xlarge" className="projects-title t-display">
+          {pageName}
+        </Heading>
         <EmptyState title={t("project.emptyTitle")} action={createAction}>
           <p>{t("project.emptyBody")}</p>
           <p>{t("project.emptyKey")}</p>
@@ -228,9 +249,11 @@ export function ProjectsScreen() {
             cell: (project: Project) => (
               <span className="project-name-cell">
                 <strong>{project.name}</strong>
-                {project.key && <ProjectKeyChip projectKey={project.key} />}
+                {project.key && (
+                  <ProjectKeyChip projectKey={project.key} dense />
+                )}
                 {project.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
+                  <Badge tone="warning">{t("record.archived")}</Badge>
                 )}
               </span>
             ),
@@ -240,19 +263,23 @@ export function ProjectsScreen() {
           {
             key: "company",
             header: t("project.company"),
+            // A real link to the customer. The row opens the PROJECT, so a
+            // reader who wanted the account behind it had to open the project
+            // first and come back out.
             cell: (project: Project) => (
-              <EntityRef
-                kind="organization"
-                id={project.organization_id}
-                asText
-              />
+              <EntityRef kind="company" id={project.company_id} />
             ),
+            // By the company's NAME. One outside this reader's scope orders
+            // the page by nothing rather than by a name it withholds.
+            sort: "company_id",
           },
           {
             key: "phase",
             header: t("project.phaseLabel"),
-            // Not sortable: phase is not in the list's sort vocabulary, and
-            // the chip beside the table is the way to read one phase at a time.
+            // By how LIVE the work is — delivering, pursuing, initiative, then
+            // closed — which is the arrangement the account page already uses.
+            // Alphabetical would be that order shuffled.
+            sort: "phase",
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),

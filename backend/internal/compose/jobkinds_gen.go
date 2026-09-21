@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "7a3c1713548210bc273dc5f45d2131f3603e5f335890d59e878cee95ceb4fd8d"
+const jobContractHash = "5ca1c5e079a56bc7891535d415790b02688bc525d16f8e7807ab22e523c6e0ae"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -30,6 +30,7 @@ type declaredJobArgs interface {
 		AgentTaskRetentionArgs |
 		AIActivityReconcileArgs |
 		AIActivityRetentionArgs |
+		AIBudgetResumeArgs |
 		AiModelRateRefreshArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
@@ -43,24 +44,27 @@ type declaredJobArgs interface {
 		CounterpartyVerdictArgs |
 		CaptureDigestArgs |
 		CaptureEnrichArgs |
+		CapturePartSlimArgs |
 		CaptureSyncArgs |
 		CaptureTraceSweepArgs |
-		CheckOrganizationVatArgs |
+		CheckCompanyVatArgs |
 		CloseDateSweepArgs |
 		AuthzDisagreementArgs |
 		ControllerPayloadSweepArgs |
 		ScheduledSendArgs |
 		ScheduledSendRecoveryArgs |
 		SendEmailArgs |
+		CompanyNamePromotionArgs |
 		DocumentExtractArgs |
 		EmbedDriftSweepArgs |
 		EmbedReindexArgs |
+		EmploymentImportSweepArgs |
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
 		ForecastSnapshotSweepArgs |
 		FxRateRefreshArgs |
 		GeocodeBackfillArgs |
-		GeocodeOrganizationArgs |
+		GeocodeCompanyArgs |
 		GmailSyncArgs |
 		GmailWatchArgs |
 		GmailWatchRenewArgs |
@@ -72,9 +76,6 @@ type declaredJobArgs interface {
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
 		LinkedInRematchArgs |
-		OrgNamePromotionArgs |
-		OverlayReconcileArgs |
-		OverlayRefetchArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
 		PrivacyRetentionArgs |
@@ -84,8 +85,9 @@ type declaredJobArgs interface {
 		SignalScanArgs |
 		SiteDeepReadArgs |
 		StageEvidenceReadArgs |
+		StoredObjectReapArgs |
 		TechnicalEnrichBackfillArgs |
-		TechnicalEnrichOrganizationArgs |
+		TechnicalEnrichCompanyArgs |
 		TelegramIngestArgs |
 		TelegramPollArgs |
 		TelegramPollSweepArgs |
@@ -129,6 +131,7 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // enumerates and enqueues; a collapsed pass walks the workspaces itself
 // (ADR-0103). Both own no workspace, which is what the marker asserts.
 var (
+	_ jobs.FleetWide = AIBudgetResumeArgs{}
 	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
@@ -140,8 +143,10 @@ var (
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
+	_ jobs.FleetWide = CompanyNamePromotionArgs{}
 	_ jobs.FleetWide = EmbedDriftSweepArgs{}
 	_ jobs.FleetWide = EmbedReindexArgs{}
+	_ jobs.FleetWide = EmploymentImportSweepArgs{}
 	_ jobs.FleetWide = FinanceSyncSweepArgs{}
 	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
@@ -152,13 +157,12 @@ var (
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
-	_ jobs.FleetWide = OrgNamePromotionArgs{}
-	_ jobs.FleetWide = OverlayReconcileArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
+	_ jobs.FleetWide = StoredObjectReapArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
@@ -172,20 +176,19 @@ var (
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
-	_ jobs.WorkspaceScoped = CheckOrganizationVatArgs{}
+	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
-	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
+	_ jobs.WorkspaceScoped = GeocodeCompanyArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
-	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}
-	_ jobs.WorkspaceScoped = TechnicalEnrichOrganizationArgs{}
+	_ jobs.WorkspaceScoped = TechnicalEnrichCompanyArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}

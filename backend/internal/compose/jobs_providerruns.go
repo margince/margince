@@ -140,10 +140,7 @@ func (ProviderRunPollSweepArgs) FleetWide() {}
 // is the floor under a path that reaches a gated write before it has resolved a
 // provider, and it is deliberately a name no reader can mistake for a vendor.
 func providerJobActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "provider_run_worker",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "provider_run_worker")
 }
 
 // providerRunPollSweepWorker fans one drain job out per live workspace.

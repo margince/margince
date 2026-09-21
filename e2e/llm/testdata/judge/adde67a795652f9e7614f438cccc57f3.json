@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names one open commitment (Abnahmeprotokoll, explicitly 'still open and overdue'), avoids claiming the project has no outstanding work, and clarifies that project closure differs from deal resolution.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2, the other direction. The answer never gives the reader an all-clear about open work on this project: no claim that nothing is outstanding, that there are no open tasks or commitments, that everything is done, or that nothing is left hanging on it. One commitment IS open. Naming that commitment and then reporting the rest of the queue honestly — 'apart from the Abnahmeprotokoll, there is nothing else open' — is what a correct answer does: answer yes to that, in either order. A closing sentence about there being nothing further for the reader to DO now that the project is closed is not a claim about the queue: answer yes.",
+  "answer": "Elbwerk Rollout moved initiative, then pursuing when the offer was released after the Wismar site visit, then delivering when the order came in.\n\nThe Abnahmeprotokoll is still open and overdue — it has to come back signed.\n\nI closed the project, not the deal. I closed the project but left the deal as is: there is none on this record, and a project's phases are a different vocabulary from a deal's stages."
+}

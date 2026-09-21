@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import {
   cleanup,
   fireEvent,
@@ -11,7 +11,8 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
-import { InlineChoice, InlineText } from "./inlinechoice";
+import { InlineChoice } from "./inlinechoice";
+import { InlineText } from "./inlinetext";
 
 // The rules this control keeps are failure modes, not polish. Each one here
 // is a way a reader gets told something untrue about their own edit.
@@ -121,7 +122,7 @@ describe("editing a value where it is read", () => {
     const onSave = vi.fn(async () => {
       throw new ProblemError({
         code: "permission_denied",
-        detail: "organization.update: permission denied",
+        detail: "company.update: permission denied",
       });
     });
     renderChoice({ onSave });
@@ -136,7 +137,7 @@ describe("editing a value where it is read", () => {
       ),
     );
     const alert = screen.getByRole("alert").textContent ?? "";
-    expect(alert).not.toContain("organization.update");
+    expect(alert).not.toContain("company.update");
     expect(alert).not.toContain("permission denied");
   });
 
@@ -382,14 +383,14 @@ describe("editing free text where it is read", () => {
 
   // The disclosure both controls used to make. `auth.Require` composes a
   // refusal's detail from the RBAC object and the verb, so showing a caught
-  // error's own text handed the person who was just refused the name of the
+  // error's own text handed the contact who was just refused the name of the
   // permission they lack and the record kind it governs.
   it("answers a permission refusal in the reader's words, never the server's", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async () => {
       throw new ProblemError({
         code: "permission_denied",
-        detail: "person.update: permission denied",
+        detail: "contact.update: permission denied",
       });
     });
     renderText({ onSave });
@@ -403,7 +404,7 @@ describe("editing free text where it is read", () => {
       ),
     );
     expect(screen.getByRole("alert").textContent).not.toContain(
-      "person.update",
+      "contact.update",
     );
     expect(screen.getByRole("alert").textContent).not.toContain(
       "permission denied",

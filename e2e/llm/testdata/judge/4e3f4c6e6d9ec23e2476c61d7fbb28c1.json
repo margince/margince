@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states 'Took the strategic-account tagging off Vorort Systeme KG' using an approved verb of removal and specifying the exact company, meeting the criterion's requirement.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record.",
+  "answer": "Took the strategic-account tagging off Vorort Systeme KG — that assignment, on that company, and nothing else.\n\nBefore I touched it I read the record's full tag assignments rather than the record view, because a retired word is not drawn on a list. Your colleague was right: there is a conference word on it. It reads K5 Conference 2025, and it is retired, which is exactly why you could not see one.\n\nThe Strategic Account tag itself is untouched; three other accounts keep it, and they should."
+}

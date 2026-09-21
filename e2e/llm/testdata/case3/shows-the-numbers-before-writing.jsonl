@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__preview_import"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__preview_import", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I ran this as a dry run first rather than writing anything, so here is what the import would do before it does it.\n\n**Would create (3)**\n- Nordwind Logistik GmbH, Rostock, 51-200\n- Elbmarsch Systeme AG, Hamburg, 11-50\n- Alpenblick Sensorik GmbH, M\u00fcnchen, 11-50\n\n**Would skip (1)** \u2014 the third row has no name at all, only K\u00f6ln and a size, and the import will not create a company without one.\n\nNothing has been written so far. Say the word and I will commit it."}

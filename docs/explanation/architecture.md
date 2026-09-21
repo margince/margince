@@ -24,10 +24,10 @@ shared  →  platform  →  modules  →  compose  →  cmd
   `database/storekit` (the one spelling of the write shape), `auth` (the
   one admission point), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr`, `httpserver`.
-- **`internal/modules/`** — the twenty bounded capabilities (identity,
-  people, deals, activities, approvals, agents, automation, ai, search,
+- **`internal/modules/`** — the nineteen bounded capabilities (identity,
+  contacts, deals, activities, approvals, agents, automation, ai, search,
   capture, comms, consent, privacy, collections, signals, customfields,
-  webhooks, overlay, migration; the `de` jurisdiction pack is an
+  webhooks, migration; the `de` jurisdiction pack is an
   extension under `extensions/`, not a module). A
   module package starts flat (store + mapping + transport + provider in
   one package) and earns a subpackage only under the
@@ -176,7 +176,7 @@ cross-module need as a `compose` adapter — never a sibling import.
 
 Modules follow one of two sanctioned shapes — don't invent a third:
 
-- **Handlers → Store** (CRUD modules: people, deals, activities, …).
+- **Handlers → Store** (CRUD modules: contacts, deals, activities, …).
   Transport handlers map contract DTOs and call the store; the store
   owns the transactional write shape and the RBAC gate at its entry
   points.
@@ -201,7 +201,7 @@ envelope, the relay, dedupe — is detailed in
 
 ## Tenancy as structure
 
-An installation holds ONE organization (ADR-0061), so no table carries a
+An installation holds ONE company (ADR-0061), so no table carries a
 row-level policy. Every module statement still goes through the one
 workspace-transaction helper — the auditable boundary a fitness function
 derived from the live tree holds — and row scope is decided by
@@ -217,3 +217,9 @@ Approving takes the authority the effect itself takes; a passport may
 answer on the authority of the human who lent it, bounded by the caps
 they lent and never on the proposal it made itself. An agent never
 exceeds the granting human's live RBAC.
+
+Every operation — core or extension — declares exactly one of `x-mcp-tool`
+or `x-agent-access: human-only`: the latter stays REST/UI-reachable but is
+refused for any Agent (or Buyer) principal before admission, tiering or
+staging ever runs, and never appears in an agent's tool listing. Extensions
+carry the identical vocabulary (`docs/how-to/add-an-extension.md`).

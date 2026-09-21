@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -54,9 +55,9 @@ func TestCaptureDedupeStagesMergeInsteadOfDuplicating(t *testing.T) {
 	// answers, and a merge proposal lands in the inbox.
 	second, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "lead",
-		NaturalKey: connector.NaturalKey{SourceSystem: "hubspot", SourceID: "h-9"},
+		NaturalKey: connector.NaturalKey{SourceSystem: "legacy_crm", SourceID: "h-9"},
 		Fields:     capture.LeadFields{FullName: "Dana Duplicate", Email: "DANA@example.test "},
-		Source:     "hubspot:h-9", CapturedBy: "connector:test",
+		Source:     "legacy_crm:h-9", CapturedBy: "connector:test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -102,8 +103,8 @@ func TestSeatDerivedBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if budget != seats*perSeatBaseTokens*budgetSafetyFactor {
-		t.Fatalf("%d-seat budget = %d, want %d", seats, budget, seats*perSeatBaseTokens*budgetSafetyFactor)
+	if budget != seats*int64(ai.DefaultMonthlyTokens) {
+		t.Fatalf("%d-seat budget = %d, want %d", seats, budget, seats*int64(ai.DefaultMonthlyTokens))
 	}
 	// An installation with no live full seat floors at one rather than
 	// refusing. Reached by deactivating the seats, which is how it actually
@@ -121,7 +122,7 @@ func TestSeatDerivedBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if budget != perSeatBaseTokens*budgetSafetyFactor {
+	if budget != int64(ai.DefaultMonthlyTokens) {
 		t.Fatalf("seatless-installation budget = %d, want the single-seat floor", budget)
 	}
 }
@@ -157,7 +158,7 @@ func TestAcceptingACaptureCollisionFillsTheLeadsEmptyFields(t *testing.T) {
 		t.Fatalf("capturing the incumbent: %v", err)
 	}
 
-	// A second message about the same person, carrying what the first lacked.
+	// A second message about the same contact, carrying what the first lacked.
 	if _, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "lead",
 		NaturalKey: connector.NaturalKey{SourceSystem: "apollo", SourceID: "c-2"},
@@ -217,7 +218,7 @@ func pendingCollisionFor(t *testing.T, e *integration.Env, target ids.UUID) ids.
 
 // A captured value never overwrites one that is already there.
 //
-// The incumbent's value may have been typed by a person, and an inbound message
+// The incumbent's value may have been typed by a contact, and an inbound message
 // carries no evidence that it knows better. Without this rule the card would be
 // a way for a connector to quietly rewrite a human's work, which is the reason
 // it is gated behind a human decision in the first place.
@@ -239,7 +240,7 @@ func TestAcceptingACaptureCollisionNeverOverwritesWhatIsAlreadyThere(t *testing.
 	if err != nil {
 		t.Fatalf("capturing the incumbent: %v", err)
 	}
-	// The same person, described differently by a second source.
+	// The same contact, described differently by a second source.
 	if _, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "lead",
 		NaturalKey: connector.NaturalKey{SourceSystem: "apollo", SourceID: "o-2"},

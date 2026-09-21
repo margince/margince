@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -41,33 +42,96 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	return out, err
 }
 
-// orderClause is newest-first for every timeline read except the open-and-due
-// task queue, which orders by the date the work is OWED rather than the date
-// it was logged. A cap applied over the wrong order keeps the tasks most
-// recently filed; capping THIS order keeps the tasks nearest their deadline,
-// which is what a page capped at a dozen can actually afford to drop.
-func orderClause(in ListActivitiesInput) string {
-	if in.OpenAndDueBy != nil {
-		return " ORDER BY a.due_at ASC, a.id ASC"
-	}
-	return " ORDER BY a.occurred_at DESC, a.id DESC"
+// activitySortFields is what a caller may order the timeline by: the four
+// instants an activity carries, and nothing else.
+//
+// They are the axes a timeline HAS. `kind`, `direction` and the rest are
+// groupings the list already filters on, and ordering by one of them answers a
+// different question badly — a page of every email before every call, in no
+// order within either. A field outside this set is refused with
+// sort_field_not_allowed rather than quietly ignored, which is the whole
+// subject of the issue behind this.
+var activitySortFields = map[string]storekit.SortField{
+	"occurred_at": storekit.Column(storekit.KindTimestamp),
+	"due_at":      storekit.Column(storekit.KindTimestamp),
+	"created_at":  storekit.Column(storekit.KindTimestamp),
+	"updated_at":  storekit.Column(storekit.KindTimestamp),
 }
 
-// errOpenAndDueByWithCursor is refused rather than built into SQL. On THIS
-// read, the keyset cursor is always decoded against the recency order
-// (a.occurred_at, a.id) — storekit.Cursor's SortField/SortDesc exist for a
-// query built through the sort-aware ListSort (listquery.go) to carry a
-// different one, but this hand-built query does not mint or check them.
-// Pairing a cursor with OpenAndDueBy, which runs under a different order
-// (a.due_at ASC), would resume on an axis this query never validates and
-// silently return the wrong rows rather than the next page. No caller does
-// this today; the guard is here so the day one tries, it fails loudly instead
-// of paginating wrongly. Routing this read through ListSort would let it mint
-// a due_at-aware cursor and remove the need for this guard entirely — left
-// for a follow-up rather than done here, since it touches the shared keyset
-// path every other ListActivities caller also runs through.
-var errOpenAndDueByWithCursor = errors.New(
-	"activities: a cursor built for the recency order cannot resume an open-and-due read")
+// The two orders this read takes when the caller names none.
+//
+// Newest-first is the timeline. The task queue orders by the date the work is
+// OWED rather than the date it was logged: a cap applied over the wrong order
+// keeps the tasks most recently filed, and capping this one keeps the tasks
+// nearest their deadline — which is what a page capped at a dozen can actually
+// afford to drop.
+const (
+	defaultTimelineSort = "-occurred_at"
+	dueQueueSort        = "due_at"
+)
+
+// requestPriorityOrder is the ONE order this read still builds by hand, and it
+// is the reason ListSort cannot express it: the queue leads with what is owed
+// TO US and orders by when it arrived, which is two keys before the house
+// tie-breaker. ListSort carries one, deliberately — a keyset cursor over two
+// sort keys is a different machine — so this arm keeps its order, refuses a
+// caller's sort outright rather than ignoring it, and hands out no cursor.
+const requestPriorityOrder = " ORDER BY (a.owed_verdict = 'asks_us') DESC NULLS LAST, a.occurred_at DESC, a.id DESC"
+
+// TimelineCursor mints the token the activity list continues from, for a
+// SECTION that paged the same rows itself.
+//
+// One invariant on both sides of a wire: a record page shows the first few
+// activities and hands out a cursor, and the list the reader then opens has to
+// resume from it rather than showing page one again. The two are different
+// queries, so the token is the only thing that ties them — and it carries the
+// ORDER it was minted under, which is why it cannot be built by hand beside
+// each of them.
+//
+// Held by TestTheContact360TimelineCursorContinuesIntoTheActivityList, which
+// walks a real 360 and then the real list with what it handed out.
+func TimelineCursor(ctx context.Context, last crmcontracts.Activity) (string, error) {
+	spec := defaultTimelineSort
+	// No binder: this vocabulary is plain columns, and a sort that rendered an
+	// expression would need one (ParseListSort says so where it refuses).
+	sorted, err := storekit.ParseListSort(ctx, &spec, activitySortFields, nil)
+	if err != nil {
+		return "", err
+	}
+	key := last.OccurredAt.Format(time.RFC3339Nano)
+	return sorted.EncodePageCursor(&key, last.CreatedAt, ids.UUID(last.Id))
+}
+
+// timelineSort resolves the order one read runs in: the caller's spec where
+// they gave one, else the default this narrowing implies.
+func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int) (*storekit.ListSort, error) {
+	if in.Sort != nil && *in.Sort != "" {
+		if in.RequestReviewAsOf != nil {
+			return nil, &storekit.SortError{
+				Code:    storekit.CodeSortUnsupported,
+				Message: "the request queue is ordered by what is owed and when it arrived, and cannot be re-ordered",
+			}
+		}
+		return storekit.ParseListSort(ctx, in.Sort, activitySortFields, arg)
+	}
+	spec := defaultTimelineSort
+	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
+		spec = dueQueueSort
+	}
+	return storekit.ParseListSort(ctx, &spec, activitySortFields, arg)
+}
+
+// errRequestReviewWithCursor is refused rather than built into SQL, and it is
+// the one arm that still needs a sentinel of its own.
+//
+// Every other order this read takes is a ListSort now, and a token minted under
+// one carries the field and direction it was minted for — so a cursor from the
+// timeline applied to the task queue is refused by the keyset itself, naming
+// what happened, instead of silently resuming on an axis the page is not
+// ordered by. The request queue's order is hand-built (requestPriorityOrder
+// says why), mints no token and can check none, so pairing a cursor with it
+// fails loudly here.
+var errRequestReviewWithCursor = errors.New("activities: a recency cursor cannot resume request priority order")
 
 // ListActivities is the timeline read: newest first, optionally scoped to
 // one entity through activity_link (the indexed 360-view join).
@@ -80,6 +144,9 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// for a caller that already holds a transaction, so it has no seam to
 		// ask — and a composite record read that carries none simply excludes
 		// no sender, which is the same open default WithOwnDomains documents.
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
@@ -107,7 +174,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	}
 	// The record the timeline was narrowed TO is gated before it is filtered
 	// on. The scope below is an ANY-LINK rule, so an activity linked to both a
-	// visible person and a lead the caller may not read passes it — and
+	// visible contact and a lead the caller may not read passes it — and
 	// filtering on that lead's id would then answer "this lead exists, and here
 	// is what happened on it" to someone with no right to either fact.
 	if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
@@ -119,46 +186,59 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 	}
 	limit := storekit.ClampLimit(in.Limit)
-	join, where, content, args, err := listActivitiesFilter(ctx, in)
+	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	order := sorted.OrderBy()
+	if in.RequestReviewAsOf != nil {
+		order = requestPriorityOrder
+	}
 
 	rows, err := tx.Query(ctx,
-		`SELECT `+activityColumns(content)+` FROM activity a`+join+` WHERE `+strings.Join(where, " AND ")+
-			orderClause(in)+sprintf(" LIMIT %d", limit+1),
+		`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
+			` FROM activity a WHERE `+strings.Join(where, " AND ")+
+			order+sprintf(" LIMIT %d", limit+1),
 		args...)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	// Collected rather than streamed: attachLinks runs a second query on
 	// this same transaction, which needs the cursor already closed.
-	activities, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Activity, error) {
-		return scanActivity(row)
+	type pagedRow struct {
+		activity crmcontracts.Activity
+		key      *string
+	}
+	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
+		activity, key, err := scanActivityPage(row, sorted)
+		return pagedRow{activity, key}, err
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	activities := make([]crmcontracts.Activity, 0, len(paged))
+	for _, row := range paged {
+		activities = append(activities, row.activity)
+	}
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.OpenAndDueBy == nil {
-			last := activities[len(activities)-1]
-			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
+		if in.RequestReviewAsOf == nil {
+			last := activities[limit-1]
+			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return nil, storekit.Page{}, err
 			}
 			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
-		// Else: the open-and-due order has no cursor to hand out — one is
-		// never decoded against it (errOpenAndDueByWithCursor) — so it
-		// reports no resumable page at all rather than a HasMore a caller has
-		// no way to act on. Rows beyond the cap still exist; CountOpenForViewer
-		// is the query that answers how many.
+		// Else: the request queue's order is hand-built and no cursor can
+		// continue it (requestPriorityOrder says why), so it reports no
+		// resumable page rather than a HasMore a caller has no way to act on.
+		// Rows beyond the cap still exist; CountOpenForViewer answers how many.
 	}
 	// What came with each message, on the same transaction and in one
 	// statement — the batching rule attachLinks above already follows.
-	if err := WithAttachmentCounts(ctx, tx, activities); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := attachLinks(ctx, tx, activities); err != nil {
@@ -228,7 +308,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithAttachmentCounts(ctx, tx, one); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachLinks(ctx, tx, one); err != nil {
@@ -238,12 +318,12 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 }
 
 // attachLinks fills the contract's links[] on a page of activities in ONE
-// query — the column the timeline's "via" chips and the per-person filter
+// query — the column the timeline's "via" chips and the per-contact filter
 // read. Batched rather than per-row because the timeline reads a page at a
 // time.
 //
 // Each link row carries its OWN row-scope check, which the activity's does
-// not subsume. Activity visibility is an ANY-link rule: one visible person
+// not subsume. Activity visibility is an ANY-link rule: one visible contact
 // makes the whole activity readable. Projecting every link row back would
 // then disclose the ids of the other records it touches — a colleague's
 // deal on the same thread — to a caller who cannot read them. A link whose
@@ -301,6 +381,18 @@ func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	return rows.Err()
 }
 
+// scanActivityPage scans one row of a sorted page: the projection every reader
+// of an activity takes, and the sort's cursor key where the sort appends one.
+func scanActivityPage(row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Activity, *string, error) {
+	var key *string
+	var dest []any
+	if sorted.CursorKeySuffix() != "" {
+		dest = append(dest, &key)
+	}
+	out, err := scanActivity(storekit.TrailingColumns{Row: row, Dest: dest})
+	return out, key, err
+}
+
 // scanActivity reads one row of the activity projection.
 //
 // Both the column list and these destinations come from activityProjection, so
@@ -339,6 +431,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 			return err
 		}
 		var err error
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
@@ -347,7 +442,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 				return err
 			}
 		}
-		join, where, content, args, err := listActivitiesFilter(ctx, in)
+		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err
 		}
@@ -357,8 +452,8 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// refuses outright ("could not determine data type of parameter"). The
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM (SELECT `+activityColumns(content)+` FROM activity a`+join+
-				` WHERE `+strings.Join(where, " AND ")+`) counted`, args...).Scan(&total)
+			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, args...).Scan(&total)
 	})
 	return total, err
 }

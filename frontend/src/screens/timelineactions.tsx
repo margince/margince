@@ -2,7 +2,7 @@
 // slot, and the audience control behind it.
 //
 // Lifted out of compose.tsx, which is 3,459 lines and was answering two
-// unrelated questions: how a person writes a message, and what a reader may do
+// unrelated questions: how a contact writes a message, and what a reader may do
 // to one already on a timeline. The writes go through the shared audience
 // service, which is where the thread decision was already spelled a second
 // time.
@@ -46,7 +46,7 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 // how the backend already reads it. Gating the composer on an email row instead
 // makes a fresh workspace, whose only rows are logged notes, unable to send at
 // all. A `message` row carries the opposite gate: it is withheld, not always
-// offered, when the person behind it cannot be reached on the transport that
+// offered, when the contact behind it cannot be reached on the transport that
 // carried it (see useChannelReachable).
 //
 // Relink, because an activity shown on a 360 timeline is by construction already
@@ -56,20 +56,20 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 //
 // It owns the two open states so the timeline mapper stays presentational.
 //
-// `extra` is how a surface adds a verb only it can serve — the person page's
+// `extra` is how a surface adds a verb only it can serve — the contact page's
 // meeting brief opens a drawer this file cannot see. It renders before Relink
 // so the row's own subject-matter verbs lead and the corrective ones follow.
 export function TimelineActions({
   activity,
   entityType,
   entityId,
-  personId,
+  contactId,
   extra,
 }: Readonly<{
   activity: Activity;
   entityType: RelinkKind;
   entityId: string;
-  personId?: string;
+  contactId?: string;
   extra?: (activity: Activity) => ReactNode;
 }>) {
   const t = useT();
@@ -82,13 +82,11 @@ export function TimelineActions({
         channelProvider={activity.channel_provider ?? undefined}
         entityType={entityType}
         entityId={entityId}
-        personId={personId}
+        contactId={contactId}
         contentWithheld={activity.content_state === "withheld"}
       />
       {extra?.(activity)}
-      <Button small onClick={() => setRelink(true)}>
-        {t("compose.relink")}
-      </Button>
+      <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
       {/* An EMAIL's audience is changed from the message, in the drawer, where
           the server states which write it would accept as `change_mode` and the
           editor opens on the set already standing. The row used to decide that
@@ -115,17 +113,15 @@ export function TimelineActions({
           entityId={entityId}
         />
       )}
-      {relink && (
-        <RelinkModal
-          activityId={activity.id}
-          activityVersion={activity.version}
-          threadKey={activity.thread_key}
-          entityType={entityType}
-          entityId={entityId}
-          open={relink}
-          onClose={() => setRelink(false)}
-        />
-      )}
+      <RelinkModal
+        activityId={activity.id}
+        activityVersion={activity.version}
+        threadKey={activity.thread_key}
+        entityType={entityType}
+        entityId={entityId}
+        open={relink}
+        onClose={() => setRelink(false)}
+      />
     </>
   );
 }
@@ -214,7 +210,6 @@ export function AudienceAction({
   return (
     <>
       <Button
-        small
         onClick={() => {
           setChoice(current);
           setOpen(true);
@@ -222,52 +217,49 @@ export function AudienceAction({
       >
         {t("compose.audience")}
       </Button>
-      {open && (
-        <ConfirmModal
-          open={open}
-          onClose={() => setOpen(false)}
-          title={t("compose.audienceTitle")}
-          confirmLabel={t("compose.audienceConfirm")}
-          confirmDisabled={
-            choice === current ||
-            (choice === "selected" && members.length === 0)
-          }
-          onConfirm={() =>
-            mutation.mutate({
-              activityId: activity.id,
-              version: activity.version,
-              audience: choice,
-              members: choice === "selected" ? members : undefined,
-            })
-          }
-          pending={mutation.isPending}
-          error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        >
-          <div className="compose-fields">
-            <ChoiceList
-              legend={t("compose.audienceLegend")}
-              value={choice}
-              onChange={setChoice}
-              choices={AUDIENCE_CHOICES.map((value) => ({
-                value,
-                label: t(AUDIENCE_LABEL[value]),
-                description: t(AUDIENCE_HINT[value]),
-              }))}
-            />
-            {/* The picker only where the choice needs one. A limited-to-nobody
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("compose.audienceTitle")}
+        confirmLabel={t("compose.audienceConfirm")}
+        confirmDisabled={
+          choice === current || (choice === "selected" && members.length === 0)
+        }
+        onConfirm={() =>
+          mutation.mutate({
+            activityId: activity.id,
+            version: activity.version,
+            audience: choice,
+            members: choice === "selected" ? members : undefined,
+          })
+        }
+        pending={mutation.isPending}
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      >
+        <div className="compose-fields">
+          <ChoiceList
+            legend={t("compose.audienceLegend")}
+            value={choice}
+            onChange={setChoice}
+            choices={AUDIENCE_CHOICES.map((value) => ({
+              value,
+              label: t(AUDIENCE_LABEL[value]),
+              description: t(AUDIENCE_HINT[value]),
+            }))}
+          />
+          {/* The picker only where the choice needs one. A limited-to-nobody
                 audience is not a limit anybody meant, so the confirm below
                 refuses an empty set rather than writing it. */}
-            {choice === "selected" && (
-              <AudienceMembers
-                candidates={candidates}
-                chosen={members}
-                onChange={setMembers}
-              />
-            )}
-            <p className="t-caption">{t("compose.audienceNote")}</p>
-          </div>
-        </ConfirmModal>
-      )}
+          {choice === "selected" && (
+            <AudienceMembers
+              candidates={candidates}
+              chosen={members}
+              onChange={setMembers}
+            />
+          )}
+          <p className="t-caption">{t("compose.audienceNote")}</p>
+        </div>
+      </ConfirmModal>
     </>
   );
 }

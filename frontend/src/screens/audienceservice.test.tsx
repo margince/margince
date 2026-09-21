@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -47,7 +47,7 @@ function Harness({ onDone }: Readonly<{ onDone?: () => void }>) {
 // first page, and a drawer anchored on a message this decision never named.
 const ELSEWHERE = [
   ["activities", "deal", "d-1"],
-  ["person360", "p-9"],
+  ["contact360", "p-9"],
   ["email-presentation", "33333333-3333-4333-8333-333333333333"],
 ];
 

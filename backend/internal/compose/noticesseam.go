@@ -14,8 +14,10 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // noticeKindAutomation labels a notice an automation's notify action raised.
@@ -35,18 +37,19 @@ const noticeKindCaptureBacklog = "capture_backlog_stalled"
 // notice never impersonates anyone.
 type noticesNotifier struct{ store *notices.Store }
 
-// No dedupe key, and that is the honest answer here rather than an omission:
-// the Notifier seam is handed a recipient and two strings, and nothing in it
-// names the event the notice is about. An automation that re-delivers writes a
-// second line, which is the same behaviour it had before the key existed —
-// closing it means the seam carrying an identity, not this adapter inventing
-// one out of the words.
-func (n noticesNotifier) Notify(ctx context.Context, recipient ids.UUID, subject, body string) error {
+func (n noticesNotifier) Notify(
+	ctx context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string, origin *crmcontracts.NoticeOrigin,
+) error {
 	_, err := n.store.Create(ctx, notices.NewNotice{
 		Recipient: ids.From[ids.UserKind](recipient),
 		Kind:      noticeKindAutomation,
+		Origin:    origin,
+		DedupeKey: dedupe,
 		Subject:   subject,
 		Body:      body,
+		// A firing that named no record writes no target: the zero EntityRef
+		// carries an empty type, and Target.Named() is what the store asks.
+		Target: notices.Target{Type: string(target.Type), ID: target.ID},
 	})
 	return err
 }

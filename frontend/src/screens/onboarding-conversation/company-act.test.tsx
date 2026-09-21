@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -209,7 +209,7 @@ function toColdField(fixture: FieldFixture): ColdField {
 const REVIEW_READ: CompanySiteRead = {
   id: REVIEW_READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "ready",
   status_code: null,
@@ -221,7 +221,7 @@ const REVIEW_READ: CompanySiteRead = {
   profile_fields: [],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,
@@ -363,14 +363,14 @@ describe("the dossier's legal-entity picker", () => {
     const legalName = screen.getByLabelText(/Registered legal name/);
     fireEvent.change(legalName, { target: { value: "Gradion, roughly" } });
 
-    const card = screen.getByRole("button", { name: /Gradion Co\., Ltd\./ });
+    const card = screen.getByRole("radio", { name: /Gradion Co\., Ltd\./ });
     fireEvent.click(card);
 
     expect(legalName).toHaveValue("Gradion Co., Ltd.");
-    // The picker marks a card chosen by comparing the card to legal_name, so
-    // a pick that left the typed name standing also denied the very click it
-    // had just honoured everywhere else.
-    expect(card).toHaveAttribute("aria-pressed", "true");
+    // The picker marks a plate chosen by comparing it to legal_name, so a pick
+    // that left the typed name standing also denied the very click it had just
+    // honoured everywhere else.
+    expect(card).toBeChecked();
     expect(screen.getByLabelText(/Registered address/)).toHaveValue(
       GRADION_LTD.registered_address,
     );

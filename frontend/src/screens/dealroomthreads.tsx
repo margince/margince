@@ -1,23 +1,24 @@
-import { CheckCheck, MessageSquare } from "lucide-react";
-import { type ReactNode, useState } from "react";
-import type { components } from "../api/schema";
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Field,
-  Textarea,
-} from "../design-system/atoms";
+import { BookOpen, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
+import { Badge, Button } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
+import { fileKind } from "../design-system/filechip";
 import { Panel, PanelBody } from "../design-system/panel";
-import { formatNumber } from "../format/format";
+import { formatBytes, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import {
+  type DealRoomThread,
+  ThreadComposer,
+  ThreadList,
+  type ThreadVerbs,
+} from "./dealroomthread";
 import "./dealroomthreads.css";
+
+export type { DealRoomThread, ThreadVerbs } from "./dealroomthread";
 
 // The document board, drawn once for both sides. A thread is about one
 // document or about the room, and the board keeps each thread under the
-// thing it is about: every document is a card that carries its own threads
+// thing it is about: every document is a tile that carries its own threads
 // and its own composer, and the room-wide threads sit in one panel below.
 // Seller and buyer read the same threads in the same shape (the contract
 // serves one projection), so this file holds the rendering and takes the
@@ -25,49 +26,32 @@ import "./dealroomthreads.css";
 // are the caller's decisions, and the only things that differ between the
 // two screens.
 
-// The one element carrying "why you may not write here". The room panel's
-// composer prints it; every refused document button points at it with
-// `aria-describedby` rather than repeating it. Both live in this file and the
-// room panel is unconditional, so the reference cannot dangle.
-const REFUSAL_ID = "deal-room-write-refusal";
-
-export type DealRoomThread = components["schemas"]["DealRoomThread"];
-
-export type ThreadVerbs = Readonly<{
-  /** Posts a reply; absent when this reader may not write. */
-  reply?: (threadId: string, body: string) => Promise<unknown>;
-  /** Resolves a thread; absent when this reader may not (the buyer never may). */
-  resolve?: (threadId: string) => Promise<unknown>;
-  /** Opens a thread; absent when this reader may not write. */
-  open?: (input: {
-    documentId: string | null;
-    body: string;
-    requiredChange: boolean;
-  }) => Promise<unknown>;
-  /** Whether the composer offers "requires a change" (the buyer's mark). */
-  mayRequireChange: boolean;
-  /** A sentence saying why writing is refused, when it is. */
-  refusal?: string;
-}>;
-
 /** One document as the board draws it; what the sides know differs. */
 export type BoardDocument = Readonly<{
   id: string;
   groupKey: string;
   title: string;
+  /** The stored filename: what the kind stamp and the saved copy are named by. */
+  filename: string;
   /** The filename, group, or both, under the title. */
   meta: string;
+  /** The stored size, when the server recorded one. */
+  byteSize?: number | null;
   /** The share state the seller sees (the buyer only sees shared ones). */
   status?: ReactNode;
   /** Download or remove — the side's own verbs on the document. */
   actions?: ReactNode;
+  /**
+   * Opens the document over the page. Absent when this side has no way to
+   * draw it: a kind no browser renders, or a surface with no preview mounted.
+   */
+  read?: () => void;
 }>;
 
 export type BoardGroup = Readonly<{ key: string; label: string }>;
 
 export function DocumentBoard({
   title,
-  sub,
   titleAction,
   groups,
   documents,
@@ -77,7 +61,6 @@ export function DocumentBoard({
   footer,
 }: Readonly<{
   title: string;
-  sub: string;
   titleAction?: ReactNode;
   groups: readonly BoardGroup[];
   documents: readonly BoardDocument[];
@@ -108,10 +91,10 @@ export function DocumentBoard({
   );
   return (
     <>
-      <Panel title={title} sub={sub} titleAction={titleAction}>
+      <Panel title={title} titleAction={titleAction}>
         {documents.length === 0 ? (
           <PanelBody>
-            <p className="t-caption">{empty}</p>
+            <p>{empty}</p>
           </PanelBody>
         ) : (
           groups.map((group) => {
@@ -140,13 +123,10 @@ export function DocumentBoard({
       </Panel>
       <Panel
         title={t("threads.roomTitle")}
-        sub={t("threads.roomSub")}
         titleAction={<Badge>{formatNumber(roomThreads.length, locale)}</Badge>}
       >
         <PanelBody>
-          {roomThreads.length === 0 ? (
-            <p className="t-caption">{t("threads.empty")}</p>
-          ) : null}
+          {roomThreads.length === 0 ? <p>{t("threads.empty")}</p> : null}
           <ThreadList threads={roomThreads} verbs={verbs} />
           <ThreadComposer
             verbs={verbs}
@@ -159,9 +139,34 @@ export function DocumentBoard({
   );
 }
 
-// A document card: the document, then what has been said about it, then the
+/**
+ * The threads nobody has answered: open, and the last word is the buyer's.
+ *
+ * One reading on both sides, and it means the same thing on each. To the buyer
+ * it is "still waiting on them"; to the seller it is "a buyer is waiting on
+ * you" — which is the question a rep opening the room actually has. A thread
+ * the seller opened and the buyer has not answered is not counted: the room
+ * exists for the buyer's questions, and a seller chasing their own is not
+ * what "unanswered" should mean on the buyer's page.
+ */
+function unansweredCount(threads: readonly DealRoomThread[]): number {
+  return threads.filter((thread) => {
+    if (thread.state === "resolved") {
+      return false;
+    }
+    const last = thread.comments?.at(-1);
+    return last !== undefined && last.author.side === "buyer";
+  }).length;
+}
+
+// A document tile: the document, then what has been said about it, then the
 // place to say more. A reader never has to work out which document a thread
 // belongs to, because the thread is inside the document.
+//
+// A tile rather than a row because a buyer scans a room the way they scan a
+// folder — by the paper — and the stage at the top is what makes eight files
+// tellable apart before any of them is opened: the kind, the size, and whether
+// somebody is waiting on an answer about it.
 function DocumentCard({
   doc,
   threads,
@@ -174,22 +179,89 @@ function DocumentCard({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const unanswered = unansweredCount(threads);
+  const kind = fileKind(doc.filename);
   return (
     <article className="board-doc" aria-label={doc.title}>
-      <div className="room-doc">
-        <div>
+      <div className="board-doc-stage">
+        {/* The page is a shape, not a rendering of the file: the bytes are
+            never fetched to draw a thumbnail, and a shape that promised to be
+            page one would be a promise the board cannot keep. */}
+        <span className="board-doc-page" aria-hidden>
+          <span className="board-doc-page-line board-doc-page-head" />
+          <span className="board-doc-page-line" />
+          <span className="board-doc-page-line board-doc-page-short" />
+          <span className="board-doc-page-line" />
+          <span className="board-doc-page-line board-doc-page-short" />
+        </span>
+        {kind ? (
+          <span className="board-doc-kind file-chip-kind" aria-hidden>
+            {kind}
+          </span>
+        ) : null}
+        {unanswered > 0 ? (
+          <span className="board-doc-unanswered">
+            <Badge tone="warning">
+              {plural("threads.unanswered", unanswered, {
+                count: formatNumber(unanswered, locale),
+              })}
+            </Badge>
+          </span>
+        ) : null}
+      </div>
+      <div className="board-doc-body">
+        {/* The tile's own door when the file can be read here: the title is a
+            button stretched over the stage and the facts by CSS, so pressing
+            anywhere on the paper opens it, while the verbs and the threads
+            sit above the stretch and keep their own presses. It carries the
+            TITLE, not "Read", so a screen reader hears which document it
+            opens; the Read verb beside it is the visible spelling of the
+            same act. */}
+        {doc.read ? (
+          <button
+            type="button"
+            className="board-doc-title board-doc-open"
+            aria-haspopup="dialog"
+            onClick={doc.read}
+          >
+            {doc.title}
+          </button>
+        ) : (
           <p className="board-doc-title">{doc.title}</p>
-          <p className="t-caption">{doc.meta}</p>
-          {doc.status ? (
-            <div className="board-doc-status">{doc.status}</div>
-          ) : null}
-        </div>
-        {doc.actions ? <div className="card-actions">{doc.actions}</div> : null}
+        )}
+        <p className="t-caption board-doc-meta">
+          {[
+            doc.meta,
+            doc.byteSize === null || doc.byteSize === undefined
+              ? ""
+              : formatBytes(doc.byteSize, locale),
+          ]
+            .filter((part) => part !== "")
+            .join(" · ")}
+        </p>
+        {doc.status ? (
+          <div className="board-doc-status">{doc.status}</div>
+        ) : null}
+        {doc.read || doc.actions ? (
+          <div className="board-doc-verbs">
+            {doc.read ? (
+              <Button
+                variant="primary"
+                aria-label={t("threads.readTitle", { title: doc.title })}
+                onClick={doc.read}
+              >
+                <BookOpen aria-hidden />
+                {t("threads.read")}
+              </Button>
+            ) : null}
+            {doc.actions}
+          </div>
+        ) : null}
       </div>
       {threads.length > 0 ? (
         <div className="board-doc-threads">
           <span className="t-caption board-doc-threads-head">
-            <MessageSquare aria-hidden />
+            <MessageSquare size={12} aria-hidden />
             {plural("threads.aboutThis", threads.length, {
               count: formatNumber(threads.length, locale),
             })}
@@ -204,253 +276,5 @@ function DocumentCard({
         collapsible
       />
     </article>
-  );
-}
-
-function ThreadList({
-  threads,
-  verbs,
-}: Readonly<{ threads: readonly DealRoomThread[]; verbs: ThreadVerbs }>) {
-  return (
-    <div className="board-threads">
-      {threads.map((thread) => (
-        <ThreadRow key={thread.id} thread={thread} verbs={verbs} />
-      ))}
-    </div>
-  );
-}
-
-function ThreadRow({
-  thread,
-  verbs,
-}: Readonly<{ thread: DealRoomThread; verbs: ThreadVerbs }>) {
-  const t = useT();
-  const [reply, setReply] = useState("");
-  const [pending, setPending] = useState<"reply" | "resolve" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const resolved = thread.state === "resolved";
-  const act = async (
-    kind: "reply" | "resolve",
-    run: () => Promise<unknown>,
-  ) => {
-    setPending(kind);
-    setError(null);
-    try {
-      await run();
-      if (kind === "reply") {
-        setReply("");
-      }
-    } catch (failure) {
-      setError(problemMessageOf(failure, t));
-    } finally {
-      setPending(null);
-    }
-  };
-  return (
-    <div className="thread">
-      {thread.required_change || resolved ? (
-        <div className="thread-head">
-          {thread.required_change ? (
-            <Badge tone="warn">{t("threads.requiredChange")}</Badge>
-          ) : null}
-          {resolved ? (
-            <Badge tone="success">{t("threads.resolved")}</Badge>
-          ) : null}
-        </div>
-      ) : null}
-      <ol className="thread-comments">
-        {(thread.comments ?? []).map((comment) => (
-          <li
-            key={comment.id}
-            className={
-              comment.author.side === "buyer" ? "thread-buyer" : "thread-seller"
-            }
-          >
-            <span className="t-caption thread-author">
-              {comment.author.name} ·{" "}
-              {t(
-                comment.author.side === "buyer"
-                  ? "threads.sideBuyer"
-                  : "threads.sideSeller",
-              )}
-            </span>
-            <p>{comment.body}</p>
-          </li>
-        ))}
-      </ol>
-      {!resolved && verbs.reply ? (
-        <div className="thread-reply">
-          <Field label={t("threads.replyLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={2}
-                value={reply}
-                onChange={(event) => setReply(event.target.value)}
-              />
-            )}
-          </Field>
-          <div className="card-actions">
-            <Button
-              small
-              disabled={reply.trim() === ""}
-              pending={pending === "reply"}
-              onClick={() => {
-                const run = verbs.reply;
-                if (run) {
-                  act("reply", () => run(thread.id, reply.trim()));
-                }
-              }}
-            >
-              {t("threads.reply")}
-            </Button>
-            {verbs.resolve ? (
-              <Button
-                small
-                variant="ghost"
-                pending={pending === "resolve"}
-                onClick={() => {
-                  const run = verbs.resolve;
-                  if (run) {
-                    act("resolve", () => run(thread.id));
-                  }
-                }}
-              >
-                <CheckCheck aria-hidden />
-                {t("threads.resolve")}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-      {error ? <p className="t-caption t-danger">{error}</p> : null}
-    </div>
-  );
-}
-
-// The composer is bound to what it is about: a document's composer opens a
-// thread about that document and nothing else, so there is no "this is
-// about" picker to get wrong. On a document it starts folded to one button,
-// so a card with nothing said yet stays a document and not a form.
-function ThreadComposer({
-  verbs,
-  documentId,
-  label,
-  collapsible = false,
-}: Readonly<{
-  verbs: ThreadVerbs;
-  documentId: string | null;
-  label: string;
-  collapsible?: boolean;
-}>) {
-  const t = useT();
-  const [openForm, setOpenForm] = useState(!collapsible);
-  const [body, setBody] = useState("");
-  const [requiredChange, setRequiredChange] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  if (!verbs.open) {
-    // A reader who may not write still sees WHERE writing would happen: the
-    // button in its disabled state, carrying the reason. Rendering nothing
-    // here made a preview show a room with no reply affordance at all, so a
-    // rep checking what their buyer sees could not tell a commenting seat
-    // from a read-only one — the two drew the same page.
-    //
-    // The room composer states the sentence and draws its own button; a
-    // document card draws the button alone and points at that sentence. Both
-    // draw one, because a room with NO documents has no card to carry it —
-    // and an empty room shown to a preview is exactly where a rep most needs
-    // to see that a buyer would have somewhere to write.
-    if (!verbs.refusal) {
-      return null;
-    }
-    return (
-      <>
-        {collapsible ? null : (
-          <p className="t-caption t-danger" id={REFUSAL_ID}>
-            {verbs.refusal}
-          </p>
-        )}
-        <div className="card-actions">
-          {/* `reasonId`, not `reason`: every control on the board is refused
-              by the ONE fact the room panel states, and printing that sentence
-              under each of them says it as many times as there are files.
-              Naming it once and pointing each control at it says it once and
-              still reaches a screen reader from every one of them. */}
-          <Button small variant="ghost" reasonId={REFUSAL_ID}>
-            <MessageSquare aria-hidden />
-            {label}
-          </Button>
-        </div>
-      </>
-    );
-  }
-  const open = verbs.open;
-  if (!openForm) {
-    return (
-      <div className="card-actions">
-        <Button small variant="ghost" onClick={() => setOpenForm(true)}>
-          <MessageSquare aria-hidden />
-          {label}
-        </Button>
-      </div>
-    );
-  }
-  const submit = async () => {
-    setPending(true);
-    setError(null);
-    try {
-      await open({
-        documentId,
-        body: body.trim(),
-        requiredChange: documentId !== null && requiredChange,
-      });
-      setBody("");
-      setRequiredChange(false);
-      if (collapsible) {
-        setOpenForm(false);
-      }
-    } catch (failure) {
-      setError(problemMessageOf(failure, t));
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <div className="thread-composer">
-      <Field label={label}>
-        {(control) => (
-          <Textarea
-            {...control}
-            rows={3}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-          />
-        )}
-      </Field>
-      {verbs.mayRequireChange && documentId !== null ? (
-        <Checkbox
-          label={t("threads.requireChangeLabel")}
-          checked={requiredChange}
-          onChange={(event) => setRequiredChange(event.target.checked)}
-        />
-      ) : null}
-      <div className="card-actions">
-        <Button
-          small
-          disabled={body.trim() === ""}
-          pending={pending}
-          onClick={submit}
-        >
-          {t("threads.open")}
-        </Button>
-        {collapsible ? (
-          <Button small variant="ghost" onClick={() => setOpenForm(false)}>
-            {t("threads.cancel")}
-          </Button>
-        ) : null}
-      </div>
-      {error ? <p className="t-caption t-danger">{error}</p> : null}
-    </div>
   );
 }

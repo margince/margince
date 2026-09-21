@@ -8,7 +8,7 @@
 // three days overdue snoozes to two days overdue, and a rep who means tomorrow
 // presses it four times.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,

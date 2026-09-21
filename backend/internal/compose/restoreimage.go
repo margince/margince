@@ -24,7 +24,7 @@ import (
 )
 
 // derivedColumns never travel in a restore even when the image carries them.
-// They are the write path's own output, not a person's decision, and replaying
+// They are the write path's own output, not a contact's decision, and replaying
 // one would state a stamp nobody made.
 //
 // Every entry here applies to EVERY record type, so a name one record type uses
@@ -42,14 +42,14 @@ var derivedColumns = map[string]bool{
 // They are dropped for the same reason as derivedColumns — undo puts the value
 // back, and what wrote it is history — but they are keyed by entity type
 // because the same word is a stamp on one record and a field on another.
-// `source` is the worked example: on an organization it is the lifecycle
+// `source` is the worked example: on a company it is the lifecycle
 // move's provenance, and on a LEAD it is a value a rep types and can edit
 // (UpdateLeadRequest.Source). Dropping it globally would silently omit a lead's
 // own source from its restore, which is the silent-drop failure this file's
 // refusal set exists to prevent.
 //
 // Filtering these is what makes their records reversible at all. An
-// organization rename records `name_source` in BOTH images, so before this
+// company rename records `name_source` in BOTH images, so before this
 // entry the before-image filtered to nothing spellable and the whole entry
 // refused with not_restorable_by_this_path — every promoted rename permanently
 // un-undoable, the same limit the address folding below exists to avoid, and a
@@ -57,13 +57,13 @@ var derivedColumns = map[string]bool{
 //
 //nolint:goconst // as namedByTheShapeButNotWrittenByThePatch below: the rows are wire names read as data
 var provenanceStamps = map[string]map[string]bool{
-	"organization": {"name_source": true, "source": true},
+	"company": {"name_source": true, "source": true},
 }
 
 // addressColumns maps the address_* columns an audit image carries onto the
 // keys of the structured `address` object the update shapes declare. The image
 // is per COLUMN, because that is what the record holds; the request is one
-// nested object, because that is how a person edits an address.
+// nested object, because that is how a human edits an address.
 //
 // Folding is what makes an address change reversible at all. Without it every
 // key filters out as unspellable and the whole entry refuses — and an edit that
@@ -123,15 +123,15 @@ var namedByTheShapeButNotWrittenByThePatch = map[string]map[string]bool{
 // reports the keys it had to leave behind.
 //
 // Those two answers travel together because the second is not a detail. A
-// person's update changed a title and an address; the address arrives in the
+// contact's update changed a title and an address; the address arrives in the
 // image as address_line1…address_country and the update shape spells only a
 // structured `address`, so a filter that quietly kept the title would put half
 // the change back and report success. That is the dishonest success this whole
 // refusal set exists to prevent, and it is worse than refusing, because the
-// person reads the confirmation and stops looking.
+// contact reads the confirmation and stops looking.
 //
 // Derived columns and the keys a record type's shape names but its mapper never
-// writes are dropped SILENTLY and on purpose: neither was a person's decision,
+// writes are dropped SILENTLY and on purpose: neither was a contact's decision,
 // and neither is missing from the restore in any sense a reader would care about.
 func filterImage(entityType string, before json.RawMessage) (map[string]json.RawMessage, []string, error) {
 	image, err := imageObject(before)

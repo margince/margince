@@ -64,7 +64,7 @@ func (r *crawlRun) admit(cand crawlCandidate) (admission, bool) {
 		// The security property of the whole crawler: no page content can
 		// send the crawl off the seed's site — off-domain candidates are
 		// recorded, never fetched.
-		r.skip(candURL, crmcontracts.SiteReadSkipReasonOffDomain)
+		r.skip(candURL, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonOffDomain)
 		return admission{}, false
 	}
 	return admission{cand: cand, url: candURL, kind: kind}, true
@@ -130,16 +130,16 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 	}
 	switch {
 	case errors.Is(res.err, webread.ErrRobotsDisallowed):
-		r.skip(adm.url, crmcontracts.SiteReadSkipReasonRobots)
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonRobots)
 		return
 	case crawlDeadlineError(ctx, res.err):
 		// Only the crawl context can end the whole walk. http.Client reports
 		// its own per-request timeout as context.DeadlineExceeded too; that
 		// page is unreadable, but the other discovery candidates remain valid.
-		r.crawl.Stopped = stoppedPtr(crmcontracts.SiteReadReportStoppedReasonDeadline)
+		r.crawl.Stopped = stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline)
 		return
 	case res.err != nil:
-		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable)
 		return
 	}
 	page := res.page
@@ -149,7 +149,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		// off-site link, discovered one fetch later — the body is discarded
 		// unread, links and all. Only the SEED's redirect may move the
 		// boundary (siteseed.go); a later page's never widens it.
-		r.skip(adm.url, crmcontracts.SiteReadSkipReasonOffDomain)
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonOffDomain)
 		return
 	}
 	if r.seenText[bodyIdentity(page.Text, page.HeadText)] {
@@ -174,7 +174,7 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 		// as thirty-one separate unreadable pages. The FIRST one is the honest
 		// report; the repeats are the same fact again.
 		r.seenText[bodyIdentity(page.Text, page.HeadText)] = true
-		r.skip(adm.url, crmcontracts.SiteReadSkipReasonUnreadable)
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable)
 		return
 	}
 
@@ -183,8 +183,8 @@ func (r *crawlRun) commit(ctx context.Context, adm admission, res fetchResult) {
 	// cap. Over-cap → record it as a byte_cap skip and stop, rather than
 	// silently exceeding the byte budget the report promises.
 	if r.totalBytes+page.Bytes > r.crawler.maxBytes {
-		r.skip(adm.url, crmcontracts.SiteReadSkipReasonByteCap)
-		r.crawl.Stopped = stoppedPtr(crmcontracts.SiteReadReportStoppedReasonByteCap)
+		r.skip(adm.url, crmcontracts.SiteReadSkipReasonSiteReadSkipReasonByteCap)
+		r.crawl.Stopped = stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap)
 		return
 	}
 

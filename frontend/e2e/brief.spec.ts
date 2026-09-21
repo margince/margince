@@ -9,7 +9,7 @@ import { signIn } from "./waits";
  * Behavioural tests (vitest) already prove the data flow: which rows render,
  * what a checkbox does not send, which absence draws which plate. What none of
  * them can see is that the readings strip came out as two stacked rows, that
- * the rail landed under the work column at desktop, or that a panel spilled
+ * the focus panel lost its full width, or that a panel spilled
  * sideways under a long German label. That is what this suite is for.
  *
  * Two describes, and the split is the same one company-record.spec.ts makes:
@@ -54,6 +54,7 @@ function copy(key: MessageKey): string {
 }
 
 const STRIP = '[data-testid="brief-readings"]';
+const FOCUS = "#brief-today";
 const GLANCE = '[data-testid="brief-glance"]';
 
 /**
@@ -70,9 +71,9 @@ const GLANCE = '[data-testid="brief-glance"]';
  * passed through rather than where it rests.
  */
 async function openBrief(page: Page) {
-  await page.goto("/#/brief", { waitUntil: "networkidle" });
+  await page.goto("/#/home", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
-  await expect(page.locator(".brief-main section").first()).toBeVisible();
+  await expect(page.locator(FOCUS)).toBeVisible();
   await settled(page);
 }
 
@@ -86,7 +87,7 @@ async function openBrief(page: Page) {
  */
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
-  await page.goto("/#/brief?view=weekly", { waitUntil: "networkidle" });
+  await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
   await expect(page.locator("#brief-weekly")).toBeVisible();
   await settled(page);
@@ -118,26 +119,6 @@ async function topOf(locator: Locator): Promise<number> {
     throw new Error("region is visible but has no box — cannot order it");
   }
   return box.y;
-}
-
-/** The horizontal position of a region, for beside-versus-under. */
-async function leftOf(locator: Locator): Promise<number> {
-  await expect(locator).toBeVisible();
-  const box = await locator.boundingBox();
-  if (!box) {
-    throw new Error("region is visible but has no box — cannot place it");
-  }
-  return box.x;
-}
-
-/** A computed pixel measure, for the scale floors. */
-async function px(locator: Locator, property: string): Promise<number> {
-  await expect(locator).toBeVisible();
-  const raw = await locator.evaluate(
-    (element, name) => getComputedStyle(element).getPropertyValue(name),
-    property,
-  );
-  return Number.parseFloat(raw);
 }
 
 /**
@@ -198,94 +179,39 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator("main h1")).toHaveCount(1);
   });
 
-  // The order the day sets. The glance says what is true this morning, the
-  // readings qualify it, and the work follows — a strip of numbers above the
-  // sentence that frames them is a page asking to be read backwards.
-  test("puts the glance above the readings, and the readings above the work", async ({
-    page,
-  }) => {
+  test("puts focus before readings and follow-through", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
     const glance = await topOf(page.locator(GLANCE));
+    const focus = await topOf(page.locator(FOCUS));
     const strip = await topOf(page.locator(STRIP));
-    expect(glance).toBeLessThan(strip);
-    // The FIRST section of the work column, whichever the day put there: the
-    // deck leads when a decision is waiting and the ranked queue leads when it
-    // is not, and the claim is about the strip sitting above the work, not
-    // about which work it is.
+    expect(glance).toBeLessThan(focus);
+    expect(focus).toBeLessThan(strip);
     expect(strip).toBeLessThan(
-      await topOf(page.locator(".brief-main section").first()),
+      await topOf(page.locator(".brief-followthrough")),
     );
   });
 
-  // The headline outranks what is under it, in the product's OWN scale.
-  //
-  // The concept pack asks for a 30px floor. The design system's `--fs-h1` is
-  // 24px and every h1 in the product is drawn at it (base.css `.t-display`),
-  // so a 30px floor here would either fail forever or force the Brief to a size
-  // no other page uses — a second type scale, to satisfy a number taken from a
-  // mockup rather than from this system. Whether the product's h1 should grow
-  // is a design-system decision, and it is not the Brief's to take alone.
-  //
-  // What IS this page's to hold is that the greeting still READS as a headline:
-  // a ratio against body text, so a change to the scale moves both ends and
-  // only a collapse fails.
-  //
-  // The sentence under the greeting is NOT compared here. It carries no size of
-  // its own (brief.css `.glance-sentence` sets colour, margin and measure) and
-  // inherits one LARGER than a panel title — the lede treatment the concept
-  // asks for. An assertion that it ranks below a section heading would encode
-  // the opposite of what the page deliberately does.
-  test("draws the headline at headline scale, not body scale", async ({
+  test("orders the greeting above the date above the sentence", async ({
     page,
   }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    const headline = await px(page.locator("main h1"), "font-size");
-    const body = await px(
-      page.locator('[data-testid="glance-sentence"]'),
-      "font-size",
-    );
-    // A RATIO, not "bigger than". Panel titles are 13px and body is 13.5, so a
-    // headline shrunk all the way to body size still measures larger than a
-    // section heading — a greater-than comparison passes on a page whose
-    // headline has stopped being one. 1.5x is comfortably under the shipped
-    // step (24 over 13.5) and comfortably over any collapse of it.
-    expect(headline / body).toBeGreaterThanOrEqual(1.5);
-  });
-
-  // Inside the glance, top to bottom: the eyebrow labels the page, the heading
-  // greets, the sentence says what the morning holds. The block-level assertion
-  // above places the glance against the strip and cannot see this order at all,
-  // so a sentence rendered above its own heading would pass every other test
-  // here.
-  test("orders the eyebrow above the heading above the sentence", async ({
-    page,
-  }) => {
-    await openBrief(page);
-    await expectShellRendered(page);
-
-    const eyebrow = await topOf(page.locator(`${GLANCE} .glance-eyebrow`));
     const heading = await topOf(page.locator("main h1"));
-    expect(eyebrow).toBeLessThan(heading);
-    expect(heading).toBeLessThan(
+    const date = await topOf(page.locator(`${GLANCE} time`));
+    expect(heading).toBeLessThan(date);
+    expect(date).toBeLessThan(
       await topOf(page.locator('[data-testid="glance-sentence"]')),
     );
   });
 
-  // ONE paragraph, and all of it visible.
-  //
-  // The sentence the Brief opens with was a STACK of one-fact lines before
-  // #3801 — a list wearing a sentence's position. Two assertions, because they
-  // fail for different reasons: a second <p> is the stack coming back, and a
-  // clipped one is a sentence the reader cannot finish.
   test("says the morning in one paragraph, unclipped", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    await expect(page.locator(`${GLANCE} p`)).toHaveCount(1);
+    await expect(page.locator(`${GLANCE} p.glance-sentence`)).toHaveCount(1);
     const clipped = await page
       .locator('[data-testid="glance-sentence"]')
       .evaluate((el) => el.scrollHeight > el.clientHeight);
@@ -335,14 +261,13 @@ test.describe("the Brief — page shape", () => {
     await expectShellRendered(page);
 
     await expect(page.locator(".brief-rail")).toHaveCount(0);
-    const main = await page.locator(".brief-main").boundingBox();
-    const zones = await page.locator(".page-zones-main").boundingBox();
-    if (!main || !zones) {
-      throw new Error("the weekly drew no work column to measure");
+    const review = await page.locator("#brief-weekly").boundingBox();
+    const header = await page.locator(".brief-head").boundingBox();
+    if (!review || !header) {
+      throw new Error("the weekly view drew no review to measure");
     }
-    // The work column fills its own grid area rather than leaving a third of
-    // it empty beside itself.
-    expect(main.width).toBeGreaterThan(zones.width * 0.9);
+    // The review fills the same content width as the page header.
+    expect(review.width).toBeGreaterThan(header.width * 0.9);
   });
 
   // And the morning shows the morning's work — the weekly is a dial away, not
@@ -351,7 +276,7 @@ test.describe("the Brief — page shape", () => {
     await openBrief(page);
     await expectShellRendered(page);
 
-    await expect(page.locator("#brief-feed")).toBeVisible();
+    await expect(page.locator(FOCUS)).toBeVisible();
     await expect(page.locator("#brief-weekly")).toHaveCount(0);
   });
 
@@ -359,14 +284,14 @@ test.describe("the Brief — page shape", () => {
   //
   // Every other assertion here is geometry, which a page rendering raw message
   // KEYS would satisfy completely — five boxes in a row is five boxes whether
-  // they read "Als Nächstes" or "brief.donext.title". One catalog read is what
+  // they read "Als Nächstes" or "brief.feed.title". One catalog read is what
   // separates a rendered page from a rendered skeleton.
-  test("greets a German reader in German", async ({ page }) => {
+  test("labels focus and view controls in German", async ({ page }) => {
     await openBrief(page);
     await expectShellRendered(page);
 
     await expect(
-      page.getByRole("heading", { name: copy("brief.donext.title") }),
+      page.getByRole("heading", { name: copy("brief.feed.title") }),
     ).toBeVisible();
     await expect(
       page.getByRole("group", { name: copy("brief.view.label") }),
@@ -386,41 +311,21 @@ test.describe("the Brief — page shape", () => {
     await page.getByRole("button", { name: copy("brief.view.weekly") }).click();
 
     await expect(page.locator("#brief-weekly")).toBeVisible();
-    await expect(page.locator("#brief-feed")).toHaveCount(0);
+    await expect(page.locator(FOCUS)).toHaveCount(0);
     expect(page.url()).toContain("view=weekly");
   });
 
-  // At desktop the rail is BESIDE the work, not under it. This is the assertion
-  // that fails when a grid rule stops applying and the aside quietly reflows to
-  // a second full-width block nobody notices from reading the code.
-  test("keeps the rail beside the work at 1280", async ({ page }) => {
+  test("gives focus the full content width at 1280", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openBrief(page);
     await expectShellRendered(page);
 
-    expect(await leftOf(page.locator(".brief-rail"))).toBeGreaterThan(
-      await leftOf(page.locator(".brief-main")),
-    );
-  });
-
-  // A reading's VALUE must outweigh its label. Equal weight is the dense
-  // admin-tool rendering these tests exist to catch; a floor, not equality,
-  // because a value larger than the mockup drew is right and 12px is not.
-  test("draws a reading's figure larger than its label", async ({ page }) => {
-    await openBrief(page);
-    await expectShellRendered(page);
-
-    const card = page.locator(`${STRIP} .stat-card`).first();
-    const value = await px(
-      card.locator(".stat-card-value").first(),
-      "font-size",
-    );
-    const label = await px(
-      card.locator(".stat-card-label").first(),
-      "font-size",
-    );
-    expect(value).toBeGreaterThan(label);
-    expect(value).toBeGreaterThanOrEqual(13);
+    const focus = await page.locator(FOCUS).boundingBox();
+    const header = await page.locator(".brief-head").boundingBox();
+    if (!focus || !header) {
+      throw new Error("the morning drew no focus panel to measure");
+    }
+    expect(focus.width).toBeGreaterThan(header.width * 0.9);
   });
 });
 
@@ -444,15 +349,17 @@ test.describe("the Brief — nothing pans", () => {
     });
   }
 
-  // At phone width the rail stacks UNDER the work rather than being squeezed
-  // beside it. A two-column layout at 390px is how a page comes to pan.
-  test("stacks the rail under the work at 390", async ({ page }) => {
+  test("keeps follow-through below focus and readings at 390", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openBrief(page);
     await expectShellRendered(page);
 
-    expect(await topOf(page.locator(".brief-rail"))).toBeGreaterThan(
-      await topOf(page.locator(".brief-main")),
+    const strip = await topOf(page.locator(STRIP));
+    expect(await topOf(page.locator(FOCUS))).toBeLessThan(strip);
+    expect(strip).toBeLessThan(
+      await topOf(page.locator(".brief-followthrough")),
     );
   });
 

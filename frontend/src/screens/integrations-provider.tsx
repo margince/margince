@@ -3,7 +3,7 @@
 
 import "./integrations-provider.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plug, Trash2 } from "lucide-react";
+import { Plug } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -18,9 +18,9 @@ import {
   TableScroll,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { type Fact, FactList } from "../design-system/factlist";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Meter } from "../design-system/readings";
@@ -29,6 +29,10 @@ import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  BuyableRefused,
+  PostureRefused,
+} from "./integrations-provider.notices";
 import { categoryName } from "./provider-categories";
 import {
   connectionLabel,
@@ -61,7 +65,7 @@ export function ProviderCard() {
   const t = useT();
   const query = useProviderConnections();
   // Every seat reads this card — the balances and the spend are a rep's
-  // explanation for a dated value on a person record — while connecting and
+  // explanation for a dated value on a contact record — while connecting and
   // destroying are admin/ops. The two answers are computed HERE, once, so the
   // posture line below and the affordances inside cannot disagree about who
   // may do what.
@@ -151,7 +155,9 @@ function ProviderConnectionRow({
           <span className="provider-mark">
             <ProviderMark providerKey={connection.provider} />
           </span>
-          <h3 className="provider-name">{connection.provider}</h3>
+          <Heading size="small" as="h3" className="provider-name">
+            {connection.provider}
+          </Heading>
           <Badge tone={connectionTone(connection.status)}>
             {t(connectionLabel(connection.status))}
           </Badge>
@@ -192,7 +198,7 @@ function SpendReading({
   const { locale } = useLocale();
   const months = connection.spend?.months ?? [];
   if (months.length === 0) {
-    return <p className="provider-empty">{t("provider.spend.none")}</p>;
+    return <p className="t-sub">{t("provider.spend.none")}</p>;
   }
   // The series only carries months that HAD spend, so its newest entry is not
   // necessarily this one — an installation that bought nothing yet this month
@@ -230,7 +236,7 @@ function SpendReading({
                   counted them either way would assert something it cannot
                   support. This is the figure a human reconciles against the
                   provider's invoice. */}
-              <td className="provider-held">
+              <td>
                 {month.held_credits > 0
                   ? formatNumber(month.held_credits, locale)
                   : "—"}
@@ -264,7 +270,7 @@ function CreditsReading({
     // Two different silences. With no key we never asked, and saying the
     // provider "has not told us" would blame them for our own empty state.
     return (
-      <p className="provider-empty">
+      <p className="t-sub">
         {connection.credential_present
           ? t("provider.credits.none")
           : t("provider.credits.notConnected")}
@@ -420,21 +426,7 @@ function PolicyRow({
       />
       <LookupBacklogRow connection={connection} />
       <PricedCategoryRows connection={connection} canEdit={canEdit} />
-      {/* Under the row whose flip failed, at the row's full width, rather than
-          squeezed into the control column beside the switch: the reason names
-          what the reader just tried to change, and a sentence sharing a
-          nowrap flex line with a switch is a sentence nobody reads. */}
-      {/* The READ's failure as well as the write's. A posture we could not ask
-          for renders the switch off, and "off" is a claim about the
-          installation — so a failed GET has to say so rather than let the
-          control answer a question nobody could reach. */}
-      {(patch.error || posture.error) && (
-        <div className="provider-row-note">
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(patch.error ?? posture.error, t)}
-          </Callout>
-        </div>
-      )}
+      <PostureRefused writeError={patch.error} readError={posture.error} />
     </>
   );
 }
@@ -443,7 +435,7 @@ function PolicyRow({
 //
 // Switching one on does not spend anything and does not schedule anything. It
 // decides which buy buttons a rep is offered on a contact — every purchase is
-// still a person pressing a priced button on one named record, which is the
+// still a contact pressing a priced button on one named record, which is the
 // split the free tier exists to keep. So the switch means "available to buy",
 // never "will be bought", and the row's own copy has to say so: an admin who
 // reads it as the latter leaves the whole paid half of the product switched off.
@@ -560,13 +552,7 @@ function PricedCategoryRows({
           />
         );
       })}
-      {patch.error && (
-        <div className="provider-row-note">
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(patch.error, t)}
-          </Callout>
-        </div>
-      )}
+      <BuyableRefused error={patch.error} />
     </>
   );
 }
@@ -588,7 +574,7 @@ type CategoryPatch = {
 
 // Saving the fetch scope, with the version the card was rendered from.
 //
-// If-Match rather than a blind write: two admins on this card are two people
+// If-Match rather than a blind write: two admins on this card are two contacts
 // deciding what the installation may spend on, and a lost update there is a
 // category switched on by somebody who never saw it happen.
 function usePatchCategories() {
@@ -675,11 +661,11 @@ function DestructiveActions({
   const t = useT();
   return (
     <OverflowMenu label={t("record.moreActions")}>
-      <Button small type="button" onClick={onDisconnect}>
+      <Button type="button" onClick={onDisconnect}>
         {t("provider.disconnect")}
       </Button>
-      <Button small variant="danger" type="button" onClick={onDeleteData}>
-        <Trash2 aria-hidden /> {t("provider.deleteData")}
+      <Button variant="danger" type="button" onClick={onDeleteData}>
+        {t("provider.deleteData")}
       </Button>
     </OverflowMenu>
   );
@@ -721,7 +707,7 @@ function CredentialDialog({
       pending={pending}
       error={error}
     >
-      <p className="t-caption">{t("provider.connectConfirm.body")}</p>
+      <p>{t("provider.connectConfirm.body")}</p>
       {/* The field is write-only in both states: a sealed key is never sent
           back to the browser, so the box is empty even when one is in place.
           Left unexplained that reads as "no key connected" while the card
@@ -849,7 +835,6 @@ function CredentialRow({
                 column. A reader who may not connect has nothing to open. */}
             {canConnect && (
               <Button
-                small
                 variant="primary"
                 type="button"
                 onClick={() => setConnecting(true)}
@@ -957,9 +942,12 @@ function FreeTierNote({
     return null;
   }
   return (
-    <Callout tone="info">
+    // Instructional prose, not a notice: it is true on every visit and says
+    // nothing about the surface, so it reads as the list's own lead caption. A
+    // band that never changes teaches a reader to skip it.
+    <div className="provider-free-note">
       <p>{t("provider.freeTier.hint")}</p>
       {priced.length > 0 && <p>{t("provider.pricedTier.hint")}</p>}
-    </Callout>
+    </div>
   );
 }

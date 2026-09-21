@@ -50,7 +50,7 @@ import (
 const resetTokenTTL = time.Hour
 
 // inviteTokenTTL is the set-password link's lifetime for a new member — longer
-// than a reset because an invited person has no account yet and may take a few
+// than a reset because an invited contact has no account yet and may take a few
 // days to act on the mail.
 const inviteTokenTTL = 7 * 24 * time.Hour
 
@@ -58,12 +58,13 @@ const inviteTokenTTL = 7 * 24 * time.Hour
 // single-use token and email its link. Always 202 — the response never
 // discloses whether the address maps to an account.
 func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-	// Both halves, not just the mailer: sending a link built on an empty base
-	// would mint a live token and mail an unusable URL, consuming the one
-	// recovery attempt the owner gets. The capabilities probe answers from this
-	// same predicate, so the login UI never offers what this would refuse.
-	if !h.canSendPasswordLink() {
-		httperr.NotImplemented(w, r, "RequestPasswordReset")
+	// Every half: a link built on an empty base would mint a live token and
+	// mail an unusable URL, consuming the one recovery attempt the owner gets,
+	// and a closed password door would recover into a method no login route
+	// accepts. The capabilities probe answers from this same predicate, so the
+	// login UI never offers what this would refuse.
+	if !h.selfServiceRecoveryOffered() {
+		httperr.NotImplementedBecause(w, r, selfServiceRecoveryOff)
 		return
 	}
 	// Throttle FIRST — before any parsing or work, so a malformed flood

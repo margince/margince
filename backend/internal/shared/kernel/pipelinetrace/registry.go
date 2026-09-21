@@ -38,6 +38,16 @@ const (
 	// `by_design` (a lie) and not stored or derived (false). It carries an issue
 	// ref so it is tracked rather than excused.
 	SourcePlanned Source = "planned"
+	// SourceAnsweredElsewhere means the stage RUNS and IS reported — on another
+	// surface, because its subject is not this ladder's.
+	//
+	// It is not SourceByDesign, which says the answer will never exist, and not
+	// SourcePlanned, which says it does not exist yet: this one exists and has
+	// a door. The distinction is the member's: told "not reported", they stop
+	// looking; told where it is answered, they go there. The registration's
+	// AbsentReason is what names the door, so a member reads a sentence rather
+	// than an absence.
+	SourceAnsweredElsewhere Source = "answered_elsewhere"
 	// SourceNotBuilt means the pipeline step itself does not exist.
 	SourceNotBuilt Source = "not_built"
 )
@@ -121,7 +131,7 @@ var registrations = []Registration{{
 		ReasonNoGrantingHuman, ReasonDerivationFailed, ReasonRecordNotAvailable,
 	},
 }, {
-	Stage:       StagePersonCreate,
+	Stage:       StageContactCreate,
 	Order:       70,
 	SubjectKind: SubjectSender,
 	Sources:     []Source{SourceDerived},
@@ -132,19 +142,26 @@ var registrations = []Registration{{
 	SubjectKind: SubjectSender,
 	Sources:     []Source{SourceDerived},
 	Reasons: []Reason{
-		ReasonAwaitingVerdict, ReasonVerdictReached, ReasonNoOpenQuestion,
-		ReasonRecordNotAvailable,
+		ReasonAwaitingVerdict, ReasonNoOpenQuestion, ReasonRecordNotAvailable,
+		ReasonJudgedReal, ReasonJudgedNoise, ReasonJudgedRejected, ReasonJudgedSuppressed,
 	},
 }, {
-	// Runs, but not reported here yet. Its subject is a DOMAIN and this ladder
-	// is per-message, so whether the rung belongs here at all is the open half
-	// of the question — see the issue.
+	// Runs, and is reported — on the COMPANY, not here. Its subject is a domain,
+	// and a domain is triaged once for every message that ever arrives from it:
+	// a per-message rung would answer "done" for the message that prompted the
+	// triage and for the hundredth one that arrived after it alike, which reads
+	// as this message having been the cause. So the ladder names where the
+	// answer lives instead, and the answer itself is
+	// GET /companies/{id}/capture-triage.
 	Stage:        StageCompanyTriage,
 	Order:        90,
 	SubjectKind:  SubjectDomain,
-	Sources:      []Source{SourcePlanned},
-	AbsentReason: AbsentNotReportedYet,
-	Issue:        "#1434",
+	Sources:      []Source{SourceAnsweredElsewhere},
+	AbsentReason: AbsentAnsweredOnTheCompany,
+	Reasons: []Reason{
+		ReasonCompanyWarranted, ReasonNoSiteIdentified, ReasonTriageQueued,
+		ReasonTriageUnevidenced, ReasonTriageStale, ReasonTriageNearDupe,
+	},
 }, {
 	Stage:       StageAttentionLabel,
 	Order:       100,
@@ -156,16 +173,22 @@ var registrations = []Registration{{
 		ReasonLabelled, ReasonRecordNotAvailable,
 	},
 }, {
-	// Runs, but not reported here yet. Worth deriving together with the
-	// email-only predicate it shares with the classifier (#1433): for a chat
-	// transport the honest answer is transport_not_read, so the derivation
-	// would be reporting a gap rather than a state.
-	Stage:        StageMaterialEvents,
-	Order:        110,
-	SubjectKind:  SubjectThread,
-	Sources:      []Source{SourcePlanned},
-	AbsentReason: AbsentNotReportedYet,
-	Issue:        "#1434",
+	// Derived from the extractor's own rule: the arms it applies to decide
+	// whether a conversation is read, asked of this message's thread. Its chat
+	// answer is transport_not_read and that is a real answer rather than a gap
+	// report — material events do not widen to chat until the grouping question
+	// is settled (#1433), so a transport with no thread key has no unit of work
+	// for this stage to have run over.
+	Stage:       StageMaterialEvents,
+	Order:       110,
+	SubjectKind: SubjectThread,
+	Sources:     []Source{SourceDerived},
+	Reasons: []Reason{
+		ReasonTransportNotRead, ReasonArchived, ReasonRecordNotAvailable,
+		ReasonEventsRaised, ReasonNothingMaterial, ReasonThreadStillMoving,
+		ReasonAwaitingScan, ReasonReadingParked, ReasonNoSingleAccount,
+		ReasonTwoBodiesOfWork, ReasonThreadNotAllOpen, ReasonNoNamedReader,
+	},
 }, {
 	Stage:        StageClaimExtraction,
 	Order:        120,

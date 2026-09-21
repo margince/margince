@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
 // The one wording these tests publish. Every test here asks what the database
@@ -144,11 +146,11 @@ func TestAProofRowNamesTheWordingItWasRenderedFrom(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO consent_event (person_id, purpose_id, new_state, source,
+		INSERT INTO consent_event (contact_id, purpose_id, new_state, source,
 		                           policy_text, policy_version, consent_text_version_id,
 		                           captured_at, captured_by)
 		VALUES ($1, $2, 'granted', 'test', 'Yes, email me.', 'v1', $3, now(), 'test')`,
-		e.person, e.newsletter, versionID); err != nil {
+		e.contact, e.newsletter, versionID); err != nil {
 		t.Fatalf("recording a proof row naming its wording: %v", err)
 	}
 
@@ -156,8 +158,8 @@ func TestAProofRowNamesTheWordingItWasRenderedFrom(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT v.body FROM consent_event e
 		  JOIN consent_text_version v ON v.id = e.consent_text_version_id
-		 WHERE e.person_id = $1 AND e.consent_text_version_id IS NOT NULL`,
-		e.person).Scan(&body); err != nil {
+		 WHERE e.contact_id = $1 AND e.consent_text_version_id IS NOT NULL`,
+		e.contact).Scan(&body); err != nil {
 		t.Fatalf("reading the wording a proof row names: %v", err)
 	}
 	if body != "Yes, email me." {
@@ -179,12 +181,15 @@ func TestPublishingTheCatalogTwiceIsANoOp(t *testing.T) {
 		}
 	}
 
+	// Grouped by LOCALE as well: one template at one version legitimately has
+	// three rows now, one per language this build speaks. Grouped without it,
+	// the second language of every template reads as a duplicate.
 	var duplicated int
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM (
-		  SELECT key, version FROM consent_text_version
+		  SELECT key, version, locale FROM consent_text_version
 		   WHERE published_at IS NOT NULL
-		   GROUP BY key, version HAVING count(*) > 1
+		   GROUP BY key, version, locale HAVING count(*) > 1
 		) d`).Scan(&duplicated); err != nil {
 		t.Fatal(err)
 	}
@@ -193,14 +198,24 @@ func TestPublishingTheCatalogTwiceIsANoOp(t *testing.T) {
 			"\"which text is this\" a question with two answers", duplicated)
 	}
 
+	// Scoped to the CONTROLLER templates. Counting every published wording
+	// would make this test fail the day a preference-centre sentence gets its
+	// own publisher — a legitimate row this test has no opinion about.
 	var published int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM consent_text_version WHERE published_at IS NOT NULL`).Scan(&published); err != nil {
+		`SELECT count(*) FROM consent_text_version
+		  WHERE published_at IS NOT NULL
+		    AND key = ANY($1)`, controllerTemplateKeys()).Scan(&published); err != nil {
 		t.Fatal(err)
 	}
-	if published < 2 {
-		t.Errorf("the catalog published %d wordings, want at least the confirm-details and "+
-			"double-opt-in templates", published)
+	// Two templates in three languages. Asked as "at least 2" this would pass a
+	// build that published one language and dropped the others, which is the
+	// failure that leaves a German installation with no German text for a proof
+	// row to point at.
+	want := len(controllerTemplates) * len(mailcopy.Languages())
+	if published != want {
+		t.Errorf("the catalog published %d wordings, want %d — %d template(s) in %d language(s)",
+			published, want, len(controllerTemplates), len(mailcopy.Languages()))
 	}
 }
 
@@ -255,4 +270,14 @@ func TestAPublishedVersionsScopeIsFrozenToo(t *testing.T) {
 				"moving it leaves no trace at all", set)
 		}
 	}
+}
+
+// controllerTemplateKeys names the catalog's own keys, so the count above asks
+// about the rows this publisher writes rather than about the table.
+func controllerTemplateKeys() []string {
+	keys := make([]string, 0, len(controllerTemplates))
+	for key := range controllerTemplates {
+		keys = append(keys, key)
+	}
+	return keys
 }

@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Terminal leads are counted, and counted under their own status.
@@ -70,6 +71,50 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 	}
 }
 
+// An unowned lead is the ordinary shape of a fresh, unrouted one, and it must
+// count on a rep's own board the same way it counts on their unscoped list:
+// `owner_id = $me` matches nothing against a NULL owner_id under ordinary SQL
+// null semantics, so the Leads board's terminal-status columns would
+// otherwise silently drop a lead the panel's own list still shows one click
+// below.
+func TestLeadsByStatusCountsAnUnownedLeadForARep(t *testing.T) {
+	e := integration.Setup(t)
+	seedLeadAt(t, e, "new", false)
+	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, archived_at)
+		VALUES ($1, 'Owned Fixture', 'disqualified', 'inbound', 'human:x', $2, now())`, ids.NewV7(), e.Rep1)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"lead":                  {Read: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeOwn,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/reports/leads-by-status",
+		strings.NewReader(`{}`)).WithContext(rep)
+	rec := httptest.NewRecorder()
+	reportHandlers{engine: newReportEngine(e.Pool)}.RunReport(rec, req, "leads-by-status")
+
+	var result reportResultWire
+	decodeWire(t, rec, http.StatusOK, &result)
+	counts := map[string]int64{}
+	for _, row := range result.Rows {
+		status, ok := row["status"].(string)
+		if !ok {
+			t.Fatalf("row %v has no status", row)
+		}
+		counts[status] = wireInt(t, row, "leads")
+	}
+	if counts["new"] != 1 {
+		t.Errorf(`a rep's own population counted %d "new" leads, want 1 — `+
+			"an unowned lead must not silently drop out", counts["new"])
+	}
+	if counts["disqualified"] != 1 {
+		t.Errorf(`a rep's own population counted %d "disqualified" leads, want 1 (their own)`,
+			counts["disqualified"])
+	}
+}
+
 // seedLeadAt plants one lead at a status, archived or not.
 //
 // archived_at is set from the status rather than passed independently: a
@@ -83,6 +128,22 @@ func seedLeadAt(t *testing.T, e *integration.Env, status string, terminal bool) 
 	if terminal {
 		archived = "now()"
 	}
-	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, archived_at)
-		VALUES ($1, 'Terminal Fixture', $2, 'inbound', 'human:x', `+archived+`)`, id, status)
+	// A promoted lead names the contact it became, which the table now requires
+	// — the promotion writes both in one statement, so a row with the status
+	// and no contact is one the product cannot produce. The contact is seeded
+	// for the same reason: the pointer is a foreign key, and a fixture naming
+	// nobody would be a different impossible row.
+	promotedContact := "NULL"
+	if status == "promoted" {
+		contact := ids.NewV7()
+		e.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Promoted Fixture', 'manual', 'human:x')`, contact)
+		promotedContact = "'" + contact.String() + "'"
+	}
+	promotedAt := "NULL"
+	if status == "promoted" {
+		promotedAt = "now()"
+	}
+	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, archived_at, promoted_at, promoted_contact_id)
+		VALUES ($1, 'Terminal Fixture', $2, 'inbound', 'human:x', `+archived+`, `+promotedAt+`, `+promotedContact+`)`, id, status)
 }

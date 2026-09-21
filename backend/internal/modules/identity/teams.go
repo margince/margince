@@ -175,7 +175,7 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 		var tag pgconn.CommandTag
 		change := "member_removed"
 		if on {
-			change = "member_added"
+			change = changeMemberAdded
 			tag, err = tx.Exec(ctx, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)
 				ON CONFLICT (team_id, user_id) DO NOTHING`, teamID, userID)
 		} else {
@@ -188,7 +188,8 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 			return nil
 		}
 		return s.recordTeamChange(ctx, tx, actor, teamID, &userID, change,
-			map[string]any{"member": userID, "on": !on}, map[string]any{"member": userID, "on": on})
+			map[string]any{teamAuditKeyMember: userID, "on": !on},
+			map[string]any{teamAuditKeyMember: userID, "on": on})
 	})
 }
 
@@ -224,8 +225,8 @@ func (s *Service) recordTeamChange(ctx context.Context, tx pgx.Tx, actor Identit
 // AUTHENTICATED caller.
 //
 // The caller's own id comes from the principal rather than from an argument, so
-// this cannot be asked about two other people. That is the gate: the answer
-// discloses one edge of the organization chart, and the only edge a reader is
+// this cannot be asked about two other contacts. That is the gate: the answer
+// discloses one edge of the company chart, and the only edge a reader is
 // entitled to probe is one they are themselves an end of. A caller with no
 // human behind it is refused — an agent or a system pass has no teammates, and
 // answering "false" would read as a fact rather than as an absence.

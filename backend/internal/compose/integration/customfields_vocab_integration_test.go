@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -158,7 +158,7 @@ func TestCustomFieldVocab_FilterEqualityPerType(t *testing.T) {
 // by it answers the same typed 422 codes an unknown cf_ field gets.
 func TestCustomFieldVocab_RetiredAndUnknownRefused(t *testing.T) {
 	f := setupCFV(t)
-	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "person", Label: "Legacy Tier", Type: customfields.TypeText, Source: "ui"})
+	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "ui"})
 	if err != nil {
 		t.Fatalf("defining field: %v", err)
 	}
@@ -169,14 +169,14 @@ func TestCustomFieldVocab_RetiredAndUnknownRefused(t *testing.T) {
 
 	for name, cf := range map[string]string{"retired": col, "unknown": "cf_never_defined"} {
 		t.Run(name+" sort refused", func(t *testing.T) {
-			_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &cf})
+			_, _, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &cf})
 			var sortErr *storekit.SortError
 			if !errors.As(err, &sortErr) || sortErr.Code != storekit.CodeSortFieldNotAllowed {
 				t.Fatalf("sort=%s err = %v, want SortError %s", cf, err, storekit.CodeSortFieldNotAllowed)
 			}
 		})
 		t.Run(name+" filter refused", func(t *testing.T) {
-			_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{CustomFilters: map[string]string{cf: "x"}})
+			_, _, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{CustomFilters: map[string]string{cf: "x"}})
 			var pred *storekit.PredicateError
 			if !errors.As(err, &pred) || pred.Code != storekit.CodeFilterFieldNotAllowed {
 				t.Fatalf("filter %s err = %v, want PredicateError %s", cf, err, storekit.CodeFilterFieldNotAllowed)
@@ -196,17 +196,17 @@ type vocabResource struct {
 // the spec, each paired with its store's list call.
 func coreVocabResources(dealCtx context.Context, f cfvFixture, dealStore *deals.Store) map[string]vocabResource {
 	return map[string]vocabResource{
-		"people (DM-VOCAB-1)": {
+		"contacts (DM-VOCAB-1)": {
 			specFields: []string{"created_at", "updated_at", "full_name", "owner_id"},
 			list: func(sort string) error {
-				_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &sort})
+				_, _, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &sort})
 				return err
 			},
 		},
-		"organizations (DM-VOCAB-2)": {
+		"companies (DM-VOCAB-2)": {
 			specFields: []string{"created_at", "updated_at", "display_name", "owner_id"},
 			list: func(sort string) error {
-				_, _, err := f.store.ListOrganizations(f.ctx, people.ListOrganizationsInput{Sort: &sort})
+				_, _, err := f.store.ListCompanies(f.ctx, contacts.ListCompaniesInput{Sort: &sort})
 				return err
 			},
 		},
@@ -240,28 +240,28 @@ func assertSpecFieldsSortable(t *testing.T, resources map[string]vocabResource) 
 // accepted and newest-first.
 func assertFullNameAndDefaultSort(t *testing.T, f cfvFixture) {
 	t.Helper()
-	zoe, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "Zoe Last", Source: "ui"})
+	zoe, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Zoe Last", Source: "ui"})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
-	ada, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "Ada First", Source: "ui"})
+	ada, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Ada First", Source: "ui"})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 
 	byName := "full_name"
-	rows, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &byName})
+	rows, _, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &byName})
 	if err != nil {
-		t.Fatalf("ListPeople sort=full_name: %v", err)
+		t.Fatalf("ListContacts sort=full_name: %v", err)
 	}
 	if len(rows) != 2 || rows[0].Id != ada.Id || rows[1].Id != zoe.Id {
 		t.Fatalf("full_name ascending order wrong: %v", rows)
 	}
 
 	defaultSpelling := "-created_at,id"
-	rows, _, err = f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &defaultSpelling})
+	rows, _, err = f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &defaultSpelling})
 	if err != nil {
-		t.Fatalf("ListPeople with the documented default spelling: %v", err)
+		t.Fatalf("ListContacts with the documented default spelling: %v", err)
 	}
 	if len(rows) != 2 || rows[0].Id != ada.Id {
 		t.Fatalf("default sort must stay -created_at,id (newest first), got %v", rows)
@@ -269,11 +269,21 @@ func assertFullNameAndDefaultSort(t *testing.T, f cfvFixture) {
 }
 
 // TestCustomFieldVocab_CoreVocabulary: each list's core sortable
-// vocabulary is exactly its data-model §13.5 DM-VOCAB table — every
-// spec-listed field sorts in both directions (full_name ordering proves
-// the ORDER BY), the documented default spelling stays accepted, and a
-// real column the tables do not list — or a multi-field spec — is
-// refused.
+// vocabulary covers the DM-VOCAB set it was drawn from — every field in
+// it sorts in both directions (full_name ordering proves the ORDER BY),
+// the documented default spelling stays accepted, and a real column the
+// list does not publish — or a multi-field spec — is refused.
+//
+// COVERS rather than EQUALS, and the difference is a ruling rather than
+// drift. The vocabulary is now the columns a list publishes: a header a
+// reader can see is one they can order by, so a list that draws a column
+// the DM-VOCAB set omits accepts it anyway. `deal.name` is the first —
+// it sorted in poc-1, the spec table dropped it, and the deals list drew
+// it as an unsortable header until the rule put it back.
+//
+// So the refusal below has to be a column the list does NOT draw.
+// Otherwise this test pins the old rule and the new one cannot land
+// without it looking like a regression.
 func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
 	f := setupCFV(t)
 	// The deal list shares f's Env (Setup rebuilds the schema, so one
@@ -285,16 +295,24 @@ func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
 	assertSpecFieldsSortable(t, resources)
 	assertFullNameAndDefaultSort(t, f)
 
-	// A real column DM-VOCAB-3 does not list stays outside the vocabulary:
-	// deal name sorted in poc-1, and the spec table dropped it.
-	dealName := "name"
+	// A real column of `deal` the deals list does not draw stays outside the
+	// vocabulary. Chosen for that reason: refusing a name no table has would
+	// pass against a vocabulary that had become "any column", which is the way
+	// widening one goes wrong.
+	notDrawn := "captured_by"
 	var sortErr *storekit.SortError
-	if err := resources["deals (DM-VOCAB-3)"].list(dealName); !errors.As(err, &sortErr) || sortErr.Code != storekit.CodeSortFieldNotAllowed {
-		t.Fatalf("deals sort=name err = %v, want SortError %s", err, storekit.CodeSortFieldNotAllowed)
+	if err := resources["deals (DM-VOCAB-3)"].list(notDrawn); !errors.As(err, &sortErr) || sortErr.Code != storekit.CodeSortFieldNotAllowed {
+		t.Fatalf("deals sort=%s err = %v, want SortError %s", notDrawn, err, storekit.CodeSortFieldNotAllowed)
+	}
+
+	// And the column the ruling put back does sort, so this test cannot go on
+	// passing if the widening is reverted somewhere else.
+	if err := resources["deals (DM-VOCAB-3)"].list("name"); err != nil {
+		t.Fatalf("deals sort=name: %v — a column the list draws must be one it orders by", err)
 	}
 
 	multi := "-created_at,full_name"
-	_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &multi})
+	_, _, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &multi})
 	if !errors.As(err, &sortErr) || sortErr.Code != storekit.CodeSortUnsupported {
 		t.Fatalf("multi-field sort err = %v, want SortError %s", err, storekit.CodeSortUnsupported)
 	}

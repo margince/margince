@@ -9,8 +9,8 @@ package gates
 // NULL` on app_user, and TWO functions in two different packages each called
 // themselves the ONE spelling of it while the tree held about twenty copies.
 //
-// org360's said so; search's said so as well, and its own comment recorded
-// that org360 had already spelled it that way — so the second author knew
+// company360's said so; search's said so as well, and its own comment recorded
+// that company360 had already spelled it that way — so the second author knew
 // about the first copy and minted a third anyway. Neither had anything holding
 // it. That is the false-uniqueness pair CLAUDE.md names: the next author greps,
 // finds a comment claiming the question is settled, and stops looking.
@@ -28,7 +28,7 @@ package gates
 //
 // What it deliberately does NOT judge: a statement that reads app_user with no
 // liveness constraint at all. Plenty legitimately do — resolving a row by id to
-// render a name does not care whether the person still works here, and a gate
+// render a name does not care whether the contact still works here, and a gate
 // that demanded they all filter would be asserting an answer nobody gave. It
 // also does not judge another table that happens to carry the same two column
 // names: `voice_profile_version` is filtered by `status = 'active' AND
@@ -64,7 +64,7 @@ const (
 // because the module DAG forbids them the helper.
 //
 // identity owns app_user and a module never imports a sibling (ADR-0054 §3).
-// compose may reach identity and now does — org360 and the extension-job seam
+// compose may reach identity and now does — company360 and the extension-job seam
 // both call the helper — but seven statements sit in sibling modules, and the
 // predicate would have to move tier before they could adopt it. That is an
 // architecture decision with an owner rather than something to smuggle in here.
@@ -76,17 +76,17 @@ const (
 // keying on statement text, which changes with every whitespace edit and
 // ratifies nothing stable.
 var cannotReachIdentity = gatekit.Waive(map[string]string{
-	"internal/modules/activities/audience.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/activities/assignee.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
-	"internal/modules/dealrooms/store_public.go":     "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/dealrooms/room_write.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
-	"internal/modules/capture/owneridentitystore.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/counterpartyname.go":    "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/leadrouting.go":         "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/linkedinmatch.go":       "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":           "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/transfer.go":          "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/search/graphedge.go":           "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/audience.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/assignee.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
+	"internal/modules/dealrooms/store_public.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/dealrooms/room_write.go":         "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
+	"internal/modules/capture/owneridentitystore.go":   "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/counterpartyname.go":    "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/domainadmissionlist.go": "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first. It decides which unanswered domain questions the operator's list carries: one whose owner can no longer sign in has no queue left to reach, so liveness is exactly the question being asked",
+	"internal/modules/contacts/leadrouting.go":         "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/linkedinmatch.go":       "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/projects/surface.go":             "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/search/graphedge.go":             "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
 })
 
 // deliberatelyNotLiveness ratifies the half-spellings that are not answering
@@ -127,7 +127,6 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms/preview.go":      "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
-	"internal/modules/identity/access.go":        "UserAccess evaluates an EXISTING member's roles and teams as they stand, which an admin needs precisely when the seat is deactivated",
 	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
 	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
@@ -391,7 +390,7 @@ func activatableCopy(sql string) bool {
 // `const liveMemberWhere = "u.status = 'active' AND u.archived_at IS NULL"` is
 // invisible to a table-keyed walk from both ends — the declaration never
 // mentions app_user, and the statement that concatenates it renders the
-// identifier as a blank. That is precisely how org360's copy sat unheld while
+// identifier as a blank. That is precisely how company360's copy sat unheld while
 // its comment told the next reader the question was already settled.
 //
 // It deliberately does not catch a HALF spelled into a bare declaration: a lone
@@ -406,7 +405,7 @@ func bareLivenessPredicate(sql string) bool {
 // exactly once per predicate: `const activatableWhere = "status IN ('invited',
 // 'active') AND archived_at IS NULL"` names no table, so a table-keyed walk
 // never yields it and the copy sits unheld while its comment tells the next
-// reader the question is settled. That is the org360 incident, verbatim, for a
+// reader the question is settled. That is the company360 incident, verbatim, for a
 // predicate added after it.
 func bareActivatablePredicate(sql string) bool {
 	return onlyTheActivatablePair.MatchString(strings.TrimSpace(sql))
@@ -429,7 +428,7 @@ var onlyTheActivatablePair = regexp.MustCompile(`(?is)^\(?\s*(?:` +
 // A looser reading — "spells both halves and names no table" — reported a test
 // whose FAILURE MESSAGE quotes the predicate back to the reader. Prose that
 // mentions the pair is not a second implementation of it, and a gate that says
-// so teaches people to stop reading its output.
+// so teaches contacts to stop reading its output.
 var onlyTheLivenessPair = regexp.MustCompile(`(?is)^\(?\s*(?:` +
 	`(?:[a-z]\w*\.)?status\s*=\s*'active'\s+AND\s+(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL` + `|` +
 	`(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL\s+AND\s+(?:[a-z]\w*\.)?status\s*=\s*'active'` +
@@ -801,7 +800,7 @@ func read() string {
 func read() string {
 	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + other.ActivatableMemberSQL("status IN ('invited', 'active') AND archived_at IS NULL")
 }`},
-	// The org360 shape, for the second predicate: a bare declaration naming no
+	// The company360 shape, for the second predicate: a bare declaration naming no
 	// table, consumed elsewhere by name. Invisible to a table-keyed walk from
 	// both ends, which is exactly why it needs its own recogniser.
 	{"the activatable pair spelled into a bare declaration", "activatable-copy", "", `

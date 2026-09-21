@@ -9,7 +9,6 @@ reviews:
   path_filters:
     - "!backend/internal/contracts/**"
     - "!**/*_gen.go"
-    - "!cli/craft/**"
     - "!.claude/**"
     - "!dev/**"
     - "!frontend/src/api/schema.d.ts"
@@ -52,6 +51,12 @@ reviews:
         and are never hand-edited; an already-applied migration under
         backend/migrations/core/ is additive-only, so amending one is a finding
         while adding a new one is ordinary work.
+
+        Comments carry a budget. Two lines is the ordinary size of one; past
+        that it must carry a why the code cannot. Raise a comment that restates
+        the code, narrates how it got here ("used to", "was answered twice", a
+        rule or ticket number), or repeats a rule a gate already holds.
+        `make comment-budget` fails a change adding more comment lines than code.
   auto_review:
     enabled: true
     # Draft PRs get no review — matches the CI path-filter's draft skip (the

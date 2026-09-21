@@ -17,7 +17,7 @@
 # push to main is not in this tree: pushing a file under .github/workflows/ needs
 # an OAuth scope the agent that wrote this does not hold, so it is written down
 # in the pull request instead of half-added here. Until somebody adds it, an edit
-# to this file reaches the repository when a person runs the script — and the
+# to this file reaches the repository when a colleague runs the script — and the
 # gate keeps the reference page honest either way.
 #
 # Colour carries meaning within an axis and none between them. Every `area:` is
@@ -67,16 +67,13 @@
   description: "Deals, pipeline, stages, leads, offers"
 - name: "area: extensions"
   color: "BFD4F2"
-  description: "The extension tier (ADR-0069): units, the published pkg surface, composition"
+  description: "The extension tier (ADR-0120): units, the published pkg surface, composition"
 - name: "area: finance"
   color: "BFD4F2"
   description: "Invoices, payments, FX, contracts"
 - name: "area: frontend"
   color: "BFD4F2"
   description: "SPA, design system, screens, Storybook, i18n"
-- name: "area: overlay"
-  color: "BFD4F2"
-  description: "External system-of-record mirror, HubSpot, flip and import"
 - name: "area: platform"
   color: "BFD4F2"
   description: "Database, migrations, events and outbox, config, boot, workers, Docker and deploy"
@@ -85,7 +82,7 @@
   description: "Erasure, retention, consent"
 - name: "area: records"
   color: "BFD4F2"
-  description: "People, organizations, employment, custom fields, merge and dedupe"
+  description: "Contacts, companies, employment, custom fields, merge and dedupe"
 - name: "area: reports"
   color: "BFD4F2"
   description: "Reporting, saved views, filters, export"
@@ -101,6 +98,23 @@
 - name: "status: needs-decision"
   color: "FBCA04"
   description: "Unactionable until someone rules on it - 'decide or decline X'"
+
+# ---------------------------------------------------------------------------
+# Claim — a lock one session takes so the others do not race it.
+#
+# The only axis that lives on a PULL REQUEST rather than an issue, and the only
+# one that is about who is working rather than about what the work is. `main`
+# goes red often here on purpose — merging past a red check is a standing
+# decision — and every session that notices reaches for the same fix at the
+# same time. A draft pull request wearing this label is how the first one says
+# so, and the rulebook is what makes the others look before they start.
+#
+# It is not a `status:`: those mark an issue nobody should pick up, and this
+# marks work somebody already did pick up.
+# ---------------------------------------------------------------------------
+- name: "claim: main-red"
+  color: "5319E7"
+  description: "A session is fixing this red on main - check before you start, do not open a second"
 
 # ---------------------------------------------------------------------------
 # Provenance — why the issue exists, which is the one thing nobody can
@@ -124,6 +138,9 @@
 - name: "margince-qc"
   color: "0052CC"
   description: "Found by margince-qc, the UAT acceptance-test repo, while building or running a scenario"
+- name: "schema-review"
+  color: "5319E7"
+  description: "Found by the table-by-table database review; the fix is a migration or a column contract"
 
 # ---------------------------------------------------------------------------
 # GitHub's own defaults, kept because they are what a drive-by contributor and

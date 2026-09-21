@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -18,7 +19,7 @@ import (
 )
 
 // fakeUndoWriters is UndoWriters over a plain map — this package never
-// imports people, so a real archive path is compose's own integration
+// imports contacts, so a real archive path is compose's own integration
 // test (csvimport_integration_test.go); this one proves RunStore.Undo's
 // own SQL: the kept/reversed/errored split, checkpoint paging/resume, and
 // the lifecycle gates.
@@ -37,7 +38,7 @@ type fakeUndoWriters struct {
 	failUnreachable ids.UUID
 }
 
-func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID) error {
+func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID, _ time.Time) error {
 	if nativeID == w.failAlways {
 		return fmt.Errorf("simulated business-rule refusal: %w", apperrors.ErrConflict)
 	}
@@ -250,7 +251,7 @@ func TestUndoStopsResumableOnAnUnclassifiedFailure(t *testing.T) {
 func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run, err := s.Create(ctx, CreateRunInput{Connector: ConnectorMirror, SourceRef: "snap", Source: "overlay:flip"})
+	run, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal", Source: "import_api"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -22,7 +22,7 @@ import {
 } from "./dealroomthreads";
 
 // The board is drawn once for BOTH sides of a Deal Room, and the buyer's half
-// is served to somebody outside the organization entirely. What a refused
+// is served to somebody outside the company entirely. What a refused
 // write says here is therefore read by a party with no seat, no role and no
 // business knowing the shape of the authority model that refused them.
 
@@ -32,6 +32,7 @@ const DOCUMENT: BoardDocument = {
   id: "doc-1",
   groupKey: "contract",
   title: "Rahmenvertrag",
+  filename: "rahmenvertrag.pdf",
   meta: "rahmenvertrag.pdf",
 };
 
@@ -60,7 +61,6 @@ function draw(verbs: Partial<ThreadVerbs> = {}, threads = [thread()]) {
     <LocaleProvider initial="en">
       <DocumentBoard
         title="Documents"
-        sub="Everything shared with the buyer"
         groups={[{ key: "contract", label: "Contract" }]}
         documents={[DOCUMENT]}
         threads={threads}
@@ -70,6 +70,104 @@ function draw(verbs: Partial<ThreadVerbs> = {}, threads = [thread()]) {
     </LocaleProvider>,
   );
 }
+
+describe("what a tile says about its document", () => {
+  // "Unanswered" is the buyer's last word standing: open, and nobody on the
+  // seller's side has replied since. A thread the seller answered and a thread
+  // resolved are both settled, and a settled question counted as waiting would
+  // send a rep chasing nothing.
+  it("counts the questions the seller has not answered, and only those", () => {
+    draw({}, [
+      thread({ id: "waiting" }),
+      thread({
+        id: "answered",
+        comments: [
+          {
+            id: "a-1",
+            body: "Where is the notice period?",
+            author: { name: "Buyer", side: "buyer" },
+            created_at: "2026-08-01T09:00:00Z",
+          },
+          {
+            id: "a-2",
+            body: "Clause 12.",
+            author: { name: "Seller", side: "seller" },
+            created_at: "2026-08-01T10:00:00Z",
+          },
+        ],
+      } as Partial<DealRoomThread>),
+      thread({ id: "settled", state: "resolved" }),
+    ]);
+    const tile = screen.getByRole("article", { name: "Rahmenvertrag" });
+    expect(within(tile).getByText("1 unanswered")).toBeInTheDocument();
+  });
+
+  it("makes no waiting claim when every question is answered", () => {
+    draw({}, [thread({ state: "resolved" })]);
+    expect(screen.queryByText(/unanswered/)).toBeNull();
+  });
+
+  // Reading in place is a verb only the side that can draw the file has; a
+  // tile handed no `read` draws no button rather than one that does nothing.
+  it("offers to read the document only when this side can draw it", async () => {
+    const read = vi.fn();
+    render(
+      <LocaleProvider initial="en">
+        <DocumentBoard
+          title="Documents"
+          groups={[{ key: "contract", label: "Contract" }]}
+          documents={[{ ...DOCUMENT, read }]}
+          threads={[]}
+          empty="No documents yet"
+          verbs={{ mayRequireChange: false }}
+        />
+      </LocaleProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Read Rahmenvertrag" }),
+    );
+    expect(read).toHaveBeenCalledOnce();
+    // The title is the tile's own door: pressing the paper opens it too.
+    await user.click(screen.getByRole("button", { name: "Rahmenvertrag" }));
+    expect(read).toHaveBeenCalledTimes(2);
+    cleanup();
+    draw();
+    expect(screen.queryByRole("button", { name: /^Read/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rahmenvertrag" })).toBeNull();
+  });
+
+  // The stamp and the size are read off what the caller knows, never fetched:
+  // a tile is a fact about a file, and it must be drawable before the bytes are.
+  it("stamps the kind and the size from the filename and the recorded size", () => {
+    render(
+      <LocaleProvider initial="en">
+        <DocumentBoard
+          title="Documents"
+          groups={[{ key: "contract", label: "Contract" }]}
+          documents={[{ ...DOCUMENT, byteSize: 412_000 }]}
+          threads={[]}
+          empty="No documents yet"
+          verbs={{ mayRequireChange: false }}
+        />
+      </LocaleProvider>,
+    );
+    const tile = screen.getByRole("article", { name: "Rahmenvertrag" });
+    expect(tile.querySelector(".board-doc-kind")?.textContent).toBe("PDF");
+    expect(within(tile).getByText(/rahmenvertrag\.pdf · 412 kB/)).toBeTruthy();
+  });
+});
+
+describe("a comment", () => {
+  // Who said it, which side they are, and when — on one line, because a
+  // buyer reading a thread three weeks later has all three questions.
+  it("carries its author, their side and the time it was written", () => {
+    draw();
+    const line = screen.getByText("Buyer").closest(".thread-author");
+    expect(line?.textContent).toMatch(/^Buyer · buyer · .*2026/);
+    expect(line?.closest("li")?.querySelector(".avatar")).not.toBeNull();
+  });
+});
 
 describe("a refused reply", () => {
   // The server's own sentence, composed for a reader, reaches them untouched —
@@ -96,7 +194,7 @@ describe("a refused reply", () => {
 
   // The disclosure. `auth.Require` builds a refusal's detail from the RBAC
   // object and the verb, and this board renders to a buyer who is not in the
-  // organization at all.
+  // company at all.
   it("never hands a refused party the RBAC object and verb", async () => {
     const user = userEvent.setup();
     const reply = vi.fn(async () => {
@@ -205,7 +303,6 @@ describe("a board nobody may write to", () => {
       <LocaleProvider initial="en">
         <DocumentBoard
           title="Documents"
-          sub="Everything shared with the buyer"
           groups={[]}
           documents={[]}
           threads={[]}
@@ -230,7 +327,6 @@ describe("a board nobody may write to", () => {
       <LocaleProvider initial="en">
         <DocumentBoard
           title="Documents"
-          sub="Everything shared with the buyer"
           groups={[{ key: "contract", label: "Contract" }]}
           documents={[DOCUMENT, { ...DOCUMENT, id: "doc-2", title: "Anhang" }]}
           threads={[]}

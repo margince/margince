@@ -1,6 +1,6 @@
 /* IdentityLine — the facts under a record's name.
 
-   One sheet for what company360.css and person360.css each spelled: the row,
+   One sheet for what company360.css and contact360.css each spelled: the row,
    its separator, and a fact inside it. The three records that draw this line
    now draw the same one. */
 
@@ -17,17 +17,18 @@
   min-width: 0;
 }
 
+/* A fact that qualifies the record rather than being a way to act on it — who
+   owns it, what buying role a contact holds. It sits in the same line as the
+   handles beside it but does not compete with them for the eye: the secondary
+   ink is the whole of the difference, because the line is one size. */
+.identity-fact-quiet {
+  color: var(--textSecondary);
+}
+
 .identity-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  font-size: var(--fs-sm);
-  line-height: 1.4;
-  /* The facts themselves are content — read at a glance under the name — so
-     they take the content ink, and the quieter roles below step down from it.
-     Never --textTertiary: that is a 3:1 token for marks and rules, and small
-     text set in it fails the contrast law the axe gate holds this page to. */
-  color: var(--textContent);
 }
 
 /* The gap follows from the separator, because it is the same job done two
@@ -51,10 +52,6 @@
   min-width: 0;
 }
 
-.identity-sep {
-  color: var(--textMeta);
-}
-
 /* A fact and its glyph stay on one line together, and the fact can be narrower
    than its content so a long one truncates inside the row rather than widening
    it. */
@@ -63,11 +60,4 @@
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
-}
-
-/* A fact that qualifies the record rather than being a way to act on it — who
-   owns it, what buying role a person holds. It sits in the same line as the
-   handles beside it but does not compete with them for the eye. */
-.identity-fact-quiet {
-  color: var(--textMeta);
 }

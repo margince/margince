@@ -9,20 +9,20 @@ import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
 import {
   type Citation,
+  type Contact,
   citationOf,
   type Fact,
   type LegalEntity,
   type Page,
-  type Person,
   pageKindLabelKey,
   pageOf,
   referenceAddressOf,
 } from "./profile-digest-data";
 import {
+  ContactLine,
   DigestLine,
   FactLine,
   LegalEntityLine,
-  PersonLine,
 } from "./profile-digest-lines";
 import { articleSections } from "./profile-digest-sections";
 
@@ -38,7 +38,7 @@ export function ProfileArticle({
   pages,
   legalEntities,
   factGroups,
-  people,
+  contacts,
   cites,
   onSettle,
   onField,
@@ -51,7 +51,7 @@ export function ProfileArticle({
     category: Fact["category"];
     facts: readonly Fact[];
   }>;
-  people: readonly Person[];
+  contacts: readonly Contact[];
   cites: readonly Citation[];
   /** Undefined draws every unanswered row as a plain blank rather than an
    * action — the digest's own optional contract, kept the same here. */
@@ -105,7 +105,7 @@ export function ProfileArticle({
           </Eyebrow>
           {factGroups.map((group) => (
             <div key={group.category} className="pdigest-factgroup">
-              <p className="pdigest-subhead t-caption">
+              <p className="pdigest-subhead">
                 {t(factCategoryLabelKey(group.category))}
               </p>
               {group.facts.map((fact) => (
@@ -120,16 +120,16 @@ export function ProfileArticle({
           ))}
         </section>
       )}
-      {people.length === 0 ? null : (
+      {contacts.length === 0 ? null : (
         <section className="pdigest-section">
           <Eyebrow as="h3" className="pdigest-heading">
-            {t("ob.digest.people")}
+            {t("ob.digest.contacts")}
           </Eyebrow>
-          {people.map((person) => (
-            <PersonLine
-              key={`${person.name}:${person.role}@${person.evidence_url}`}
-              person={person}
-              n={number.get(person.evidence_url)}
+          {contacts.map((contact) => (
+            <ContactLine
+              key={`${contact.name}:${contact.role}@${contact.evidence_url}`}
+              contact={contact}
+              n={number.get(contact.evidence_url)}
             />
           ))}
         </section>
@@ -148,7 +148,7 @@ export function ProfileArticle({
                 <span className="pdigest-source-path t-caption">
                   {referenceAddressOf(cite.url)}
                 </span>
-                <span className="pdigest-source-label">
+                <span>
                   {t(pageKindLabelKey(pageOf(pages, cite.url)?.kind))}
                 </span>
               </li>

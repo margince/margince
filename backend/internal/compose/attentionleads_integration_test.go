@@ -55,7 +55,7 @@ var leadRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"lead":     {Create: true, Read: true, Update: true},
-		"person":   {Create: true, Read: true, Update: true},
+		"contact":  {Create: true, Read: true, Update: true},
 		"deal":     {Create: true, Read: true, Update: true},
 		"activity": {Create: true, Read: true, Update: true},
 		// A read resolves the basis it reports money in; every seeded role holds it.
@@ -84,8 +84,8 @@ func measureFirstResponse(t *testing.T, e *integration.Env) {
 	// The floor the setting allows, so every seeded wait below is comfortably
 	// past it and no case turns on minutes.
 	e.WsExec(t, `INSERT INTO setting (key, value) VALUES
-		('people.first_response_enabled', 'true'::jsonb),
-		('people.first_response_target_minutes', to_jsonb(15::int))
+		('contacts.first_response_enabled', 'true'::jsonb),
+		('contacts.first_response_target_minutes', to_jsonb(15::int))
 	 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 }
 
@@ -110,7 +110,7 @@ func seedOwedLead(t *testing.T, e *integration.Env, name string, owner *ids.UUID
 // arguments this helper pins.
 func ownQueue(ctx context.Context, t *testing.T, e *integration.Env) crmcontracts.Worklist {
 	t.Helper()
-	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), time.Now)
+	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now)
 	page, err := svc.Worklist(ctx, "mine", "", ids.Nil, 50, "")
 	if err != nil {
 		t.Fatalf("reading the worklist: %v", err)
@@ -151,23 +151,49 @@ func TestAnOwedLeadReachesItsOwnersQueueAndNobodyElses(t *testing.T) {
 	}
 }
 
-// The lane claims nothing when the installation measures no first response.
+// A lead still owes a reply where nothing measures how late it is, and the row
+// says so by carrying no deadline.
 //
-// Not merely "no rows": an absent source must publish no reach row either, or
-// the page reports a bound on a source it never consulted.
-func TestWithTheTargetOffTheLaneIsAbsentFromThePage(t *testing.T) {
+// This replaced an earlier decision that read almost alike on screen: with no
+// first-response target the lane used to be ABSENT rather than empty, on the
+// grounds that "nothing is late" and "nothing measures late" are different
+// answers. They are — but whether a lead has been replied to is a fact about
+// the lead, and whether anyone states a time for it is a fact about the
+// installation's policy. Withholding the row made the second answer the rep's
+// problem. So the row stands whatever the policy says, and a deadline appears
+// only where one is set.
+func TestWithTheTargetOffALeadIsOwedButCarriesNoDeadline(t *testing.T) {
 	e := integration.Setup(t)
 	// Deliberately NOT calling measureFirstResponse: this is the default.
 	seedOwedLead(t, e, "Nobody Is Counting", &e.Rep1, 48*time.Hour)
 
 	page := ownQueue(e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms), t, e)
-	if got := leadRows(page); len(got) != 0 {
-		t.Errorf("the queue carries %v with the target switched off", got)
+	if got := leadRows(page); len(got) != 1 || got[0] != "Nobody Is Counting" {
+		t.Fatalf("the queue carries %v with the target switched off, want the one lead "+
+			"still owed a reply", got)
 	}
+	// Silent about WHEN, which is the half the policy owns. A deadline here
+	// would be one this installation never stated.
+	for _, item := range page.Queue {
+		if string(item.Source) == "lead_response" && (item.Lead == nil || item.Lead.ResponseTargetTracked == nil || *item.Lead.ResponseTargetTracked) {
+			t.Error("an unmeasured lead must carry honest response-target context")
+		}
+		if string(item.Source) == "lead_response" && item.DueAt != nil {
+			t.Errorf("the row carries a deadline of %v where no policy states one", *item.DueAt)
+		}
+	}
+	// And the source publishes its reach, because it WAS read. This is what
+	// tells a read source with nothing to show from one the page never
+	// consulted, and it is the assertion the retired decision inverted.
+	var published bool
 	for _, reach := range page.Reach {
 		if string(reach.Source) == "lead_response" {
-			t.Errorf("the page publishes a reach row for a source it never read: %+v", reach)
+			published = true
 		}
+	}
+	if !published {
+		t.Error("the page publishes no reach row for lead_response, so a source it did read " +
+			"reports no bound at all")
 	}
 }
 
@@ -315,7 +341,7 @@ func TestALeadSurvivesTheNamedOwnerRead(t *testing.T) {
 
 	// The lead opens their teammate's queue by name.
 	lead := e.As(e.Rep2, []ids.UUID{e.Team1}, leadLeadPerms)
-	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), time.Now)
+	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now)
 	page, err := svc.Worklist(lead, "team", "", e.Rep1, 50, "")
 	if err != nil {
 		t.Fatalf("opening the rep's queue: %v", err)

@@ -8,7 +8,7 @@ import {
   User as UserIcon,
   Users as UsersIcon,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
@@ -16,7 +16,6 @@ import { navigate } from "../app/router";
 import {
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   SearchField,
@@ -24,6 +23,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -140,8 +140,8 @@ function reassertKind(held: RecordGrant, next: DraftFields): ReassertKind {
 }
 
 const RECORD_TYPES: readonly RecordType[] = [
-  "person",
-  "organization",
+  "contact",
+  "company",
   "deal",
   "lead",
   "project",
@@ -152,7 +152,7 @@ function isRecordType(value: string): value is RecordType {
 }
 
 // The per-screen "Share" affordance, extracted from four verbatim copies that
-// lived inline in the person/organization/deal/lead 360 action clusters
+// lived inline in the contact/company/deal/lead 360 action clusters
 // (mirrors EditAction/ArchiveAction — a thin prop component owning its label
 // and its navigation, nothing else). recordType is the narrow union, so a
 // screen can't wire a share link to a record kind the route can't resolve.
@@ -174,7 +174,6 @@ export function ShareAction({
   return (
     <Button
       reasonId={disabledReasonId}
-      small
       data-testid="share-record"
       onClick={() =>
         navigate({ screen: "share", id: recordType, id2: recordId })
@@ -253,9 +252,9 @@ export function ShareScreen({
   return <ShareScreenBody recordType={recordType} recordId={recordId} />;
 }
 
-// A person-vs-team affordance for every subject this screen names. The picker
+// A contact-vs-team affordance for every subject this screen names. The picker
 // rows and the who-has-access list otherwise show a bare name with no cue to
-// its kind, so a Lucide glyph carries it — a single silhouette for a person, a
+// its kind, so a Lucide glyph carries it — a single silhouette for a contact, a
 // group for a team — labelled for assistive tech (the glyphs alone aren't).
 function SubjectKindIcon({
   kind,
@@ -318,7 +317,7 @@ function renderSubjectList(
                     )}
                   </Badge>
                 )}
-                <span className="share-subject-note">{candidate.note}</span>
+                <span>{candidate.note}</span>
               </span>
             </Button>
           </li>
@@ -361,16 +360,12 @@ function RosterPicker({
   // Gate explicitly on loading/error first — the empty picker only renders
   // once both queries have actually succeeded with no subjects.
   if (usersQuery.isPending || teamsQuery.isPending) {
-    return (
-      <p className="t-caption" data-testid="share-roster-loading">
-        {t("share.rosterLoading")}
-      </p>
-    );
+    return <p data-testid="share-roster-loading">{t("share.rosterLoading")}</p>;
   }
   if (usersQuery.isError || teamsQuery.isError) {
     return (
       <div data-testid="share-roster-error">
-        <p className="t-caption share-error">
+        <p className="share-error">
           {usersQuery.isError && teamsQuery.isError
             ? t("share.rosterErrorBoth")
             : usersQuery.isError
@@ -378,7 +373,6 @@ function RosterPicker({
               : t("share.rosterErrorTeams")}
         </p>
         <Button
-          small
           style={{ marginTop: "var(--space-2)" }}
           onClick={() => {
             if (usersQuery.isError) usersQuery.refetch();
@@ -397,9 +391,7 @@ function RosterPicker({
   if (filteredRoster.length === 0) {
     return (
       <>
-        <p className="t-caption" data-testid="share-roster-empty">
-          {t("share.rosterEmpty")}
-        </p>
+        <p data-testid="share-roster-empty">{t("share.rosterEmpty")}</p>
         {/* "Nobody matches" over a roster that stopped early is the reader
             being told the subject they are looking for does not exist, on the
             strength of pages nothing read. */}
@@ -427,15 +419,14 @@ function ShareScreenBody({
   // calendar date does this viewer see".
   const zone = viewerZone();
   const queryClient = useQueryClient();
-  const headingId = useId();
   // Where focus lands when a dialog closes on a control that no longer exists.
   // Both dialogs here destroy their own trigger on success — a revoked grant's
   // row leaves the roster, and a downgrade clears the picker that opened it —
   // so without this focus falls to the document body and a keyboard reader
   // starts the surface over. The subject field is the one control on this page
   // that is always present, which is what makes it the honest landing place.
-  const returnFocusToSubject = () =>
-    document.getElementById(`${headingId}-subject`);
+  const subjectField = useRef<HTMLInputElement>(null);
+  const returnFocusToSubject = () => subjectField.current;
   const grantsKey = ["record-grants", recordType, recordId];
 
   const grantsQuery = useQuery({
@@ -472,7 +463,7 @@ function ShareScreenBody({
 
   const roster: RosterSubject[] = useMemo(() => {
     // Agent seats carry is_agent (spec §2.1) precisely so the share picker
-    // excludes them — a record is shared with people/teams, never an agent.
+    // excludes them — a record is shared with contacts/teams, never an agent.
     const users = ((usersQuery.data ?? []) as User[])
       .filter((u) => !u.is_agent)
       .map(
@@ -530,10 +521,12 @@ function ShareScreenBody({
     name: string;
     access: Access;
   } | null>(null);
-  // The draft a downgrade is waiting on: the dialog is open exactly while one
-  // exists, and confirming submits THIS draft rather than re-reading a form
-  // the reader has been looking at a dialog instead of.
+  // The draft a downgrade is waiting on. Confirming submits THIS draft rather
+  // than re-reading a form the reader has been looking at a dialog instead of,
+  // and closing KEEPS it: the copy names the contact and the two levels, so a
+  // dropped draft would word that question about nobody mid-close.
   const [downgrade, setDowngrade] = useState<ReassertDraft | null>(null);
+  const [askingDowngrade, setAskingDowngrade] = useState(false);
 
   // The whole submit arrives as the mutation's variable, not through this
   // closure: react-query re-arms a mutation's options in a passive effect, so a
@@ -569,7 +562,7 @@ function ShareScreenBody({
           ? { name: draft.subject.name, access: draft.access }
           : null,
       );
-      setDowngrade(null);
+      setAskingDowngrade(false);
       resetForm();
     },
   });
@@ -651,6 +644,7 @@ function ShareScreenBody({
     const draft = draftFor(picked);
     if (draft.change === "lower") {
       setDowngrade(draft);
+      setAskingDowngrade(true);
       return;
     }
     grant.mutate(draft);
@@ -658,48 +652,65 @@ function ShareScreenBody({
 
   return (
     <div className="wrap share-screen">
-      <Card as="div" className="share-head" title={t("share.title")}>
-        <div className="share-backlink">
-          <Link2 aria-hidden />
-          <EntityRef kind={recordType} id={recordId} />
-        </div>
-        <p className="share-ceiling">
-          <ShieldCheck aria-hidden />
-          <span>
-            {t("share.ceiling.pre")}
-            <b>{t("share.ceiling.recordEmphasis")}</b>
-            {t("share.ceiling.mid")}
-            <b>{t("share.ceiling.noWider")}</b>
-            {t("share.ceiling.post")}
-          </span>
-        </p>
-      </Card>
+      <Panel title={t("share.title")}>
+        <PanelBody>
+          <div className="share-backlink">
+            <Link2 aria-hidden />
+            <EntityRef kind={recordType} id={recordId} />
+          </div>
+          <p className="share-ceiling t-caption">
+            <ShieldCheck aria-hidden />
+            <span>
+              {t("share.ceiling.pre")}
+              <b>{t("share.ceiling.recordEmphasis")}</b>
+              {t("share.ceiling.mid")}
+              <b>{t("share.ceiling.noWider")}</b>
+              {t("share.ceiling.post")}
+            </span>
+          </p>
+        </PanelBody>
+      </Panel>
 
-      {/* The mockup's at-a-glance scope chip and the client-side "can't grant
-          wider than you" (write-disabled-when-you-only-have-read) block both
-          need the CURRENT USER's own access level FOR THIS RECORD, which no
-          endpoint cheaply returns today. Rather than fake it, the ceiling is
-          server-enforced: a POST that exceeds the granter's access comes back
-          422 / approval_required and is surfaced honestly below. The
-          client-side ceiling UI is deferred until a "my access for this
-          record" read exists — same call the agent-proposed-grant card
-          (held-for-approval) made. */}
-      <Card as="div" title={t("share.grantAccess")}>
-        <div className="form-stack">
+      {/* The ceiling is SERVER-enforced: a POST that exceeds the granter's own
+          access comes back 422 / approval_required and is surfaced below. No
+          endpoint returns this reader's access for this record, so the surface
+          states the rule rather than drawing a limit it cannot know. */}
+      <Panel
+        title={t("share.grantAccess")}
+        actions={
+          <Button
+            variant="primary"
+            disabled={!subject}
+            pending={grant.isPending}
+            onClick={() => subject && submit(subject)}
+            data-testid="share-grant-submit"
+          >
+            {/* A subject who already holds a grant is not being granted one:
+                the press restates what they hold, and the word on the button
+                is the reader's last cue to which of the two they are doing. */}
+            {subject && heldBySubject.has(subjectKey(subject.kind, subject.id))
+              ? t("share.update")
+              : t("share.grant")}
+          </Button>
+        }
+      >
+        <PanelBody className="form-stack">
           <div className="field">
-            <label className="t-label" htmlFor={`${headingId}-subject`}>
-              {t("share.subject")}
-            </label>
-            <SearchField
-              id={`${headingId}-subject`}
-              placeholder={t("share.subject")}
-              value={term}
-              onChange={(event) => {
-                setTerm(event.target.value);
-                setSubject(null);
-                dismissGrantFeedback();
-              }}
-            />
+            <Field label={t("share.subject")}>
+              {(control) => (
+                <SearchField
+                  {...control}
+                  ref={subjectField}
+                  placeholder={t("share.subject")}
+                  value={term}
+                  onChange={(event) => {
+                    setTerm(event.target.value);
+                    setSubject(null);
+                    dismissGrantFeedback();
+                  }}
+                />
+              )}
+            </Field>
             <RosterPicker
               usersQuery={usersQuery}
               teamsQuery={teamsQuery}
@@ -822,36 +833,21 @@ function ShareScreenBody({
           )}
 
           {grantErrorMessage && (
-            <p className="t-caption share-error">{grantErrorMessage}</p>
+            <p className="share-error">{grantErrorMessage}</p>
           )}
+        </PanelBody>
+      </Panel>
 
-          <Button
-            variant="primary"
-            disabled={!subject}
-            pending={grant.isPending}
-            onClick={() => subject && submit(subject)}
-            data-testid="share-grant-submit"
-          >
-            {/* A subject who already holds a grant is not being granted one:
-                the press restates what they hold, and the word on the button
-                is the reader's last cue to which of the two they are doing. */}
-            {subject && heldBySubject.has(subjectKey(subject.kind, subject.id))
-              ? t("share.update")
-              : t("share.grant")}
-          </Button>
-        </div>
-      </Card>
-
-      <Card as="div" title={t("share.whoHasAccess")}>
+      <Panel title={t("share.whoHasAccess")}>
         <QueryGate
           query={grantsQuery}
           empty={(rows) => rows.length === 0}
           pendingLabel={t("share.whoHasAccess")}
         >
           {(rows) => (
-            <ul className="share-acl-list" data-testid="share-acl-list">
+            <div data-testid="share-acl-list">
               {rows.map((g) => (
-                <li key={g.id} className="share-acl-row">
+                <PanelRow key={g.id} className="share-acl-row">
                   <div className="share-acl-who">
                     <span className="share-acl-name">
                       <SubjectKindIcon kind={g.subject_type} t={t} />
@@ -872,26 +868,25 @@ function ShareScreenBody({
                         <span className="t-caption">{g.reason}</span>
                       )}
                       {g.expires_at && (
-                        <span className="share-expiry-badge">
+                        <Badge tone="warning">
                           {formatDate(g.expires_at, locale, zone)}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>
                   <Button
-                    small
                     variant="danger"
                     onClick={() => setRevokingId(g.id)}
                     data-testid="revoke-grant"
                   >
                     {t("share.revoke")}
                   </Button>
-                </li>
+                </PanelRow>
               ))}
-            </ul>
+            </div>
           )}
         </QueryGate>
-      </Card>
+      </Panel>
 
       <ConfirmModal
         open={revokingId !== null}
@@ -914,14 +909,11 @@ function ShareScreenBody({
         <p>{t("share.revokeConfirm")}</p>
       </ConfirmModal>
 
-      {/* Mounted only while a downgrade is waiting, because its copy names the
-          person and the two levels — a dialog kept mounted with nothing to ask
-          about would have to word that question about nobody. */}
-      {downgrade && (
+      {downgrade !== null && (
         <ConfirmModal
-          open
+          open={askingDowngrade}
           onClose={() => {
-            setDowngrade(null);
+            setAskingDowngrade(false);
             grant.reset();
           }}
           title={t("share.downgradeTitle")}

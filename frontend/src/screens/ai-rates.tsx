@@ -19,7 +19,7 @@ import {
  * The price sheet is already the list a model is CHOSEN from (`ai-models.ts`),
  * and until now its prices reached the reader only as a hint inside a dropdown
  * row — visible while the list is open, gone the moment it closes. So the
- * binding a person actually confirms was the one screen in the product that
+ * binding a contact actually confirms was the one screen in the product that
  * showed a price nowhere. This is that number, on the surface where the choice
  * is made and after it has been made.
  *
@@ -133,6 +133,7 @@ function LaneSlot({
   if (asked !== undefined) {
     return (
       <StatCard
+        narrow="row"
         label={label}
         value={asked}
         // `source` rather than a tone: this is not a worse price, it is a price
@@ -142,46 +143,61 @@ function LaneSlot({
         source={
           <span className="ai-rate-proposed">{t("aiRates.proposed")}</span>
         }
+        // TWO lines, because a card's detail holds two: the model and what its
+        // figure is per belong to the price, so they share a line, and the
+        // caveat that nobody has agreed to it is the second.
         detail={
           <>
-            <span className="t-mono">{modelId}</span>
-            <span>{t("aiRates.perMTokInOut")}</span>
+            <span>{`${modelId} · ${t("aiRates.perMTokInOut")}`}</span>
             <span>{t("aiRates.proposedDetail")}</span>
           </>
         }
+        // What binding it would actually do. A repair does not fit a caption
+        // and a caption is not where a reader looks for one, so it folds into
+        // the reading's own receipt.
+        basis={<p>{t("aiRates.proposedBasis")}</p>}
       />
     );
   }
   // Both halves of the same case: a model the sheet has never seen, and one it
-  // has a row for that it cannot state. They read the same to the person
+  // has a row for that it cannot state. They read the same to the contact
   // binding it, because the consequence is the same — the call runs, and the
   // usage report cannot say what it cost.
   if (rate === undefined || price === undefined) {
     return (
       <StatCard
+        narrow="row"
         label={label}
         value={t("aiRates.unpriced")}
-        tone="warn"
+        tone="warning"
         detail={
           <>
-            <span className="t-mono">{modelId}</span>
-            <span>{t("aiRates.unpricedDetail")}</span>
+            <span>{`${modelId} · ${t("aiRates.unpricedDetail")}`}</span>
+            <span>{t("aiRates.unpricedConsequence")}</span>
           </>
         }
+        // Where the missing rate is entered. The consequence is on the card;
+        // the repair is one fold away, so the caption stays the two lines it
+        // is allowed and the way out is still on the reading that needs it.
+        basis={<p>{t("aiRates.unpricedBasis")}</p>}
       />
     );
   }
   return (
     <StatCard
+      narrow="row"
       label={label}
       value={price}
       detail={
         <>
-          <span className="t-mono">{modelId}</span>
+          {/* The model and what its figure is PER, on one line: both qualify
+              the price above, and a card's detail holds two lines. */}
           <span>
-            {rate.lane === "embeddings"
-              ? t("aiRates.perMTok")
-              : t("aiRates.perMTokInOut")}
+            {`${modelId} · ${
+              rate.lane === "embeddings"
+                ? t("aiRates.perMTok")
+                : t("aiRates.perMTokInOut")
+            }`}
           </span>
           {/* The date the sheet's own row carries. A price with no date is a
               price somebody has to go and re-verify against the vendor, which

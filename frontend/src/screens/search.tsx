@@ -17,6 +17,7 @@ import { useUrlParams } from "../app/urlstate";
 import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
+import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -27,7 +28,7 @@ import "./search.css";
 type SearchResult = components["schemas"]["SearchResult"];
 
 // RS-1/RS-2: the cross-object search results screen. Hits are grouped by
-// record type so a caller scanning "acme" sees people, companies, deals and the
+// record type so a caller scanning "acme" sees contacts, companies, deals and the
 // rest as separate sections rather than one undifferentiated ranked list.
 //
 // The order and the headings come from app/searchkinds.ts, which the ⌘K palette
@@ -173,7 +174,9 @@ function SearchGroups({
         results.some((r) => r.type === type),
       ).map((type) => (
         <Card key={type} className="search-group">
-          <h2 className="t-label">{t(SEARCH_HIT_GROUP_KEY[type])}</h2>
+          <Heading size="small" as="h2">
+            {t(SEARCH_HIT_GROUP_KEY[type])}
+          </Heading>
           <ul className="search-hits">
             {results
               .filter((r) => r.type === type)
@@ -243,9 +246,9 @@ function SearchHit({
         ) : (
           <span>{hit.title ?? hit.id}</span>
         )}
-        {/* Only a tier the reader would not otherwise assume. In native mode
-            every stored record is `authoritative` (contract: external and
-            unverified are reserved for overlay/connector rows), so badging it
+        {/* Only a tier the reader would not otherwise assume. Nearly every
+            stored record is `authoritative` (contract: external and unverified
+            are reserved for connector rows), so badging it
             put the same green pill on every hit on the page — a mark that
             never varies marks nothing, and it crowded out the one that does.
             `unverified` is the opposite case and keeps its badge: it is rare by
@@ -253,14 +256,14 @@ function SearchHit({
             nothing reads as a record with nothing to declare.
 
             Neither badge names the SYSTEM a row came from. `external` covers
-            every overlay- and connector-sourced row and the hit carries no
-            provider field, so one vendor's name would be stamped on rows
-            mirrored from any other. */}
+            every connector-sourced row and the hit carries no provider field,
+            so one vendor's name would be stamped on rows mirrored from any
+            other. */}
         {hit.trust_tier === "external" && (
           <Badge tone="accent">{t("search.tier.mirrored")}</Badge>
         )}
         {hit.trust_tier === "unverified" && (
-          <Badge tone="warn">{t("search.tier.unverified")}</Badge>
+          <Badge tone="warning">{t("search.tier.unverified")}</Badge>
         )}
       </div>
       {/* `hit.score` is deliberately not drawn. The contract bounds it to
@@ -272,7 +275,7 @@ function SearchHit({
           used without opening it. Absent rather than zero when the server sent
           no number: a count it could not take is not a count of none. */}
       {isTag && hit.carried_by != null && (
-        <p className="search-hit-snippet">
+        <p>
           {t("search.tag.carriedBy", {
             count: formatNumber(hit.carried_by, locale),
           })}
@@ -286,9 +289,7 @@ function SearchHit({
           sentence, and the marks are what a reader would have to type to search
           for it. */}
       {hit.snippet && (
-        <p className="search-hit-snippet">
-          {hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}
-        </p>
+        <p>{hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}</p>
       )}
     </li>
   );

@@ -18,9 +18,9 @@ import (
 
 // One item's shape, per producer.
 //
-// The rule every renderer here keeps: the title is what a person would say
+// The rule every renderer here keeps: the title is what a contact would say
 // happened, and the identifiers stay in `id` and `subject` where a client uses
-// them to navigate. A card that printed `organization_id` at a reader was
+// them to navigate. A card that printed `company_id` at a reader was
 // showing them the plumbing and calling it information.
 
 // actionOpen sends the reader to the record named in the item's `subject`, so
@@ -28,16 +28,25 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
-// actionDismiss puts a lapsed contact aside for a while.
+// actionUndo puts back a change the system made without asking.
 //
-// Offered ONLY where a dismissal endpoint takes the row's own id, which today
-// is the relationship-decay lane: its rows carry the person's id, and
-// /people/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
-// id the endpoint cannot take would be a control that 404s.
+// Offered on a receipt alone, and only on one carrying an audit row to restore:
+// the record-history route reads the before-image from it, so a card without
+// one would be a button naming nothing to reverse.
+const actionUndo crmcontracts.AttentionItemActions = "undo"
+
+// actionDismiss says this row is not work, and what that MEANS is the row's.
 //
-// A reader's own judgement rather than a change to the record — the contact is
-// no less quiet for being set aside — which is why the dismissal is per-reader
-// and expires rather than resolving anything.
+// Offered only where a dismissal endpoint takes the row's own id. Two lanes
+// qualify, and the difference between them is the reason the client dispatches
+// on source rather than on the verb. A relationship-decay row carries the
+// contact's id and /contacts/{id}/nudge-dismissal is keyed on it: a reader's
+// own judgement rather than a change to the record — the contact is no less
+// quiet for being set aside — so that dismissal is per-reader and expires. A
+// dedupe row carries the candidate's id and
+// /dedupe-candidates/{id}/disposition is keyed on it: a verdict for the whole
+// workspace, for good. A verb on a row whose id no endpoint can take would be
+// a control that 404s.
 const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 
 // duplicateItem renders one open candidate pair, with both records named.
@@ -55,9 +64,9 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // honest answer: the alternative is a merge button over a record they cannot
 // read.
 //
-// The verb needs MORE than that read, and this is where the two questions part.
-// Settling a pair archives one record and rewrites the other, so it is offered
-// only to a reader who could change BOTH — the records' owner, or a seat that
+// The verbs need MORE than that read, and this is where the two questions part.
+// Deciding a pair either way writes it, so both verbs are offered only to a
+// reader who could change BOTH records — the records' owner, or a seat that
 // writes the whole workspace. Everyone else sees the pair and no verb, because
 // they are the ones who cannot act on it. Offered on visibility alone, the
 // button refused every press on a pair whose two records had different owners,
@@ -69,7 +78,7 @@ func (s *Service) duplicateItem(
 	confidence := float32(pair.Confidence)
 	item := crmcontracts.AttentionItem{
 		Id:         pair.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("dedupe_candidate"),
+		Source:     crmcontracts.AttentionItemSource(sourceDuplicate),
 		Kind:       &kind,
 		Confidence: &confidence,
 		Actions:    []crmcontracts.AttentionItemActions{},
@@ -84,12 +93,22 @@ func (s *Service) duplicateItem(
 		Right:    right,
 		Evidence: evidenceRows(pair.Evidence),
 	}
-	// Both questions, and they are different. Authority asks whether this
-	// reader could change these records; settleable asks whether the merge
-	// would be accepted from anyone. A button offered on either alone is one
-	// that refuses after the press.
-	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) && settleable[pair.ID] {
-		item.Actions = []crmcontracts.AttentionItemActions{"merge"}
+	// Two questions, and each answers a different verb. Authority asks whether
+	// this reader could change these records, which is all a dismissal needs:
+	// DisposeDedupeCandidate's not-a-duplicate arm takes write authority over
+	// both sides and nothing else. Settleable asks whether the MERGE would be
+	// accepted from anyone, which only the merge needs — two companies each
+	// carrying live work do not combine, whoever presses.
+	//
+	// So the pair the merge refuses still carries dismiss. It is a real false
+	// positive somebody is entitled to clear, and gating both verbs on the
+	// merge's own refusal left it on the page as a question nobody could answer
+	// from here.
+	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
+		item.Actions = append(item.Actions, actionDismiss)
+		if settleable[pair.ID] {
+			item.Actions = append(item.Actions, "merge")
+		}
 	}
 	return item
 }
@@ -279,7 +298,7 @@ func stagedFacts(
 	// matching" (modules/capture/pending.go). A sender types it, so
 	// `Alice <alice@gmail.com>` would have read as a company we know.
 	//
-	// A real match needs a lookup against the organizations this workspace has,
+	// A real match needs a lookup against the companies this workspace has,
 	// which is a read this assembler does not make. Until it does, a contact
 	// question is either from a machine or is the honest remainder.
 	return facts, true
@@ -291,7 +310,7 @@ func stagedFacts(
 // — the one place that decides whether a due moment is behind now.
 // Held by: TestOnlyOnePlaceDecidesWhetherSomethingIsLate
 // (backend/gates/overdueboundary_test.go).
-func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
+func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
 		Id:      task.ID.String(),
@@ -300,11 +319,20 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
+	if task.LeadResponseEscalation {
+		kind := "lead_response_escalation"
+		item.Kind = &kind
+	}
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
+		// Which run of the page it heads. Only dated rows carry one, which is
+		// what the contract says and what lets a client group without having to
+		// decide the day's end for itself.
+		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		item.DueGroup = &group
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.
@@ -314,7 +342,7 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 	}
 	// The row this item's verbs write to. `complete` and `snooze` both PATCH the
 	// task, and a client that cannot name the version cannot make either
-	// conditional — so two people acting on one task overwrite each other and
+	// conditional — so two contacts acting on one task overwrite each other and
 	// the second is told nothing.
 	if task.Version != nil {
 		version := *task.Version
@@ -335,13 +363,21 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 // already calls, so this lane adds no second way to answer a brief item.
 func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 	rank := entry.Rank
-	return crmcontracts.AttentionItem{
+	item := crmcontracts.AttentionItem{
 		Id:      entry.ID.String(),
 		Source:  crmcontracts.AttentionItemSource("brief_item"),
 		Rank:    &rank,
 		Subject: subjectOf("deal", entry.DealID),
 		Actions: []crmcontracts.AttentionItemActions{"act", "set_aside", "dismiss"},
 	}
+	// WHY the night picked it, in the field that exists for a producer's own
+	// sub-type. A run stored before the signal existed carries none, and the
+	// classifier answers as it always did rather than inventing one.
+	if entry.Signal != "" {
+		signal := entry.Signal
+		item.Kind = &signal
+	}
+	return item
 }
 
 // commitmentItem renders one promise this rep made.
@@ -363,7 +399,7 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // used to name a debt every morning with no way to say it was paid, because
 // nothing anywhere could write the `done` the status column has always had.
 //
-// And `open`: the person the promise was made to is named on the card, and a
+// And `open`: the contact the promise was made to is named on the card, and a
 // reader who cannot reach them has been told about a debt and denied the way to
 // pay it.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
@@ -376,7 +412,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Source:  crmcontracts.AttentionItemSource("conversation_claim"),
 		Title:   &body,
 		Detail:  &quote,
-		Subject: subjectOf("person", promise.PersonID),
+		Subject: subjectOf("contact", promise.ContactID),
 		DueAt:   &due,
 		Overdue: &past,
 		Actions: []crmcontracts.AttentionItemActions{
@@ -389,34 +425,6 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		item.Kind = &label
 	}
 	return item
-}
-
-// receiptItem renders one thing the system did on its own.
-//
-// It offers no decision: a receipt reports a finished act, and asking the reader
-// to answer a question already answered is not a verb this lane has.
-//
-// It offers `open` only when the decision named a record. Not every approval is
-// about one, and a card that advertised the verb regardless would send a client
-// that trusts it to a destination the card never carried.
-func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
-	kind := receipt.Kind
-	occurred := receipt.OccurredAt
-	summary := receipt.Summary
-	subject := subjectOf(receipt.TargetType, receipt.TargetID)
-	actions := []crmcontracts.AttentionItemActions{}
-	if openableSubject(subject) {
-		actions = append(actions, actionOpen)
-	}
-	return crmcontracts.AttentionItem{
-		Id:         receipt.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("approval"),
-		Kind:       &kind,
-		Title:      &summary,
-		Subject:    subject,
-		OccurredAt: &occurred,
-		Actions:    actions,
-	}
 }
 
 // subjectOf names the record an item concerns, when the producer named one.
@@ -438,8 +446,8 @@ func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
 // pointed a reader at the wrong record would be worse than one that pointed
 // nowhere.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	"organization": "organization",
-	"person":       "person",
+	subjectCompany: subjectCompany,
+	"contact":      "contact",
 	"deal":         "deal",
 	"lead":         "lead",
 	"activity":     "activity",
@@ -455,7 +463,7 @@ func openableSubject(subject *crmcontracts.AttentionSubject) bool {
 		return false
 	}
 	switch subject.Type {
-	case "organization", "person", "deal", "lead", "project":
+	case subjectCompany, subjectContact, subjectDeal, "lead", "project":
 		return true
 	}
 	return false

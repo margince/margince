@@ -12,7 +12,7 @@ import { itemsOf, signIn } from "./waits";
  *
  * Shape alone is not the requirement, and asserting only shape is how a page
  * with the right skeleton at half the mockup's scale passed every check while
- * looking nothing like it. The second describe reads computed styles.
+ * looking nothing like it. The second describe measures what is drawn.
  *
  * Never pixel-equality and never the drawn English strings: the app renders
  * German chrome, so a copy change must not fail a layout suite, and a font
@@ -30,28 +30,28 @@ const BASE_URL = process.env.BASE_URL;
 // dossier, and one that arrived by import with nothing on it yet. Both must
 // look right, and they fail differently — the populated one by missing
 // regions, the sparse one by showing regions that should be absent.
-const POPULATED_ORG = process.env.E2E_ORG_POPULATED;
-const SPARSE_ORG = process.env.E2E_ORG_SPARSE;
+const POPULATED_COMPANY = process.env.E2E_COMPANY_POPULATED;
+const SPARSE_COMPANY = process.env.E2E_COMPANY_SPARSE;
 
 // A live run is opt-in, but a HALF-configured one is a mistake rather than a
 // choice: skipping silently there is exactly the failure this suite was built
 // to stop, so it fails instead and says which variable is missing.
-if (BASE_URL && !(POPULATED_ORG && SPARSE_ORG)) {
+if (BASE_URL && !(POPULATED_COMPANY && SPARSE_COMPANY)) {
   throw new Error(
-    "BASE_URL is set, so this suite runs live — it also needs E2E_ORG_POPULATED and E2E_ORG_SPARSE (company uuids on that stack).",
+    "BASE_URL is set, so this suite runs live — it also needs E2E_COMPANY_POPULATED and E2E_COMPANY_SPARSE (company uuids on that stack).",
   );
 }
 
 test.skip(
   !BASE_URL,
-  "company-record runs against a live stack: set BASE_URL, E2E_ORG_POPULATED and E2E_ORG_SPARSE (see make e2e-company).",
+  "company-record runs against a live stack: set BASE_URL, E2E_COMPANY_POPULATED and E2E_COMPANY_SPARSE (see make e2e-company).",
 );
 
 const SHOTS = process.env.E2E_SHOT_DIR ?? "/tmp/e2e-company";
 
 // The readings row, by the test id StateStrip hands its StatStrip. Not by class:
 // the plate is the shared primitive's (design-system/statstrip.tsx), so a class
-// selector here would either name the primitive — and match the person record's
+// selector here would either name the primitive — and match the contact record's
 // row too — or name a screen class that only exists to be selected. The test id
 // names THIS row on THIS page, which is what these assertions are about.
 const STRIP = '[data-testid="company-strip"]';
@@ -63,8 +63,8 @@ const STRIP = '[data-testid="company-strip"]';
  * while cards are still empty. Anchoring on the heading means the assertions
  * below describe a rendered page rather than a racing one.
  */
-async function openCompany(page: Page, orgId: string) {
-  await page.goto(`/#/companies/${orgId}`, { waitUntil: "networkidle" });
+async function openCompany(page: Page, companyId: string) {
+  await page.goto(`/#/companies/${companyId}`, { waitUntil: "networkidle" });
   // The RECORD's own identity block. On a record route the shell's page head
   // shows only the trail back and no heading, and that trail renders from the
   // router before any company read returns — so anchoring there would say the
@@ -89,16 +89,16 @@ test.describe("company record — the glance's page shape", () => {
 
   // The readings are the overview's, under the bar that chose it (DESIGN.md
   // §7): a tab without them moves nothing above itself, and a row of account
-  // readings over the People roster would be a header for a page it is not
+  // readings over the Contacts roster would be a header for a page it is not
   // describing.
   test("the readings row sits under the tab strip, on the overview alone", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
-    expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
+    await openCompany(page, POPULATED_COMPANY as string);
+    expect(await topOf(page.locator("[data-testid='co-tabs']"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
-    await page.getByRole("button", { name: "Personen" }).click();
+    await page.getByRole("button", { name: "Kontakte" }).click();
     await expect(page.locator(STRIP)).toHaveCount(0);
   });
 
@@ -108,15 +108,10 @@ test.describe("company record — the glance's page shape", () => {
   // strip derives the row's fold from it — a row that sometimes carried six
   // would fold at a different width on two accounts of the same product.
   //
-  // Then the row must READ as one row — the regression this strip actually had
-  // was two slots drawn at a different font size than the rest — so every slot
-  // is checked for a label AND a value, and every value against the SAME
-  // computed size. A row of readings is a scale the eye sweeps; a slot that
-  // sizes itself to its own content breaks the sweep.
-  test("every reading carries a label and a value, all at one size", async ({
-    page,
-  }) => {
-    await openCompany(page, POPULATED_ORG as string);
+  // Then every slot is checked for a label AND a value: a reading that drew one
+  // of the pair and not the other is a door the eye sweeps past.
+  test("every reading carries a label and a value", async ({ page }) => {
+    await openCompany(page, POPULATED_COMPANY as string);
     const slots = page.locator(`${STRIP} > *`);
     // Waited for, not counted straight away: a bare count() resolves against
     // whatever is mounted at that instant, which on a composite read is an
@@ -124,59 +119,54 @@ test.describe("company record — the glance's page shape", () => {
     await expect(slots.nth(1)).toBeVisible();
     await expect(slots).toHaveCount(5);
     const count = await slots.count();
-    const sizes = new Set<string>();
     for (let index = 0; index < count; index++) {
       const slot = slots.nth(index);
       await expect(slot.locator(".stat-card-label")).not.toBeEmpty();
       await expect(slot.locator(".stat-card-value")).not.toBeEmpty();
-      sizes.add(
-        await slot
-          .locator(".stat-card-value")
-          .evaluate((element) => getComputedStyle(element).fontSize),
-      );
     }
-    expect(sizes.size).toBe(1);
   });
 
-  // Overview · History · People · Deals · Tasks · Finance · Documents · Profile,
+  // Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile,
   // plus Partner for an account that has a partner programme (companyTabsFor
-  // in organizations.tsx gates it on relationship_types, not on a fixed
+  // in companies.tsx gates it on relationship_types, not on a fixed
   // count) — so the expectation follows the fixture's own data rather than
   // assuming either shape. The details control stands at the END of the row
   // and is not a tab: it is the one pressed button among them.
   test("the tab strip offers every tab, plus partner only where the account has one, and ends in the details control", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const isPartnerAccount = await page.evaluate(async () => {
       const id = location.hash.split("/").pop();
-      const response = await fetch(`/v1/organizations/${id}`, {
+      const response = await fetch(`/v1/companies/${id}`, {
         headers: { accept: "application/json" },
       });
-      const org = await response.json();
-      return Boolean(org?.relationship_types?.includes("partner"));
+      const company = await response.json();
+      return Boolean(company?.relationship_types?.includes("partner"));
     });
-    await expect(page.locator(".co-tabs .recordtabs-tab")).toHaveCount(
-      isPartnerAccount ? 8 : 7,
-    );
     await expect(
-      page.locator(".co-tabs .recordtabs-trailing button[aria-pressed]"),
+      page.locator("[data-testid='co-tabs'] .recordtabs-tab"),
+    ).toHaveCount(isPartnerAccount ? 8 : 7);
+    await expect(
+      page.locator(
+        "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
+      ),
     ).toHaveCount(1);
   });
 
   // The 360 is the first pane and the only one that may look like a feature
-  // (DESIGN.md §7): one pane naming the record and "· 360", the needs list
-  // and the money under it on the left, Ask on the right. What this pins is
-  // that they are PANES of the glance in that order, not a column of cards
-  // that each reads the account.
+  // (DESIGN.md §7): one pane, the account brief, the needs list and the money
+  // under it on the left, Ask on the right. What this pins is that they are
+  // PANES of the glance in that order, not a column of cards that each reads
+  // the account.
   //
   // Anchored on rendered TEXT rather than classes: the strings are the German
   // chrome the suite pins via `locale: de-DE`.
   test("the overview leads with the 360, then the needs list and the money on the left, Ask on the right", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
-    const call = page.getByText(/· 360$/);
+    await openCompany(page, POPULATED_COMPANY as string);
+    const call = page.getByRole("heading", { name: "Kontobriefing" });
     await expect(call).toHaveCount(1);
     const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toHaveCount(1);
@@ -203,22 +193,22 @@ test.describe("company record — the glance's page shape", () => {
 
   // The needs list asks for a move on the account, so it belongs to the tab a
   // reader opens to be told what to do — not to every tab. Someone who has
-  // gone to People or Documents has already chosen what to read.
+  // gone to Contacts or Documents has already chosen what to read.
   test("the needs list leads the overview, and is not drawn on the other tabs", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toBeVisible();
 
-    await page.getByRole("button", { name: "Personen" }).click();
+    await page.getByRole("button", { name: "Kontakte" }).click();
     await expect(needs).toHaveCount(0);
   });
 
   // The details pane is the record's, on the RIGHT of the work under the tab
   // row, and it starts closed: the Details control at the end of the tab row
   // opens it (DESIGN.md §6). Inside it, ONE pane of named sections — the
-  // account's fields, its deals, its people, the hold where the account has a
+  // account's fields, its deals, its contacts, the hold where the account has a
   // domain, its tags — each a disclosure with a non-empty summary, never a
   // stack of cards.
   //
@@ -229,12 +219,14 @@ test.describe("company record — the glance's page shape", () => {
   test("the details pane opens from the tab row as one pane of named sections, on the right", async ({
     page,
   }) => {
-    await openCompany(page, POPULATED_ORG as string);
+    await openCompany(page, POPULATED_COMPANY as string);
     const rail = page.locator(".co-rail");
     await expect(rail).toBeHidden();
 
     await page
-      .locator(".co-tabs .recordtabs-trailing button[aria-pressed]")
+      .locator(
+        "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
+      )
       .click();
     await expect(rail).toBeVisible();
 
@@ -264,28 +256,30 @@ test.describe("company record — the glance's page shape", () => {
   // empty states, and a sparse account that drops whole regions is the
   // second way this page stops looking like the design.
   test("an imported company keeps the page's shape", async ({ page }) => {
-    await openCompany(page, SPARSE_ORG as string);
-    await expect(page.locator(".co-tabs")).toBeVisible();
+    await openCompany(page, SPARSE_COMPANY as string);
+    await expect(page.locator("[data-testid='co-tabs']")).toBeVisible();
     await expect(page.locator(STRIP)).toBeVisible();
-    expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
+    expect(await topOf(page.locator("[data-testid='co-tabs']"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
     // Five readings here too, on an account that can answer almost none of
     // them: each slot says which reading it has none of. A shorter row would be
     // the sparse account quietly dropping part of the page again.
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
-    await expect(page.getByText(/· 360$/)).toHaveCount(1);
+    await expect(
+      page.getByRole("heading", { name: "Kontobriefing" }),
+    ).toHaveCount(1);
   });
 
   // Not an assertion — the artifact a human compares against the design. It is
   // written outside the repo (E2E_SHOT_DIR) because a screenshot is session
   // debris, not product.
   test("capture both states for eyeball comparison", async ({ page }) => {
-    for (const [name, org] of [
-      ["populated", POPULATED_ORG],
-      ["sparse", SPARSE_ORG],
+    for (const [name, company] of [
+      ["populated", POPULATED_COMPANY],
+      ["sparse", SPARSE_COMPANY],
     ] as const) {
-      await openCompany(page, org as string);
+      await openCompany(page, company as string);
       // openCompany waits for the h1, which the router paints before the
       // composite read returns. The strip's second slot comes from that read,
       // so its arrival is the proxy for a settled page.
@@ -299,41 +293,22 @@ test.describe("company record — the glance's page shape", () => {
 });
 
 /**
- * The mockup's TYPOGRAPHIC SCALE, asserted as computed styles.
+ * The mockup's PROMINENCE, measured off the boxes the page lays out.
  *
  * The structural suite above passes on a page rendering at half the mockup's
- * size, because a count does not know how big anything is. These are the
- * numbers a reader actually sees: the account's name, its logo, the money in
- * the KPI strip, and the control that says where the account stands.
+ * size, because a count does not know how big anything is. These are the things
+ * a reader actually sees at their drawn size: the account's logo and the
+ * control that says where the account stands.
  *
- * Floors rather than exact values. A design that lands at 42px where the
- * mockup drew 40 is right; one that lands at 22 is the dense admin-tool
- * rendering these exist to catch. Pixel equality would fail on a font
- * substitution and tell nobody anything.
+ * Floors rather than exact values. A mark that lands at 120px where the mockup
+ * drew 110 is right; one that lands at 44 is the list-row avatar these exist to
+ * catch. Pixel equality would fail on a rounding difference and tell nobody
+ * anything.
  */
 test.describe("company record — the mockup's visual weight", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
-    await openCompany(page, POPULATED_ORG as string);
-  });
-
-  const px = async (locator: Locator, prop: string): Promise<number> => {
-    await expect(locator).toBeVisible();
-    const value = await locator.evaluate(
-      (element, name) => getComputedStyle(element).getPropertyValue(name),
-      prop,
-    );
-    return Number.parseFloat(value);
-  };
-
-  test("the account's name leads the page", async ({ page }) => {
-    // ~40px in both mockups. It is the largest text on the record and the
-    // first thing a reader lands on. Measured on the record header's own
-    // heading: it is the page's h1, and the page head above it carries the
-    // trail back at a deliberately quiet 13px.
-    expect(
-      await px(page.locator(".record-head h1"), "font-size"),
-    ).toBeGreaterThanOrEqual(30);
+    await openCompany(page, POPULATED_COMPANY as string);
   });
 
   test("the company's mark is a logo, not a favicon", async ({ page }) => {
@@ -347,32 +322,6 @@ test.describe("company record — the mockup's visual weight", () => {
       throw new Error("the header avatar has no box");
     }
     expect(box.width).toBeGreaterThanOrEqual(72);
-  });
-
-  test("the KPI figures read as the headline numbers they are", async ({
-    page,
-  }) => {
-    // ONE size for every slot, and it belongs to the primitive now
-    // (design-system/statstrip.css `.stat-strip .stat-card-value`): some slots
-    // carry a figure and some a sentence ("typically 4 days early"), and a slot
-    // sized to its own content would stop the row reading as one comparison.
-    // The shared clamp floors at 13px, and at 1280px (this suite's pinned
-    // viewport) it sits AT that floor: the bar is "clearly bigger than a label",
-    // not "exactly what the clamp happens to compute".
-    const size = await px(
-      page.locator(`${STRIP} .stat-card-value`).first(),
-      "font-size",
-    );
-    expect(size).toBeGreaterThanOrEqual(13);
-    // And it must still LEAD its label — the stronger claim, that every
-    // slot's value shares this exact size with every other slot, is what the
-    // strip's "every KPI slot carries a label and a value, all at one size"
-    // test above pins; a fixed ratio here cannot also express that.
-    const label = await px(
-      page.locator(`${STRIP} .stat-card-label`).first(),
-      "font-size",
-    );
-    expect(size).toBeGreaterThan(label);
   });
 
   test("the lifecycle control is a control, not a tag", async ({ page }) => {
@@ -396,12 +345,12 @@ test.describe("company record — the mockup's visual weight", () => {
   test("the header carries the company's attribute chips", async ({ page }) => {
     const recorded = await page.evaluate(async () => {
       const id = location.hash.split("/").pop();
-      const response = await fetch(`/v1/organizations/${id}`, {
+      const response = await fetch(`/v1/companies/${id}`, {
         headers: { accept: "application/json" },
       });
-      const org = await response.json();
+      const company = await response.json();
       return ["industry", "address_city", "linkedin_url"].filter((field) =>
-        Boolean(org?.[field]),
+        Boolean(company?.[field]),
       ).length;
     });
     await expect

@@ -16,10 +16,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -33,7 +33,7 @@ import (
 // Team2), and the core stores over the workspace-bound app pool.
 type Env struct {
 	Pool       *pgxpool.Pool
-	People     *people.Store
+	Contacts   *contacts.Store
 	Deals      *deals.Store
 	Projects   *projects.Store
 	Contracts  *contracts.Store
@@ -146,7 +146,7 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
 	e.Pool = pool
-	e.People = people.NewStore(harnessDB(pool, e.WS))
+	e.Contacts = contacts.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
 	e.Projects = ProjectsStore(harnessDB(pool, e.WS))
 	e.Contracts = ContractsStore(harnessDB(pool, e.WS), e.Deals)
@@ -169,7 +169,7 @@ func Setup(t *testing.T) *Env {
 // this store that legitimately varies between them.
 func ProjectsStore(db *database.DB) *projects.Store {
 	return projects.NewStore(db).
-		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx))
+		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx))
 }
 
 // ContractsStore builds the contract store the way compose builds it.
@@ -184,7 +184,8 @@ func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
 	return contracts.NewStore(db,
 		func(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error) {
 			return dealStore.FreezeRateAt(ctx, tx, currency, asOf)
-		})
+		},
+		identity.TimezoneAppliedTx)
 }
 
 // SchemaPool opens the owner-privileged schema-change pool the
@@ -249,7 +250,7 @@ func (e *Env) Admin() context.Context { return e.As(e.AdminUser, nil, AdminPerms
 // agent-minted one deliberately reaches no executor. on_behalf_of names the
 // human whose decision it waits on, which the authority predicate narrows a held
 // draft by: releasing one SENDS it from the approver's own mailbox, so only the
-// person it goes out as may release it.
+// contact it goes out as may release it.
 //
 // A staging that omitted the owner would model a row production no longer
 // writes, and it would be decidable by nobody — so a suite using it would prove
@@ -343,38 +344,12 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	})
 }
 
-// WsExec runs one setup statement in a workspace-bound transaction (RLS is
-// FORCED, so the GUC must be set even for the owner-less test pool).
-func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, sql, args...)
-		return err
-	}); err != nil {
-		t.Fatalf("setup exec: %v", err)
-	}
-}
-
-// WsCount returns a scalar count in a workspace-bound transaction.
-func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	var n int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, sql, args...).Scan(&n)
-	}); err != nil {
-		t.Fatalf("count query: %v", err)
-	}
-	return n
-}
-
-// AgentWithOrgRead binds an agent principal holding the same object grants
+// AgentWithCompanyRead binds an agent principal holding the same object grants
 // the rep does, unbounded, and CARRYING the granting human's user id — the
 // shape identity/passport.go actually mints, where OnBehalfOf becomes
 // UserID for row scope. An agent with no user id would be refused for the
 // wrong reason and would prove nothing about the human-only rule.
-func AgentWithOrgRead(e *Env) context.Context {
+func AgentWithCompanyRead(e *Env) context.Context {
 	// Deep copy, not `perms := AccountRepPerms`: a plain struct copy shares the
 	// Objects map, and this fixture is now read from other packages. A later
 	// grant added here would widen it for every suite at once, which is exactly
@@ -398,7 +373,7 @@ func AgentWithOrgRead(e *Env) context.Context {
 var SchedulerPerms = principal.Permissions{
 	RoleKeys: []string{roleRep},
 	Objects: map[string]principal.ObjectGrant{
-		objPerson:   {Create: true, Read: true, Update: true},
+		objContact:  {Create: true, Read: true, Update: true},
 		objActivity: {Create: true, Read: true, Update: true},
 	},
 	RowScope: principal.RowScopeTeam,

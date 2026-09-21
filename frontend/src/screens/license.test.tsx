@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { LicenseCard } from "./license";
 
 // Settings → License: what the license grants and how much of it is used.
@@ -17,8 +18,8 @@ import { LicenseCard } from "./license";
 // The three readings this screen must keep apart, because collapsing any two of
 // them tells an admin something untrue:
 //
-//   a seat cap        the meter reads used against granted
-//   no seat cap       a license that limits nothing — no meter, and no "0"
+//   a seat cap        one reading: used against granted, with the bar under it
+//   no seat cap       a license that limits nothing — no bar, and no "0"
 //   over the cap      reported, with the workspace still working
 //
 // The second is the one a naive client gets wrong: `seats_granted` is absent
@@ -37,7 +38,7 @@ type Entitlement = {
     expiry: string;
     in_grace: boolean;
     renewal_due: boolean;
-    org?: string;
+    company?: string;
     contact_name?: string;
     contact_email?: string;
   };
@@ -48,7 +49,7 @@ type Entitlement = {
 const HOLDER = {
   id: "0199c4f2-1d6e-7a41-9f0b-7b2a2c1d5e30",
   subject: "acme-prod",
-  org: "Acme GmbH",
+  company: "Acme GmbH",
   contact_name: "Ada Lovelace",
   contact_email: "ada@acme.example",
   expiry: "2027-08-14T09:00:00Z",
@@ -92,6 +93,15 @@ function render(node: ReactNode) {
 
 const checkedAt = "2026-08-14T09:00:00Z";
 
+// The catalog's own words with the figures filled in as the card fills them: a
+// literal here would go on passing while the catalog said something else.
+const ofGranted = (used: string, granted: string) =>
+  en["license.seats.ofGranted"]
+    .replace("{used}", used)
+    .replace("{granted}", granted);
+const left = (count: string) =>
+  en["license.seats.left"].replace("{count}", count);
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -111,14 +121,38 @@ describe("LicenseCard", () => {
     );
     render(<LicenseCard />);
 
-    const meter = await waitFor(() => screen.getByRole("meter"));
-    expect(meter.getAttribute("aria-valuenow")).toBe("9");
-    expect(meter.getAttribute("aria-valuemax")).toBe("10");
-    // A role="meter" takes no accessible name from the terms beside it, so the
-    // reading has to be IN the name or a screen reader gets a bare number.
-    expect(meter.getAttribute("aria-label")).toContain("9");
-    expect(meter.getAttribute("aria-label")).toContain("10");
+    // ONE reading, and the words carry it: the bar is hidden from a screen
+    // reader precisely because the value and its detail already say the share
+    // in full, so a reader who hears the card hears both figures.
+    const card = await waitFor(() => screen.getByText(ofGranted("9", "10")));
+    expect(screen.getByText(left("1"))).toBeTruthy();
+    expect(
+      card.closest(".stat-card")?.querySelector(".stat-card-meter"),
+    ).not.toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says how many seats are left rather than repeating the grant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({
+        state: "valid",
+        seats_used: 4,
+        seats_granted: 10,
+        over_limit: false,
+        checked_at: checkedAt,
+      }),
+    );
+    render(<LicenseCard />);
+
+    await waitFor(() => screen.getByText(ofGranted("4", "10")));
+    // The two figures and the bar under them were three spellings of one fact.
+    // What a reader cannot get from the value is what is still FREE, so that is
+    // what the line under it says.
+    expect(screen.getByText(left("6"))).toBeTruthy();
+    // The two retired slots, gone from the catalog as well as from the card.
+    expect(screen.queryByText("Seats granted")).toBeNull();
+    expect(screen.queryByText("Seats in use")).toBeNull();
   });
 
   // The seat reading is ONE row, and what counts as a seat is that row's
@@ -143,13 +177,13 @@ describe("LicenseCard", () => {
     if (!row) {
       throw new Error("the seat rule is not a settings row's description");
     }
-    // One row holds the label, the rule, both figures and the bar: the whole
+    // One row holds the label, the rule and the reading — the whole
     // comparison, which is what makes it one reading.
     expect(row.textContent).toContain("Seats");
-    expect(row.querySelector('[role="meter"]')).not.toBeNull();
+    const reading = screen.getByText(ofGranted("9", "10"));
+    expect(row.contains(reading)).toBe(true);
     expect(
-      rule.compareDocumentPosition(screen.getByRole("meter")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      rule.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -271,11 +305,12 @@ describe("LicenseCard", () => {
     // the thing that will not go through.
     expect(alert.textContent).toMatch(/nobody loses access/i);
     expect(alert.textContent).toMatch(/no new member can be invited/i);
-    // The meter still reads, clamped by the component rather than misreporting:
-    // the value is the truth and the maximum is the entitlement.
-    const meter = screen.getByRole("meter");
-    expect(meter.getAttribute("aria-valuenow")).toBe("11");
-    expect(meter.getAttribute("aria-valuemax")).toBe("10");
+    // The reading still states both figures, and its detail says which side of
+    // the grant the count is on rather than leaving a reader to subtract.
+    expect(screen.getByText(ofGranted("11", "10"))).toBeTruthy();
+    expect(
+      screen.getByText(en["license.seats.over"].replace("{count}", "1")),
+    ).toBeTruthy();
   });
 });
 
@@ -426,7 +461,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(await waitFor(() => screen.getByText("acme-prod"))).toBeTruthy();
-    expect(screen.queryByText("Organization")).toBeNull();
+    expect(screen.queryByText("Company")).toBeNull();
     expect(screen.queryByText("Contact")).toBeNull();
   });
 
@@ -451,9 +486,10 @@ describe("the licensee", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // Past expiry and still accepted. This one interrupts, because the
-  // installation will stop working.
-  it("interrupts when the license runs on its grace period", async () => {
+  // Past expiry and still accepted. Stated in the danger family and NOT
+  // announced: the expiry is true as the tab renders, so the one interruption
+  // on this screen stays with the seat breach an admin has to act on.
+  it("states the grace period without interrupting", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor({
@@ -467,9 +503,11 @@ describe("the licensee", () => {
     );
     render(<LicenseCard />);
 
-    const alert = await waitFor(() => screen.getByRole("alert"));
-    expect(alert.textContent).toMatch(/expired/i);
-    expect(alert.textContent).toMatch(/still works/i);
+    expect(
+      await waitFor(() => screen.getByText("This license expired")),
+    ).toBeTruthy();
+    expect(screen.getByText(/still works/i)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
     // One notice, not two: the grace state supersedes the renewal warning.
     expect(screen.queryByText("This license needs a renewal")).toBeNull();
   });

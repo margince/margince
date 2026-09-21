@@ -9,18 +9,19 @@ import {
   Skeleton,
   TableScroll,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type StrengthBucket, useOrganizationGraph } from "./organizationgraph";
+import { type StrengthBucket, useCompanyGraph } from "./companygraph";
 import { incompleteGraph } from "./record360";
 
 // Comparing a chosen few colleagues against the account's contacts.
 //
 // The compact coverage on each contact row answers "who should make this call".
 // This answers the other question — "where are we thin" — and it is the one that
-// tempts a contact × every-colleague matrix. With a forty-person sales team that
+// tempts a contact × every-colleague matrix. With a forty-contact sales team that
 // matrix is 40 columns wide and nobody reads it.
 //
 // So the reader CHOOSES the colleagues to compare, up to a handful, and the grid
@@ -40,57 +41,70 @@ import { incompleteGraph } from "./record360";
 // is gone, and the account's contact list feeds it now. Naming the fields makes
 // both shapes fit and stops a future field on the 360 card reading as a
 // dependency this comparison does not have.
-type Contact = Readonly<{ person_id: string; full_name: string }>;
+type Contact = Readonly<{ contact_id: string; full_name: string }>;
 
 // How many colleagues can stand in the grid at once. Beyond this the columns
 // stop being scannable, which is the failure the whole surface exists to avoid.
 const COLUMN_CAP = 8;
 
 const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
-  strong: "co.routeIn.band.strong",
-  moderate: "co.routeIn.band.some",
-  weak: "co.routeIn.band.faint",
-  none: "co.routeIn.band.unknown",
+  strong: "co.routeIn.bandBadge.strong",
+  moderate: "co.routeIn.bandBadge.some",
+  weak: "co.routeIn.bandBadge.faint",
+  none: "co.routeIn.bandBadge.unknown",
 };
 
-export function CoverageExplorer({ orgId }: Readonly<{ orgId: string }>) {
+export function CoverageExplorer({
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  // Opened once, mounted from then on. The grid reads the company graph, so it
+  // must not mount with the page — and it must not unmount when the dialog
+  // closes either, because the dialog is still on screen while it leaves and an
+  // emptied one is what the reader would watch go.
+  const [everOpened, setEverOpened] = useState(false);
   const titleId = useId();
   return (
     <>
       <button
         type="button"
         className="link-button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setEverOpened(true);
+          setOpen(true);
+        }}
       >
         {t("acctCoverage.open")}
       </button>
-      {open && (
-        <Modal open onClose={() => setOpen(false)} labelledBy={titleId}>
-          <h2 id={titleId} className="t-h2 modal-title">
-            {t("acctCoverage.title")}
-          </h2>
-          <CoverageGrid orgId={orgId} />
-        </Modal>
-      )}
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        size="wide"
+      >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {t("acctCoverage.title")}
+        </Heading>
+        {everOpened && <CoverageGrid companyId={companyId} />}
+      </Modal>
     </>
   );
 }
 
-// One colleague's edges to this account's contacts, keyed by person.
+// One colleague's edges to this account's contacts, keyed by contact.
 type ColleagueCoverage = {
   id: string;
   label: string;
   bands: Map<string, StrengthBucket>;
 };
 
-function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
+function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   // Read only when somebody opens the explorer: a graph query on every company
   // page load is what the on-demand route-in read already avoids.
-  const query = useOrganizationGraph(orgId);
+  const query = useCompanyGraph(companyId);
   const graph = Array.isArray(query.data?.nodes) ? query.data : undefined;
   const [contactFilter, setContactFilter] = useState("");
   const [selected, setSelected] = useState<readonly string[]>([]);
@@ -127,7 +141,7 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
 
   const shown = selected.length > 0 ? selected : defaultSelection(colleagues);
   // The account's contacts as the GRAPH knows them, narrowed by this grid's own
-  // search box. Not the caller's rows: the People tab's list is filtered and
+  // search box. Not the caller's rows: the Contacts tab's list is filtered and
   // paged, and a coverage comparison built from a page reports the team as
   // covering nobody the moment a reader narrows the list — a false claim, not
   // a smaller one.
@@ -138,7 +152,7 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
   );
 
   return (
-    <div className="coverage-grid">
+    <div className="coverage-body">
       <SearchField
         value={contactFilter}
         aria-label={t("acctCoverage.findContact")}
@@ -148,14 +162,13 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
       {/* The columns are a choice, not a default view of everybody. Colleagues
           with no edge to this account are absent entirely rather than offered
           as empty columns. */}
-      <div className="coverage-picker">
+      <div className="coverage-colleagues">
         {colleagues.map((colleague) => {
           const on = shown.includes(colleague.id);
           const full = shown.length >= COLUMN_CAP && !on;
           return (
             <Button
               key={colleague.id}
-              small
               disabled={full}
               // aria-pressed, not a glyph: a toggle's state belongs in the
               // control's semantics, where a screen reader can hear it, rather
@@ -192,7 +205,7 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
           been the same specificity as TableScroll's, winning only if this
           screen's stylesheet happened to load second. */}
       <TableScroll label={t("acctCoverage.title")}>
-        <table className="coverage-table">
+        <table className="table coverage-table">
           <thead>
             <tr>
               <th>{t("acctCoverage.contact")}</th>
@@ -205,11 +218,11 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
           </thead>
           <tbody>
             {rows.map((contact) => (
-              <tr key={contact.person_id}>
+              <tr key={contact.contact_id}>
                 <th scope="row">{contact.full_name}</th>
                 {shown.map((id) => {
                   const colleague = colleagues.find((c) => c.id === id);
-                  const band = colleague?.bands.get(contact.person_id);
+                  const band = colleague?.bands.get(contact.contact_id);
                   return (
                     // The column header travels with the cell twice over: as
                     // data-label, which the narrow layout renders as visible
@@ -231,9 +244,7 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
                           {t(BAND_LABELS[band])}
                         </Badge>
                       ) : (
-                        <span className="t-caption">
-                          {t("acctCoverage.untried")}
-                        </span>
+                        <span>{t("acctCoverage.untried")}</span>
                       )}
                     </td>
                   );
@@ -261,20 +272,20 @@ function CoverageGrid({ orgId }: Readonly<{ orgId: string }>) {
 // Only colleagues with at least one edge to a contact ON THIS ACCOUNT appear: an
 // empty column is a name the reader has to rule out, and the default is to hide
 // what has nothing to say.
-/** accountContacts is every person the account's graph names. */
+/** accountContacts is every contact the account's graph names. */
 function accountContacts(
-  graph: ReturnType<typeof useOrganizationGraph>["data"],
+  graph: ReturnType<typeof useCompanyGraph>["data"],
 ): Contact[] {
   if (!graph || !Array.isArray(graph.nodes)) {
     return [];
   }
   return graph.nodes
-    .filter((node) => node.kind === "person")
-    .map((node) => ({ person_id: node.id, full_name: node.label }));
+    .filter((node) => node.kind === "contact")
+    .map((node) => ({ contact_id: node.id, full_name: node.label }));
 }
 
 function colleaguesFrom(
-  graph: ReturnType<typeof useOrganizationGraph>["data"],
+  graph: ReturnType<typeof useCompanyGraph>["data"],
   locale: Locale,
 ): ColleagueCoverage[] {
   if (!graph || !Array.isArray(graph.nodes)) {
@@ -283,10 +294,10 @@ function colleaguesFrom(
   // The account's contacts, taken from the GRAPH rather than from whatever the
   // caller had loaded. The caller is now a filtered, paged list, and a coverage
   // comparison built from a page answers a question nobody asked: filter the
-  // list to one person and the grid would report the whole team as covering
+  // list to one contact and the grid would report the whole team as covering
   // nobody, which is a false claim rather than a narrower one.
   const onAccount = new Set(
-    accountContacts(graph).map((contact) => contact.person_id),
+    accountContacts(graph).map((contact) => contact.contact_id),
   );
   const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
   const byColleague = new Map<string, ColleagueCoverage>();

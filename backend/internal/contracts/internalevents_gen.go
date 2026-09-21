@@ -8,6 +8,14 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// InternalEventAiBudgetUpdated The shared company allowance changed; workers reconsider deferred work.
+type InternalEventAiBudgetUpdated struct {
+	AfterRevision        string `json:"after_revision"`
+	BeforeRevision       string `json:"before_revision"`
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens,omitempty"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
+}
+
 // InternalEventAiTaskStateChanged Payload for ai_task.state_changed — one AI-backed occurrence reported its current state to the AI-activity projection. Entity-less by nature: the occurrence names no domain record, and the row that will hold it does not exist until the projection this event feeds writes it.
 type InternalEventAiTaskStateChanged struct {
 	// AiTask The api/ai-tasks.yaml task that did the model work, when one did. Absent for an occurrence with no model call of its own.
@@ -54,7 +62,7 @@ type InternalEventAiTaskStateChanged struct {
 
 	// SubjectLabel What that record is CALLED, as the source knew it when it emitted. The projection may not ask: it reaches back into no source's tables, so a name it is not given is a name it does not have. The label travels for the same reason the lease does.
 	// Unlike degrade_reason this is RECORD DATA rather than server-authored prose, and that is admissible here for one reason — it is the reader's own record, already shown to them on the surface the occurrence came from. It is never a provider's text. Resolve it the way the product titles the thing elsewhere, so the rail and the record cannot call one document two names.
-	// A SNAPSHOT, never re-resolved on read: a record renamed afterwards keeps the old name on a settled line, which is what that line was actually about. The corollary is that it cannot be re-gated either, so a source emits a label only where the occurrence's own actor is the person the record was already displayed to.
+	// A SNAPSHOT, never re-resolved on read: a record renamed afterwards keeps the old name on a settled line, which is what that line was actually about. The corollary is that it cannot be re-gated either, so a source emits a label only where the occurrence's own actor is the contact the record was already displayed to.
 	SubjectLabel *string `json:"subject_label,omitempty"`
 
 	// SubjectType The kind of record the occurrence is about, when it is about one.
@@ -78,6 +86,10 @@ type InternalEventBriefOpened struct {
 	// Unread How many of those carried no act, dismiss or snooze mark yet. Together with items it separates a first open from a return visit without needing a second event type for the difference.
 	Unread int `json:"unread"`
 }
+
+func (InternalEventAiBudgetUpdated) EventType() string { return "ai_budget.updated" }
+
+func (InternalEventAiBudgetUpdated) EntityType() string { return "ai_budget" }
 
 func (InternalEventAiTaskStateChanged) EventType() string { return "ai_task.state_changed" }
 

@@ -10,7 +10,7 @@ package mailmap
 import "testing"
 
 // ADR-0072 §1 promises that a transactional sender's message keeps its place on
-// the timeline while the tier gate suppresses the person and company it would
+// the timeline while the tier gate suppresses the contact and company it would
 // otherwise derive. A no-reply localpart is the ordinary shape of exactly that
 // mail — a signed envelope, an invoice, a shipping notice — so dropping it here
 // would make the promise false before the gate ever ran, and would starve the
@@ -96,7 +96,7 @@ func TestOnlyAutoRepliesAreKeptOffTheTimeline(t *testing.T) {
 		// unreadable rather than absent.
 		"unclosed leading comment": {"Auto-Submitted: (swallows auto-replied"},
 		// These two parse cleanly and name nothing. An empty keyword is not one
-		// of the two values that mean a person wrote this, and nothing is not
+		// of the two values that mean a contact wrote this, and nothing is not
 		// permission.
 		"empty comment only": {"Auto-Submitted: ()"},
 		"present but empty":  {"Auto-Submitted:"},

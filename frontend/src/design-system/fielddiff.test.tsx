@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -31,7 +31,7 @@ describe("FieldDiff", () => {
 });
 
 describe("PassportChip", () => {
-  it("renders the passport id in mono", () => {
+  it("shows the agent's passport id", () => {
     render(<PassportChip id="psp_7Q3fa91" />);
     expect(screen.getByText(/psp_7Q3fa91/)).toBeTruthy();
   });

@@ -4,27 +4,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useId, useState } from "react";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
-import {
-  Badge,
-  Button,
-  DataTable,
-  EmptyState,
-  Field,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
+import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CountLine } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  ADMISSION_LABEL,
+  BLANK_DECISION,
+  type BlockedDomain,
+  type Decision,
+  DecisionDialog,
+  type SetDecision,
+  useSetBlockedDomain,
+} from "./blocked-domains-decision";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // The domains this installation refuses a company (ADR-0072). A vendor the
@@ -37,53 +35,24 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // company that never appeared — was it refused, and by whom? So `source` is a
 // first-class column, not a detail: a bulk-sender verdict and somebody's
 // deliberate call look identical in the outcome and are completely different
-// facts. Every human role reads the list (`organization:read`); changing an
-// entry demands `organization:update`, so the verb is refused rather than
+// facts. Every human role reads the list (`company:read`); changing an
+// entry demands `company:update`, so the verb is refused rather than
 // hidden, like the capture cards beside it.
 //
 // The write is a PUT that is idempotent on the normalized domain: there is no
 // version to quote and none to send, so no `ifMatch` here — an entry for a
 // domain already on the list REPLACES it, which is also how a refusal is undone.
 
-// The row shape comes from the generated contract rather than being restated
-// here: a hand-written copy would drift the first time the contract gains a
-// field, and drift silently, since nothing compares the two.
-type BlockedDomain = components["schemas"]["BlockedDomain"];
-
-// The two decisions an entry can carry, as ONE list: the type is derived from
-// it and the Select's options are built from it, so the offered choices, their
-// labels and the runtime narrowing cannot drift apart (the shape
-// consumer-mail-domains.tsx uses for the same reason).
-const ADMISSIONS = ["suppressed", "admitted"] as const;
-type Admission = (typeof ADMISSIONS)[number];
-
-const ADMISSION_LABEL: Record<Admission, MessageKey> = {
-  suppressed: "blockedDomains.admission.suppressed",
-  admitted: "blockedDomains.admission.admitted",
-};
-
-// The contract's own ceiling on `reason` (SetBlockedDomainRequest.maxLength).
-// Held on the control so the reader stops at the limit rather than typing past
-// it and losing the sentence to a 422 — the server enforces it either way.
-const REASON_MAX = 500;
-
+// What decided a row — or, for an open question, what stopped the machine
+// deciding. The two are one column because they answer one thing a reader wants
+// to know: why this domain stands where it does.
 const SOURCE_LABEL: Record<BlockedDomain["source"], MessageKey> = {
   verdict: "blockedDomains.source.verdict",
   heuristic: "blockedDomains.source.heuristic",
   human: "blockedDomains.source.human",
-};
-
-/** One standing decision, as the dialog receives it before anybody types. */
-type Decision = Readonly<{
-  domain: string;
-  admission: Admission;
-  reason: string;
-}>;
-
-const BLANK_DECISION: Decision = {
-  domain: "",
-  admission: "suppressed",
-  reason: "",
+  unevidenced: "blockedDomains.source.unevidenced",
+  stale_evidence: "blockedDomains.source.staleEvidence",
+  near_duplicate: "blockedDomains.source.nearDuplicate",
 };
 
 function useBlockedDomains() {
@@ -101,16 +70,26 @@ function useBlockedDomains() {
   });
 }
 
-function useSetBlockedDomain() {
+/**
+ * Asking again about a domain the machine gave up on.
+ *
+ * No body and no reason: a re-ask asserts nothing about what the domain IS, so
+ * there is nothing for a reader to review. That is what separates it from the
+ * decision write above, which demands a sentence precisely because it settles
+ * something.
+ */
+function useReopenDomain() {
   const queryClient = useQueryClient();
   return useMutation({
-    // Every input arrives as a variable rather than through a closure: the
-    // handler belongs to the committed render, so what it passes cannot be
-    // older than the control the operator pressed.
-    mutationFn: async (decision: Decision) => {
-      const { data, error } = await api.PUT("/capture/blocked-domains", {
-        body: decision,
-      });
+    // The domain arrives as a variable rather than through a closure, for the
+    // reason every other write on this card does: the handler belongs to the
+    // committed render, so what it sends cannot be older than the row the
+    // operator pressed.
+    mutationFn: async (domain: string) => {
+      const { data, error } = await api.POST(
+        "/capture/blocked-domains/{domain}/reopen",
+        { params: { path: { domain } } },
+      );
       if (error) {
         throwProblem(error);
       }
@@ -122,8 +101,8 @@ function useSetBlockedDomain() {
   });
 }
 
-/** Derived from the hook rather than restated, so the two cannot drift. */
-type SetDecision = ReturnType<typeof useSetBlockedDomain>;
+/** Likewise for the re-ask, so the column and the card agree on its shape. */
+type ReopenDomain = ReturnType<typeof useReopenDomain>;
 
 export function BlockedDomainsCard() {
   const t = useT();
@@ -133,9 +112,10 @@ export function BlockedDomainsCard() {
   // fixed installation zone would put the moment they are correlating against
   // an hour they were not working.
   const zone = viewerZone();
-  const canManage = useCanWrite("organization", "update");
+  const canManage = useCanWrite("company", "update");
   const query = useBlockedDomains();
   const set = useSetBlockedDomain();
+  const reopen = useReopenDomain();
   // The decision being written, and the dialog's own open state: one piece of
   // state rather than two, because a dialog that is open with nothing in it is
   // a state this card cannot be in.
@@ -171,11 +151,7 @@ export function BlockedDomainsCard() {
       // grows. Refused rather than hidden, like every other control on this
       // card — the sentence under the list is what `reasonId` names.
       titleAction={
-        <Button
-          small
-          reasonId={refusal}
-          onClick={() => setEditing(BLANK_DECISION)}
-        >
+        <Button reasonId={refusal} onClick={() => setEditing(BLANK_DECISION)}>
           {t("blockedDomains.recordOpen")}
         </Button>
       }
@@ -214,6 +190,7 @@ export function BlockedDomainsCard() {
                           revise,
                           refusal,
                           set,
+                          reopen,
                         })}
                         rows={list.data}
                         rowKey={(row) => row.domain}
@@ -239,11 +216,7 @@ export function BlockedDomainsCard() {
             }
           />
         </SettingList>
-        {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("blockedDomains.adminOnly")}
-          </p>
-        )}
+        {!canManage && <p id={denialId}>{t("blockedDomains.adminOnly")}</p>}
         {/* What LANDED, named, and on the CARD rather than in the dialog: the
             server normalizes the domain to its registrable form and the write
             replaces any entry already on it, so without this a sub-domain
@@ -251,11 +224,34 @@ export function BlockedDomainsCard() {
             already listed looked like nothing had happened at all. The dialog
             is gone by the time it is true. */}
         {set.data && (
-          <Callout tone="success" live="status">
-            {t("blockedDomains.stored", {
+          <Callout
+            tone="success"
+            kind="outcome"
+            // One short sentence, so it IS the heading and there is nothing
+            // left to say under it.
+            title={t("blockedDomains.stored", {
               domain: set.data.domain,
               admission: t(ADMISSION_LABEL[set.data.admission]),
             })}
+          />
+        )}
+        {/* A re-ask changes nothing a reader can see in the row — the domain
+            stays undecided until a crawl answers — so without this the press
+            reads as a control that did nothing. */}
+        {reopen.data && (
+          <Callout
+            tone="success"
+            kind="outcome"
+            title={t("blockedDomains.reopened", { domain: reopen.data.domain })}
+          />
+        )}
+        {reopen.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("blockedDomains.reopenFailed")}
+          >
+            {problemMessageOf(reopen.error, t)}
           </Callout>
         )}
         {editing !== null && (
@@ -284,6 +280,7 @@ function decisionColumns({
   revise,
   refusal,
   set,
+  reopen,
 }: Readonly<{
   t: ReturnType<typeof useT>;
   locale: Locale;
@@ -291,6 +288,7 @@ function decisionColumns({
   revise: (entry: BlockedDomain) => void;
   refusal: string | undefined;
   set: SetDecision;
+  reopen: ReopenDomain;
 }>) {
   return [
     {
@@ -298,15 +296,15 @@ function decisionColumns({
       header: t("blockedDomains.col.domain"),
       render: (row: BlockedDomain) => (
         <>
-          <span className="t-mono">{row.domain}</span>
+          <span>{row.domain}</span>
           {/* The company an admitted domain produced, when there is one. A
               link rather than the id it is built from: the payload carries no
               name, and printing a UUID at an operator is not a fact they can
               use. */}
-          {row.organization_id != null && (
+          {row.company_id != null && (
             <>
               {" "}
-              <a href={`#/companies/${row.organization_id}`}>
+              <a href={`#/companies/${row.company_id}`}>
                 {t("blockedDomains.openCompany")}
               </a>
             </>
@@ -318,7 +316,7 @@ function decisionColumns({
       key: "admission",
       header: t("blockedDomains.col.admission"),
       render: (row: BlockedDomain) => (
-        <Badge tone={row.admission === "admitted" ? "success" : "warn"}>
+        <Badge tone={admissionTone(row.admission)}>
           {t(ADMISSION_LABEL[row.admission])}
         </Badge>
       ),
@@ -351,133 +349,53 @@ function decisionColumns({
     {
       key: "revise",
       header: t("blockedDomains.col.revise"),
-      render: (row: BlockedDomain) => (
-        <Button
-          small
-          variant="ghost"
-          disabled={set.isPending}
-          reasonId={refusal}
-          onClick={() => revise(row)}
-        >
-          {t(
-            row.admission === "suppressed"
-              ? "blockedDomains.rowAdmit"
-              : "blockedDomains.rowRefuse",
-          )}
-        </Button>
-      ),
+      // An undecided row gets a different verb, because it is a different act:
+      // the other two REPLACE a decision and owe a reason, while this one only
+      // asks the crawl to look again. Offering "Allow this one" on a domain
+      // nobody has judged would invite a decision the operator has no grounds
+      // for — the whole reason the row is here is that nothing knows yet.
+      render: (row: BlockedDomain) =>
+        row.admission === "undecided" ? (
+          <Button
+            variant="ghost"
+            disabled={reopen.isPending}
+            reasonId={refusal}
+            onClick={() => reopen.mutate(row.domain)}
+          >
+            {t("blockedDomains.rowReopen")}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            disabled={set.isPending}
+            reasonId={refusal}
+            onClick={() => revise(row)}
+          >
+            {t(
+              row.admission === "suppressed"
+                ? "blockedDomains.rowAdmit"
+                : "blockedDomains.rowRefuse",
+            )}
+          </Button>
+        ),
     },
   ];
 }
 
 /**
- * The write, in a dialog.
- *
- * It is only ever opened by a seat holding `organization:update` — both verbs
- * that open it are refused without the grant — so nothing in here restates the
- * denial. The mutation belongs to the CARD rather than to this component,
- * because what landed is reported after the dialog has closed.
+ * How each standing reads at a glance. An open question is neither an outcome
+ * nor a warning — nothing went wrong and nothing was settled — so it takes the
+ * neutral tone and leaves the eye to the two that were decided.
  */
-function DecisionDialog({
-  initial,
-  set,
-  onClose,
-}: Readonly<{ initial: Decision; set: SetDecision; onClose: () => void }>) {
-  const t = useT();
-  const headingId = useId();
-  const [domain, setDomain] = useState(initial.domain);
-  const [admission, setAdmission] = useState<Admission>(initial.admission);
-  const [reason, setReason] = useState(initial.reason);
-  const trimmedDomain = domain.trim();
-  const trimmedReason = reason.trim();
-  const ready = trimmedDomain !== "" && trimmedReason !== "";
-  return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
-        {t("blockedDomains.record")}
-      </h2>
-      <form
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!ready) {
-            return;
-          }
-          set.mutate(
-            {
-              domain: trimmedDomain,
-              admission,
-              reason: trimmedReason,
-            },
-            { onSuccess: onClose },
-          );
-        }}
-      >
-        <div className="form-row">
-          <Field label={t("blockedDomains.domainLabel")} required>
-            {(control) => (
-              <TextInput
-                {...control}
-                data-testid="blocked-domain-input"
-                placeholder={t("blockedDomains.domainPlaceholder")}
-                value={domain}
-                onChange={(event) => setDomain(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("blockedDomains.admissionLabel")}>
-            {(control) => (
-              <Select
-                {...control}
-                value={admission}
-                onChange={(value) => {
-                  if (isOption(value, ADMISSIONS)) {
-                    setAdmission(value);
-                  }
-                }}
-                options={ADMISSIONS.map((value) => ({
-                  value,
-                  label: t(ADMISSION_LABEL[value]),
-                }))}
-              />
-            )}
-          </Field>
-        </div>
-        <Field
-          label={t("blockedDomains.reasonLabel")}
-          hint={t("blockedDomains.reasonHint")}
-          required
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              data-testid="blocked-domain-reason"
-              maxLength={REASON_MAX}
-              placeholder={t("blockedDomains.reasonPlaceholder")}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          )}
-        </Field>
-        {set.isError && (
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(set.error, t)}
-          </Callout>
-        )}
-        <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            small
-            type="submit"
-            variant="primary"
-            disabled={set.isPending || !ready}
-          >
-            {t("blockedDomains.save")}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
+function admissionTone(
+  admission: BlockedDomain["admission"],
+): "success" | "warning" | undefined {
+  switch (admission) {
+    case "admitted":
+      return "success";
+    case "suppressed":
+      return "warning";
+    default:
+      return undefined;
+  }
 }

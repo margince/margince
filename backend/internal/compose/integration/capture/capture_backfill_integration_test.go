@@ -33,9 +33,10 @@ import (
 // pagedConnector is a Backfiller whose provider holds a fixed message count,
 // served pageSize at a time. It counts pages so resumability is observable.
 type pagedConnector struct {
-	messages  int
-	pageSize  int
-	pageCalls int
+	messages       int
+	pageSize       int
+	pageCalls      int
+	estimatedAfter time.Time
 }
 
 func (p *pagedConnector) Descriptor() connector.Descriptor {
@@ -61,8 +62,9 @@ func (p *pagedConnector) Normalize(context.Context, connector.RawRecord) ([]conn
 
 func (p *pagedConnector) HealthCheck(context.Context, connector.Auth) error { return nil }
 
-func (p *pagedConnector) EstimateBackfill(context.Context, connector.Auth, time.Time) (int, error) {
-	return p.messages, nil
+func (p *pagedConnector) EstimateBackfill(_ context.Context, _ connector.Auth, after time.Time) (connector.BackfillEstimate, error) {
+	p.estimatedAfter = after
+	return connector.BackfillEstimate{Messages: p.messages}, nil
 }
 
 func (p *pagedConnector) BackfillPage(_ context.Context, _ connector.Auth, _ time.Time, pageToken string, _ connector.Sink) (connector.BackfillPageResult, error) {
@@ -105,6 +107,8 @@ func TestBackfillLifecycle(t *testing.T) {
 	e := integration.SetupSearch(t)
 	prov := &pagedConnector{messages: 25, pageSize: 10}
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
+	now := time.Date(2026, time.March, 31, 12, 0, 0, 0, time.UTC)
+	registry.WithClock(func() time.Time { return now })
 	registry.Register(prov)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -118,21 +122,40 @@ func TestBackfillLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("EstimateBackfill: %v", err)
 		}
-		if msgs != 25 {
-			t.Fatalf("estimate = %d msgs, want 25", msgs)
+		if want := time.Date(2025, time.October, 1, 12, 0, 0, 0, time.UTC); !msgs.AfterDate.Equal(want) {
+			t.Fatalf("preview date = %s, want %s", msgs.AfterDate, want)
 		}
+		if !msgs.AfterDate.Equal(prov.estimatedAfter) {
+			t.Fatalf("preview boundary %s differs from provider query %s", msgs.AfterDate, prov.estimatedAfter)
+		}
+		if msgs.Messages != 25 {
+			t.Fatalf("estimate = %d msgs, want 25", msgs.Messages)
+		}
+		// The fake counts exactly, so the preview has a total rather than a
+		// bound and must not hedge it.
+		if msgs.Floor {
+			t.Error("an exactly counted preview was reported as a floor")
+		}
+		registry.WithClock(func() time.Time { return time.Date(2026, time.August, 31, 12, 0, 0, 0, time.UTC) })
+		august, err := registry.EstimateBackfill(grantCtx, "gmail", rep, 6)
+		registry.WithClock(func() time.Time { return now })
+		wantAugust := time.Date(2026, time.March, 3, 12, 0, 0, 0, time.UTC)
+		if err != nil || !august.AfterDate.Equal(wantAugust) {
+			t.Fatalf("August month-end preview = %s, want %s; error = %v", august.AfterDate, wantAugust, err)
+		}
+
 		if _, err := registry.EstimateBackfill(grantCtx, "gmail", rep, 5); !errors.Is(err, capturemod.ErrWindowInvalid) {
 			t.Fatalf("a 5-month window must be refused, got %v", err)
 		}
 	})
 
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 
 	t.Run("one live run per connection", func(t *testing.T) {
-		if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, enqueueNothing); !errors.Is(err, capturemod.ErrBackfillRunning) {
+		if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); !errors.Is(err, capturemod.ErrBackfillRunning) {
 			t.Fatalf("second start while running = %v, want ErrBackfillRunning", err)
 		}
 	})
@@ -185,19 +208,31 @@ func TestBackfillLifecycle(t *testing.T) {
 	})
 
 	t.Run("windows only widen", func(t *testing.T) {
-		if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, 25, enqueueNothing); !errors.Is(err, capturemod.ErrWindowNarrowing) {
+		if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, connector.BackfillEstimate{Messages: 25}, enqueueNothing); !errors.Is(err, capturemod.ErrWindowNarrowing) {
 			t.Fatalf("narrowing 6m→3m = %v, want ErrWindowNarrowing", err)
 		}
-		wider, err := registry.StartBackfill(grantCtx, "gmail", rep, 12, 25, enqueueNothing)
+		wider, err := registry.StartBackfill(grantCtx, "gmail", rep, 120, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 		if err != nil {
-			t.Fatalf("widening 6m→12m: %v", err)
+			t.Fatalf("widening six months to ten years: %v", err)
+		}
+
+		if want := time.Date(2016, time.March, 31, 12, 0, 0, 0, time.UTC); wider.WindowMonths != 120 || !wider.AfterDate.Equal(want) {
+			t.Fatalf("ten-year run = %+v, want boundary %s", wider, want)
+		}
+		persisted, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+		if err != nil || persisted == nil || !persisted.AfterDate.Equal(time.Date(2016, time.March, 31, 0, 0, 0, 0, time.UTC)) {
+			t.Fatalf("persisted ten-year boundary = %+v, error = %v", persisted, err)
+		}
+		status, scanned, captured, _ := readBackfillRow(t, e, run.ID)
+		if status != "done" || scanned != 25 || captured != 22 {
+			t.Fatalf("extending changed prior run: status=%s scanned=%d captured=%d", status, scanned, captured)
 		}
 
 		// Cancel the widened run: terminal, with captured counts retained.
 		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
 			t.Fatalf("CancelBackfill: %v", err)
 		}
-		status, _, _, _ := readBackfillRow(t, e, wider.ID)
+		status, _, _, _ = readBackfillRow(t, e, wider.ID)
 		if status != "cancelled" {
 			t.Fatalf("status = %s, want cancelled", status)
 		}
@@ -240,7 +275,7 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 	// one-live-run guard permits it and the same 6-month window never narrows.
 	startWithCursor := func(t *testing.T, cursorJSON string) ids.UUID {
 		t.Helper()
-		run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, enqueueNothing)
+		run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 		if err != nil {
 			t.Fatalf("StartBackfill: %v", err)
 		}
@@ -297,7 +332,7 @@ func TestStartBackfillRollsBackWhenTheJobCannotBeScheduled(t *testing.T) {
 
 	queueDown := errors.New("the job queue refused the insert")
 	failToSchedule := func(context.Context, pgx.Tx, ids.UUID) error { return queueDown }
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, failToSchedule); !errors.Is(err, queueDown) {
+	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, failToSchedule); !errors.Is(err, queueDown) {
 		t.Fatalf("StartBackfill over a dead queue = %v, want the scheduling fault", err)
 	}
 
@@ -313,7 +348,7 @@ func TestStartBackfillRollsBackWhenTheJobCannotBeScheduled(t *testing.T) {
 
 	// What the rollback buys the user: the retry starts, instead of colliding
 	// with the wreckage of the attempt that failed.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, enqueueNothing); err != nil {
+	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); err != nil {
 		t.Fatalf("the retry after a failed schedule must start cleanly, got %v", err)
 	}
 }

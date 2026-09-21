@@ -30,10 +30,12 @@ import (
 // raw flags plus the fields that evidence them. The TOOL decides what is
 // presentable — a flag without its grounding field is dropped here.
 type SlippingDeal struct {
-	DealID      ids.UUID
-	Name        string
-	AmountMinor *int64
-	Currency    *string
+	CloseDateProvisional *bool
+	ForecastCategory     *string
+	DealID               ids.UUID
+	Name                 string
+	AmountMinor          *int64
+	Currency             *string
 	// StageID and OwnerID ride the same row-scoped list read as the rest:
 	// the attention card states value, stage and ownership without a
 	// second read per deal, and nothing here widens what the list already
@@ -75,7 +77,7 @@ type SlippingLister func(ctx context.Context) ([]SlippingDeal, error)
 // draft_email drafts ONE message meant to be sent now, so it returns text and
 // files nothing — matching the HTTP draft endpoint the web app's own button
 // calls, which is an agreement worth keeping. compose.commsAdapter's
-// DraftAccountEmail carries that half of the reasoning.
+// DraftCompanyEmail carries that half of the reasoning.
 type FollowUpDrafter func(ctx context.Context, deal SlippingDeal) (draftActivityID ids.UUID, summary string, err error)
 
 // RegisterSlippingTools wires the pipeline-risk intents. No lister, no

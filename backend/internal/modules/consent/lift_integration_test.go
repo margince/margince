@@ -32,14 +32,14 @@ import (
 // plantSuppression writes a row at a named level, bypassing the write door so a
 // lift test can start from a level that door would never produce — `subject`
 // above all, which is the arm that must never be liftable.
-func plantSuppression(t *testing.T, e *channelConsentEnv, person ids.PersonID, level string) ids.UUID {
+func plantSuppression(t *testing.T, e *channelConsentEnv, contact ids.ContactID, level string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression
-		    (id, person_id, kind, source, captured_by, decided_by_level)
+		    (id, contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, $2, 'subject_request', 'test', 'human:x', $3)`,
-		id, person, level); err != nil {
+		id, contact, level); err != nil {
 		t.Fatalf("planting a %s-level suppression: %v", level, err)
 	}
 	return id
@@ -62,11 +62,11 @@ func stillLive(t *testing.T, e *channelConsentEnv, id ids.UUID) bool {
 // the level a claim rather than a rule.
 func TestAnAdminLiftsARepsStop(t *testing.T) {
 	e := setupChannelConsent(t)
-	row := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
 	// setupChannelConsent binds an admin role, so e.ctx is the admin seat.
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: "they asked us to resume",
+		ContactID: e.contact, SuppressionID: row, Reason: "they asked us to resume",
 	}); err != nil {
 		t.Fatalf("an admin lifting a rep's stop: %v", err)
 	}
@@ -82,9 +82,9 @@ func TestAnAdminLiftsARepsStop(t *testing.T) {
 // deliberate escalation rather than something a rep does by pressing a button.
 func TestARepDoesNotLiftAnotherRepsStop(t *testing.T) {
 	e := setupChannelConsent(t)
-	own := ids.New[ids.PersonKind]()
+	own := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO person (id, full_name, source, captured_by, visibility, owner_id)
+		INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
 		VALUES ($1, 'Their Own Contact', 'test', 'human:x', 'workspace', $2)`,
 		own, e.user); err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestARepDoesNotLiftAnotherRepsStop(t *testing.T) {
 	row := plantSuppression(t, e, own, string(commsauthz.LevelUser))
 
 	err := e.store.Lift(boundedRepCtx(e.ws, e.user), LiftInput{
-		PersonID: own, SuppressionID: row, Reason: "I think they changed their mind",
+		ContactID: own, SuppressionID: row, Reason: "I think they changed their mind",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep lifting a peer's stop answered %v, want ErrPermissionDenied", err)
@@ -110,11 +110,11 @@ func TestARepDoesNotLiftAnotherRepsStop(t *testing.T) {
 // would believe the send was permitted.
 func TestNobodyLiftsTheSubjectsOwnAct(t *testing.T) {
 	e := setupChannelConsent(t)
-	row := plantSuppression(t, e, e.person, string(commsauthz.LevelSubject))
+	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelSubject))
 
 	// The admin seat, which outranks every other level there is.
 	err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: "we would like to resume",
+		ContactID: e.contact, SuppressionID: row, Reason: "we would like to resume",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an admin lifting the subject's own act answered %v, want ErrPermissionDenied", err)
@@ -131,15 +131,15 @@ func TestNobodyLiftsTheSubjectsOwnAct(t *testing.T) {
 // be allowed to touch.
 func TestAnAlreadyLiftedStopAnswersNotFound(t *testing.T) {
 	e := setupChannelConsent(t)
-	row := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: "first",
+		ContactID: e.contact, SuppressionID: row, Reason: "first",
 	}); err != nil {
 		t.Fatalf("the first lift: %v", err)
 	}
 	err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: "second",
+		ContactID: e.contact, SuppressionID: row, Reason: "second",
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("lifting an already-lifted stop answered %v, want ErrNotFound", err)
@@ -147,7 +147,7 @@ func TestAnAlreadyLiftedStopAnswersNotFound(t *testing.T) {
 
 	// And an id belonging to nobody answers the same way.
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: ids.NewV7(), Reason: "x",
+		ContactID: e.contact, SuppressionID: ids.NewV7(), Reason: "x",
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("lifting an unknown id answered %v, want ErrNotFound", err)
 	}
@@ -160,12 +160,12 @@ func TestAnAlreadyLiftedStopAnswersNotFound(t *testing.T) {
 // look like it worked and change nothing a rep can see.
 func TestALiftedStopStopsRefusingTheSend(t *testing.T) {
 	e := setupChannelConsent(t)
-	row := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
 	var liveBefore int
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_suppression
-		 WHERE person_id = $1 AND revoked_at IS NULL`, e.person).Scan(&liveBefore); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, e.contact).Scan(&liveBefore); err != nil {
 		t.Fatal(err)
 	}
 	if liveBefore != 1 {
@@ -173,7 +173,7 @@ func TestALiftedStopStopsRefusingTheSend(t *testing.T) {
 	}
 
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: "resolved on a call",
+		ContactID: e.contact, SuppressionID: row, Reason: "resolved on a call",
 	}); err != nil {
 		t.Fatalf("lifting: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestALiftedStopStopsRefusingTheSend(t *testing.T) {
 	var liveAfter int
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_suppression
-		 WHERE person_id = $1 AND revoked_at IS NULL`, e.person).Scan(&liveAfter); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, e.contact).Scan(&liveAfter); err != nil {
 		t.Fatal(err)
 	}
 	if liveAfter != 0 {
@@ -196,10 +196,10 @@ func TestALiftedStopStopsRefusingTheSend(t *testing.T) {
 // row said somebody asked us not to write, and this says who overruled that.
 func TestTheLiftCarriesItsAuditAndItsEvent(t *testing.T) {
 	e := setupChannelConsent(t)
-	row := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: "resolved on a call",
+		ContactID: e.contact, SuppressionID: row, Reason: "resolved on a call",
 	}); err != nil {
 		t.Fatalf("lifting: %v", err)
 	}
@@ -207,8 +207,8 @@ func TestTheLiftCarriesItsAuditAndItsEvent(t *testing.T) {
 	var payload string
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT after::text FROM audit_log
-		 WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'
-		   AND after ? 'lifted_suppression'`, e.person).Scan(&payload); err != nil {
+		 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'update'
+		   AND after ? 'lifted_suppression'`, e.contact).Scan(&payload); err != nil {
 		t.Fatalf("the lift left no audit entry naming the row it took back: %v", err)
 	}
 	// Both levels, because an auditor checking that the lift was permitted needs
@@ -246,13 +246,13 @@ func TestTheLiftCarriesItsAuditAndItsEvent(t *testing.T) {
 func TestALiftIsRefusedOnAContactOutsideTheCallersScope(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	hidden := seedForeignPerson(t, e, "owner")
+	hidden := seedForeignContact(t, e, "owner")
 	// A MACHINE-level stop, which every seat outranks — so a refusal here is the
 	// probe refusing and not the level rule.
 	row := plantSuppression(t, e, hidden, string(commsauthz.LevelMachine))
 
 	err := e.store.Lift(boundedRepCtx(e.ws, e.user), LiftInput{
-		PersonID: hidden, SuppressionID: row, Reason: "looks stale to me",
+		ContactID: hidden, SuppressionID: row, Reason: "looks stale to me",
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("lifting on an invisible contact answered %v, want ErrNotFound", err)
@@ -272,11 +272,11 @@ func TestALiftIsRefusedOnAContactOutsideTheCallersScope(t *testing.T) {
 func TestALiftIsRefusedOnAContactTheCallerMayOnlyRead(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	theirs := seedForeignPerson(t, e, "workspace")
+	theirs := seedForeignContact(t, e, "workspace")
 	row := plantSuppression(t, e, theirs, string(commsauthz.LevelMachine))
 
 	err := e.store.Lift(boundedRepCtx(e.ws, e.user), LiftInput{
-		PersonID: theirs, SuppressionID: row, Reason: "looks stale to me",
+		ContactID: theirs, SuppressionID: row, Reason: "looks stale to me",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("lifting on a read-only contact answered %v, want ErrPermissionDenied", err)
@@ -286,11 +286,11 @@ func TestALiftIsRefusedOnAContactTheCallerMayOnlyRead(t *testing.T) {
 	}
 }
 
-// seedForeignPerson plants a person owned by somebody other than the test's rep,
+// seedForeignContact plants a contact owned by somebody other than the test's rep,
 // at the given visibility.
-func seedForeignPerson(t *testing.T, e *channelConsentEnv, visibility string) ids.PersonID {
+func seedForeignContact(t *testing.T, e *channelConsentEnv, visibility string) ids.ContactID {
 	t.Helper()
-	person := ids.New[ids.PersonKind]()
+	contact := ids.New[ids.ContactKind]()
 	owner := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Owning rep')`,
@@ -298,12 +298,12 @@ func seedForeignPerson(t *testing.T, e *channelConsentEnv, visibility string) id
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO person (id, full_name, source, captured_by, visibility, owner_id)
+		INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
 		VALUES ($1, 'Somebody Else''s Contact', 'test', 'human:x', $2, $3)`,
-		person, visibility, owner); err != nil {
+		contact, visibility, owner); err != nil {
 		t.Fatal(err)
 	}
-	return person
+	return contact
 }
 
 // TestALiftNeedsAReasonSomebodyCanReview holds the field the contract requires.
@@ -314,7 +314,7 @@ func seedForeignPerson(t *testing.T, e *channelConsentEnv, visibility string) id
 // enforces the contract's copy.
 func TestALiftNeedsAReasonSomebodyCanReview(t *testing.T) {
 	e := setupChannelConsent(t)
-	row := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
 	for name, reason := range map[string]string{
 		"empty":      "",
@@ -322,7 +322,7 @@ func TestALiftNeedsAReasonSomebodyCanReview(t *testing.T) {
 		"too long":   strings.Repeat("x", reasonMax+1),
 	} {
 		err := e.store.Lift(e.ctx, LiftInput{
-			PersonID: e.person, SuppressionID: row, Reason: reason,
+			ContactID: e.contact, SuppressionID: row, Reason: reason,
 		})
 		var invalid *ValidationError
 		if !errors.As(err, &invalid) {
@@ -342,7 +342,7 @@ func TestALiftNeedsAReasonSomebodyCanReview(t *testing.T) {
 	// The bound admits its own limit, so the check is a ceiling and not an
 	// off-by-one that refuses a legitimate 500-character explanation.
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: strings.Repeat("x", reasonMax),
+		ContactID: e.contact, SuppressionID: row, Reason: strings.Repeat("x", reasonMax),
 	}); err != nil {
 		t.Errorf("a reason at exactly the limit was refused: %v", err)
 	}
@@ -371,7 +371,7 @@ func lastLiftPayload(t *testing.T, e *channelConsentEnv) crmcontracts.PublicEven
 // TestALiftSaysWhatStillStands is the whole reason the event carries more than
 // two authority levels.
 //
-// A person can hold several stops at once — their own objection and a rep's
+// A contact can hold several stops at once — their own objection and a rep's
 // separate note. Lifting one leaves the others standing, and an event that says
 // only "a stop was lifted" reads to an outside consumer as "you may write to
 // them now". Margince itself is safe either way, because the engine re-reads the
@@ -382,11 +382,11 @@ func TestALiftSaysWhatStillStands(t *testing.T) {
 
 	// Two stops. The user-level one is liftable by an admin; the subject's own
 	// is not, and is what must still be reported after the lift.
-	liftable := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
-	subjects := plantSuppression(t, e, e.person, string(commsauthz.LevelSubject))
+	liftable := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
+	subjects := plantSuppression(t, e, e.contact, string(commsauthz.LevelSubject))
 
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID:      e.person,
+		ContactID:     e.contact,
 		SuppressionID: liftable,
 		Reason:        "the rep confirmed this note was filed against the wrong contact",
 	}); err != nil {
@@ -415,10 +415,10 @@ func TestALiftSaysWhatStillStands(t *testing.T) {
 // the event must say so, or a consumer holding mail back forever is the bug.
 func TestALiftOfTheLastStopSaysSo(t *testing.T) {
 	e := setupChannelConsent(t)
-	only := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	only := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID:      e.person,
+		ContactID:     e.contact,
 		SuppressionID: only,
 		Reason:        "recorded in error against this contact",
 	}); err != nil {
@@ -435,20 +435,20 @@ func TestALiftOfTheLastStopSaysSo(t *testing.T) {
 
 // TestALiftReportsAnAddressPinnedStopAsStanding holds the count's match rule.
 //
-// A hard bounce is pinned to an ADDRESS and carries no person_id. The engine
+// A hard bounce is pinned to an ADDRESS and carries no contact_id. The engine
 // still refuses every message to that mailbox, because liveSuppression matches
-// person OR lead OR address. A count that asked only about person_id would
+// contact OR lead OR address. A count that asked only about contact_id would
 // answer "nothing stands" for exactly that subject, and still_suppressed would
 // tell a consumer to resume mail the engine will not send. Under-reporting is
 // the one direction this field must never fail in.
 func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	address := "bounced-" + e.person.String() + "@example.test"
+	address := "bounced-" + e.contact.String() + "@example.test"
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		 VALUES ($1, lower($2), true, 'test', 'human:x')`, e.person, address); err != nil {
-		t.Fatalf("giving the person an address: %v", err)
+		`INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		 VALUES ($1, lower($2), true, 'test', 'human:x')`, e.contact, address); err != nil {
+		t.Fatalf("giving the contact an address: %v", err)
 	}
 	// Pinned to the address alone, the way a bounce handler writes it.
 	if _, err := e.owner.Exec(context.Background(),
@@ -459,13 +459,13 @@ func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 		t.Fatalf("planting the address-pinned bounce: %v", err)
 	}
 
-	liftable := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	liftable := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID:      e.person,
+		ContactID:     e.contact,
 		SuppressionID: liftable,
 		Reason:        "filed against the wrong contact",
 	}); err != nil {
-		t.Fatalf("lifting the person-level stop: %v", err)
+		t.Fatalf("lifting the contact-level stop: %v", err)
 	}
 
 	payload := lastLiftPayload(t, e)
@@ -474,6 +474,100 @@ func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 		t.Errorf("remaining = %s, still_suppressed = %s; want 1 and true — the bounce on "+
 			"%s is still live and the engine will still refuse this mail",
 			derefInt(payload.RemainingSuppressions), derefBool(payload.StillSuppressed), address)
+	}
+}
+
+// plantNarrowSuppression writes a contact's marketing_objection scoped to ONE
+// consent_purpose, at user level — the same bypass plantSuppression uses,
+// because no writer gives a CONTACT a narrow stop yet. Lift takes a ContactID
+// (consentSubject resolves only contact or lead, and LiftInput carries no
+// LeadID field), so the lead-only narrow writer StopForCredentialTx reaches —
+// withdrawalpress.go's named-purpose press — can never produce the row this
+// test needs. Planting it directly is the accepted way this package reaches a
+// row shape no door on this subject type writes yet. Fixed at user level: every
+// lift here overrules a user-level stop, and no case needs another tier.
+func plantNarrowSuppression(
+	t *testing.T, e *channelConsentEnv, contact ids.ContactID, purpose ids.UUID,
+) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression
+		    (id, contact_id, purpose_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, $3, $4, 'test', 'human:x', $5)`,
+		id, contact, purpose, commsauthz.ReasonObjection, string(commsauthz.LevelUser)); err != nil {
+		t.Fatalf("planting a narrow-purpose suppression: %v", err)
+	}
+	return id
+}
+
+// TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose is the ROW half of
+// lift's purpose-agnostic contract: the row lookup asks for id and contact_id
+// only, so a narrow stop lifts exactly as a broad one does. The two narrow
+// rows here carry DIFFERENT purposes and the SAME kind — the shape a
+// purpose-blind bug would confuse, either by refusing to find the targeted
+// row (over-matching would not explain a miss, so this pins UNDER-matching:
+// the id alone must be enough) or, the case that matters more, by touching
+// the wrong one.
+func TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+	second := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+		VALUES ($1, 'second-newsletter', 'Second Newsletter', false)`, second); err != nil {
+		t.Fatal(err)
+	}
+	targeted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID)
+	other := plantNarrowSuppression(t, e, e.contact, second)
+
+	if err := e.store.Lift(e.ctx, LiftInput{
+		ContactID: e.contact, SuppressionID: targeted, Reason: "they resubscribed to this one on a call",
+	}); err != nil {
+		t.Fatalf("lifting the targeted narrow stop: %v", err)
+	}
+
+	if stillLive(t, e, targeted) {
+		t.Error("the narrow stop named by id is still live — lift did not act on the row it was told to")
+	}
+	if !stillLive(t, e, other) {
+		t.Error("a DIFFERENT narrow stop was revoked by a lift that named the other row's id — " +
+			"the lookup is not purpose-agnostic, it is purpose-confused")
+	}
+}
+
+// TestALiftReportsARemainingNarrowStopAsStanding is the COUNT half: after
+// lifting one narrow stop, a second narrow stop on a different purpose must
+// still report still_suppressed — the subject remains stopped from that one
+// newsletter, and a consumer told otherwise would resume mail to somebody who
+// is still refused it.
+func TestALiftReportsARemainingNarrowStopAsStanding(t *testing.T) {
+	e := setupChannelConsent(t)
+	second := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+		VALUES ($1, 'second-newsletter', 'Second Newsletter', false)`, second); err != nil {
+		t.Fatal(err)
+	}
+	lifted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID)
+	remaining := plantNarrowSuppression(t, e, e.contact, second)
+
+	if err := e.store.Lift(e.ctx, LiftInput{
+		ContactID: e.contact, SuppressionID: lifted, Reason: "resolved the newsletter complaint",
+	}); err != nil {
+		t.Fatalf("lifting: %v", err)
+	}
+
+	payload := lastLiftPayload(t, e)
+	if payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 1 {
+		t.Errorf("remaining_suppressions = %s, want 1 — the second-newsletter objection is still live",
+			derefInt(payload.RemainingSuppressions))
+	}
+	if payload.StillSuppressed == nil || !*payload.StillSuppressed {
+		t.Error("still_suppressed = false while a narrow objection to the second newsletter is " +
+			"still live — a consumer reading this event would treat the subject as fully clear")
+	}
+	if !stillLive(t, e, remaining) {
+		t.Error("the second narrow stop was revoked by a lift that named the other row's id")
 	}
 }
 

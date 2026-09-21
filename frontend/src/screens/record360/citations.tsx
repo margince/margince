@@ -11,8 +11,9 @@
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
 import { Badge, Button } from "../../design-system/atoms";
+import { EmailReference } from "../../design-system/emailreference";
 import { Popover } from "../../design-system/popover";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
@@ -20,11 +21,11 @@ import type { MessageKey } from "../../i18n/en";
  * One sentence of grounded prose, with what it rests on.
  *
  * Typed against the contract's own shared sentence — which the contract
- * spells `OrganizationBriefSentence` and uses for the org brief, the deal
- * status card, Person360 and the growth-fit panel alike. The name is the
+ * spells `CompanyBriefSentence` and uses for the company brief, the deal
+ * status card, Contact360 and the growth-fit panel alike. The name is the
  * contract's; the shape has never been a company's.
  */
-export type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
+export type BriefSentence = components["schemas"]["CompanyBriefSentence"];
 
 /** One record a sentence was written from. */
 export type Cited = BriefSentence["evidence"][number];
@@ -98,7 +99,7 @@ function hasReceipt(cited: Cited): boolean {
  * the first and stepping through the rest — rendered one per record they
  * became the same run under a different reason: a receipt has no name of its
  * own, so ten profile fields all read "profile field", ten times, with nothing
- * to tell them apart. `deal`/`person` stay one chip per record: each opens its
+ * to tell them apart. `deal`/`contact` stay one chip per record: each opens its
  * OWN screen rather than a shared stepper, so collapsing them would silently
  * drop every record after the first.
  *
@@ -106,7 +107,13 @@ function hasReceipt(cited: Cited): boolean {
  */
 export function citationChips(
   evidence: readonly Cited[],
-  openable: (entityType: CitedKind) => boolean,
+  // Asked about the CITATION, not about its kind. Whether an activity opens
+  // depends on the row: one carrying an email summary this reader may receive
+  // opens the message, and one carrying none opens nothing — same kind, two
+  // answers. A kind-only predicate had to give both rows the same one, so a
+  // sentence resting on a readable message and a withheld one either offered
+  // two dead controls or hid a live one.
+  openable: (cited: Cited) => boolean,
   groupable: (entityType: CitedKind) => boolean = () => false,
 ): CitationChip[] {
   const chips: CitationChip[] = [];
@@ -119,7 +126,7 @@ export function citationChips(
       nameRepeat(chips[already], cited);
       continue;
     }
-    const isOpenable = openable(cited.entity_type);
+    const isOpenable = openable(cited);
     // Its own chip: a record with a page of its own, or one carrying a
     // receipt. A citation with a receipt is never folded into a count — the
     // quote is about ONE record, and a chip for three activities that opened
@@ -202,16 +209,47 @@ function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
 // can be stepped through, because only these render in the drawer.
 const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
 
-// The citation kinds a reader can open something for. `deal` and `person` route
-// to their own screens; `fact` and `profile_field` open their receipt instead —
+// The citation kinds that route to a record of their own. `deal` and `contact`
+// open their screens; `fact` and `profile_field` open their receipt instead —
 // where the value came from, when it was read, and what could not be recorded.
 //
-// An activity has no detail route of its own (it lives in a timeline) and no
-// receipt either, and the organization citation is usually the page the reader
-// is already on. Both stay flat: a clickable element that does nothing teaches
-// the reader that citations do not work, which costs more than the click it
-// saves.
-const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
+// `activity` is not here, and `company` is not either, for two different
+// reasons. An activity lives in a timeline and has no route; what it CAN open
+// is the message itself, decided per row by `emailOf` below. A company
+// citation is usually the page the reader is already on.
+const ROUTABLE_CITATIONS = new Set([
+  "deal",
+  "contact",
+  "fact",
+  "profile_field",
+]);
+
+/**
+ * The message behind a citation, when there is one this reader may open.
+ *
+ * Three things have to be true together, which is why the question is asked
+ * here once rather than at each of the eight call sites. The citation has to be
+ * an activity; the server has to have sent the canonical email row for it, which
+ * it does only for an email this reader may receive a summary of; and the host
+ * has to mount a drawer for it to open into. Any of the three missing means the
+ * citation names a message and cannot open one, and then it is prose.
+ *
+ * A `withheld` summary is the interesting case: the row exists and the words are
+ * not this reader's. It still renders — as a reference with no subject and no
+ * control — because drawing nothing would say the message did not happen.
+ */
+function emailOf(cited: Cited): Cited["email_summary"] | undefined {
+  return cited.entity_type === "activity"
+    ? (cited.email_summary ?? undefined)
+    : undefined;
+}
+
+// Whether the HOST can open a message at all. The other half of the question —
+// whether this reader may read THIS one — is EmailReference's own: it takes the
+// withheld state and drops the opener whatever the caller passed, because a
+// privacy rule living in a prop contract is a rule the next caller has to
+// remember. Repeating it here would be a second copy of that decision, and the
+// two would be free to disagree.
 
 /** One steppable citation, in the receipt's own shape. */
 export type CitedSibling = {
@@ -235,6 +273,24 @@ function dedupeCited(evidence: readonly Cited[]): CitedSibling[] {
       entityType: each.entity_type as "fact" | "profile_field",
       entityId: each.entity_id,
     });
+  }
+  return out;
+}
+
+// The cited messages, once each, in the order the sentence names them.
+//
+// A message keeps whichever citation the server named FIRST: they are two
+// mentions of one activity, so the summary behind them is the same row read
+// once, and the later mention adds nothing to drop the earlier one for.
+function dedupeMessages(evidence: readonly Cited[]): Cited[] {
+  const seen = new Set<string>();
+  const out: Cited[] = [];
+  for (const cited of evidence) {
+    if (!emailOf(cited) || seen.has(cited.entity_id)) {
+      continue;
+    }
+    seen.add(cited.entity_id);
+    out.push(cited);
   }
   return out;
 }
@@ -279,6 +335,7 @@ function chipLabel(chip: CitationChip, t: Translator, locale: Locale): string {
 export function Citations({
   evidence,
   onOpenRecord,
+  onOpenEmail,
   nameOf,
 }: Readonly<{
   evidence: readonly Cited[];
@@ -286,7 +343,7 @@ export function Citations({
   //
   // The server names a citation when the writer had the name at hand and
   // leaves it out otherwise, and this file invents nothing — but a page
-  // showing an account's own 360 is HOLDING the names of that account's people
+  // showing an account's own 360 is HOLDING the names of that account's contacts
   // and deals, and printing "contact" beside a reason while the roster three
   // sections down says "Frédéric de Gombert" is the page failing to read
   // itself. Answers undefined for a record it does not know, which falls back
@@ -297,16 +354,37 @@ export function Citations({
     entityId: string,
     siblings?: readonly CitedSibling[],
   ) => void;
+  /**
+   * Opens one message in the host's own email drawer.
+   *
+   * Beside `onOpenRecord` rather than folded into it: a message is not a record
+   * with a route, it is a drawer the host already mounts for its timeline, and
+   * a host that mounts none passes nothing here. The citation then renders the
+   * message as prose instead of as a control that does nothing.
+   */
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const named = evidence.map((cited) =>
+    cited.name || !nameOf
+      ? cited
+      : { ...cited, name: nameOf(cited.entity_type, cited.entity_id) },
+  );
+  // A cited message is drawn as a message, by the one component that cites one,
+  // and never folded into the chip run. The chips speak in record kinds — "deal",
+  // "3 activities" — and a message has a subject and a date the reader checks
+  // the claim against, which a kind word cannot carry.
+  // Deduplicated the way the chips are, and for the same reason: the same
+  // record cited twice is one source. A brief resting four sentences on one
+  // thread would otherwise draw the message four times — and, because the key
+  // is the activity id, draw it four times under one React key.
+  const messages = dedupeMessages(named);
   const chips = citationChips(
-    evidence.map((cited) =>
-      cited.name || !nameOf
-        ? cited
-        : { ...cited, name: nameOf(cited.entity_type, cited.entity_id) },
-    ),
-    (entityType) => Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(entityType),
+    named.filter((cited) => !emailOf(cited)),
+    (cited) =>
+      Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(cited.entity_type),
     (entityType) => RECEIPT_CITATIONS.has(entityType),
   );
   // THIS sentence's citations, in the order it cites them, so the receipt's
@@ -317,11 +395,29 @@ export function Citations({
   // citing the same fact twice would leave `findIndex` returning the first
   // occurrence forever, and Next would never move past it.
   const siblings = dedupeCited(evidence);
-  if (chips.length === 0) {
+  if (chips.length === 0 && messages.length === 0) {
     return null;
   }
   return (
     <span className="co-brief-cites">
+      {messages.map((cited) => {
+        const summary = emailOf(cited);
+        if (!summary) {
+          return null;
+        }
+        const withheld = summary.display_status === "withheld";
+        return (
+          <EmailReference
+            key={`activity:${cited.entity_id}`}
+            subject={summary.subject}
+            occurredAt={formatDateTime(summary.occurred_at, locale, recordZone)}
+            withheld={withheld}
+            onOpen={
+              onOpenEmail ? () => onOpenEmail(summary.activity_id) : undefined
+            }
+          />
+        );
+      })}
       {chips.map((chip) => {
         const open = chip.openable
           ? () => onOpenRecord?.(chip.entityType, chip.entityId, siblings)
@@ -393,7 +489,7 @@ function CitationWithReceipt({
       {provenance && <p className="co-cite-origin t-caption">{provenance}</p>}
       {onOpen && (
         <p className="co-cite-open">
-          <Button small variant="ghost" onClick={onOpen}>
+          <Button variant="ghost" onClick={onOpen}>
             {t("co.cite.open")}
           </Button>
         </p>
@@ -421,12 +517,15 @@ const NATURE_LABELS: Record<
 export function SentenceList({
   sentences,
   onOpenRecord,
+  onOpenEmail,
   nameOf,
   citations = "per-sentence",
   leadWithJudgement = false,
 }: Readonly<{
   sentences: BriefSentence[];
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  /** Opens one cited message; see `Citations`. */
+  onOpenEmail?: (activityId: string) => void;
   // The record's own name for a citation the writer could not name — see
   // `Citations`. Passed through rather than resolved here: the names belong to
   // the page holding the record, not to the prose.
@@ -461,13 +560,16 @@ export function SentenceList({
     <>
       {lead ? (
         <p className="co-brief-lead">
-          <NatureBadge sentence={lead} />
+          {/* No nature word on the lead: being set apart IS its mark. The
+              lines under it keep theirs, where a suggestion sits beside a
+              fact and the word is what tells them apart. */}
           {lead.text}
           {citations === "per-sentence" && (
             <Citations
               evidence={lead.evidence}
               nameOf={nameOf}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
           )}
         </p>
@@ -485,6 +587,7 @@ export function SentenceList({
                 evidence={sentence.evidence}
                 nameOf={nameOf}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             )}
           </li>
@@ -495,6 +598,7 @@ export function SentenceList({
               evidence={sentences.flatMap((sentence) => sentence.evidence)}
               nameOf={nameOf}
               onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
             />
           </li>
         )}
@@ -508,23 +612,21 @@ export function SentenceList({
  * looked like a stored fact would be the one thing a reader could not check —
  * and the prose is allowed to judge now.
  *
- * It rides the leading sentence too, so a promoted judgement keeps its mark
- * rather than losing it to the promotion. A fact leading a block carries no
- * badge and is meant to — that is a block with nothing to judge, and the
- * absence of the mark is what says so.
+ * The leading sentence carries none: being set apart at the top IS its mark.
  */
 function NatureBadge({ sentence }: Readonly<{ sentence: BriefSentence }>) {
   const t = useT();
   if (!sentence.nature || sentence.nature === "fact") {
     return null;
   }
-  return (
-    <>
-      <Badge tone={sentence.nature === "recommendation" ? "accent" : undefined}>
-        {t(NATURE_LABELS[sentence.nature])}
-      </Badge>{" "}
-    </>
-  );
+  // A word in the sentence's own line, not a pill in front of it: "Suggested:
+  // use the call to…" reads as prose with its kind named, where a pill per
+  // sentence made a four-line brief carry four boxes.
+  const cls =
+    sentence.nature === "recommendation"
+      ? "co-brief-nature co-brief-nature-suggested"
+      : "co-brief-nature";
+  return <span className={cls}>{t(NATURE_LABELS[sentence.nature])}: </span>;
 }
 
 /**

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { DealCommitteeMap } from "./dealcommittee";
+import { CommitteeReading } from "./dealcommittee";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
@@ -24,14 +24,14 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL_ID,
   stakeholders: [
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b1",
-      person_name: "Dana Weiss",
+      contact_id: "01a03000-0000-7000-8000-0000000000b1",
+      contact_name: "Dana Weiss",
       role: "champion",
       engaged: true,
     },
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b3",
-      person_name: "Ines Kraft",
+      contact_id: "01a03000-0000-7000-8000-0000000000b3",
+      contact_name: "Ines Kraft",
       role: "evaluator",
       engaged: false,
     },
@@ -50,7 +50,7 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   ...over,
 });
 
-function draw(props: Parameters<typeof DealCommitteeMap>[0]): void {
+function draw(props: Parameters<typeof CommitteeReading>[0]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -59,24 +59,33 @@ function draw(props: Parameters<typeof DealCommitteeMap>[0]): void {
       <LocaleProvider>{node}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(wrap(<DealCommitteeMap {...props} />));
+  return render(wrap(<CommitteeReading {...props} />));
 }
 
 afterEach(cleanup);
 
 describe("the buying committee, drawn", () => {
-  it("names every seat it draws, engaged or not", () => {
+  it("draws one seat per stakeholder and names none of them", () => {
     draw({
       coverage: coverage(),
       withheld: false,
       pending: false,
-      overlay: false,
     });
-    // The accessible list is the assertion rather than the SVG: a reader on a
-    // screen reader gets the rows, and a map that drew shapes for seats it did
-    // not name would pass any check that counted only circles.
-    expect(screen.getByText("Dana Weiss")).toBeTruthy();
-    expect(screen.getByText("Ines Kraft")).toBeTruthy();
+    // The reading is the PICTURE only. Naming the seats here is what made the
+    // page carry three lists of one committee, so the names belong to the
+    // table this map stands on (dealcommitteecard.tsx) and the count is what proves
+    // the map did not quietly drop a seat it was given.
+    expect(document.querySelectorAll(".dc-seat").length).toBe(
+      // Our own node is a seat circle too, so the buyer's seats plus ours.
+      coverage().stakeholders.length + 1,
+    );
+    expect(screen.queryByText("Dana Weiss")).toBeNull();
+    expect(screen.queryByText("Ines Kraft")).toBeNull();
+  });
+
+  it("says how many of ours carry the deal, which the picture can only size", () => {
+    draw({ coverage: coverage(), withheld: false, pending: false });
+    expect(screen.getByText("1 of ours carry it")).toBeTruthy();
   });
 
   // Each of the three no-seat states asserts ITS OWN sentence, not merely the
@@ -89,7 +98,6 @@ describe("the buying committee, drawn", () => {
       coverage: undefined,
       withheld: true,
       pending: false,
-      overlay: false,
     });
     expect(
       screen.getByText("Hidden — your role cannot read this"),
@@ -105,7 +113,6 @@ describe("the buying committee, drawn", () => {
       coverage: undefined,
       withheld: false,
       pending: true,
-      overlay: false,
     });
     // The busy region rather than its label: the label lands in an sr-only
     // span or a visible note depending on the caller, and asserting the one
@@ -120,18 +127,34 @@ describe("the buying committee, drawn", () => {
     expect(screen.queryByText("Dana Weiss")).toBeNull();
   });
 
-  it("says the deal has no stakeholders when the read is simply empty", () => {
-    draw({
+  // The empty case is the ONE state this reading stays silent for, and the
+  // silence is only safe because the stakeholder rows beneath it say the
+  // sentence instead. It is asserted against the withheld case deliberately:
+  // "nobody is on this deal" and "you may not see who is" are opposite claims,
+  // so a regression that let withheld fall through to silence would leave a
+  // reader with no seats and no reason, and an absence-only check would stay
+  // green through it.
+  it("draws nothing when the read is simply empty, leaving the rows to say so", () => {
+    const { container } = draw({
       coverage: coverage({ stakeholders: [] }),
       withheld: false,
       pending: false,
-      overlay: false,
     });
+    expect(container.firstChild).toBeNull();
     expect(
-      screen.getByText("No stakeholder is recorded on this deal"),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText("Hidden — your role cannot read this"),
+      screen.queryByText("No stakeholder is recorded on this deal"),
     ).toBeNull();
+  });
+
+  it("still names the withheld case rather than falling silent with it", () => {
+    const { container } = draw({
+      coverage: undefined,
+      withheld: true,
+      pending: false,
+    });
+    expect(container.firstChild).not.toBeNull();
+    expect(
+      screen.getByText("Hidden — your role cannot read this"),
+    ).toBeTruthy();
   });
 });

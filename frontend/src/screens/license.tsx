@@ -1,16 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info, TriangleAlert } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
 import { LicenseHolderCard } from "./licenseholder";
@@ -22,20 +19,22 @@ import { LicenseHolderCard } from "./licenseholder";
 //
 // Four states the server distinguishes, and the reading has to as well:
 //
-//   valid, with a seat count   the strip reads used beside granted, then a meter
-//   valid, with no seat count  a license that caps nothing: a count, no meter
+//   valid, with a seat count   used against granted, with the bar under it
+//   valid, with no seat count  a license that caps nothing: a count, no bar
 //   absent                     no license configured; nothing to measure against
 //   rejected                   asked and told no — a fault with a repair behind
 //                              it, which `absent` is not
 //
 // The middle case is why `seats_granted` is nullable rather than zero, and why
-// the granted slot says "no limit" instead of a number: a meter filled against a
+// the reading says "no limit" instead of a number: a meter filled against a
 // limit nobody set would invent the limit.
 //
-// A strip rather than two cards, because the two numbers are ONE comparison —
-// used against granted is the whole question this screen answers, and cards are
-// read one at a time. It sits in one stacked `SettingRow`, for the same reason:
-// a row per figure would split the comparison the strip exists to make.
+// ONE reading, because used against granted is ONE fact. It was two slots and a
+// bar beneath them, which is that fact spelled three times — a reader had to
+// work out that the second figure was the first one's denominator and that the
+// bar was both of them again. It sits in one stacked `SettingRow` for the same
+// reason: a row per figure would split the comparison this screen exists to
+// make.
 //
 // Over the limit is REPORTED, never enforced. The workspace keeps working — P7's
 // warning-then-grace, not a silent mid-month lockout — so the notice says what is
@@ -182,6 +181,28 @@ function stateKey(
     : "license.state.unlicensed";
 }
 
+// What is still free, or what the count is past — the caption the seat reading
+// owes, and the one an uncapped installation owes instead.
+//
+// Derived from the two figures the value itself shows rather than from
+// `over_limit`: this line describes that value, so it has to agree with it. The
+// server's verdict still owns the ALERT, which is a claim about the
+// installation's standing and not about the arithmetic on screen.
+function seatsDetail(
+  seatsUsed: number,
+  granted: number | null | undefined,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string {
+  if (granted === undefined || granted === null) {
+    return t("license.seats.uncapped");
+  }
+  const spare = granted - seatsUsed;
+  return spare < 0
+    ? t("license.seats.over", { count: formatNumber(-spare, locale) })
+    : t("license.seats.left", { count: formatNumber(spare, locale) });
+}
+
 // Exported for its story: the states worth looking at are states of the READING,
 // and a story that had to stub a query to reach them would be testing the fetch.
 /**
@@ -251,26 +272,28 @@ export function LicenseReading({
             one that was never configured is a standing condition. */}
         {entitlement.state === "rejected" && (
           <Callout
-            tone="warn"
-            icon={TriangleAlert}
+            kind="standing"
+            tone="warning"
             title={t("license.refused.title")}
           >
             {t("license.refused.body")}
           </Callout>
         )}
         {entitlement.state === "absent" && (
-          <Callout tone="info" icon={Info} title={t("license.absent.title")}>
+          <Callout kind="standing" title={t("license.absent.title")}>
             {t("license.absent.body")}
           </Callout>
         )}
         {entitlement.over_limit && (
-          // `alert` interrupts, which is right here and nowhere else on this
-          // screen: the installation is past what it is entitled to, and that is a
-          // thing the admin has to act on rather than notice eventually.
+          // `live` overrides what `standing` derives, which is silence: the
+          // breach is true as the page renders and still has to interrupt,
+          // here and nowhere else on this screen — the installation is past
+          // what it is entitled to, and that is a thing the admin has to act on
+          // rather than notice eventually.
           <Callout
+            kind="standing"
             tone="danger"
             live="alert"
-            icon={TriangleAlert}
             title={t("license.over.title")}
           >
             {/* Gated on the server's verdict ALONE. `over_limit` is false
@@ -300,39 +323,40 @@ export function LicenseReading({
             description={t("license.counting")}
             layout="stack"
             control={
-              <div className="form-stack">
-                <StatStrip>
-                  <StatCard
-                    label={t("license.seats.used")}
-                    value={formatNumber(entitlement.seats_used, locale)}
-                    // The slot itself is the bad news when the count is past the
-                    // grant, so `alert` rather than `tone`, which would only
-                    // colour the figure.
-                    alert={entitlement.over_limit}
-                  />
-                  <StatCard
-                    label={t("license.seats.granted")}
-                    // Absent, not zero, and it says which absence it is: an
-                    // unlicensed installation and a license that caps nothing
-                    // both have no number here, and only the first is something
-                    // an admin might want to change.
-                    value={grantedText}
-                  />
-                </StatStrip>
-                {capped && (
-                  <Meter
-                    value={entitlement.seats_used}
-                    max={granted}
-                    // A role="meter" takes no accessible name from the slots
-                    // beside it, so the reading is named here rather than by the
-                    // row's own label.
-                    label={t("license.meter.label", {
-                      used: formatNumber(entitlement.seats_used, locale),
-                      granted: grantedText,
-                    })}
-                  />
-                )}
-              </div>
+              <StatCard
+                label={t("license.seats.title")}
+                // Used AGAINST granted in one value, because that is one fact.
+                // Two slots and a bar under them said it three times: a reader
+                // comparing them had to work out that the second figure was the
+                // first one's denominator and that the bar was both of them
+                // again.
+                value={
+                  capped
+                    ? t("license.seats.ofGranted", {
+                        used: formatNumber(entitlement.seats_used, locale),
+                        granted: grantedText,
+                      })
+                    : formatNumber(entitlement.seats_used, locale)
+                }
+                // What is left, or what is past — and for a licence that caps
+                // nothing, the fact that there is nothing to be left of. Absent,
+                // not zero: an unlicensed installation and a licence that caps
+                // nothing both have no grant, and only the first is something an
+                // admin might want to change.
+                detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
+                // Only where the reading HAS a denominator: an uncapped
+                // installation has nothing to be a share of, and a bar drawn
+                // against an invented limit invents the limit.
+                meter={
+                  capped
+                    ? { filled: entitlement.seats_used, total: granted }
+                    : undefined
+                }
+                // The slot itself is the bad news when the count is past the
+                // grant, so `alert` rather than `tone`, which would only
+                // colour the figure.
+                alert={entitlement.over_limit}
+              />
             }
           />
         </SettingList>

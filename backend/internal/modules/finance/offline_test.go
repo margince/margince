@@ -9,11 +9,20 @@ package finance
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// offlineEpoch is the anchor every case in this suite generates against.
+//
+// It lives here rather than in the generator because production takes its
+// anchor from the finance connection's own creation instant; what a TEST needs
+// is a fixed one, so the assertions measure the formulas rather than how long
+// ago some constant was. The date itself carries no meaning beyond being fixed.
+var offlineEpoch = time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 
 func ledgerFor(t *testing.T, customer string) SourceLedger {
 	t.Helper()
@@ -22,7 +31,7 @@ func ledgerFor(t *testing.T, customer string) SourceLedger {
 
 func ledgerIn(t *testing.T, workspace, customer string) SourceLedger {
 	t.Helper()
-	provider := NewOfflineProvider(workspace, []SourceCustomer{{ExternalID: customer}})
+	provider := NewOfflineProvider(workspace, []SourceCustomer{{ExternalID: customer}}, offlineEpoch)
 	ledger, err := provider.InvoicesFor(context.Background(), customer)
 	if err != nil {
 		t.Fatal(err)
@@ -324,4 +333,80 @@ func TestOnlyTheIdentityRateIsKnownWithoutARateSheet(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The ledger follows its ANCHOR and nothing else: two providers built for the
+// same workspace and customer at different anchors produce the same shape,
+// shifted by exactly the difference between them.
+//
+// Both halves are the point. Same shape — the amounts, the archetype and the
+// payment behaviour come off sha256(workspace | customer), which no anchor
+// touches — so an installation set up next year gets the same ledger, not a
+// different one. Shifted exactly — so the rolling windows the card folds over
+// (365 days for net invoiced, 180 for timeliness) find the same invoices
+// inside them whenever the installation was made, which is the whole point of
+// anchoring to a stored value instead of to a date in this repository.
+func TestTheGeneratedLedgerShiftsWithItsAnchorAndKeepsItsShape(t *testing.T) {
+	shift := 400 * 24 * time.Hour
+
+	early := ledgerAt(t, offlineEpoch)
+	late := ledgerAt(t, offlineEpoch.Add(shift))
+
+	if len(early.Invoices) != len(late.Invoices) {
+		t.Fatalf("invoice counts differ across anchors: %d vs %d — the anchor moved more than the dates",
+			len(early.Invoices), len(late.Invoices))
+	}
+	for i, want := range early.Invoices {
+		got := late.Invoices[i]
+		if got.ExternalID != want.ExternalID || got.NetMinor != want.NetMinor || got.Currency != want.Currency {
+			t.Fatalf("invoice %d differs beyond its dates: %+v vs %+v — the anchor reached the seed",
+				i, got, want)
+		}
+		if diff := got.IssuedOn.Sub(want.IssuedOn); diff != shift {
+			t.Errorf("invoice %s issued %v after the earlier anchor's, want exactly the anchor difference %v",
+				got.ExternalID, diff, shift)
+		}
+	}
+}
+
+// A second generation at the same anchor is byte-identical, which is the
+// invariant the anchor is a parameter to protect: the sync rewrites a row only
+// when the source actually changed, so a generator that answered differently on
+// a later day would have every morning's pass rewrite the whole mirror.
+func TestTheGeneratedLedgerDoesNotMoveWhenOnlyTheClockHas(t *testing.T) {
+	first := ledgerAt(t, offlineEpoch)
+	second := ledgerAt(t, offlineEpoch)
+
+	if !reflect.DeepEqual(first, second) {
+		t.Error("two generations at one anchor differ — every sync would rewrite every row")
+	}
+}
+
+// The anchor is truncated to a UTC day, so two connections made hours apart on
+// one day generate the same ledger — a demonstration ledger reads as dates, and
+// an invoice issued at 14:37 is noise a reader has to look past.
+func TestTheAnchorIsTruncatedToItsDay(t *testing.T) {
+	midnight := ledgerAt(t, offlineEpoch)
+	afternoon := ledgerAt(t, offlineEpoch.Add(14*time.Hour+37*time.Minute))
+
+	if !reflect.DeepEqual(midnight, afternoon) {
+		t.Error("two anchors on the same UTC day produced different ledgers")
+	}
+}
+
+// anchorCaseCustomer is the customer the anchor cases generate for. One is
+// enough here and three would be noise: what these assert is a property of the
+// ANCHOR, which the seed never sees — the customer's own space is swept by the
+// cases above that vary it.
+const anchorCaseCustomer = "acme-gmbh"
+
+// ledgerAt generates anchorCaseCustomer's ledger against a named anchor.
+func ledgerAt(t *testing.T, anchor time.Time) SourceLedger {
+	t.Helper()
+	ledger, err := NewOfflineProvider("ws-1", []SourceCustomer{{ExternalID: anchorCaseCustomer}}, anchor).
+		InvoicesFor(context.Background(), anchorCaseCustomer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ledger
 }

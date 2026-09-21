@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Download, Printer, X } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
 import {
   createContext,
@@ -16,6 +16,7 @@ import { useT } from "../i18n";
 import { EmptyState, Modal, PendingBody } from "./atoms";
 import { IconAction } from "./iconaction";
 import "./filepreview.css";
+import { Heading } from "./heading";
 
 /**
  * One stored file, opened over the page it was clicked on.
@@ -57,6 +58,16 @@ export type PreviewFile = Readonly<{
    * would carry it into our own page with our own cookies.
    */
   mediaType: string;
+  /**
+   * The session token that admits the reader to these bytes, on the one
+   * surface with no cookie: a Deal Room's buyer, who holds no seat and is
+   * known to the server by a Bearer alone. Absent, the read rides the session
+   * cookie like every other file in the product.
+   *
+   * With a bearer there is no link the browser could follow on its own, so the
+   * saved copy is the drawn bytes, and Download waits with Print for them.
+   */
+  bearer?: string;
 }>;
 
 type FilePreview = Readonly<{ open: (file: PreviewFile) => void }>;
@@ -127,16 +138,21 @@ function FilePreviewDialog({
       {file !== null && (
         <div className="file-preview">
           <div className="file-preview-head">
-            <h2 id={TITLE_ID} className="t-h3 file-preview-name">
+            <Heading
+              size="large"
+              id={TITLE_ID}
+              className="t-h3 file-preview-name"
+            >
               {file.filename}
-            </h2>
+            </Heading>
             <div className="file-preview-verbs">
-              <IconAction
-                small
-                label={t("filePreview.download")}
-                icon={<Download size={15} aria-hidden="true" />}
-                onClick={() => save(file)}
-              />
+              {(file.bearer === undefined || object.status === "ready") && (
+                <IconAction
+                  label={t("filePreview.download")}
+                  icon={<Download aria-hidden="true" />}
+                  onClick={() => save(file, object)}
+                />
+              )}
               {/* Print stands beside the other two only once there IS a
                   document: until the bytes arrive, and after a read that
                   failed, there is nothing on the stage for it to put on paper.
@@ -146,18 +162,11 @@ function FilePreviewDialog({
                   paragraph hanging off the corner of the dialog. */}
               {object.status === "ready" && (
                 <IconAction
-                  small
                   label={t("filePreview.print")}
-                  icon={<Printer size={15} aria-hidden="true" />}
+                  icon={<Printer aria-hidden="true" />}
                   onClick={() => printing(frame.current)}
                 />
               )}
-              <IconAction
-                small
-                label={t("filePreview.close")}
-                icon={<X size={15} aria-hidden="true" />}
-                onClick={onClose}
-              />
             </div>
           </div>
           <div className="file-preview-stage">
@@ -246,10 +255,17 @@ function printing(frame: HTMLIFrameElement | null) {
  * is how a tree grows a second icon button. The act is still the anchor's —
  * `download` on the same href the chip carries — so the saved copy is the one
  * the server names, whether or not the preview above ever loaded.
+ *
+ * A file read on a bearer has no href a link could follow — the anchor would
+ * arrive without the token and be refused — so its saved copy is the object
+ * URL the stage is drawing, which is the same bytes under the same name.
  */
-function save(file: PreviewFile) {
+function save(file: PreviewFile, object: PreviewObject) {
   const link = document.createElement("a");
-  link.href = file.href;
+  link.href =
+    file.bearer !== undefined && object.status === "ready"
+      ? object.url
+      : file.href;
   link.download = file.filename;
   // In the document before the click: Safari ignores `download` on a node that
   // is not in one, and saves nothing at all.
@@ -279,7 +295,13 @@ function usePreviewObject(file: PreviewFile | null): PreviewObject {
     setObject({ status: "loading" });
     const abort = new AbortController();
     let url: string | null = null;
-    fetch(file.href, { credentials: "include", signal: abort.signal })
+    fetch(file.href, {
+      credentials: "include",
+      signal: abort.signal,
+      ...(file.bearer === undefined
+        ? {}
+        : { headers: { Authorization: `Bearer ${file.bearer}` } }),
+    })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`preview read answered ${response.status}`);

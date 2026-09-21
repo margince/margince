@@ -53,7 +53,7 @@ func TestARunGivenNoLanguageRuleCarriesNone(t *testing.T) {
 	}
 	// The empty case must not leave the gap the rule would have filled. A prompt
 	// that ends a section with two blank lines is not broken, but it is the tell
-	// that the writer wrote the separator unconditionally — and the next person
+	// that the writer wrote the separator unconditionally — and the next contact
 	// to add a block there inherits the same bug with real text in it.
 	if strings.Contains(system, "\n\n\n") {
 		t.Errorf("the absent rule left its separator behind:\n%q", system)

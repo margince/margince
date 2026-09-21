@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { CompanyFinanceCard } from "./companyfinance";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
 // The finance card's own rule: no figure is invented, and the absence of one
 // is never drawn as a zero. `no_connection` and `connected` render as
@@ -19,10 +24,10 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const connected: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
   last_synced_at: "2026-08-10T06:00:00Z",
@@ -60,7 +65,7 @@ const connected: FinanceSummary = {
 };
 
 const noConnection: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "no_connection",
 };
 
@@ -69,12 +74,15 @@ function Finance({
   lifecycle,
 }: Readonly<{ summary: FinanceSummary; lifecycle?: string }>) {
   installFetchStub({
-    "GET /organizations/o-1/finance-summary": () => jsonResponse(summary),
+    // The billing panel inside the card asks for the session; a reader of the
+    // company's finance, with no standing to name its billing contacts.
+    "GET /me": meRoute({ company: ["read"] }),
+    "GET /companies/o-1/finance-summary": () => jsonResponse(summary),
   });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 420 }}>
-        <CompanyFinanceCard orgId="o-1" lifecycle={lifecycle} />
+        <CompanyFinanceCard companyId="o-1" lifecycle={lifecycle} />
       </div>
     </StoryProviders>
   );

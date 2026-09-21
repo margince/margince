@@ -72,7 +72,7 @@ Follow this checklist — several obligations are enforced by fitness tests, so 
    on `origin/main`, so a branch that sat while another migration merged re-runs
    `make migrate-create` and moves its SQL across. `make check` reports that
    (`scripts/check-migration-versions.sh`).
-2. **No table carries row-level security.** An installation holds one organization (ADR-0061), so a
+2. **No table carries row-level security.** An installation holds one company (ADR-0061), so a
    tenant predicate separates nothing; a schema fitness test derived from the live schema fails a
    table that declares a policy.
 3. **Keep enums in sync** — a new `CHECK (col IN (...))` that a Go enum mirrors means extending that Go
@@ -93,10 +93,20 @@ Follow this checklist — several obligations are enforced by fitness tests, so 
 
    On a table with real rows, the backfill cannot be batched here: one transaction per migration is
    the runner's contract. Land the column with a `DEFAULT` and no rewrite, then backfill from
-   application code or a job, then add the `CHECK` as `NOT VALID` and `VALIDATE` it separately —
-   `1787831200_a_company_event_is_a_signal.up.sql` is the worked example of that last step, and
-   explains why: `NOT VALID` takes the lock without scanning, and `VALIDATE` drops to
-   `SHARE UPDATE EXCLUSIVE` for the pass.
+   application code or a job, then add the `CHECK` as `NOT VALID` and `VALIDATE` it in a
+   **migration of its own**.
+
+   The separate file is the whole of what makes the two-step work, and it is easy to get wrong:
+   `NOT VALID` records the constraint without scanning, and `VALIDATE` does drop to
+   `SHARE UPDATE EXCLUSIVE` — but only for itself. Run in the same file, it asks for that lighter
+   lock while the `ACCESS EXCLUSIVE` the `ALTER` took is still held to commit, so readers and
+   writers queue exactly as long as a plain `ADD CONSTRAINT` would have made them.
+   `backend/gates/migrationvalidatesplit_test.go` refuses the same-file form; fourteen applied
+   migrations carry it and are registered there, because an applied migration is never edited.
+
+   `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
+   `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair, and the second
+   explains why it is a file of its own.
 6. **Apply and verify** — `make migrate`, then `make check` / `make test-integration`.
 
 Fork-local schema goes in `backend/migrations/custom/`, which has its own tracking table and applies

@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -38,20 +40,37 @@ func NewStore(db *database.DB) *Store {
 	return &Store{db: db}
 }
 
-// Notice is one durable line addressed to one person.
+// Notice is one durable line addressed to one contact.
 type Notice struct {
+	Origin    *crmcontracts.NoticeOrigin
 	ID        ids.UUID
 	Kind      string
 	Subject   string
 	Body      string
+	Target    Target
 	CreatedAt time.Time
 }
+
+// Target is the record a notice is about, when it is about one.
+//
+// Both halves or neither, which the table's own constraint holds: a type with
+// no id names a KIND of thing and cannot be opened, and an id with no type
+// cannot be routed to a screen. The zero value is a notice about no record —
+// a capture backlog, a coach's word — and those are the majority.
+type Target struct {
+	Type string
+	ID   ids.UUID
+}
+
+// Named reports whether this notice points at a record.
+func (t Target) Named() bool { return t.Type != "" && !t.ID.IsZero() }
 
 // NewNotice is one notice to record. It is a struct rather than a parameter
 // list because the dedupe key is the fifth thing a caller might say about a
 // notice, and five positional strings is where a caller starts passing the
 // subject as the body.
 type NewNotice struct {
+	Origin    *crmcontracts.NoticeOrigin
 	Recipient ids.UserID
 	Kind      string
 	Subject   string
@@ -66,6 +85,10 @@ type NewNotice struct {
 	// honest answer, since an invented key would silently collapse two real
 	// notices into one.
 	DedupeKey string
+	// Target is the record this notice is about, when it is about one. "A deal
+	// you own changed stage" is true of every deal a rep owns, so the sentence
+	// alone left a reader knowing something moved and having to find it.
+	Target Target
 }
 
 // Create records one notice for recipient — the whole of delivery on this
@@ -111,10 +134,19 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	subject := truncate(in.Subject, subjectBound)
 	body := truncate(in.Body, bodyBound)
 	id := ids.NewV7()
+	target := in.Target
+	origin := in.Origin
 	var createdAt time.Time
 	var dedupe *string
 	if in.DedupeKey != "" {
 		dedupe = &in.DedupeKey
+	}
+	// Nil rather than the zero value on both halves, so the table's paired
+	// constraint sees a notice about no record as two NULLs.
+	var targetType *string
+	var targetID *ids.UUID
+	if target.Named() {
+		targetType, targetID = &target.Type, &target.ID
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The INDEX is the guard, not a read-then-write check: two deliveries
@@ -126,13 +158,20 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 		//
 		// created_at is the column's own default, so the insert returns it
 		// rather than the caller stamping a second clock beside it.
+		args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, origin}
+		holders := make([]string, len(args))
+		for i := range args {
+			holders[i] = "$" + strconv.Itoa(i+1)
+		}
+		placeholders := strings.Join(holders, ", ")
 		row := tx.QueryRow(ctx, `
-			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by, dedupe_key)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by,
+			                    dedupe_key, target_type, target_id, origin)
+			VALUES (`+placeholders+`)
 			ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
 			DO NOTHING
 			RETURNING created_at`,
-			id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe)
+			args...)
 		switch err := row.Scan(&createdAt); {
 		case errors.Is(err, pgx.ErrNoRows):
 			// Already recorded. Answer the notice that STANDS — all of it, not
@@ -143,10 +182,25 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 			// later version spells differently. Returning the stored id with
 			// the replay's words would put a notice on screen that the reader
 			// cannot find anywhere, and that nothing in the database says.
-			return tx.QueryRow(ctx, `
-				SELECT id, kind, subject, body, created_at FROM notice
+			// The target comes back with them, for the same reason: a second
+			// delivery can name a different entity — an event replayed after
+			// the automation was repointed — and answering the stored notice's
+			// id with this call's target would send a reader to a record the
+			// notice they can see says nothing about.
+			var storedType *string
+			var storedID *ids.UUID
+			if err := tx.QueryRow(ctx, `
+				SELECT id, kind, subject, body, target_type, target_id, created_at, origin FROM notice
 				 WHERE recipient_user_id = $1 AND dedupe_key = $2`,
-				in.Recipient, in.DedupeKey).Scan(&id, &kind, &subject, &body, &createdAt)
+				in.Recipient, in.DedupeKey,
+			).Scan(&id, &kind, &subject, &body, &storedType, &storedID, &createdAt, &origin); err != nil {
+				return err
+			}
+			target = Target{}
+			if storedType != nil && storedID != nil {
+				target = Target{Type: *storedType, ID: *storedID}
+			}
+			return nil
 		case err != nil:
 			return fmt.Errorf("notices: recording the notice: %w", err)
 		}
@@ -165,28 +219,40 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	if err != nil {
 		return Notice{}, err
 	}
-	return Notice{ID: id, Kind: kind, Subject: subject, Body: body, CreatedAt: createdAt}, nil
+	return Notice{
+		ID: id, Kind: kind, Subject: subject, Body: body,
+		Target: target, CreatedAt: createdAt, Origin: origin,
+	}, nil
 }
 
-// UnreadFor answers the CALLING person's own unread notices, newest first,
-// bounded. The person comes from the bound principal and is not a parameter
-// — another person's notices cannot be expressed — and a caller with no
-// person behind it is refused with the permission sentinel, which the
+// UnreadFor answers the CALLING contact's own unread notices, newest first,
+// bounded. The contact comes from the bound principal and is not a parameter
+// — another contact's notices cannot be expressed — and a caller with no
+// contact behind it is refused with the permission sentinel, which the
 // attention feed renders as a withheld lane.
 func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// The PERSON, not merely a user id: an agent or system principal
+		// The CONTACT, not merely a user id: an agent or system principal
 		// can carry a human's id, and reading — like settling — a notice
 		// is that human's own act.
-		return nil, fmt.Errorf("notices: reading your notices needs an authenticated person: %w", apperrors.ErrPermissionDenied)
+		return nil, fmt.Errorf("notices: reading your notices needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
 	}
 	var unread []Notice
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Delivery declines owner-made stage changes in automation.stageChangeNotify.
+		// This SQL mirror also excludes old deliveries before LIMIT, without deleting
+		// their history or pretending the recipient acknowledged them.
 		rows, txErr := tx.Query(ctx, `
-			SELECT id, kind, subject, body, created_at
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND read_at IS NULL
+			   AND NOT coalesce(
+			     kind = 'automation' AND target_type = 'deal'
+			     AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))
+			     AND origin->>'actor_type' = 'human'
+			     AND lower(origin->>'actor_id') IN
+			       (recipient_user_id::text, 'human:' || recipient_user_id::text), false)
 			 ORDER BY created_at DESC, id DESC
 			 LIMIT $2`, actor.UserID, limit)
 		if txErr != nil {
@@ -196,8 +262,16 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		unread = []Notice{}
 		for rows.Next() {
 			var n Notice
-			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body, &n.CreatedAt); scanErr != nil {
+			// Both halves are nullable and the table pairs them, so either
+			// arriving alone is a row the constraint should have refused.
+			var targetType *string
+			var targetID *ids.UUID
+			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
+				&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
 				return scanErr
+			}
+			if targetType != nil && targetID != nil {
+				n.Target = Target{Type: *targetType, ID: *targetID}
 			}
 			unread = append(unread, n)
 		}
@@ -210,16 +284,16 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 }
 
 // MarkRead settles one notice for its own recipient. Scoped by recipient in
-// the statement — another person's notice reads as absent (404), so its
+// the statement — another contact's notice reads as absent (404), so its
 // existence stays hidden — and idempotent: marking a read notice again is a
 // no-op success, because the reader's goal state already holds. The
 // read-state flip is a mutation and carries the write shape.
 func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// The same person-not-id rule UnreadFor states: acknowledgment is
+		// The same contact-not-id rule UnreadFor states: acknowledgment is
 		// the recipient's own act, never a principal acting as them.
-		return fmt.Errorf("notices: marking a notice read needs an authenticated person: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("notices: marking a notice read needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The write claims the unread row alone, so two concurrent settles
@@ -257,7 +331,7 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 		}
 		// The event's subject is the RECIPIENT, like the created event's:
 		// the self-only delivery rule compares the subscription owner to the
-		// entity, and the notice's lifecycle is that one person's to hear.
+		// entity, and the notice's lifecycle is that one contact's to hear.
 		return storekit.EmitEvent(ctx, tx, auditID, actor.UserID, crmcontracts.PublicEventNoticeRead{
 			NoticeId: openapi_types.UUID(id),
 		})

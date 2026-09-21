@@ -30,3 +30,15 @@ export const MAIL_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>([
 export function isMailbox(provider: Provider): boolean {
   return MAIL_PROVIDERS.has(provider);
 }
+
+/** Whether this connection's row should draw the mail icon.
+ *
+ *  test_mailbox is deliberately outside MAIL_PROVIDERS/isMailbox — it has no
+ *  "Add a connection" button, no signature enrichment, and no backfill (there
+ *  is no history to import), so the rows those gate stay off for it exactly
+ *  as they do for a calendar. But it is still a MAILBOX, not a calendar, and
+ *  drawing it under CalendarDays reads as a second, wrong-shaped connection
+ *  type nobody chose. */
+export function isMailIcon(provider: Provider): boolean {
+  return isMailbox(provider) || provider === "test_mailbox";
+}

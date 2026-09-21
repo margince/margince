@@ -1,5 +1,12 @@
 import type { Locale, Translator } from "../i18n";
+import { middayInstant } from "./calendarday";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
+import { formatMoneyOrWord } from "./moneyword";
+import {
+  dateTimePreferences,
+  formatPreferredDate,
+  hourCycle,
+} from "./preferences";
 
 // The presentation edge (architecture/10 §1–3): everything here formats
 // ALREADY-stored values — minor units, UTC instants, IR-provided base
@@ -67,10 +74,15 @@ export function formatMoneyOrAbsent(
   currency: string | null | undefined,
   locale: Locale,
 ): string {
-  if (amountMinor == null || !currency) {
-    return MONEY_ABSENT;
-  }
-  return formatMoney(amountMinor, currency, locale);
+  // The dash is one WORD for the absence among several, so both spellings run
+  // on one guard rather than agreeing twice about what "no money here" means.
+  return formatMoneyOrWord(
+    amountMinor,
+    currency,
+    locale,
+    MONEY_ABSENT,
+    formatMoney,
+  );
 }
 
 /**
@@ -156,33 +168,35 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
   }).format(value);
 }
 
+/**
+ * A share of a whole where the FRACTION matters: "0.4 %", "12.0 %".
+ *
+ * `formatPercent` rounds to whole numbers, which is right for progress. It is
+ * wrong for a rate held to a threshold below one percent — a transition sitting
+ * at 0.4% undone would print "0%" and read as flawless, which is the rounding
+ * that flatters exactly where flattery is dangerous.
+ *
+ * Zero is still "0 %": nothing went wrong is a whole fact, and "0.0 %" claims a
+ * measurement where there is simply nothing to measure.
+ */
+export function formatFinePercent(fraction: number, locale: Locale): string {
+  if (fraction === 0) {
+    return formatPercent(0, locale);
+  }
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(fraction);
+}
+
 export function formatRate(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     maximumFractionDigits: 10,
   }).format(value);
 }
 
-/**
- * The month's own name in the reader's language, from Intl rather than a table
- * of our own — a list of twelve month names per locale is a translation file
- * that goes stale, and the platform already ships them.
- *
- * The day is fixed at the 1st and the year is arbitrary: only the month is
- * rendered, and a month name does not depend on either.
- *
- * `timeZone: "UTC"` is load-bearing, not tidiness. The instant is MINTED in UTC
- * (`Date.UTC`), so formatting it on the reader's own clock reads it back in a
- * different zone than it was written in — and midnight on the 1st is the worst
- * possible instant for that, because any zone behind UTC lands on the last day
- * of the PREVIOUS month. In America/New_York this returned "December" for
- * month 1, so the fiscal-year picker offered a label one month off the value it
- * saved.
- *
- * This is not a moment anybody is reading in their own zone: the argument is a
- * month NUMBER, not a point in time, and the date is scaffolding for Intl's
- * month table. Reading it back in the zone it was written in is what makes the
- * scaffolding cancel out.
- */
+/** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
 export function monthName(month: number, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     month: "long",
@@ -359,7 +373,7 @@ export function formatDecimal(
 
 // IANA zone names only (AC-DS-TZ4): fixed offsets ("+01:00", "Etc/GMT-1")
 // silently freeze DST rules — reject them loudly at the edge.
-function assertIanaZone(zone: string): void {
+export function assertIanaZone(zone: string): void {
   if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
     throw new Error(
       `timezone must be an IANA name, got fixed offset "${zone}"`,
@@ -392,6 +406,13 @@ export function isRenderableZone(zone: string): boolean {
   }
 }
 
+// Calendar dates are not UTC-midnight instants: their day survives every zone.
+export function displayDay(value: string, zone: string): Date {
+  return new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ? middayInstant(value, zone) : value,
+  );
+}
+
 // Zone-by-purpose (architecture/10 §2): personal deadlines localize to the
 // USER zone, reporting-period labels bucket on the WORKSPACE zone — the
 // caller picks the purpose, this helper only attaches the zone.
@@ -401,12 +422,13 @@ export function formatDate(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  const formatter = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(utcIso));
+  });
+  return formatPreferredDate(formatter, displayDay(utcIso, zone));
 }
 
 /**
@@ -427,7 +449,7 @@ export function formatDayLong(
     weekday: "long",
     day: "numeric",
     month: "long",
-  }).format(new Date(utcIso));
+  }).format(displayDay(utcIso, zone));
 }
 
 // A date a reader SCANS rather than keys into a form — a record's header
@@ -441,29 +463,18 @@ export function formatDateAbbrev(
   locale: Locale,
   zone: string,
 ): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return formatDate(utcIso, locale, zone);
   assertIanaZone(zone);
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(utcIso));
+  }).format(displayDay(utcIso, zone));
 }
 
-/**
- * A day and its month, with NO year — "21 Aug".
- *
- * For a date the surrounding text already places in time: a row inside a
- * period the reader picked, an employment span whose years are printed beside
- * it, a meeting the page has already called the next one. `formatDateAbbrev`
- * is the same rendering WITH the year and is the right one everywhere the
- * reader cannot tell which year is meant from the context.
- *
- * Four screens carried a byte-identical private copy of this before it lived
- * here, each with its own `undefined` locale — so the same person record
- * printed its dates in the browser's guessed locale on four surfaces and in
- * the reader's chosen one nowhere.
- */
+/** A day and month for dates whose surrounding period already supplies the year. */
 export function formatDayMonth(
   utcIso: string,
   locale: Locale,
@@ -474,7 +485,7 @@ export function formatDayMonth(
     timeZone: zone,
     day: "numeric",
     month: "short",
-  }).format(new Date(utcIso));
+  }).format(displayDay(utcIso, zone));
 }
 
 /**
@@ -496,6 +507,7 @@ export function formatTimeOfDay(
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: hourCycle(),
   }).format(new Date(utcIso));
 }
 
@@ -505,6 +517,9 @@ export function formatDateTime(
   zone: string,
 ): string {
   assertIanaZone(zone);
+  if (dateTimePreferences().dateFormat !== "locale") {
+    return `${formatDate(utcIso, locale, zone)}, ${formatTimeOfDay(utcIso, locale, zone)}`;
+  }
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "2-digit",
@@ -512,6 +527,7 @@ export function formatDateTime(
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: hourCycle(),
   }).format(new Date(utcIso));
 }
 
@@ -562,7 +578,7 @@ export function calendarDaysBetween(from: Date, to: Date): number {
 }
 
 /**
- * relativeDays reads a timestamp the way a person says it: today, yesterday,
+ * relativeDays reads a timestamp the way a contact says it: today, yesterday,
  * or "N days".
  *
  * `never` is reserved for a read that HAPPENED and found nothing — the caller
@@ -570,7 +586,7 @@ export function calendarDaysBetween(from: Date, to: Date): number {
  * section is not "never"; it is unknown, and its card says so.
  *
  * It lives here because three screens wanted it and each wrote its own: two
- * private copies in personstrip.tsx and personrail.tsx, byte-equivalent and
+ * private copies in contactstrip.tsx and contactrail.tsx, byte-equivalent and
  * both counting milliseconds. format.ts's own INTL_LOCALE comment had been
  * pointing at this gap since it was written — "exported because a relative-time
  * formatter needs the same mapping".
@@ -582,21 +598,21 @@ export function relativeDays(
   now: Date = new Date(),
 ): string {
   if (!at) {
-    return t("person.strip.never");
+    return t("contact.strip.never");
   }
   const days = calendarDaysBetween(new Date(at), now);
   if (days <= 0) {
-    return t("person.strip.today");
+    return t("contact.strip.today");
   }
   if (days === 1) {
-    return t("person.strip.yesterday");
+    return t("contact.strip.yesterday");
   }
   // The count is a MAGNITUDE, so it is grouped in the reader's own notation.
   // Handed to `t` as a raw number it reached the catalog sentence through
-  // string coercion, which groups for nobody: a person last written to 1200
+  // string coercion, which groups for nobody: a contact last written to 1200
   // days ago read "1200 days" in a German sentence that spells every other
   // figure on the page "1.200".
-  return t("person.strip.days", { count: formatNumber(days, locale) });
+  return t("contact.strip.days", { count: formatNumber(days, locale) });
 }
 
 // Idle/SLA spans display as ABSOLUTE durations (no naive calendar diff —

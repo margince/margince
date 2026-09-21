@@ -68,7 +68,7 @@ export function CallDetailPanel({
                 })
               : t("aicalls.detail.contextNone")}
           </p>
-          {/* A bare <h3> carries no class, and preflight leaves it at body size
+          {/* A bare h3 carries no class, and preflight leaves it at body size
               and body weight — a heading only the document tree can see. The
               eyebrow is the one spelling of a label over a block, and `as="h3"`
               is what keeps it a real heading inside the card's own h2. */}
@@ -76,9 +76,7 @@ export function CallDetailPanel({
           <ol>
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
-                <span className="t-mono">
-                  #{ordinalNumber(attempt.attempt)}
-                </span>{" "}
+                <span className="t-num">#{ordinalNumber(attempt.attempt)}</span>{" "}
                 {attempt.attempt_reason || "—"} ·{" "}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),
@@ -113,7 +111,7 @@ export function CallDetailPanel({
                   </pre>
                 </div>
                 <div>
-                  <Button small onClick={() => setExporting(true)}>
+                  <Button onClick={() => setExporting(true)}>
                     {t("aiexport.button")}
                   </Button>
                 </div>
@@ -158,21 +156,37 @@ function useCallTrace(task: string, enabled: boolean) {
 }
 
 /**
- * When the runtime last reached a model, as epoch ms — or null while nobody
- * knows yet.
+ * When the runtime last reached a model — and, where there is no instant to
+ * give, WHICH silence this is.
  *
- * Null covers three different silences on purpose, because the caller draws
- * nothing for any of them: the read is not this reader's, the page has not
- * arrived, and the installation has never called. A zero here would be an
- * instant in 1970, and a "never" would be a claim this hook cannot make for the
- * first two.
+ * `never` is a claim about the INSTALLATION: nothing has ever called a model.
+ * The other three are claims about the READ — this reader may not make it, it
+ * has not answered yet, it failed — and none of them is evidence about the
+ * installation at all. One `null` over all four let a caller say "Never called"
+ * over a trace that was still arriving, which is the defect this type exists to
+ * make unspellable.
+ *
+ * `failed` is its own arm rather than folded into `unread` for the reason
+ * `never` is its own: only one of the two resolves by waiting, and a reading
+ * that goes silent on a broken read tells a reader nothing is wrong. Every
+ * caller draws it; none may assume another surface will.
+ */
+export type LastCall =
+  | { state: "withheld" }
+  | { state: "unread" }
+  | { state: "failed" }
+  | { state: "never" }
+  | { state: "at"; epochMs: number };
+
+/**
+ * The newest call, as a state a caller can switch on.
  *
  * Its OWN query rather than the card's. The card pages through a filtered trace
  * on demand; this wants the newest row and wants it to keep up, and the two
  * cannot share a key without one imposing its refetch on the other — a poll
  * over every page the reader had loaded.
  */
-export function useLastCallAt(): number | null {
+export function useLastCallAt(): LastCall {
   const canSee = useCan("ai_diagnostics", "read");
   const query = useQuery({
     enabled: canSee,
@@ -187,13 +201,21 @@ export function useLastCallAt(): number | null {
     },
   });
   // Read through the grant, not only around it. A revoked grant disables the
-  // query but leaves its last answer in the cache, and returning that would go
-  // on showing a seat the runtime activity it may no longer see.
+  // query but leaves its last answer in the cache, and answering from it would
+  // go on showing a seat the runtime activity it may no longer see.
   if (!canSee) {
-    return null;
+    return { state: "withheld" };
   }
-  const newest = query.data?.data[0];
-  return newest ? Date.parse(newest.occurred_at) : null;
+  if (query.isError) {
+    return { state: "failed" };
+  }
+  if (query.data === undefined) {
+    return { state: "unread" };
+  }
+  const newest = query.data.data[0];
+  return newest
+    ? { state: "at", epochMs: Date.parse(newest.occurred_at) }
+    : { state: "never" };
 }
 
 export function AiCallsCard() {
@@ -318,7 +340,6 @@ export function AiCallsCard() {
                   {query.hasNextPage && (
                     <div>
                       <Button
-                        small
                         disabled={query.isFetchingNextPage}
                         onClick={() => void query.fetchNextPage()}
                       >
@@ -373,7 +394,6 @@ function FragmentRow({
               label, which is what makes the control square instead of a pill
               around 14px. */}
           <Button
-            small
             iconOnly
             variant="ghost"
             aria-expanded={expanded}
@@ -383,7 +403,7 @@ function FragmentRow({
             aria-label={t("aicalls.expandCall", { task: call.task, when })}
             onClick={onToggle}
           >
-            {/* No `size=`: `.btn-sm svg` already sizes a button's icon child
+            {/* No `size=`: `.btn svg` already sizes a button's icon child
                 (base.css), and a size at the call site is the drift that rule
                 exists to stop. */}
             <ChevronDown className="expander-chevron" aria-hidden />
@@ -395,7 +415,7 @@ function FragmentRow({
           <div className="aicalls-badges">
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
             {call.degraded && (
-              <Badge tone="warn">{t("aicalls.badge.degraded")}</Badge>
+              <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
             )}
             {call.error_sentinel && (
               <Badge tone="danger">{call.error_sentinel}</Badge>

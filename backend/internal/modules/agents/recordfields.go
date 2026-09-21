@@ -8,9 +8,9 @@ package agents
 //
 // Without them the `fields` argument is an opaque object and the only way to
 // learn a name is to guess and read the error: a real session spent three
-// round-trips discovering name → display_name for an organization and then
-// display_name → full_name for a person, and never did find that a person's
-// organization is not a field at all. A tool surface that requires trial and
+// round-trips discovering name → display_name for a company and then
+// display_name → full_name for a contact, and never did find that a contact's
+// company is not a field at all. A tool surface that requires trial and
 // error to use is a tool surface that will be used wrongly.
 //
 // The names are REFLECTED off the generated contract structs rather than
@@ -42,8 +42,8 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.CreatePersonRequest](),
-		datasource.EntityOrganization: reflect.TypeFor[crmcontracts.CreateOrganizationRequest](),
+		datasource.EntityContact:      reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
 		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.CreateActivityRequest](),
@@ -56,8 +56,8 @@ var (
 	// domain one — an edge's ends are what it IS, so moving one is an archive
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityPerson:       reflect.TypeFor[crmcontracts.UpdatePersonRequest](),
-		datasource.EntityOrganization: reflect.TypeFor[crmcontracts.UpdateOrganizationRequest](),
+		datasource.EntityContact:      reflect.TypeFor[crmcontracts.UpdateContactRequest](),
+		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
 		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
 		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
 		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
@@ -115,8 +115,9 @@ func contractFieldNames(t reflect.Type) []string {
 // disprove, which costs more than the silence it replaced.
 const recordFieldsDescription = "The crm.yaml body for the record_type. The fields each " +
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
-	RecordFieldsURI + " — that document, not this description, is what says what a write may " +
-	"name. An extra key must be cf_<slug> for a custom field; any other key is refused BY NAME " +
+	RecordFieldsURI + ", and answered by describe_record_fields — that document, not this " +
+	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
+	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
 	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
 	"prose_language, whatever language this conversation is in."
@@ -132,17 +133,25 @@ const customFieldPrefix = "cf_"
 // This lives at the TOOL, not in the store, and that placement is the whole
 // point. The store's silence is contract-conformant: the write bodies declare
 // additionalProperties: true, and storekit's package doc ratifies
-// drop-on-mismatch. So REST may keep accepting-and-discarding, while the tool
-// surface — whose caller cannot see a response body it did not think to
+// drop-on-mismatch. So a SESSION may keep accepting-and-discarding, while a
+// governed call — whose caller cannot see a response body it did not think to
 // re-read — refuses up front instead of reporting success for a write it did
-// not perform. Two sessions lost data to that silence: organization_id on a
-// person create, and emails on a person UPDATE, which is a real field on
+// not perform. Two sessions lost data to that silence: company_id on a
+// contact create, and emails on a contact UPDATE, which is a real field on
 // create and no field at all on update.
+//
+// The line is the CREDENTIAL, not the door, and it stopped being the door when
+// the governed-call seam put these guards on the REST agent path
+// (margince/margince#928). An agent's confirm-first create with a stray key is
+// refused where a session's identical request succeeds, and that asymmetry is
+// the intended one: the session's own reader is looking at the screen the write
+// answered, and the agent's is not. Reading this comment as "REST accepts" is
+// what it used to say and is now false of half of REST.
 //
 // A cf_-prefixed key passes: whether that custom field is active in this
 // workspace is the store's ratified question, not a shape this tool can judge.
-func rejectUnknownFields(shapes map[datasource.EntityType]reflect.Type, recordType string, fields json.RawMessage) error {
-	shape, ok := shapes[datasource.EntityType(recordType)]
+func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawMessage) error {
+	shape, ok := shapes.types[datasource.EntityType(recordType)]
 	if !ok {
 		// An unknown record_type is the provider's refusal to make, and it
 		// names the served vocabulary when it does.
@@ -153,13 +162,13 @@ func rejectUnknownFields(shapes map[datasource.EntityType]reflect.Type, recordTy
 		// `fields` is a JSON object in every record type's contract, so a
 		// payload that is not one is the caller's mistake and says so here —
 		// carrying the decoder's own words rather than discarding them.
-		return &BadArgsError{Cause: fmt.Errorf("fields must be a JSON object: %w", err)}
+		return &BadArgsError{Field: fieldsArg, Cause: fmt.Errorf("fields must be a JSON object: %w", err)}
 	}
 	// A literal null decodes into a nil map with NO error and therefore no
 	// unknown keys, so it would pass this check and reach the provider as a
 	// write carrying no fields at all.
 	if submitted == nil {
-		return &BadArgsError{Cause: errors.New("fields must be a JSON object, not null")}
+		return &BadArgsError{Field: fieldsArg, Cause: errors.New("fields must be a JSON object, not null")}
 	}
 	accepted := make(map[string]struct{})
 	for _, name := range contractFieldNames(shape) {
@@ -190,8 +199,14 @@ func rejectUnknownFields(shapes map[datasource.EntityType]reflect.Type, recordTy
 	// store: an activity stores links, so "cannot store links" would be false and
 	// would send the caller looking for the wrong fix.
 	return &BadArgsError{
-		Cause:    fmt.Errorf("%s does not accept %s", recordType, strings.Join(unknown, ", ")),
-		Guidance: "accepts " + strings.Join(contractFieldNames(shape), ", ") + " (or cf_<slug> for an active custom field)",
+		// The argument the caller must change is `fields` — not one of the
+		// unknown KEYS inside it, which are not contract fields at all and
+		// which a client cannot look up. A refusal naming a key the schema does
+		// not have points at nothing.
+		Field: fieldsArg,
+		Cause: fmt.Errorf("%s does not accept %s", recordType, strings.Join(unknown, ", ")),
+		Guidance: "accepts " + shapes.acceptedBy(recordType, shape) +
+			" (or cf_<slug> for an active custom field)",
 	}
 }
 
@@ -261,4 +276,46 @@ func UpdatableFields(recordType datasource.EntityType) ([]string, bool) {
 		return nil, false
 	}
 	return contractFieldNames(shape), true
+}
+
+// fieldsArg is the argument name every refusal above blames, as the contract
+// spells it: the payload is `fields` on both the create and the patch shape.
+const fieldsArg = "fields"
+
+// writeShapes pairs the reflected types a decoder binds against with the
+// rendered shape a refusal hands back, so the two halves of "what this record
+// type accepts" cannot be looked up from different places and disagree.
+type writeShapes struct {
+	types map[datasource.EntityType]reflect.Type
+	// rendered is gen-recordfields' own line for each record type: every field
+	// with its JSON type, its closed vocabulary where it has one, and a `?` on
+	// the ones the body may omit.
+	rendered map[string]string
+}
+
+var (
+	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes}
+	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
+)
+
+// acceptedBy renders what this record type accepts, for a caller that has just
+// proved it does not know.
+//
+// THE SHAPE, not the names. A bare name list answers the question the caller
+// already half-knew and leaves the next two refusals in place: a measured run
+// was told `company` accepts `domains`, sent `["example.test"]`, was
+// refused for an array of strings, and then had to be told the item shape; a
+// second was told `relationship` accepts `kind` only after omitting it. Every
+// one of those facts is in gen-recordfields' line, which the tool DESCRIPTION
+// deliberately does not recite because reciting it there cost 18% of the whole
+// listing on every call. A refusal is paid only when it happens, and it is
+// paid by the caller who needs it.
+//
+// Falls back to the names when a record type has no rendered line — a shape the
+// generator did not reach is still a vocabulary this caller is owed.
+func (w writeShapes) acceptedBy(recordType string, shape reflect.Type) string {
+	if rendered, ok := w.rendered[recordType]; ok && rendered != "" {
+		return rendered
+	}
+	return strings.Join(contractFieldNames(shape), ", ")
 }

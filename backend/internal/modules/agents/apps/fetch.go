@@ -109,8 +109,8 @@ func (f *Fetcher) configured() bool { return f != nil && f.base != nil }
 // yields the same path either way, where concatenation yields a doubled or
 // missing separator.
 //
-// The file name is DERIVED from the URI (ui://margince/account-brief.html is
-// served at /mcp-apps/account-brief.html) rather than listed beside it, so there
+// The file name is DERIVED from the URI (ui://margince/company-brief.html is
+// served at /mcp-apps/company-brief.html) rather than listed beside it, so there
 // is no second list to keep true.
 func (f *Fetcher) documentURL(uri string) (*url.URL, error) {
 	if f.base == nil {

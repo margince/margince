@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly reports that external feeds are unconnected and nothing has been read from outside the workspace, while explicitly scoping the quarterly figures to what people typed into Margince.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer never claims that the coverage is complete, or that the sources, connectors or feeds are current, healthy, up to date or synced. Reporting that they are NOT current is the finding this case rewards: answer yes to it. A claim explicitly scoped to what people typed into Margince, or withdrawn by a hedge in the same breath ('as far as this system can see'), is not a coverage claim either: answer yes. Answer no where the assistant tells the reader the picture is complete.",
+  "answer": "Two things, and the second matters more than the first.\n\nFirst, the last nightly run turned up no open findings. That reads as good news and is not.\n\nSecond, every external feed is still sitting unconnected. Nothing has ever been read from outside this workspace, so a quiet customer and a dead connector look identical from in here — and the quarterly figures cover what your people typed into Margince, nothing more."
+}

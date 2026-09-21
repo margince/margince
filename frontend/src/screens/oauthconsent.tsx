@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Button, Card, Checkbox, EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
@@ -98,9 +99,9 @@ function ConsentErrorCard({
   const t = useT();
   return (
     <Card>
-      <h1>{t(titleKey)}</h1>
+      <Heading size="xlarge">{t(titleKey)}</Heading>
       <p>{t(bodyKey)}</p>
-      <Button variant="ghost" onClick={() => navigate({ screen: "brief" })}>
+      <Button variant="ghost" onClick={() => navigate({ screen: "home" })}>
         {t("consent.backToApp")}
       </Button>
     </Card>
@@ -143,7 +144,7 @@ function ConsentSelector({
 
   return (
     <Card>
-      <h1>{t("consent.title")}</h1>
+      <Heading size="xlarge">{t("consent.title")}</Heading>
       <p>{t("consent.asks", { client: data.client_name })}</p>
       <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
       <div
@@ -193,9 +194,7 @@ function ConsentSelector({
           <input type="hidden" name="deny" value="1" />
           <Button type="submit">{t("consent.deny")}</Button>
         </form>
-        {granted.size === 0 && (
-          <p className="t-caption">{t("consent.pickOne")}</p>
-        )}
+        {granted.size === 0 && <p>{t("consent.pickOne")}</p>}
       </div>
     </Card>
   );

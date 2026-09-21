@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -34,15 +34,23 @@ function draw(adapter: Partial<ProjectLinksAdapter> = {}, bare = false) {
 describe("ProjectLinks", () => {
   it("says how a link comes to exist when there are none", () => {
     draw();
-    expect(screen.getByText("No projects yet")).toBeTruthy();
+    // One quiet line, no display heading over it: as a pane of its own the
+    // section already carries its name in the head.
+    expect(screen.queryByText("No projects yet")).toBeNull();
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
     expect(screen.getByText(/body of work a deal is about/)).toBeTruthy();
+    // And that line alone. As a pane of its own the section already carries
+    // its name in the head, so a heading under it says the same word twice
+    // and makes an absence the loudest thing in the column.
+    expect(screen.queryByText("No projects yet")).toBeNull();
   });
 
   // Bare, the section is a GROUP inside a pane the caller holds: no pane of
   // its own, the title as a group head one level down with the verb beside
-  // it, and the empty state as the plate an empty group draws.
+  // it, and the empty state as the plate an empty group draws — titled there,
+  // because a group head is not a pane head and the plate is what carries the
+  // absence.
   it("stands as a group inside a pane when the caller holds the pane", () => {
     const { container } = draw({}, true);
     expect(container.querySelector(".panel")).toBeNull();
@@ -53,6 +61,7 @@ describe("ProjectLinks", () => {
       container.querySelector(".panel-grouphead button")?.textContent,
     ).toBe("Attach project");
     expect(container.querySelector(".empty-plate")).toBeTruthy();
+    expect(screen.getByText("No projects yet")).toBeTruthy();
   });
 
   it("offers to MOVE rather than attach when the record carries at most one", () => {
@@ -102,7 +111,7 @@ describe("ProjectLinks", () => {
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
       // Every real adapter refuses through throwProblem (companyprojects,
-      // personprojects, projectcompanies all do), so the stand-in refuses the
+      // contactprojects, projectcompanies all do), so the stand-in refuses the
       // same way. A plain Error here would be a test supplying its own version
       // of production and proving nothing about it.
       attach: async () => {
@@ -243,7 +252,7 @@ describe("ProjectLinks", () => {
       attach: async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "organization.link_project: permission denied",
+          detail: "company.link_project: permission denied",
         });
       },
     });
@@ -256,6 +265,6 @@ describe("ProjectLinks", () => {
     await user.click(await screen.findByText("Warehouse rollout"));
 
     expect(await screen.findByText(/do not have permission/)).toBeTruthy();
-    expect(screen.queryByText(/organization\.link_project/)).toBeNull();
+    expect(screen.queryByText(/company\.link_project/)).toBeNull();
   });
 });

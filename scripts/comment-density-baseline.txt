@@ -1,0 +1,6 @@
+# backend's comment lines per 1000 code lines, held by
+# scripts/check-comment-density.sh. It may fall and never rise; a change that
+# brings it down re-pins it here so the gain is held.
+#
+# For scale: the Go standard library runs 170-230, and pgx runs 75.
+434

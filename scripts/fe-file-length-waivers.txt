@@ -1,0 +1,136 @@
+# Pre-existing frontend files over the cap, frozen at their line count when the
+# gate landed (scripts/check-fe-file-length.sh). Shrinking is allowed; growing
+# is not. When a file drops to the cap or below, DELETE its line here.
+#
+# The cap is 500 for product code and 1000 for a test, story, testkit or
+# fixture file. This list is the frontend's size debt as it stood, and the only
+# direction it may move is shorter.
+#
+# Regenerate with scripts/seed-fe-file-length-waivers.sh — to ESTABLISH this
+# baseline, never to absorb a file that grew.
+# Format: <frozen-line-count> <path>
+#
+# The entries below were re-frozen UPWARD once, by the change that renamed the
+# record type to company. Nothing was added to them: the variable the record
+# sits in got four characters wider, and biome splits the JSX prop lists that
+# no longer fit. Paying them back down is
+# https://github.com/margince/margince/issues/5025 — and re-freezing anything
+# else upward is what the seeder refuses to do for you.
+#
+# The same again, one noun over: the change that renamed the record to contact
+# widened `people` to `contacts` and `person_id` to `contact_id`, and biome
+# splits what no longer fits in 80 columns. Nothing was added to those files
+# either, and they pay back down through the same ticket.
+
+1007 frontend/src/screens/webhooks.tsx
+1031 frontend/src/app/shell.tsx
+1035 frontend/src/App.tsx
+1037 frontend/src/screens/automations.test.tsx
+1042 frontend/src/screens/installation-setup.tsx
+928 frontend/src/screens/auth.tsx
+1092 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
+1098 frontend/src/screens/worklist.test.tsx
+1105 frontend/src/screens/contactpage.test.tsx
+1109 frontend/src/screens/users-admin.test.tsx
+1125 frontend/src/design-system/listsurface.tsx
+1139 frontend/src/screens/companyrail.test.tsx
+1145 frontend/src/screens/record360/spine.test.tsx
+1160 frontend/src/screens/onboarding-conversation/company-act.tsx
+1159 frontend/src/design-system/conformance.test.ts
+1183 frontend/src/screens/onboarding-conversation/company-act.test.tsx
+1184 frontend/src/screens/contactpage.tsx
+1200 frontend/src/screens/privacy.test.tsx
+1208 frontend/src/screens/contactprovider.test.tsx
+1208 frontend/src/screens/worklist.row.tsx
+1245 frontend/src/screens/privacy.tsx
+1278 frontend/src/screens/connectors.tsx
+1302 frontend/src/screens/analytics.test.tsx
+1326 frontend/src/screens/company-context.tsx
+1330 frontend/src/screens/listquery.test.tsx
+1402 frontend/src/screens/listquery.tsx
+1378 frontend/src/screens/offers.tsx
+1440 frontend/src/app/agentrail.test.tsx
+1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
+1527 frontend/src/design-system/listtable.test.tsx
+1369 frontend/src/app/agentrail.tsx
+1650 frontend/src/design-system/listtable.tsx
+1728 frontend/src/screens/onboarding-facts.test.tsx
+1917 frontend/src/screens/contactpage.stories.tsx
+1913 frontend/src/screens/analytics.tsx
+1676 frontend/src/design-system/atoms.tsx
+2062 frontend/src/screens/company360.tsx
+1931 frontend/src/design-system/composed.tsx
+2185 frontend/src/screens/leads.tsx
+2308 frontend/src/screens/company360.test.tsx
+2535 frontend/src/screens/companies.test.tsx
+2576 frontend/src/screens/companies.tsx
+2642 frontend/src/screens/deals.test.tsx
+2750 frontend/src/screens/compose.tsx
+2315 frontend/src/screens/settings.tsx
+2833 frontend/src/screens/leads.test.tsx
+3331 frontend/src/screens/compose.test.tsx
+3784 frontend/src/screens/deals.tsx
+505 frontend/src/screens/recordchronology.tsx
+513 frontend/src/design-system/relationshipmap.tsx
+513 frontend/src/screens/contact360.tsx
+514 frontend/src/screens/documentextraction.tsx
+516 frontend/src/design-system/margince-workbench.tsx
+516 frontend/src/design-system/richtext.tsx
+525 frontend/src/screens/onboarding-backread.tsx
+527 frontend/src/screens/importflow.ts
+531 frontend/src/screens/voice-versions.tsx
+542 frontend/src/screens/leadpresentation.tsx
+547 frontend/src/screens/connected-agents.tsx
+547 frontend/src/screens/scheduledsends.tsx
+560 frontend/src/screens/users-access.tsx
+561 frontend/src/screens/worklist.queries.ts
+571 frontend/src/screens/capture-activity.tsx
+564 frontend/src/screens/project360.tsx
+538 frontend/src/screens/adddocument.tsx
+592 frontend/src/screens/rates.tsx
+612 frontend/src/app/account.tsx
+612 frontend/src/design-system/trust.tsx
+616 frontend/src/screens/logactivity.tsx
+617 frontend/src/screens/dealroomaccess.tsx
+617 frontend/src/screens/taskactions.tsx
+629 frontend/src/screens/knowledge.tsx
+630 frontend/src/screens/onboarding-connect-panels.tsx
+640 frontend/src/screens/retention.tsx
+648 frontend/src/screens/leads.list.tsx
+648 frontend/src/screens/partners.tsx
+666 frontend/src/screens/record360/citations.tsx
+594 frontend/src/screens/approvalkind.ts
+670 frontend/src/screens/entityref.tsx
+560 frontend/src/screens/contractform.tsx
+671 frontend/src/screens/users-admin.tsx
+676 frontend/src/screens/worklist.dispositions.tsx
+682 frontend/src/format/format.ts
+702 frontend/src/screens/settingsnav.tsx
+737 frontend/src/screens/companytoday.tsx
+737 frontend/src/screens/installation-settings.tsx
+762 frontend/src/screens/extension-access.tsx
+781 frontend/src/screens/onboarding-conversation/connect-scene.tsx
+789 frontend/src/screens/worklist.tsx
+790 frontend/src/screens/companycontacts/summary.tsx
+818 frontend/src/screens/import.tsx
+827 frontend/src/screens/voice-dna.tsx
+836 frontend/src/screens/record360/spine.tsx
+787 frontend/src/screens/relationships.tsx
+844 frontend/src/screens/filterbuilder.tsx
+856 frontend/src/screens/onboarding-gate.tsx
+857 frontend/src/screens/worklist.copy.ts
+894 frontend/src/screens/common.tsx
+906 frontend/src/screens/leadvocab.tsx
+906 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
+906 frontend/src/screens/settingscatalog.ts
+919 frontend/src/screens/customfields.tsx
+941 frontend/src/screens/contactprovider.tsx
+948 frontend/src/screens/share.tsx
+950 frontend/src/screens/automations.tsx
+965 frontend/src/screens/integrations-provider.tsx
+546 frontend/src/design-system/decisiondeck.tsx
+982 frontend/src/screens/ai-routing.tsx
+878 frontend/src/screens/create.tsx
+822 frontend/src/design-system/decisioncard.tsx
+989 frontend/src/screens/companyheader.tsx
+995 frontend/src/screens/onboarding-read.tsx

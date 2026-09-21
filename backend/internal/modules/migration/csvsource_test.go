@@ -36,7 +36,7 @@ func TestCSVSourceRowsPageDeterministicallyByOffset(t *testing.T) {
 	var b strings.Builder
 	b.WriteString("Email,First Name\n")
 	for i := range 500 {
-		fmt.Fprintf(&b, "person%03d@x.test,Name%03d\n", i, i)
+		fmt.Fprintf(&b, "contact%03d@x.test,Name%03d\n", i, i)
 	}
 	mapping, sourceKey := leadMapping()
 	src := NewCSVSource(seedCSV(t, b.String()), testCSVKey, ObjectLead, mapping, sourceKey)
@@ -162,7 +162,7 @@ func TestCSVSourceReportsAMissingObject(t *testing.T) {
 	mapping, sourceKey := leadMapping()
 	src := NewCSVSource(seedCSV(t, "Email,First Name\na@x.test,A\n"), testCSVKey, ObjectLead, mapping, sourceKey)
 
-	if _, err := src.Rows(context.Background(), ObjectOrganization, 0, 10); !errors.Is(err, ErrObjectNotInSource) {
+	if _, err := src.Rows(context.Background(), ObjectCompany, 0, 10); !errors.Is(err, ErrObjectNotInSource) {
 		t.Fatalf("err = %v, want ErrObjectNotInSource", err)
 	}
 }
@@ -220,7 +220,7 @@ func TestCSVSourceRefusesAnUnusableHeader(t *testing.T) {
 	}
 }
 
-// TestARowCarriesTheFileLineItCameFrom is the number an issue sends a person to.
+// TestARowCarriesTheFileLineItCameFrom is the number an issue sends a contact to.
 //
 // The line used to be recovered from the external id's TEXT — a row the source
 // could not identify is disclosed as "line N", so the id was parsed back. A file

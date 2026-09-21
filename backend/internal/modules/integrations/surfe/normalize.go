@@ -14,7 +14,7 @@ package surfe
 //   - A label the platform inferred is never presented as the provider's.
 //     emailType is frequently ABSENT even under the professional cascade, so
 //     the address is labeled from what was REQUESTED and marked as such —
-//     the person page reads that marker to say which is which.
+//     the contact page reads that marker to say which is which.
 //
 // What the vendor returns beyond the requested categories is dropped: the
 // claim vocabulary is closed, and no raw payload is retained.
@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
-// claimsFor normalizes one person's result. A category the vendor answered
+// claimsFor normalizes one contact's result. A category the vendor answered
 // emptily produces NO claim rather than an empty one, so "we asked and they
 // had nothing" is stored as an absence and reads as one.
 func claimsFor(p wireResult) ([]provider.Claim, error) {
@@ -165,7 +165,7 @@ func historyFor(jobs []wireJob) []map[string]any {
 // One credit per pool, not one per value, and that is the load-bearing part.
 // Surfe's `emails` array is PLURAL: it returns every address it found for the
 // subject, from the single lookup the run paid for. Counting them would bill
-// a well-documented person more than a thinly-documented one for the same
+// a well-documented contact more than a thinly-documented one for the same
 // question, and would exceed the reservation the platform took — a number
 // reconcile writes into actual_credits and poolUsedThisMonth sums against the
 // customer's monthly ceiling, so the over-charge would silently eat budget

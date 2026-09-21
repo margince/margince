@@ -22,6 +22,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -69,22 +70,25 @@ type UpdateWebhookSubscriptionRequest =
 // same spelling rather than re-deriving its own tone rules per status.
 export function webhookStatusBadge(
   status: WebhookDeliveryStatus,
-): "success" | "warn" | "danger" | "accent" {
+): "success" | "info" | "warning" | "danger" {
   switch (status) {
     case "delivered":
       return "success";
     case "dead_lettered":
       return "danger";
     case "retrying":
-      return "warn";
+      return "warning";
     // Not "danger": nothing failed. The subscriber's own endpoint is fine and
     // the record simply left their sight, so this is a stop rather than a
     // fault, and an operator reading the list should not go looking for a
     // broken endpoint.
     case "visibility_revoked":
-      return "warn";
+      return "warning";
+    // `info` and not the brand accent: a delivery nobody has attempted yet is
+    // work in flight, and green beside the real `delivered` row read as a
+    // second way of saying it landed.
     case "pending":
-      return "accent";
+      return "info";
   }
 }
 
@@ -253,7 +257,7 @@ function updateWebhookSubscription(
 }
 
 // Archive stops all delivery (DELETE, no If-Match — mirrors products.tsx/
-// people.tsx's ArchiveAction usage: archiving isn't a concurrent-edit hazard
+// contacts.tsx's ArchiveAction usage: archiving isn't a concurrent-edit hazard
 // the way a field patch is).
 async function archiveWebhookSubscription(
   subscription: WebhookSubscription,
@@ -311,7 +315,6 @@ function RotateSecretAction({
           confirm borrowed "Confirm" from the deals namespace, which named the
           dialog's mechanics rather than the act being confirmed. */}
       <Button
-        small
         variant="danger"
         onClick={() => setConfirming(true)}
         data-testid="rotate-webhook-secret"
@@ -364,41 +367,39 @@ function SecretRevealModal({
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webhooks.secret.title")}
-      </h2>
+      </Heading>
       {/* One stack owns every interval in this dialog, so the warning, the
-          secret and whatever the copy attempt has to say do not each set a
-          margin of their own. */}
+          secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">
-        <p className="t-caption">{t("webhooks.secret.warning")}</p>
-        <pre className="code-block t-mono" data-testid="webhook-signing-secret">
+        <p>{t("webhooks.secret.warning")}</p>
+        <pre className="code-block" data-testid="webhook-signing-secret">
           {secret}
         </pre>
         {copyFailed && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("webhooks.secret.copyFailedTitle")}
+          >
             {t("webhooks.secret.copyFailed")}
           </Callout>
         )}
       </div>
       {/* Dismissing is what DESTROYS the only copy of the secret: it lives in
           this component's state and is never re-derivable from any read. So
-          Copy is the primary act here and Done is the quiet one — the reverse
-          of what this dialog used to say, where the green button was the
-          irreversible half and read as the safe way out. Done is still
-          available before a copy (a reader who deliberately abandons a
-          subscription must be able to leave), but the caution says in words
-          what it costs. */}
+          Copy is the primary act here and Done is the quiet one. Done stays
+          available before a copy — abandoning a subscription must be possible —
+          but the caution says in words what it costs. */}
       {!copied && (
-        <p className="t-caption webhook-secret-caution">
+        <p className="webhook-secret-caution">
           {t("webhooks.secret.leaveWarning")}
         </p>
       )}
       <div className="actions">
-        <Button small onClick={onClose}>
-          {t("webhooks.secret.done")}
-        </Button>
-        <Button small variant="primary" onClick={() => void copySecret()}>
+        <Button onClick={onClose}>{t("webhooks.secret.done")}</Button>
+        <Button variant="primary" onClick={() => void copySecret()}>
           {copied ? t("webhooks.secret.copied") : t("webhooks.secret.copy")}
         </Button>
       </div>
@@ -408,8 +409,8 @@ function SecretRevealModal({
 
 function subscriptionStateTone(
   state: WebhookSubscription["state"],
-): "success" | "warn" {
-  return state === "active" ? "success" : "warn";
+): "success" | "warning" {
+  return state === "active" ? "success" : "warning";
 }
 
 function NotConfiguredState() {
@@ -504,11 +505,7 @@ function ReplayDeliveryAction({
 
   return (
     <>
-      <Button
-        small
-        onClick={() => setConfirming(true)}
-        data-testid="replay-delivery"
-      >
+      <Button onClick={() => setConfirming(true)} data-testid="replay-delivery">
         {t("webhooks.deliveries.replay")}
       </Button>
       <ConfirmModal
@@ -570,9 +567,7 @@ function deliveryColumns(
     {
       key: "event",
       header: t("webhooks.deliveries.column.event"),
-      render: (delivery: WebhookDelivery) => (
-        <span className="t-mono">{delivery.event_type}</span>
-      ),
+      render: (delivery: WebhookDelivery) => <span>{delivery.event_type}</span>,
     },
     {
       key: "attempts",
@@ -769,9 +764,7 @@ function SubscriptionRow({
     <>
       <SettingRow
         label={
-          <span className="t-mono webhook-target">
-            {subscription.target_url}
-          </span>
+          <span className="webhook-target">{subscription.target_url}</span>
         }
         description={
           subscription.updated_at
@@ -809,7 +802,6 @@ function SubscriptionRow({
                 actually missing, so the button carries it: what it controls,
                 and whether it is open. */}
             <Button
-              small
               data-testid="view-deliveries"
               aria-expanded={showDeliveries}
               aria-controls={deliveriesId}
@@ -931,7 +923,6 @@ export function WebhooksCard() {
       titleAction={
         canCreateHere ? (
           <Button
-            small
             variant="primary"
             data-testid="new-webhook-subscription"
             onClick={() => setCreating(true)}

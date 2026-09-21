@@ -30,11 +30,17 @@ type workerConfig struct {
 	// armed the destructive reset at all. The worker's only stake is the cache
 	// flush it subscribes to, which exists solely to serve that reset — so an
 	// installation that never armed it holds no subscriber either.
-	allowDataReset       bool
-	ratesFx              string
-	ratesCurrencies      []string
-	ratesModelPricing    map[string]string
-	redisAddr            string
+	allowDataReset    bool
+	ratesFx           string
+	ratesCurrencies   []string
+	ratesModelPricing map[string]string
+	redisAddr         string
+	// redisPassword is the bus credential, empty where the instance requires
+	// none. The bus carries job payloads and therefore CRM data, so an
+	// instance reachable by anything but this deployment has to require one —
+	// the desktop bundle's loopback bus does, and generates it per
+	// installation.
+	redisPassword        string
 	routingPath          string
 	fakeBrain            bool
 	runnerInterval       time.Duration
@@ -54,8 +60,6 @@ type workerConfig struct {
 	graphNotifyURL       string
 	graphWatchInterval   time.Duration
 	graphWatchRenew      time.Duration
-	overlayInterval      time.Duration
-	overlayBackfillLimit int
 	sendRateLimit        int
 	sendRateWindow       time.Duration
 	sendMaxAge           time.Duration
@@ -101,6 +105,8 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.configPath, "config", "MARGINCE_CONFIG", "margince.yaml",
 		"path to the deployment configuration file (A107/ADR-0061); read for the ai.capture_payloads posture the Surface-B runner honors and the capture pipeline tuning (capture.freemail_extra). A missing file boots with defaults")
 	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
+	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
+		"Event-bus credential, where the instance requires one")
 	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
 	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "run the Surface-B runner on the offline fake model (dev/test only)")
 	fs.DurationVar(&cfg.runnerInterval, "runner-interval", 30*time.Second, "how often the Surface-B scheduler fans one seed-and-execute pass out per live workspace")
@@ -122,7 +128,7 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.gmailClientSecret, "gmail-client-secret", "MARGINCE_GMAIL_CLIENT_SECRET", "", "Google OAuth client secret for the Gmail capture connector")
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; enables its background sync poll")
 	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
-	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for token refresh (default: common — any organization)")
+	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for token refresh (default: common — any company)")
 	fs.DurationVar(&cfg.gmailSyncInterval, "gmail-sync-interval", 2*time.Minute, "Gmail incremental-sync poll interval")
 	env.String(fs, &cfg.gmailPubsubTopic, "gmail-pubsub-topic", "MARGINCE_GMAIL_PUBSUB_TOPIC", "", "Gmail Pub/Sub topic (projects/<p>/topics/<t>); enables the push-watch register+renew job. Empty leaves capture on the poll.")
 	fs.DurationVar(&cfg.gmailWatchInterval, "gmail-watch-interval", 6*time.Hour, "Gmail push-watch maintenance scan interval")
@@ -130,8 +136,6 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.graphNotifyURL, "graph-notification-url", "MARGINCE_GRAPH_NOTIFICATION_URL", "", "public URL Microsoft posts Graph change notifications to, operator token and all (https://<api>/webhooks/graph?token=...); enables the subscription register+renew job. Empty leaves Outlook capture on the poll.")
 	fs.DurationVar(&cfg.graphWatchInterval, "graph-watch-interval", 6*time.Hour, "Graph subscription maintenance scan interval")
 	fs.DurationVar(&cfg.graphWatchRenew, "graph-watch-renew-within", 24*time.Hour, "renew a Graph subscription this far ahead of its <3-day deadline")
-	fs.DurationVar(&cfg.overlayInterval, "overlay-reconcile-interval", 2*time.Minute, "overlay-mode incumbent mirror reconcile poll interval (design.md §4.4)")
-	fs.IntVar(&cfg.overlayBackfillLimit, "overlay-backfill-limit", 0, "cap the overlay initial mirror backfill at this many records per object class (dev/demo; 0 = uncapped)")
 	if err := registerDeepReadFlags(fs, cfg); err != nil {
 		return nil, nil, nil, err
 	}
@@ -207,11 +211,14 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	if cfg.dsn == "" {
 		return workerConfig{}, errors.New("worker: --dsn or MARGINCE_DSN required")
 	}
-	if err := overlayBackfillLimitFromEnv(&cfg.overlayBackfillLimit); err != nil {
+	// The refusal half of the auto-enrich daily cap: a typo fails the boot
+	// here; compose resolves the value where it is spent, from the same
+	// process environment, which is fixed at exec.
+	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return workerConfig{}, err
 	}
-	if cfg.deepReadMaxPages < 0 || cfg.deepReadMaxBytes < 0 || cfg.deepReadWall < 0 || cfg.overlayBackfillLimit < 0 {
-		return workerConfig{}, errors.New("worker: the deep-read caps and the overlay backfill limit must be zero (default/uncapped) or positive")
+	if cfg.deepReadMaxPages < 0 || cfg.deepReadMaxBytes < 0 || cfg.deepReadWall < 0 {
+		return workerConfig{}, errors.New("worker: the deep-read caps must be zero (default/uncapped) or positive")
 	}
 	// A negative pacing value would read as "take the default" downstream,
 	// which quietly ignores what the operator actually typed.
@@ -230,13 +237,12 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 // unparseable value there is a boot error rather than a silent fallback to the
 // built-in — an operator who typed a cap and got the default instead would have
 // no way to tell.
-// The deep-read caps and the overlay backfill limit, named so each role can
-// declare them without spelling the strings a second time.
+// The deep-read caps, named so each role can declare them without spelling the
+// strings a second time.
 const (
-	deepReadMaxPagesEnv     = "MARGINCE_DEEPREAD_MAX_PAGES"
-	deepReadMaxBytesEnv     = "MARGINCE_DEEPREAD_MAX_BYTES"
-	deepReadWallEnv         = "MARGINCE_DEEPREAD_WALL"
-	overlayBackfillLimitEnv = "MARGINCE_OVERLAY_BACKFILL_LIMIT"
+	deepReadMaxPagesEnv = "MARGINCE_DEEPREAD_MAX_PAGES"
+	deepReadMaxBytesEnv = "MARGINCE_DEEPREAD_MAX_BYTES"
+	deepReadWallEnv     = "MARGINCE_DEEPREAD_WALL"
 )
 
 func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
@@ -285,7 +291,6 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 		{"gmail-sync-interval", cfg.gmailSyncInterval},
 		{"gmail-watch-interval", cfg.gmailWatchInterval},
 		{"graph-watch-interval", cfg.graphWatchInterval},
-		{"overlay-reconcile-interval", cfg.overlayInterval},
 		{"webhook-retry-interval", cfg.webhookRetryInterval},
 	}
 	for _, iv := range intervals {
@@ -301,23 +306,6 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 	if cfg.graphWatchRenew < 0 {
 		return fmt.Errorf("worker: --graph-watch-renew-within must be zero or positive, got %s", cfg.graphWatchRenew)
 	}
-	return nil
-}
-
-// overlayBackfillLimitFromEnv folds MARGINCE_OVERLAY_BACKFILL_LIMIT into
-// limit when the flag was left at its 0 default, so either the flag or the
-// env sets the cap. An unset env leaves limit untouched; a set-but-invalid
-// env (non-integer or negative) is a boot error, never a silent default.
-func overlayBackfillLimitFromEnv(limit *int) error {
-	v := config.FromOS(overlayBackfillLimitEnv)
-	if v == "" || *limit != 0 {
-		return nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil || n < 0 {
-		return fmt.Errorf("invalid MARGINCE_OVERLAY_BACKFILL_LIMIT %q: want a non-negative integer", v)
-	}
-	*limit = n
 	return nil
 }
 

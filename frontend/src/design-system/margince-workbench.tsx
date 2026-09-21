@@ -8,6 +8,7 @@ import type { MessageKey } from "../i18n/en";
 import { Avatar } from "./atoms";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./margince-workbench.css";
+import { Heading } from "./heading";
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 
@@ -51,8 +52,8 @@ export function MarginceWorkbench({
   variant = "split",
   footerLabel,
   stepLabel,
-  person,
-  personAction,
+  contact,
+  contactAction,
 }: Readonly<{
   state: MarginceCoreState;
   progress?: number;
@@ -87,19 +88,19 @@ export function MarginceWorkbench({
    * Copy belongs to the caller's catalog, never to the design system. */
   stepLabel?: string;
   /** Rail only: who is signed in, at the rail's very foot. */
-  person?: Readonly<{
+  contact?: Readonly<{
     name: string;
     detail: string;
     /** What the chip's tint is keyed on — see `Avatar.identity`. */
     identity?: string;
   }>;
   /**
-   * Rail only: a control at the right-hand end of the person row. The rail has
+   * Rail only: a control at the right-hand end of the contact row. The rail has
    * no top bar, so this is the one place surface-level chrome can live; the foot
    * row keeps it out of the journey's reading path. Copy and behaviour belong to
    * the caller — the design system supplies the slot, never its contents.
    */
-  personAction?: ReactNode;
+  contactAction?: ReactNode;
 }>) {
   // The rail reads top-down as: who is speaking, where the journey is, the
   // conversation itself, and what this run costs — so the identity block
@@ -117,7 +118,7 @@ export function MarginceWorkbench({
       />
       <div className="mw-identity">
         <span className="t-eyebrow">{eyebrow}</span>
-        <h1>{title}</h1>
+        <Heading size="xlarge">{title}</Heading>
         <p>
           <i data-state={state} aria-hidden /> {status}
         </p>
@@ -184,25 +185,25 @@ export function MarginceWorkbench({
           {children}
           {/* The row survives an unresolved identity so its control does not
               appear only once the signed-in reader has loaded. */}
-          {rail && (person || personAction) && (
-            <div className="mw-person">
-              {person && (
+          {rail && (contact || contactAction) && (
+            <div className="mw-contact">
+              {contact && (
                 <>
                   {/* The design system's chip, not a second one. This was a
                       hand-rolled span taking ONE letter and a hard-coded
                       `--mono0Fill`, so every reader was the same colour and a
-                      different letter count from the same person's chip in the
+                      different letter count from the same contact's chip in the
                       transcript three columns away — which that transcript's
                       own comment claims it matches. */}
-                  <Avatar identity={person.identity} name={person.name} />
-                  <span className="mw-person-id">
-                    <b>{person.name}</b>
-                    <small>{person.detail}</small>
+                  <Avatar identity={contact.identity} name={contact.name} />
+                  <span className="mw-contact-id">
+                    <b>{contact.name}</b>
+                    <small>{contact.detail}</small>
                   </span>
                 </>
               )}
-              {personAction && (
-                <span className="mw-person-action">{personAction}</span>
+              {contactAction && (
+                <span className="mw-contact-action">{contactAction}</span>
               )}
             </div>
           )}
@@ -280,9 +281,8 @@ function StepProgress({
 
 // Cost disclosure as an opt-in chip. The summary line (spend so far) is always
 // visible because a reader must never have to ask what a run is costing; the
-// per-model breakdown opens on demand. Hover reveals, click pins — so a
-// pointer user reads it in passing and a keyboard user can keep it open while
-// they read it.
+// per-model breakdown opens on demand. Hover reveals, click pins — so a pointer
+// user reads it in passing and a keyboard user can keep it open while reading.
 /**
  * What the installation is running on, and what this setup has spent on it.
  *
@@ -418,7 +418,7 @@ export function AiRuntimeChip({
             {labels.tokensShort !== undefined && ` ${labels.tokensShort}`}
           </small>
         )}
-        <ChevronDown className="mw-aistat-caret" aria-hidden size={12} />
+        <ChevronDown className="mw-aistat-caret" aria-hidden />
       </button>
       <div className="mw-aistat-pop" id={popoverId} hidden={!open}>
         <p className="mw-aistat-h">{labels.answering}</p>

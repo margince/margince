@@ -12,9 +12,20 @@ import "github.com/riverqueue/river"
 func jobQueues() map[string]river.QueueConfig {
 	return map[string]river.QueueConfig{
 		river.QueueDefault: {MaxWorkers: 5},
+		// A send carrying files is long and outbound-bound — a three-minute
+		// upload budget, because a 20 MiB album cannot cross the wire in
+		// thirty seconds. It is the category this file's posture was written
+		// for, and it was on the shared queue until it grew into one
+		// (commsSendQueue).
+		commsSendQueue: {MaxWorkers: commsSendMaxWorkers},
 		// Deep reads run on their own bounded pool so long crawls cannot
 		// evict the short maintenance jobs from the default queue.
 		deepReadQueue: {MaxWorkers: deepReadMaxWorkers},
+		// The raw-capture part sweep reads an object per attachment and encodes
+		// its octets to locate them, so a batch is outbound-bound work of the
+		// same species as a deep read: its own bounded pool keeps it from
+		// holding default workers while the object store answers.
+		capturePartSlimQueue: {MaxWorkers: capturePartSlimMaxWorkers},
 		// Rate refreshes (FX fetch + pricing-page crawl+LLM extract) are
 		// likewise long; their own bounded pool keeps a multi-workspace
 		// burst from starving close-date, reconcile, and capture jobs.
@@ -50,13 +61,6 @@ func jobQueues() map[string]river.QueueConfig {
 		// the intervals; this bound holds the single thread, because a second
 		// worker would be a second requester however carefully each paced.
 		technicalLookupQueue: {MaxWorkers: technicalLookupMaxWorkers},
-		// Overlay reconcile is SERIAL by design. overlaybudget.ConsumeSearch
-		// counts but does not pace, and its keys are per workspace, so it
-		// cannot bound a provider-level burst: a concurrent fan-out could
-		// exceed the incumbent's per-second Search limit. Each workspace
-		// still gets its own job row, which is the observability this phase
-		// is after; per-workspace PARALLELISM is not.
-		overlayReconcileQueue: {MaxWorkers: 1},
 		// A full batch of sequential calls to endpoints this deployment
 		// does not control: long and outbound-bound, so the same posture
 		// deep reads take (webhookRetryQueue).

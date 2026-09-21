@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -306,7 +307,10 @@ func (s *Dispatcher) eraOwned(req rpcRequest, fr framing) (rpcResponse, bool) {
 func methodNotFound(req rpcRequest) rpcResponse {
 	return rpcResponse{
 		JSONRPC: jsonRPCVersion, ID: req.ID,
-		Error: &rpcError{Code: codeMethodNotFound, Message: "method not found: " + req.Method},
+		// The method is the caller's own string off the JSON body, bounded and
+		// escaped for the reason UnknownToolError bounds a tool name: both are
+		// chosen freely and both land in a transcript the same run reads back.
+		Error: &rpcError{Code: codeMethodNotFound, Message: "method not found: " + httperr.QuoteCaller(req.Method)},
 	}
 }
 
@@ -365,7 +369,7 @@ func (s *Dispatcher) identity() map[string]any {
 // call answers tools/call. Its return is `any` rather than a result map because
 // a confirm-first call has TWO shapes: the refusal every client understands,
 // and — for a client that declared the Tasks extension on this request — a task
-// handle it can poll until the person decides.
+// handle it can poll until the human decides.
 //
 //craft:ignore naked-any the protocol makes this result polymorphic (CallToolResult or CreateTaskResult) and the framing tells them apart by TYPE — a named wrapper here would be a naked any wearing a hat, and collapsing both into one map would make resultType a member two components read differently
 func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framing) any {
@@ -374,7 +378,14 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		Arguments json.RawMessage `json:"arguments"`
 	}
 	if err := json.Unmarshal(params, &p); err != nil {
-		return toolError("malformed tools/call params: " + err.Error())
+		// Same reason decodeArgs masks its decoder: encoding/json describes this
+		// program, not anything the caller can fix, and the withheld words go
+		// to the operator instead of into the model's transcript.
+		safe, withheld := httperr.SafeDecodeError(err)
+		if withheld {
+			s.log.Warn("mcp: unnamed tools/call params decode failure", "err", err)
+		}
+		return toolError("malformed tools/call params: " + safe.Error())
 	}
 	if p.Arguments == nil {
 		p.Arguments = json.RawMessage(`{}`)

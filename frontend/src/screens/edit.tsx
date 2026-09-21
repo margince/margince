@@ -3,6 +3,7 @@ import { PenLine } from "lucide-react";
 import { useId, useState } from "react";
 import type { Route } from "../app/router";
 import { Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -15,19 +16,23 @@ import {
 } from "./common";
 import {
   type CreateField,
-  type FormRow,
   type FormRows,
   RecordFormBody,
   usePublishedValues,
 } from "./create";
+import {
+  prefillFromRecord,
+  prefillRowsFromRecord,
+  seedMissingFields,
+} from "./edit.prefill";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
 // copy.ts). Only the four record kinds a salesperson edits by hand carry
 // one; every other screen this hook also serves (products, offer templates,
 // relationships, webhooks, pipeline stages...) gets none.
 const EDIT_MUTATION_HEAD: Readonly<Partial<Record<string, string>>> = {
-  organization: "company-edit",
-  person: "contact-edit",
+  company: "company-edit",
+  contact: "contact-edit",
   deal: "deal-edit",
   lead: "lead-edit",
 };
@@ -88,7 +93,7 @@ export function useUpdateRecord<Updated extends { id: string }>({
       values: Record<string, unknown>;
       rows: FormRows;
       // The reading the form prefilled from, carried through the mutation so
-      // the write's baseline and version are the ones the person saw.
+      // the write's baseline and version are the ones the contact saw.
       opened?: Record<string, unknown> & { id: string; version?: number };
     }) => update(values, rows, opened),
     onSuccess: (updated) => {
@@ -111,71 +116,6 @@ export function useUpdateRecord<Updated extends { id: string }>({
   });
 }
 
-// One field's initial form string: a divider holds no value; a field with a
-// `toInput` transform (e.g. currency minor→major) uses it; otherwise the raw
-// record value is stringified, or blank when the record doesn't carry it.
-function prefillField(
-  field: CreateField,
-  record: Record<string, unknown>,
-): string {
-  const current = record[field.key];
-  if (field.toInput) {
-    return field.toInput(current);
-  }
-  return current == null ? "" : String(current);
-}
-
-// The record's scalar field values as form strings, keyed by field — dividers
-// hold no value and repeatable fields live in the separate rows channel, so
-// both are skipped here.
-function prefillFromRecord(
-  fields: CreateField[],
-  record: Record<string, unknown>,
-): Record<string, string> {
-  const prefilled: Record<string, string> = {};
-  for (const field of fields) {
-    if (field.divider || field.type === "repeatable") {
-      continue;
-    }
-    prefilled[field.key] = prefillField(field, record);
-  }
-  return prefilled;
-}
-
-// One repeatable field's row value coerced to the form's string-keyed rows: an
-// array of row objects seeds those rows (each subfield stringified — the form
-// controls only ever read/write strings); anything else starts with no rows.
-function prefillRows(value: unknown): FormRow[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.map((entry) => {
-    const row: FormRow = {};
-    if (entry && typeof entry === "object") {
-      for (const [key, cell] of Object.entries(entry)) {
-        row[key] = cell == null ? "" : String(cell);
-      }
-    }
-    return row;
-  });
-}
-
-// The record's repeatable fields as prefilled rows, keyed by field — the rows
-// channel's counterpart to prefillFromRecord (a field the record doesn't carry
-// starts empty rather than throwing).
-function prefillRowsFromRecord(
-  fields: CreateField[],
-  record: Record<string, unknown>,
-): FormRows {
-  const rows: FormRows = {};
-  for (const field of fields) {
-    if (field.type === "repeatable") {
-      rows[field.key] = prefillRows(record[field.key]);
-    }
-  }
-  return rows;
-}
-
 // The edit modal: prefilled from the record's current field values (each
 // field's key projected off the record, coerced to a string; a field the
 // record doesn't carry starts blank rather than throwing). The screen's
@@ -185,7 +125,6 @@ export function EditRecordModal({
   open,
   onClose,
   title,
-  notice,
   fields,
   record,
   pending,
@@ -198,10 +137,6 @@ export function EditRecordModal({
   open: boolean;
   onClose: () => void;
   title: string;
-  // A one-sentence advisory shown above the form fields, e.g. overlay mode's
-  // partial-write-back warning. Optional so a plain edit carries no empty
-  // banner.
-  notice?: string;
   fields: CreateField[];
   record: Record<string, unknown> & { id: string; version?: number };
   pending: boolean;
@@ -214,8 +149,8 @@ export function EditRecordModal({
   // values on screen, the baseline the diff is taken against, and the version
   // the If-Match carries. `record` is recomputed on every render, so a
   // background refetch mid-edit moves the last two while the first stays as
-  // the person left it — and then the diff reports somebody else's change as
-  // this person's edit, and the fresh version makes the server's concurrency
+  // the contact left it — and then the diff reports somebody else's change as
+  // this contact's edit, and the fresh version makes the server's concurrency
   // check pass on the write that overwrites it.
   //
   // Carried ON the submit rather than published when it is taken, so it is
@@ -256,13 +191,24 @@ export function EditRecordModal({
   // under an open dialog without remounting it, and then the form is
   // showing one record's values while the caller's write
   // addresses another. Re-seeding on identity is not the same trade as
-  // re-seeding on every render: keeping what the person typed is only worth
+  // re-seeding on every render: keeping what the human typed is only worth
   // anything while it is about the record they are still editing.
   const [seededFor, setSeededFor] = useState<string | null>(null);
   // The reading the values were taken from, kept for the write. Set in the
   // same transition as they are, so the three cannot describe different
   // moments of the record.
   const [opened, setOpened] = useState(record);
+  // Whether the block below already seeded this render, and why it must not
+  // run again when it did.
+  //
+  // `values` is never CLEARED on close — only replaced on open. So on a reopen
+  // it still holds the previous session's answers, and this render they are
+  // still the ones in hand: React has not applied the setter above yet. The
+  // pass below would read those stale answers as present, skip them, and merge
+  // them back over the fresh seed — submitting the old name against the NEW
+  // version, which is the version the server checks. A lost update that passes
+  // the concurrency test is worse than one that fails it.
+  let seededThisRender = false;
   if (open !== seededOpen || (open && record.id !== seededFor)) {
     setSeededOpen(open);
     setSeededFor(open ? record.id : null);
@@ -272,19 +218,33 @@ export function EditRecordModal({
       setValues(prefillFromRecord(fields, record));
       setRows(prefillRowsFromRecord(fields, record));
       setOpened(record);
+      seededThisRender = true;
+    }
+  }
+  // A field list that GREW while the dialog stayed open — the custom-field
+  // catalog landing after Edit was pressed. The seed above already covered
+  // every field it knew about, so this runs on the renders after it.
+  if (open && !seededThisRender) {
+    const seeded = seedMissingFields(fields, record, values);
+    if (seeded) {
+      setValues({ ...values, ...seeded.form });
+      // The baseline grows with the form. A field the opening reading never
+      // carried would otherwise make a genuine clear compare equal to it and
+      // vanish from the patch — see seedMissingFields.
+      setOpened((current) => ({ ...current, ...seeded.raw }));
     }
   }
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {title}
-      </h2>
-      {notice && (
-        <p className="t-caption" style={{ marginBottom: "var(--space-3)" }}>
-          {notice}
-        </p>
-      )}
+      </Heading>
       <RecordFormBody
         fields={fields}
         values={values}
@@ -311,7 +271,6 @@ export function EditRecordModal({
 // prefill from, and its transport — nothing else.
 export function EditAction<Updated extends { id: string }>({
   label,
-  notice,
   fields,
   record,
   update,
@@ -341,8 +300,6 @@ export function EditAction<Updated extends { id: string }>({
   // hiding the control hides a fact the reader needs.
   disabledReasonId?: string;
 
-  // See EditRecordModal — an optional one-sentence advisory over the form.
-  notice?: string;
   fields: CreateField[];
   record: Record<string, unknown> & { id: string; version?: number };
   update: (
@@ -396,7 +353,6 @@ export function EditAction<Updated extends { id: string }>({
           row of the list that names nothing. */}
       {labelled ? (
         <Button
-          small
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
           data-testid="edit-record"
@@ -405,9 +361,8 @@ export function EditAction<Updated extends { id: string }>({
         </Button>
       ) : (
         <IconAction
-          small
           label={label}
-          icon={<PenLine size={15} aria-hidden="true" />}
+          icon={<PenLine aria-hidden="true" />}
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
           testId="edit-record"
@@ -417,7 +372,6 @@ export function EditAction<Updated extends { id: string }>({
         open={editing}
         onClose={() => setEditing(false)}
         title={label}
-        notice={notice}
         fields={fields}
         record={record}
         pending={mutation.isPending}

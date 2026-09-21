@@ -8,7 +8,7 @@ gate) stay in [`frontend/src/design-system/README.md`](frontend/src/design-syste
 and the two do not overlap: this file decides *how it should look*, the catalog
 decides *what you build it from*.
 
-Read this once before designing anything a person can see, and again when a
+Read this once before designing anything a reader can see, and again when a
 screen "looks fine but not like the others" — that sentence is the symptom this
 file exists to cure.
 
@@ -30,14 +30,14 @@ each one prevents is named.
 - **Numbers set like words.** Money and counts in a proportional face with no
   alignment make a column of amounts a ragged block rather than a ledger.
 - **Colour spent on nothing.** When the accent is a button and a link and the
-  rest is grey, a product with a strong opinion about *who did this* (a person
+  rest is grey, a product with a strong opinion about *who did this* (a contact
   or an agent) shows that opinion at chip size only.
 
 The answer to all five is not a new colour; it is a hierarchy.
 
 ## What the refined products actually do
 
-The products people name when they say "that looks professional" — Linear,
+The products contacts name when they say "that looks professional" — Linear,
 Attio, Vercel, Stripe, Raycast, Notion — disagree on colour and agree on
 almost everything else. The techniques below recur in every one of them, and
 each is stated here as the rule this language adopts, so a screen can be
@@ -48,15 +48,20 @@ checked against it. The sources are listed at the end of the section.
    hovered row one step lighter again, and that ordering is the whole
    elevation system. Vercel is "border-first": a 1px hairline defines every
    static element and a real shadow is reserved for something floating above
-   the plane. **Rule:** paper → surface → raised is the ladder; a hairline OR a
-   shadow, never both on one element; only a popover, a menu or a drawer casts
-   a shadow that a reader would notice.
+   the plane. **Rule:** paper → surface → raised is the ladder, and it carries
+   the separation. A resting surface takes ONE tight layer on top of that —
+   `--shadow-rest`, 1px down and 2px of blur at 5% — which gives it a top side
+   without making it float; only a popover, a menu or a drawer casts a shadow a
+   reader would call one. Never two shadows on one element.
 2. **When a shadow is cast, it is tinted and layered.** Stripe's shadows are
    blue-grey (`rgba(50,50,93,.25)`) because its brand is navy, with a second
    tighter layer close to the element; a pure black shadow is what makes a
-   card look pasted on. **Rule:** `--shadow-raised` and `--shadow-pop` are
-   ink-green (`rgba(16,26,21,…)`) in two layers, the near one tight and the far
-   one soft, from a single light source above.
+   card look pasted on. **Rule:** there are exactly three depth tokens, all
+   from a single light source above — `--shadow-rest`, one tight layer for a
+   thing with a top side; `--shadow-well`, that same layer turned `inset` for a
+   field, which has a floor instead; and `--shadow-pop`, soft and far, for what
+   is genuinely above the plane. All three are themed: the ink is the theme's
+   to decide, the geometry is not.
 3. **A rim light on the top edge is what makes a filled thing look made.**
    Raycast's buttons and keycaps carry `inset 0 1px 0 rgba(255,255,255,.1)`;
    the same one-pixel highlight is on every "premium" control the craft guides
@@ -86,8 +91,8 @@ checked against it. The sources are listed at the end of the section.
    heads at `-0.04em`; every guide marks `font-variant-numeric: tabular-nums`
    mandatory for money and tables. Raycast turns on a stylistic set so its
    Inter stops looking like everyone's Inter. **Rule:** display at 600 with
-   `-0.025em`, body at 400 and 500, 700 nowhere; every figure mono and
-   tabular; the display face is the one place the type has a voice.
+   `-0.025em`, body at 400 and 500, 700 nowhere; every figure tabular in the
+   body face; the display face is the one place the type has a voice.
 8. **Density is a feature.** Attio's whole product is a dense grid with
    high-contrast labels, subtle material and no loud brand elements; the 2026
    guidance is that every visible element earns its place and density and
@@ -126,53 +131,85 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 
 1. **A lit ground, and one pane per zone.** The page is a pale green paper lit
    from two corners, an emerald glow behind the sidebar and an indigo one
-   behind the far edge. Each zone of a record is one white pane on it, with a
-   hairline edge and a 20px corner, and inside a pane there is only ever a
-   title, a rule and rows. Dark is the same room with the lights down.
+   at the top of the far edge. Each zone of a record is one white pane on it,
+   with a hairline edge and a 20px corner, and inside a pane there is only ever
+   a title, a rule and rows. Dark is the same room with the lights down.
 2. **Everything is a list.** A record's attributes are a list of label and
    value in a panel on the left that folds. What happened is a list. What
    needs you is a list. Money is a list. Because every list is the same list,
    a rep never learns a second layout.
 3. **One display face carries identity.** The name of a record, a zone's
-   title and the verdict the agent speaks are set in the display face; every
-   figure is set in the mono face, tabular; everything else is one quiet sans.
+   title and the verdict the agent speaks are set in the display face;
+   everything else, figures included, is one quiet sans with tabular figures.
 4. **Buttons are flat and there is one filled one.** No gradient, no rim, no
    glow: a filled emerald verb for the move the page names, white outlines for
    the rest.
 5. **Colour means something.** Emerald is the one filled verb, a link and the
    light behind the sidebar. Indigo is a tinted row that says an agent wrote
-   it, and the light behind the far edge. Green, amber and red are a dot
-   before a word. Nothing is coloured to look nice.
+   it, and the light at the top of the far edge. Green, amber and red are a
+   soft tint behind a word. Nothing is coloured to look nice.
 
 Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
 ## 3. Colour
 
 The semantic split is unchanged: `--accent` (emerald) is brand and primary
-action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
-`--danger` are status. Those names are the ones `tokens.test.ts` pins, together
-with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
-which is lit, and the surface, which is one translucent pane per zone.
+action, `--ai*` (indigo) is agent provenance, and the five state hues report how
+something went. Those names are the ones `tokens.test.ts` pins, together with
+`--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground, which
+is lit, and the surface, which is one translucent pane per zone.
+
+**Five states, and a screen may not invent a sixth.** *Information* is the
+neutral report and the work still in flight — an info mark, a spinner's ring, a
+row a job has not finished writing. *Success* is a favourable outcome. *Warning*
+is caution BEFORE the fact: the sentence that stops a mistake while it can still
+be stopped. *Danger* is the serious or irreversible one. *Discovery* is what is
+new to this reader — onboarding, a capability they have not met — and it is the
+one of the five that is not a verdict about the record.
+
+Each state has ONE base, and it is the only value anybody picks: `--info`
+`#0485f7`, `--success` `#17c964`, `--warning` `#f5a524`, `--danger` `#ff383c`,
+`--discovery` `#964ac0` in light, with warning, danger and discovery stepping to
+a lighter tone the dark ground can carry. Everything else in a family is derived
+from that base in `tokens.css` and nowhere else — the ink (`--<state>Text`, the
+base walked in OKLCh lightness until it clears 4.5:1 on every ground it lands on
+and on its own tint), the opaque badge tint (`--<state>Surface`), the
+translucent wash (`--<state>Bg`) and the hairline (`--<state>Border`). A filled
+control is grounded in the ink and not in the base, because a base is tuned to be
+SEEN at a bar's size and no ink reads on the set of them. `tokens.test.ts` reads
+the five states off the sheet, measures every pair in both themes, and fails when
+a state is missing from either.
+
+**The neutral ink is TWO tokens, not the four-rung ladder below.**
+`--textPrimary` is the ink that carries — names, headings, body — at `#15201b`
+in light and `#fff` in dark; `--textSecondary` is the one that supports, at
+`lch(40% 1 282)` in light and `lch(63.304% 1.425 272)` in dark, and a
+placeholder is the first thing wearing it. The `--ink` / `--ink2` / `--ink3` /
+`--ink4` row in the table below is what those two replace: four rungs is a
+question ("how quiet is this?") answered four ways, and every pair the product
+actually draws is measured against every ground it lands on in
+`tokens.test.ts`, which four unmeasured greys never were.
 
 The tables below are the design TARGET, and they name some rungs the tree does
 not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
 does not appear in `frontend/src` as a value still to be introduced, not as one
 to reach for today: the shipped spelling of the agent tint is `--aiLight`, its
-edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
+edge is `--aiMed`, and the state hues are the five named above.
 
 ### Light (the default)
 
 | Token | Value | Role |
 |---|---|---|
 | `--bg` | `#f1f5f2` | The paper the page is read on. |
-| `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the bottom-right. Radials of 900×620, the only decoration on the page. |
+| `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the top-right. Radials of 900×620, the only decoration on the page. |
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
+| `--bgChip` | `rgba(16,26,21,.07)` | The shipped spelling of `--bg3`'s pill and keycap: the fill under a badge, a key-cap, a segmented strip, the trough of a meter. TRANSLUCENT, so a chip reads one step deeper than whatever ground it lands on — an opaque value can only be a step off one, and on a plate drawn in the same grey it is a chip nobody can see. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgCard`, the worst of the four grounds a chip lands on, and `.08` would take that to 4.49:1 — under the floor. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
 | `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `rgba(91,97,214,.09)` / `.35` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
-| `--ok` / `--warn` / `--bad` | `#15803d` / `#a16207` / `#b91c1c` | Status, as a dot before a word, or as a pill for the one status that must not be missed. |
+| `--info` / `--success` / `--warning` / `--danger` / `--discovery` | `#0485f7` / `#17c964` / `#f5a524` / `#ff383c` / `#964ac0` | The five states, as a soft badge — the tone's `Surface` behind a word, lettered in its `Text` ink and edged in its `Border` — or as a solid one for a count and the one state that must not be missed. |
 
 ### Dark
 
@@ -181,7 +218,9 @@ The same room with the lights down: `--bg #0c1311` (a hair above the mock's
 (`.10` / `.20`) because they are the only light, panes at
 `rgba(255,255,255,.045)` with a `.09` edge, ink from `#eef3ef` down to
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
-lifted to `#b3b7f5`. The three-state theme pattern (`:root`,
+lifted to `#b3b7f5`. The chip inverts rather than mirrors: `--bgChip` becomes
+`rgba(255,255,255,.09)`, because a chip on a dark ground has only one direction
+to step. The three-state theme pattern (`:root`,
 `prefers-color-scheme` guarded by `:not([data-theme="light"])`,
 `[data-theme="dark"]`) is how they switch.
 
@@ -192,27 +231,56 @@ lifted to `#b3b7f5`. The three-state theme pattern (`:root`,
 - **The page carries at most ONE filled control in view**, in emerald: the
   move the page names. Every other button is a pane with an outline.
 - **Indigo is a fact, not a mood.** The agent's read is a row on `--aiBg`; a
-  staged change is a row with a dashed `--aiLine` edge until a person accepts
+  staged change is a row with a dashed `--aiLine` edge until a contact accepts
   it. Nothing else is indigo.
-- **Status is a dot before it is a pill.**
+- **A state is a soft badge before it is a solid one.** A column of states is a
+  column of soft badges, one weight down the page; the solid fill is for a count
+  and the one state a reader must not miss.
 - **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
   apart by its name.
 
 ## 4. Type
 
-Three families, which is the ceiling `check-font-lock.sh` holds.
+Three families, which is the ceiling `check-font-lock.sh` holds. The third is
+for code alone: a mono face on an amount or a date dressed a business fact as
+machine output and shouted in a dense row, and `tabular-nums` gives a column the
+alignment mono was bought for.
+
+**Size answers the context; level answers the structure.** How big a heading is
+says what it introduces and where — brand and marketing at the top of the
+ladder, a product page's title below that, a component's own title at the
+bottom. Which of `<h1>`–`<h6>` it is written as says where it sits in the page,
+which is how a screen-reader user moves through it: one `<h1>`, descending, no
+level skipped. Neither decision is allowed to settle the other. Body is three
+levels on the same foundation, each carrying the paragraph spacing that
+separates two blocks of its own prose, and weight is meaning rather than
+decoration — and there are exactly three, shipped in both text families and
+loaded as such, so a fourth is a face the browser synthesized: 400 is prose, 500
+is text that sits beside a line icon and most text inside a component, 700 is a
+heading or an emphasis that has earned it.
+
+Everything is rem on the browser's own 1rem = 16px, so a reader who enlarges
+that moves the product with them. The three weights are named tokens
+(`--fontWeightRegular` / `Medium` / `Bold`) that the size tokens read, and the
+whole of the type — size, leading, weight, tracking — is declared in
+`tokens.css` and in no other file: `design-system/type-source.test.ts` fails a
+sheet or a style object that spells any of the four by value.
+
+**Almost none of it is applied yet.** `body` in `app.css` reads `--fontBody`,
+and that is the whole of it: no `h1`–`h6` mapping, no class hooks, and the
+`.t-*` names in `base.css` are role hooks with no rules on them. The tokens and
+the usage rules that go with them live in
+[`frontend/src/design-system/README.md`](frontend/src/design-system/README.md),
+which is what an implementer reads. So every size, weight, tracking and neutral
+ink named anywhere else in this document is a TARGET for that rebuild rather
+than a description of the sheet that ships.
 
 | Role | Family | Where |
 |---|---|---|
-| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the Brief greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px. |
-| Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
-| Figures | **Geist Mono** 500, tabular | A reading's figure at 22px (`-0.03em`), and every amount, count, date and identifier in a row or a cell. |
-
-- **Weight 600 is for the display face.** Everything that must stand out in a
-  row does it at 500 in the body face.
-- **Uppercase is one thing: the eyebrow** (`.t-eyebrow`, 10.5px, `.08em`,
-  in a lighter ink) — a reading's label, a timeline entry's kind, the TODAY
-  marker. Every other label is sentence case.
+| Heading | **Outfit** | Every heading, and the one line a record is identified by: its name, the Brief greeting, a zone's title, the agent's verdict word, a reading's word and its figure. |
+| Body and UI | **Geist** | Everything else, prose included. |
+| Figures | **Geist**, tabular (`.t-num`) | Every amount, count, percent, duration and date in a row or a cell. An identifier is plain body type. |
+| Code | **Geist Mono** | `<pre>`, `<code>` and `<samp>` through one rule in `base.css`, and the `.code-block` surface; nothing else. A `<kbd>` is body type. |
 
 ## 5. Space, shape, depth
 
@@ -226,35 +294,28 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
-- **Sizes by role, and there are nine.** `--fs-eyebrow` 10.5 (uppercase
-  kickers, monograms), `--fs-meta` 12 (counts, timestamps, provenance),
-  `--fs-sm` 13 (chips, table cells, helper text), `--fs-body` 13.5 (the
-  default), `--fs-lead` 15 (the paragraph under a heading, and inputs),
-  `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title), `--fs-h1` 24 (a
-  step title, a record's head), `--fs-display` 32 (a full-viewport moment),
-  plus the two fluid rungs `--fs-display-fluid` and `--fs-hero-fluid` for the
-  first-run surfaces. Nothing in the tree names a length instead — a size half
-  a pixel off a rung is a decision nobody made, and the tree carried 25 of
-  them. `design-system/type.test.ts` fails a tenth value, and a genuine
-  platform floor (iOS zooms a field under 16px) is waived in line with its
-  reason. A role that has a class is spelled as the class: `.t-caption` is
-  quiet grey at the meta size, `.t-sub` the same at the dense size, `.t-label`,
-  `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`. A rule that writes a
-  utility's properties out again under a name of its own stops moving when the
-  utility does, and `design-system/type-one-spelling.test.ts` fails it.
-- **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
-  uppercase label, `--tracking-display` -0.03em on the display face,
-  `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
-  eighteen sheets while the token said 0.08em, which is a label that looks
-  different depending on which screen drew it.
+- **A role that has a class is spelled as the class** — `.t-caption`,
+  `.t-sub`, `.t-label`, `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`.
+  What each one draws is §4's rebuild, taken one role at a time.
 - **Radii by role**: 20px for a pane, the details panel and a reading card;
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.
-- **Depth is light, not shadow.** A pane is translucent over the lit ground
-  with a hairline edge; that is its whole elevation. Nothing at rest casts a
-  shadow, glows or has a gradient. A popover, menu or drawer takes the one
-  shadow; a board card takes a faint one on hover, because it is being picked
-  up.
+- **Depth is light first, shadow second.** A pane is translucent over the lit
+  ground with a hairline edge; that is its elevation. On top of it the question
+  is what the thing IS. A surface — a pane, a card, a reading, a board card —
+  and a control with a FILL have a top side, and take `--shadow-rest`, one
+  tight 1px/2px 5% layer. The fill is what decides a control: a ghost button
+  casts, because the pane is its fill; a bare icon button has none and casts
+  nothing, and neither does a text affordance. A FIELD is a place to put
+  something, so it has a floor rather than a top side and takes
+  `--shadow-well`, the same layer turned inside — a text box, a textarea, a
+  field shell, and anything DRAWN as a field, the topbar's search included,
+  because a reader reads the shape and not the element. The one exception runs
+  the other way: the `Select` trigger holds a closed face rather than a place
+  to type, so it is verb-shaped and takes the resting layer. Either way a control closes the gap on hover, active and focus — a
+  verb presses into the page, a field's floor comes up to meet the pointer. A
+  popover, menu or drawer takes `--shadow-pop` instead. Nothing at rest glows
+  or has a gradient, and nothing stacks a shadow under a shadow.
 - **No pane inside a pane.** A zone is one pane; the things in it are a
   title, a rule and rows. The only enclosed shapes inside a pane are the
   agent's tinted row and a staged row's dashed edge.
@@ -297,7 +358,7 @@ scrolls inside itself.
 │ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
 │ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
-│ WORK   │ │ readings ┊ readings ┊ readings        ││ │ People / Seats    ││
+│ WORK   │ │ readings ┊ readings ┊ readings        ││ │ Contacts / Seats    ││
 │ …      │ │ spine · · · gap · today · ahead       ││ │ Tags / Room / Docs││
 │ ● agent│ │ the thread, newest first              ││ └───────────────────┘│
 │        │ └───────────────────────────────────────┘│                      │
@@ -341,10 +402,10 @@ scrolls inside itself.
   until the Details control at the end of the tab row opens it. It holds Ask, the attributes as label and
   value rows (with the evidence underline on a machine-read value and a
   lighter "Add …" on an empty one), and the short lists that describe the
-  record (people, seats, tags, the Deal Room, documents). It is where the
+  record (contacts, seats, tags, the Deal Room, documents). It is where the
   current product keeps its context column, so a rep's hand does not move.
 - **The glows**: the emerald light at the top-left is faint (`.06` in light,
-  `.10` in dark); the indigo one at the bottom-right a step stronger. They are
+  `.10` in dark); the indigo one at the top-right a step stronger. They are
   atmosphere, not a feature, and the eye should not find them.
 
 ## 7. How the tool feels, and how a page is structured
@@ -352,15 +413,16 @@ scrolls inside itself.
 **The feel.** Calm, lit, and legible at arm's length. A rep opens an account
 and in one screen knows where it stands, what they owe, and what happened; the
 agent speaks in one place on the page and says what it rests on; every figure
-is in the same face and lines up; nothing casts a shadow or glows. It should
-feel like a well-lit desk with one folder open on it, not a dashboard.
+is in the same face and lines up; nothing glows, and the one shadow anything
+rests on is too slight to notice as a shadow. It should feel like a well-lit
+desk with one folder open on it, not a dashboard.
 
 **Five rules of structure**, each preventing a shape a record page falls into
 as it grows (a fact with several homes, verdicts stacked above the list they
 should lead):
 
 1. **Every fact has one home.** If a deal appears in the readings, it does not
-   also appear in the rail. If people are in the context column, they are not
+   also appear in the rail. If contacts are in the context column, they are not
    also a section in the work column.
 2. **Zones, numbered, in reading order.** A record page is five zones with a
    heading each. The number is not decoration: it is the order a rep reads an
@@ -368,11 +430,11 @@ should lead):
 3. **One list of what needs you.** The agent's read of the record is the lead
    row of that list, not a separate card above it; the agent's finds, the manual
    moves, the overdue tasks and the next meeting are rows below it, sorted by
-   urgency. A person has one place to look and one place to clear.
+   urgency. A contact has one place to look and one place to clear.
 4. **One timeline.** The spine (the axis with the gap drawn at width) heads the
    list of what happened; they are one component, not two panes.
 5. **The context column answers "who and what is this", not "what is
-   happening".** Ask at the top, then the people, the fields, the tags. State
+   happening".** Ask at the top, then the contacts, the fields, the tags. State
    and work stay in the work column, where the reading order is.
 
 ### Glance, then depth
@@ -389,11 +451,11 @@ one present, none at full depth:
   ("In conversation · Hamburg · Freight forwarding · 240 employees · Owner"),
   and three verbs. No badges beyond the standing, no second line.
 - **A quiet tab row** under the head — no pane, no rule, a 2px accent under
-  the current tab — so every sub page (History, People, Deals, Tasks,
+  the current tab — so every sub page (History, Contacts, Deals, Tasks,
   Finance, Documents, Profile, Partner) is one click away. The links inside
   the panes ("All deals", "Full history") open the same tabs.
 - **Five readings as roomy cards**, 138px tall, an uppercase label, one
-  figure at 26px in the mono face (22px under 1400px), one line of basis at the foot, and empty
+  figure at 26px in the display face with tabular figures (22px under 1400px), one line of basis at the foot, and empty
   space between them. **Every reading is a claim, so every reading carries
   its evidence**: an "evidence" chip at the right of the label that opens, on
   hover or focus, the popover with what the figure rests on (the rows it sums,
@@ -418,10 +480,10 @@ one present, none at full depth:
   can answer today — "What changed since I last looked?", "Why is Rostock
   stalled?" — each a full-width row on `--bg3` that tints indigo on hover;
   no free-text field until the answers earn one), About (the lead sentence,
-  one paragraph, its sources, "Profile" for the rest), People as chips with
+  one paragraph, its sources, "Profile" for the rest), Contacts as chips with
   a "+N".
 - **The details panel is hidden until asked**, and the Details control at
-  the end of the tab row opens it on the right at 300px with the fields, the people and
+  the end of the tab row opens it on the right at 300px with the fields, the contacts and
   the tags. It is the only thing on the glance that starts closed.
 - No zone numbers. Commercial and the rest of About are the deep overview,
   one click away, with the same panes.
@@ -440,16 +502,16 @@ glance line for line; what changes is the content of each slot.
 
 | Slot | Company | Contact | Deal | Lead |
 |---|---|---|---|---|
-| Live dot | In conversation | Your move (warn) | Your move (warn) | In motion |
+| Live dot | In conversation | Your move (warning) | Your move (warning) | In motion |
 | Facts | city · industry · size · owner · way in | title · employer · email · phone · way in | account · value · stage · close · owner · partner | title · company · email · source · owner |
 | Verbs (base, never the task) | Write email · Log activity · Add task · more | Write email · Call · Add task · more | Write email · Log activity · Edit deal · more | Qualify · Write email · Edit · Disqualify · more |
-| Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The people · Momentum | Company · Score · First response · Next · Your move |
+| Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The contacts · Momentum | Company · Score · First response · Next · Your move |
 | 360 word | Good | Promise overdue | Live | In motion |
 | In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
 | Needs-list lead | Your move | The move the call names | Margince suggests, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
 | Second left pane | Deals | The deal she decides, with the room | The buying committee, with the cover gap | The score as factors |
-| Right column | Ask (prepared questions) · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
-| Tabs | Overview · History · People · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
+| Right column | Ask (prepared questions) · About · Contacts | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
+| Tabs | Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
 
 The test: a rep back from a week away reads the glance in ten seconds and
 knows where the account stands, what happened last, what they owe, and what
@@ -483,7 +545,7 @@ The details panel is the same on every record: Ask at the top, then the
 panes that answer "who and what is this".
 
 **Sub pages.** Every tab in the strip opens a real page, in the same panes:
-History (the filter strip, then the **rail timeline** below), People (the
+History (the filter strip, then the **rail timeline** below), Contacts (the
 coverage band, **the committee map**, the roster as a table with list, board
 and map cuts),
 Deals (the commercial band, the deals table with won and lost), Tasks (tick,
@@ -528,7 +590,7 @@ the rest; nothing below is lost, it is one click further in.
 6. **About.** The dossier lead and paragraph, its provenance and age, the
    signals, the fit verdict with a link to how it was judged.
 
-Context column: Ask (with three prepared questions), People (three, with who is
+Context column: Ask (with three prepared questions), Contacts (three, with who is
 in touch from our side), Details (nine fields including mail capture), Tags.
 
 **What merged, moved or went.** The call card merged into Health. Next steps,
@@ -536,7 +598,7 @@ the agent's suggestions, the manual moves and the tasks merged into one list.
 The record spine merged into the timeline, and the timeline moved up to third.
 Work in flight, the commercial figures and projects merged into Commercial. The
 dossier, signals and growth fit merged into About. Active deals left the rail;
-key people became the rail's People; Ask moved from the foot of the page to
+key contacts became the rail's Contacts; Ask moved from the foot of the page to
 the top of the column. Nothing the page could say is gone; each thing is said
 once.
 
@@ -577,7 +639,7 @@ became a compact rail pane; the grant and withdraw table lives behind Manage.
    Log activity, Edit deal, more (Archive, Share, Reopen).
 2. **Where this deal stands.** The money (with the newest offer and its
    status), The close (days, forecast category, provisional or waiting), The
-   people (engaged of total, champion named, single-threaded), The momentum
+   contacts (engaged of total, champion named, single-threaded), The momentum
    (days since the last contact, stalled). Under them the stage stepper: done
    stages tinted, the current one filled, terminal stages last, the rule that
    a terminal stage asks first stated beside it.
@@ -589,11 +651,11 @@ became a compact rail pane; the grant and withdraw table lives behind Manage.
    "Read the full briefing", written-by and write-it-again. Then any staged
    approval (dashed, Accept / Dismiss), then the reply that is owed.
 5. **Commercial.** The offers table (number, revision, status, value, sent),
-   the FX basis in the zone head, then forecast, wait-until and the custom
-   fields as rows.
+   the FX basis in the zone head, then its offer actions. Forecast and wait-until are edited in Details;
+   custom fields have their own Details section.
 6. **The buying committee.** The map (our circle, their seats, threads only to
    the engaged, a dashed ghost per coverage gap), then the stakeholder table
-   with role, person, talking, dates and edit. Add stakeholder in the zone
+   with role, contact, talking, dates and edit. Add stakeholder in the zone
    head.
 
 Context column: Ask, Deal Room (state, invited, signed in, last seen, open),
@@ -602,7 +664,8 @@ carries it), Related evidence, Documents.
 
 **What merged, moved or went.** The stage stepper moved beside the readings.
 Deal360, the approvals queue and the email box merged into the needs list.
-Offers, the FX line and custom fields merged into Commercial. The committee map,
+Offers and the FX line sit in Commercial. Editable fields and custom fields
+live in Details. The committee map,
 the seats and the stakeholders table merged into one zone, with the read-only
 seats list kept in the rail as the short form. Log activity became a verb, not
 a form on the page. The Documents tab keeps its full list; the rail shows the
@@ -654,19 +717,19 @@ of the tab row, and starts closed.
 ### The timeline, as the tool draws it
 
 History is a **rail**, not a list of rows. Each entry is a grid of four: the
-date in the mono face, right-aligned in a 76px column with the time under it
+date in tabular figures, right-aligned in a 76px column with the time under it
 in `--ink4`; a 20px rail column carrying a 1px `--line2` line that runs the
 full height so consecutive entries join, with a mark on it; the body; the
 verb slot. The mark says what kind of thing happened: a solid 8px dot for an
 exchange, a hollow one for a field change, an indigo one for a change the
 agent made, a dashed indigo ring for a staged change, and a 24px circled
 glyph for a thread. The body opens with the kind in 10.5px uppercase, the
-direction words ("they wrote", "we sent", "both sides") and the people; then
+direction words ("they wrote", "we sent", "both sides") and the contacts; then
 the title at 13.5px 600; then **the text of the message itself**, clamped to
 three lines, because a timeline of subject lines is a list of things you
 cannot read; then a meta line (the summary's author, the attachment, Restore).
 A thread is one entry: its mark on the rail, a card on the body side with the
-count and the people, and the messages inside it newest first, each with its
+count and the contacts, and the messages inside it newest first, each with its
 avatar, direction and two lines of text. A hairline under each entry is the
 only divider; there are no day headings, the date column is the axis. The
 same rail, without the message text, is the 360's folded thread.
@@ -679,7 +742,7 @@ rows on one baseline: the date at 11.5px in `--ink3`, then the **rail** — a
 right of a dot is the span that stop covers — then the title at 13px, then
 the detail. The gap stop takes 1.5× the width, because on this axis the
 width is the waiting: its date row is the day count at 26px 600 in amber in
-the display face — the one count outside the mono face, because it is read
+the display face — the one count on the spine not in the body face, because it is read
 as a word ("12 days") and compared with nothing — its rule is dashed amber, and it has no dot, because
 nothing happened. **Today is a marker, not a stop**: a 2px × 15px black bar
 on the rail with TODAY in 10.5px uppercase and the date under it, in a column
@@ -694,10 +757,10 @@ marker, not the marker itself.
 One drawing primitive, the product's `RelationshipMap`, on three pages, with
 its own geometry: three columns of 184 / 200 / 184px with 72px gutters and
 16px padding (744px, scrolling sideways rather than shrinking), node heights
-by kind (a colleague 40, a person 60, an organization 48, a deal 44, a gap
+by kind (a colleague 40, a contact 60, a company 48, a deal 44, a gap
 60), 8px between nodes, 20px between lanes, a lane heading in 10.5px
 uppercase. Nodes are rounded boxes on `--pane` with the name at 13px 600 and
-a sublabel; a colleague on `--bg`, an organization with a 2px `--ink3` edge,
+a sublabel; a colleague on `--bg`, a company with a 2px `--ink3` edge,
 a deal with an accent edge, and **a gap as a dashed amber box** naming the
 missing role with "Assign" under it — the only drawing of an absence a
 reader can count. Edges are cubic curves: a route is a way in and carries a
@@ -708,8 +771,8 @@ strongest route in ink and fades everything unrelated to 35%; a 280px panel
 on the right names the selection, the best route with its evidence, the
 alternatives, and the one write the picture offers (record an acquaintance
 the graph saw). On the contact's Network tab the lanes are our team, the
-target, their company; on the company's People tab they are our side, the
-account with its deals, and their people **by buying role** in the product's
+target, their company; on the company's Contacts tab they are our side, the
+account with its deals, and their contacts **by buying role** in the product's
 order (champion, economic buyer, influencer, blocker, user), with a gap node
 where a critical role is unheld. The deal keeps its small decorative
 committee picture beside the seat rows: our circle, their seats, 2px accent
@@ -718,7 +781,7 @@ coverage gap.
 
 ### The Deal Room, two surfaces on one board
 
-The Deal Room is the one thing in the product a person outside it reaches,
+The Deal Room is the one thing in the product a contact outside it reaches,
 so it is two pages that share one document board and nothing else.
 
 **The seller's side** is a page inside Margince, under the deal: "Back to
@@ -790,7 +853,7 @@ call card, the day's panel, the timeline thread) after this document's first
 inventory. The structure above holds; these are the facts it now carries.
 
 - **Every record page reads in the same order** on main: readings, then the
-  call with the thread under it, then what needs a person, then the pairs.
+  call with the thread under it, then what needs a contact, then the pairs.
   That is the order here, with the thread as its own zone between the
   readings and the needs, because the 360 opens on what happened last.
 - **The contact's strip on main is four readings**: Whose move (Yours / Theirs /
@@ -817,14 +880,15 @@ inventory. The structure above holds; these are the facts it now carries.
   and the next task. A lead carries no agent suggestions; the "Ready to
   qualify" row on this page is a proposal, derived from the same evidence the
   qualify dialog derives its reason from.
-- **The Brief draws five fixed readings**: Customer waiting, Meetings ahead,
-  Promises due, Lead response, Quota pace. Two of them say what they cannot
-  answer ("promises are not tracked yet", "no target is set") rather than
-  showing a zero, and the floor line under the row says when a source was read
-  to its limit. The old four cards are gone.
+- **The Brief draws five fixed readings**: Urgent, Meetings today, Leads owed
+  a reply, Pipeline · Q3, Decisions waiting. One dense row — label, figure,
+  basis fragment — where the whole cell is the door into the lane its figure
+  counted, figures are in neutral ink unless the reading counts something
+  breaching, and a source read to its limit marks its figures `8+` rather than
+  adding a sentence under the row.
 - **Tags** are a panel on company, contact and deal (four visible, "+N more",
   a split pill that opens the tag or its menu, "Add tag" opens a picker that
-  cannot create a word), a Tags column on the people, companies and deals
+  cannot create a word), a Tags column on the contacts, companies and deals
   lists (two visible, not sortable), a tag on the board card, and a "Tags ·
   Any tag" filter chip. Leads are not tagged.
 - **The email verb is an outlined button on every record**, in the same
@@ -844,26 +908,26 @@ looks now.
 
 | Primitive | Treatment |
 |---|---|
-| `Button` primary | `--accent` fill, white text, 10px radius, 36px, weight 500. One per view. |
-| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only at 36×36 for the overflow. |
+| `Button` primary | `--accent` fill, white text, 10px radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only on the same `--controlHeight` square for the overflow — there is one control size, not two. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | Outlined in `--bad`; fills only inside a `ConfirmModal`. |
-| `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
-| `Badge` | `quiet` by default: a 6px dot and a word. The pill (`--bg3`, 20px, 11.5px 500) is for the one status that must not be missed and for the record's standing badges beside its name. |
-| `Chip` | The same pill. There is one pill. |
+| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
+| `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never capitals. `soft` by default: the tone's tint behind the word in the tone's ink, edged in a hairline of the same tone — the record's standing badges beside its name, a status in a row. `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the sparkles. |
+| `Chip` | A fact a reader can act on rather than a status: a pill on the elevated ground with a neutral hairline and a glyph, a link when the fact has somewhere to go, and a hover that says so. A badge is the other thing — a tinted status, edged in its tone, that nobody presses. |
 | `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
+| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall; the eyebrow as its label with the basis as dotted-underlined words at the label's end, the figure at 26px in the display face, tabular (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |
-| `SegmentedControl` | `--bg3` track, white pressed segment with a faint shadow, 12px. |
-| `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
+| `SegmentedControl` | `--bg3` track, white pressed segment on the resting shadow, 12px. |
+| `Modal` | White, 8px radius, `--shadow-pop`, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
-| `Callout` | A row on `--bg2` with a dot in the tone's colour before its first words. Never a filled coloured box. |
-| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
+| `Callout` | An alert's anatomy on the pane's ground, and ONE of them: the tone's own glyph on the heading's first line, the heading beside it in the tone's ink, an optional body in ordinary ink under it, the verbs right-aligned at the end of that line and the dismiss after them. The heading is mandatory and everything else optional, so a bare heading is the commonest callout in the product; below 640px the verbs drop under the body. Seven tones — `info`, `accent` (the emphatic ask, in the brand accent, and never in indigo, which claims a machine wrote what follows), `success`, `warning`, `danger`, `discovery` (something NEW to this reader, the one tone that is no verdict) and `ai` — and tone reaches the glyph and the heading and nothing else, never a filled coloured box. The dot it replaced was dots differing only in hue; the shape is what says which tone it is. No `className`: a notice that wanted its own edge was a second callout wearing this one's name. |
+| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warning, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
-| `RecordTimeline` | The rail: a 76px mono date column, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |
+| `RecordTimeline` | The rail: a 76px date column in tabular figures, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |
 | `RelationshipMap` | Three lanes at 184/200/184 with 72px gutters; rounded nodes by kind, a dashed amber gap node; route edges banded strong / developing / cold, membership as hairline; selection lights the route and fades the rest; a 280px panel with the best route and the one write. |
 | `EvidenceMark` / `Citations` | A **source chip**: `--bg3`, 11.5px, a note glyph and a short label ("email · 1 Sep"). On hover or focus it opens a popover with the quote it rests on, in a left-ruled indigo block, and the origin line under it. Every claim the agent makes carries them; they are how a reader checks the 360 without leaving it. |
 | `Stepper` | Steps as 24px pills on one line with a `›` between: done on `--accentBg`, the current one filled `--accent`, the rest outlined; the rule ("A terminal stage asks first") at the right in `--ink4`. |
@@ -882,20 +946,27 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
   landed) rather than decoration.
 - A reading whose value changed counts to the new figure over `--dur-move`;
   a row just saved flashes `--accentWash` once and fades over `--dur-enter`.
-- Only `transform` and `opacity` animate. Nothing animates its own layout.
+- Only `transform` and `opacity` animate, with ONE exception: a page COLUMN
+  arriving or leaving — the sidebar rail, the record's details pane — travels
+  its own grid track, and the gutter beside it, over `--dur-move`. It earns
+  the exception twice: the distance is short and a reader makes the move many
+  times a day, and the work column next to it has to REFLOW as the track goes
+  rather than smear behind a pane sliding over it. Nothing else animates its
+  own layout.
 - `prefers-reduced-motion` jumps every one of these to its end state.
 
 ## 10. Restraint — what a screen in this language does not do
 
 - Does not put a pane inside a pane. A zone is one pane; inside it a title, a
   hairline and rows.
-- Does not cast a shadow, a glow or a gradient at rest. The two corner glows
-  on the ground are the only light; a button is a flat shape; the only tinted
-  thing inside a pane is the agent's row.
+- Does not cast a shadow of its own, a glow or a gradient. The resting layer
+  is `--shadow-rest` and it comes from the token, never from a rule that spells
+  its own; the two corner glows on the ground are the only other light; the
+  only tinted thing inside a pane is the agent's row.
 - Does not say a fact twice. One home per fact; the rest are links to it.
 - Does not fill a button, a row or a surface with emerald except the one
   primary verb and a selected row's wash.
-- Does not tint anything indigo that a person wrote.
+- Does not tint anything indigo that a contact wrote.
 - Does not set a number in the proportional face.
 - Does not centre a title, a section or a table.
 - Does not use uppercase outside an eyebrow, or weight 700 outside the rare
@@ -917,11 +988,12 @@ rest one screen at a time.
 
 ## 12. Checklist for a new screen
 
-- [ ] The display face on the name, the zone titles and the verdict; nothing
-      else uses it.
-- [ ] Every figure is mono and tabular, right-aligned in a column.
-- [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
-      a shadow at rest.
+- [ ] The display face on the name, the zone titles, the verdict and a
+      reading's figure; nothing else uses it.
+- [ ] Every figure is tabular (`t-num`), right-aligned in a column; mono only
+      on code.
+- [ ] Every zone is one pane with a title, a hairline and rows; the only
+      shadow at rest is `--shadow-rest`, and no rule spells one by hand.
 - [ ] One emerald-filled control in view.
 - [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark,
       and a row that ASKS for something says "Margince suggests" — never over

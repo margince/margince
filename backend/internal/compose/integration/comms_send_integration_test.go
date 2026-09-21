@@ -42,6 +42,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -234,6 +235,7 @@ func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
 func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, messageID := p.deliveryFor(t, sentActivity)
@@ -357,16 +359,25 @@ func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
 // delivered mail because no response carries it.
 func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	t.Helper()
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/confirm-request",
+	if status := p.Call(t, "POST", "/v1/contacts/"+p.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
 	token := confirmLinkToken(t, p.AppEnv)
+	// The submission answers with a receipt now. A marketing answer alone
+	// proposes no correction and asks for no erasure, so it opens no rights
+	// case — and an empty list is the assertion that says so: a helper every
+	// consent test leans on is where a marketing tick quietly filing Art. 16
+	// cases into the admin queue would first be visible.
+	var receipt crmcontracts.ConfirmSubmissionReceipt
 	if s := publicCall(t, p.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
 		"marketing_choice":  "granted",
 		"marketing_wording": "Yes, send me occasional product news.",
-	}, nil, nil); s != http.StatusNoContent {
-		t.Fatalf("the subject spends their own link → %d, want 204", s)
+	}, nil, &receipt); s != http.StatusOK {
+		t.Fatalf("the subject spends their own link → %d, want 200", s)
+	}
+	if len(receipt.Cases) != 0 {
+		t.Fatalf("the marketing answer opened %d rights case(s), want none", len(receipt.Cases))
 	}
 }
 
@@ -378,6 +389,7 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)
@@ -406,6 +418,7 @@ func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 func TestASenderDowngradedToAReadSeatParksAStagedDelivery(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")
 	deliveryID, _ := p.deliveryFor(t, sentActivity)

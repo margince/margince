@@ -19,7 +19,7 @@ import type { UserEvent } from "@testing-library/user-event";
  * ```
  *
  * `optionLabel` is the label the reader sees, not the value: a test should say
- * what a person would click. Matched exactly by accessible name, so "Won" does
+ * what a contact would click. Matched exactly by accessible name, so "Won" does
  * not also match "Won (renewal)" — pass a RegExp when a prefix is what you mean.
  *
  * **The control must be CLOSED when this is called, and one call is one attempt.**
@@ -41,6 +41,33 @@ export async function pickOption(
   await user.click(control);
   const listbox = screen.getByRole("listbox");
   await user.click(within(listbox).getByRole("option", { name: optionLabel }));
+}
+
+/**
+ * The ONE way a test drives a Margince `MultiSelect`.
+ *
+ * `pickOption`'s multi sibling: one call opens the control, toggles each named
+ * option in order, and closes the list again with Escape — the popup stays
+ * open across toggles, which is the control's whole point, so unlike
+ * `pickOption` several picks belong in ONE call. Toggling is symmetric:
+ * naming an option that is already chosen removes it.
+ *
+ * The control must be CLOSED when this is called, for `pickOption`'s reason:
+ * the first click toggles the trigger.
+ */
+export async function toggleOptions(
+  user: UserEvent,
+  control: HTMLElement,
+  optionLabels: readonly (string | RegExp)[],
+): Promise<void> {
+  await user.click(control);
+  const listbox = screen.getByRole("listbox");
+  for (const optionLabel of optionLabels) {
+    await user.click(
+      within(listbox).getByRole("option", { name: optionLabel }),
+    );
+  }
+  await user.keyboard("{Escape}");
 }
 
 /**

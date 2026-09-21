@@ -7,7 +7,7 @@ package compose
 
 // The extraction vocabulary lives in FOUR copies: the contract ColdStartField
 // enum, extractionFieldNames, the gate predicate, and the
-// organization_profile_field CHECK constraint. The first three are pinned to
+// company_profile_field CHECK constraint. The first three are pinned to
 // each other in Go; this test pins the fourth — a field the model can emit
 // but the database refuses would pass every unit gate and then fail at the
 // accept-write, in production, on the first site that grounds it.
@@ -28,18 +28,18 @@ func TestEveryExtractionFieldIsAccepted_ByTheLiveCheckConstraint(t *testing.T) {
 	ctx := e.Admin()
 
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		orgID := ids.New[ids.OrganizationKind]()
+		companyID := ids.New[ids.CompanyKind]()
 		if _, err := tx.Exec(context.Background(),
-			`INSERT INTO organization (id, display_name, source, captured_by)
+			`INSERT INTO company (id, display_name, source, captured_by)
 			 VALUES ($1, 'Vocab Probe', 'manual', 'human:test')`,
-			orgID); err != nil {
+			companyID); err != nil {
 			return err
 		}
 		for _, field := range extractionFieldNames {
 			if _, err := tx.Exec(context.Background(),
-				`INSERT INTO organization_profile_field (organization_id, field, value, evidence_snippet, source_url, confidence, captured_by)
+				`INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, captured_by)
 				 VALUES ($1, $2, 'v', 'e', 'https://example.test', 0.9, 'agent:test')`,
-				orgID, field); err != nil {
+				companyID, field); err != nil {
 				t.Errorf("the live CHECK constraint refuses extraction field %q — widen it with the vocabulary (see 0084's pattern)", field)
 				return err
 			}

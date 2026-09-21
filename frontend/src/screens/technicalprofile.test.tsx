@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
+import { isTechnicalFact, TechnicalProfilePanel } from "./companytechnical";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,7 +13,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-const ORG = "019ff000-0000-7000-8000-0000000000a1";
+const COMPANY = "019ff000-0000-7000-8000-0000000000a1";
 
 function fact(field: string, valueKey: string, value: string) {
   return {
@@ -32,11 +32,11 @@ function fact(field: string, valueKey: string, value: string) {
   };
 }
 
-const A_READER = meRoute({ organization: ["read", "update"] });
+const A_READER = meRoute({ company: ["read", "update"] });
 
 function laneState(outcome = "applied") {
   return {
-    organization_id: ORG,
+    company_id: COMPANY,
     lanes: [
       {
         lane: "certlog",
@@ -52,7 +52,7 @@ function laneState(outcome = "applied") {
 function renderCard() {
   return render(
     <StoryProviders locale="de">
-      <TechnicalProfileCard orgId={ORG} />
+      <TechnicalProfilePanel companyId={COMPANY} />
     </StoryProviders>,
   );
 }
@@ -65,14 +65,14 @@ describe("the technical profile card", () => {
   beforeEach(() => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /organizations/${ORG}/facts`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({
           data: [
             fact("mail_provider", "microsoft365", "Microsoft 365"),
             fact("operated_service", "webshop", "Webshop"),
           ],
         }),
-      [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(laneState()),
     });
   });
@@ -92,8 +92,8 @@ describe("the technical profile card", () => {
   it("says plainly that nothing has been read yet", async () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: [] }),
-      [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse({ title: "not found" }, 404),
     });
     renderCard();
@@ -107,11 +107,11 @@ describe("the technical profile card", () => {
   it("names a source that did not answer", async () => {
     installFetchStub({
       "GET /me": A_READER,
-      [`GET /organizations/${ORG}/facts`]: () =>
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({
           data: [fact("mail_provider", "microsoft365", "Microsoft 365")],
         }),
-      [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(laneState("failed")),
     });
     renderCard();
@@ -123,12 +123,12 @@ describe("the technical profile card", () => {
   // control is not a permission decision the card has to make.
   it("shows the same profile to a reader who may not write the record", async () => {
     installFetchStub({
-      "GET /me": meRoute({ organization: ["read"] }, { seat: "read" }),
-      [`GET /organizations/${ORG}/facts`]: () =>
+      "GET /me": meRoute({ company: ["read"] }, { seat: "read" }),
+      [`GET /companies/${COMPANY}/facts`]: () =>
         jsonResponse({
           data: [fact("mail_provider", "microsoft365", "Microsoft 365")],
         }),
-      [`GET /organizations/${ORG}/technical-enrich/latest`]: () =>
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(laneState()),
     });
     renderCard();
@@ -168,7 +168,7 @@ describe("which facts belong to the technical profile", () => {
     ).toBe(false);
   });
 
-  // A person correcting a machine-read value rewrites the row's source to
+  // A contact correcting a machine-read value rewrites the row's source to
   // `human`. Partitioning by source would drop exactly the rows somebody cared
   // enough to fix.
   it("keeps a corrected row on the technical card", () => {

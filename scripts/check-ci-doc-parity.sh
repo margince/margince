@@ -71,7 +71,7 @@ check() {
   echo "checked $count path(s) from $workflow against $doc"
 }
 
-check .github/workflows/ci.yml "filters: |" infra/ci-pipeline.md
+check .github/workflows/ci.yml "filters: |" docs/explanation/ci-pipeline.md
 # sbom.yml is not checked: it is dispatch-only and filters on no paths at all, so
 # there is nothing to hold against its document. Restoring a push trigger there
 # means restoring the line

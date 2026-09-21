@@ -180,12 +180,13 @@ var unreadFiles = gatekit.Waive(map[string]string{
 	"backend/internal/platform/ownedfile/owned_windows.go":   "the windows half of the owned-file primitive, cross-compiled and unlinted for the reason its blobstore sibling above states — the cost is that a permissions or error-handling defect here is caught only by review",
 
 	// The desktop launcher is its own module, released by its own lanes.
-	"desktop/launcher/platform_windows.go":  "desktop launcher platform layer: built by the windows release lane (desktop-windows.yml), not by the merge gate, which neither cross-compiles this module nor lints at a foreign GOOS. A break here surfaces at release rather than at merge",
-	"desktop/launcher/process_windows.go":   "desktop launcher process control, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
-	"desktop/launcher/postgres_windows.go":  "desktop launcher Postgres supervision, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
-	"desktop/launcher/runerror_windows.go":  "desktop launcher error rendering, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
-	"desktop/launcher/browser_darwin.go":    "desktop launcher browser handoff for macOS: compiled by the macOS release lane (desktop-macos.yml) and by a maintainer's own machine, and by nothing at all in the merge gate — GOOS is not a tag, so no config entry could change that",
-	"desktop/launcher/quarantine_darwin.go": "desktop launcher quarantine-attribute handling, macOS-only and reached only by the macOS release lane. This one carries the most risk of the set: it is the code that decides what a downloaded bundle is allowed to do, and no linter in this repository has read it",
+	"desktop/launcher/platform_windows.go":     "desktop launcher platform layer: built by the windows release lane (desktop-windows.yml), not by the merge gate, which neither cross-compiles this module nor lints at a foreign GOOS. A break here surfaces at release rather than at merge",
+	"desktop/launcher/process_windows.go":      "desktop launcher process control, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
+	"desktop/launcher/postgres_windows.go":     "desktop launcher Postgres supervision, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
+	"desktop/launcher/runerror_windows.go":     "desktop launcher error rendering, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
+	"desktop/launcher/processalive_windows.go": "desktop launcher liveness probe for the start lock, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it. The cost here is that the OpenProcess/GetExitCodeProcess pair decides whether a lock is abandoned, and an inverted answer either reclaims a folder another launcher is starting in or refuses one nobody holds",
+	"desktop/launcher/browser_darwin.go":       "desktop launcher browser handoff for macOS: compiled by the macOS release lane (desktop-macos.yml) and by a maintainer's own machine, and by nothing at all in the merge gate — GOOS is not a tag, so no config entry could change that",
+	"desktop/launcher/quarantine_darwin.go":    "desktop launcher quarantine-attribute handling, macOS-only and reached only by the macOS release lane. This one carries the most risk of the set: it is the code that decides what a downloaded bundle is allowed to do, and no linter in this repository has read it",
 })
 
 func TestEveryGoFileIsCompiledAndAnalysedBySomePass(t *testing.T) {

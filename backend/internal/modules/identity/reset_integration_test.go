@@ -55,7 +55,7 @@ func TestPasswordResetFlowEndToEnd(t *testing.T) {
 	h.resetSendStarted = func() { close(sent) }
 
 	// The member holds a live session that the reset must end.
-	_, sessionToken, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("pre-reset login: %v", err)
 	}
@@ -101,13 +101,13 @@ func TestPasswordResetFlowEndToEnd(t *testing.T) {
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("reset-password status = %d, want 204: %s", rec.Code, rec.Body)
 	}
-	if _, err := e.svc.Authenticate(ctx, sessionToken); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.svc.Authenticate(ctx, login.Token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("pre-reset session still authenticates (err=%v); a completed reset must end every session", err)
 	}
-	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword); !errors.Is(err, ErrBadCredentials) {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); !errors.Is(err, ErrBadCredentials) {
 		t.Fatalf("old password still logs in: %v", err)
 	}
-	if _, _, err := e.svc.Login(ctx, e.member.Email, newPassword); err != nil {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, newPassword, noDevice); err != nil {
 		t.Fatalf("new password refused: %v", err)
 	}
 
@@ -318,7 +318,7 @@ func TestOperatorResetPasswordRecoversTheAccount(t *testing.T) {
 	e := setupRevocationEnv(t, "reset-operator")
 	ctx := e.wsOnlyCtx()
 
-	_, sessionToken, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("pre-reset login: %v", err)
 	}
@@ -339,10 +339,10 @@ func TestOperatorResetPasswordRecoversTheAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := e.svc.Authenticate(ctx, sessionToken); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.svc.Authenticate(ctx, login.Token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("session survived the operator reset: %v", err)
 	}
-	if _, _, err := e.svc.Login(ctx, e.member.Email, operatorPassword); err != nil {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, operatorPassword, noDevice); err != nil {
 		t.Fatalf("operator-set password refused: %v", err)
 	}
 	if err := OperatorResetPasswordSmoke(ctx, e, "missing@nobody.test"); err == nil {

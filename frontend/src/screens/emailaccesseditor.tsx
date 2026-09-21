@@ -10,7 +10,7 @@
 // detail read fetches. Reading one per row would be a request per visible line.
 //
 // The drawer has the access block in hand, so it is the surface that can show
-// a reader who is currently named and let them remove one person without
+// a reader who is currently named and let them remove one contact without
 // retyping the other four.
 //
 // It also ends an inference. The timeline decides which of the two audience
@@ -50,11 +50,17 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 type EmailAccessStatus = components["schemas"]["EmailAccessStatus"];
 
 // The sentence under the mark: the mark says "Participants" in a word, and
-// this says what that means for the person reading. `withheld` has no entry
+// this says what that means for the reader reading. `withheld` has no entry
 // on purpose — the body below a withheld message already says it is not shared
 // with this reader, and the same sentence twice on one screen reads as a
 // surface that does not know what it has said.
+//
+// `workspace` and `team` are two sentences because they are two facts, and the
+// mark and the sentence used to disagree about which one this was: the badge
+// read "Team" over "Everyone in the company can read this." The server now
+// tells them apart, so each word gets the sentence that is true of it.
 const STATUS_SENTENCE: Partial<Record<EmailAccessStatus, MessageKey>> = {
+  workspace: "email.access.sentence.workspace",
   team: "email.access.sentence.team",
   participants: "email.access.sentence.participants",
   selected: "email.access.sentence.selected",
@@ -95,7 +101,7 @@ export function EmailAccessEditor({
     <div className="emailaccess">
       <VisibilityLine
         state={access.display_status}
-        marks={reasonKey && <Badge quiet>{t(reasonKey)}</Badge>}
+        marks={reasonKey && <Badge>{t(reasonKey)}</Badge>}
         action={changeable && <ChangeAccess presentation={presentation} />}
       />
       {sentence && <p className="emailaccess__sentence">{t(sentence)}</p>}
@@ -112,7 +118,7 @@ export function EmailAccessEditor({
  * reader with no standing to edit the set has no standing to enumerate it. So
  * an absent list here is not an empty audience, and nothing is drawn for it:
  * printing "nobody" would be a false statement about a message that is in fact
- * limited to four people this reader may not name.
+ * limited to four contacts this reader may not name.
  *
  * The write's vocabulary is ids, not names — `AudienceMember` is a subject type
  * and a uuid, which is the right shape for a write and unreadable in a list. So
@@ -139,7 +145,7 @@ function NamedMembers({ access }: Readonly<{ access: EmailAccess }>) {
         <li key={memberKey(member)} className="emailaccess__member">
           {/* A member the roster has not answered for yet, or one it no longer
               carries. The id is not shown: a uuid tells a reader nothing, and
-              a seat that has left the organization is still a real limit on
+              a seat that has left the company is still a real limit on
               the message. */}
           {nameOf.get(memberKey(member)) ?? t("email.access.unnamedMember")}
         </li>
@@ -182,7 +188,7 @@ function ThreadContribution({
       // A share that did not open the thread means a colleague still holds it.
       // Saying so is the difference between a control that looks broken and
       // one that reports what happened — and it is a COUNT, never a name,
-      // because whose mail a person keeps private is itself private.
+      // because whose mail a contact keeps private is itself private.
       setHeld(outcome && !outcome.shared ? outcome.held_by_others : null);
     },
   });
@@ -233,7 +239,7 @@ function ThreadContribution({
  *
  * This is the whole reason the editor lives in the drawer. The timeline row's
  * dialog starts every `selected` audience blank, so a reader removing one
- * person from a set of five had to re-tick the other four and hope they
+ * contact from a set of five had to re-tick the other four and hope they
  * remembered them. Here `selected_members` is already loaded, so the checklist
  * opens with the real set ticked and the reader changes what they came to
  * change.
@@ -272,57 +278,55 @@ function MessageAudience({
       >
         {t("compose.audience")}
       </Button>
-      {open && (
-        <ConfirmModal
-          open={open}
-          onClose={() => setOpen(false)}
-          title={t("compose.audienceTitle")}
-          confirmLabel={t("compose.audienceConfirm")}
-          confirmDisabled={
-            unchanged || (choice === "selected" && members.length === 0)
-          }
-          onConfirm={() =>
-            mutation.mutate({
-              activityId: presentation.id,
-              version: presentation.version,
-              audience: choice,
-              members: choice === "selected" ? members : undefined,
-            })
-          }
-          pending={mutation.isPending}
-          error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        >
-          <div className="compose-fields">
-            <ChoiceList
-              legend={t("compose.audienceLegend")}
-              value={choice}
-              onChange={setChoice}
-              choices={AUDIENCE_CHOICES.map((value) => ({
-                value,
-                label: t(AUDIENCE_LABEL[value]),
-                description: t(AUDIENCE_HINT[value]),
-              }))}
-            />
-            {/* The picker only where the choice needs one. A limited-to-nobody
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("compose.audienceTitle")}
+        confirmLabel={t("compose.audienceConfirm")}
+        confirmDisabled={
+          unchanged || (choice === "selected" && members.length === 0)
+        }
+        onConfirm={() =>
+          mutation.mutate({
+            activityId: presentation.id,
+            version: presentation.version,
+            audience: choice,
+            members: choice === "selected" ? members : undefined,
+          })
+        }
+        pending={mutation.isPending}
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      >
+        <div className="compose-fields">
+          <ChoiceList
+            legend={t("compose.audienceLegend")}
+            value={choice}
+            onChange={setChoice}
+            choices={AUDIENCE_CHOICES.map((value) => ({
+              value,
+              label: t(AUDIENCE_LABEL[value]),
+              description: t(AUDIENCE_HINT[value]),
+            }))}
+          />
+          {/* The picker only where the choice needs one. A limited-to-nobody
                 audience is not a limit anybody meant, so the confirm above
                 refuses an empty set rather than writing it. */}
-            {choice === "selected" && (
-              <AudienceMembers
-                candidates={candidates}
-                chosen={members}
-                onChange={setMembers}
-              />
-            )}
-            <p className="t-caption">{t("compose.audienceNote")}</p>
-          </div>
-        </ConfirmModal>
-      )}
+          {choice === "selected" && (
+            <AudienceMembers
+              candidates={candidates}
+              chosen={members}
+              onChange={setMembers}
+            />
+          )}
+          <p className="t-caption">{t("compose.audienceNote")}</p>
+        </div>
+      </ConfirmModal>
     </span>
   );
 }
 
 /**
- * Whether two member sets name the same people, order disregarded.
+ * Whether two member sets name the same contacts, order disregarded.
  *
  * Order is not meaning here: the checklist appends in tick order and the server
  * returns its own, so comparing sequences would call every set changed the

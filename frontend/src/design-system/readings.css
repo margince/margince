@@ -1,9 +1,9 @@
-/* Meter — a proportion as a bar. Shared by StrengthCard
+/* Meter — a proportion as a bar. Shared by StrengthPanel
  * (screens/strength.tsx), onboarding (screens/onboarding.tsx) and the
  * company page's completeness readings. */
 .meterbar {
   height: 8px;
-  background: var(--bgCard);
+  background: var(--bgChip);
   border-radius: var(--r-full);
   corner-shape: round;
   overflow: hidden;
@@ -12,7 +12,7 @@
 .meterbar span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--away));
+  background: linear-gradient(90deg, var(--accent), var(--warning));
   border-radius: var(--r-full);
   corner-shape: round;
   transition: width 0.5s var(--ease-out);
@@ -34,14 +34,14 @@
 /* A reading whose low end is the bad one carries its own colour, so the bar
  * agrees with the band badge the caller draws beside it. Flat, not a
  * gradient: the second colour of a gradient reads as a second meaning. */
-.meterbar-warn span {
-  background: var(--warn);
+.meterbar-warning span {
+  background: var(--warning);
 }
 .meterbar-danger span {
   background: var(--danger);
 }
 /* Same reasoning as the tone variants above: a caller can want the accent
- * without the fade to `--away`, which reads as a warning creeping into a
+ * without the fade to `--warning`, which reads as a warning creeping into a
  * bar that has no low-is-bad meaning at all. */
 .meterbar-flat span {
   background: var(--accent);
@@ -75,20 +75,29 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   padding: 6px 12px;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.2;
   white-space: nowrap;
 }
 .chip svg {
-  color: var(--textMeta);
   flex: none;
+}
+/* dense: a chip that shares a cell with badges, at their geometry. A table
+ * row's name column carries the name, a fact chip and a status pill together,
+ * and the default chip is a rung taller and a rung larger than the badge beside
+ * it — so the fact read as the most important thing in the cell, which the name
+ * is. `.badge`'s four values rather than `.badge` itself: a badge is a status in
+ * a closed tone vocabulary and a chip is a fact that may be a link, so one
+ * shared class would tie the two vocabularies together at the first restyle of
+ * either. */
+.chip-dense {
+  min-block-size: 20px;
+  padding: 0 8px;
 }
 .chip-link {
   text-decoration: none;
@@ -139,10 +148,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--textMuted);
 }
 /* Right-aligned so the digits form a column the eye can run down, which is
-   the same reason the figures take the mono face through `num`. */
+   the same reason the figures take tabular digits through `.t-num`. */
 .barlist-amount {
   text-align: right;
 }

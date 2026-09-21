@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
+import type { components, operations } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -32,12 +33,15 @@ import "./users-access.css";
 
 type AccessPreview = components["schemas"]["AccessPreview"];
 type Team = components["schemas"]["Team"];
-type Role = components["schemas"]["AccessPreviewRequest"]["role"];
+// The preview's role comes off the OPERATION rather than a request schema: the
+// endpoint is a GET, so its parameters are the query and there is no body shape
+// to name.
+type Role = operations["previewAccess"]["parameters"]["query"]["role"];
 
 // The objects worth a line in the preview: the record kinds a rep works.
 const PREVIEW_OBJECTS = [
-  "person",
-  "organization",
+  "contact",
+  "company",
   "lead",
   "deal",
   "project",
@@ -49,8 +53,8 @@ function useAccessPreview(role: Role, teamIds: string[]) {
     // set of teams has to spell the same key wherever it is read.
     queryKey: ["access-preview", role, [...teamIds].sort(stable).join(",")],
     queryFn: async (): Promise<AccessPreview> => {
-      const { data, error } = await api.POST("/users/access-preview", {
-        body: { role, team_ids: teamIds },
+      const { data, error } = await api.GET("/users/access-preview", {
+        params: { query: { role, team_ids: teamIds } },
       });
       if (error) throwProblem(error);
       return data;
@@ -66,7 +70,7 @@ export function AccessPreviewPanel({
   const preview = useAccessPreview(role, teamIds);
   return (
     <div className="users-access-preview" aria-live="polite">
-      <p className="t-caption">{t("users.access.title")}</p>
+      <p>{t("users.access.title")}</p>
       <QueryGate query={preview} pendingLabel={t("users.access.title")}>
         {(access) => <AccessSummary access={access} />}
       </QueryGate>
@@ -88,7 +92,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   };
   const teams = (access.teams ?? []).map((team) => team.name).join(", ");
   return (
-    <ul className="t-caption users-access-list">
+    <ul className="users-access-list">
       <li>{t("users.access.identity")}</li>
       <li>
         {access.row_scope === "all"
@@ -133,7 +137,7 @@ function teamName(
   id: string,
 ): string {
   const found = entries?.find((entry) => entry.id === id);
-  // The roster is a union of people and teams under one cache key, so the
+  // The roster is a union of contacts and teams under one cache key, so the
   // narrowing is real rather than ceremonial — a `name` is what makes it a team.
   return found && "name" in found ? found.name : id;
 }
@@ -194,7 +198,7 @@ export function TeamsCard() {
     // came back. Sticky, because a refusal is not a courtesy to withdraw after
     // three and a half seconds.
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
     },
     onSuccess: (_restored, { name }) => {
       qc.invalidateQueries({ queryKey: ["teams"] });
@@ -224,9 +228,7 @@ export function TeamsCard() {
   });
   return (
     // The create verb sits on the title's own line, which is where a card-level
-    // create verb goes. It used to be the LAST ROW of the team list, labelled
-    // "New team" beside a button reading "Create team" — a row that was not a
-    // team, inside a list of teams, saying its own name twice.
+    // create verb goes — never as a row of a team list that is not a team.
     <Panel
       title={t("users.teamsTitle")}
       titleAction={canCreateTeam ? <NewTeamAction /> : undefined}
@@ -239,12 +241,10 @@ export function TeamsCard() {
             ` ${t("users.teamsAdminOnly")}`}
         </p>
         {/* A refused archive belongs to the card, not to the row: the roster
-            below is refetched on success, so the only thing left to say is that
-            the write did not land. Callout's `danger` tone is what the rest of
-            this tab says that with — a bare `role="alert"` span took its
-            emphasis from nothing at all. */}
+            below is refetched on success, so the only thing left to say is
+            that the write did not land. */}
         {archive.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout tone="danger" kind="outcome" title={t("users.notArchived")}>
             {problemMessageOf(archive.error, t)}
           </Callout>
         )}
@@ -260,7 +260,7 @@ export function TeamsCard() {
               <EmptyState>{t("users.noTeamsYet")}</EmptyState>
             ) : (
               // One team per row, and the row OPENS: the name and how many
-              // people are in it on the summary line, who those people are
+              // contacts are in it on the summary line, who those contacts are
               // inside. A team's membership was previously fixed at invite —
               // the two endpoints that change it existed and nothing in the
               // product reached them.
@@ -314,14 +314,13 @@ function TeamRow({
   const count = team.member_count ?? 0;
   return (
     <Disclosure
-      className="users-team"
       summary={
         <span className="users-team-summary">
           <span className="t-body">{team.name}</span>
           {/* The TEAM's own count key, not the roster's: this counts members OF
               a team, while the card above counts users of the installation.
               One key for both made renaming either silently rewrite the other. */}
-          <span className="t-caption users-team-count">
+          <span className="t-caption">
             {plural("users.teamMemberCount", count, {
               count: formatNumber(count, locale),
             })}
@@ -331,7 +330,6 @@ function TeamRow({
       action={
         canEditTeam ? (
           <Button
-            small
             variant="ghost"
             iconOnly
             aria-label={t("users.archiveTeam", { name: team.name })}
@@ -416,7 +414,7 @@ function TeamMembers({
   });
 
   if (!canSeeMembership) {
-    return <p className="t-caption">{t("users.teamMembersAdminOnly")}</p>;
+    return <p>{t("users.teamMembersAdminOnly")}</p>;
   }
 
   return (
@@ -427,7 +425,7 @@ function TeamMembers({
         // the seats the server will actually take. SetTeamMember refuses an
         // agent seat outright and refuses a non-active seat on the way in, so
         // offering either is offering a box that can only fail.
-        const people = list.flatMap((entry) =>
+        const contacts = list.flatMap((entry) =>
           "email" in entry && !entry.is_agent && entry.status === "active"
             ? [entry]
             : [],
@@ -435,23 +433,23 @@ function TeamMembers({
         return (
           <>
             {setMember.isError && (
-              <Callout tone="danger" live="alert">
+              <Callout tone="danger" kind="outcome" title={t("users.notSaved")}>
                 {problemMessageOf(setMember.error, t)}
               </Callout>
             )}
-            {people.length === 0 ? (
+            {contacts.length === 0 ? (
               <EmptyState>{t("users.teamNobodyToAdd")}</EmptyState>
             ) : (
               <fieldset className="users-team-members">
-                <legend className="t-caption">
+                <legend className="t-name">
                   {t("users.teamMembersLabel")}
                 </legend>
-                {people.map((person) => (
+                {contacts.map((contact) => (
                   <Checkbox
-                    key={person.id}
+                    key={contact.id}
                     className="t-body"
-                    label={person.display_name}
-                    checked={(person.team_ids ?? []).includes(team.id)}
+                    label={contact.display_name}
+                    checked={(contact.team_ids ?? []).includes(team.id)}
                     // Disabled rather than absent for a reader who may SEE
                     // membership and not change it: the list is the answer they
                     // came for and every box is part of it, so removing them
@@ -461,7 +459,7 @@ function TeamMembers({
                     disabled={setMember.isPending || !canEditTeam}
                     onChange={(event) =>
                       setMember.mutate({
-                        userId: person.id,
+                        userId: contact.id,
                         member: event.target.checked,
                       })
                     }
@@ -513,9 +511,7 @@ function NewTeamAction() {
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team", so
           the two buttons on screen together are tellable apart. */}
-      <Button small onClick={() => setOpen(true)}>
-        {t("users.newTeamOpen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("users.newTeamOpen")}</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
         <form
           className="form-stack"
@@ -524,9 +520,9 @@ function NewTeamAction() {
             if (ready) create.mutate(draft.trim());
           }}
         >
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.newTeamLabel")}
-          </h2>
+          </Heading>
           <Field label={t("users.teamNameLabel")} required>
             {(control) => (
               <TextInput
@@ -538,18 +534,19 @@ function NewTeamAction() {
               />
             )}
           </Field>
-          {/* `.form-stack` stretches its children, so the submit takes its own
-              trailing row rather than filling the dialog's width. */}
-          <div className="form-actions">
-            <Button type="submit" variant="primary" small disabled={!ready}>
-              {t("users.createTeam")}
-            </Button>
-          </div>
+          {/* ABOVE the submit row, where the sibling dialogs put a refusal. */}
           {create.isError && (
-            <Callout tone="danger" live="alert">
+            <Callout tone="danger" kind="outcome" title={t("users.notCreated")}>
               {problemMessageOf(create.error, t)}
             </Callout>
           )}
+          {/* `.form-stack` stretches its children, so the submit takes its own
+              trailing row rather than filling the dialog's width. */}
+          <div className="form-actions">
+            <Button type="submit" variant="primary" disabled={!ready}>
+              {t("users.createTeam")}
+            </Button>
+          </div>
         </form>
       </Modal>
     </>

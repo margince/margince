@@ -29,10 +29,11 @@ configurable logger.
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — organization, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `organization` + `bootstrap_admin` |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (bootstrap + auth — workspace, bootstrap_admin, seeds, email; strict decoding, secrets as `*_file` references). A missing file boots an existing installation; bootstrapping an empty database requires `workspace` + `bootstrap_admin` |
 | `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime-DDL pool; unset = `createCustomField`/`updateCustomFieldOptions` answer 501 |
 | `--addr` | — | `:8080` | listen address |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
+| `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — (none) | Event-bus credential, where the instance requires one. Empty is the ordinary case: an instance reached over a network the deployment controls needs none. Set it wherever the bus is reachable by anything else — the desktop bundle mints one per installation, because its bus listens on loopback and any local account could otherwise read the stream. Prefer the environment over the flag: argv is readable by every process on the machine |
 | `--inline-relay` | — | `true` | run the outbox relay in-process; set `false` when `cmd/worker` runs it |
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key sealing outbound-webhook signing secrets at rest; unset = the mutating `/webhook-subscriptions` paths (create/rotate, replay) answer 503, never an unsigned fallback; the read surface still lists |
 | `--geocode-base-url` | `MARGINCE_GEOCODE_BASE_URL` | — | Nominatim base URL, read by **both roles**: the worker for the lookup itself, the api to decide whether to queue one at all — set on only one role and the other silently disagrees, either serving nothing or queueing lookups nobody answers. Unset on both = no geocoding: company addresses keep no coordinates and every `within_radius` query answers unavailable. `public` uses OpenStreetMap's own service, which is POC-only — its terms hold a client that runs on a schedule to 4 requests a minute, single-threaded, with caching, so any real volume wants a self-hosted instance. |
@@ -40,13 +41,13 @@ configurable logger.
 | `--vat-check-requester` | `MARGINCE_VAT_CHECK_REQUESTER` | — | This installation's OWN VAT ID (e.g. `DE123456789`), on the worker role. VIES issues a consultation number — the receipt a business shows to say it verified a counterpart before treating a supply as intra-community — only for a check made under a requester's number. Unset still checks and still answers; the answer just carries no proof. |
 | `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate-transparency base URL, on the worker role. It enables the whole technical lookup — what a company publicly runs, read from its DNS records, its certificate history and one polite fetch of its own homepage. Unset = the lane is off: the company record keeps no technical profile and the button on it answers 501, which is honest for an installation that should make no outbound lookups. `public` uses crt.sh, which is free and needs no key but is one small service run on goodwill — the reader paces itself to one query every five seconds and caches every answer for that reason. |
 | `--technical-backfill-interval` | — | `6h` | how often the worker looks for companies whose technical profile is missing or stale. Unlike geocoding there is no write to trigger on — a company's mail provider changes at the COMPANY — so this pass is the only thing that ever observes a move. Runs on start; `0` turns the sweep off and leaves the button working. |
-| `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential, and the **only** knob over that endpoint's access — there is no second variable declaring a mode. Unset (the default) `/metrics` is served to whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. That matches `cmd/worker`, whose `/metrics` has always been unauthenticated behind `--observe-addr`. Set it when the port is **not** already contained by a private listener, a NetworkPolicy or an ingress allow-list — the exposition is fleet-wide and carries workspace ids plus a declared-catalogue info metric, so an unguarded port discloses tenant shape. The api logs a warning at boot whenever it is unset, so the open posture is visible without reading the config. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
-| `--hubspot-app-secret` | `MARGINCE_HUBSPOT_APP_SECRET` | — | the HubSpot app client secret. Verifies inbound overlay-webhook v3 signatures and, when set, mounts `/webhooks/hubspot`; unset, that route is absent rather than present-and-unverified |
+| `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. Unset (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. The api logs one line at boot saying which posture it took. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
+| `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` requires `--metrics-token`. `open` serves whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. Choose `open` only where the port is already contained — a private listener, a NetworkPolicy, an ingress that does not route `/metrics` — because this listener is the one `/v1` is served on and the exposition names every route and carries workspace ids plus a declared-catalogue info metric. The api warns at boot whenever it is open, and refuses to boot with `open` and a token together (the token would authenticate nothing). `cmd/worker`'s own `/metrics` is served on `--observe-addr`, a separate listener that is off unless set |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
 | `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback. **Held to an address a RECIPIENT can open** whenever a real sender is configured (SMTP `email.enabled`, or a Gmail/Graph app): https only, and not localhost, a private address or an interface-scoped one. `MARGINCE_ENV=dev` or `test` admits the dev stack's `http://localhost`. Both the api and the worker refuse to boot on an unusable value, and a tokenized send refuses at send time; the configured value and whether it last answered are shown on Settings → Connections |
-| — (env-only) | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) so the on-connect/Connect-time seeding path sees the same cap the periodic sweep does |
-| — (env-only) | `MARGINCE_PROVIDER_SURFE` | `off` | which licensed-data-provider adapter this process carries: `off` registers none (every provider surface answers honestly and no code path can reach a vendor — PI-AC-9), `offline` the deterministic fake for a dev stack, `live` the real Surfe adapter. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent |
+| — (env-only) | `MARGINCE_AUTO_ENRICH_DAILY_CAP` | `0` (= built-in 500) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) because an approval accept on this role can queue a domain-triage read, which spends the same daily budget the worker's sweeps do |
+| — (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed-data-provider adapter this process carries: `live` (the default) the real Surfe adapter, `offline` the deterministic fake for a dev stack, `off` registers none at all. **Registering an adapter is not what permits egress** — a sealed credential is, and with no key there is no call any adapter could make (PI-AC-9): the surface stays fully available, renders `not_connected` honestly, and an admin can connect it themselves. Defaulting to `off` is what made the capability invisible, needing an environment variable and a restart to reach, which is a build flag wearing a setting's clothes. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent |
 | `--oauth-access-token-ttl` | `MARGINCE_OAUTH_ACCESS_TOKEN_TTL` | `0` (= the passport default, 720h / 30 days) | lifetime of the access token the MCP connector's OAuth handshake mints. That token IS an Agent Seat Passport, so unset it inherits the 30-day passport default, while connector norms are ~15 minutes plus refresh; set e.g. `15m` to run those norms without a code change — the refresh-rotation machinery is what makes a short lifetime cheap for a client. It applies to **both** mints of a connection's life, the code exchange and every rotation. Maximum `2160h` (90 days, the mint's own ceiling); an out-of-range or non-duration value is a boot error, never a silent default |
 
 With `--inline-relay` (the default) an unreachable Redis fails the boot:
@@ -61,13 +62,107 @@ Operational endpoints (served next to `/v1`):
   configured; the secret vault when a keyvault is configured; the
   customfields schema pool when `--schema-dsn` is set) must pass within
   2s, else 503 naming the unready dependency.
-- `/metrics` — Prometheus text format: `margince_outbox_unpublished`,
-  `margince_relay_published_total`, `margince_pgxpool_conns{state=…}`, the
-  AI router's counters, the overlay sync-health section, and the
-  **job-runtime section** below. Served openly by default, so an
-  annotation-discovered scraper works with no configuration; set
-  `--metrics-token` to require a Bearer credential where the port itself is not
-  already contained.
+- `/metrics` — Prometheus text format: the **HTTP section** below,
+  `margince_outbox_unpublished`, `margince_relay_published_total`,
+  the **connection-pool section** below, the AI router's counters, and the
+  **job-runtime section** below. Closed by default:
+  set `--metrics-token` to require a Bearer credential, or
+  `--metrics-access=open` for an annotation-discovered scraper where the port
+  itself is already contained.
+
+  The HTTP section covers the `/v1` contract surface:
+
+  | Family | Type | Labels |
+  |---|---|---|
+  | `margince_http_requests_total` | counter | `route`, `method`, `status` |
+  | `margince_http_request_duration_seconds` | histogram | `route`, `method` |
+  | `margince_http_requests_in_flight` | gauge | — |
+
+  **`route` is the matched route TEMPLATE, never the request path** —
+  `/v1/deals/{id}`, not `/v1/deals/9f3c…`. The path carries record ids, and a
+  label carrying ids grows one series per record for the life of the process.
+  The access log is the opposite reading on purpose: it logs the real path,
+  because a log line answers "what did clients ask".
+
+  **What this section does NOT count, because the measurement sits inside the
+  router rather than in front of it.** It runs as chi *operation* middleware, so
+  it only sees a request that already matched a registered method and path:
+
+  - a **404** for an unrouted path, and a **405** for a method that route does
+    not serve — chi answers both itself, and neither enters a wrapper, so
+    scanner traffic is invisible here;
+  - a **400 from parameter parsing** — the generated wrapper binds path, query
+    and header parameters and calls its error handler *before* the middleware
+    chain, so a `GET /v1/deals/not-a-uuid` is a real client-visible 400 that
+    appears in neither family.
+
+  The access log carries all three. Counting them would mean instrumenting in
+  front of the router, where the route template is not yet known — which is why
+  the store has an `unmatched` bucket it can use, and why nothing on `/v1`
+  currently fills it.
+
+  The measurement sits **outside** the admission gate and the idempotency
+  replay, so a `403` counts as that route's latency — which is
+  what a client experienced. A handler that **panics** is recorded as `500`,
+  matching what `RecoverPanics` sends the client, and a handler that answered
+  and *then* panicked keeps the status it actually sent. `p95` over five
+  minutes, per route:
+
+  ```promql
+  histogram_quantile(0.95, sum by (route, le) (
+    rate(margince_http_request_duration_seconds_bucket[5m])))
+  ```
+
+  Mind the scrape interval when choosing that window: a rate needs several
+  points, so a cluster scraping every 5m wants `[30m]` or wider.
+
+  The connection-pool section reports this process's own pool. It publishes
+  every value pgx computes, and the split between the two kinds is what makes
+  it readable:
+
+  | Family | Type | Labels |
+  |---|---|---|
+  | `margince_pgxpool_conns` | gauge | `state`: `acquired`, `idle`, `constructing`, `total`, `max` |
+  | `margince_pgxpool_acquire_total` | counter | — |
+  | `margince_pgxpool_acquire_empty_total` | counter | — |
+  | `margince_pgxpool_acquire_canceled_total` | counter | — |
+  | `margince_pgxpool_acquire_seconds_total` | counter | — |
+  | `margince_pgxpool_acquire_wait_seconds_total` | counter | — |
+  | `margince_pgxpool_conns_opened_total` | counter | — |
+  | `margince_pgxpool_conns_retired_lifetime_total` | counter | — |
+  | `margince_pgxpool_conns_retired_idle_total` | counter | — |
+
+  **The gauges cannot tell a queue from a busy pool, which is what the counters
+  are for.** `acquired` near `max` is what saturation looks like AND what a
+  healthy peak looks like; the series that separates them is
+  `acquire_empty_total`, an acquire that found nothing free and had to wait.
+  The gauges also only describe the instant they were scraped, so at a 5-minute
+  interval a queue that formed and drained between two scrapes leaves no trace
+  in them at all. The counters carry it into the next scrape regardless.
+
+  **The three wait series count acquires that SUCCEEDED.** pgx increments
+  `EmptyAcquireCount`, `EmptyAcquireWaitTime` and `AcquireDuration` when a
+  caller eventually gets a connection; one that gives up while queued — a
+  cancelled context, a request that went away — lands only in
+  `acquire_canceled_total` and contributes none of its wait. That is the
+  opposite of an academic distinction during the incident these exist for: the
+  callers who gave up are the requests that FAILED, so a mean wait read alone
+  averages over the survivors and reports a shorter queue than the one callers
+  actually stood in. Read the two together.
+
+  The waiting line, and the mean wait of a caller that joined it:
+
+  ```promql
+  rate(margince_pgxpool_acquire_empty_total[30m])
+
+  rate(margince_pgxpool_acquire_wait_seconds_total[30m])
+    / rate(margince_pgxpool_acquire_empty_total[30m])
+  ```
+
+  `acquire_seconds_total` is over every SUCCESSFUL acquire including the ones
+  that waited for nothing, so it measures what acquiring costs on average;
+  `acquire_wait_seconds_total` is over the ones that queued and were then
+  served, and is the one that answers how long anybody actually waited.
 - `GET /v1/admin/job-health` — the per-workspace read of the same job
   table, for an admin rather than a scrape. See
   [Reading the job surfaces](#reading-the-job-surfaces).
@@ -107,7 +202,7 @@ copy reported a truthful-looking zero. That stays true — the worker never
 re-serves a job-table gauge, and `--observe-addr` below is about the process,
 not the fleet.
 
-**`/metrics` — is a queue growing?** Nine gauge families over the job table:
+**`/metrics` — is a queue growing?** Ten gauge families over the job table:
 
 | Family | Labels | Meaning |
 |---|---|---|
@@ -120,8 +215,16 @@ not the fleet.
 | `margince_sweep_workspaces_failed` | `sweep` | those whose MOST RECENT child is discarded or cancelled |
 | `margince_sweep_units` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
 | `margince_sweep_units_failed` | `sweep`, `unit` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_job_failures` | `kind`, `class` | failing work (retryable or discarded) by WHAT went wrong — the same class the failure list shows. `unclassified` is a failure whose recorded text nothing recognises, which is what an outage nobody has enumerated looks like. Cancelled work is not here: a deliberate stop is not an outage |
 
-The last two exist because the workspace pair counts each workspace once, and
+`margince_job_failures` is the one that makes an outage alertable rather than
+only readable. Without a class the only signal a monitor sees is the discarded
+count rising, and that rises identically for a provider outage, a revoked
+credential and a bug — three situations wanting three different responses. Its
+cardinality is bounded by the vocabularies: every class the core declares, plus
+each composed unit's own, plus the reserved one, for each failing kind.
+
+The sweep pairs exist because the workspace pair counts each workspace once, and
 four dispatchers fan out below that grain. They report **only** the kinds whose
 declared `fan_out_unit` is finer than a workspace — for the other twenty the
 unit *is* the workspace, so the two pairs would carry the same numbers.
@@ -331,8 +434,9 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required for a marketing send originated by this role's Surface-B agent run — without it that send refuses rather than emit a forgeable link |
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off. Turning capture ON makes the `ai_call_payload` / `content` retention window the whole bound on what is kept — see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before picking one |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
+| `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — (none) | Event-bus credential, where the instance requires one. Empty is the ordinary case: an instance reached over a network the deployment controls needs none. Set it wherever the bus is reachable by anything else — the desktop bundle mints one per installation, because its bus listens on loopback and any local account could otherwise read the stream. Prefer the environment over the flag: argv is readable by every process on the machine |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns** — see the api row. A bound installation runs the Surface-B runner + embeddings from the database, and this role re-reads that stored binding on an interval so it never serves one the api has replaced |
 | `--ai-fake` | — | `false` | run the Surface-B runner on the offline fake model |
 | `--runner-interval` | — | `30s` | Surface-B scheduler tick — the River periodic schedule of the `agent_scheduler` dispatcher, which enqueues one `agent_scheduler_workspace` job per live workspace. It paces the fan-out, not an agent's own schedule: the catalog's daily due hour decides when a brief runs |
@@ -342,12 +446,11 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key sealing outbound-webhook signing secrets; unset = the delivery worker stays off (no `cg:webhooks` consumer, no retry sweep) |
 | `--webhook-retry-interval` | — | `30s` | how often the outbound-webhook retry dispatcher fans one due-retry pass out per live workspace (worker role only) |
 | `--reconcile-interval` | — | `24h` | overnight follow-up reconciliation pass interval |
-| `--overlay-reconcile-interval` | — | `2m` | overlay-mode incumbent mirror sweep interval. Every tick spends incumbent API quota per object class even when nothing changed (9 classes ≈ 11 REST calls/tick against HubSpot's 90k/day), so lengthen it on a dev box. `POST /overlay/reconcile` ("Sync now") only marks the workspace due — the sweep still waits for the next tick, so a long interval makes that button feel slow |
-| `--overlay-backfill-limit` | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | cap the overlay INITIAL mirror backfill at N records per object class — dev/demo, so connecting a real portal doesn't pull it all onto a laptop. Only the backfill is capped: later incremental sweeps still bring in anything edited after the sweep window, which opens shortly before the connect instant (a clock-skew grace). A class the cap actually cuts short reports `backfillComplete: false` permanently (`overlay_backfill_cursor.truncated`) — unsetting the limit does NOT resume it, since the cursor is already `done`; reset that class's `overlay_backfill_cursor` row (or reconnect, which purges it) to backfill it for real. Don't change the limit mid-backfill either — the running count rides in `overlay_backfill_cursor` as a `<count>\|<inner>` prefix the uncapped adapter rejects, which fails that class every sweep until the cursor row is cleared |
-| `--send-rate-limit` | — | `0` (= built-in 30) | outbound messages ONE mailbox may transmit per `--send-rate-window`. Burst pacing, not a quota: the provider enforces its own daily cap and throttles an account that bursts past it. The limiter is in-process, so a multi-worker deployment paces each replica's view of the mailbox independently |
+| `--send-rate-limit` | — | `0` (= built-in 30) | outbound messages ONE mailbox may transmit per `--send-rate-window`. Burst pacing, not a quota: the provider enforces its own daily cap and throttles an account that bursts past it. The limiter counts in the bus Redis, so every worker replica paces one mailbox against ONE window |
 | `--send-rate-window` | — | `0` (= built-in 1m) | the window the per-mailbox send rate is measured over |
 | `--send-max-age` | — | `0` (= built-in 24h) | how long a staged send may be deferred by the pacing chain before it parks with a reason instead. Without a bound a permanently saturated policy would defer a message forever, silently |
-| `--deepread-max-pages` | `MARGINCE_DEEPREAD_MAX_PAGES` | `0` (= built-in 40) | deep-read crawl page cap |
+| — (env-only) | `MARGINCE_AUTO_ENRICH_DAILY_CAP` | `0` (= built-in 500) | installation-wide daily ceiling on AUTOMATIC site deep reads — company auto-enrich and domain triage spend the one atomically-reserved budget (`capture_auto_enrich_budget`). Raise it when backfills routinely meet more than 500 new domains in one UTC day and their companies should not trickle in over following days; it paces only — concurrency stays bounded by the two deep-read workers and model spend by the AI budget. Read by **both roles** (an approval accept on the api can queue a triage read); an invalid value is a boot error on both, never a silent default |
+| `--deepread-max-pages` | `MARGINCE_DEEPREAD_MAX_PAGES` | `0` (= built-in 60) | deep-read crawl page cap |
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
@@ -365,13 +468,38 @@ re-serves no fleet-wide reading:
 
 | Family | Meaning |
 |---|---|
-| `margince_process_goroutines` | goroutines in the scraped process |
-| `margince_process_heap_bytes` / `margince_process_heap_sys_bytes` | heap in use, and heap held from the OS |
-| `margince_process_gc_cycles_total` | completed GC cycles since this process started |
-| `margince_pgxpool_conns` | this process's own connection pool, by class |
+| `go_goroutines`, `go_threads` | goroutines and OS threads in the scraped process |
+| `go_memstats_*` | heap in use, heap held from the OS, and where the next GC fires |
+| `go_gc_duration_seconds` | GC pause quantiles — the stop-the-world cost, not merely the cycle count |
+| `process_cpu_seconds_total`, `process_resident_memory_bytes` | this process's CPU and RSS, which cAdvisor can only give per container |
+| `process_start_time_seconds` | uptime, and a crash loop that restarts between scrapes |
+| `margince_pgxpool_*` | this process's own connection pool — see the connection-pool section |
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
+| `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
 
-The same `margince_process_*` section is served by `cmd/api` too — it describes
+The AI families are labelled by `provider`, `model`, `served_identity_source`,
+`task` and `tier`. `model` is the **served** identity, not the configured one: a
+tier binding need not declare a model (no `--ai-fake` deployment does), and
+`served_identity_source` grades what the label is worth — `response` is a vendor
+confirming what ran, `echo` is an OpenAI-compatible wire reflecting the request
+back, `configured` is nobody having said.
+
+Two grains, and reading the wrong one is the easy mistake.
+`margince_ai_calls_total` counts **one per logical call**: the served-or-failed
+decision the caller actually got. `margince_ai_call_attempts_total` counts
+**every ladder rung**, so their ratio is how much failing over a tier is doing.
+`margince_ai_call_errors_total` is per ATTEMPT — it exceeded calls_total the day
+attempts were added, so an `errors / calls` panel now reads above 1 on a tier
+that fails over, and the honest denominator for it is attempts.
+
+The `go_*` and `process_*` families come from client_golang's runtime and
+process collectors, gathered into the same exposition as the hand-rolled
+`margince_*` ones. They replaced four hand-read `margince_process_*` gauges,
+which measured a strict subset of the same thing under a prefix whose only
+stated purpose was to avoid colliding with these collectors — and cost a second
+stop-the-world read of `runtime.MemStats` per scrape to do it.
+
+The same runtime section is served by `cmd/api` too — it describes
 whichever process answered, which is exactly what makes it worth having on both.
 `margince_outbox_unpublished`, the job-table gauges and the declared catalogue
 stay a **single** reading on the api: two roles answering one fleet number is a
@@ -433,6 +561,27 @@ workflow dispatch (`cg:workflows`), and the clock time-scan always run.
 Shutdown is graceful: in-flight subscriber handlers finish their ack before
 the process exits.
 
+## AI payload capture and its window (api, worker)
+
+`ai.capture_payloads` is off by default. Turning it on stores the model's whole request and response
+in `ai_call_payload`, and for a reading of a meeting transcript that request **is** the transcript —
+the largest copy of somebody's words this product holds.
+
+The `ai_call_payload` / `content` row in `retention_policy` is what bounds that. Bootstrap seeds it
+at 365 days and `enabled`, so the retention engine erases past it from the first sweep; the number is
+an **admin-editable default**, and each installation decides its own. Three things settle it:
+
+- **What it bounds.** How long a captured transcript, contract or draft stays on disk after the work
+  is done.
+- **What it is for.** Debugging a call and auditing what was sent are days-to-weeks questions. A year
+  of them is a year of somebody's words kept for a lane nobody is reading.
+- **What it does NOT bound.** An Art. 17 erasure reaches these payloads by the record a call cited and
+  by matching the subject's addresses in the text. A call that names no record and whose text spells
+  no address is reached by neither, and for those this window is the guaranteed end — which is exactly
+  the case a shorter one is for. The two lanes, and why the citation is an optimisation rather than the
+  boundary, are in
+  [privacy-and-consent.md](../explanation/privacy-and-consent.md).
+
 ## The bus address and its logical database (api, worker)
 
 `--redis` accepts a Redis logical database as a suffix: `localhost:16379/7`
@@ -470,7 +619,7 @@ runs the background sync.
 | `--gmail-client-id` / `--gmail-client-secret` | `MARGINCE_GMAIL_CLIENT_ID` / `MARGINCE_GMAIL_CLIENT_SECRET` | api + worker | the Google OAuth app; with the state key and `--public-base-url`, enables `/connectors/gmail/*` (api) and the sync poll (worker). **Optional once an admin stores the app under Settings** (or during the first run): capture and Google sign-in both resolve the stored app first and fall back to this pair, at the moment a flow runs, so a stored app needs no restart |
 | `--graph-client-id` / `--graph-client-secret` | `MARGINCE_GRAPH_CLIENT_ID` / `MARGINCE_GRAPH_CLIENT_SECRET` | api + worker | the Microsoft (Entra) app; same enablement shape for `/connectors/graph/*` (Outlook mail) and `/connectors/graphcal/*` (Outlook calendar). One app serves both, with `Mail.Read` and `Calendars.Read` granted and a redirect URI registered for each — they are separate connections with separate consents. The same stored-app-first rule as the Google pair, for capture and for Microsoft sign-in |
 | `--graph-tenant` | `MARGINCE_GRAPH_TENANT` | api + worker | Microsoft identity tenant (default `common` — any organization) |
-| `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory ids** (GUIDs, comma-separated) whose members may sign in through `/auth/oidc/microsoft/*`, on the same client as Graph capture. Defaults to `--graph-tenant` when that already names a directory rather than an authority alias. When it is unset, a Microsoft app stored under Settings signs people in on the directory it is **pinned** to, and an unpinned one signs nobody in; when it is set, this list wins over the pin. **Sign-in cannot run on `common`/`organizations`/`consumers`**: it matches the token's address to an existing member, and the administrator of any Entra tenant can set any of their own users' `mail` attribute to any string — so an unbounded authority would let anyone who can create a tenant sign in as anyone here. Each id is therefore a directory whose administrators this installation vouches for, which is a thing somebody can decide; an alias is not, and leaves the provider off with the reason in the boot log. One work directory routes the browser through that directory's own authority, personal accounts alone through `consumers`, several work directories through `organizations`, and a mixed list through `common` — the routing never decides what is ACCEPTED, which is the `tid` check against the list. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the Entra app's redirect URIs, and grant it the `openid profile email` delegated permissions |
+| `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory ids** (GUIDs, comma-separated) whose members may sign in through `/auth/oidc/microsoft/*`, on the same client as Graph capture. Defaults to `--graph-tenant` when that already names a directory rather than an authority alias. When it is unset, a Microsoft app stored under Settings signs contacts in on the directory it is **pinned** to, and an unpinned one signs nobody in; when it is set, this list wins over the pin. **Sign-in cannot run on `common`/`organizations`/`consumers`**: it matches the token's address to an existing member, and the administrator of any Entra tenant can set any of their own users' `mail` attribute to any string — so an unbounded authority would let anyone who can create a tenant sign in as anyone here. Each id is therefore a directory whose administrators this installation vouches for, which is a thing somebody can decide; an alias is not, and leaves the provider off with the reason in the boot log. One work directory routes the browser through that directory's own authority, personal accounts alone through `consumers`, several work directories through `organizations`, and a mixed list through `common` — the routing never decides what is ACCEPTED, which is the `tid` check against the list. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the Entra app's redirect URIs, and grant it the `openid profile email` delegated permissions |
 | | | | The Entra **registration's own audience has to reach that authority**, or Microsoft refuses at the authorize step and the callback never runs. One directory works under any audience. Several work directories need at least *Accounts in any organizational directory* (`AzureADMultipleOrgs`). A list naming personal accounts needs *…and personal Microsoft accounts* (`AzureADandPersonalMicrosoftAccount`) — the audience is a property of the app registration, not of this setting, so widening the list without widening the registration fails at Microsoft rather than here |
 | | | | **Personal Microsoft accounts** sign in by naming their tenant, `9188040d-6c67-4c5b-b112-36a304b66dad`, in that list. The trust is different in kind rather than merely narrower: no administrator stands over a consumer tenant, so the address is one Microsoft made the holder prove they receive mail at — the same bar this installation already accepts for a password reset. Their `preferred_username` is deliberately NOT accepted as an address, because unlike a work account's UPN it is a handle the holder picks rather than a domain a tenant proved by DNS |
 | `--connector-state-key` | `MARGINCE_CONNECTOR_STATE_KEY` | api | HMAC key (≥32 bytes) signing the OAuth connect `state`; required for both connect flows |
@@ -485,6 +634,30 @@ runs the background sync.
 | `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft posts Graph change notifications to, operator token and all (`https://<api>/webhooks/graph?token=…`); enables the subscription register+renew job (empty = poll only) |
 | `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
 | `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
+
+### Turning the password method off
+
+An installation that signs its members in through an identity provider closes
+the password door in `margince.yaml`:
+
+```yaml
+auth:
+  password:
+    enabled: false   # default true
+```
+
+With it off, `POST /v1/auth/login` and `POST /v1/auth/forgot-password` answer
+**501** naming the method, `/v1/auth/capabilities` reports `password: false`
+and `password_reset: false`, and the login screen draws the provider buttons
+alone. The **admin-issued** set-password link is deliberately unaffected: it
+provisions a seat rather than offering a way in, and an installation that turns
+the method back on must not have to re-provision everybody first.
+
+**The api refuses to boot with the method off and no federated provider
+mounted** — that deployment has no door at all. Mounted is the bar the check
+uses, which is weaker than "somebody can sign in today": a provider whose OAuth
+app an admin has not stored yet is mounted and offers no button, and the login
+screen says so rather than rendering an empty card.
 
 ## Object storage (api, worker) — attachments and company logos
 
@@ -647,22 +820,45 @@ credential this DSN names must be the same owner role `cmd/migrate` uses.
 Configured, it also gains the api's `/readyz` `customfields-schema-pool`
 probe.
 
+### Enabling custom fields on an installation
+
+`make dev` supplies the selected stack's owner DSN to the API's schema pool,
+including the isolated database name in a linked worktree. The ordinary API
+pool still uses the app role; the schema credential is not exported to the
+worker or frontend. Configure the dev database through `OWNER_DSN`/`APP_DSN`
+or their environment fallbacks, rather than overriding the schema database.
+
+The container API entrypoint defaults `MARGINCE_SCHEMA_DSN` to
+`MARGINCE_OWNER_DSN`. A direct API launch bypasses both launchers and must set
+`MARGINCE_SCHEMA_DSN` explicitly, using the owner role for the same database as
+the app connection. The annotated setting is in [`.env.example`](../../.env.example).
+
+If adding a field reports “operation custom-field schema changes is specified
+but not yet implemented”, the API was started without this pool. Configure it
+and restart the API; no database reset or field-name change is needed. The
+startup log confirms `api custom-field schema changes enabled (schema pool configured)`.
+Then check `/readyz` and, on a rehearsal installation, create a picklist through
+Settings, save a value, and read it back. The ordinary ready response alone is
+not proof that the pool was configured: an omitted optional dependency has no
+readiness probe. A configured pool is checked and makes readiness fail if its
+connection fails.
+
 ## cmd/migrate — schema migrations
 
 ```
 migrate <up|down> --dsn <owner-dsn> [--steps n]
 migrate reset-password --dsn <owner-dsn> --email <user-email>
 migrate <recreate-db|drop-db|db-exists> --dsn <owner-maintenance-dsn> --name <db> [--template <db>]
-migrate org-exists --dsn <owner-dsn>
+migrate workspace-exists --dsn <owner-dsn>
 ```
 
-`org-exists` prints `true` or `false`: whether this installation already holds an
-active organization. It takes no `--name` — it asks about the database the DSN
+`workspace-exists` prints `true` or `false`: whether this installation already
+holds an active workspace — the tenant, not a company record. It takes no `--name` — it asks about the database the DSN
 names. A deployment asks before the api starts, to know whether a bootstrap
 credential is still needed; `scripts/deploy/api-entrypoint.sh` writes the
 `bootstrap_admin` password file only while the answer is `false`, because
 ADR-0061 §2 consumes bootstrap values exactly once and permits deleting that
-secret once the organization exists. The answer is **printed rather than
+secret once the workspace exists. The answer is **printed rather than
 signalled by exit status**, so a caller can tell "no" from "could not ask"; a
 failed probe exits non-zero and must not be read as "unprovisioned".
 
@@ -681,30 +877,28 @@ place keeps the api reading a password file that is no longer written. Use
 
 ## Other environment variables
 
-| Var | Used by | Meaning |
-|---|---|---|
-| `MARGINCE_ENV` | api (`runtimeenv.Parse`) | Read at boot and parsed **fail-closed**: only the exact values `dev` or `test` yield a non-production posture; unset, `production`, `staging`, or any unrecognized value ⇒ production. It decides two **licensing** questions and nothing else: which issuers the installation honours, and whether it may run unlicensed at all (a production role refuses to boot with no license). No destructive capability keys off it. `staging` was retired deliberately: a staging installation carries real internal users, so it takes the production posture. The Makefile exports `dev`; production must not set it. |
-| `MARGINCE_TEST_DSN`, `MARGINCE_TEST_APP_DSN`, `MARGINCE_TEST_REDIS` | integration tests | owner DSN / app-role DSN / Redis address for the real-Postgres lane; exported by the Makefile. The lane runs on its own `_test` namespace (the `margince_test` DB, never the dev `margince` DB), so it can run alongside `make dev`. |
-| `MARGINCE_TEST_REDIS_DB` | integration tests | Redis logical db for the lane (default 15). db 0 is reserved for a running `make dev`; a valid value is 1..15, and the parallel runner assigns one per package so concurrent packages never share a stream. Out-of-range fails loudly. |
-| `MARGINCE_TEST_CLONE_DB` | integration tests | names the throwaway clone this package's process was handed, set by `scripts/test-integration-parallel.sh` and `scripts/test-integration-one.sh` beside the two DSNs. It is what lets `testdb.EnsureSchema` reuse a database the lane copied from an already-migrated template instead of dropping the schema and re-applying every migration onto it (~1.3 s per package process). The value is a database NAME and not a flag: the skip additionally requires it to equal `current_database()`, which refuses the serial lane (it runs on the template itself, where the rebuild is what keeps one package's residue out of every later clone) and any suite that made its own database mid-process. Unset means rebuild, so a lane that forgets it is slower and never wrong. |
-| `MARGINCE_TEST_POOL_MAX_CONNS` | integration tests | ceiling for EACH pool the harness opens from the clone DSNs, set by `scripts/test-integration-parallel.sh` to the per-pool number its connection budget was sized for. Unset (the one-package lane, a suite run by hand) the pool keeps `database.NewPool`'s own 16, because one package oversubscribes nothing. It is an env var rather than a DSN parameter because `pgx.ParseConfig` — which `cmd/migrate` and every bare `pgx` connection a fixture opens use — forwards an unrecognised `pool_*` key to the server as a startup parameter and dies with `FATAL: unrecognized configuration parameter`. A non-numeric or non-positive value fails loudly: a ceiling that silently fails to apply leaves the lane's budget describing a limit nothing enforces. |
-| `MARGINCE_TEST_BLOBSTORE_ENDPOINT`, `MARGINCE_TEST_BLOBSTORE_ACCESS_KEY`, `MARGINCE_TEST_BLOBSTORE_SECRET_KEY`, `MARGINCE_TEST_BLOBSTORE_BUCKET` | integration tests | the object store the blobstore lane runs against; exported by the Makefile at the `make db-up` MinIO, on its own `margince-test` bucket. The endpoint being unset **fails** the lane rather than skipping it — a skipped storage gate reads exactly like a passing one. |
-| `MARGINCE_AICERT` | `make e2e-ai` | the AI-certification lane's runtime switch. The `e2e_llm` build tag keeps this paid, live lane out of every ordinary lane; once the tag is set, an empty value here **fails** rather than skips, so the lane can never report success for having done nothing. |
-| `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_JUDGE_MODEL` | `make e2e-ai` | **both required** — `provider:model` each. The candidate is what the run certifies; the judge grades it and must be a DIFFERENT model, because one grading itself is certified by construction. The run refuses the two being equal before a single paid call. Surfaced as `MODEL=` and `JUDGE=`. |
-| `MARGINCE_AICERT_ROUTING` | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against whatever is bound at its **leading ladder rung** (the rung that would actually serve it), so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
-| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. Surfaced as `BASE_URL=`. |
-| `MARGINCE_AICERT_PROFILE` | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `sovereign` \| `cloud_frontier`), default `eu_hosted`; ignored when `MARGINCE_AICERT_ROUTING` is set, which takes the profile from the config file instead. Not a label: it is part of a record's identity, and it is enforced — a cloud vendor under `sovereign` is refused rather than run. Surfaced as `PROFILE=`. |
-| `MARGINCE_VOICE_MODEL`, `MARGINCE_VOICE_BASE_URL` | `TestVoiceLiveSmoke` | the model the manual voice-live smoke drives, `provider:model`, plus an endpoint host root when it is on a broker. Manual-only: the smoke fails rather than skips without one, so a run that measured nothing is never mistaken for a pass. |
-| `MARGINCE_AICERT_UPSTREAM` | `make e2e-ai` | broker upstream-selection preferences to certify the candidate under, as the JSON of one `ai.OpenRouterRouting` (`only`, `ignore`, `quantizations`, `sort`, `require_parameters`, `allow_fallbacks`, `preferred_max_latency_p90`, `reasoning_effort`). Optional; unset measures the broker's own default choice, which is the baseline a tuned run is compared against. Read only alongside `MODEL=` — a deployment's tiers carry their own bindings, so passing it with `ROUTING=` is refused rather than accepted and applied to nothing. Unknown keys are refused too: a misspelt preference would be dropped in silence and the run would report the baseline's numbers under a tuned run's name. The field set, and the measurements behind the default a deployment inherits without this variable, are in [openrouter.md](openrouter.md). |
-| `MARGINCE_AICERT_TASK`, `MARGINCE_AICERT_RUNS`, `MARGINCE_AICERT_TRACE` | `make e2e-ai` | narrow certification to one task / repeat count / directory for the request+response dump. All optional: unset certifies everything the corpus covers. Surfaced as `TASK=`, `RUNS=`, `TRACE=`. |
-| `MARGINCE_AICERT_RESUME` | `make e2e-ai` | directory for the resume journal: every scored run is appended to it as it is scored, so a run cut short by a dropped connection is restarted without paying for the runs it already made. A journaled run is replayed only for the same task and scenario, and only on the same candidate binding, judge, profile, corpus version, scenario stamp, BINARY and repeat index, within six hours — anything else is measured again. The binary is in that list because a stamp covers the requests, never the code that judges the replies. One run owns a resume directory at a time, held by a lock file. Empty turns it off, which forces a run to measure everything fresh. Surfaced as `RESUME=`, on by default. |
-| `MARGINCE_ANTHROPIC_KEY` | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
-| `MARGINCE_BENCH_TIER` | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
-| `MARGINCE_BENCH_RECORD` | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
-| `MARGINCE_AITASK_DIR` | `worker aitask` | working directory for the `ai-probe` debug loop's artifacts (flag `--work-dir`, default the gitignored `.tmp/aitask/`). A fetched page carries whatever the source carried, so this stays out of the tree. |
-| `MARGINCE_HOME` | desktop launcher | overrides the installation folder the launcher works from. Unset, it resolves the directory of the running executable, which is where the launcher sits inside a packaged folder — so this is what lets a development stack be driven from a staging tree that was never packaged. Everything else the launcher touches is derived from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the replaceable `runtime/`. |
-| `MARGINCE_SEED_PASSWORD` | `tools/seed-demo` | the password the demo seeder signs in with, so a credential never lands in a shell history or a make target. Equivalent to its `-password` flag. |
-| `MARGINCE_SEED_DSN` | `tools/seed-demo` | owner DSN for the two things the demo seeder cannot do over the API: create a team (read-only on the contract) and set a seat's password (no endpoint accepts one under 12 characters). Equivalent to its `-dsn` flag; unset skips both phases rather than failing, because the rest of the seed is useful without them. |
+| Env | Default | Used by | Meaning |
+|---|---|---|---|
+| `MARGINCE_ENV` | `production` | api (`runtimeenv.Parse`) | Read at boot and parsed **fail-closed**: only the exact values `dev` or `test` yield a non-production posture; unset, `production`, `staging`, or any unrecognized value ⇒ production. It decides two **licensing** questions and nothing else: which issuers the installation honours, and whether it may run unlicensed at all (a production role refuses to boot with no license). No destructive capability keys off it. `staging` was retired deliberately: a staging installation carries real internal users, so it takes the production posture. The Makefile exports `dev`; production must not set it. |
+| `MARGINCE_TEST_DSN`, `MARGINCE_TEST_APP_DSN`, `MARGINCE_TEST_REDIS` | — | integration tests | owner DSN / app-role DSN / Redis address for the real-Postgres lane; exported by the Makefile. The lane runs on its own `_test` namespace (the `margince_test` DB, never the dev `margince` DB), so it can run alongside `make dev`. |
+| `MARGINCE_TEST_REDIS_DB` | `15` | integration tests | Redis logical db for the lane. db 0 is reserved for a running `make dev`; a valid value is 1..15, and the parallel runner assigns one per package so concurrent packages never share a stream. Out-of-range fails loudly. |
+| `MARGINCE_TEST_CLONE_DB` | — | integration tests | names the throwaway clone this package's process was handed, set by `scripts/test-integration-parallel.sh` and `scripts/test-integration-one.sh` beside the two DSNs. It is what lets `testdb.EnsureSchema` reuse a database the lane copied from an already-migrated template instead of dropping the schema and re-applying every migration onto it (~1.3 s per package process). The value is a database NAME and not a flag: the skip additionally requires it to equal `current_database()`, which refuses the serial lane (it runs on the template itself, where the rebuild is what keeps one package's residue out of every later clone) and any suite that made its own database mid-process. Unset means rebuild, so a lane that forgets it is slower and never wrong. |
+| `MARGINCE_TEST_POOL_MAX_CONNS` | — | integration tests | ceiling for EACH pool the harness opens from the clone DSNs, set by `scripts/test-integration-parallel.sh` to the per-pool number its connection budget was sized for. Unset (the one-package lane, a suite run by hand) the pool keeps `database.NewPool`'s own 16, because one package oversubscribes nothing. It is an env var rather than a DSN parameter because `pgx.ParseConfig` — which `cmd/migrate` and every bare `pgx` connection a fixture opens use — forwards an unrecognised `pool_*` key to the server as a startup parameter and dies with `FATAL: unrecognized configuration parameter`. A non-numeric or non-positive value fails loudly: a ceiling that silently fails to apply leaves the lane's budget describing a limit nothing enforces. |
+| `MARGINCE_TEST_BLOBSTORE_ENDPOINT`, `MARGINCE_TEST_BLOBSTORE_ACCESS_KEY`, `MARGINCE_TEST_BLOBSTORE_SECRET_KEY`, `MARGINCE_TEST_BLOBSTORE_BUCKET` | — | integration tests | the object store the blobstore lane runs against; exported by the Makefile at the `make db-up` MinIO, on its own `margince-test` bucket. The endpoint being unset **fails** the lane rather than skipping it — a skipped storage gate reads exactly like a passing one. |
+| `MARGINCE_AICERT` | — | `make e2e-ai` | the AI-certification lane's runtime switch. The `e2e_llm` build tag keeps this paid, live lane out of every ordinary lane; once the tag is set, an empty value here **fails** rather than skips, so the lane can never report success for having done nothing. |
+| `MARGINCE_AICERT_MODEL`, `MARGINCE_AICERT_JUDGE_MODEL` | — | `make e2e-ai` | **both required** — `provider:model` each. The candidate is what the run certifies; the judge grades it and must be a DIFFERENT model, because one grading itself is certified by construction. The run refuses the two being equal before a single paid call. Surfaced as `MODEL=` and `JUDGE=`. |
+| `MARGINCE_AICERT_ROUTING` | — | `make e2e-ai` | path to a deployment config whose `seeds.ai_routing` names the binding to certify. Certifies a DEPLOYMENT rather than a model: each task is measured against whatever is bound at its **leading ladder rung** (the rung that would actually serve it), so one run writes records across several models — which is what the config binds. Mutually exclusive with `MARGINCE_AICERT_MODEL`, and the run refuses both: one names a deployment, the other one candidate to A/B a prompt fix against. Under it `MARGINCE_AICERT_PROFILE` is ignored and the profile is the file's own, because a record's environment class must come from the config that named the models. The judge is still named separately and is never resolved from the routing — `cert_judge` is itself a task and leads at `premium`, so a config binding a model there would make the grader collide with every `premium`-led candidate. Surfaced as `ROUTING=`. |
+| `MARGINCE_AICERT_BASE_URL`, `MARGINCE_AICERT_JUDGE_BASE_URL` | — | `make e2e-ai` | endpoint host root for a broker or OpenAI-wire host. Required for `openai_compatible`, which fails closed without one; empty for a native vendor, which uses its own default. Surfaced as `BASE_URL=`. |
+| `MARGINCE_AICERT_PROFILE` | — | `make e2e-ai` | the environment class a record is filed under (`eu_hosted` \| `sovereign` \| `cloud_frontier`), default `eu_hosted`; ignored when `MARGINCE_AICERT_ROUTING` is set, which takes the profile from the config file instead. Not a label: it is part of a record's identity, and it is enforced — a cloud vendor under `sovereign` is refused rather than run. Surfaced as `PROFILE=`. |
+| `MARGINCE_VOICE_MODEL`, `MARGINCE_VOICE_BASE_URL` | — | `TestVoiceLiveSmoke` | the model the manual voice-live smoke drives, `provider:model`, plus an endpoint host root when it is on a broker. Manual-only: the smoke fails rather than skips without one, so a run that measured nothing is never mistaken for a pass. |
+| `MARGINCE_AICERT_UPSTREAM` | — | `make e2e-ai` | broker upstream-selection preferences to certify the candidate under, as the JSON of one `ai.OpenRouterRouting` (`only`, `ignore`, `quantizations`, `sort`, `require_parameters`, `allow_fallbacks`, `preferred_max_latency_p90`, `reasoning_effort`). Optional; unset measures the broker's own default choice, which is the baseline a tuned run is compared against. Read only alongside `MODEL=` — a deployment's tiers carry their own bindings, so passing it with `ROUTING=` is refused rather than accepted and applied to nothing. Unknown keys are refused too: a misspelt preference would be dropped in silence and the run would report the baseline's numbers under a tuned run's name. The field set, and the measurements behind the default a deployment inherits without this variable, are in [openrouter.md](openrouter.md). |
+| `MARGINCE_AICERT_TASK`, `MARGINCE_AICERT_RUNS`, `MARGINCE_AICERT_TRACE` | — | `make e2e-ai` | narrow certification to one task / repeat count / directory for the request+response dump. All optional: unset certifies everything the corpus covers. Surfaced as `TASK=`, `RUNS=`, `TRACE=`. |
+| `MARGINCE_AICERT_RESUME` | — | `make e2e-ai` | directory for the resume journal: every scored run is appended to it as it is scored, so a run cut short by a dropped connection is restarted without paying for the runs it already made. A journaled run is replayed only for the same task and scenario, and only on the same candidate binding, judge, profile, corpus version, scenario stamp, BINARY and repeat index, within six hours — anything else is measured again. The binary is in that list because a stamp covers the requests, never the code that judges the replies. One run owns a resume directory at a time, held by a lock file. Empty turns it off, which forces a run to measure everything fresh. Surfaced as `RESUME=`, on by default. |
+| `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. Distinct from `ANTHROPIC_API_KEY`, which is what the **runtime** reads for a bound `anthropic` provider. |
+| `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds — `smb` (default) or `mid_market`. An unrecognized value fails the bench loudly. |
+| `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness WRITE its record into `docs/reference/perfbench/`, which `make perfdoc` renders into the published budgets page. Off by default because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The by-hand `bench-record`/`bench-capture`/`bench-mobile` targets need no switch — nothing but a human runs them. |
+| `MARGINCE_AITASK_DIR` | — | `worker aitask` | working directory for the `ai-probe` debug loop's artifacts (flag `--work-dir`, default the gitignored `.tmp/aitask/`). A fetched page carries whatever the source carried, so this stays out of the tree. |
+| `MARGINCE_HOME` | — | desktop launcher | overrides the installation folder the launcher works from. Unset, it resolves the directory of the running executable, which is where the launcher sits inside a packaged folder — so this is what lets a development stack be driven from a staging tree that was never packaged. Everything else the launcher touches is derived from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the replaceable `runtime/`. |
 
 ### `POST /v1/admin/reset-data` — the armed data reset
 
@@ -750,8 +944,8 @@ The `workspace` row survives too — it carries the organization — but only it
 currency and timezone bootstrap took from `margince.yaml`, and `created_at`.
 (`updated_at` moves, as it does for any write — the reset did write the row.)
 Every other column on it is a workspace-level **setting**, and each
-one goes back to the default its migration declared (the overlay mode columns
-today, and whatever is added next). Nothing here is a kept list:
+one goes back to the default its migration declared. Nothing here is a kept
+list:
 the columns are derived from the catalog, so a setting added later is restored
 the day its column exists, and a column that genuinely belongs to the
 installation's identity has to be declared preserved to be spared. Settings
@@ -791,7 +985,7 @@ against records that no longer exist. The endpoint therefore also:
    history, which an installation wiped back to first-boot state must not carry.
 4. **Purges the event bus** — the catalog streams, their consumer groups
    (deleted and immediately re-created, so live subscribers keep reading), the
-   processed-event dedupe marks, and this workspace's overlay budget counters.
+   and the processed-event dedupe marks.
 5. **Deletes the workspace's stored objects** under its `<workspace>/` prefix.
    It also redeems the **sealed credentials** those swept connection rows
    referenced. `vault_secret` deliberately carries no `workspace_id` — the
@@ -800,20 +994,10 @@ against records that no longer exist. The endpoint therefore also:
    before the rows naming them go. Which tables hold one is derived from the
    catalog on the `credential_ref` column, so a connection table added later is
    covered the day its column exists.
-6. **Restores every workspace-level setting**, including returning an
-   overlay-mode installation to native. The table sweep reaches none of them:
-   its target list is derived from the tables carrying a `workspace_id` column,
-   and `workspace` keys on `id`, so that row is not a candidate for it at all.
-   The overlay columns are the consequential case — everything overlay mode
-   depends on IS swept (the incumbent connection, the mirror, the budget
-   counters), so a workspace left in overlay would claim to read from an
-   incumbent it no longer has a connection to, dispatching every read at an
-   empty mirror. `x_sor_mode` and `x_incumbent` flip together, as the schema
-   requires. This is not the governed `Disconnect` teardown: those rows are
-   already gone with the sweep, the reset carries its own audit row, and no
-   `incumbent.disconnected` event is emitted into an outbox this reset just
-   drained. Whether it happened is recorded as `sor_mode_reverted` in the audit
-   evidence and the completion log line.
+6. **Restores every workspace-level setting.** The table sweep reaches none of
+   them: its target list is derived from the tables carrying a `workspace_id`
+   column, and `workspace` keys on `id`, so that row is not a candidate for it
+   at all.
 7. **Announces the reset** on the `gw:control:reset` Redis pub/sub channel, so
    the api and the worker each drop the caches they hold — model results and
    the resolved system-of-record mode. No HTTP call reaches the worker process;
@@ -867,7 +1051,7 @@ The **deployment configuration** (`--config`, default `margince.yaml`) is
 seeded the same way for local dev. The annotated reference is
 [`config/margince.example.yaml`](../../config/margince.example.yaml); `make dev`
 copies it to a gitignored `config/margince.yaml` on first run and then
-**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — organization,
+**leaves it** (create-if-missing / leave-if-exists), so an engineer's edits — workspace,
 `bootstrap_admin`, or the `ai.capture_payloads` posture — persist across
 `make dev-stop` / `make dev` rather than being regenerated each boot. The
 admin `password_file` it references (`config/margince-admin-password`) is
@@ -939,6 +1123,30 @@ enables the canonical read model and Company Context settings; `tasks` also
 injects bounded context into declared AI tasks; `onboarding` additionally enables
 the five-step first-run flow. The default is `onboarding`. Moving backward is a
 reversible operational kill switch and never deletes confirmed company data.
+
+### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
+
+Gated on `operations.allow_test_mailbox` in `margince.yaml`, compiled default
+**false in every posture, dev included** (armed by `config/margince.dev.yaml`
+for a dev stack, same as `allow_data_reset`). An installation that did not arm
+it gets the same `connector_unsupported` 422 a real unconfigured provider
+returns — the connect endpoint, the connector's registration, and its send
+authority are all conditioned on this one flag.
+
+```yaml
+operations:
+  allow_test_mailbox: true   # dev/test only; omit or false everywhere else
+```
+
+The `test_mailbox` connector implements both capture and send with no real
+network: `SendEmail` refuses any address outside the RFC 2606 reserved
+domains (`example.com`/`.net`/`.org`, `.test`/`.example`/`.invalid`/
+`.localhost`) and never dials out, and its own `Sync` echoes back what it
+sent, reconciling against the outbound activity by RFC822 Message-ID instead
+of duplicating it. It is never offered in the UI (absent from
+`MAIL_PROVIDERS`) — the connect endpoint is the only way a connection is
+created, which is what lets a QC suite create and remove one within a test
+run with no restart.
 
 ### Uploads
 
@@ -1042,7 +1250,7 @@ licensed full seat is taken, inviting a member and reactivating a deactivated
 full seat are refused with `403 seat_limit_reached`, carrying the granted and
 used counts. Nothing already in use is touched: no seat is demoted, no session
 ends, and a license that lapses mid-month refuses the NEXT seat rather than
-taking away the ones people are working in (P7). Read seats are unlimited and
+taking away the ones colleagues are working in (P7). Read seats are unlimited and
 never counted; a suspended or deactivated seat frees its own, so an admin at the
 ceiling can make room. A license carrying no seat count caps nothing, and so
 does an unlicensed development installation — the ceiling is read live, so a
@@ -1165,15 +1373,26 @@ takes inline bytes or an `http(s)` URL it fetches itself.
 knowing before you enable an attachment lane, because both run the other way
 from what a reader tends to assume:
 
-- **Which lane a file takes was decided at ingress, and carriage is not a content
-  check.** The AI lane reads the content type the file is stored with and adds no
-  second authority of its own. What that type means depends on how the file
-  arrived: a **captured** attachment carries the type *sniffed from its bytes*,
-  with a disagreeing sender claim recorded rather than obeyed — so an external
-  counterparty influences the lane only through the bytes they actually sent — while
-  a file **uploaded through the API** carries its uploader's declared type,
-  unsniffed. Either way `image/*` matches by prefix, and `input: [image]` says
-  what Margince will *carry*; it never says what the bytes *are*.
+- **Which lane a file takes was decided at ingress; carriage checks the KIND and
+  not the content.** The AI lane reads the content type the file is stored with
+  and adds no second authority for anything else. What that type means depends on
+  how the file arrived: a **captured** attachment carries the type *sniffed from
+  its bytes*, with a disagreeing sender claim recorded rather than obeyed — so an
+  external counterparty influences the lane only through the bytes they actually
+  sent — while a file **uploaded through the API** carries its uploader's declared
+  type, unsniffed.
+
+  Before the bytes become a wire part, that type has to hold up: a file claiming
+  a kind whose signature is unambiguous — PNG, JPEG, GIF, WebP, BMP, PDF, HEIC,
+  HEIF — must carry it, and a file claiming any other image type is refused when
+  its bytes are **text**. `image/svg+xml` is refused outright on every wire,
+  however its bytes look: it matches `image/*` by prefix on a binding that
+  declares one, and no vision model decodes it as an image. A refusal here is its own fault, not a
+  carriage limit: retrying on another binding would read the same bytes the same
+  way. What it does **not** do is decide anything else — the stored type stays the
+  authority for every other reader, a kind whose bytes carry no signature this
+  build can name goes through unchecked, and `input: [image]` still says what
+  Margince will *carry* rather than what a picture contains.
 - **The secret stripper does not reach inside an attachment.** It runs over the
   outbound payload — the right place, and unbypassable — but an attachment rides
   that payload **base64-encoded**, and the rules match a secret's literal text. A
@@ -1234,7 +1453,11 @@ about what the endpoint you chose does with what it receives.
   silently disable the feature it was meant to enable. `pdf` is deliberately not
   accepted: a PDF rides a vendor-proprietary request extension on one gateway
   and nothing at all on a self-hosted endpoint, so the word would mean different
-  things per vendor. Scanned PDFs take the text-extraction lane.
+  things per vendor. A PDF does not need the word — on a binding whose wire has
+  no document part, the document lane reads the text the PDF already carries and
+  sends that instead, which every wire spells the same way. A SCAN is the case
+  that cannot be helped: its pages are pictures, there is no text to read, and
+  the reading says so rather than guessing.
 - **The `embeddings:` binding does not take it** — that lane sends no
   attachments.
 - **A declaration is a claim, not a checked fact.** A binding that claims more
@@ -1259,12 +1482,36 @@ else's host**, because the provider name alone would let a deployment declare
 zero egress and send every call over the public internet. Under that profile
 each binding's resolved `base_url` (an omitted one is the provider default,
 which is loopback) must name an address on infrastructure you control:
-loopback, link-local, or a private range (`10.x`, `172.16–31.x`, `192.168.x`,
-or an IPv6 unique-local address). **A private-range host on another machine
-counts** — your own GPU box is your own infrastructure. A **DNS name is
-refused** even when it looks internal: resolving it at boot says only where it
-pointed at boot, and a profile satisfied by an answer that can change an hour
-later is not a guarantee. Use the IP, or `localhost`.
+loopback or a private range (`10.x`, `172.16–31.x`, `192.168.x`, or an IPv6
+unique-local address). **A private-range host on another machine counts** — your
+own GPU box is your own infrastructure. A **DNS name is refused** even when it
+looks internal: resolving it at boot says only where it pointed at boot, and a
+profile satisfied by an answer that can change an hour later is not a guarantee.
+Use the IP, or `localhost`.
+
+Two egress rules bind **every** profile, checked when the binding is written and
+again on the socket the call actually opens (so a name that resolves — or
+rebinds — to a refused address is stopped at connect time):
+
+- `ollama`, `vllm` and `openai_compatible` may reach loopback, a private range,
+  or a public host — the local model, the GPU box, the self-hosted gateway.
+- `anthropic`, `openai` and `gemini` may reach a **public host over https only**.
+  Their `base_url` overrides a vendor's own API host, and the call carries this
+  installation's model key in a header (`x-api-key`, `x-goog-api-key`) that Go
+  does not strip across hosts. To reach a gateway on your own network, or one
+  served over http, bind `openai_compatible` instead.
+
+Neither lane may reach the ranges that serve nobody: link-local
+(`169.254.0.0/16`, `fe80::/10` — where every cloud's instance-metadata service
+lives), carrier-grade NAT, the documentation ranges, and the encapsulations that
+carry another address inside them. A `base_url` carrying userinfo
+(`http://user:token@host`) is refused outright — a binding never carries a
+credential.
+
+A redirect is held to the same rule as the binding: the outbound client follows
+a redirect that stays on the same host and keeps its scheme, and refuses one that
+changes host or downgrades https to http, because either would carry the model
+key somewhere the binding never named.
 
 An editor with a YAML language server picks up
 [`config/margince.schema.json`](../../config/margince.schema.json)

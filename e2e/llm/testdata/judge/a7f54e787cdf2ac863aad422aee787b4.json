@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer attributes the tag's absence to retiring the word from the workspace and the record view not drawing it, not to an inability to remove tags from records; retiring words workspace-wide is explicitly excluded from being a capability claim per the criterion.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes.",
+  "answer": "Here is everything sitting on Vorort Systeme KG, retired words included: Strategic Account, and K5 Conference 2025 — that one is on a list we have since retired, which is why the record view does not draw it and you could not see it.\n\nStrategic Account stays in the workspace either way; three other accounts genuinely are strategic accounts and they keep the word."
+}

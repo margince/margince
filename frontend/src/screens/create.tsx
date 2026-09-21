@@ -1,38 +1,39 @@
+import {
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create.multiselect";
+
+export {
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create.multiselect";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
-  Card,
-  Checkbox,
   Field,
   type FieldControl,
   Modal,
-  Radio,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { Select, type SelectOption } from "../design-system/select";
+import { Heading } from "../design-system/heading";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../design-system/recordpicker";
+import {
+  MultiSelect,
+  Select,
+  type SelectOption,
+} from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-  useSorMode,
-} from "./common";
-
-// The record screens whose entities are served from the incumbent mirror in
-// overlay mode. Creating one there answers unsupported_by_sor, so CreateAction
-// renders nothing for these screens in overlay (native screens — products,
-// offer-templates, settings — are unaffected and keep their create button).
-const OVERLAY_MIRRORED_SCREENS = new Set([
-  "contacts",
-  "companies",
-  "deals",
-  "leads",
-]);
+import { ProblemError, problemExistingId, problemMessageOf } from "./common";
+import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // The shared create-record form (contacts, companies, leads, deals): each
 // list screen declares its fields; the transport (which endpoint, how values
@@ -51,13 +52,16 @@ export type SubField = {
   type?: "text" | "email" | "number" | "date" | "datetime-local" | "select";
   required?: boolean;
   options?: CreateFieldOption[];
+  multiselectEncoding?: "json";
   placeholder?: string;
+  maxLength?: number;
   // Granularity for a number input. Omitted means the browser's default of 1,
   // which rejects any fractional entry.
   step?: string;
 };
 
 export type CreateField = {
+  searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
   key: string;
   // Static fields carry an i18n `label` key; dynamic fields (custom fields,
   // whose labels are workspace data, not translated) carry a literal
@@ -76,27 +80,24 @@ export type CreateField = {
     | "textarea";
   required?: boolean;
   options?: CreateFieldOption[];
+  multiselectEncoding?: "json";
   placeholder?: string;
-  /**
-   * A sentence under the control saying what the value is FOR — what a
-   * project key does in an email subject. Already translated by the caller.
-   */
+  maxLength?: number;
+  // Already translated guidance beneath the control.
   hint?: string;
-  /**
-   * The one client-side refusal a field may carry: what is wrong with the
-   * value as typed, or undefined when nothing is. The server stays the truth
-   * for everything else (uniqueness, cross-record rules); this is for a shape
-   * the contract states as a pattern, where a round trip to learn that a key
-   * may not start with a digit is a wait the reader need not pay. A refused
-   * value blocks Save exactly as a missing required value does, and renders
-   * through `Field`'s own `error` slot so it announces.
-   */
+  // A validation refusal blocks Save and is announced through Field.error.
+  // The server remains authoritative for uniqueness and cross-record rules.
   validate?: (value: string) => string | undefined;
   // repeatable-only: the subfields each row renders, the "add row" button's
-  // label, and (if set) which subfield key holds the row's primary flag.
+  // label, which subfield key holds the row's primary flag, and (if set)
+  // which one holds its kind — scoping primaryKey to same-kind rows.
   rowFields?: SubField[];
   addLabel?: MessageKey;
   primaryKey?: string;
+  typeKey?: string;
+  // typeKey's value when unanswered — must match the request mapper's own
+  // fallback, or an unset row groups differently here than once submitted.
+  typeDefault?: string;
   // A non-input group divider (renders its labelText as a heading, holds no
   // value) — used to set custom fields apart from core fields.
   divider?: boolean;
@@ -106,52 +107,14 @@ export type CreateField = {
   toInput?: (raw: unknown) => string;
   // See SubField.step: a money field must declare its cents.
   step?: string;
-  /**
-   * Show this field only when the form's current values satisfy the predicate.
-   *
-   * For a field that is meaningless until another one is answered: what a
-   * partner did for a deal is a question about a partner, so asking it before
-   * one is named offers a choice with nothing to attach it to. A hidden field
-   * is also not required and not submitted — `visibleFields` is what both the
-   * render and the required check read, so the two cannot disagree and a form
-   * can never be blocked by a control nobody can see.
-   */
+  // Hidden fields are neither required nor submitted.
   showWhen?: (values: Record<string, string>) => boolean;
-  /**
-   * A select whose choices DEPEND on another answer — the projects a deal may
-   * name are the projects of the company the same form has chosen. Called
-   * with the form's current values; an empty list disables the control, and
-   * a value no longer in the list is cleared the moment the answer it hung
-   * on changes, so a project from the previous company cannot ride along
-   * into a save the server would refuse.
-   */
+  // Recompute dependent choices; clear values no longer valid after a change.
   optionsFor?: (values: Record<string, string>) => CreateFieldOption[];
 };
 
-/**
- * Publishes a form's live answers to a caller that asked for them.
- *
- * `optionsFor` covers the dependent field whose narrowing the browser can do
- * for itself: it is a pure function of the values, so it can only filter a
- * list the parent already fetched. It cannot RE-READ, and some narrowings are
- * questions only the server can answer — which projects a company may be
- * filed under is decided by relationship rows, and a project list row carries
- * only its anchor company, so nothing in the browser can compute membership.
- * This is the seam for that: the parent watches the values, runs its own
- * query, and hands the narrowed list back as ordinary options.
- *
- * From an EFFECT rather than from the setter, because values are set from two
- * places. The reader typing is one; the seed that runs during the closed→open
- * transition is the other, and it runs during render — where calling a
- * parent's setState is exactly what React refuses. Publishing from the setter
- * would miss it, and the answers a form OPENS with are the first thing a
- * dependent query needs.
- *
- * The dependency is the values object alone. It is a new identity only when
- * they change, which is precisely when a caller wants to hear; adding the
- * callback would republish on every render for the callers most likely to
- * pass an inline one.
- */
+// Publish after render so server-dependent choices also see seeded answers.
+// The callback ref avoids publishing again solely because its identity changed.
 export function usePublishedValues(
   values: Record<string, string>,
   publish?: (values: Record<string, string>) => void,
@@ -243,22 +206,6 @@ export function fieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   return field.labelText ?? (field.label ? t(field.label) : "");
-}
-
-// multiselect (e.g. a webhook's subscribed event types): the toggled
-// selection is collected as a comma-joined string in the SAME
-// `values: Record<string, string>` channel every scalar field already uses —
-// no new value channel, so every existing single-string field type stays
-// untouched. These are the documented mapper a screen's transport uses to
-// recover the `string[]` (join before render, split after submit).
-const MULTISELECT_DELIMITER = ",";
-
-export function splitMultiselectValue(raw: string): string[] {
-  return raw.length === 0 ? [] : raw.split(MULTISELECT_DELIMITER);
-}
-
-export function joinMultiselectValue(selected: string[]): string {
-  return selected.join(MULTISELECT_DELIMITER);
 }
 
 // One repeatable-row field's collected rows, e.g. `{ email: "a@x", email_type:
@@ -378,7 +325,7 @@ export function CreateAction<Created extends { id: string }>({
   startOpen?: boolean;
   // `keepOpen` turns one save into "saved, next": the modal stays open and
   // empties itself instead of closing. It is for capture done in a run —
-  // somebody reading a list of profiles in another window types six people
+  // somebody reading a list of profiles in another window types six contacts
   // without reopening the form six times. It implies `stay`, because opening
   // the record just created would be the opposite of staying to type the next
   // one.
@@ -425,10 +372,6 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const overlay = useSorMode() === "overlay";
-  if (overlay && OVERLAY_MIRRORED_SCREENS.has(screen)) {
-    return null;
-  }
   return (
     <>
       <NewRecordButton
@@ -469,8 +412,8 @@ export function NewRecordButton({
   testId?: string;
 }>) {
   return (
-    <Button small onClick={onClick} data-testid={testId}>
-      <Plus aria-hidden style={{ width: 14, height: 14 }} /> {label}
+    <Button onClick={onClick} data-testid={testId}>
+      <Plus aria-hidden /> {label}
     </Button>
   );
 }
@@ -479,6 +422,43 @@ export function NewRecordButton({
 // required marker and the described-by seam — belongs to the `Field` that
 // wraps this, which is why the wiring arrives whole as `control` rather than
 // being rebuilt from a field id here.
+function referenceControl(
+  field: CreateField,
+  searchTargets: NonNullable<CreateField["searchTargets"]>,
+  control: FieldControl,
+  value: string,
+  setValue: (next: string) => void,
+  t: (key: MessageKey) => string,
+): ReactNode {
+  return (
+    <>
+      <RecordPicker
+        label={fieldLabel(field, t)}
+        id={control.id}
+        aria-describedby={control["aria-describedby"]}
+        aria-invalid={control["aria-invalid"]}
+        searchTargets={searchTargets}
+        selected={
+          value
+            ? {
+                id: value,
+                name:
+                  field.options?.find((option) => option.value === value)
+                    ?.label ?? value,
+              }
+            : null
+        }
+        onPick={(candidate) => setValue(candidate.id)}
+      />
+      {value && !field.required && (
+        <Button variant="link" onClick={() => setValue("")}>
+          {t("field.unset")}
+        </Button>
+      )}
+    </>
+  );
+}
+
 export function fieldControl(
   field: CreateField | SubField,
   control: FieldControl,
@@ -488,20 +468,17 @@ export function fieldControl(
   // The form's current values, for a field whose choices depend on them.
   values: Record<string, string> = {},
 ): ReactNode {
+  if ("searchTargets" in field && field.searchTargets)
+    return referenceControl(
+      field,
+      field.searchTargets,
+      control,
+      value,
+      setValue,
+      t,
+    );
   if (field.type === "select") {
-    // An optional select leads with a choice that clears it, and it is a choice
-    // rather than a placeholder face: once a value has been picked, this is the
-    // only way back to leaving the field unset.
-    //
-    // It says so in words. A blank-labelled entry is what a native `<option/>`
-    // left behind — a row a browser gave a baseline height and a screen reader
-    // announced as nothing at all — and in a drawn list it is an unreadable
-    // strip nobody can aim at.
-    //
-    // A field that already offers the empty value has said it in its own,
-    // better words ("Unassign" on a deal's owner), and one value gets exactly
-    // one entry: a second would offer the same choice twice and give the list
-    // two options with the same identity.
+    // Optional fields can be cleared; preserve a caller's existing empty choice.
     const options =
       "optionsFor" in field
         ? fieldOptions(field, values)
@@ -534,6 +511,7 @@ export function fieldControl(
         value={value}
         placeholder={field.placeholder}
         rows={3}
+        maxLength={field.maxLength}
         onChange={(event) => setValue(event.target.value)}
       />
     );
@@ -545,6 +523,7 @@ export function fieldControl(
       // A bare number input steps by 1, so the browser refuses 14.60 before
       // any handler sees it. A money field has to say it takes cents.
       step={field.step}
+      maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}
       onChange={(event) => setValue(event.target.value)}
@@ -552,168 +531,38 @@ export function fieldControl(
   );
 }
 
-// A repeatable-row field (emails/phones/domains): each existing row renders
-// its subfields via the same fieldControl every scalar field uses, plus an
-// optional "primary" radio (selecting one clears it on every other row) and a
-// remove button; an "Add" button appends a blank row. Rows live in the
-// second `rows` channel — never merged into `values` — so scalar-only
-// screens stay untouched.
-function RepeatableRowsField({
-  field,
-  formId,
-  rows,
-  setRows,
-}: Readonly<{
-  field: CreateField;
-  formId: string;
-  rows: FormRow[];
-  setRows: (next: FormRow[]) => void;
-}>) {
-  const t = useT();
-  const rowFields = field.rowFields ?? [];
-  const primaryKey = field.primaryKey;
-
-  function updateRow(index: number, key: string, value: string) {
-    setRows(
-      rows.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [key]: value } : row,
-      ),
-    );
-  }
-
-  function markPrimary(index: number) {
-    if (!primaryKey) {
-      return;
-    }
-    setRows(
-      rows.map((row, rowIndex) => ({
-        ...row,
-        [primaryKey]: rowIndex === index ? "true" : "",
-      })),
-    );
-  }
-
-  function removeRow(index: number) {
-    setRows(rows.filter((_, rowIndex) => rowIndex !== index));
-  }
-
-  return (
-    <div className="field-repeatable">
-      <span className="t-label">
-        {fieldLabel(field, t)}
-        {field.required ? " *" : ""}
-      </span>
-      {rows.map((row, index) => (
-        // Rows have no stable identity until saved — index is the only key
-        // available, and reordering never happens (add appends, remove
-        // filters), so it's safe here.
-        <Card
-          as="div"
-          // biome-ignore lint/suspicious/noArrayIndexKey: rows are unordered-append/remove only
-          key={index}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "var(--space-2)",
-            alignItems: "center",
-          }}
-        >
-          {rowFields.map((subField) => (
-            <Field
-              key={subField.key}
-              label={t(subField.label)}
-              required={subField.required}
-            >
-              {(control) =>
-                fieldControl(
-                  subField,
-                  control,
-                  row[subField.key] ?? "",
-                  (next) => updateRow(index, subField.key, next),
-                  t,
-                )
-              }
-            </Field>
-          ))}
-          {primaryKey && (
-            <Radio
-              className="t-label"
-              name={`${formId}-${field.key}-primary`}
-              checked={row[primaryKey] === "true"}
-              onChange={() => markPrimary(index)}
-              label={t("field.primary")}
-            />
-          )}
-          <Button small type="button" onClick={() => removeRow(index)}>
-            {t("field.removeRow")}
-          </Button>
-        </Card>
-      ))}
-      <Button small type="button" onClick={() => setRows([...rows, {}])}>
-        {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
-      </Button>
-    </div>
-  );
-}
-
-// A multiselect field: each option renders as its own checkbox; toggling one
-// re-joins the whole selection back into `values` via `setValue` — the same
-// single-string channel every scalar field writes through (see
-// `splitMultiselectValue`/`joinMultiselectValue` above).
+// A multiselect field: a MultiSelect dropdown whose toggled set re-joins back
+// into `values` via `setValue` — the same single-string channel every scalar
+// field writes through (see `splitMultiselectValue`/`joinMultiselectValue`
+// above).
 function MultiselectField({
   field,
-  formId,
   value,
   setValue,
 }: Readonly<{
   field: CreateField;
-  formId: string;
   value: string;
   setValue: (next: string) => void;
 }>) {
   const t = useT();
-  const selected = splitMultiselectValue(value);
-  const hintId = `${formId}-${field.key}-required-hint`;
-
-  function toggle(optionValue: string) {
-    const next = selected.includes(optionValue)
-      ? selected.filter((entry) => entry !== optionValue)
-      : [...selected, optionValue];
-    setValue(joinMultiselectValue(next));
-  }
-
   return (
-    <fieldset
-      className="field-multiselect"
-      // A checkbox group has no native `required`, and aria-required is not a
-      // valid attribute on a group — so the mandatory-ness is announced via a
-      // described-by hint the screen reader reads when focus enters the group
-      // (the "*" alone is silent, and Save just stays disabled).
-      aria-describedby={field.required ? hintId : undefined}
+    <Field
+      label={fieldLabel(field, t)}
+      required={field.required}
+      hint={field.hint}
     >
-      <legend className="t-label">
-        {fieldLabel(field, t)}
-        {field.required ? " *" : ""}
-      </legend>
-      {field.required && (
-        <p id={hintId} className="t-caption field-multiselect-hint">
-          {t("create.multiselect.required")}
-        </p>
+      {(control) => (
+        <MultiSelect
+          {...control}
+          options={field.options ?? []}
+          values={splitMultiselectValue(value, field.multiselectEncoding)}
+          onChange={(next) =>
+            setValue(joinMultiselectValue(next, field.multiselectEncoding))
+          }
+          placeholder={t("field.unset")}
+        />
       )}
-      {(field.options ?? []).map((option) => {
-        const optionId = `${formId}-${field.key}-${option.value}`;
-        return (
-          <Checkbox
-            key={option.value}
-            className="t-label"
-            id={optionId}
-            checked={selected.includes(option.value)}
-            onChange={() => toggle(option.value)}
-            label={option.label}
-          />
-        );
-      })}
-    </fieldset>
+    </Field>
   );
 }
 
@@ -781,7 +630,8 @@ export function RecordFormBody({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit(submittedValues(fields, values), rows);
+        if (!pending && !requiredMissing && refusals.size === 0)
+          onSubmit(submittedValues(fields, values), rows);
       }}
       className="form-stack"
     >
@@ -809,7 +659,6 @@ export function RecordFormBody({
             <MultiselectField
               key={field.key}
               field={field}
-              formId={formId}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -843,17 +692,12 @@ export function RecordFormBody({
         // left the form: nothing moves when this appears, and the server's
         // reason is the only thing that says why the dialog is still open. The
         // edit dialog renders this same body, so both carry it.
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--danger)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {error}
         </p>
       )}
       {existing && resolveExisting && (
         <Button
-          small
           type="button"
           style={{ alignSelf: "flex-start" }}
           onClick={() => navigate(resolveExisting(existing.code, existing.id))}
@@ -862,11 +706,10 @@ export function RecordFormBody({
         </Button>
       )}
       <div className="actions">
-        <Button small type="button" onClick={onClose}>
+        <Button type="button" onClick={onClose}>
           {t("create.cancel")}
         </Button>
         <Button
-          small
           variant="primary"
           type="submit"
           disabled={!pending && (requiredMissing || refusals.size > 0)}
@@ -945,7 +788,7 @@ export function CreateRecordModal({
       // A form that stays open to take the next record clears only what the
       // save it just made carried. Nothing disables the fields during the
       // round trip, so a reader who kept typing while it was in flight has
-      // words on screen that belong to the NEXT person — and blanking the
+      // words on screen that belong to the NEXT contact — and blanking the
       // whole form would take them with it. `submitted` is what went; anything
       // typed after it stays exactly where the reader put it.
       setValues((current) =>
@@ -957,9 +800,14 @@ export function CreateRecordModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {title}
-      </h2>
+      </Heading>
       <RecordFormBody
         fields={fields}
         values={values}

@@ -79,10 +79,10 @@ func assertPreparedFor(t *testing.T, assembled retrieval.Context, want datasourc
 
 // meetingFixture is one workspace's calendar event and everything it can name.
 type meetingFixture struct {
-	pipeline, stage        ids.UUID
-	rep1Org, rep1Deal      ids.UUID
-	rep3Org, rep3Project   ids.UUID
-	organizer, otherPerson ids.UUID
+	pipeline, stage          ids.UUID
+	rep1Company, rep1Deal    ids.UUID
+	rep3Company, rep3Project ids.UUID
+	organizer, otherContact  ids.UUID
 }
 
 func seedMeetingFixture(t *testing.T, e *SearchEnv) meetingFixture {
@@ -98,21 +98,21 @@ func seedMeetingFixture(t *testing.T, e *SearchEnv) meetingFixture {
 	// the per-subject visibility probe would prep against it. Every shareable
 	// record type is read by every seat (platform/auth tableclass.go), so
 	// capture privacy is what hides a record here: the other team's
-	// organization is 'owner'-visible and only Rep3 reads it. The project
+	// company is 'owner'-visible and only Rep3 reads it. The project
 	// hanging off it is visible to everyone and is the neighbourhood, not the
 	// hidden record.
-	f.rep3Org = e.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	f.rep3Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Other Team GmbH', 'owner', 'manual', 'human:x')`, e.Rep3)
-	f.rep3Project = e.SeedID(t, `INSERT INTO project (id, owner_id, name, organization_id, source, captured_by)
-		VALUES ($1, $2, 'Other Team Rollout', $3, 'manual', 'human:x')`, e.Rep3, f.rep3Org)
-	f.rep1Org = e.SeedID(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
+	f.rep3Project = e.SeedID(t, `INSERT INTO project (id, owner_id, name, company_id, source, captured_by)
+		VALUES ($1, $2, 'Other Team Rollout', $3, 'manual', 'human:x')`, e.Rep3, f.rep3Company)
+	f.rep1Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Turbinenbau AG', 'manual', 'human:x')`, e.Rep1)
-	f.rep1Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, source, captured_by)
+	f.rep1Deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, source, captured_by)
 		VALUES ($1, $2, 'Turbinenbau Renewal', $3, $4, $5, 'manual', 'human:x')`,
-		e.Rep1, f.pipeline, f.stage, f.rep1Org)
-	f.organizer = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+		e.Rep1, f.pipeline, f.stage, f.rep1Company)
+	f.organizer = e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Annegret Weiss', 'manual', 'human:x')`, e.Rep1)
-	f.otherPerson = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+	f.otherContact = e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Bernhard Klein', 'manual', 'human:x')`, e.Rep1)
 	return f
 }
@@ -130,19 +130,19 @@ func linkMeeting(t *testing.T, e *SearchEnv, meeting ids.UUID, entityType, colum
 		VALUES ($1, $2, $3, $4)`, meeting, entityType, target)
 }
 
-// employ records the current job that reaches a company through a person. A
+// employ records the current job that reaches a company through a contact. A
 // meeting cannot be filed against a company at all (a company is not somebody
 // you can meet), so this is how an account gets into a meeting's prep.
-func employAt(t *testing.T, e *SearchEnv, person, org ids.UUID) {
+func employAt(t *testing.T, e *SearchEnv, contact, company ids.UUID) {
 	t.Helper()
-	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, organization_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, person, org)
+	e.SeedID(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, contact, company)
 }
 
-func addParty(t *testing.T, e *SearchEnv, meeting ids.UUID, role string, person *ids.UUID, address string) {
+func addParty(t *testing.T, e *SearchEnv, meeting ids.UUID, role string, contact *ids.UUID, address string) {
 	t.Helper()
-	e.SeedID(t, `INSERT INTO activity_participant (id, activity_id, role, person_id, address)
-		VALUES ($1, $2, $3, $4, $5)`, meeting, role, person, address)
+	e.SeedID(t, `INSERT INTO activity_participant (id, activity_id, role, contact_id, address)
+		VALUES ($1, $2, $3, $4, $5)`, meeting, role, contact, address)
 }
 
 // The headline case: a meeting that names a deal is prepped against the deal,
@@ -152,9 +152,9 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-	// The company is reached through the person who was in the room, which is
+	// The company is reached through the contact who was in the room, which is
 	// the only way it can be: a meeting cannot be filed against a company.
-	employAt(t, e, f.organizer, f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Company)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 	addParty(t, e, meeting, "attendee", nil, "unknown@turbinenbau.example")
 
@@ -166,8 +166,8 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
 	also := refsIn(assembled, "also_present")
 	for _, want := range []datasource.EntityRef{
-		{Type: datasource.EntityOrganization, ID: f.rep1Org},
-		{Type: datasource.EntityPerson, ID: f.organizer},
+		{Type: datasource.EntityCompany, ID: f.rep1Company},
+		{Type: datasource.EntityContact, ID: f.organizer},
 	} {
 		if !containsRef(also, want) {
 			t.Errorf("also_present = %+v, want it to name %+v — a subject the prep did not "+
@@ -179,9 +179,9 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	if len(unresolved) != 1 || !strings.Contains(unresolved[0], "unknown@turbinenbau.example") {
 		t.Errorf("unresolved_attendees = %v, want the one address that matched no record", unresolved)
 	}
-	// The organizer resolved to a person, so their address is a subject rather
+	// The organizer resolved to a contact, so their address is a subject rather
 	// than an unmatched attendee — reporting it in both places would read as
-	// two people in the room.
+	// two contacts in the room.
 	for _, summary := range unresolved {
 		if strings.Contains(summary, "annegret@turbinenbau.example") {
 			t.Errorf("unresolved_attendees names %q, an address that DID resolve", summary)
@@ -200,7 +200,7 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 	}
 }
 
-// With no links at all, the people on the invitation are the subjects — and
+// With no links at all, the contacts on the invitation are the subjects — and
 // the one who convened it is the subject the prep is built around.
 func TestAMeetingWithOnlyAttendeesPrepsAgainstTheOrganizer(t *testing.T) {
 	e := SetupSearch(t)
@@ -208,16 +208,16 @@ func TestAMeetingWithOnlyAttendeesPrepsAgainstTheOrganizer(t *testing.T) {
 	meeting := seedMeeting(t, e, "Intro call")
 	// The attendee is seeded first and owns the lower id, so an ordering that
 	// ignored the role would pick them.
-	addParty(t, e, meeting, "attendee", &f.otherPerson, "bernhard@turbinenbau.example")
+	addParty(t, e, meeting, "attendee", &f.otherContact, "bernhard@turbinenbau.example")
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 
 	assembled, err := prepFor(e.Admin(), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
-	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: f.organizer})
+	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityContact, ID: f.organizer})
 	if also := refsIn(assembled, "also_present"); !containsRef(also,
-		datasource.EntityRef{Type: datasource.EntityPerson, ID: f.otherPerson}) {
+		datasource.EntityRef{Type: datasource.EntityContact, ID: f.otherContact}) {
 		t.Errorf("also_present = %+v, want the other attendee named", also)
 	}
 }
@@ -239,13 +239,15 @@ func TestAMeetingLinkedOnlyToALeadPrepsAgainstTheLead(t *testing.T) {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityLead, ID: lead})
-	// A lead carries no activity_link neighborhood the record walk reads, so
-	// the prep is honestly the event and the lead — never the 500 an unwalkable
-	// subject would raise.
-	for _, section := range assembled.Sections {
-		if section.Name == "recent_touches" || section.Name == "open_tasks" {
-			t.Errorf("a lead subject produced a %q section, which a lead has no walk for", section.Name)
-		}
+	// And the lead's own neighborhood comes back with it. This assertion used
+	// to run the other way — it froze the walk's missing lead arm as a property
+	// of leads, so the one test that looked at this agreed the emptiness was
+	// correct. A prep built on a lead nobody can see the history of is the
+	// answer that had a model call a lead untouched.
+	touches := summariesIn(assembled, "recent_touches")
+	if !strings.Contains(strings.Join(touches, " | "), "Discovery call") {
+		t.Errorf("recent_touches = %v, want the meeting this lead is linked to — a lead subject "+
+			"whose timeline comes back empty reads as a lead nothing has happened to", touches)
 	}
 }
 
@@ -287,17 +289,17 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		f := seedMeetingFixture(t, e)
 		meeting := seedMeeting(t, e, "Joint review")
 		linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-		// The other team's account, in the room through the person who works
+		// The other team's account, in the room through the contact who works
 		// there — an inferred subject is probed exactly as a linked one is.
-		employAt(t, e, f.otherPerson, f.rep3Org)
-		addParty(t, e, meeting, "attendee", &f.otherPerson, "bernhard@turbinenbau.example")
+		employAt(t, e, f.otherContact, f.rep3Company)
+		addParty(t, e, meeting, "attendee", &f.otherContact, "bernhard@turbinenbau.example")
 
 		assembled, err := prepFor(e.AsTeamRep(e.Rep1, e.Team1), t, e, meeting)
 		if err != nil {
 			t.Fatalf("preparing for the meeting: %v", err)
 		}
 		assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
-		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep3Org})
+		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep3Company})
 	})
 
 	// A record the caller cannot see that WOULD have been the subject (an
@@ -308,26 +310,26 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 		e := SetupSearch(t)
 		f := seedMeetingFixture(t, e)
 		meeting := seedMeeting(t, e, "Joint review")
-		employAt(t, e, f.organizer, f.rep3Org)
-		linkMeeting(t, e, meeting, "person", "person_id", f.organizer)
+		employAt(t, e, f.organizer, f.rep3Company)
+		linkMeeting(t, e, meeting, "contact", "contact_id", f.organizer)
 
 		// The control: the capture's own owner preps against the account.
 		theirs, err := prepFor(e.teamRepWhoReadsProjects(e.Rep3, e.Team2), t, e, meeting)
 		if err != nil {
 			t.Fatalf("preparing for the meeting as the capture's owner: %v", err)
 		}
-		assertPreparedFor(t, theirs, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep3Org})
+		assertPreparedFor(t, theirs, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep3Company})
 
 		assembled, err := prepFor(e.teamRepWhoReadsProjects(e.Rep1, e.Team1), t, e, meeting)
 		if err != nil {
 			t.Fatalf("preparing for the meeting: %v", err)
 		}
-		assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: f.organizer})
-		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep3Org})
+		assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityContact, ID: f.organizer})
+		assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep3Company})
 	})
 }
 
-// A party matched to a person the caller cannot see is neither a subject nor
+// A party matched to a contact the caller cannot see is neither a subject nor
 // an unmatched address. The second half is the one a ref sweep cannot catch:
 // reclassifying them as "unresolved" would put their email in the answer as
 // free text, disclosing through a summary exactly what the row scope withheld.
@@ -336,7 +338,7 @@ func TestAMeetingNeverDisclosesAnAttendeeTheCallerCannotSee(t *testing.T) {
 	f := seedMeetingFixture(t, e)
 	// Contacts are readable by every seat, so the hidden attendee is a
 	// capture-private contact of the other team's rep.
-	hidden := e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, visibility, source, captured_by)
+	hidden := e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Dieter Fremd', 'owner', 'manual', 'human:x')`, e.Rep3)
 	meeting := seedMeeting(t, e, "Joint review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
@@ -347,7 +349,7 @@ func TestAMeetingNeverDisclosesAnAttendeeTheCallerCannotSee(t *testing.T) {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
 	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
-	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: hidden})
+	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityContact, ID: hidden})
 	assertNoTextAnywhere(t, assembled, "dieter@othertteam.example", "Dieter Fremd")
 }
 
@@ -382,15 +384,15 @@ func TestTheOrganizerSurvivesAnOversizedInvitation(t *testing.T) {
 	// seeded FIRST, so every one of them holds a lower id than the organizer.
 	if _, err := e.Owner.Exec(context.Background(), `
 		WITH room AS (
-		    INSERT INTO person (owner_id, full_name, source, captured_by)
+		    INSERT INTO contact (owner_id, full_name, source, captured_by)
 		    SELECT $1, 'Attendee ' || n, 'manual', 'human:x' FROM generate_series(1, 60) n
 		    RETURNING id
 		)
-		INSERT INTO activity_participant (activity_id, role, person_id)
+		INSERT INTO activity_participant (activity_id, role, contact_id)
 		SELECT $2, 'attendee', id FROM room`, e.Rep1, meeting); err != nil {
 		t.Fatalf("seeding the oversized invitation: %v", err)
 	}
-	organizer := e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+	organizer := e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Zoe Organizer', 'manual', 'human:x')`, e.Rep1)
 	addParty(t, e, meeting, "organizer", &organizer, "zoe@turbinenbau.example")
 
@@ -398,7 +400,7 @@ func TestTheOrganizerSurvivesAnOversizedInvitation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
-	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: organizer})
+	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityContact, ID: organizer})
 	// And the room is bounded like every other section rather than exported.
 	if also := refsIn(assembled, "also_present"); len(also) > 5 {
 		t.Errorf("also_present carries %d items at max_items=5 — the section is a window, not an export",
@@ -432,7 +434,7 @@ func TestAnEventIsRefusedToACallerWithNoActivityGrant(t *testing.T) {
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
 
-	_, err := prepFor(e.readerOf(objPerson, objOrg, objDeal), t, e, meeting)
+	_, err := prepFor(e.readerOf(objContact, objCompany, objDeal), t, e, meeting)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("preparing without an activity grant = %v, want permission denied", err)
 	}
@@ -447,18 +449,18 @@ func TestASubjectTypeTheCallerMayNotReadIsNeverNamed(t *testing.T) {
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
 	linkMeeting(t, e, meeting, "deal", "deal_id", f.rep1Deal)
-	employAt(t, e, f.organizer, f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Company)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 
 	// The EDGE grant is among them because the company is reached through the
 	// attendee's employment: a prep that named it without one would be handing
-	// over a pair (this person, that company) the edge grant governs. The case
+	// over a pair (this contact, that company) the edge grant governs. The case
 	// below is the other end of that.
-	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg, objRelationship), t, e, meeting)
+	assembled, err := prepFor(e.readerOf(objActivity, objContact, objCompany, objRelationship), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
-	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep1Company})
 	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal})
 	assertNoTextAnywhere(t, assembled, "Turbinenbau Renewal")
 }
@@ -468,30 +470,30 @@ func TestASubjectTypeTheCallerMayNotReadIsNeverNamed(t *testing.T) {
 //
 // "This attendee works at that company" is a fact about a PAIR, which is what
 // relationship.read governs — neither endpoint's own grant covers it, so a
-// caller who may read both the person and the company may still not be told
+// caller who may read both the contact and the company may still not be told
 // they are connected. Without this the employer hop would be a way to learn
 // every edge in the workspace by asking for a meeting prep.
 func TestAnEmployerIsNotNamedToACallerWithNoEdgeGrant(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
-	employAt(t, e, f.organizer, f.rep1Org)
+	employAt(t, e, f.organizer, f.rep1Company)
 	addParty(t, e, meeting, "organizer", &f.organizer, "annegret@turbinenbau.example")
 
 	// The control: the same prep, for a caller who may read edges.
-	granted, err := prepFor(e.readerOf(objActivity, objPerson, objOrg, objRelationship), t, e, meeting)
+	granted, err := prepFor(e.readerOf(objActivity, objContact, objCompany, objRelationship), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting with the edge grant: %v", err)
 	}
-	assertPreparedFor(t, granted, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+	assertPreparedFor(t, granted, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep1Company})
 
-	assembled, err := prepFor(e.readerOf(objActivity, objPerson, objOrg), t, e, meeting)
+	assembled, err := prepFor(e.readerOf(objActivity, objContact, objCompany), t, e, meeting)
 	if err != nil {
 		t.Fatalf("preparing for the meeting: %v", err)
 	}
 	// The prep still happens, around the attendee they may read.
-	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityPerson, ID: f.organizer})
-	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityOrganization, ID: f.rep1Org})
+	assertPreparedFor(t, assembled, datasource.EntityRef{Type: datasource.EntityContact, ID: f.organizer})
+	assertAbsent(t, assembled, datasource.EntityRef{Type: datasource.EntityCompany, ID: f.rep1Company})
 }
 
 // assertAbsent holds the whole assembled picture against one ref, not just the
@@ -543,9 +545,9 @@ func TestAnEventOutsideTheCallersScopeIsNotFound(t *testing.T) {
 	// meeting cannot be linked to a company at all, and every record type is
 	// read by every seat (platform/auth tableclass.go), so a capture-private
 	// record is what an event nobody else may reach looks like.
-	theirContact := e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, visibility, source, captured_by)
+	theirContact := e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Dieter Fremd', 'owner', 'manual', 'human:x')`, e.Rep3)
-	linkMeeting(t, e, meeting, "person", "person_id", theirContact)
+	linkMeeting(t, e, meeting, "contact", "contact_id", theirContact)
 
 	if _, err := prepFor(e.teamRepWhoReadsProjects(e.Rep3, e.Team2), t, e, meeting); err != nil {
 		t.Fatalf("preparing for the meeting as the capture's own owner: %v", err)
@@ -609,4 +611,79 @@ func sectionNames(assembled retrieval.Context) []string {
 		out = append(out, section.Name)
 	}
 	return out
+}
+
+// A LEAD anchor walks its own timeline, and the case for asserting it is what
+// an empty one is read as.
+//
+// `activity_link` has admitted a lead arm since the 0001 baseline, and the walk
+// followed contact, company, deal and project. So a lead answered its
+// profile and nothing else, while the tool serving this walk tells its caller
+// that what cannot be evidenced is absent rather than inferred. The two
+// sentences together turn a leg nobody wrote into a report that nothing has
+// happened — and that is what a model did with it, declining to close off a
+// dead lead because the record it was shown carried no history at all.
+//
+// Asserting the SUMMARY rather than the section being present is deliberate: a
+// walk emitting an empty recent_touches would satisfy a check on the sections.
+func TestALeadAnchorWalksItsOwnTimeline(t *testing.T) {
+	e := SetupSearch(t)
+	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, status, source, captured_by)
+		VALUES ($1, $2, 'Bruno Kellner', 'Kellner Anlagenbau', 'new', 'manual', 'human:x')`, e.Rep1)
+	note := e.SeedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'note', 'Mail kam als unzustellbar zurück', now(), 'manual', 'human:x')`)
+	linkMeeting(t, e, note, "lead", "lead_id", lead)
+
+	assembled, err := search.NewRetriever(e.Store, nil).AssembleContext(e.Admin(),
+		datasource.EntityRef{Type: datasource.EntityLead, ID: lead},
+		retrieval.AssembleOptions{MaxItems: 5})
+	if err != nil {
+		t.Fatalf("walking the lead's context: %v", err)
+	}
+
+	touches := summariesIn(assembled, "recent_touches")
+	if len(touches) == 0 {
+		t.Fatalf("a lead with a linked activity walked back no recent_touches at all, which a "+
+			"caller reads as a lead nothing has happened to: sections %+v", assembled.Sections)
+	}
+	if !strings.Contains(strings.Join(touches, " | "), "unzustellbar") {
+		t.Errorf("recent_touches = %v, want the note filed against this lead", touches)
+	}
+}
+
+// A lead in the room is in the picture.
+//
+// The hop-2 walk reported four record types and not the fifth, which was never
+// a decision about leads — the list predated the arm. So a discovery call
+// filed against both a deal and an unqualified lead prepped as though the lead
+// had not been there, and the caller reading "what cannot be evidenced is
+// absent rather than inferred" would conclude it had not.
+//
+// The lead is the record the reader was NOT prepared against, which is exactly
+// why naming it is worth a section: the deal is what they came for, and the
+// lead is what else was on the call.
+func TestALeadSharingAnActivityWithTheAnchorIsReportedAsANeighbour(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedMeetingFixture(t, e)
+	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, status, source, captured_by)
+		VALUES ($1, $2, 'Bruno Kellner', 'Kellner Anlagenbau', 'new', 'manual', 'human:x')`, e.Rep1)
+	call := seedMeeting(t, e, "Discovery — Turbinenbau + Kellner")
+	linkMeeting(t, e, call, "deal", "deal_id", f.rep1Deal)
+	linkMeeting(t, e, call, "lead", "lead_id", lead)
+
+	assembled, err := search.NewRetriever(e.Store, nil).AssembleContext(e.Admin(),
+		datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal},
+		retrieval.AssembleOptions{MaxItems: 5})
+	if err != nil {
+		t.Fatalf("walking the deal's context: %v", err)
+	}
+
+	neighbours := summariesIn(assembled, "related_leads")
+	if len(neighbours) == 0 {
+		t.Fatalf("a lead on the anchor's own call is absent from the picture, which reads as a "+
+			"room it was not in: sections %+v", assembled.Sections)
+	}
+	if !strings.Contains(strings.Join(neighbours, " | "), "Kellner") {
+		t.Errorf("related_leads = %v, want the lead the call was also filed against", neighbours)
+	}
 }

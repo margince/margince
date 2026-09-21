@@ -171,7 +171,7 @@ func TestTheMeetingPlanCaseRefusesAFixtureThatMeasuresNothing(t *testing.T) {
 			name:     "a token no message carries could only be invented",
 			fixture:  planFixture,
 			expected: `{"cites_label":"wish_list","names_token":"nobody said this"}`,
-			wants:    "appears in no message",
+			wants:    "does not appear in the message it names",
 		},
 		{
 			name:     "an expectation naming a label the fixture lacks",

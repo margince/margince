@@ -20,7 +20,7 @@ The window is 32768 tokens. An agent's listing may take 23210 of them (17/24). T
 served catalog is held to 28672 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
-Before any tool is listed the frame itself costs **353 tokens** — the output contract,
+Before any tool is listed the frame itself costs **448 tokens** — the output contract,
 the rules and the prompt fence. It is published here because a rule moved OUT of the
 per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence,
 and only the first half is held by a bound: the floor above measures the LISTING
@@ -30,15 +30,15 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 6 |
-| `overnight_at_risk_sweep` | 7 | 2509 | 7% | 20701 | 15 | 10 |
-| _whole served catalog, for scale_ | 73 | 22009 | 67% | — | — | — |
+| `morning_brief` | 5 | 1666 | 5% | 21544 | 6 | 6 |
+| `overnight_at_risk_sweep` | 7 | 2540 | 7% | 20670 | 15 | 10 |
+| _whole served catalog, for scale_ | 76 | 24331 | 74% | — | — | — |
 
 ### `morning_brief`
 
-> Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
+> Prepare the acting contact's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this contact; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools for 1634 tokens, leaving 21576 of its budget and 31134 tokens of the
+Attaches 5 tools for 1666 tokens, leaving 21544 of its budget and 31102 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2509 tokens, leaving 20701 of its budget and 30259 tokens of the
+Attaches 7 tools for 2540 tokens, leaving 20670 of its budget and 30228 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -75,7 +75,7 @@ window for the goal, the grounding and everything it reads.
 **15 dangling cross-references** — this agent's own tool copy points at tools it
 cannot call, so a run may spend a step discovering the refusal:
 
-- at_risk_relationships → account_coverage
+- at_risk_relationships → company_coverage
 - at_risk_relationships → intro_path_to
 - at_risk_relationships → who_knows
 - catch_me_up_on → prep_for_meeting
@@ -126,7 +126,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 263 tokens, mean 301, across 73 served tools.
+Median 273 tokens, mean 319, across 76 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -135,78 +135,81 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 939 | 3 scenarios |
-| `send_account_email` | 742 | — |
+| `run_report` | 1010 | 3 scenarios |
+| `send_company_email` | 823 | — |
+| `send_email` | 754 | 1 scenario |
+| `preview_import` | 726 | — |
 | `log_activity` | 677 | 1 scenario |
-| `preview_import` | 677 | — |
-| `send_email` | 675 | 1 scenario |
-| `update_record` | 572 | 4 scenarios |
-| `send_message` | 518 | — |
-| `list_records` | 508 | — |
-| `progress_deal` | 501 | 3 scenarios |
-| `resolve_entities` | 498 | — |
+| `send_message` | 603 | — |
+| `update_record` | 581 | 4 scenarios |
+| `list_records` | 541 | — |
+| `forecast_readings` | 509 | — |
+| `progress_deal` | 505 | 3 scenarios |
+| `resolve_entities` | 493 | — |
 | `query_workspace` | 484 | 3 scenarios |
-| `create_record` | 473 | 1 scenario |
-| `run_analytics_query` | 465 | — |
-| `advance_deal` | 443 | 1 scenario |
+| `create_record` | 481 | 1 scenario |
+| `run_analytics_query` | 476 | — |
+| `forecast_movement` | 453 | — |
+| `advance_deal` | 446 | 1 scenario |
+| `compose_analytics_report` | 440 | — |
+| `book_meeting` | 423 | — |
 | `annotate_brief` | 418 | — |
 | `review_commitments` | 401 | 1 scenario |
-| `book_meeting` | 393 | — |
-| `enrich` | 393 | — |
-| `compose_analytics_report` | 390 | — |
-| `search_records` | 385 | 9 scenarios |
-| `forecast_movement` | 351 | — |
+| `enrich` | 391 | — |
+| `search_records` | 383 | 9 scenarios |
+| `check_availability` | 366 | — |
 | `describe_report_vocabulary` | 349 | — |
-| `forecast_readings` | 349 | — |
-| `search_context` | 345 | — |
-| `prep_for_meeting` | 326 | — |
-| `merge_records` | 292 | — |
-| `catch_me_up_on` | 280 | 3 scenarios |
-| `advance_project_phase` | 279 | — |
-| `draft_email` | 279 | — |
-| `relink_activity` | 277 | — |
-| `draft_follow_ups_for` | 273 | — |
-| `decide_approval` | 272 | — |
-| `promote_lead` | 270 | — |
-| `list_approvals` | 267 | — |
+| `describe_record_fields` | 345 | — |
+| `search_context` | 344 | — |
+| `advance_project_phase` | 340 | — |
+| `forecast_input_checks` | 324 | — |
+| `prep_for_meeting` | 324 | — |
+| `demote_lead` | 317 | — |
+| `promote_lead` | 304 | — |
+| `merge_records` | 293 | — |
+| `archive_record` | 289 | — |
+| `describe_analytics_vocabulary` | 286 | — |
+| `catch_me_up_on` | 279 | 3 scenarios |
+| `draft_email` | 278 | — |
+| `relink_activity` | 276 | — |
+| `draft_follow_ups_for` | 274 | — |
+| `decide_approval` | 273 | — |
+| `list_approvals` | 268 | — |
 | `prepare_handoff` | 267 | 1 scenario |
 | `describe_query_vocabulary` | 266 | — |
-| `check_availability` | 263 | — |
-| `archive_record` | 261 | — |
-| `forecast_input_checks` | 252 | — |
-| `account_coverage` | 245 | 2 scenarios |
+| `company_coverage` | 246 | 2 scenarios |
 | `describe_report_blocks` | 245 | — |
-| `decide_approval_bundle` | 235 | — |
-| `qualify_lead` | 230 | — |
-| `apply_tag` | 227 | — |
-| `create_task` | 222 | — |
-| `read_record` | 222 | 3 scenarios |
+| `decide_approval_bundle` | 236 | — |
+| `qualify_lead` | 229 | — |
+| `apply_tag` | 226 | — |
+| `create_task` | 221 | — |
+| `read_record` | 220 | 3 scenarios |
 | `whats_slipping_this_week` | 211 | 2 scenarios |
-| `at_risk_relationships` | 208 | — |
+| `at_risk_relationships` | 209 | — |
+| `disqualify_lead` | 209 | — |
+| `list_input_checks` | 209 | — |
 | `read_brief` | 206 | — |
-| `relink_activities` | 206 | — |
+| `relink_activities` | 205 | — |
 | `update_tag` | 205 | — |
+| `commit_import` | 204 | — |
 | `merge_tags` | 198 | — |
-| `relink_thread` | 197 | — |
-| `who_knows` | 194 | — |
+| `list_colleagues` | 196 | — |
+| `relink_thread` | 196 | — |
+| `who_knows` | 196 | — |
+| `data_coverage` | 195 | — |
 | `list_pipelines` | 191 | — |
-| `disqualify_lead` | 190 | — |
-| `intro_path_to` | 190 | 2 scenarios |
+| `intro_path_to` | 187 | 2 scenarios |
 | `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |
-| `remove_tag` | 167 | — |
+| `remove_tag` | 166 | — |
 | `check_location_support` | 156 | — |
 | `read_project_360` | 156 | — |
-| `read_approval` | 153 | — |
-| `list_input_checks` | 146 | — |
-| `get_record_tags` | 142 | — |
-| `list_colleagues` | 141 | — |
-| `whoami` | 128 | — |
-| `commit_import` | 118 | — |
-| `data_coverage` | 109 | — |
+| `read_approval` | 154 | — |
+| `get_record_tags` | 141 | — |
+| `whoami` | 129 | — |
 | `list_tags` | 95 | — |
-| `get_tag` | 86 | — |
-| `read_import_report` | 73 | — |
+| `get_tag` | 87 | — |
+| `read_import_report` | 77 | — |
 | `read_import_run` | 67 | — |
 
 ## Related

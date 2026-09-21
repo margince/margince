@@ -43,7 +43,7 @@ func patchRequest(path string, id ids.UUID, body []byte) *http.Request {
 func TestACreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 	staging := &capturingApprovals{}
 	pol := agentPolicy{Op: "createProject", Access: accessTool, Tool: "create_record", RecordType: recordTypeProject}
-	body := []byte(`{"name":"New Project","organization_id":"018f2a10-0000-7000-8000-000000000001"}`)
+	body := []byte(`{"name":"New Project","company_id":"018f2a10-0000-7000-8000-000000000001"}`)
 
 	stageRefusal(httptest.NewRecorder(), createRequest("/v1/projects", body), staging, restCommandDeps{}, pol, body)
 
@@ -58,7 +58,7 @@ func TestACreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 
 // A create OUTSIDE create_record's own served vocabulary still stages,
 // through createResolver like every other registered create — the same shape
-// TestAnArchiveOutsideTheToolSchemaStagesTheRowItNames proves for archive.
+// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID proves for archive.
 // custom_field is one of the six create routes whose record type
 // create_record's own Handle cannot write, and createResolver.Guards has no
 // opinion on that (command.go); proving it stages successfully through the
@@ -124,7 +124,7 @@ func TestAMalformedPatchIDAnswersNotFound(t *testing.T) {
 // the seam cannot answer. Staged against a provider that fails EVERY read, so
 // a resolver that consulted the seam anyway fails here rather than passing on
 // a lenient stub — the same proof shape as
-// TestAnArchiveOutsideTheToolSchemaStagesTheRowItNames.
+// TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID.
 func TestAPatchOutsideTheToolSchemaStagesTheRowItNames(t *testing.T) {
 	staging := &capturingApprovals{}
 	pol := agentPolicy{

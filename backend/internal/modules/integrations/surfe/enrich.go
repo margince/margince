@@ -25,16 +25,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
-// The wire shapes, named as SURFE names them. The tags must match its
-// camelCase format exactly, or the request is rejected and the response
-// silently decodes to zero values — the vendor's keys are not ours to case.
+// The wire shapes, named as SURFE names them.
+//
+// EVERY string in this block and in the two paths below is the VENDOR'S, and
+// none of it is ours to rename. The tags must match its camelCase exactly or
+// the request is rejected and the response silently decodes to zero values;
+// the paths must match or it answers 404. A repo-wide rename ran over
+// `people` here once, and because the tests asserted the same literals it
+// rewrote, every test agreed with a shape the vendor does not serve while
+// every real run failed.
+//
+// What holds them now is testdata/vendor-wire.json — recorded from
+// Surfe's published reference, data rather than source, and so outside the
+// reach of anything that rewrites identifiers in this tree.
 //
 //nolint:tagliatelle // the vendor's wire format, not this repo's convention.
 type (
 	enrichRequest struct {
 		EnrichmentOptions enrichOptions `json:"enrichmentOptions"`
 		Include           includeFlags  `json:"include"`
-		People            []wirePerson  `json:"people"`
+		People            []wireContact `json:"people"`
 	}
 	enrichOptions struct {
 		// AcceptedEmailType is how the frozen cascade reaches the vendor:
@@ -51,7 +61,7 @@ type (
 		LinkedInURL bool `json:"linkedInUrl"`
 		Mobile      bool `json:"mobile"`
 	}
-	wirePerson struct {
+	wireContact struct {
 		FirstName     string `json:"firstName,omitempty"`
 		LastName      string `json:"lastName,omitempty"`
 		LinkedInURL   string `json:"linkedinUrl,omitempty"`
@@ -147,7 +157,7 @@ func (a *Adapter) Credits(ctx context.Context, cred provider.Credential) (provid
 	}, nil
 }
 
-// Submit starts one person's enrichment.
+// Submit starts one contact's enrichment.
 //
 // The correlation id rides as externalID: it is an opaque handle carrying no
 // subject identity, which is what makes it safe to hand a third party, and it
@@ -162,7 +172,7 @@ func (a *Adapter) Submit(ctx context.Context, cred provider.Credential, req prov
 			SkipMobileEnrichmentIfNoEmailFound: true,
 		},
 		Include: includeFor(req.Categories),
-		People: []wirePerson{{
+		People: []wireContact{{
 			FirstName:     req.Identifiers.FirstName,
 			LastName:      req.Identifiers.LastName,
 			LinkedInURL:   req.Identifiers.LinkedInURL,
@@ -224,8 +234,8 @@ func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJo
 	if len(out.People) == 0 {
 		return provider.PollStatus{Outcome: provider.OutcomeNoMatch, SafeStatusCode: "no_match"}, nil
 	}
-	person := out.People[0]
-	claims, err := claimsFor(person)
+	contact := out.People[0]
+	claims, err := claimsFor(contact)
 	if err != nil {
 		// A result we cannot encode is NOT a no-match: the run completed and
 		// was charged. Surfacing the error leaves it in progress for the
@@ -241,7 +251,7 @@ func (a *Adapter) Poll(ctx context.Context, cred provider.Credential, providerJo
 	}
 	return provider.PollStatus{
 		Outcome: provider.OutcomeCompleted,
-		Result:  &provider.Result{Claims: claims, PoolSpend: spendFor(person)},
+		Result:  &provider.Result{Claims: claims, PoolSpend: spendFor(contact)},
 	}, nil
 }
 
@@ -327,7 +337,10 @@ func monthOrDate(value string) string {
 	}
 	for _, layout := range []string{"2006-01", time.RFC3339, "2006-01-02"} {
 		if parsed, err := time.Parse(layout, value); err == nil {
-			return parsed.Format("2006-01")
+			if layout == "2006-01" {
+				return parsed.Format("2006-01")
+			}
+			return parsed.Format(time.DateOnly)
 		}
 	}
 	return ""

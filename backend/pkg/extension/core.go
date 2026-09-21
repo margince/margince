@@ -47,10 +47,6 @@ import (
 //     — a system principal passes every check ever written — a tick's Core call
 //     answers ErrForbidden. A tick may still write the unit's OWN tables, which
 //     is what a tick is for.
-//   - OVERLAY MODE. Where an installation mirrors an incumbent system of
-//     record, the native tables this writes are not the live ones, so a write
-//     here would land somewhere nobody reads. It answers
-//     ErrOverlayUnsupported rather than writing into the dark.
 //   - CUSTOM FIELDS. A record's custom-field values need the field catalog, and
 //     reading the catalog takes a second database connection — inside a
 //     transaction the unit already holds, that is a deadlock shape rather than
@@ -92,9 +88,14 @@ var (
 	ErrConflict = errors.New("extension: the record changed under this write")
 
 	// ErrInvalid is a request the contract does not admit.
+	//
+	// VALIDATE BEFORE THE DRIVER SEES IT. This is the one refusal the core
+	// cannot make on a unit's behalf: a malformed argument handed straight to
+	// Tx.Exec — an id that is not a UUID, a number where a timestamp belongs —
+	// comes back as a database driver's parse error, which is indistinguishable
+	// from a real database fault at the seam. The caller is then told the server
+	// broke, and an agent is told to retry a call that can only fail again. A
+	// unit that checks its own arguments and answers this instead is the only
+	// thing that makes that case read correctly.
 	ErrInvalid = errors.New("extension: the request is malformed")
-
-	// ErrOverlayUnsupported is a core write in an overlay workspace, where the
-	// native record this would write is not the live one.
-	ErrOverlayUnsupported = errors.New("extension: core records are not writable in overlay mode")
 )

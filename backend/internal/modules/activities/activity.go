@@ -43,7 +43,9 @@ func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEv
 }
 
 type LogActivityInput struct {
-	Kind string
+	// Internal creation policy; public activity input cannot set an audience.
+	audienceMembers []AudienceMember
+	Kind            string
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
 	// one. Separate from Kind because they answer separate questions: what sort
@@ -65,8 +67,22 @@ type LogActivityInput struct {
 	RemindAt      *time.Time
 	AssigneeID    *ids.UserID
 	HostUserID    *ids.UserID
-	SourceSystem  *string
-	SourceID      *string
+	// ClaimsHostSlot marks a meeting that HOLDS its host's hour, which is what
+	// activity_meeting_no_overlap refuses a second of. Only BookMeeting sets
+	// it: a booking door takes a slot on somebody's calendar, and taking one
+	// twice is the fault the guard exists for. Logging a meeting records that
+	// one happened and claims nothing — a rep writing up a morning of
+	// back-to-back calls is describing their Tuesday, not double-booking it.
+	//
+	// There is no way to set it from the wire, and there must not be: a guard a
+	// caller can opt out of is not one.
+	ClaimsHostSlot bool
+	SourceSystem   *string
+	SourceID       *string
+	// SourceActivityID is the activity this one was derived FROM — the meeting
+	// whose transcript proposed a task. Nil on almost every activity.
+	SourceActivityID  *ids.UUID
+	RequestActivityID *ids.UUID
 	// ThreadKey files this activity under a conversation. Empty stores NULL.
 	// It is written at insert time or not at all: the (source_system,
 	// source_id) upsert both capture and this path key on does nothing when
@@ -80,8 +96,30 @@ type LogActivityInput struct {
 	// as ThreadKey, for the same reason.
 	CounterpartyEmail            string
 	CounterpartyOutboundAttested bool
-	Links                        []ActivityLinkInput
-	Source                       string
+	// Raw is the source system's own representation of this activity, kept
+	// verbatim. It is CONTENT: the audience projection withholds it from a
+	// reader who may not read the subject and body, and both destructive
+	// paths — retention and noise redaction — null it with the rest of the text.
+	Raw *map[string]any
+	// DurationSeconds is how long a meeting or call lasted; the mapping
+	// refuses it on any other kind.
+	DurationSeconds *int
+	// The address headers an importer stated, normalized and each address in
+	// one role only. Capture derives these from the message it holds; an
+	// importer holds only what its source system kept, so it states them.
+	EmailFrom string
+	EmailTo   []string
+	EmailCc   []string
+	// RFCMessageID is this message's own RFC 5322 identity, brackets stripped —
+	// what a later capture of the same message resolves against.
+	RFCMessageID string
+	// The calendar identity, which is a PAIR: a recurring series shares one UID
+	// across every occurrence, so the UID names the series and the instance
+	// names the occurrence within it.
+	ICalUID      string
+	ICalInstance string
+	Links        []ActivityLinkInput
+	Source       string
 	// Origin says who caused this row to exist, and the recency clocks in the
 	// schema read it: the two system origins are excluded from every
 	// last_activity_at, because neither the system asking about a silent deal
@@ -92,7 +130,7 @@ type LogActivityInput struct {
 
 // The origins an activity can have.
 //
-// Two of them are the system writing rather than a person, and neither counts
+// Two of them are the system writing rather than a contact, and neither counts
 // as the record being touched: OriginSystemRemediation marks work the product
 // files about a record — a forecast-assurance review task — and OriginSystemNotice
 // marks a message the installation owes somebody, such as the confirm-details
@@ -153,6 +191,9 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
+	if in.RequestActivityID != nil {
+		return s.takeEmailRequest(ctx, tx, in)
+	}
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err
@@ -188,6 +229,33 @@ func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
 	return &owner
 }
 
+// meetingHost is who HELD a meeting, which is not the same question as who
+// typed it up.
+//
+// A meeting names the one place an activity says which of US was there, and it
+// is what a rep's week is counted from. Left unset it falls to captured_by, so
+// a colleague who minutes somebody else's meeting takes it into their own week
+// — the case the attribution audit named, and the one the connector import
+// already answers because a calendar knows whose it was.
+//
+// A caller may name somebody else: that IS the minuting case, and the host is a
+// label rather than an authority — what the caller may read was decided before
+// this field is filled in. Silence defaults to the acting human, because a
+// meeting somebody logs with no host named is almost always their own; a system
+// or agent principal has no week to count it into and leaves it null rather
+// than inventing one.
+func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
+	if in.HostUserID != nil || in.Kind != KindMeeting {
+		return in.HostUserID
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+		return nil
+	}
+	host := ids.From[ids.UserKind](actor.UserID)
+	return &host
+}
+
 // logActivityInTx is LogActivity's transactional body, shared by the
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
@@ -201,6 +269,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		occurredAt = in.OccurredAt.UTC()
 	}
 	assignee := taskAssignee(ctx, in)
+	host := meetingHost(ctx, in)
 	// Asked at the CREATE door too, not only at the patch. A task minted onto an
 	// agent seat is one that never reaches a queue, and it used to be refused
 	// only if somebody later tried to move it — which is after it has been sat
@@ -220,23 +289,32 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
 		return moved, false, err
 	}
+	if bound, found, err := recognizedMessage(ctx, tx, in); err != nil || found {
+		return bound, false, err
+	}
 
 	id := ids.New[ids.ActivityKind]()
 	origin := in.Origin
 	if origin == "" {
 		origin = OriginHuman
 	}
+	counterparty, err := counterpartyFor(ctx, tx, in)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
-		                       due_at, remind_at, assignee_id, host_user_id, source_system, source_id, source, captured_by,
-		                       thread_key, counterparty_email, counterparty_outbound_attested, origin)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''),
-		         NULLIF($18, ''), $19, $20)`,
+		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, source_system, source_id, source, captured_by,
+		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
+		                       source_activity_id, raw, duration_seconds)
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		         NULLIF($19, ''), $20, $21, $22, $23, $24)`,
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
-		in.DueAt, in.RemindAt, assignee, in.HostUserID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested, origin)
+		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
+		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
+		in.SourceActivityID, in.Raw, in.DurationSeconds)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict
@@ -244,6 +322,25 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
+	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt, by); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	return out, true, nil
+}
+
+// writeActivitySatellites writes the rows that ride with a new activity and
+// have no meaning without it: its first meeting transition, its links, who was
+// in it, where it came from, and the first-touch stamp. All in the caller's
+// transaction, because an activity that reached the timeline without them is a
+// row nobody can read properly.
+func writeActivitySatellites(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput,
+	occurredAt time.Time, by string,
+) error {
 	// The first transition, where this capture named a status. A meeting
 	// arrives `booked` far more often than not, and that booking is the fact
 	// every "how many did we book this period" question counts.
@@ -254,33 +351,21 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		SourceSystem:   in.SourceSystem,
 		SourceID:       in.SourceID,
 	}); err != nil {
-		return crmcontracts.Activity{}, false, err
+		return err
 	}
-
 	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
-		return crmcontracts.Activity{}, false, err
+		return err
 	}
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
-	// whichever person they name — and they have just been through the
+	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
 	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links); err != nil {
-		return crmcontracts.Activity{}, false, err
+		return err
 	}
-
-	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, map[string]any{fieldKind: in.Kind, fieldSubject: in.Subject})
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
+	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {
+		return err
 	}
-	// activity.captured is the first-class verb — emitted instead of a
-	// generic activity.created, never in addition (events.md §1).
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCapturedPayload(in.Kind, in.ChannelProvider)); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	return out, true, nil
+	return recordInitialActivity(ctx, tx, id, in)
 }
 
 // replayedActivity resolves the (source_system, source_id) idempotency

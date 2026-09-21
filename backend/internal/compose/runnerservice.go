@@ -20,7 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -80,16 +81,12 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 // NewRunnerService assembles the runner over the SAME governed registry
 // every other agent surface dispatches through — the two-directions
 // invariant is a property of this constructor: there is no other
-// registry to hand it. resolveIncumbent is the per-workspace live-incumbent
-// resolver the overlay write-back path reaches HubSpot through when a
-// Surface-B run's agent tool writes a record; the worker passes a FromEnv
-// vault-backed resolver, and nil degrades write-back to errNoWriteIncumbent
-// (reads and non-SoR tools are unaffected).
-func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain completer, retriever retrieval.Retriever, log *slog.Logger, resolveIncumbent func(context.Context) (overlay.Incumbent, error), send SendPath, opts ...RunnerOption) *RunnerService {
+// registry to hand it.
+func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain completer, retriever retrieval.Retriever, log *slog.Logger, send SendPath, opts ...RunnerOption) *RunnerService {
 	svc := &RunnerService{
 		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
-		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, resolveIncumbent, send), brain),
+		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, send), brain),
 		identity:   identity.NewService(pool),
 		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,
@@ -128,7 +125,24 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// the write shape — a ledger row and an outbox row, both of which take their
 	// actor from the context. A pass with no actor bound could not write either,
 	// and the rail would silently never learn that the 06:00 brief was queued.
+	//
+	// Refused BEFORE that binding if somebody else is already on the context.
+	// Checking after it would be decoration: schedulerContext overwrites the
+	// actor, so a human, an agent or a buyer handed to Tick would be converted
+	// to the system principal and then admitted by the very check meant to
+	// refuse them. The pass runs on the installation's own authority, and the
+	// only caller entitled to start it is one carrying nobody.
+	if actor, ok := principal.Actor(ctx); ok && actor.Type != principal.PrincipalSystem {
+		return fmt.Errorf("runner: a scheduled pass runs as the system, not as %s: %w",
+			actor.Type, apperrors.ErrPermissionDenied)
+	}
 	ctx = schedulerContext(ctx)
+	// And the binding it just made, stated as a check so the entry-point gate
+	// sees an admission and a future edit to schedulerContext cannot quietly
+	// stop making one.
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	s.reapAbandonedRuns(ctx)
 	// Seeding failures are collected, NOT returned here. Claiming is what makes
 	// already-queued work run, and it is independent of whether tonight's
@@ -158,8 +172,8 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 // seedSeats queues tonight's occurrence of one spec for every rep who granted
 // it, each job carrying that rep's own passport.
 //
-// WHY THE GRANTS DRIVE THE LOOP. An agent run acts as a person, and the only
-// credential it may act with is one that person minted for themselves. There
+// WHY THE GRANTS DRIVE THE LOOP. An agent run acts as a contact, and the only
+// credential it may act with is one that colleague minted for themselves. There
 // is no workspace-wide authority to fall back on and deliberately so, so a
 // spec with no live grants has nothing to run tonight — that is a workspace
 // where nobody has said yes yet, not a fault, and it queues nothing.
@@ -208,10 +222,7 @@ const resumeActor = "system:agent_resume"
 // schedulerContext binds the pass's actor and one correlation id, so every row
 // a single tick writes groups under the tick that wrote it.
 func schedulerContext(ctx context.Context) context.Context {
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: schedulerActor,
-	})
+	return principal.SystemActing(ctx, schedulerActor)
 }
 
 // stuckRunGrace is how far past its wall clock a 'running' row must be before

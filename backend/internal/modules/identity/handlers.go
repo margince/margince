@@ -66,6 +66,13 @@ type Handlers struct {
 	loginPerIP    *ratelimit.Limiter // 30/min per client IP
 	resetPerEmail *ratelimit.Limiter // 3/hour per (email, IP)
 	resetPerIP    *ratelimit.Limiter // 30/hour per client IP
+	// passwordLoginDisabled is the deployment's `auth.password.enabled=false`
+	// — an installation that signs its members in through an identity provider
+	// and wants the password door shut. Negative so the zero value offers the
+	// method: passwordmethod.go carries why, and both surfaces that must agree
+	// about it read passwordLoginOffered rather than this field.
+	passwordLoginDisabled bool
+
 	// changeFailures caps wrong-current-password attempts per account.
 	// /auth/change-password verifies the SAME secret the login path does, so
 	// leaving it uncapped would put an unthrottled guessing oracle behind any
@@ -85,15 +92,6 @@ type Handlers struct {
 	// at full rate.
 	passwordLinkPerActor  *ratelimit.Limiter // 20/hour per admin
 	passwordLinkPerTarget *ratelimit.Limiter // 5/hour per member
-
-	// sorMode answers whether the caller's workspace reads from an
-	// incumbent overlay mirror, so /me can tell the client its
-	// system-of-record mode (the client gates its list UI on it — an
-	// overlay mirror cannot serve sort/filter dials). Injected by the
-	// composition root (the datasource dispatch owns mode resolution;
-	// identity never imports the overlay module). Nil ⟹ always native,
-	// the correct default for any role that wired no overlay dispatch.
-	sorMode func(context.Context) (overlay bool, err error)
 
 	// nonProduction reports the deployment posture (MARGINCE_ENV) on /me's
 	// deprecated non_production field. Injected by the composition root from
@@ -167,19 +165,26 @@ type Handlers struct {
 	firstRunFn func(context.Context) (bool, error)
 }
 
+// oidcPerIPLimiter names the OIDC edge's per-IP ceiling. It is a constant
+// because two constructors build that ceiling — NewHandlers, and
+// WithOIDCProviders for a handler set assembled without it — and in a store
+// the replicas share, the name is the bucket: two spellings would be two
+// ceilings for one edge, each the configured size.
+const oidcPerIPLimiter = "identity/oidc-per-ip"
+
 // NewHandlers builds the identity transport surface over its service.
 func NewHandlers(svc *Service) Handlers {
 	return Handlers{
 		svc:                   svc,
-		loginFailures:         ratelimit.New(10, time.Minute),
-		loginPerIP:            ratelimit.New(30, time.Minute),
-		resetPerEmail:         ratelimit.New(3, time.Hour),
-		resetPerIP:            ratelimit.New(30, time.Hour),
-		changeFailures:        ratelimit.New(10, time.Minute),
-		passwordLinkPerActor:  ratelimit.New(20, time.Hour),
-		passwordLinkPerTarget: ratelimit.New(5, time.Hour),
-		oidcPerIP:             ratelimit.New(30, time.Minute),
-		capabilitiesPerIP:     ratelimit.New(60, time.Minute),
+		loginFailures:         ratelimit.New("identity/login-failures", ratelimit.FailClosed, 10, time.Minute),
+		loginPerIP:            ratelimit.New("identity/login-per-ip", ratelimit.FailClosed, 30, time.Minute),
+		resetPerEmail:         ratelimit.New("identity/reset-per-address", ratelimit.FailClosed, 3, time.Hour),
+		resetPerIP:            ratelimit.New("identity/reset-per-ip", ratelimit.FailClosed, 30, time.Hour),
+		changeFailures:        ratelimit.New("identity/password-change-failures", ratelimit.FailClosed, 10, time.Minute),
+		passwordLinkPerActor:  ratelimit.New("identity/password-link-per-actor", ratelimit.FailClosed, 20, time.Hour),
+		passwordLinkPerTarget: ratelimit.New("identity/password-link-per-target", ratelimit.FailClosed, 5, time.Hour),
+		oidcPerIP:             ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
+		capabilitiesPerIP:     ratelimit.New("identity/capabilities-per-ip", ratelimit.FailClosed, 60, time.Minute),
 	}
 }
 
@@ -208,14 +213,6 @@ func (h *Handlers) ResetRateLimits() {
 // installation without email still builds set-password links.
 func (h Handlers) WithPasswordReset(m mailer.Mailer) Handlers {
 	h.resetMailer = m
-	return h
-}
-
-// WithSorMode injects the workspace system-of-record mode resolver the
-// composition root builds over the datasource dispatch. Without it /me
-// reports native (the correct answer for any role with no overlay wiring).
-func (h Handlers) WithSorMode(resolve func(context.Context) (bool, error)) Handlers {
-	h.sorMode = resolve
 	return h
 }
 
@@ -260,25 +257,18 @@ func (h Handlers) accessTokenTTL() *time.Duration {
 	return &ttl
 }
 
-// resolveSorMode names the caller's workspace system-of-record mode for
-// the /me response. A nil resolver (no overlay wiring) is native; a
-// resolver error degrades to native rather than failing /me — the 422
-// read-subset guard still refuses any dial the mirror cannot serve, so a
-// momentary mis-report costs an unsorted list, never a wrong answer.
-func (h Handlers) resolveSorMode(ctx context.Context) crmcontracts.MeResponseSystemOfRecordMode {
-	if h.sorMode == nil {
-		return crmcontracts.Native
-	}
-	overlay, err := h.sorMode(ctx)
-	if err != nil || !overlay {
-		return crmcontracts.Native
-	}
-	return crmcontracts.Overlay
-}
-
 // Login implements (POST /auth/login). The route is public; the singleton
-// organization is bound by the middleware (installation.go).
+// company is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
+	// Before the body is read, and before any budget is spent: a deployment
+	// that closed the password door owes every caller the same answer whatever
+	// they posted, and a refusal that ran the throttle first would let an
+	// installation with no password method still be pushed into rate-limiting
+	// the address it is not authenticating.
+	if !h.passwordLoginOffered() {
+		httperr.NotImplementedBecause(w, r, passwordMethodOff)
+		return
+	}
 	var req crmcontracts.LoginRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -295,7 +285,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, token, err := h.svc.Login(r.Context(), string(req.Email), req.Password)
+	id, session, err := h.svc.Login(r.Context(), string(req.Email), req.Password, presentedDeviceProof(r))
 	if err != nil {
 		if errors.Is(err, ErrBadCredentials) {
 			h.loginFailures.Record(accountKey)
@@ -306,8 +296,9 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setSessionCookie(w, token)
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(id, h.resolveSorMode(r.Context())))
+	setSessionCookie(w, session.Token)
+	setDeviceCookie(w, session.DeviceProof)
+	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }
 
 // Logout implements (POST /auth/logout): revoke + clear, idempotent, 204.
@@ -339,7 +330,7 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	// else's capabilities, and a stored copy would survive the role change that
 	// revoked them.
 	w.Header().Set("Cache-Control", "private, no-store")
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(id, h.resolveSorMode(r.Context())))
+	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }
 
 func setSessionCookie(w http.ResponseWriter, token string) {
@@ -347,6 +338,26 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 		Name: SessionCookieName, Value: token,
 		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
+}
+
+// setDeviceCookie keeps the device proof across browser restarts and logouts —
+// outliving the session is its purpose. It carries the session cookie's
+// attributes, so no script reads it and no cross-site request sends it.
+func setDeviceCookie(w http.ResponseWriter, proof string) {
+	http.SetCookie(w, &http.Cookie{
+		Name: DeviceCookieName, Value: proof, MaxAge: int(deviceProofTTL / time.Second),
+		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
+	})
+}
+
+// presentedDeviceProof is the proof the browser sent, or empty when it sent
+// none — which the lock judges exactly like a proof that does not vouch.
+func presentedDeviceProof(r *http.Request) string {
+	cookie, err := r.Cookie(DeviceCookieName)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
 }
 
 func clearSessionCookie(w http.ResponseWriter) {

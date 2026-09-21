@@ -33,7 +33,7 @@ func (f *fakeVocabulary) VocabularyDocument(context.Context) (json.RawMessage, e
 // this surface refuses to keep, and the reason the grammar was never inlined
 // into query_workspace's input schema either.
 func TestTheVocabularyIsPassedThroughUnchanged(t *testing.T) {
-	const doc = `{"version":"v1","targets":[{"target":"organization",` +
+	const doc = `{"version":"v1","targets":[{"target":"company",` +
 		`"fields":[{"name":"address","kind":"geo","ops":["within_radius"]}]}]}`
 	read := &fakeVocabulary{doc: doc}
 

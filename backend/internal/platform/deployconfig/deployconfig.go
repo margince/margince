@@ -25,10 +25,10 @@ import (
 // Config is the root of margince.yaml. Every section beyond `version` is
 // optional: a missing file (or one holding only `version: 1`) boots an
 // already-bootstrapped installation; bootstrap of an empty database
-// additionally requires `organization` and `bootstrap_admin`.
+// additionally requires `company` and `bootstrap_admin`.
 type Config struct {
 	Version        int             `yaml:"version"`
-	Organization   Organization    `yaml:"organization"`
+	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
 	Auth           Auth            `yaml:"auth"`
@@ -39,7 +39,6 @@ type Config struct {
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
-	OverlayBudget  OverlayBudget   `yaml:"overlay_budget"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
 }
@@ -63,6 +62,19 @@ type Operations struct {
 	// was not production. A capability that erases tenant data is stated, never
 	// inferred from what the deployment happens to be called.
 	AllowDataReset bool `yaml:"allow_data_reset"`
+
+	// AllowTestMailbox arms the test_mailbox connector: the QC-only, no-network
+	// fake mailbox that can both capture and send. Same reasoning as
+	// AllowDataReset: a capability that can fake a real send outcome is
+	// stated here, never inferred from what MARGINCE_ENV happens to say a
+	// deployment is — a staging install is not "non-production" for this
+	// purpose either.
+	//
+	// The zero value is false. Even set, the connector is inert until a human
+	// calls POST /connectors/test_mailbox/connect on themselves, and a rep who
+	// also holds a real gmail/graph grant still sends through that one —
+	// SendableMailProvider picks the first alphabetically capable provider.
+	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
 }
 
 // CompanyContextRollout is the ordered deployment capability for company
@@ -112,10 +124,16 @@ func (c CompanyContext) OnboardingEnabled() bool {
 	return c.EffectiveRollout() == CompanyContextOnboarding
 }
 
-// Organization names the installation's singleton organization. Consumed
-// only when the organization is created; it never reconciles into an
-// existing installation (§6.3 of the ratified concept).
-type Organization struct {
+// Workspace names the installation's singleton workspace — the tenant every
+// row is filed under, and what the schema has always called it. Consumed only
+// when the workspace is created; it never reconciles into an existing
+// installation (§6.3 of the ratified concept).
+//
+// It was spelled `company` until the schema and the config disagreed
+// loudly enough to notice: `workspace` is the table, `workspace_id` is the
+// column on every tenant row, and an operator reading both had to know that
+// the two words meant one thing. Nothing here is the CRM's company record.
+type Workspace struct {
 	Name         string `yaml:"name"`
 	BaseCurrency string `yaml:"base_currency"`
 	BaseLanguage string `yaml:"base_language"`
@@ -124,7 +142,7 @@ type Organization struct {
 
 // BootstrapAdmin identifies the first administrator. The password is a
 // reference so the secret can be deleted after first boot — once the
-// organization exists this whole section may be removed.
+// workspace exists this whole section may be removed.
 type BootstrapAdmin struct {
 	Email       string `yaml:"email"`
 	DisplayName string `yaml:"display_name"`
@@ -233,10 +251,14 @@ type ConsentPurpose struct {
 	DoubleOptIn bool   `yaml:"double_opt_in"`
 }
 
-// Auth selects the enabled authentication methods. Password login
-// defaults to enabled; OIDC arrives with its complete flow (ADR-0061 §6)
-// and has no configuration surface until then — strict decoding makes a
-// premature `oidc:` block a boot error rather than a silent no-op.
+// Auth selects the enabled authentication methods. Password login defaults to
+// enabled, and an installation that puts an identity provider in front of
+// Margince turns it off here.
+//
+// Federated sign-in has no block of its own: which providers a deployment
+// mounts is decided by the credentials and URLs it composes, not by this file,
+// and strict decoding makes a premature `oidc:` block a boot error rather than
+// a silent no-op.
 type Auth struct {
 	Password PasswordAuth `yaml:"password"`
 }
@@ -328,16 +350,16 @@ func (c Config) validate() error {
 	if c.Version != 1 {
 		return fmt.Errorf("deployconfig: unsupported version %d (this build supports version 1)", c.Version)
 	}
-	if c.Organization.Timezone != "" {
-		if _, err := values.ParseTimezone(c.Organization.Timezone); err != nil {
-			return fmt.Errorf("deployconfig: organization.timezone: %w", err)
+	if c.Workspace.Timezone != "" {
+		if _, err := values.ParseTimezone(c.Workspace.Timezone); err != nil {
+			return fmt.Errorf("deployconfig: workspace.timezone: %w", err)
 		}
 	}
-	if cur := c.Organization.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
-		return fmt.Errorf("deployconfig: organization.base_currency %q is not a 3-letter ISO 4217 code", cur)
+	if cur := c.Workspace.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
+		return fmt.Errorf("deployconfig: workspace.base_currency %q is not a 3-letter ISO 4217 code", cur)
 	}
-	if lang := c.Organization.BaseLanguage; lang != "" && !textlang.Known(lang) {
-		return fmt.Errorf("deployconfig: organization.base_language %q is not a language this build speaks (en, de, vi)", lang)
+	if lang := c.Workspace.BaseLanguage; lang != "" && !textlang.Known(lang) {
+		return fmt.Errorf("deployconfig: workspace.base_language %q is not a language this build speaks (en, de, vi)", lang)
 	}
 	if err := c.Rates.validate(); err != nil {
 		return err
@@ -347,12 +369,6 @@ func (c Config) validate() error {
 			return err
 		}
 	}
-	if !c.Auth.PasswordEnabled() {
-		// Fail closed (A107 §14): password login is the only implemented
-		// method — disabling it would brick every human sign-in. The
-		// switch becomes meaningful when OIDC ships its complete flow.
-		return errors.New("deployconfig: auth.password.enabled=false would disable the only implemented login method — refused until another method (OIDC) exists")
-	}
 	if err := c.Seeds.validate(); err != nil {
 		return err
 	}
@@ -360,11 +376,6 @@ func (c Config) validate() error {
 	case CompanyContextOff, CompanyContextRead, CompanyContextTasks, CompanyContextOnboarding:
 	default:
 		return fmt.Errorf("deployconfig: company_context.rollout %q is not off, read, tasks, or onboarding", c.CompanyContext.Rollout)
-	}
-	for name, ib := range c.OverlayBudget {
-		if err := ib.validate(name); err != nil {
-			return err
-		}
 	}
 	if err := c.Uploads.validate(); err != nil {
 		return err

@@ -13,12 +13,12 @@ package briefs
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // LocalDayAt is the calendar date the given instant falls on in the
@@ -40,12 +40,11 @@ func LocalDayAt(ctx context.Context, tx pgx.Tx, now time.Time) (day time.Time, l
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	loc, err := time.LoadLocation(zone)
+	loc, err := storekit.LoadZone(zone)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("brief: the installation timezone %q does not resolve: %w", zone, err)
+		return time.Time{}, time.Time{}, err
 	}
-	local = now.In(loc)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC), local, nil
+	return storekit.WorkspaceDay(now, loc), now.In(loc), nil
 }
 
 // localDay is LocalDayAt for the callers in this package, which need only the
@@ -62,11 +61,11 @@ func insertRunIfDayFree(ctx context.Context, tx pgx.Tx, run BriefRun) (bool, err
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO brief_run (
 			id, user_id, generated_at, as_of, local_day, candidate_count,
-			revenue_norm_minor, revenue_norm_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			revenue_norm_minor, revenue_norm_currency, factors_omitted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT ON CONSTRAINT uq_brief_run_user_day DO NOTHING`,
 		run.ID, run.UserID, run.GeneratedAt, run.AsOf, run.LocalDay, run.CandidateCount,
-		run.RevenueNormMinor, run.RevenueNormCurrency)
+		run.RevenueNormMinor, run.RevenueNormCurrency, run.FactorsOmitted)
 	if err != nil {
 		return false, err
 	}

@@ -124,7 +124,7 @@ func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInpu
 // that means to probe THAT case uses its own v1-only stub and says so.
 func (seamProbeProvider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
 	}, nil
 }
@@ -143,7 +143,7 @@ func (seamProbeProvider) Merge(context.Context, datasource.MergeInput) (datasour
 	return datasource.EntityRef{}, errSeamReached
 }
 
-func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	return datasource.EntityRef{}, false, errSeamReached
 }
 
@@ -168,6 +168,12 @@ type seamProbeReportVocabulary struct{}
 
 func (seamProbeReportVocabulary) ReportVocabularyDocument(context.Context) (json.RawMessage, error) {
 	return nil, errSeamReached
+}
+
+type seamProbeAnalyticsVocabulary struct{}
+
+func (seamProbeAnalyticsVocabulary) AnalyticsVocabularyDocument(context.Context) (string, error) {
+	return "", errSeamReached
 }
 
 type seamProbeRetriever struct{}
@@ -197,7 +203,11 @@ func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, 
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID) (json.RawMessage, error) {
+func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 
@@ -292,13 +302,15 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	// a rule with no exceptions to remember.
 	RegisterGeoProbeTool(r)
 	RegisterLifecycleTools(r, seamProbeProvider{},
-		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
+		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached
 	}, nil)
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
+	RegisterRecordFieldsTool(r, RecordFieldsResource{})
+	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, errSeamReached

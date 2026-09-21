@@ -120,7 +120,7 @@ func TestABodyThatIsNotMultipartIsRefusedBeforeAnythingIsDecoded(t *testing.T) {
 	}
 }
 
-// The name is shown back to a person in the field's history and is under the
+// The name is shown back to a contact in the field's history and is under the
 // control of whoever made the file, so it is cut — by rune, because a cut
 // through a multi-byte character leaves a fragment that is not text.
 func TestTheFilenameIsBoundedByRuneAndTrimmed(t *testing.T) {

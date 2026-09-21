@@ -13,11 +13,11 @@ import (
 // anyone seeing the call first.
 //
 // That is what makes the confirm-first tier work — a 🟡 call from an unattended
-// run stops and waits for a person. A run that could ANSWER an approval would
+// run stops and waits for a contact. A run that could ANSWER an approval would
 // answer its own: stage the call, release it, re-issue it, and the tier is a
-// formality it walks through by itself. The queue tools exist because a person
+// formality it walks through by itself. The queue tools exist because a contact
 // in a conversation can now reach their inbox from it; a scheduled run is the
-// case where there is no such person.
+// case where there is no such contact.
 //
 // So the decide verbs are refused HERE, in the allowlist, rather than at the
 // gate: a passport that may decide is exactly what an interactive caller needs,

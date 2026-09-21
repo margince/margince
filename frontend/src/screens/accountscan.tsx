@@ -10,11 +10,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
 
-export type AccountScan = components["schemas"]["OrganizationScan"];
+export type AccountScan = components["schemas"]["CompanyScan"];
 
 /** The query the page and the rows read the scan under. */
-export function accountScanKey(orgId: string) {
-  return ["account-scan", orgId] as const;
+export function accountScanKey(companyId: string) {
+  return ["account-scan", companyId] as const;
 }
 
 /** Whether a read is in flight: the states the page keeps polling under. */
@@ -44,21 +44,20 @@ const POLL_LIVE_MS = 3000;
  * reader sees it against what it stored and answers with the stored findings,
  * the same findings marked stale, or a queued read — so an open costs a
  * model call only when the account moved and the hourly floor has passed.
- * `enabled` is false where the page cannot ask at all — an overlay
- * workspace, a 360 that has not answered — so nothing is asked for a page
- * that has nothing to show it on.
+ * `enabled` is false where the page cannot ask at all — a 360 that has not
+ * answered — so nothing is asked for a page that has nothing to show it on.
  */
 export function useAccountScan(
-  orgId: string,
+  companyId: string,
   enabled: boolean,
 ): AccountScan | undefined {
   const client = useQueryClient();
   const scan = useQuery({
-    queryKey: accountScanKey(orgId),
+    queryKey: accountScanKey(companyId),
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/scan", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/scan", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -69,9 +68,9 @@ export function useAccountScan(
       scanIsLive(query.state.data) ? POLL_LIVE_MS : false,
   });
   const ensure = useMutation({
-    mutationKey: accountScanKey(orgId),
+    mutationKey: accountScanKey(companyId),
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST("/organizations/{id}/scan", {
+      const { data, error } = await api.POST("/companies/{id}/scan", {
         params: { path: { id } },
       });
       if (error) {
@@ -84,15 +83,15 @@ export function useAccountScan(
     // is cancelled first: it left before the ensure queued anything, and
     // landing after it would put "never" over "queued" and stop the poll.
     onSuccess: async (data) => {
-      await client.cancelQueries({ queryKey: accountScanKey(orgId) });
-      client.setQueryData(accountScanKey(orgId), data);
+      await client.cancelQueries({ queryKey: accountScanKey(companyId) });
+      client.setQueryData(accountScanKey(companyId), data);
     },
   });
   const fire = ensure.mutate;
   useEffect(() => {
     if (enabled) {
-      fire(orgId);
+      fire(companyId);
     }
-  }, [enabled, orgId, fire]);
+  }, [enabled, companyId, fire]);
   return scan.data;
 }

@@ -3,9 +3,14 @@ task: capture_counterparty_verdict
 site: verdict
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
+# The address is deliberately one no deterministic gate settles. A `noreply@`
+# local part is answered off the address before any model call — nobody replies
+# there — so authored at one, this scenario would certify a judgment production
+# never makes. What it measures is the BODY: whether an automated invoice from a
+# paid supplier reads as a contact.
 fixture:
   display_name: Ledgerly Billing
-  email: noreply@billing.ledgerly.example
+  email: ledgerly-system@billing.ledgerly.example
   subject: "Invoice R-2026-11487 for your subscription"
   body: |
     Your invoice R-2026-11487 for EUR 149.00 is now available.
@@ -29,11 +34,11 @@ expect:
     imprecise in label, and scores in the middle. "spam" scores lower again:
     the mail is neither unsolicited nor fraud, and calling a paid supplier's
     invoice fraud is wrong even though it hides it either way.
-    "person" is the failure this scenario exists to catch and scores zero above
+    "contact" is the failure this scenario exists to catch and scores zero above
     the floor: it mints a contact for a robot that has said it will not read a
-    reply. "role_mailbox" and "organization_sender" are also wrong — both would
+    reply. "role_mailbox" and "company_sender" are also wrong — both would
     file this as correspondence a colleague might answer — but they withhold the
-    record and so score above "person".
+    record and so score above "contact".
   bands:
     certified_min: 70
     degraded_min: 50

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import { CompanyRail } from "./companyrail";
 import {
   installFetchStub,
@@ -25,11 +26,12 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
+type Company = components["schemas"]["Company"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company: Company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -40,7 +42,15 @@ const org = {
   size_band: "51-200",
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -48,14 +58,15 @@ const org = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-const populated = {
+const populated: View = {
+  ...company360,
   as_of: "2026-06-01T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         deal_roles: [],
@@ -89,33 +100,45 @@ const populated = {
     active_contacts: 4,
     open_commitments: 2,
   },
-  tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
-} as unknown as View;
+  tags: [{ id: "t-1", name: "Key account" }],
+  projects: [
+    {
+      project_id: "pr-1",
+      name: "Depot fit-out",
+      key: "DEP-12",
+      phase: "delivering",
+      quiet: false,
+      owner_name: "Mira Voss",
+    },
+  ],
+  projects_page: page,
+};
 
-// Health and People withheld, exactly the shape a role scoped away from
+// Health and Contacts withheld, exactly the shape a role scoped away from
 // them reads on any real workspace — no seeded demo account can reach this,
 // so this story is the only place it renders.
-const withheld = {
+const withheld: View = {
+  ...company360,
   ...populated,
   health: undefined,
-  people: undefined,
-  sections_omitted: ["health", "people"],
-} as unknown as View;
+  contacts: undefined,
+  sections_omitted: ["health", "contacts"],
+};
 
 function Rail({ view }: Readonly<{ view: View }>) {
   installFetchStub({
-    // Without a routed session useCan("organization","update") fails closed
+    // Without a routed session useCan("company","update") fails closed
     // (useMe's no-authorization fallback) and canEdit is false for every field
     // the DetailsGrid draws, contradicting this file's own claim that every
     // seeded demo account grants full RBAC.
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     // Payment is the third health meter, sourced from usePaymentHealth off
     // this endpoint rather than off view.health. A no_connection reply
     // leaves payment undefined and the meter never draws, so every story in
     // this file needs a connected summary to show the full three-meter card.
-    "GET /organizations/o-1/finance-summary": () =>
+    "GET /companies/o-1/finance-summary": () =>
       jsonResponse({
-        organization_id: "o-1",
+        company_id: "o-1",
         state: "connected",
         provider: "offline_demo",
         last_synced_at: "2026-08-10T06:00:00Z",
@@ -136,10 +159,9 @@ function Rail({ view }: Readonly<{ view: View }>) {
     <StoryProviders>
       <div style={{ maxWidth: 340 }}>
         <CompanyRail
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={false}
-          composerOpen={false}
           onTab={() => {}}
         />
       </div>

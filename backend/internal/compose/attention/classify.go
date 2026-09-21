@@ -23,39 +23,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// sourceWaiting names the who-is-waiting producer. A named constant rather
-// than the literal at each site: the classifier, the dedupe and the
-// source-unavailable report all reach for it, and a typo in any of them would
-// produce a lane nothing joins up — silently, because each half would still
-// compile.
-const sourceWaiting = "customer_waiting"
-
-// sourceTask names the open-task producer. Named for the reason sourceWaiting
-// is: the owner filter asks whether a row came from the lane that narrowed to
-// one person in its own query, and a typo there would silently drop every task
-// out of the queue it was asked for.
-const sourceTask = "task"
-
-// sourceClaim names the rep's own promises. keepUnowned reads it: a claim has
-// no assignee column, so the row arrives ownerless while already belonging to
-// the rep whose query produced it.
-const sourceClaim = "conversation_claim"
-
-// sourceAtRisk names the quiet-deal producer. Three readers spell it — the
-// bounds table, the category map and the classifier — which is two more than a
-// literal survives.
-const sourceAtRisk = "deal_at_risk"
-
-// subjectDeal is the subject type a deal-shaped row names.
-const subjectDeal = "deal"
-
-// subjectPerson is the subject type a person-shaped row names.
-//
-// A constant for the reason sourceDecay is one: the suppressor pairing the
-// decay lane against a waiting row matches on it, and a misspelt literal there
-// fails silently — it matches nothing, drops nothing, and reads green.
-const subjectPerson = "person"
-
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
@@ -81,9 +48,9 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
+	rows = appendLane(rows, day.DomainQuestions, asOf, classifyDomainQuestion)
 	rows = appendLane(rows, day.AiWorkHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.SyncHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.Notices, asOf, classifySystem)
 	rows = appendLane(rows, day.Introductions, asOf, classifyIntroduction)
 	return rows
@@ -115,15 +82,16 @@ func base(
 	consequence crmcontracts.WorklistItemConsequence,
 ) crmcontracts.WorklistItem {
 	return crmcontracts.WorklistItem{
-		Id:          item.Id,
-		Source:      crmcontracts.WorklistItemSource(item.Source),
-		Category:    category,
-		Level:       level,
-		Consequence: consequence,
-		Kind:        item.Kind,
-		Title:       item.Title,
-		Detail:      item.Detail,
-		CauseRef:    item.CauseRef,
+		Id:           item.Id,
+		Source:       crmcontracts.WorklistItemSource(item.Source),
+		Category:     category,
+		Level:        level,
+		Consequence:  consequence,
+		Kind:         item.Kind,
+		Title:        item.Title,
+		Detail:       item.Detail,
+		NoticeOrigin: item.NoticeOrigin,
+		CauseRef:     item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
 		// label is what the group says. Forwarding only the first is how the
 		// client came to interpolate an identity into a sentence.
@@ -134,32 +102,33 @@ func base(
 		// then cannot pin the write is the last-write-wins this field ends.
 		Version: item.Version,
 		Deal:    dealFactsOf(item),
+		// The human behind the row, where the lane named one: a rep reads
+		// whose row it is before choosing a verb (contacttouch.go).
+		Contact: contactOf(item),
 		// Whose page a meeting's brief opens on. Forwarded rather than derived
 		// here: the lane already decided whether the reader may see anybody on
 		// the meeting, and an absent value is that decision rather than a gap.
-		WithPerson: item.WithPerson,
+		WithContact: item.WithContact,
 		// Forwarded, never re-derived here. The lane already applied the
 		// both-sides-visible rule and set `merge` only where it held, so
 		// carrying the payload keeps the verb and the records it acts on
 		// travelling together: a row offering merge with no pair beneath it
 		// would be a button over records the client cannot name.
-		Pair:       item.Pair,
-		DueAt:      item.DueAt,
-		Overdue:    item.Overdue,
+		Pair:    item.Pair,
+		DueAt:   item.DueAt,
+		Overdue: item.Overdue,
+		// Carried rather than recomputed, for the reason the deadline itself
+		// is: the group was resolved against the assembly's own boundary and
+		// zone, and a second derivation here would need both again.
+		DueGroup: carriedDueGroup(item.DueGroup),
+		// Carried, not re-derived: the lane decided whether there was a way
+		// back, and a queue that answered it again could offer the verb on a
+		// row the lane had already reversed.
+		Undo:       carriedUndo(item.Undo),
 		OccurredAt: item.OccurredAt,
 		Actions:    carriedActions(item.Actions),
 		Because:    []crmcontracts.WorklistReason{},
 	}
-}
-
-// carriedActions passes the lane feed's verbs through unchanged. The queue adds
-// no authority of its own: every verb still routes to the endpoint that owns it.
-func carriedActions(actions []crmcontracts.AttentionItemActions) []crmcontracts.WorklistItemActions {
-	out := make([]crmcontracts.WorklistItemActions, 0, len(actions))
-	for _, action := range actions {
-		out = append(out, crmcontracts.WorklistItemActions(action))
-	}
-	return out
 }
 
 // classifyCommitment: a promise the rep made. Level 2 whether or not it is
@@ -189,7 +158,7 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),
-		// Carried back to the person who APPROVED it, by a lane bound to them.
+		// Carried back to the contact who APPROVED it, by a lane bound to them.
 		ownerRef: ownedByWhoeverIsReading(),
 	}
 }
@@ -199,7 +168,7 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 // levelBlocking, which is "a decision that holds up customer work", because
 // that is precisely what it is: a rep's deal is stopped until this colleague
 // says yes, no, or ask somebody else. It is a DECISION rather than system news
-// — a person must choose, and only this person can.
+// — a contact must choose, and only this contact can.
 //
 // The deadline is stamped like the DSR's, because both are somebody else's
 // clock running and the queue orders by it. An ask that lapses reads to the
@@ -218,26 +187,22 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
-// classifyLegalDeadline: a clock the law started, and the shape BOTH compliance
-// lanes take. A subject request and a disclosure duty differ in what they oblige
-// and in nothing this function decides — same band, same reason, same deadline
-// stamp, same unassigned owner — so they share it rather than drifting apart.
-//
-// UNASSIGNED, for both. Each is a compliance queue rather than a personal one:
-// the lane reads every open item due soonest behind one gate, so several admins
-// see the same row and none owns it by having looked. A subject request has no
-// assignee column at all; a notice case has a nullable owner that is frequently
-// empty, and reading it as an assignment would hide an unowned overdue duty from
-// everybody — the failure the lane exists to prevent.
-//
-// Both lanes reach only privacy admins — they are absent for everyone else — so
-// neither ever needs explaining to a rep.
+// classifyLegalDeadline ranks both compliance clocks by the same deadline.
+// Subject requests remain unassigned; disclosure duties carry the responsible
+// officer, falling back to their contact owner. Ownerless duties remain
+// available in the unassigned view.
 func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelWaiting, "system", "legal_deadline_missed")
+	// Seven days is the agenda preparation window, not a change to the legal deadline.
+	level := levelRoutine
+	if item.DueAt != nil && item.DueAt.Sub(asOf) <= 7*24*time.Hour {
+		level = levelWaiting
+	}
+	row := base(item, level, "system", "legal_deadline_missed")
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
-		ownerRef:   unassigned(),
+		ownerRef:   ownerFromAssignee(item.AssigneeId),
+		owner:      assigneeID(item.AssigneeId),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -253,8 +218,7 @@ func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) rank
 // the page lying about what matters now. Such a row moves to the review band —
 // still visible, still answerable, no longer claiming the day.
 //
-// Unless money is still on it. An open deal keeps a long wait in execution,
-// because there the silence is the problem rather than a closed chapter.
+// Old waits on open deals stay in the revenue recovery band.
 const waitingStaleDays = 14
 
 // classifyWaiting: somebody wrote and nobody answered.
@@ -271,13 +235,15 @@ const waitingStaleDays = 14
 // drafting a reply to words this reader may not see, and a button that opened
 // an empty composer would be worse than no button.
 func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
-	subject := waiting.Subject
 	days := daysSince(waiting.Since, asOf)
-	// Stale and unfunded: the row belongs to review, not to today.
+	// Old threads are recovery work; an open deal preserves material-risk priority.
 	level := levelWaiting
-	stale := days > waitingStaleDays && !waiting.HasOpenDeal
+	stale := days > waitingStaleDays
 	if stale {
 		level = levelRoutine
+		if waiting.HasOpenDeal {
+			level = levelMaterialRisk
+		}
 	}
 	// Nobody here has written on this thread, and no money is on it either.
 	//
@@ -290,22 +256,32 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	//
 	// Money outranks it, exactly as it does for staleness: an open deal on the
 	// thread is a stronger claim than any header the sender chose to send.
-	unproven := !waiting.Engaged && !waiting.HasOpenDeal
+	unproven := !waiting.Engaged && !waiting.HasOpenDeal && !waiting.ConfirmedRequest
 	if unproven {
 		level = levelRoutine
 	}
-	// A message that asks us nothing. A report, a receipt, a statement: the
-	// sender wrote and nobody replied, both true, and neither makes it work.
+	// Written to somebody else.
 	//
-	// DEMOTED, never dropped — the same floor capture_label sits under, and for
-	// a sharper reason here: this is one model call's opinion about a customer's
-	// mail. A wrong one costs a scroll. An UNJUDGED message is not demoted at
-	// all: a classifier that never ran, ran out of budget or answered below its
-	// confidence floor must leave the queue exactly as it found it.
+	// A reader sees mail addressed to a colleague — copied in, or on a record
+	// they own — and the queue called all of it a customer waiting on THEM. The
+	// header is the evidence: capture stamps this mailbox's owner as a
+	// recipient on every message it stores, so the participant row proves only
+	// that the mail arrived.
 	//
-	// Money outranks it, like every other demotion here.
-	informational := waiting.AsksNothing && !waiting.HasOpenDeal
-	if informational {
+	// NO MONEY OVERRIDE, which is what separates this from every demotion
+	// around it. Those ask whether a wait MATTERS, and an open deal is a
+	// stronger claim than a header. This asks WHOSE it is, and a deal on the
+	// thread does not make a colleague's mail into this reader's reply to
+	// write — the colleague has the same row on their own queue, where it is
+	// addressed to them and ranks accordingly.
+	elsewhere := waiting.AddressedElsewhere
+	if elsewhere {
+		level = levelRoutine
+	}
+	// Informational and unconfirmed messages stay reviewable without claiming
+	// priority. A deal's value cannot turn an acknowledgement into an obligation.
+	informational := waiting.AsksNothing
+	if informational || waiting.ActionUnconfirmed {
 		level = levelRoutine
 	}
 	because := []crmcontracts.WorklistReason{
@@ -314,6 +290,9 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	if stale {
 		because = append(because, reason("stale", nil))
+	}
+	if elsewhere {
+		because = append(because, reason("addressed_elsewhere", nil))
 	}
 	if unproven {
 		because = append(because, reason("no_reply_history", nil))
@@ -330,11 +309,14 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Because:     because,
 		Actions:     []crmcontracts.WorklistItemActions{},
 	}
+	if informational || waiting.ActionUnconfirmed || elsewhere {
+		row.Consequence = "none"
+	}
 	// The subject travels because the row exists at all only for a reader the
 	// content gate admitted: a message this reader may not read produces no
 	// row, rather than a row with its words removed.
-	if subject != "" {
-		row.Title = &subject
+	if waiting.Subject != "" {
+		row.Title = &waiting.Subject
 	}
 	// Present exactly when this wait is an email the reader may read. A client
 	// branches on the field rather than on the kind word: the lane also carries
@@ -342,14 +324,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	row.EmailSummary = waiting.EmailSummary
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
-	switch {
-	case !waiting.DealID.IsZero():
-		row.Subject = subjectOf(subjectDeal, waiting.DealID)
-	case !waiting.PersonID.IsZero():
-		row.Subject = subjectOf("person", waiting.PersonID)
-	case !waiting.OrganizationID.IsZero():
-		row.Subject = subjectOf("organization", waiting.OrganizationID)
-	}
+	row.Subject = waitingSubject(waiting)
+	// The sender, whatever the subject: a thread filed under a deal is still a
+	// message from a contact, and the reply goes to them.
+	row.Contact = waitingContact(waiting)
 	if openableSubject(row.Subject) {
 		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
 		// Answering where the reader is standing, offered only for an EMAIL. The
@@ -388,6 +366,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		waitingDays: days,
 		waitingRank: orderingAge(days),
 		occurredAt:  waiting.Since,
+		// Whether this message is in a conversation, which decides what the
+		// reader is offered: two of the three dispositions are keyed on the
+		// thread and a threadless row can perform neither.
+		threaded: waiting.Threaded,
 		// Who owes the reply, so the scope filters can judge this row the way
 		// they judge a deal-bearing one. A wait carries no deal on the wire, and
 		// without this it is a row the filters cannot place: a named owner's
@@ -404,7 +386,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.
-		person: waiting.PersonID,
+		contact: waiting.ContactID,
 	}
 }
 
@@ -456,13 +438,24 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
-// nobody dated is real work and is not today's.
+// without a date stays actionable without claiming an invented deadline.
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelAgreed, "tasks", "task_slips")
+	level := levelAgreed
+	// A due customer obligation needs attention even if its deal is small.
+	// Prospecting follow-ups retain their dates without claiming an external
+	// response deadline; that clock belongs to the lead-response lane.
+	if item.DueAt != nil && (overdueAt(item.DueAt, asOf) || (item.DueGroup != nil && *item.DueGroup == crmcontracts.AttentionItemDueGroupToday)) &&
+		(item.Subject == nil || item.Subject.Type != subjectLead) {
+		level = levelPromise
+	}
+	row := base(item, level, "tasks", "task_slips")
 	stampDeadline(&row, item.DueAt, asOf)
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
-	} else if item.DueAt != nil {
+	} else if item.DueAt != nil && !isUpcoming(item.DueGroup) {
+		// Only work that IS due today says so. The lane now also carries what
+		// is coming, and a task due next week telling the reader it is due
+		// today contradicts the group on the same row.
 		row.Because = append(row.Because, reason("due_today", nil))
 	}
 	// Nobody has taken it. The same fact the lead lane states, and this lane
@@ -488,5 +481,18 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// which now also puts an outside-team colleague's user id on the wire
 		// through the owner field. One assignee, read by both.
 		owner: assigneeID(item.AssigneeId),
+	}
+}
+
+func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {
+	switch {
+	case !waiting.DealID.IsZero():
+		return subjectOf(subjectDeal, waiting.DealID)
+	case !waiting.ContactID.IsZero():
+		return subjectOf("contact", waiting.ContactID)
+	case !waiting.CompanyID.IsZero():
+		return subjectOf("company", waiting.CompanyID)
+	default:
+		return nil
 	}
 }

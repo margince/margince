@@ -13,7 +13,6 @@ import {
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { localDateTimeValue } from "../format/calendarday";
@@ -31,8 +30,10 @@ import {
   problemMessageOf,
   QueryStates,
   throwProblem,
+  WriteRefused,
 } from "./common";
 import { scheduleFields } from "./compose";
+import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
 
@@ -45,7 +46,7 @@ import { useSendPermission } from "./usesendpermission";
 // It is the SENDER's own list, not the workspace's (ADR-0104/A155): an unsent
 // body and its blind-copy list are not workspace-readable the way a sent
 // activity is, and the server lists only what the caller scheduled. So there is
-// no owner column here and no sharing affordance — the page is one person's.
+// no owner column here and no sharing affordance — the page is one contact's.
 
 type ScheduledSend = components["schemas"]["ScheduledSend"];
 type Status = ScheduledSend["status"];
@@ -57,7 +58,7 @@ export const SCHEDULED_SCREEN = "scheduled" as const;
  * The three groups a rep reads this page in, which are NOT the five wire
  * statuses.
  *
- * `held` is first because it is the only group that is waiting on a person: a
+ * `held` is first because it is the only group that is waiting on a contact: a
  * gate refused at fire, or the moment passed while nothing was running, and the
  * message will not send itself. `waiting` is the queue proper. `closed` is
  * everything that is no longer going to change on its own — released, sent,
@@ -92,6 +93,20 @@ const GROUP_EMPTY: Record<Group, MessageKey> = {
   waiting: "sched.group.waitingEmpty",
   closed: "sched.group.closedEmpty",
 };
+
+// What each status SAYS, in the five-state vocabulary. `scheduled` is work
+// still in flight, `sent` is the favourable outcome, `held` needs a human
+// before it can go, and `cancelled` is a send that will never happen. The
+// ternary this replaces gave every status but `held` the neutral pill, so a
+// send that landed and one a rep withdrew were the same grey word.
+const STATUS_TONE: Record<Status, "info" | "success" | "warning" | undefined> =
+  {
+    scheduled: "info",
+    released: "info",
+    sent: "success",
+    cancelled: undefined,
+    held: "warning",
+  };
 
 const STATUS_LABEL: Record<Status, MessageKey> = {
   scheduled: "sched.status.scheduled",
@@ -231,7 +246,6 @@ function MoveControl({
   if (!open) {
     return (
       <Button
-        small
         onClick={() => {
           setDraft(localDateTimeValue(send.scheduled_at));
           setOpen(true);
@@ -254,7 +268,6 @@ function MoveControl({
         style={{ maxWidth: 220 }}
       />
       <Button
-        small
         variant="primary"
         disabled={fields.scheduled_at === undefined}
         pending={pending}
@@ -270,9 +283,7 @@ function MoveControl({
       >
         {t("sched.moveSave")}
       </Button>
-      <Button small onClick={() => setOpen(false)}>
-        {t("sched.moveCancel")}
-      </Button>
+      <Button onClick={() => setOpen(false)}>{t("sched.moveCancel")}</Button>
     </>
   );
 }
@@ -327,16 +338,14 @@ function SendRow({
           <br />
           <Moment send={send} readerZone={readerZone} />
         </span>
-        {send.status === "held" ? (
-          <Badge tone="warn">{t(STATUS_LABEL[send.status])}</Badge>
-        ) : (
-          <Badge quiet>{t(STATUS_LABEL[send.status])}</Badge>
-        )}
+        <Badge tone={STATUS_TONE[send.status]}>
+          {t(STATUS_LABEL[send.status])}
+        </Badge>
         {actionable && (
           <MoveControl send={send} pending={movePending} onMove={onMove} />
         )}
         {actionable && (
-          <Button small variant="danger" onClick={() => onWithdraw(send)}>
+          <Button variant="danger" onClick={() => onWithdraw(send)}>
             {t("sched.withdraw")}
           </Button>
         )}
@@ -347,9 +356,7 @@ function SendRow({
           unmapped token prints nothing rather than the token — a reason nobody
           can act on is worse than the sentence above it standing alone. */}
       {heldReasonKey && (
-        <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
-          {t(heldReasonKey)}
-        </p>
+        <p style={{ marginTop: "var(--space-1)" }}>{t(heldReasonKey)}</p>
       )}
       {/* The held reason above says a gate stopped it; this says WHOSE decision
           that was and whether anybody may change it, in the same words the
@@ -358,6 +365,7 @@ function SendRow({
       {actionable && (
         <SendPermission
           preview={permission.preview}
+          asking={permission.asking}
           unanswered={permission.unanswered}
         />
       )}
@@ -460,19 +468,9 @@ export function ScheduledSendsScreen() {
     // titles.
     <div className="wrap">
       {skew && (
-        <Callout
-          tone="warn"
-          live="status"
-          actions={
-            <Button small onClick={() => void query.refetch()}>
-              {t("sched.reload")}
-            </Button>
-          }
-        >
-          {skew}
-        </Callout>
+        <QueueSkewNotice message={skew} onReload={() => void query.refetch()} />
       )}
-      {writeError && <Callout tone="danger">{writeError}</Callout>}
+      <WriteRefused titleKey="sched.writeFailed" message={writeError} />
       <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
         {query.data && query.data.length === 0 ? (
           // One sentence for the whole page, not one per group: a rep who has

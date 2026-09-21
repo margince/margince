@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func seedToolDeals(t *testing.T, e *integration.Env) {
@@ -84,6 +86,26 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 	}
 }
 
+// An unknown population is refused WITH the allowed set — the tool's own
+// description promises it, and a tools-only caller has no other route to the
+// names: the schema lives at a resource such a client cannot open, so a
+// refusal that only points there is a dead end.
+func TestAnUnknownPopulationIsRefusedWithTheAllowedSet(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	run := analyticsQueryToolRunner(e.DB())
+	_, err := run(ctx, json.RawMessage(`{"entity":"deal","measures":[{"fn":"count"}]}`))
+	if err == nil {
+		t.Fatal("a population the schema does not carry was answered")
+	}
+	// The refusal must name at least one population that WOULD work, proved
+	// against the entity the passing tests above ask about.
+	if !strings.Contains(err.Error(), "deals-by-stage") {
+		t.Errorf("the refusal names no allowed population, so a tools-only caller "+
+			"cannot recover from it: %v", err)
+	}
+}
+
 // An argument key the engine does not serve is refused by name, not dropped.
 func TestTheAnalyticsToolRefusesAnUnservedArgument(t *testing.T) {
 	e := integration.Setup(t)
@@ -104,5 +126,153 @@ func TestTheAnalyticsToolRefusesTrailingContent(t *testing.T) {
 	if _, err := run(e.Admin(), json.RawMessage(
 		`{"entity":"deals-by-stage","measures":[{"fn":"count"}]} {"save":true}`)); err == nil {
 		t.Fatal("trailing content after the arguments was silently ignored")
+	}
+}
+
+// Every dimension of every population, asked with a number: none may answer a
+// server fault.
+//
+// A census rather than the one field an incident named. period_year was the
+// first grain a model spelled the way JSON spells a year, and nothing about it
+// was special — every text-valued dimension took the same route to the same
+// opaque "the tool failed for an internal reason", which is advice an agent
+// can only retry. A case naming one field would pass while the rest stayed
+// broken.
+//
+// It reads the vocabulary this caller was HANDED rather than a list kept here,
+// so a dimension added to any spec is covered the day it appears, and a
+// column left out of columnValueShapes shows up as a refusal a caller can
+// act on rather than as a fault.
+func TestNoDimensionAnswersAJSONNumberWithAServerFault(t *testing.T) {
+	e := integration.Setup(t)
+	seedToolDeals(t, e)
+	ctx := e.Admin()
+	run := analyticsQueryToolRunner(e.DB())
+
+	asked := 0
+	schema := AnalyticsSchemaFor(ctx)
+	for _, entity := range schema.EntityNames() {
+		for _, name := range schema.Entities[entity].FieldNames(analyticsquery.KindDimension) {
+			asked++
+			_, err := run(ctx, json.RawMessage(fmt.Sprintf(
+				`{"entity":%q,"measures":[{"fn":"count"}],"filters":[{"field":%q,"op":"eq","value":2026}]}`,
+				entity, name)))
+			if err == nil {
+				// The column holds a number and 2026 bound to it, which is the
+				// other honest answer to this question.
+				continue
+			}
+			if _, classified := httperr.Classify(err); !classified {
+				t.Errorf("%s.%s answered a number with an unclassified fault, which reaches the caller "+
+					"as an opaque server error they cannot act on: %v", entity, name, err)
+			}
+		}
+	}
+	// A census that read nothing reports PASS with no assertion to notice, so
+	// it says how much tree it covered before it claims anything.
+	if asked == 0 {
+		t.Fatal("the census found no dimension to ask about, so it proved nothing")
+	}
+}
+
+// The other direction: a column TYPED as a number or a yes-or-no must actually
+// take one.
+//
+// Under-typing a column costs a caller a round trip — they are told to quote
+// it, and quoting works. Over-typing costs them the fault this whole change
+// exists to remove, because the literal is admitted and then cannot bind. Only
+// the database can settle which, so the case asks it.
+func TestATypedDimensionTakesTheLiteralItsTypePromises(t *testing.T) {
+	e := integration.Setup(t)
+	seedToolDeals(t, e)
+	ctx := e.Admin()
+	run := analyticsQueryToolRunner(e.DB())
+
+	literals := map[analyticsquery.ColumnShape]string{
+		analyticsquery.ShapeNumber:  "50",
+		analyticsquery.ShapeBoolean: "true",
+	}
+	asked := 0
+	schema := AnalyticsSchemaFor(ctx)
+	for _, entity := range schema.EntityNames() {
+		for _, name := range schema.Entities[entity].FieldNames(analyticsquery.KindDimension) {
+			literal, typed := literals[schema.Entities[entity].Fields[name].Shape]
+			if !typed {
+				continue
+			}
+			asked++
+			if _, err := run(ctx, json.RawMessage(fmt.Sprintf(
+				`{"entity":%q,"measures":[{"fn":"count"}],"filters":[{"field":%q,"op":"eq","value":%s}]}`,
+				entity, name, literal))); err != nil {
+				t.Errorf("%s.%s is typed %s and refused %s: %v", entity, name,
+					schema.Entities[entity].Fields[name].Shape, literal, err)
+			}
+		}
+	}
+	if asked == 0 {
+		t.Fatal("no dimension carries a type, so this proved nothing — either the types " +
+			"were lost or the seam stopped reading them")
+	}
+}
+
+// Every dimension of every population, asked with a STRING that is not a valid
+// value of its column: none may answer a server fault either.
+//
+// The sibling above covers a value whose JSON SHAPE cannot bind — a number
+// against a text column, refused before any SQL runs. This is the other half of
+// the same complaint, and it fails for a different reason: a string binds to
+// any column as far as the driver is concerned, so `{"field":"owner_id",
+// "op":"eq","value":"1"}` reaches Postgres and faults there, on a column that
+// holds a uuid. That error matches nothing in httperr.Classify, so it reaches
+// the caller as "the tool failed for an internal reason; nothing may have
+// changed. Retry." — advice that sends an agent retrying what cannot succeed,
+// which is the exact behaviour the sibling fix exists to stop.
+//
+// "1" is chosen because it is not a valid uuid and not a valid timestamp, while
+// being a perfectly ordinary value for a text column to hold none of. So a text
+// dimension answers it with no rows and no error, and only a column whose type
+// it cannot satisfy can fault on it.
+//
+// The fault is classified today — httperr's IsInvalidValueForType answers
+// SQLSTATE 22P02 with a 422 that says "do not retry unchanged" — so this passes
+// as written. It is here because that is the property, not the incident: remove
+// the classification and this names six uuid dimensions across four
+// populations, which is what the original report found by hand on one.
+// notAnID is a string no uuid or timestamp column can hold and any text one can.
+const notAnID = "1"
+
+func TestNoDimensionAnswersAStringItCannotHoldWithAServerFault(t *testing.T) {
+	e := integration.Setup(t)
+	seedToolDeals(t, e)
+	ctx := e.Admin()
+	run := analyticsQueryToolRunner(e.DB())
+
+	asked := 0
+	schema := AnalyticsSchemaFor(ctx)
+	for _, entity := range schema.EntityNames() {
+		for _, name := range schema.Entities[entity].FieldNames(analyticsquery.KindDimension) {
+			asked++
+			_, err := run(ctx, json.RawMessage(fmt.Sprintf(
+				`{"entity":%q,"measures":[{"fn":"count"}],"filters":[{"field":%q,"op":"eq","value":%q}]}`,
+				entity, name, notAnID)))
+			if err == nil {
+				// The column can hold "1" and matched nothing, which is the
+				// other honest answer to this question.
+				continue
+			}
+			if _, classified := httperr.Classify(err); !classified {
+				t.Errorf("%s.%s answered the string %q with an unclassified fault, which reaches the "+
+					"caller as an opaque server error they can only retry: %v\n"+
+					"\tEither the database's refusal needs a class in httperr (a uuid column answers "+
+					"SQLSTATE 22P02, which IsInvalidValueForType already recognises), or the column "+
+					"needs a shape in columnValueShapes so the value is refused before any SQL runs.",
+					entity, name, notAnID, err)
+			}
+		}
+	}
+	// A census that read nothing reports PASS with no assertion to notice, so
+	// it says how much tree it covered before it claims anything.
+	if asked == 0 {
+		t.Fatal("the census found no dimension to ask about, so it proved nothing")
 	}
 }

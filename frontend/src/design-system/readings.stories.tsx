@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Building2, Globe, Link2, MapPin, Users } from "lucide-react";
+import { Building2, Globe, Hash, Link2, MapPin, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
+import { Badge } from "./atoms";
 import { BarList, Chip, Meter, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
@@ -35,7 +36,7 @@ export const Meters: Story = {
       </div>
       <div>
         <p className="t-caption">Payment behaviour — low is the bad end</p>
-        <Meter value={3} max={10} label="Payment behaviour" tone="warn" />
+        <Meter value={3} max={10} label="Payment behaviour" tone="warning" />
       </div>
       <div>
         <p className="t-caption">Nothing measured yet</p>
@@ -123,6 +124,43 @@ export const Chips: Story = {
   ),
 };
 
+// The row a chip and a badge share: a name and the marks on it, one line.
+const NAME_CELL = {
+  display: "flex",
+  alignItems: "center",
+  gap: "var(--space-2)",
+};
+
+// dense against default, each in the cell it is drawn for, because the size is
+// only legible as a comparison: on its own the default chip looks right, and it
+// is beside the badge that it reads as the loudest thing in a cell whose subject
+// is the NAME. Read it in both themes — the chip carries a border and the badge
+// a fill, and the two sit differently against a dark ground.
+export const DenseChips: Story = {
+  render: () => (
+    <>
+      <div>
+        <p className="t-caption">Default — the chip in a record's head</p>
+        <span style={NAME_CELL}>
+          <strong>Northwind Traders</strong>
+          <Chip icon={Hash}>NWT-4</Chip>
+          <Badge tone="warning">Archived</Badge>
+        </span>
+      </div>
+      <div>
+        <p className="t-caption">dense — the same chip in a table row</p>
+        <span style={NAME_CELL}>
+          <strong>Northwind Traders</strong>
+          <Chip icon={Hash} dense>
+            NWT-4
+          </Chip>
+          <Badge tone="warning">Archived</Badge>
+        </span>
+      </div>
+    </>
+  ),
+};
+
 // A ranking: several bars on ONE denominator, which is the whole difference
 // between this and a column of Meters.
 export const Bars: Story = {
@@ -139,12 +177,12 @@ export const Bars: Story = {
   ),
 };
 
-// The caller's whole as the denominator: four stages of a pipeline that holds
-// more than they add up to, so no bar claims to be everything.
+// The caller's whole as the denominator: four stages drawn from open deals
+// that total more than the bars add up to, so no bar claims to be everything.
 export const BarsAgainstAWhole: Story = {
   render: () => (
     <BarList
-      label="Open pipeline by stage"
+      label="Open deals by stage"
       max={200}
       rows={[
         { key: "qualified", label: "Qualified", value: 80, amount: "€80,000" },
@@ -154,7 +192,7 @@ export const BarsAgainstAWhole: Story = {
           label: "Slipped",
           value: 12,
           amount: "€12,000",
-          tone: "warn",
+          tone: "warning",
         },
       ]}
     />

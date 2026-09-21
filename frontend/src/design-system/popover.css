@@ -15,8 +15,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
-  color: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -27,10 +25,31 @@
   border-radius: var(--r-sm);
 }
 
+/* A refused text trigger. The shape that draws its own chrome above has to draw
+   its own refusal too: the `.btn` shape takes `.btn:disabled` from base.css and
+   needs nothing here, while this one kept full ink and a pointer cursor and so
+   read as live.
+
+   The house spelling for a refused control that is not a filled button —
+   `.iconbtn:disabled`, `.btn:disabled` — and deliberately not a colour swap:
+   base.css gives the reason where it fades rather than re-grounds a dead
+   button, which is that a swapped ground inverts in dark. A fade is one
+   declaration in both themes, and this trigger's ink is `inherit`, so there is
+   no colour of its own to swap. */
+.popover-trigger:not(.btn):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Fixed, because it is placed against the trigger's viewport rectangle
    (anchored.ts). Narrow on purpose: what goes in here is read once, and a wide
    panel over the page reads as a second card rather than as an aside to the
-   one underneath. */
+   one underneath.
+   NOT the menu anatomy (design-system/listtable.css, .lt-menu), and this is the
+   line between the two: a menu is a list of things to choose and its inset is a
+   row's, an aside is PROSE and its inset is a reading's. The one place a
+   popover does hold verbs — the compose send menu — hands them over as `Button`
+   atoms, which already stand --controlHeight tall. */
 .popover-panel {
   position: fixed;
   /* Above the modal (atoms.css: scrim 50, dialog 60), not below it like the
@@ -52,7 +71,4 @@
      rather than its own. */
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-  color: var(--textContent);
 }

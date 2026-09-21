@@ -11,7 +11,7 @@
 #
 # MARGINCE_ENV=dev relaxes the production-only postures (an unlicensed install
 # warns rather than refuses, the data reset is reachable). It does NOT switch on
-# a workspace header: one installation serves one organization (ADR-0061), the
+# a workspace header: one installation serves one company (ADR-0061), the
 # server resolves it itself, and no request selects a tenant. localhost is a
 # browser secure-context, so the Secure session cookie survives over plain
 # http — no TLS front door needed.
@@ -28,9 +28,11 @@
 # no secret literal beyond the shared dev defaults, and there is one set of names
 # rather than two.
 #
-#   scripts/dev.sh up    [slug] [--fresh]  # spin infra + db + api + FE
-#   scripts/dev.sh stop  [slug] [--drop]   # stop THIS stack; --drop also drops its db
-#   scripts/dev.sh sweep       [--drop]    # stop EVERY stack on the machine
+#   scripts/dev.sh up       [slug] [--fresh]  # spin infra + db + api + FE
+#   scripts/dev.sh stop     [slug] [--drop]   # stop THIS stack; --drop also drops its db
+#   scripts/dev.sh sweep          [--drop]    # stop EVERY stack on the machine
+#   scripts/dev.sh snapshot [slug]            # copy this stack's db to its template
+#   scripts/dev.sh restore  [slug]            # put the db back as the template holds it
 set -euo pipefail
 # Runtime state (logs, pids, claims) lives under dev_state_root below, one
 # directory per machine rather than per worktree — keep everything this script
@@ -63,6 +65,30 @@ repo_root="$PWD"
 COMPOSE_OWNER_DSN="postgres://margince_owner:dev@localhost:15432/margince"
 COMPOSE_APP_DSN="postgres://margince_app:margince_app_dev@localhost:15432/margince"
 
+# .env.local FIRST, before anything below resolves a default out of the
+# environment.
+#
+# It used to be sourced deep inside the `dev` command, beside the AI block that
+# needed the cloud keys — which is after every `${VAR:-default}` in this file
+# has already run. So the file lost every question it was asked: the DSN
+# resolution below explained in a comment that it consults MARGINCE_DSN, and did
+# so against an environment that had not yet been read. A value set in
+# .env.local looked meaningful and did nothing, which is the failure this whole
+# file has now made twice.
+#
+# Seeded here too, and on every invocation rather than only on `dev`: the seed
+# and the read are one step, and splitting them is what let the read move.
+seed_and_source_env_local() {
+    if [[ ! -f .env.local && -f .env.example ]]; then
+        cp .env.example .env.local
+        echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
+    fi
+    if [[ -f .env.local ]]; then
+        set -a; . ./.env.local; set +a
+    fi
+}
+seed_and_source_env_local
+
 # This stack's connection surface, resolved the way the product resolves it:
 # an explicit argument, else the environment the binaries themselves read, else
 # the compose default. OWNER_DSN runs migrations; APP_DSN is the non-superuser
@@ -80,6 +106,39 @@ REDIS_PORT="${REDIS_PORT:-16379}"
 # well-known throwaway dev credential the compose stack already ships, never a
 # production secret.
 MINIO_PORT="${MINIO_PORT:-29000}"
+
+# WHAT THIS STACK OWNS, AND WHAT IT MERELY DEFAULTS.
+#
+# `make dev` owns what makes this a per-worktree dev stack: MARGINCE_ENV, the
+# database name, the Redis logical database and the port pair. Override those
+# and you do not have this stack any more — you have a stack that looks like it
+# and answers somebody else's rows.
+#
+# Everything else it sets is a DEFAULT. The blobstore four point at the MinIO
+# the compose stack starts, and pointing them at a real object store instead is
+# a thing an engineer legitimately wants; they were passed as command-prefix
+# assignments, which outrank an exported variable, so a value set in .env.local
+# was read, exported and then discarded with nothing said.
+# Its own function so a test can call it rather than read it: the failure this
+# replaces was a resolution that looked right in the file and lost at runtime.
+resolve_stack_environment() { # minio_port
+    MARGINCE_BLOBSTORE_ENDPOINT="${MARGINCE_BLOBSTORE_ENDPOINT:-localhost:${1}}"
+    MARGINCE_BLOBSTORE_ACCESS_KEY="${MARGINCE_BLOBSTORE_ACCESS_KEY:-minioadmin}"
+    MARGINCE_BLOBSTORE_SECRET_KEY="${MARGINCE_BLOBSTORE_SECRET_KEY:-minioadmin}"
+    MARGINCE_BLOBSTORE_REGION="${MARGINCE_BLOBSTORE_REGION:-us-east-1}"
+    export MARGINCE_BLOBSTORE_ENDPOINT MARGINCE_BLOBSTORE_ACCESS_KEY \
+        MARGINCE_BLOBSTORE_SECRET_KEY MARGINCE_BLOBSTORE_REGION
+
+    # MARGINCE_ENV is this script's, and says so rather than winning silently.
+    # A `make dev` that booted a production posture would refuse an unlicensed
+    # install and hide the data reset, for a reason nobody would connect to a
+    # line in their own .env.local.
+    if [[ -n "${MARGINCE_ENV:-}" && "${MARGINCE_ENV}" != "dev" ]]; then
+        echo "dev: MARGINCE_ENV=${MARGINCE_ENV} is set, and this stack runs as dev regardless — the dev postures are what \`make dev\` is. Run the binary yourself to serve another posture."
+    fi
+    export MARGINCE_ENV=dev
+}
+resolve_stack_environment "$MINIO_PORT"
 
 # Slug, state root and bucket come from the shared helper — three scripts need
 # the same answers and dev.sh knowing them alone is how `make dev-logs` came to
@@ -366,7 +425,11 @@ else
   label="dev '$slug'"
   db="margince_dev_${slug}"
 fi
-blob_bucket="$(dev_bucket_for_slug "$slug")"
+# The bucket is a DEFAULT like the other three: the per-worktree name keeps two
+# stacks off each other's objects, and an engineer pointing the endpoint at a
+# real store names the bucket there too. Nothing here has to create it —
+# blobstore.New makes a missing bucket — so an override costs no setup step.
+blob_bucket="${MARGINCE_BLOBSTORE_BUCKET:-$(dev_bucket_for_slug "$slug")}"
 # :8080 is THE port — the app, the thing a human opens, always and only. The api
 # sits behind it at fe+10000 and the app's dev server proxies /v1 and the probes
 # through, so `curl localhost:8080/v1/...` still answers and nobody has to
@@ -386,7 +449,7 @@ port_listeners() { # port
 }
 
 # The Redis instance serves 80 logical databases in three blocks that must not
-# overlap (infra/docker-compose.dev.yml says the same): 0 is the primary
+# overlap (docker-compose.dev.yml says the same): 0 is the primary
 # worktree's stack, 1..63 belong to the parallel integration lane one per
 # package, and 64..79 are these per-worktree stacks. A stack landing in the test
 # range would have its streams FLUSHDB'd mid-run by a suite that believes it
@@ -652,20 +715,17 @@ dev_app_url="$(with_database "$APP_DSN" "$db")"
 
 # The owner DSN reaches cmd/migrate through the environment rather than argv (it
 # carries a password, and argv is world-readable), but it is assigned PER COMMAND
-# below — never exported here. An export would hand the superuser credential to
-# every child this script starts, and the api and worker have no use for it: the
-# api connects as margince_app precisely because it is UNPRIVILEGED: it owns no
-# table, cannot alter the schema, and cannot bypass a grant, none of which is
-# true of the superuser margince_owner is in the compose stack. Core carries no
-# row-level security, so the role separation is the boundary rather than a
-# backstop behind one.
+# below — never exported here. Only migrations and the api's separate
+# custom-field schema pool need it; the worker and frontend do not. The api's
+# ordinary pool still connects as margince_app: runtime DDL belongs to the
+# governed custom-field engine, not to ordinary record writes.
 
 # psql is NOT a host requirement (hosts need Go + Docker only): every ad-hoc
 # SQL statement runs inside the compose postgres container, the same way
 # `make db-init` applies scripts/db-init.sql.
 #
 # WHICH container is resolved from the DSN's own port, not from the compose
-# project. infra/docker-compose.dev.yml pins `name: margince`, so every checkout
+# project. docker-compose.dev.yml pins `name: margince`, so every checkout
 # on one machine resolves to the same project and `compose exec` lands in
 # whichever brought the stack up first — while the api, the worker and the
 # migrator connect through this DSN. Two ways to name one database, and when
@@ -943,6 +1003,24 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
   rm -rf "$(dev_state_root)"/*
 }
 
+# ensure_infra brings the containers up QUIETLY, and says everything if it fails.
+#
+# `make db-up >/dev/null` is not quiet: compose writes its per-container progress
+# to stderr, so a lane that calls this between runs prints nine lines of
+# "Container margince-redis-1 Healthy" around every one of them and buries its
+# own output. Redirecting stderr as well would be the other mistake — an
+# infrastructure failure here is the reason every statement after it fails, and
+# swallowing it leaves a caller reading a psql error about a database that was
+# never reachable.
+ensure_infra() {
+  local out
+  if ! out="$(make db-up 2>&1)"; then
+    printf '%s\n' "$out" >&2
+    echo "FAIL: the dev infrastructure could not be brought up" >&2
+    exit 1
+  fi
+}
+
 drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left behind
   local strays
   strays=$(psql_owner postgres -tAc \
@@ -1013,7 +1091,7 @@ up)
     # The base `margince` db already exists (db-up + db-init); only a slugged
     # env needs its own database created.
     [[ -n "$slug" ]] && psql_owner postgres -c "CREATE DATABASE \"${db}\"" 2>&1 || true
-    # The composed workspace (ADR-0069): materialize build/composition/
+    # The composed workspace (ADR-0120): materialize build/composition/
     # and build the role binaries against it, so an enabled extension set
     # under extensions/ reaches the dev stack; vanilla composes empty.
     #
@@ -1063,14 +1141,9 @@ up)
   # .env.local exports those vars, and the api/worker started below inherit them —
   # no key ever lands in a config file. Seed .env.local from the tracked template
   # on first run so a fresh clone has a documented place for these keys.
-  if [[ ! -f .env.local && -f .env.example ]]; then
-    cp .env.example .env.local
-    echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
-  fi
+  # Already sourced, at the top of this file — see seed_and_source_env_local.
+  # The keys the scan below looks for are in the environment by now.
   ai_flag=(--ai-fake)
-  if [[ -f .env.local ]]; then
-    set -a; . ./.env.local; set +a
-  fi
   # Real routing needs the key for EVERY cloud provider the routing file
   # actually binds — SelectBrain fails closed at boot on the first bound
   # provider whose env key is missing, so "any key present" is not enough
@@ -1155,7 +1228,7 @@ up)
   # Exported unconditionally, and it used to be exported only inside the branch
   # below. A dev stack with no Gmail app in .env.local therefore mounted no
   # transport, so a stored app could never run its consent flow — and the
-  # connect step reported "your organization has not registered its Google app
+  # connect step reported "your company has not registered its Google app
   # yet" to somebody who had just registered one, because the roster could not
   # tell an unregistered app from an unusable deployment. Not a secret: a fixed
   # dev constant, overridden by .env.local where one is set.
@@ -1183,10 +1256,10 @@ up)
   fi
 
   # The deployment configuration (A107/ADR-0061): the api bootstraps the demo
-  # organization itself at boot — no public provisioning endpoint exists. Seeded
+  # company itself at boot — no public provisioning endpoint exists. Seeded
   # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml
   # and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
-  # can edit org details or runtime
+  # can edit company details or runtime
   # posture (e.g. ai.capture_payloads for Layer-3 capture) and it persists across
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
   deploy_cfg="config/margince.yaml"
@@ -1204,7 +1277,7 @@ up)
   fi
   if [[ ! -f "$deploy_cfg" ]]; then
     cp config/margince.example.yaml "$deploy_cfg"
-    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change org/admin or AI posture (e.g. ai.capture_payloads)"
+    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
   fi
   # The dev posture's own differences — the Reset data button among them — live
   # in the TRACKED config/margince.dev.yaml, which MARGINCE_ENV=dev selects on
@@ -1267,12 +1340,8 @@ up)
   # relay: it coexists with the worker's standalone relay (started below) —
   # outbox rows are claimed FOR UPDATE SKIP LOCKED, so two relays never
   # double-ship.
-  MARGINCE_ENV=dev \
-    MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
-    MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
+  MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
     --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
@@ -1287,7 +1356,7 @@ up)
     exit 1
   fi
   # No demo records: `make dev` brings up a COLD START — the installation the
-  # api bootstrapped from the deployment config (one organization, one admin
+  # api bootstrapped from the deployment config (one company, one admin
   # seat) and nothing else, so onboarding, empty states, and first-run flows are
   # what a developer sees by default. Demo data is an explicit opt-in step:
   # `make seed-dev` (API records + the FX/RBAC fixture) jumps over the cold
@@ -1320,12 +1389,7 @@ up)
     # A short poll makes the demo mailbox responsive; the default is 2m.
     worker_gmail_flags=(--gmail-sync-interval 30s)
   fi
-  MARGINCE_ENV=dev \
-    MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
-    MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    MARGINCE_BLOBSTORE_REGION=us-east-1 \
+  MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     "${public_base_url_flag[@]}" \
@@ -1446,6 +1510,13 @@ stop)
       # WITH (FORCE) (PG13+) terminates any lingering connection so the drop
       # doesn't fail on a slow-to-close api/vite child.
       psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" >/dev/null 2>&1 || true
+      # And the snapshot beside it, if this stack ever took one. It is a copy of
+      # the same stack's database and outlives it for no reason; left behind it
+      # is a whole database's worth of disk that nothing will ever read, since
+      # the next `snapshot` overwrites it anyway. `sweep --drop` already reaps it
+      # through the margince_dev_% scan — this is the same rule for the stack
+      # somebody drops by name.
+      psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}_tmpl\" WITH (FORCE)" >/dev/null 2>&1 || true
       echo "dropped ${db}"
     fi
   fi
@@ -1467,8 +1538,65 @@ sweep)
   fi
   ;;
 
+snapshot)
+  # Copy this stack's database to `<db>_tmpl`, so a caller that dirties the
+  # world can put it back in about a second (the `restore` verb below) instead
+  # of paying a migrate and a reseed for it.
+  #
+  # This is the shape the integration lanes already use — a migrated template
+  # and CREATE DATABASE ... TEMPLATE, which is a file copy (scripts/lib-testdb.sh).
+  # What is new here is snapshotting a SEEDED and signed-in world rather than a
+  # migrated empty one, so a restore returns the records AND the credentials
+  # minted against them.
+  #
+  # THE STACK MUST BE DOWN. Postgres refuses to copy a database that any session
+  # is connected to, and the api's pool reconnects the instant it is terminated —
+  # so a snapshot attempted against a running stack fails on a race rather than
+  # on a rule, which is the confusing way to learn this.
+  #
+  # SESSIONS, not ports. This asked `port_listeners` about the api and the fe,
+  # and the WORKER binds no port at all while connecting to the same database —
+  # so a stack whose worker outlived a partial stop passed the check and then
+  # failed inside CREATE DATABASE, which is precisely the confusing failure the
+  # check exists to prevent. The precondition is "nothing is connected", so that
+  # is what is asked, of the one authority on it.
+  ensure_infra
+  sessions="$(psql_owner postgres -tAc \
+    "SELECT count(*) FROM pg_stat_activity WHERE datname = '${db}' AND pid <> pg_backend_pid()" \
+    </dev/null | tr -d '[:space:]')"
+  if [[ "${sessions:-0}" != "0" ]]; then
+    echo "FAIL: ${sessions} session(s) are still connected to ${db}, and Postgres cannot copy a" >&2
+    echo "database a session is connected to. The worker holds one without binding a port, so a" >&2
+    echo "stack can look stopped and not be." >&2
+    echo "  Stop it first:  make dev-stop${slug:+ DEV_SLUG=$slug}" >&2
+    exit 1
+  fi
+  psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}_tmpl\" WITH (FORCE)" </dev/null
+  psql_owner postgres -c "CREATE DATABASE \"${db}_tmpl\" TEMPLATE \"${db}\"" </dev/null
+  echo "dev: snapshotted ${db} → ${db}_tmpl"
+  ;;
+
+restore)
+  # Put the database back exactly as the snapshot holds it, with the stack left
+  # RUNNING: WITH (FORCE) closes the api's connections, the clone lands, and the
+  # pool redials on its next query.
+  #
+  # A restore is safer for the api's in-memory state than the reseed it replaces,
+  # which is the opposite of what one expects. A fresh seed mints new uuids for
+  # every record, so anything the process had cached by id went stale; a clone is
+  # byte-identical to the world the process was already looking at.
+  ensure_infra
+  if [[ -z "$(psql_owner postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${db}_tmpl'" </dev/null)" ]]; then
+    echo "FAIL: no snapshot to restore — ${db}_tmpl does not exist." >&2
+    echo "  Take one:  make dev-snapshot${slug:+ DEV_SLUG=$slug}   (with the stack stopped)" >&2
+    exit 1
+  fi
+  psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" </dev/null
+  psql_owner postgres -c "CREATE DATABASE \"${db}\" TEMPLATE \"${db}_tmpl\"" </dev/null
+  ;;
+
 *)
-  echo "usage: dev.sh {up|stop|sweep} [slug] [--drop]" >&2
+  echo "usage: dev.sh {up|stop|sweep|snapshot|restore} [slug] [--drop]" >&2
   exit 2
   ;;
 esac

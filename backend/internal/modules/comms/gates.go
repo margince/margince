@@ -72,16 +72,16 @@ func (d *Dispatcher) gateSendAuthority(ctx context.Context, del Delivery, grante
 // a different provider, a file added by a later edit. The human should get the
 // message back with a reason, which is what parking does.
 //
-// It checks FOUR things, not one: whether files may go at all, how many may ride
-// in one message, how large each may be, and — for a transport that carries
-// text-with-files as a caption — how long the covering text may be. All four are
-// the provider's own limits, published on the channel directory so the composer
+// It checks FIVE things, not one: whether files may go at all, how many may
+// ride in one message, how large each may be, how large they are TOGETHER, and
+// — for a transport that carries text-with-files as a caption — how long the
+// covering text may be. Four are the provider's own limits, published on the channel directory so the composer
 // warns first, and every one of them parks for the same reason: a message that
 // went out missing a file, or truncated to fit a caption, is not the message a
 // human approved.
 //
 // The reason names the channel and the files, because "this could not be sent"
-// with no subject leaves a person guessing which of the two to fix.
+// with no subject leaves a contact guessing which of the two to fix.
 func (d *Dispatcher) gateAttachmentCarriage(ctx context.Context, del Delivery, seam sendSeam) (Outcome, time.Duration, error) {
 	if len(del.Attachments) == 0 {
 		return outcomeUndecided, 0, nil
@@ -92,14 +92,52 @@ func (d *Dispatcher) gateAttachmentCarriage(ctx context.Context, del Delivery, s
 	return outcomeUndecided, 0, nil
 }
 
+// MaxSendBytes caps what ONE message may carry in total, across every file on
+// it.
+//
+// Below what mailbox providers accept (Gmail refuses past 25 MiB after
+// encoding), so a message this passes is one the provider will take rather than
+// one this product built and the wire refused. It also bounds what a worker
+// serving every send in the installation holds at once: ten files at the upload
+// limit is a quarter of a gigabyte, and base64 encoding doubles it.
+//
+// It lives HERE, with the gate that tells a human about it, and the read path
+// that enforces it as a backstop reads this same constant
+// (compose/commsattachments.go). Two spellings of one budget is how the number
+// a composer is shown comes to differ from the number a send applies, which is
+// the whole defect this bound had.
+const MaxSendBytes = 20 << 20
+
+// aggregateBound is the largest total a message on this transport may carry:
+// the provider's own aggregate where it declares one, and the product's budget
+// otherwise — whichever is smaller.
+//
+// Published by the channel directory and applied by carriageRefusal from this
+// one function, so the number the composer warns with is the number the send
+// refuses on. A provider declaring no aggregate of its own is held to the
+// product's, which is the same "a zero bound means no limit beyond the
+// contract's own" rule the other three bounds follow.
+func aggregateBound(carriage connector.Carriage) int64 {
+	if carriage.MaxTotalBytes > 0 && carriage.MaxTotalBytes < MaxSendBytes {
+		return carriage.MaxTotalBytes
+	}
+	return MaxSendBytes
+}
+
+// AggregateCarriageBound is aggregateBound for the channel directory, which
+// publishes the same number this package refuses on.
+func AggregateCarriageBound(carriage connector.Carriage) int64 { return aggregateBound(carriage) }
+
 // carriageRefusal is why this message may not go out as staged, or "" when it
 // may. ONE function so the four refusals read together and none can be added
-// without a reason a person can act on.
+// without a reason a contact can act on.
 //
 // A zero bound means "no limit beyond the contract's own", never "zero allowed"
 // — the only field that says nothing may go is Carries. A connector that
 // declares carriage without naming a limit is therefore held to the contract's
-// own caps rather than parked on every send.
+// own caps rather than parked on every send. The aggregate is the one bound the
+// contract always has: a provider that declares none of its own still gets
+// MaxSendBytes.
 func carriageRefusal(del Delivery, carriage connector.Carriage) string {
 	if !carriage.Carries {
 		return fmt.Sprintf(
@@ -121,6 +159,21 @@ func carriageRefusal(del Delivery, carriage connector.Carriage) string {
 				file.Filename, humanBytes(carriage.MaxBytesPerFile), del.Provider)
 		}
 	}
+	// The AGGREGATE, which the three bounds above cannot see between them: ten
+	// files each under the per-file cap can still total ten times what a send
+	// may carry. Without it the read path refuses instead — correctly, but only
+	// after the composer said the message was fine, and after every object has
+	// been opened.
+	var total int64
+	for _, file := range del.Attachments {
+		total += file.ByteSize
+	}
+	if bound := aggregateBound(carriage); total > bound {
+		return fmt.Sprintf(
+			"this message's %d files come to %s together, and the %s channel carries at most %s in one "+
+				"message; it was not sent — send them across several messages, or share the largest another way",
+			len(del.Attachments), humanBytes(total), del.Provider, humanBytes(bound))
+	}
 	if body := utf8.RuneCountInString(del.Body); carriage.MaxBodyWithFiles > 0 && body > carriage.MaxBodyWithFiles {
 		return fmt.Sprintf(
 			"the %s channel carries the text of a message with files as a caption, which holds at most "+
@@ -131,7 +184,7 @@ func carriageRefusal(del Delivery, carriage connector.Carriage) string {
 	return ""
 }
 
-// humanBytes renders a size bound the way the person who has to act on it reads
+// humanBytes renders a size bound the way the contact who has to act on it reads
 // sizes.
 //
 // It rounds DOWN to one decimal, deliberately: a bound reported as larger than
@@ -150,7 +203,7 @@ func humanBytes(size int64) string {
 	}
 }
 
-// attachmentNames is the staged filenames, for a reason a person can act on:
+// attachmentNames is the staged filenames, for a reason a contact can act on:
 // "this could not be sent" with no subject leaves them guessing which file.
 //
 // QUOTED, like the size branch already quotes its one name. A filename is
@@ -241,9 +294,9 @@ func (d *Dispatcher) gateSeat(ctx context.Context, del Delivery) (Outcome, time.
 // message was refused anyway, in a branch no rollout mode could soften. Removing
 // it is what makes the rollout mean anything.
 //
-// Nothing the legacy gate asked is now unasked. It read person_consent for the
+// Nothing the legacy gate asked is now unasked. It read contact_consent for the
 // same recipient list this call passes; AuthorizeTransmit reads that through
-// VerdictForPerson AND reads communication_suppression, which the old gate never
+// VerdictForContact AND reads communication_suppression, which the old gate never
 // looked at. It refused an empty recipient list; AuthorizeTransmit refuses one
 // too, and an empty decision set is not an allow.
 func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {
@@ -270,10 +323,71 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.
 		o, w, err := d.retry(ctx, del.ID, terr)
 		return none, o, w, err
 	}
+	return d.gateConsentDecision(ctx, ticket, del)
+}
+
+// gateConsentDecision is what the gate DOES with the engine's answer, split out
+// so the rule can be exercised without a database behind it. The asking is
+// above; this is the deciding.
+func (d *Dispatcher) gateConsentDecision(
+	ctx context.Context, ticket commsauthz.TransmitTicket, del Delivery,
+) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {
 	if !ticket.Allowed {
+		// A REFUSAL A NAMED HUMAN ALREADY ANSWERED.
+		//
+		// The engine refused this message at staging and refuses it again here,
+		// which is correct and is exactly what the record should say. What
+		// changed is that somebody with the authority read that refusal, took
+		// responsibility in writing, and their decision was spent on this
+		// delivery inside the transaction that staged it.
+		//
+		// So the ticket's answer is not overruled here — it is not re-asked.
+		// The authority on the row was decided before the message was queued,
+		// by a human, and this worker's job is to carry out what was decided
+		// rather than to decide again.
+		//
+		// ONLY THE CONSENT REFUSAL. The human was shown the engine's answer
+		// about the RECIPIENTS and signed for that; they were not shown, and
+		// cannot have signed for, a message that was edited after it was
+		// checked. A branch that waived every refusal because the delivery
+		// carries an instruction would send the wrong message under their name
+		// — which is what this branch did when it asked only whether an
+		// instruction existed.
+		if ticket.ConsentRefused &&
+			del.ExecutionAuthority == authorityInstruction && !del.InstructionID.IsZero() {
+			return ticket, outcomeUndecided, 0, nil
+		}
 		o, w, err := d.park(ctx, del.ID, ticket.Reason)
 		return ticket, o, w, err
 	}
 
 	return ticket, outcomeUndecided, 0, nil
+}
+
+// Execution authorities this build understands.
+const (
+	authoritySupported   = "supported"
+	authorityInstruction = "instruction"
+)
+
+// gateExecutionAuthority parks a delivery whose authority this build does not
+// recognise.
+//
+// A WORKER THAT DOES NOT UNDERSTAND WHY A MESSAGE MAY GO MUST NOT SEND IT.
+// Deployments roll forward one process at a time, so an older worker can pick
+// up a delivery written by a newer API. If a later change adds an authority
+// this build has never heard of, the safe reading is not "probably fine" — it
+// is a message whose permission this process cannot evaluate.
+//
+// Parked rather than retried, because waiting changes nothing: the row will
+// read the same value on every attempt until somebody deploys a build that
+// knows what it means.
+func (d *Dispatcher) gateExecutionAuthority(ctx context.Context, del Delivery) (Outcome, time.Duration, error) {
+	switch del.ExecutionAuthority {
+	case "", authoritySupported, authorityInstruction:
+		return outcomeUndecided, 0, nil
+	default:
+		return d.park(ctx, del.ID,
+			"this worker does not understand the authority this delivery goes out under")
+	}
 }

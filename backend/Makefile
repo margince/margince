@@ -78,7 +78,7 @@ export MARGINCE_TEST_BLOBSTORE_BUCKET     ?= margince-test
 # production deployment sets its own environment and never runs make.
 export MARGINCE_ENV          ?= dev
 
-# The composed workspace (ADR-0069): every build/test lane runs against
+# The composed workspace (ADR-0120): every build/test lane runs against
 # build/composition/go.work, so an enabled extension set under
 # extensions/ is compiled in — vanilla composes empty and the output is
 # unchanged (the generator's vanilla wiring is byte-identical to the
@@ -104,7 +104,7 @@ UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db seed-demo migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -369,7 +369,7 @@ ai-probe: composition ## Probe one AI task site against real input (free except 
 test-db-up: composition ## (Re)build the migrated margince_test template the parallel lane clones from
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && build_template && echo "test-db-up: template $$TEMPLATE_NAME migrated to head"'
 
-test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/people [RUN=TestName]
+test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
 
 # The lane's connection ceiling and budget, for a lane that runs ONE package at a
@@ -409,19 +409,28 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6
 # job is exactly the machine meant.
 #
 # SMB ONLY, and the omission is the honest half of this target. Mid-market is
-# where the PERF-7 SLO binds, so a drift alarm would ideally watch it — but its
-# seed is 250k persons, 500k activities and 50k relationships, and it exceeded
-# `go test`'s 30m budget when this target was first run against it (measured:
-# SMB 46.6s, mid-market FAIL at 1800.7s, on a fast laptop; a 4-core runner is
-# slower). A scheduled job that cannot finish does not report "slow" — it goes
-# red, and scripts/scheduled-report.sh files an issue saying a budget is
-# breaching, which would be a fabricated finding every week.
+# where the PERF-7 SLO binds, so a drift alarm would ideally watch it. What
+# used to rule it out was the seed: 250k contacts, 500k activities and 50k
+# relationships did not finish inside `go test`'s budget at all. That was the
+# seed planning its denormalisation triggers against an unanalysed database,
+# not the volume, and it is fixed in seedBenchTier — measured on a fast laptop
+# afterwards: SMB 12.4s, mid-market 151.4s.
 #
-# So the alarm watches the corpus it can finish. SMB is what most installations
-# look like, and drift there is real drift. Mid-market stays with `bench-perf`,
-# by hand, where a person is watching the clock — and a PERF-7 row measured
-# below mid-market renders `inconclusive` in the published page rather than
-# claiming a bound it did not test.
+# The remaining reason is a budget, not a clock: mid-market's PERF-3 p95 lands
+# at 181ms against a 200ms budget on that laptop — 9% of headroom. What the
+# runner would measure is unknown, and not safe to guess in either direction:
+# the same laptop reads SMB's search_fts at 35.7ms where the 2026-09-07 CI run
+# read 6.1ms, so a laptop number is not even a conservative one. A weekly job
+# that breaches on measurement spread files an issue saying a budget is
+# breaching, which would be a fabricated finding — so which tier the alarm
+# gates on is a call somebody has to make on the runner's own numbers, not a
+# default to drift into.
+#
+# So the alarm watches SMB, which is what most installations look like, and
+# drift there is real drift. Mid-market stays with `bench-perf`, by hand, where
+# a contact is watching the numbers — and a PERF-7 row measured below
+# mid-market renders `inconclusive` in the published page rather than claiming
+# a bound it did not test.
 #
 # MARGINCE_BENCH_RECORD is cleared rather than merely left unset: "writes
 # nothing" must be a property of the target, not of whatever the caller's shell
@@ -461,6 +470,19 @@ bench-record: composition ## PERF-1/PERF-4 record open + save budgets, measured 
 bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (needs db-up)
 	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture
 	@$(MAKE) --no-print-directory perfdoc
+
+# AC-W2, and the newest arrival in this lane. It gated the standing integration
+# lane until a health check read p50=13ms against a p95 of 201.6ms and filed
+# main as broken over the 1.6ms: six shards share one Postgres there, and what a
+# contended runner measures is the runner. The regression it existed to catch is
+# held in the lane deterministically now, by the sequential-scan count in
+# workflow_dispatch_integration_test.go.
+#
+# It writes no record and so does not re-render the page: AC-W2 is not a
+# published budget row, and a target that renders nothing new should not claim a
+# measurement the page never shows.
+bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over the seeded dataset (needs db-up)
+	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration
 
 # The published page is re-rendered from EVERY record, not only the one the run
 # just wrote, so a partial run still produces a complete and current page: the
@@ -685,15 +707,15 @@ hooks: ## Install the repo pre-commit hook (gofmt + license-header gate)
 # sessions hand-ran `fable-pg16`/`fable-redis` containers on the same host
 # ports; db-up removes those legacy names so the stack can bind (their data
 # is throwaway — migrate + seed-dev rebuild it).
-COMPOSE ?= docker compose -f ../infra/docker-compose.dev.yml
+COMPOSE ?= docker compose -f ../docker-compose.dev.yml
 
-db-up: ## Start the dev stack (infra/docker-compose.dev.yml) and create the app role
+db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 	@docker rm -f fable-pg16 fable-redis 2>/dev/null || true
 	$(COMPOSE) up -d --wait
 	$(MAKE) db-init
 # Every ad-hoc statement goes through PSQL, which resolves the container from
 # PG_PORT — the port the DSNs above name — rather than from the compose project.
-# infra/docker-compose.dev.yml pins `name: margince`, so every checkout on this
+# docker-compose.dev.yml pins `name: margince`, so every checkout on this
 # machine resolves to the same project and `$(COMPOSE) exec` lands in whichever
 # one brought the stack up first, while the api and the migrator connect through
 # the port. Two ways to name one database: a seed run from a second checkout
@@ -709,13 +731,6 @@ seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (
 seed-dev-db: ## Apply the dev DB seed for API-less demo data (scripts/seed-dev.sql); run after seed-dev
 	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-dev.sql
 
-# MARGINCE_SEED_DSN is not optional in practice, and the root target always
-# supplies it: without a DSN the seeder silently skips teams, seats, finance
-# links and facts, then fails in the ownership pass with "no seats to own
-# anything". Run this through the root `make seed-demo`, which reads the
-# password and the DSN for you.
-seed-demo: composition ## Fill a running stack from the demo dataset (prefer the root `make seed-demo`)
-	$(GOWORK_COMPOSED) $(GO) run ./tools/seed-demo -dataset "$(DATASET)" $(SEED_ARGS)
 
 # The COMPOSED workspace is load-bearing here, not tidiness: cmd/migrate
 # applies the enabled units' migrations from the composed extension set, and

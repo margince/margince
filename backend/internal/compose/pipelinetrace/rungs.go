@@ -26,7 +26,9 @@ import (
 )
 
 // rung answers one registered stage.
-func (a *Assembler) rung(reg trace.Registration, v view, facts *activities.PipelineFacts) Rung {
+func (a *Assembler) rung(
+	reg trace.Registration, v view, facts *activities.PipelineFacts, reading *ThreadReading,
+) Rung {
 	stored, owned := v.stored, v.owned
 	out := Rung{
 		Stage:       reg.Stage,
@@ -48,12 +50,14 @@ func (a *Assembler) rung(reg trace.Registration, v view, facts *activities.Pipel
 		return activityWriteRung(out, v)
 	case trace.StageTierLadder:
 		return storedRung(out, stored, owned, trace.StageTierLadder)
-	case trace.StagePersonCreate:
-		return personCreateRung(out, v, facts)
+	case trace.StageContactCreate:
+		return contactCreateRung(out, v, facts)
 	case trace.StageVerdict:
 		return verdictRung(out, v)
 	case trace.StageAttentionLabel:
 		return attentionLabelRung(out, v, facts)
+	case trace.StageMaterialEvents:
+		return materialEventsRung(out, v, facts, reading)
 	}
 	// A registered stage with no branch here. TestEveryAnsweringStageHasABranch
 	// walks the registry and fails on exactly this, so it is unreachable — but
@@ -118,11 +122,11 @@ func activityWriteRung(out Rung, v view) Rung {
 	return notApplicableOrUnknown(out, stored)
 }
 
-// personCreateRung is derived by ELIMINATION. There is no stored "the ladder
+// contactCreateRung is derived by ELIMINATION. There is no stored "the ladder
 // decided to create a contact" — the ladder decides it in memory and explicitly
-// refuses to re-derive it downstream — so this reads the person link, and falls
+// refuses to re-derive it downstream — so this reads the contact link, and falls
 // back to what the ladder's own rung concluded.
-func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
+func contactCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 	stored, owned := v.stored, v.owned
 	if v.activityHidden {
 		// The activity exists and is not this reader's to open, so nothing
@@ -133,7 +137,7 @@ func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 		// No activity at all: the message never reached the step.
 		return notApplicableOrUnknown(out, stored)
 	}
-	if facts.HasPersonLink {
+	if facts.HasContactLink {
 		out.Status = trace.StatusDone
 		return out
 	}
@@ -149,7 +153,7 @@ func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 		return out
 	}
 	// A contact was intended and none is linked. This promises nothing about
-	// when: the link_reconcile sweep links a message the moment a person
+	// when: the link_reconcile sweep links a message the moment a contact
 	// exists for its address — it repairs the LINK, it does not re-run the
 	// resolver, so a sender nobody was created for waits on that instead of
 	// activities, but a channel identity conflict stages a human review the
@@ -180,10 +184,12 @@ func verdictRung(out Rung, v view) Rung {
 	switch {
 	case trace.IsOpenDisposition(resolution.Status):
 		out.Status, out.Reason = trace.StatusPending, trace.ReasonAwaitingVerdict
-	case isSettledDisposition(resolution.Status):
-		out.Status, out.Reason = trace.StatusDone, trace.ReasonVerdictReached
 	default:
-		return unavailable(out)
+		judged, settled := settledVerdictReason(resolution.Status)
+		if !settled {
+			return unavailable(out)
+		}
+		out.Status, out.Reason = trace.StatusDone, judged
 	}
 	if resolution.ResolvedAt != nil {
 		out.At = stamp(*resolution.ResolvedAt)
@@ -216,6 +222,85 @@ func attentionLabelRung(out Rung, v view, facts *activities.PipelineFacts) Rung 
 	}
 	out.Status = trace.StatusSkipped
 	return out
+}
+
+// materialEventsRung answers the per-CONVERSATION reading.
+//
+// Every refusal below is an arm of the extractor's own offer, asked through
+// ThreadReader rather than re-spelled here — so a member reading "this
+// conversation reaches two accounts" is reading the same sentence the pass
+// acted on. The order is the order a reader needs: what happened first, then
+// why it did not.
+func materialEventsRung(out Rung, v view, facts *activities.PipelineFacts, reading *ThreadReading) Rung {
+	if v.activityHidden {
+		return unavailable(out)
+	}
+	if facts == nil {
+		// No activity: there was no conversation for the extractor to read.
+		out.Status = trace.StatusNotApplicable
+		return out
+	}
+	if facts.ThreadKey == "" {
+		// The extractor's unit of work is a thread settled for a window, and a
+		// transport with no thread key has no such unit (#1433). Not a gap
+		// report: it is the whole answer for that transport class.
+		out.Status, out.Reason = trace.StatusSkipped, trace.ReasonTransportNotRead
+		return out
+	}
+	if reading == nil {
+		// No extractor composed, so no pass has an answer to report. The
+		// activity exists and the stage is real; what is missing is the reader.
+		out.Status = trace.StatusUnknown
+		return out
+	}
+	if !reading.Known {
+		// The thread key is on the message, and the extractor sees no
+		// conversation there: every message on it archived, or none captured by
+		// a connector. Either way the reading had nothing to read.
+		out.Status, out.Reason = trace.StatusSkipped, trace.ReasonArchived
+		return out
+	}
+	if reading.Cited {
+		out.Status, out.Reason = trace.StatusDone, trace.ReasonEventsRaised
+		return out
+	}
+	if refusal, refused := threadRefusal(*reading); refused {
+		out.Status, out.Reason = trace.StatusSkipped, refusal
+		return out
+	}
+	if reading.Scanned && !reading.HasMoved {
+		// Read, and it yielded nothing about this message. A stage that ran and
+		// concluded is done, and "nothing material" is a conclusion.
+		out.Status, out.Reason = trace.StatusDone, trace.ReasonNothingMaterial
+		return out
+	}
+	out.Status, out.Reason = trace.StatusPending, trace.ReasonAwaitingScan
+	return out
+}
+
+// threadRefusal names the first arm of the offer this conversation fails, and
+// whether it fails one at all.
+//
+// FIRST rather than all of them, because a rung carries one reason and a member
+// asking why their conversation was not read is owed the one that decides it.
+// The order is the order the arms decide in: what the conversation IS, then
+// what has happened to it.
+func threadRefusal(reading ThreadReading) (trace.Reason, bool) {
+	switch {
+	case !reading.ReachesOneAccount:
+		return trace.ReasonNoSingleAccount, true
+	case !reading.IsOneBodyOfWork:
+		return trace.ReasonTwoBodiesOfWork, true
+	case !reading.IsFullyOpen:
+		return trace.ReasonThreadNotAllOpen, true
+	case !reading.HasANamedReader:
+		return trace.ReasonNoNamedReader, true
+	case !reading.HasSettled:
+		return trace.ReasonThreadStillMoving, true
+	case reading.IsParked:
+		return trace.ReasonReadingParked, true
+	}
+	return "", false
 }
 
 // notApplicableOrUnknown is the distinction the retention window forces.
@@ -266,22 +351,32 @@ func unavailable(out Rung) Rung {
 	return out
 }
 
-// isSettledDisposition names the ledger states that ARE an answer.
+// settledVerdictReason names the ledger states that ARE an answer, and says
+// WHICH answer each one is.
 //
 // It reads capture's own constants rather than restating them: the ledger owns
 // this vocabulary, and a literal copy here is the drift the trace exists to
 // expose, reproduced inside the trace.
 //
 // Listed rather than derived as "not open", so a status added to the ledger
-// reaches the default branch and reports that we cannot tell, instead of being
-// read as a verdict nobody reached.
-func isSettledDisposition(status string) bool {
+// falls through and reports that we cannot tell, instead of being read as a
+// verdict nobody reached.
+//
+// One reason per verdict rather than one for all four: the rung used to say a
+// verdict had been reached and stop there, which is the one fact a member
+// opening this panel already knew.
+func settledVerdictReason(status string) (trace.Reason, bool) {
 	switch status {
-	case capture.PendingStatusReal, capture.PendingStatusNoise,
-		capture.PendingStatusRejected, capture.PendingStatusSuppressed:
-		return true
+	case capture.PendingStatusReal:
+		return trace.ReasonJudgedReal, true
+	case capture.PendingStatusNoise:
+		return trace.ReasonJudgedNoise, true
+	case capture.PendingStatusRejected:
+		return trace.ReasonJudgedRejected, true
+	case capture.PendingStatusSuppressed:
+		return trace.ReasonJudgedSuppressed, true
 	default:
-		return false
+		return "", false
 	}
 }
 

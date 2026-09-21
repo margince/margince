@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
+import { ActionRow } from "../design-system/actionrow";
 import {
   Button,
   Disclosure,
@@ -10,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { EvidenceChip } from "../design-system/trust";
 import { isRealCalendarDay } from "../format/calendarday";
@@ -29,7 +31,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit
 // apart from the row because neither is about deciding — one reads the whole
-// proposal, the other rewrites the part of it this installation lets a person
+// proposal, the other rewrites the part of it this installation lets a contact
 // change — and the row is already the longest thing on the surface.
 
 /**
@@ -123,13 +125,14 @@ export function ApprovalDetailModal({
   });
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("decision.detail")}
-      </h2>
+      </Heading>
       {open && (
         <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
           {(approval) => (
@@ -148,7 +151,7 @@ export function ApprovalDetailModal({
 /**
  * What "view everything" shows.
  *
- * Ordered the way a person reads a decision rather than the way the row is
+ * Ordered the way a reader reads a decision rather than the way the row is
  * stored: the sentence saying what is being asked, then what the proposal says
  * in named fields, then when it was asked, then the quoted evidence behind it.
  *
@@ -161,7 +164,7 @@ export function ApprovalDetailModal({
  * already said what its fields mean — there it is reference material for
  * somebody checking what the server actually staged. The target version and the
  * `agent:<id>` that proposed it are gone from this surface entirely: neither
- * names a person or describes a change, so a reader can do nothing with them,
+ * names a contact or describes a change, so a reader can do nothing with them,
  * and one click away rather than zero does not make them useful.
  */
 function ApprovalDetailBody({
@@ -225,7 +228,6 @@ function RawPayload({
         <FieldLine
           key={key}
           name={key}
-          mono
           value={typeof value === "string" ? value : JSON.stringify(value)}
         />
       ))}
@@ -237,13 +239,13 @@ function RawPayload({
  * When the question was raised, and when it was settled.
  *
  * These two used to sit behind the technical disclosure, labelled `created_at`
- * and `decided_at` in monospace beside a uuid. They are not technical: how long
- * a proposal has been waiting is one of the few things on this dialog a reader
- * actually weighs, and it was filed with the debugging material because it
- * arrived on the wire next to it.
+ * and `decided_at` beside a uuid. They are not technical: how long a proposal
+ * has been waiting is one of the few things on this dialog a reader actually
+ * weighs, and it was filed with the debugging material because it arrived on
+ * the wire next to it.
  *
  * The rest of that block is gone from this surface rather than moved. A target
- * version and a `proposed_by` of `agent:<id>` name no person and describe no
+ * version and a `proposed_by` of `agent:<id>` name no contact and describe no
  * change — there is nothing a reader can do with either, and putting them one
  * click away rather than zero does not make them useful.
  */
@@ -268,20 +270,13 @@ function askedOn(
   return asked;
 }
 
-// `mono` marks a value the WIRE spells — a uuid, a version, a payload path.
-// A named field carries a person's own words and a date they recognise, and
-// setting those in mono would dress a business fact as machine output.
-function FieldLine({
-  name,
-  value,
-  mono,
-}: Readonly<{ name: string; value: string; mono?: boolean }>) {
+// One label over one value, set as prose whether the value is a contact's own
+// words or a uuid the wire spells.
+function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
   return (
     <div className="field">
       <span className="t-label">{name}</span>
-      <p className={mono ? "t-mono" : "approval-detail-value t-body"}>
-        {value}
-      </p>
+      <p className="approval-detail-value t-body">{value}</p>
     </div>
   );
 }
@@ -308,21 +303,16 @@ export function DecideOutcome({
   return (
     <>
       {generic && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
           {problemMessageOf(decide.error, t)}
         </p>
       )}
       {skew && (
         <div style={{ marginTop: "var(--space-2)" }}>
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {t("decision.versionSkew")}
           </p>
-          <Button small onClick={onReRead}>
-            {t("decision.reRead")}
-          </Button>
+          <Button onClick={onReRead}>{t("decision.reRead")}</Button>
         </div>
       )}
     </>
@@ -370,7 +360,7 @@ function isoOrBlank(staged: string | undefined): ISODate | "" {
  * gate from scratch on the server (re-tiered, re-RBAC'd, new diff_hash —
  * ADR-0036), so what it may offer is a question about THIS kind and this
  * contract, which is screen knowledge. The card knows how to draw a decision;
- * it does not know what this installation lets a person change.
+ * it does not know what this installation lets a contact change.
  */
 export function StagedEditor({
   fields,
@@ -440,16 +430,23 @@ export function StagedEditor({
           }
         </Field>
       ))}
-      <div className="approval-gate">
-        {/* The edited approve is the same write as the plain one and was the one
-            path with no gate at all, so a second press sent a second verdict. */}
-        <Button variant="primary" small pending={pending} onClick={onApprove}>
-          {t("decision.approveEdited")}
-        </Button>
-        <Button small disabled={pending} onClick={onCancel}>
+      <ActionRow
+        className="approval-gate"
+        primary={
+          /* The edited approve is the same write as the plain one and was the
+             one path with no gate at all, so a second press sent a second
+             verdict. */
+          <Button variant="primary" pending={pending} onClick={onApprove}>
+            {t("decision.approveEdited")}
+          </Button>
+        }
+      >
+        {/* Cancel keeps its word: leaving the editor without a verdict is not a
+            verb any glyph says, and an X here would be read as Reject. */}
+        <Button disabled={pending} onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-      </div>
+      </ActionRow>
     </div>
   );
 }

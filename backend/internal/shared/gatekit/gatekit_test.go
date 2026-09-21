@@ -36,7 +36,7 @@ func TestWaivedRatifiesAKnownSubjectAndRefusesAnUnknownOne(t *testing.T) {
 	if !w.Waived(rec, "record_grant") {
 		t.Error("a ratified subject was not waived")
 	}
-	if w.Waived(rec, "person") {
+	if w.Waived(rec, "contact") {
 		t.Error("an unratified subject was waived")
 	}
 	if len(rec.errs) != 0 {
@@ -59,7 +59,7 @@ func TestAReasonlessWaiverFailsWhereItIsReliedOn(t *testing.T) {
 // is not an argument, and a subject long enough to clear the byte count is still
 // only the subject.
 func TestAReasonThatStatesNoCostIsRefusedHoweverLongItIs(t *testing.T) {
-	const subject = "internal/modules/people/store.go"
+	const subject = "internal/modules/contacts/store.go"
 	for _, probe := range []struct{ name, reason string }{
 		{"blank padding", strings.Repeat(" ", 25)},
 		{"mixed whitespace padding", "  \t\n   \n\t     \n            "},
@@ -159,7 +159,7 @@ func TestSubjectsEnumeratesInADeterministicOrder(t *testing.T) {
 	})
 	for range 8 {
 		if got := w.Subjects(); strings.Join(got, ",") != "a,b,c" {
-			t.Fatalf("Subjects() = %v, want a,b,c in every call", got)
+			t.Fatalf("Subjects() = %v, want company,contact,deal in every call", got)
 		}
 	}
 }
@@ -170,14 +170,14 @@ func TestSubjectsEnumeratesInADeterministicOrder(t *testing.T) {
 func TestSubjectsOfAWaiverSetKeyedByANamedStringTypeAreOrderedToo(t *testing.T) {
 	type recordType string
 	w := Waive(map[recordType]string{
-		"organization": "the third subject, ratified for the reason stated right here",
-		"deal":         "the first subject, ratified for the reason stated right here",
-		"person":       "the second subject, ratified for the reason stated right here",
+		"company": "the first subject, ratified for the reason stated right here",
+		"deal":    "the second subject, ratified for the reason stated right here",
+		"contact": "the third subject, ratified for the reason stated right here",
 	})
 	for range 8 {
 		got := w.Subjects()
-		if len(got) != 3 || got[0] != "deal" || got[1] != "organization" || got[2] != "person" {
-			t.Fatalf("Subjects() = %v, want deal,organization,person in every call", got)
+		if len(got) != 3 || got[0] != "company" || got[1] != "contact" || got[2] != "deal" {
+			t.Fatalf("Subjects() = %v, want company,contact,deal in every call", got)
 		}
 	}
 }
@@ -198,6 +198,51 @@ func TestANilWaiversBehavesAsAnEmptySet(t *testing.T) {
 	w.AssertAllMatched(rec)
 	if len(rec.errs) != 0 {
 		t.Errorf("a nil waiver set reported: %s", rec.joined())
+	}
+}
+
+func TestReasonsCarriesEveryRatifiedSubjectWithItsReason(t *testing.T) {
+	w := Waive(map[string]string{
+		"first":  "ratified because the estate refuses it for a reason stated here",
+		"second": "ratified because the alternative costs more than it saves here",
+	})
+	got := w.Reasons()
+	if len(got) != 2 {
+		t.Fatalf("Reasons() returned %d entries, want 2: %v", len(got), got)
+	}
+	if got["first"] != "ratified because the estate refuses it for a reason stated here" {
+		t.Errorf("Reasons()[first] = %q, want the reason it was waived with", got["first"])
+	}
+}
+
+// Reasons publishes a waiver onto a generated page, so a caller holds the map
+// that the gate reads. Handing out the live one would let a page edit the
+// reasons the gate holds to a standard.
+func TestReasonsReturnsACopyTheCallerCannotWriteThrough(t *testing.T) {
+	w := Waive(map[string]string{"subject": "ratified for the reason stated right here in full"})
+	w.Reasons()["subject"] = "quietly rewritten by whoever read the page"
+	if again := w.Reasons()["subject"]; again != "ratified for the reason stated right here in full" {
+		t.Errorf("a write through Reasons() changed the waiver: %q", again)
+	}
+}
+
+// Enumerating an exemption is not relying on one, so printing a waiver must not
+// mark it matched — otherwise a page that lists an entry would keep a stale one
+// alive forever, which is the failure AssertAllMatched exists to catch.
+func TestReasonsDoesNotMarkAWaiverMatched(t *testing.T) {
+	w := Waive(map[string]string{"unused": "ratified but never asked about by any gate here"})
+	w.Reasons()
+	rec := &recorder{TB: t}
+	w.AssertAllMatched(rec)
+	if len(rec.errs) == 0 {
+		t.Error("reading Reasons() marked the waiver matched, hiding a stale entry")
+	}
+}
+
+func TestReasonsOnANilWaiverSetIsEmpty(t *testing.T) {
+	var w *Waivers[string]
+	if got := w.Reasons(); len(got) != 0 {
+		t.Errorf("Reasons() on a nil set = %v, want empty", got)
 	}
 }
 

@@ -21,10 +21,13 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
+import { useRecordZone } from "../app/recordzone";
 import { Button } from "../design-system/atoms";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
-import { PersonMeetingBrief } from "./meetingbrief";
+import { ContactMeetingBrief } from "./meetingbrief";
+import { useOpenEmail } from "./openemail";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 
 // What a move must carry to be performed. Both producers' shapes satisfy it.
@@ -60,23 +63,31 @@ export function hasMoveControl(move: PerformableMove): boolean {
 
 export function MoveButton({
   dealId,
+  contactId,
   move,
 }: Readonly<{
   // The deal whose card to refresh after the verb writes, where the caller has
   // one. OPTIONAL because the worklist does not: a queue row's move may belong
-  // to a deal, a person or nothing at all, and passing an empty string would
+  // to a deal, a contact or nothing at all, and passing an empty string would
   // invalidate a key naming no deal — a call that does nothing, spelled as one
   // that does something.
   dealId?: string;
+  contactId?: string;
   move: PerformableMove;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [briefOpen, setBriefOpen] = useState(false);
+  // This button's own drawer. Every other host of the meeting brief already
+  // mounts one for its timeline; this one is a lone control on the deal card,
+  // so a message cited in the brief it opens has nowhere else to go.
+  const [openEmail, setOpenEmail] = useOpenEmail();
+  const zone = useRecordZone();
   const [taskOpen, setTaskOpen] = useState(false);
   const canUpdateTask = useCan("activity", "update");
   const taskUpdate = useTaskUpdate([
     ...(dealId ? [["deal-status", dealId]] : []),
+    ...(contactId ? [["contact360", contactId]] : []),
     ["tasks"],
     ["worklist"],
   ]);
@@ -107,6 +118,16 @@ export function MoveButton({
       // useTaskUpdate's own key list; this arm has its own onSuccess and so
       // needs it spelled.
       queryClient.invalidateQueries({ queryKey: ["worklist"] });
+      // And every contact page, because this button can now file work AGAINST a
+      // contact: the meeting move links the task to the stakeholder it names.
+      // That contact's page opens on a moment derived from exactly this task,
+      // so leaving its cache alone means a reader who files the meeting here
+      // and clicks through still reads "no next step with them" for the next
+      // half-minute. The key is per contact and this button does not know
+      // which, so the prefix is invalidated whole — one page's worth of refetch
+      // against telling a reader something that stopped being true when they
+      // pressed the button.
+      queryClient.invalidateQueries({ queryKey: ["contact360"] });
     },
   });
 
@@ -116,7 +137,7 @@ export function MoveButton({
       if (!activityId) return null;
       return (
         <>
-          <Button small onClick={() => setTaskOpen(true)}>
+          <Button onClick={() => setTaskOpen(true)}>
             {t("deal360.openTask")}
           </Button>
           {taskOpen && (
@@ -136,9 +157,10 @@ export function MoveButton({
       }
       return (
         <>
+          {/* The agent's own step, in the agent's own colour: a rule wrote
+              the task and pressing this accepts it. */}
           <Button
-            variant="primary"
-            small
+            variant="ai"
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
           >
@@ -146,9 +168,7 @@ export function MoveButton({
             {t("deal360.createTask")}
           </Button>
           {createTask.isError ? (
-            <p className="t-caption t-danger">
-              {problemMessageOf(createTask.error, t)}
-            </p>
+            <p className="t-danger">{problemMessageOf(createTask.error, t)}</p>
           ) : null}
         </>
       );
@@ -165,14 +185,20 @@ export function MoveButton({
       }
       return (
         <>
-          <Button variant="primary" small onClick={() => setBriefOpen(true)}>
+          <Button variant="ai" onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
-          <PersonMeetingBrief
+          <ContactMeetingBrief
             activityId={activityId}
             open={briefOpen}
             onClose={() => setBriefOpen(false)}
+            onOpenEmail={setOpenEmail}
+          />
+          <OpenEmailDrawer
+            activityId={openEmail}
+            zone={zone}
+            onClose={() => setOpenEmail(null)}
           />
         </>
       );

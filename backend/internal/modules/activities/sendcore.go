@@ -39,7 +39,14 @@ func (s *Store) SendEmail(ctx context.Context, origin SendOrigin, in SendEmailIn
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		return err
 	}); err != nil {
-		return crmcontracts.Activity{}, err
+		// AFTER the transaction has unwound, so a refusal that must be recorded
+		// is recorded on a connection this call is no longer holding. See
+		// RefusalRecorder for why the moment matters.
+		//
+		// The hold runs first because the review binds to it. Both writes
+		// happen after the unwind, and in this order: a review naming an intent
+		// that does not exist yet would violate its own foreign key.
+		return crmcontracts.Activity{}, recordRefusal(ctx, stager, err, s.holdRefusedSend(ctx, origin, in, err))
 	}
 	return sent, nil
 }
@@ -159,7 +166,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 
 	// Who the recipient sees this is from. Resolved here, beside the signature
 	// and before the transaction, because both answer "who is sending this" and
-	// a message whose header and sign-off named different people would be one
+	// a message whose header and sign-off named different contacts would be one
 	// message telling two stories.
 	fromName, err := s.senderDisplayName(ctx)
 	if err != nil {

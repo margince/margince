@@ -47,7 +47,7 @@ const KIND_LABELS: Record<ActivityKind, MessageKey> = {
  *
  * "They wrote" and "we sent" rather than "inbound" and "outbound": the row is
  * read to decide whether anybody owes anybody a reply, and that is a question
- * about people. A meeting has both sides by definition and says so; a note has
+ * about contacts. A meeting has both sides by definition and says so; a note has
  * no direction at all and says nothing rather than inventing one.
  */
 function directionLabel(activity: Activity): MessageKey | undefined {
@@ -86,7 +86,7 @@ function durationLabel(
  * CompanyRecentList is the exchanges, newest first.
  *
  * The mark carries the row rather than an icon per kind: a reader scanning the
- * list is looking for a person they know, and the KIND already has a word of
+ * list is looking for a contact they know, and the KIND already has a word of
  * its own beside it. Withheld rows still draw — a section that silently
  * dropped what this reader may not see would report a quieter account than the
  * one on file.
@@ -171,7 +171,7 @@ function RecentRow({
     : t("co.recent.re");
   return (
     <li className="co-recent-row">
-      <Avatar name={title} identity={activity.id} size="xs" />
+      <Avatar name={title} identity={activity.id} />
       <span className="co-recent-body">
         {/* A retained email is the canonical row here as everywhere: it already
             says which way it went, who was at the other end and who may read
@@ -203,9 +203,7 @@ function RecentRow({
                   painting it on a human's email tells the reader something
                   false. */}
               <Badge>{kind}</Badge>
-              {direction && (
-                <span className="co-recent-dir t-caption">{t(direction)}</span>
-              )}
+              {direction && <span className="t-caption">{t(direction)}</span>}
             </span>
             <span className="co-recent-title">{title}</span>
           </>
@@ -226,7 +224,7 @@ function RecentRow({
             ))}
         </span>
       </span>
-      <span className="co-recent-when t-mono t-caption">{when}</span>
+      <span className="co-recent-when t-caption">{when}</span>
     </li>
   );
 }

@@ -1,11 +1,11 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { StrengthCard } from "./strength";
+import { StrengthPanel } from "./strength";
 
 // The card's whole promise is "no mystery number": the composite score never
 // renders alone, it carries the band that names it and the four factors that
@@ -39,11 +39,8 @@ function mount(body: unknown, status = 200) {
     "fetch",
     vi.fn(async (request: Request) => {
       const pathname = new URL(request.url).pathname;
-      // `/me` decides native vs overlay, and overlay skips the read entirely —
-      // an unstubbed probe would leave the card in its unavailable state and a
-      // test could not tell that from a card that never rendered its rows.
       if (pathname.endsWith("/me")) {
-        return jsonResponse({ system_of_record: { mode: "native" } });
+        return jsonResponse({});
       }
       return jsonResponse(body, status);
     }),
@@ -55,7 +52,7 @@ function mount(body: unknown, status = 200) {
       }
     >
       <LocaleProvider initial="en">
-        <StrengthCard kind="person" id="p-1" />
+        <StrengthPanel kind="contact" id="p-1" />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -99,5 +96,103 @@ describe("the relationship-strength card", () => {
     mount({ title: "Not found" }, 404);
 
     expect(await screen.findByText(/not found/i)).toBeTruthy();
+  });
+});
+
+// The receipts behind the number, and the count that must not move with them.
+describe("what the score was computed from", () => {
+  const withReceipts: RelationshipStrength = {
+    ...strength,
+    contributing_activity_ids: ["a-1", "a-2", "a-3"],
+    contributing_activities: [
+      {
+        activity_id: "a-1",
+        kind: "email",
+        subject: "Depot slot confirmed",
+        occurred_at: "2026-09-01T09:00:00Z",
+        content_state: "available",
+      },
+      {
+        activity_id: "a-2",
+        kind: "call",
+        subject: "Rang about the retrofit",
+        occurred_at: "2026-08-28T09:00:00Z",
+        content_state: "available",
+      },
+    ],
+  };
+
+  function show(
+    value: RelationshipStrength,
+    onOpenEmail?: (id: string) => void,
+  ) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(value)),
+    );
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <StrengthPanel kind="contact" id="p-1" onOpenEmail={onOpenEmail} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("keeps the count from the ids, not from the rows it can name", async () => {
+    // THREE activities fed the score and this reader may see two of them. The
+    // number is a fact about the score; the list is a fact about the reader.
+    // A count that shrank to the second would tell two readers different
+    // things about one score.
+    show(withReceipts);
+
+    expect(await screen.findByText(/3 activities/)).toBeTruthy();
+  });
+
+  it("opens a cited message and leaves the other kinds as prose", async () => {
+    const opened: string[] = [];
+    show(withReceipts, (id) => opened.push(id));
+
+    const email = await screen.findByRole("button", {
+      name: /Depot slot confirmed/,
+    });
+    email.click();
+    expect(opened).toEqual(["a-1"]);
+    // The call is named and not pressable: it has no page of its own, and a
+    // control that opened nothing would teach a reader the list does not work.
+    expect(screen.getByText("Rang about the retrofit")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /Rang about the retrofit/ }),
+    ).toBeNull();
+  });
+
+  it("says a message is there without saying what it said", async () => {
+    show({
+      ...withReceipts,
+      contributing_activities: [
+        {
+          activity_id: "a-9",
+          kind: "email",
+          subject: null,
+          occurred_at: "2026-09-01T09:00:00Z",
+          content_state: "withheld",
+        },
+      ],
+    });
+
+    expect(await screen.findByText(/3 activities/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Depot slot/ })).toBeNull();
+  });
+
+  it("reads as it always did when the server names nothing", async () => {
+    // Version skew, and the seat with no activity grant. Both send the ids and
+    // no names.
+    show({ ...withReceipts, contributing_activities: undefined });
+
+    expect(await screen.findByText(/3 activities/)).toBeTruthy();
   });
 });

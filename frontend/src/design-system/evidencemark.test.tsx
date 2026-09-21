@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import {
   cleanup,
   fireEvent,
@@ -13,7 +13,7 @@ import { EvidenceMark } from "./evidencemark";
 
 // The one provenance affordance. What it has to get right:
 //
-//   - a value a PERSON typed carries no mark, or the underline stops meaning
+//   - a value a CONTACT typed carries no mark, or the underline stops meaning
 //     "this was derived" and starts meaning nothing;
 //   - the receipts are reachable by keyboard, and Escape gives focus back;
 //   - the quoted source text is presented as a quote, never as our own words.
@@ -124,6 +124,48 @@ describe("evidence mark", () => {
     await waitFor(() => {
       expect(screen.queryByRole("region")).toBeNull();
     });
+  });
+
+  it("moves focus into the panel's own control when a press opened it", async () => {
+    show(
+      <EvidenceMark
+        value="1998"
+        source={{ provenance: { kind: "agent", agent: "capture" } }}
+        onOpenHistory={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /1998/ }));
+    // Portalled to the body, the panel is no longer the trigger's next DOM
+    // sibling, so a reader tabbing forward would otherwise land somewhere
+    // else on the page entirely rather than on the one control the panel
+    // offers.
+    expect(document.activeElement).toBe(
+      screen.getByText("Full history").closest("button"),
+    );
+  });
+
+  it("leaves focus on the value when the panel opened under a settled pointer", async () => {
+    show(
+      <EvidenceMark
+        value="1998"
+        source={{ provenance: { kind: "agent", agent: "capture" } }}
+        onOpenHistory={() => {}}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /1998/ });
+    const mark = trigger.parentElement;
+    if (!mark) {
+      throw new Error("the mark has no wrapper");
+    }
+    fireEvent.pointerEnter(mark);
+    await waitFor(() => expect(screen.getByRole("region")).toBeTruthy());
+    // A pointer that merely settled is not a reader asking to be moved: the
+    // page must not grab focus off whatever they were doing.
+    expect(document.activeElement).not.toBe(
+      screen.getByText("Full history").closest("button"),
+    );
+    fireEvent.pointerLeave(mark);
+    await waitFor(() => expect(screen.queryByRole("region")).toBeNull());
   });
 
   it("keeps one panel open at a time, whatever opened it", async () => {

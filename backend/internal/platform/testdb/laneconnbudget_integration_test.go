@@ -66,11 +66,11 @@ func TestTheClusterSeatsTheBudgetTheLaneComputed(t *testing.T) {
 		// computed for MORE concurrency than the committed configuration
 		// provisions, and the run knows that: INTEGRATION_JOBS is the knob.
 		remedy := "the CONTAINER predates the configuration — Postgres fixes max_connections at startup, so recreate it with " +
-			"`docker compose -f infra/docker-compose.dev.yml up -d --force-recreate postgres` and re-run. " +
+			"`docker compose -f docker-compose.dev.yml up -d --force-recreate postgres` and re-run. " +
 			"The committed compose file is separately checked by TestTheLaneFitsInsideTheClusterItRunsAgainst in `make check`, " +
 			"so a green tree plus a short cluster is this case."
 		if jobs := os.Getenv("INTEGRATION_JOBS"); jobs != "" {
-			remedy = "this run set INTEGRATION_JOBS=" + jobs + ", so it budgeted for more concurrency than infra/docker-compose.dev.yml provisions. " +
+			remedy = "this run set INTEGRATION_JOBS=" + jobs + ", so it budgeted for more concurrency than docker-compose.dev.yml provisions. " +
 				"Recreating the container CANNOT help — the compose file's max_connections is sized for the concurrency CI uses. " +
 				"Either lower INTEGRATION_JOBS for this run, or raise max_connections and the terms in scripts/lib-testdb.sh together."
 		}

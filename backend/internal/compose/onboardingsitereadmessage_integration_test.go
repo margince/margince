@@ -43,7 +43,7 @@ func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.
 		"message":"I found the company name on the home page.",
 		"proposed_changes":[{"field":"display_name","value":"Acme","reason":"The page states it.","source_ids":["S1"]}],
 		"source_ids":["S1"]}`}}
-	engine := &deepReadEngine{people: env.People, brain: brain, runtime: ai.NewRunTransparency(env.DB())}
+	engine := &deepReadEngine{contacts: env.Contacts, brain: brain, runtime: ai.NewRunTransparency(env.DB())}
 
 	request := companyReadMessageRequest(human, t, read.ID.String(), "Please update the display name to Acme from the website.")
 	recorder := httptest.NewRecorder()
@@ -56,7 +56,7 @@ func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.
 		t.Fatal(err)
 	}
 	if reply.Message == "" || len(reply.ProposedChanges) != 1 || len(reply.Citations) != 1 ||
-		reply.Citations[0].Url != seedURL || reply.AiRuntime.Currency != crmcontracts.USD ||
+		reply.Citations[0].Url != seedURL || reply.AiRuntime.Currency != crmcontracts.AiRunSummaryCurrencyUSD ||
 		reply.AiRuntime.CallAttempts != 1 || reply.AiRuntime.TokensIn != 1_000 ||
 		reply.AiRuntime.TokensOut != 100 || reply.AiRuntime.EstimatedCostMicrousd != 1_450 ||
 		len(reply.AiRuntime.Models) != 1 || reply.AiRuntime.Models[0].ServedModel != "claude-workbench-test-202607" {

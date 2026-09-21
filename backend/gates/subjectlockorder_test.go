@@ -8,7 +8,7 @@ package gates
 // The subject lock is the FIRST row a transaction takes.
 //
 // Art. 17 erasure is subject-first and always has been: anonymizeSubjectRows
-// runs `UPDATE person … archived_at` and then, in the same transaction, deletes
+// runs `UPDATE contact … archived_at` and then, in the same transaction, deletes
 // the rows hanging off that subject — the consent tokens, the LinkedIn ghosts,
 // the lead scores. A writer that touches one of those child rows and only then
 // reaches for the subject has taken the two in the opposite order, and the two
@@ -75,7 +75,9 @@ var mutatingStatement = regexp.MustCompile(
 // Empty. An entry here is a claim that the eraser cannot be on the other side of
 // the rows this function takes first — which is a claim about privacy/erasure.go,
 // so write down which rows and why the eraser never holds them.
-var locksBeforeTheSubject = gatekit.Waive(map[string]string{})
+var locksBeforeTheSubject = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:runLinkedInMatch": "the two writes this walk reads as one body are in SEPARATE transactions. runLinkedInMatch resolves ghost employers (matchGhostCompanies, which writes linkedin_connection.matched_company_id) in its own s.db.Tx that COMMITS, and only then opens the match transaction that holds contacts. The eraser does hold linkedin_connection — it deletes the subject's ghosts after locking the subject — but the company-resolution locks are released at the first commit, before any contact is held, so the two never sit on opposite sides of a cycle. Splitting is deliberate: matched_company_id must be resolved before the name tier reads it, and holding those connection locks into the contact-holding transaction is the one ordering the eraser deadlocks against.",
+})
 
 func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 	t.Parallel()

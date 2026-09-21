@@ -17,7 +17,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -25,17 +26,22 @@ import (
 )
 
 // NewRestoreSeam assembles the reversal executor over the installation pool and
-// the update dispatcher, with the evaluator's ports bound to the real readers.
-func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher) RestoreSeam {
-	// The edge's rules are the people module's, and so is its table. This seam
+// the record provider, with the evaluator's ports bound to the real readers.
+//
+// corrections is nil-safe: an installation wired without it simply offers no
+// correction-aware reversal, every row falling through to the generic
+// evaluator exactly as before this seam knew corrections existed.
+func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.Store) RestoreSeam {
+	// The edge's rules are the contacts module's, and so is its table. This seam
 	// reaches them through that module's own store rather than restating any of
 	// them, which is also why it owns no relationship SQL.
-	edges := people.NewStore(InstallationDB(pool))
+	edges := contacts.NewStore(InstallationDB(pool))
 	return RestoreSeam{
-		pool:       pool,
-		dispatcher: dispatcher,
-		visible:    recordIsVisibleToCaller,
-		edges:      edges,
+		pool:        pool,
+		provider:    provider,
+		visible:     recordIsVisibleToCaller,
+		edges:       edges,
+		corrections: corrections,
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
@@ -44,9 +50,6 @@ func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher) RestoreSeam {
 			Unwritable:    valuesNoLongerWritable,
 			EdgeFacts:     edges.EdgeFactsForReverse,
 			EdgeWritable:  edgeIsWritableByCaller(edges),
-			ExternallyGoverned: func(ctx context.Context) (bool, error) {
-				return dispatcher.isOverlayUncached(ctx)
-			},
 		},
 	}
 }
@@ -122,19 +125,19 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 }
 
 // edgeIsWritableByCaller asks both halves of an edge write's authority: the
-// OBJECT grants the people store asks at its own entry, and the ROW scope on the
+// OBJECT grants the contacts store asks at its own entry, and the ROW scope on the
 // ANCHOR the edge annotates.
 //
 // The anchor and not the record whose history was open, and the two are not
-// symmetric: an employment anchors the PERSON, so a seat holding
-// organization-write and not person-write is refused the button on the company's
+// symmetric: an employment anchors the CONTACT, so a seat holding
+// company-write and not contact-write is refused the button on the company's
 // page. Asking the record instead would light a button the write then refuses.
 //
 // The entry's action travels with it because the object grant the inverse asks
-// for is the people store's own to decide — reversing a create is an archive
+// for is the contacts store's own to decide — reversing a create is an archive
 // there, and the archive asks delete.
-func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, people.EdgeFacts, string) error {
-	return func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts, entryAction string) error {
+func edgeIsWritableByCaller(edges *contacts.Store) func(context.Context, pgx.Tx, contacts.EdgeFacts, string) error {
+	return func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error {
 		if err := edges.RefuseEdgeWrite(ctx, facts.Kind, entryAction); err != nil {
 			return err
 		}
@@ -145,6 +148,11 @@ func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, p
 // entityTypeActivity is the record kind whose row-scope checks dispatch
 // differently, named rather than typed inline at the branch above.
 const entityTypeActivity = "activity"
+
+// entityTypeDeal is the record kind a machine correction is always about —
+// deals.DealCorrection has no other subject today, so reverseCorrection
+// filters an audit row on it before asking the corrections store anything.
+const entityTypeDeal = "deal"
 
 // rowIsBehindTheErasureBoundary reuses privacy's own boundary predicate rather
 // than restating it. An Art. 17 erasure is one of the few rules where a second
@@ -213,7 +221,7 @@ func rowIsAlreadyUndone(ctx context.Context, tx pgx.Tx, row AuditRow) (bool, err
 
 // valuesNoLongerWritable names patch keys the update path could not write
 // today. A cf_* key whose catalog entry was retired is the case that reaches a
-// person as "unknown field cf_budget", which is not an answer to pressing Undo.
+// contact as "unknown field cf_budget", which is not an answer to pressing Undo.
 func valuesNoLongerWritable(ctx context.Context, tx pgx.Tx, entityType string, _ ids.UUID, patch map[string]json.RawMessage) ([]string, error) {
 	var custom []string
 	for key := range patch {
@@ -254,16 +262,33 @@ var _ privacy.ChangeRestorer = RestoreSeam{}
 // executor that puts a change back, and the reader that says in advance which
 // changes can be. They share ONE seam, so the button and the write cannot come
 // to disagree about what is possible.
-//
-// It runs AFTER assembly and takes the server's OWN dispatcher rather than
-// building one. A second dispatcher is a second per-workspace overlay cache and
-// a second overlay meter, so the reversal path would answer "is this workspace
-// overlay-governed" from a different reading than every other write the server
-// makes — and two answers to that question is what the dispatcher exists to
-// prevent.
 func (s *Server) wireReversal(pool *pgxpool.Pool) {
-	seam := NewRestoreSeam(pool, s.sorDispatch)
+	// ONE instance, given to the seam that WRITES a reversal and to the judge
+	// that READS whether one is offered — the same reason the seam itself is
+	// shared below. Two separately constructed stores would still ask the
+	// database the same question, but a future difference between them (a
+	// second gate, a second cache) is exactly the kind of drift this line
+	// exists to make impossible rather than merely unlikely.
+	corrections := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	seam := NewRestoreSeam(pool, NewProvider(pool), corrections)
 	s.privacyHandlers = s.privacyHandlers.
 		WithChangeRestorer(seam).
 		WithUndoabilityReader(NewUndoabilityPage(seam))
+	// The receipt's undo answer comes from THIS seam, not a second one built
+	// for it: the line offering an Undo and the write performing it must agree,
+	// and one evaluator is how they stay agreed.
+	//
+	// Assembly order is load-bearing here and stated rather than assumed: the
+	// receipt is built before this runs, and a nil service would leave every
+	// line reading "not evaluated" with nothing failing to say so.
+	if s.magicService == nil {
+		panic("compose: the receipt must be assembled before its undo judge is bound")
+	}
+	s.magicService.WithUndoJudge(magicUndoJudge{
+		seam: seam,
+		// The corrections store is what lets a machine close-date change read
+		// as undoable at all: the generic evaluator refuses exactly those rows,
+		// because they write a field the ordinary update shape cannot spell.
+		corrections: corrections,
+	})
 }

@@ -33,8 +33,8 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
 	admin := e.Admin()
 
-	person := e.SeedPerson(t, "Newsletter Reader", &e.Rep1)
-	addPersonEmail(t, e, person, "reader@buyer.test")
+	contact := e.SeedContact(t, "Newsletter Reader", &e.Rep1)
+	addContactEmail(t, e, contact, "reader@buyer.test")
 	// Two granted purposes: a marketing one, which carries an unsubscribe
 	// surface, and the locked transactional one, which by definition does not.
 	for _, key := range []string{"newsletter", "transactional"} {
@@ -43,7 +43,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 			t.Fatalf("create purpose %s: %v", key, err)
 		}
 		if _, err := consentStore.Record(admin, consent.RecordInput{
-			PersonID: ids.From[ids.PersonKind](person), PurposeID: purpose.ID, NewState: "granted",
+			ContactID: ids.From[ids.ContactKind](contact), PurposeID: purpose.ID, NewState: "granted",
 			PolicyText: &grantedWording,
 		}); err != nil {
 			t.Fatalf("grant %s: %v", key, err)

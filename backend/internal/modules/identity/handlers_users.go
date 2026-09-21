@@ -5,6 +5,7 @@ package identity
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -22,6 +23,38 @@ import (
 // actor.hasRole("admin")); the handler resolves the acting Identity the
 // middleware bound and returns the resulting member row.
 
+// seatIdentity reads the two fields every route that CREATES a seat carries: the
+// address the seat is keyed on, and the name a colleague is shown by.
+//
+// It exists because the contract's `format: email` and `maxLength` are
+// documentation — the generated binding enforces neither, so a route that
+// skipped these checks would take a malformed address or an empty name and
+// create a member from it. Both routes need exactly the same two refusals, and
+// the second one was a copy of the first until this was extracted.
+//
+// It takes the two strings rather than a request, because the two requests are
+// different generated types that happen to agree on these fields; a parameter
+// naming one of them would make the other one's route convert into a shape it
+// is not.
+//
+// Writes its own refusal and answers false, in the idiom h.actor uses: a caller
+// that gets false has already answered the request and returns.
+func seatIdentity(
+	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
+) (values.Email, string, bool) {
+	email, perr := values.ParseEmail(rawEmail)
+	if perr != nil {
+		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
+		return values.Email{}, "", false
+	}
+	name := strings.TrimSpace(rawName)
+	if name == "" || utf8.RuneCountInString(name) > 255 {
+		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+		return values.Email{}, "", false
+	}
+	return email, name, true
+}
+
 // InviteUser (POST /users): provision a new member and mail the set-password link.
 func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.actor(w, r)
@@ -32,16 +65,8 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// The contract's format/length constraints are not enforced by the binding —
-	// validate here so a malformed email or empty name can't create a member.
-	email, perr := values.ParseEmail(string(req.Email))
-	if perr != nil {
-		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
-		return
-	}
-	name := strings.TrimSpace(req.DisplayName)
-	if name == "" || utf8.RuneCountInString(name) > 255 {
-		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	if !ok {
 		return
 	}
 	// An invite creates an ACTIVE member with no password whose only way in is
@@ -74,7 +99,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		err = conflictIf(err, errEmailTaken, "email_taken",
-			"a user with this email already exists in this organization; if they were "+
+			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
 		httperr.Write(w, r, unknownRoleRefusal(err))
 		return
@@ -95,11 +120,11 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 	}
 	if err := h.svc.ChangeUserRole(r.Context(), actor, ids.UserID{UUID: ids.UUID(id)}, string(req.Role)); err != nil {
 		err = conflictIf(err, errLastActiveAdmin, "last_active_admin",
-			"this user is the organization's only active administrator; give another "+
+			"this user is the company's only active administrator; give another "+
 				"user the admin role first, then change this one's")
 		err = conflictIf(err, errAgentSeatHoldsNoRole, "agent_seat_holds_no_role",
 			"this is the workspace's agent identity; what an agent may do comes from the "+
-				"passport granting it and the person that passport names, never from a role of its own")
+				"passport granting it and the contact that passport names, never from a role of its own")
 		httperr.Write(w, r, unknownRoleRefusal(err))
 		return
 	}
@@ -126,7 +151,7 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 		Reason: req.Reason,
 	}); err != nil {
 		httperr.Write(w, r, conflictIf(err, errLastActiveAdmin, "last_active_admin",
-			"this user is the organization's only active administrator; deactivating them "+
+			"this user is the company's only active administrator; deactivating them "+
 				"would leave nobody able to manage users — give another user the admin role first"))
 		return
 	}
@@ -249,12 +274,12 @@ func conflictIf(err, cause error, code, detail string) error {
 // MEMBER and an unknown ROLE. Both invite and change-role look a role key up, so
 // the wording lives here rather than being written out at each — an admin who
 // mistyped a role would otherwise be told the member was not found and go
-// looking for the wrong thing. The roles an organization defines are not a fixed
+// looking for the wrong thing. The roles a company defines are not a fixed
 // list (a workspace may define its own), so the detail points at where the truth
 // lives instead of reciting an enum that can drift.
 func unknownRoleRefusal(err error) error {
 	return refuseAs(err, errUnknownRole, http.StatusNotFound, "unknown_role",
-		"this organization defines no role with that key; check the roles it does "+
+		"this company defines no role with that key; check the roles it does "+
 			"define and use one of those")
 }
 
@@ -279,16 +304,19 @@ func tooManyPasswordLinksBy(detail string) error {
 }
 
 // passwordLinkRefusal reports why this installation cannot issue set-password
-// links, or nil when it can. Both refusals are operator configuration states
-// rather than anything about the request, which is why they are decided before
+// links, or nil when it can. The refusal is an operator configuration state
+// rather than anything about the request, which is why it is decided before
 // the target is even resolved.
+//
+// A CONFIGURED MAILER IS NO LONGER ONE OF THEM. It used to answer
+// `email_channel_configured` — "invite the user instead" — which is sound
+// advice only while the mail actually arrives. On an installation whose relay
+// is configured and dead, the invite answers 201 and delivers nothing and this
+// refused the one fallback, so the escape was disabled by the fault it existed
+// to escape. It must stay in step with canIssuePasswordLink, which decides what
+// /me advertises: advertising an action this refuses is the same misleading
+// affordance from the other side.
 func (h Handlers) passwordLinkRefusal() error {
-	if h.resetMailer != nil {
-		return &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "email_channel_configured",
-			Detail: "this installation delivers set-password links by email; invite the user instead",
-		}
-	}
 	if h.passwordLinkBaseURL == "" {
 		return &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "public_base_url_unset",
@@ -338,4 +366,62 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
 	if err := h.resetMailer.Send(r.Context(), email, words.InviteSubject, body); err != nil {
 		slog.Error("invite email failed", "err", err)
 	}
+}
+
+// CreateFormerMember (POST /users/former): record a colleague who already left,
+// as a deactivated seat with no password and no invitation.
+//
+// formerSourceMax is the contract's own bound on `source`, enforced in the
+// handler because the generated wrapper enforces no maxLength.
+const formerSourceMax = 200
+
+// CreateFormerMember (POST /users/former) records a colleague who already left,
+// as a deactivated seat with no password and no invitation.
+//
+// The three refusals InviteUser carries that this one does not are all about
+// delivery: there is no set-password token, so no mail channel is required and
+// no "this member could never sign in" conflict applies. Being unable to sign
+// in is the point here rather than the failure.
+func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.FormerMemberRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	if !ok {
+		return
+	}
+	in := FormerMemberInput{Email: email.String(), DisplayName: name}
+	if req.Role != nil {
+		in.Role = string(*req.Role)
+	}
+	if req.LeftAt != nil {
+		in.LeftAt = req.LeftAt
+	}
+	if req.Source != nil {
+		// CHARACTERS, not bytes, and bounded here because the generated wrapper
+		// enforces no maxLength — the same gap seatIdentity covers one function
+		// over. Unbounded, this string rides into the audit row's `after` image
+		// at whatever length a caller sends: an operator's label, not content,
+		// and nothing downstream truncates it.
+		if utf8.RuneCountInString(*req.Source) > formerSourceMax {
+			httperr.Write(w, r, httperr.Validation("source", "length",
+				fmt.Sprintf("Name where this record came from in %d characters or fewer.", formerSourceMax)))
+			return
+		}
+		in.Source = *req.Source
+	}
+	userID, err := h.svc.CreateFormerMember(r.Context(), actor, in)
+	if err != nil {
+		err = conflictIf(err, errEmailTaken, "email_taken",
+			"a seat with this email already exists; a former member is recorded once, "+
+				"and somebody who came back is reactivated from the roster rather than added again")
+		httperr.Write(w, r, unknownRoleRefusal(err))
+		return
+	}
+	h.writeUserByID(w, r, userID, http.StatusCreated)
 }

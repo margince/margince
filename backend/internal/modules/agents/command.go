@@ -210,7 +210,7 @@ func (a *archiveResolver) Subject(ctx context.Context, cmd ArchiveCommand) (Stag
 		// The id is the only name this type has here.
 		return info, nil
 	}
-	// "Archive person 0195c3…" tells the approver nothing about who
+	// "Archive contact 0195c3…" tells the approver nothing about who
 	// disappears, and the approvals surface hands the inbox no other
 	// human-readable name for the target.
 	info.Summary = fmt.Sprintf("Archive %s %s", cmd.RecordType, recordLabel(rec))
@@ -295,7 +295,7 @@ func (createResolver) Subject(_ context.Context, cmd CreateCommand) (StageInfo, 
 // fine, and a resolver that cannot tell which door asked has no way to
 // answer "does the executor support this" correctly for both.
 func (createResolver) Guards(_ context.Context, cmd CreateCommand) error {
-	return rejectUnknownFields(createShapes, cmd.RecordType, cmd.Fields)
+	return rejectUnknownFields(createWriteShapes, cmd.RecordType, cmd.Fields)
 }
 
 // PatchCommand is one whole-record field patch, whichever door asked for it.
@@ -362,7 +362,7 @@ func (patchResolver) Subject(_ context.Context, cmd PatchCommand) (StageInfo, er
 // webhook_subscription) are patched by their own module rather than through
 // this seam.
 func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
-	if err := rejectUnknownFields(updateShapes, cmd.RecordType, cmd.Fields); err != nil {
+	if err := rejectUnknownFields(updateWriteShapes, cmd.RecordType, cmd.Fields); err != nil {
 		return err
 	}
 	if !servedByTheRecordSeam(cmd.RecordType) {
@@ -404,7 +404,7 @@ func servedByTheRecordSeam(recordType string) bool {
 //
 // Unlike archiveResolver's own target (above), there is no memo here: none
 // of this family's Subject implementations reads the record — their summary
-// names the OPERAND (a fact key, a profile field, a person id), the same way
+// names the OPERAND (a fact key, a profile field, a contact id), the same way
 // patchResolver's names the fields a patch sets rather than reading the
 // record for a value nothing downstream renders (patchResolver's own doc,
 // below) — so refuse is Guards' only caller and there is no second reading

@@ -47,7 +47,7 @@ const SETTINGS: NavSection = {
   ],
 };
 
-const primary = railTrail({ screen: "brief" })[0];
+const primary = railTrail({ screen: "home" })[0];
 const settings = railTrail({ screen: "settings", id: "account" }, SETTINGS);
 
 function level(
@@ -120,7 +120,7 @@ export const Collapsed: Story = {
 
 /**
  * A drilled level, which is the case the component exists for: the same rows in
- * the same groups, named by the heading over the first of them, with the way out
+ * the same groups, named by the label over the first of them, with the way out
  * of the section above them.
  */
 export const Drilled: Story = {

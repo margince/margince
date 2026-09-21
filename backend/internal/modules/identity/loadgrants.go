@@ -94,3 +94,23 @@ func rawTeamIDs(teams []ids.TeamID) []ids.UUID {
 	}
 	return out
 }
+
+// SeatAllows answers whether one seat's effective grants admit an action on an
+// object, without asking anything about the CALLER.
+//
+// The other readers here answer about the principal, because almost every
+// question is "may I". This one is "may THEY", which the lead-escalation seat
+// needs: a desk is being nominated to receive escalations that carry the record
+// they are about, and a seat that cannot open a lead is not a desk to send one
+// to. Nominating is an admin's act and the caller's own authority is checked by
+// the surface that offers it, so this reads grants and nothing else.
+//
+// A seat with no role assignment allows nothing, which is the honest answer for
+// a user who holds none.
+func SeatAllows(ctx context.Context, tx pgx.Tx, seat ids.UserID, object string, action principal.Action) (bool, error) {
+	_, _, perms, err := loadGrants(ctx, tx, seat)
+	if err != nil {
+		return false, err
+	}
+	return perms.Allows(object, action), nil
+}

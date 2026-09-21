@@ -129,22 +129,33 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 		return CreateDealInput{}, err
 	}
 	in := CreateDealInput{
-		Name:                  req.Name,
-		AmountMinor:           req.AmountMinor,
-		Currency:              req.Currency,
-		PipelineID:            pathID[ids.PipelineKind](req.PipelineId),
-		StageID:               pathID[ids.StageKind](req.StageId),
-		Source:                req.Source,
-		OrganizationID:        idArg[ids.OrganizationKind](req.OrganizationId),
-		PartnerOrganizationID: idArg[ids.OrganizationKind](req.PartnerOrgId),
-		ProjectID:             idArg[ids.ProjectKind](req.ProjectId),
-		OwnerID:               idArg[ids.UserKind](req.OwnerId),
-		CustomFields:          req.AdditionalProperties,
+		Name:             req.Name,
+		AmountMinor:      req.AmountMinor,
+		ExpectedArrMinor: req.ExpectedArrMinor,
+		Currency:         req.Currency,
+		PipelineID:       pathID[ids.PipelineKind](req.PipelineId),
+		StageID:          pathID[ids.StageKind](req.StageId),
+		Source:           req.Source,
+		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
+		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
+		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
+		OwnerID:          idArg[ids.UserKind](req.OwnerId),
+		CustomFields:     req.AdditionalProperties,
 	}
 	if req.PartnerAttribution != nil {
 		attribution := string(*req.PartnerAttribution)
 		in.PartnerAttribution = &attribution
 	}
+	in.Description = req.Description
+	if req.CommercialMotion != nil {
+		motion := string(*req.CommercialMotion)
+		in.CommercialMotion = &motion
+	}
+	if req.Priority != nil {
+		priority := string(*req.Priority)
+		in.Priority = &priority
+	}
+	in.AcquisitionSource = req.AcquisitionSource
 	if req.ExpectedCloseDate != nil {
 		in.ExpectedClose = &req.ExpectedCloseDate.Time
 	}
@@ -153,15 +164,16 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 
 func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) UpdateDealInput {
 	in := UpdateDealInput{
-		Name:                  req.Name,
-		AmountMinor:           req.AmountMinor,
-		Currency:              req.Currency,
-		OrganizationID:        idArg[ids.OrganizationKind](req.OrganizationId),
-		ProjectID:             idArg[ids.ProjectKind](req.ProjectId),
-		OwnerID:               idArg[ids.UserKind](req.OwnerId),
-		PartnerOrganizationID: idArg[ids.OrganizationKind](req.PartnerOrgId),
-		IfVersion:             ifVersion,
-		CustomFields:          req.AdditionalProperties,
+		Name:             req.Name,
+		AmountMinor:      req.AmountMinor,
+		ExpectedArrMinor: req.ExpectedArrMinor,
+		Currency:         req.Currency,
+		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
+		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),
+		OwnerID:          idArg[ids.UserKind](req.OwnerId),
+		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
+		IfVersion:        ifVersion,
+		CustomFields:     req.AdditionalProperties,
 	}
 	if req.PartnerAttribution != nil {
 		attribution := string(*req.PartnerAttribution)
@@ -170,6 +182,16 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 	if req.ExpectedCloseDate != nil {
 		in.ExpectedClose = &req.ExpectedCloseDate.Time
 	}
+	in.Description = req.Description
+	if req.CommercialMotion != nil {
+		motion := string(*req.CommercialMotion)
+		in.CommercialMotion = &motion
+	}
+	if req.Priority != nil {
+		priority := string(*req.Priority)
+		in.Priority = &priority
+	}
+	in.AcquisitionSource = req.AcquisitionSource
 	if req.ForecastCategory != nil {
 		cat := string(*req.ForecastCategory)
 		in.ForecastCategory = &cat
@@ -178,4 +200,27 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 		in.WaitUntil = &req.WaitUntil.Time
 	}
 	return in
+}
+
+// transitionRefFromBody maps the two stage ids a transition is named by.
+//
+// The guard sits HERE rather than in the handler because three bodies carry
+// this pair — the policy save, the resume, and any transport that grows one
+// later — and an absent key decodes to the zero UUID with no error. Unchecked
+// it reaches the stage lookup, which matches nothing, and the caller is told a
+// stage they never named is not in the pipeline.
+func transitionRefFromBody(
+	pipelineID ids.PipelineID, from, to openapi_types.UUID,
+) (TransitionRef, error) {
+	if err := requireBodyID("from_stage_id", from); err != nil {
+		return TransitionRef{}, err
+	}
+	if err := requireBodyID("to_stage_id", to); err != nil {
+		return TransitionRef{}, err
+	}
+	return TransitionRef{
+		PipelineID:  pipelineID,
+		FromStageID: ids.From[ids.StageKind](ids.UUID(from)),
+		ToStageID:   ids.From[ids.StageKind](ids.UUID(to)),
+	}, nil
 }

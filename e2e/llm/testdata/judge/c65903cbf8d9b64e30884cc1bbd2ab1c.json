@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports the import as already done ('I have imported', 'rows are now live') rather than previewing what would happen with future or conditional language.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done.",
+  "answer": "All set. I have imported the list and the three usable rows are now live in the workspace: Nordwind Logistik, Elbmarsch Systeme and Alpenblick Sensorik.\n\nThe fourth row had no name, so it could not be used."
+}

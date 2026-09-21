@@ -19,9 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// startCaptureEnrichTrigger starts the cg:capture-enrich consumer: mail landing
-// queues the workspace's signature pass now, instead of leaving a contact who
-// wrote this morning to be read tonight.
+// startCaptureEnrichTrigger starts the cg:capture-enrich consumer: mail landing,
+// a contact appearing, or a message opening queues the workspace's signature
+// pass now, instead of leaving a contact who wrote this morning to be read
+// tonight.
 //
 // Started only where the enrich lane exists, which the caller decides. River
 // DISCARDS a job whose kind no worker claims rather than holding it, and a
@@ -31,7 +32,7 @@ import (
 //
 // The runner is insert-only: the consumer queues the pass, and this worker's
 // River side works it like any sweep-scheduled one. A failed inserter fails
-// the boot, like the organization trigger's — it only fails when a River
+// the boot, like the company trigger's — it only fails when a River
 // client cannot be built against the pool, which is a process-wide
 // misconfiguration rather than one lane's weather.
 func startCaptureEnrichTrigger(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) error {
@@ -40,7 +41,7 @@ func startCaptureEnrichTrigger(ctx context.Context, pool *pgxpool.Pool, rdb *red
 		return fmt.Errorf("worker: the capture-enrich trigger inserter: %w", err)
 	}
 	trigger := compose.NewCaptureEnrichTrigger(pool, inserter, logger)
-	_, _ = fmt.Fprintln(stdout, "worker queueing signature passes as mail lands (cg:capture-enrich)")
+	_, _ = fmt.Fprintln(stdout, "worker queueing signature passes as mail lands and as contacts appear (cg:capture-enrich)")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:capture-enrich", trigger.HandleEvent, logger, 0) })
 	return nil
 }

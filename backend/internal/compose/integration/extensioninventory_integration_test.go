@@ -16,7 +16,7 @@ import (
 )
 
 // TestExtensionInventoryLogsOnlyChanges: the boot observation writes one
-// system_log row per composed-set CHANGE (ADR-0069 §5) — a vanilla boot
+// system_log row per composed-set CHANGE (ADR-0120 §5) — a vanilla boot
 // writes nothing, a rebooted unchanged set writes nothing, and install /
 // upgrade / removal each write exactly one attributable row.
 func TestExtensionInventoryLogsOnlyChanges(t *testing.T) {

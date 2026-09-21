@@ -62,7 +62,7 @@ Scan policy lives in [`.syft.yaml`](../../.syft.yaml); the Makefile owns the
   a release unless the SBOM attests every file the release patch adds or
   modifies, and that patch is a full committed-tree diff with no excludes — so
   the SBOM file set must equal the whole committed tree. Excluding any committed
-  tree here (CI workflows, `cli/craft`, `fixtures`, `sbom-schemas`, …) would make
+  tree here (CI workflows, `fixtures`, `sbom-schemas`, …) would make
   a commit touching it fail that gate. Uncommitted host state is already absent
   because the scan runs on `git archive HEAD`, so there is nothing left to
   exclude.
@@ -145,7 +145,7 @@ Two categories never reach the allowlist check:
 
 - **First-party packages** are ignored by coordinate (`ignore-packages`):
   `github.com/margince/margince/*` (our own Go modules) and
-  `example.margince.dev/*` (the committed extension stubs, ADR-0069). They carry
+  `example.margince.dev/*` (the committed extension stubs, ADR-0120). They carry
   no third-party license to gate.
 - **Local composite actions** under `.github/actions/` are ignored by coordinate
   too (`./.github/actions/*`). They are first-party files carrying the repo's own
@@ -245,7 +245,7 @@ is no automatic trigger at all. The runner needs only Docker, which
 There is no path filter, because there is no filtered trigger to apply it to.
 
 **Why the `main` push trigger went away.** It fired on every dependency-set
-change that landed, about 48 runs a week, each drawing on the same org-wide
+change that landed, about 48 runs a week, each drawing on the same company-wide
 ceiling of 20 concurrent runners that the PR gates queue in — where a starved
 lane delays a verdict somebody is waiting on. Nothing consumed the output at that
 cadence: this repository has no releases yet, so every run published bundles for
@@ -265,7 +265,7 @@ even now that this workflow has no filter of its own: a workflow-level `paths:`
 filter produces no check run when it does not match, and a required context that
 never posts blocks a merge forever — so a gate that must be required cannot live
 behind one. Job-level gating reports a path skip as passing instead. See
-[infra/ci-pipeline.md](../../infra/ci-pipeline.md).
+[ci-pipeline.md](../explanation/ci-pipeline.md).
 
 Workflow-level `permissions: contents: read` is the floor for every job. The
 OIDC minting credential is **not** granted there — only the `sign` job requests

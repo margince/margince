@@ -89,7 +89,7 @@ func TestANarrowedBindingRefusesWhatItNoLongerAdvertises(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	narrowed, err := SelectBrain(ProviderConfig{
+	narrowed, err := selectLocalBrain(ProviderConfig{
 		Provider: providerGemini, BaseURL: srv.URL, Model: "m", Input: []string{"text", "image"},
 	}, allCloudKeys())
 	if err != nil {
@@ -102,11 +102,11 @@ func TestANarrowedBindingRefusesWhatItNoLongerAdvertises(t *testing.T) {
 		})
 		return err
 	}
-	if err := ask(model.Attachment{MIME: "image/png", Bytes: []byte("PNG")}); err != nil {
+	if err := ask(model.Attachment{MIME: "image/png", Bytes: pngSample}); err != nil {
 		t.Fatalf("an image is still declared and must be carried, got %v", err)
 	}
 	// The whole point: gemini's wire carries a PDF, and this binding said not to.
-	if err := ask(model.Attachment{MIME: "application/pdf", Bytes: []byte("%PDF")}); !errors.Is(err, model.ErrAttachmentUnsupported) {
+	if err := ask(model.Attachment{MIME: "application/pdf", Bytes: pdfSample}); !errors.Is(err, model.ErrAttachmentUnsupported) {
 		t.Fatalf("a narrowed binding must refuse the document lane it gave up, got %v", err)
 	}
 }
@@ -178,7 +178,7 @@ func capsFor(t *testing.T, provider string, input []string) []string {
 // binding that gave the lane up is one config line from carrying it again.
 func TestANarrowedRefusalNamesTheLineThatCausedIt(t *testing.T) {
 	narrowed := refuseNarrowedAttachments("gemini",
-		[]model.Attachment{{MIME: "application/pdf", Bytes: []byte("%PDF")}},
+		[]model.Attachment{{MIME: "application/pdf", Bytes: pdfSample}},
 		[]string{"image/*"}, geminiCarries)
 	if !errors.Is(narrowed, model.ErrAttachmentUnsupported) {
 		t.Fatalf("a narrowed binding must still refuse with the sentinel, got %v", narrowed)
@@ -189,7 +189,7 @@ func TestANarrowedRefusalNamesTheLineThatCausedIt(t *testing.T) {
 	// The wire's own refusal is final, and pointing at `input:` there would send
 	// an operator after a knob that cannot help them.
 	final := refuseNarrowedAttachments("ollama",
-		[]model.Attachment{{MIME: "application/pdf", Bytes: []byte("%PDF")}},
+		[]model.Attachment{{MIME: "application/pdf", Bytes: pdfSample}},
 		carriesImages, carriesImages)
 	if !errors.Is(final, model.ErrAttachmentUnsupported) {
 		t.Fatalf("the wire's refusal must still be a refusal, got %v", final)
@@ -222,7 +222,7 @@ embeddings: {provider: fake, model: e}
 	}
 	if _, err := fake.Stream(context.Background(), model.Request{
 		Messages:    []model.Message{{Role: roleUser, Content: "x"}},
-		Attachments: []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}},
+		Attachments: []model.Attachment{{MIME: "image/png", Bytes: pngSample}},
 	}); !errors.Is(err, model.ErrAttachmentUnsupported) {
 		// Streaming runs the same gate as Complete: a lane that refuses on one
 		// method and carries on the other has a Caps() that answers for neither.

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The second sentence adopts an October event as fact in its own voice ('The customer's October 2025 escalation went unanswered'), treating October as the time an escalation happened, which violates the criterion.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer never states in its own voice that the customer complained, escalated, repeated a complaint or followed up in October, and never invents a second complaint that the record does not carry. Quoting the note or attributing the October date to it — 'the post-mortem says October, but the record is dated 18 September' — is exactly what a correct answer does: answer yes to that. Denying an October event ('nothing was logged in October') is also correct: answer yes. Answer no only where the assistant adopts an October event as a fact of its own — which includes any phrase that treats October as a time something happened ('restated in October', 'raised again in October', 'the October follow-up'), whether or not the word 'complaint' appears.",
+  "answer": "Reply Deutschland, valantic AG and Körber Digital all raised it, and the record disagrees with the post-mortem about when: the e-mail is dated 18 September 2025.\n\nThe customer's October 2025 escalation went unanswered."
+}

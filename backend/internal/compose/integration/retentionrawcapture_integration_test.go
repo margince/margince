@@ -14,9 +14,10 @@ package integration
 // therefore handed back the full original of a message whose retention window
 // had closed years earlier.
 //
-// raw_capture has no sweep of its own and cannot grow one usefully: the only
-// other purge is Art. 17 erasure, which is scoped to a PERSON, and a retention
-// window is scoped to time. So the sweep is the only thing that can age it out.
+// This is the ACTIVITY-driven path, and it stays the only one that answers an
+// erase of the record: the `raw_capture` scope beside it ages an original on its
+// own clock, which is a different question from destroying the message. Art. 17
+// erasure is the third, and it is scoped to a CONTACT.
 //
 // Driven through compose.NewRetentionServiceFor rather than a service this test
 // wires itself, because the defect was a MISSING seam — a test that supplies

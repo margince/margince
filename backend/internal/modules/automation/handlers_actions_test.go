@@ -9,6 +9,7 @@ import (
 	"errors"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -74,19 +75,23 @@ func (f *fakeComms) DraftEmail(_ context.Context, anchor ids.UUID, intent string
 // fakeNotifier is a DB-free stand-in for the Notifier seam: this repo
 // wires none in compose, but the seam must still work once something
 // does, so its wired path gets its own test.
-type fakeNotifier struct {
-	err   error
-	calls []struct {
-		recipient     ids.UUID
-		subject, body string
-	}
+type notifyCall struct {
+	recipient     ids.UUID
+	subject, body string
+	target        datasource.EntityRef
+	dedupe        string
+	origin        *crmcontracts.NoticeOrigin
 }
 
-func (f *fakeNotifier) Notify(_ context.Context, recipient ids.UUID, subject, body string) error {
-	f.calls = append(f.calls, struct {
-		recipient     ids.UUID
-		subject, body string
-	}{recipient, subject, body})
+type fakeNotifier struct {
+	err   error
+	calls []notifyCall
+}
+
+func (f *fakeNotifier) Notify(
+	_ context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string, origin *crmcontracts.NoticeOrigin,
+) error {
+	f.calls = append(f.calls, notifyCall{recipient, subject, body, target, dedupe, origin})
 	return f.err
 }
 
@@ -160,7 +165,7 @@ func (p *fakeUpdateProvider) Merge(context.Context, datasource.MergeInput) (data
 	panic("fakeUpdateProvider: Merge not stubbed for this test")
 }
 
-func (p *fakeUpdateProvider) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (p *fakeUpdateProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	panic("fakeUpdateProvider: PromoteLead not stubbed for this test")
 }
 
@@ -454,7 +459,7 @@ func TestApplyAssignOwnerAtScaleStagesInsteadOfWriting(t *testing.T) {
 // nobody can decide.
 //
 // Releasing a held draft SENDS it from the approving human's own mailbox, so
-// approvals narrows the card to the person it goes out as. A firing with no
+// approvals narrows the card to the contact it goes out as. A firing with no
 // owner names nobody, and the three things it could do are: stage a card
 // decidable by nobody, which rots in the inbox; stage one decidable by anyone,
 // which is the defect that narrowing removes; or refuse where an operator can

@@ -18,7 +18,7 @@ import {
  * ## When a write gets one
  *
  * The bar is whether the reader can otherwise tell it worked. A toast for
- * something already visible on screen is noise, and noise is what teaches people
+ * something already visible on screen is noise, and noise is what teaches contacts
  * to stop reading the region that will one day carry something they need.
  *
  * **Show one** when the write succeeded and its result is NOT visible: a setting
@@ -32,8 +32,8 @@ import {
  *
  * **Errors go inline where they have a home** — a field, a form, the card that
  * failed. A toast is for a refusal with nowhere else to land, and it takes
- * `mark: false`, because a green completion dot beside a failure says the
- * opposite of what the sentence says.
+ * `tone: "danger"`, because the green completion dot the default tone draws
+ * says the opposite of what the sentence says.
  *
  * **An action is offered only where an inverse write actually exists.** Most of
  * this product's destructive verbs have none: every `DELETE` is a soft archive
@@ -97,13 +97,48 @@ export const Completion: Story = {
   render: () => <Bench label="Save" message="Signature saved." />,
 };
 
-/** A refusal takes no mark, and stays until it is put down. */
+/**
+ * Every tone the region draws, one after another. The dot is the message's own
+ * claim about itself — a completion, a caveat, work still running, something
+ * the reader has just been given — and every message carries one, because the
+ * arrangement this replaces could only turn the dot OFF, which drew the
+ * messages that mattered most with the least.
+ */
+export const Tones: Story = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-2)" }}>
+      <Bench
+        label="Report"
+        message="Nine contacts are being re-read."
+        options={{ tone: "info" }}
+      />
+      <Bench label="Completion" message="Signature saved." />
+      <Bench
+        label="Caveat"
+        message="Saved, but two fields were left blank."
+        options={{ tone: "warning" }}
+      />
+      <Bench
+        label="Refusal"
+        message="That did not save."
+        options={{ tone: "danger" }}
+      />
+      <Bench
+        label="Something new"
+        message="Deal Rooms are available on this plan."
+        options={{ tone: "discovery" }}
+      />
+    </div>
+  ),
+};
+
+/** A refusal wears the danger dot, and stays until it is put down. */
 export const Refusal: Story = {
   render: () => (
     <Bench
       label="Save without a stage"
       message="A deal needs a stage before it can be saved."
-      options={{ mark: false, sticky: true }}
+      options={{ tone: "danger", sticky: true }}
     />
   ),
 };

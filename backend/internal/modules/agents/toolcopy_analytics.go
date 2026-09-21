@@ -16,9 +16,9 @@ var runAnalyticsQueryCopy = toolCopy{
 		"governed population, in the database. The answer carries its columns, rows and " +
 		"schema version; groups too small to disclose are withheld, never estimated.",
 	Limits: "Populations, dimensions and measures come from margince://schema/analytics, " +
-		"derived for this seat; a name outside it is refused with what would work. Money " +
-		"measures are minor units. An omitted scope is this seat's own default population, " +
-		"never the workspace.",
+		"derived for this seat and answered by describe_analytics_vocabulary; a name outside " +
+		"it is refused with what would work. Money measures are minor units. An omitted scope " +
+		"is this seat's own default population, never the workspace.",
 	Instead: "run_report answers a prebuilt report by key; query_workspace lists exact " +
 		"records; the forecast tools answer forecast readings and movement. This one is for " +
 		"a novel aggregate no prebuilt report shapes.",

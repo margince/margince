@@ -71,9 +71,9 @@ describe("the scope each page declares", () => {
 
     // Pages whose cards genuinely split across two scopes. `integrations`
     // is one: PATCH /integrations/settings is "the installation's
-    // provider-lookup posture" by its own contract summary, while webhooks,
-    // the overlay mapping and the workspace extension units on the same page
-    // stay inside one workspace.
+    // provider-lookup posture" by its own contract summary, while webhooks
+    // and the workspace extension units on the same page stay inside one
+    // workspace.
     integrations: "mixed",
 
     // Personal pages carrying one shared surface each. A badge reading "Only
@@ -102,7 +102,11 @@ describe("the scope each page declares", () => {
     members: "workspace",
     teams: "workspace",
     pipelines: "workspace",
+    stageautomation: "workspace",
     leads: "workspace",
+    acquisition: "workspace",
+    reviewtemplates: "workspace",
+    recordroles: "workspace",
     fields: "workspace",
     tags: "workspace",
     products: "workspace",
@@ -152,8 +156,8 @@ describe("what each page lets a reader change", () => {
   //
   // The census renders the WHOLE expression, not the object names in it. An
   // earlier version flattened to names and every one of these passed it: Import
-  // asking create-OR-update where its card needs both, the missing delete verbs
-  // on webhooks and overlays, Authentication missing the OAuth cards' own grant,
+  // asking create-OR-update where its card needs both, the missing delete verb
+  // on webhooks, Authentication missing the OAuth cards' own grant,
   // and the absent seat ceiling. Verbs, AND-versus-OR and the ceiling are
   // exactly where the defects were, so they are exactly what it has to compare.
   function render(expression: CapabilityExpression): string {
@@ -194,7 +198,7 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(voice_profile:update, voice_profile:create)))",
 
     company:
-      "all(full-seat, any(any(installation_settings:update), all(any(organization:update, organization:create), available:company_context), any(fx_rate:update, fx_rate:create)))",
+      "all(full-seat, any(any(installation_settings:update), all(any(company:update, company:create), available:company_context), any(fx_rate:update, fx_rate:create)))",
     // The OAuth cards save through `capture_settings`, a different grant from
     // the sign-in card's.
     authentication:
@@ -207,8 +211,22 @@ describe("what each page lets a reader change", () => {
 
     pipelines:
       "all(full-seat, any(any(pipeline:update, pipeline:create), pipeline:delete))",
+    // The report is read-only, but the per-transition switches beneath it are
+    // not: turning a transition on is a pipeline write, so a rep who may only
+    // READ pipelines opens the page and finds every switch refused.
+    stageautomation: "all(full-seat, any(any(pipeline:update)))",
     leads:
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
+    // No delete arm: a source is retired through its switch, never removed.
+    acquisition:
+      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
+    // No write of any kind: the templates endpoint serves them and accepts no
+    // edits, so reading them IS the action this page performs.
+    reviewtemplates: "same-as-requires",
+    // No delete arm either: a role is retired through its switch, because an
+    // assignment that carried it has to stay resolvable.
+    recordroles:
+      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     fields:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     tags: "all(full-seat, any(any(tag:update, tag:create), tag:delete))",
@@ -216,11 +234,11 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(product:update, product:create), product:delete, any(offer_template:update, offer_template:create), offer_template:delete))",
 
     capture:
-      "all(full-seat, any(any(capture_settings:update), any(organization:update)))",
-    // Delete included on both, and the composed-unit arm outside the ceiling:
+      "all(full-seat, any(any(capture_settings:update), any(company:update)))",
+    // Delete included, and the composed-unit arm outside the ceiling:
     // ExtensionUnitsCard's Open link asks for no grant at all.
     integrations:
-      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete, any(overlay_connection:update, overlay_connection:create), overlay_connection:delete)), units:workspace)",
+      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete)), units:workspace)",
     knowledge: "all(full-seat, any(any(knowledge_corpus:create)))",
     // BOTH verbs: ImportCard's own gate is `mayCreate && mayAdvance`.
     import:
@@ -230,11 +248,11 @@ describe("what each page lets a reader change", () => {
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
     usage:
-      "all(full-seat, any(any(ai_model_rate:update, ai_model_rate:create)))",
+      "all(full-seat, any(any(any(ai_model_rate:update, ai_model_rate:create), any(ai_budget:update))))",
     "model-calls": "same-as-requires",
 
     privacy:
-      "all(full-seat, any(any(consent_config:create), any(retention_policy:update, retention_policy:create), retention_policy:delete, any(privacy_request:update), any(person:update)))",
+      "all(full-seat, any(any(consent_config:create), any(retention_policy:update, retention_policy:create), retention_policy:delete, any(privacy_request:update), any(contact:update)))",
     audit: "same-as-requires",
     // The reindex takes the seat; watching the queue beside it is a read, and
     // watching a stalled queue is an operator acting.
@@ -307,7 +325,7 @@ describe("who may open what", () => {
   const rep = meFixture({
     roles: ["rep"],
     allow: {
-      person: ["read"],
+      contact: ["read"],
       pipeline: ["read"],
       custom_field: ["read"],
       tag: ["read"],
@@ -358,14 +376,14 @@ describe("who may open what", () => {
   // but a directory is not an administration page, and a reader who may not
   // invite, change a role or switch a seat off has nothing to do on either.
   it("withholds members from a reader holding no user_admin", () => {
-    expect(visibleIds(readsOnly("person"))).not.toContain("members");
+    expect(visibleIds(readsOnly("contact"))).not.toContain("members");
     // Any authority over the roster opens it, and the READ is one of them —
     // it is what carries the role keys and the widened status view.
     expect(visibleIds(readsOnly("user_admin"))).toContain("members");
   });
 
   it("withholds teams from a reader holding neither team verb nor the roster read", () => {
-    expect(visibleIds(readsOnly("person"))).not.toContain("teams");
+    expect(visibleIds(readsOnly("contact"))).not.toContain("teams");
     // The team object's READ is not one of its arms: teams.go takes create and
     // update, and nothing on the page answers to a `team_admin:read`.
     expect(visibleIds(readsOnly("team_admin"))).not.toContain("teams");
@@ -439,7 +457,7 @@ describe("who may open what", () => {
   // The four pages whose subject is the installation's own configuration. Each
   // was reachable by a rep because the grant that opened it is a READ every
   // seeded role holds — the base currency, what an automation ran, whether
-  // capture is working, the person record behind the purposes list.
+  // capture is working, the contact record behind the purposes list.
   //
   // Every absence below is paired with the presence that proves the case is not
   // vacuous: an authority that refused everyone would pass the first half
@@ -447,7 +465,7 @@ describe("who may open what", () => {
   // nothing.
   it.each([
     ["company", "installation_settings"],
-    ["integrations", "overlay_connection"],
+    ["integrations", "webhook_subscription"],
     ["automations", "automation"],
   ] as const)(
     "withholds %s from a rep who only reads %s, and opens it to its writer",
@@ -460,35 +478,35 @@ describe("who may open what", () => {
   // Privacy is the fourth page but not the same shape: its arms stay READS,
   // because `retention_policy` and `privacy_request` are held by nobody below
   // admin and ops — the read already says whose page it is. What was wrong was
-  // the third arm, `person:read`, which every seeded role holds and which is
+  // the third arm, `contact:read`, which every seeded role holds and which is
   // why a rep opened the governance page at all.
   //
-  // The purposes card still reads through `person` server-side and must keep
-  // doing so; it feeds the Person 360. A card narrower than its page withholds
+  // The purposes card still reads through `contact` server-side and must keep
+  // doing so; it feeds the Contact 360. A card narrower than its page withholds
   // itself, which is the safe direction.
   // Management is seeded `consent_config:read` and NOTHING else on this page —
-  // no retention, no request queue. Dropping the `person` arm without this pair
+  // no retention, no request queue. Dropping the `contact` arm without this pair
   // locked the one role deliberately granted the consent vocabulary out of the
   // only page that renders it. The pair is what keeps them in without letting a
-  // rep back: a rep holds `person` and no consent grant at all.
-  it("opens privacy to the consent vocabulary's own reader, and to nobody else holding person", () => {
+  // rep back: a rep holds `contact` and no consent grant at all.
+  it("opens privacy to the consent vocabulary's own reader, and to nobody else holding contact", () => {
     const management = meFixture({
       roles: ["management"],
-      allow: { person: ["read"], consent_config: ["read"] },
+      allow: { contact: ["read"], consent_config: ["read"] },
     });
     expect(visibleSettingsPages(management).map((page) => page.id)).toContain(
       "privacy",
     );
     // The same reader without the consent grant is a rep, and stays out.
-    expect(visibleIds(readsOnly("person"))).not.toContain("privacy");
+    expect(visibleIds(readsOnly("contact"))).not.toContain("privacy");
     // And the consent grant alone does not do it either: the purposes list is
-    // read through `person`, so a holder without that read would open a page
+    // read through `contact`, so a holder without that read would open a page
     // whose only card is withheld.
     expect(visibleIds(readsOnly("consent_config"))).not.toContain("privacy");
   });
 
-  it("withholds privacy from a rep holding person, and opens it to a retention reader", () => {
-    expect(visibleIds(readsOnly("person"))).not.toContain("privacy");
+  it("withholds privacy from a rep holding contact, and opens it to a retention reader", () => {
+    expect(visibleIds(readsOnly("contact"))).not.toContain("privacy");
     expect(visibleIds(readsOnly("retention_policy"))).toContain("privacy");
     expect(visibleIds(readsOnly("privacy_request"))).toContain("privacy");
   });
@@ -508,11 +526,11 @@ describe("who may open what", () => {
 
 describe("requirements that are not permissions", () => {
   it("withholds the company page when the installation lacks the surface", () => {
-    // organization.update alone. The company profile ANDs its grant with a
+    // company.update alone. The company profile ANDs its grant with a
     // deployment flag, so a reader holding only that grant sees nothing when
     // the flag is off — the surface may genuinely not exist here.
     const holder = meFixture({
-      allow: { organization: ["read", "update"] },
+      allow: { company: ["read", "update"] },
       settingsAvailability: { company_context: false },
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).not.toContain(
@@ -522,7 +540,7 @@ describe("requirements that are not permissions", () => {
 
   it("shows it once the installation has it", () => {
     const holder = meFixture({
-      allow: { organization: ["read", "update"] },
+      allow: { company: ["read", "update"] },
       settingsAvailability: { company_context: true },
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).toContain("company");
@@ -532,7 +550,7 @@ describe("requirements that are not permissions", () => {
     // A server older than the field, or a snapshot cached before it shipped.
     // Absent is not permission: it has to read as "no such surface here".
     const holder = meFixture({
-      allow: { organization: ["read", "update"] },
+      allow: { company: ["read", "update"] },
       settingsAvailability: null,
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).not.toContain(
@@ -610,18 +628,22 @@ describe("the reset page needs the deployment's consent as well as the grant", (
 describe("holds — the evaluator the four surfaces share", () => {
   it("denies a grant arm while /me is unresolved", () => {
     expect(
-      holds({ kind: "grant", object: "person", action: "read" }, undefined),
+      holds({ kind: "grant", object: "contact", action: "read" }, undefined),
     ).toBe(false);
   });
 
   it("reads `any` as at-least-one and `all` as every", () => {
-    const me = meFixture({ allow: { person: ["read"] } });
-    const person = { kind: "grant", object: "person", action: "read" } as const;
+    const me = meFixture({ allow: { contact: ["read"] } });
+    const contact = {
+      kind: "grant",
+      object: "contact",
+      action: "read",
+    } as const;
     const deal = { kind: "grant", object: "deal", action: "read" } as const;
 
-    expect(holds({ kind: "any", of: [person, deal] }, me)).toBe(true);
-    expect(holds({ kind: "all", of: [person, deal] }, me)).toBe(false);
-    expect(holds({ kind: "all", of: [person] }, me)).toBe(true);
+    expect(holds({ kind: "any", of: [contact, deal] }, me)).toBe(true);
+    expect(holds({ kind: "all", of: [contact, deal] }, me)).toBe(false);
+    expect(holds({ kind: "all", of: [contact] }, me)).toBe(true);
   });
 });
 
@@ -691,7 +713,7 @@ describe("a page and its cards ask the same question", () => {
       opens("audit", { roles: ["management"], allow: { audit_log: ["read"] } }),
     ).toBe(true);
     expect(
-      opens("audit", { roles: ["rep"], allow: { person: ["read"] } }),
+      opens("audit", { roles: ["rep"], allow: { contact: ["read"] } }),
     ).toBe(false);
   });
 
@@ -743,10 +765,10 @@ describe("a page and its cards ask the same question", () => {
   });
 
   // The purposes card is what `consent_config` administers, but the object
-  // buys no READ — the list stays on `person` (consent/store.go ListPurposes)
+  // buys no READ — the list stays on `contact` (consent/store.go ListPurposes)
   // and only the writes moved. A page opening on it would be a page whose every
   // card is withheld. Invisible in the seeded roles, where every consent holder
-  // also holds `person:read`; a custom role is where it would have shown.
+  // also holds `contact:read`; a custom role is where it would have shown.
   it("does not open privacy on a grant that reads nothing on it", () => {
     expect(
       opens("privacy", {
@@ -754,12 +776,12 @@ describe("a page and its cards ask the same question", () => {
         allow: { consent_config: ["read", "create"] },
       }),
     ).toBe(false);
-    // Nor on `person`, which every seeded role holds: the purposes card reads
+    // Nor on `contact`, which every seeded role holds: the purposes card reads
     // through it, but a page that opened on it was the whole workspace's
     // governance page. The arms that DO open it are the two objects nobody
     // below admin and ops holds at all.
     expect(
-      opens("privacy", { roles: ["rep"], allow: { person: ["read"] } }),
+      opens("privacy", { roles: ["rep"], allow: { contact: ["read"] } }),
     ).toBe(false);
     expect(
       opens("privacy", {
@@ -801,7 +823,7 @@ describe("requirements that are not permissions — the composed units", () => {
   it("does not open integrations on a grant nobody in the old predicate had", () => {
     // `integrations.read` is held by every seeded role including read_only, so
     // admitting it would put the page in front of everyone. The old predicate
-    // asked for overlay, webhook or a composed unit, and this keeps to that.
+    // asked for a webhook write or a composed unit, and this keeps to that.
     expect(
       visibleSettingsPages(
         meFixture({ roles: ["rep"], allow: { integrations: ["read"] } }),
@@ -815,18 +837,9 @@ describe("requirements that are not permissions — the composed units", () => {
     // a misspelling here a compile error rather than a silently denied grant.
     //
     // The read is the same everyone-holds-it grant as `integrations` above —
-    // every seeded role reads both, because "is capture working?" shows up on
-    // the records they already open. Connecting an overlay is admin and ops work.
-    expect(
-      visibleSettingsPages(
-        meFixture({ allow: { overlay_connection: ["read"] } }),
-      ).some((p) => p.id === "integrations"),
-    ).toBe(false);
-    expect(
-      visibleSettingsPages(
-        meFixture({ allow: { overlay_connection: ["read", "update"] } }),
-      ).some((p) => p.id === "integrations"),
-    ).toBe(true);
+    // every seeded role reads it, because "is capture working?" shows up on the
+    // records they already open. Pointing a webhook somewhere is admin and ops
+    // work.
     expect(
       visibleSettingsPages(
         meFixture({ allow: { webhook_subscription: ["read"] } }),
@@ -872,10 +885,9 @@ describe("what the rail carries and what it leaves behind", () => {
       list: ["create", "read", "update"],
       offer: ["create", "read", "update"],
       offer_template: ["create", "read", "update"],
-      organization: ["create", "read", "update"],
-      overlay_connection: ["read"],
+      company: ["create", "read", "update"],
       partner: ["read"],
-      person: ["create", "read", "update"],
+      contact: ["create", "read", "update"],
       pipeline: ["read"],
       product: ["create", "read", "update"],
       project: ["create", "read", "update"],
@@ -900,13 +912,18 @@ describe("what the rail carries and what it leaves behind", () => {
       "agents",
       "connections",
       "capture-activity",
-      // The company profile the AI reads: a rep holds `organization` create and
+      // The company profile the AI reads: a rep holds `company` create and
       // update, which is what CompanyContextCard asks. Existing behaviour that
       // the rail is only now reporting — the card was always editable by them.
       "company",
+      // The outcome-review questions. A rep holds `custom_field:read`, and this
+      // page is read-only, so it is theirs to CONSULT — they are the ones asked
+      // these questions when a deal closes, and the page is where they can see
+      // what will be asked before it is.
+      "reviewtemplates",
       // Products and offer templates: a rep authors both.
       "products",
-      // Capture rules, because a rep holds `organization:update` and
+      // Capture rules, because a rep holds `company:update` and
       // BlockedDomainsCard writes it. If a rep editing the company's blocked
       // domains is not wanted, that CARD's grant is the thing to change — the
       // rail is only reporting what the card already allows.
@@ -918,7 +935,18 @@ describe("what the rail carries and what it leaves behind", () => {
     const reach = settingsReach(seededRep);
     expect(reach.looksUp.map((page) => page.id)).toEqual([
       "pipelines",
+      // Stage automation MOVED here when the page grew its switches. A rep
+      // holds pipeline read and not update, so the report is still theirs to
+      // consult and every control on it is refused — which is what looksUp
+      // means. It sat in the acted-on half while the page was read-only.
+      "stageautomation",
       "leads",
+      // The acquisition-source catalog, gated on custom_field like the lead
+      // vocabulary beside it: a rep reads the channels and changes none.
+      "acquisition",
+      // The responsibility-role vocabulary, gated the same way: a rep reads
+      // the roles and changes none.
+      "recordroles",
       "fields",
       "tags",
       "knowledge",

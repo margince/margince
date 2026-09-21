@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,14 +13,14 @@ import { TodayOnThisAccount } from "./companytoday";
 
 afterEach(cleanup);
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
-// A COMPLETE Organization360, not a cast one. A fixture asserted into the
+// A COMPLETE Company360, not a cast one. A fixture asserted into the
 // contract type can drop a required field or carry an invalid value and still
 // compile, so the test would go on passing after the wire shape moved under it.
-const BASE: Organization360 = {
+const BASE: Company360 = {
   as_of: "2026-08-07T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Acme",
     source: "manual",
@@ -32,11 +32,12 @@ const BASE: Organization360 = {
 };
 
 function show(
-  view?: Organization360,
+  view?: Company360,
   opts: {
     loading?: boolean;
     failed?: boolean;
-    onDraftTo?: (personId: string) => void;
+    onDraftTo?: (contactId: string) => void;
+    onOpenRecord?: (entityType: string, entityId: string) => void;
     onPrepareMeeting?: (activityId: string) => void;
     scan?: AccountScan;
   } = {},
@@ -48,11 +49,12 @@ function show(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <TodayOnThisAccount
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={opts.loading ?? false}
           failed={opts.failed ?? false}
           onDraftTo={opts.onDraftTo}
+          onOpenRecord={opts.onOpenRecord}
           onPrepareMeeting={opts.onPrepareMeeting}
           scan={opts.scan}
         />
@@ -61,15 +63,28 @@ function show(
   );
 }
 
-describe("what needs a person on this account today", () => {
+// The withheld line, found by the words the catalog puts BEFORE the list of
+// sections. Which sections it names is what these cases are about, and a copy
+// of the whole sentence here would fail on a rewrite that changed nothing
+// about the reading.
+const withheldPrefix = en["today.withheld"].slice(
+  0,
+  en["today.withheld"].indexOf("{sections}"),
+);
+const withheldLine = () =>
+  screen.getByText((content) => content.startsWith(withheldPrefix));
+
+describe("what needs a contact on this account today", () => {
   it("says nothing about a meeting when none is booked", () => {
     // Absent AND not named in sections_omitted means "none scheduled". Writing
     // a line about it would be missing data dressed as a recommendation — only
     // the suggestion engine can name WHOM to contact, so only it may advise
     // booking one.
     show(BASE);
-    expect(screen.getByText("Nothing here needs you today.")).toBeTruthy();
-    expect(screen.queryByText(/Hidden from you/)).toBeNull();
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    expect(
+      screen.queryByText((content) => content.startsWith(withheldPrefix)),
+    ).toBeNull();
   });
 
   it("says the calendar is hidden when the reader has no activity grant", () => {
@@ -80,8 +95,8 @@ describe("what needs a person on this account today", () => {
       ...BASE,
       sections_omitted: ["next_meeting"],
     });
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "the calendar",
+    expect(withheldLine().textContent).toContain(
+      en["today.source.nextMeeting"],
     );
   });
 
@@ -91,12 +106,12 @@ describe("what needs a person on this account today", () => {
       sections_omitted: ["next_meeting", "next_steps"],
     });
 
-    // "Hidden from you", never "None": a list assembled from three of five
+    // "Not included", never "None": a list assembled from three of five
     // sources is not the same list, and only the reader can judge whether the
     // missing one mattered.
-    const withheld = screen.getByText(/Hidden from you/);
-    expect(withheld.textContent).toContain("the calendar");
-    expect(withheld.textContent).toContain("open tasks");
+    const withheld = withheldLine();
+    expect(withheld.textContent).toContain(en["today.source.nextMeeting"]);
+    expect(withheld.textContent).toContain(en["today.source.nextSteps"]);
   });
 
   // The interaction tile reads the activities section, so a caller with no
@@ -106,9 +121,7 @@ describe("what needs a person on this account today", () => {
   it("names the activities section when the reader may not see what was said", () => {
     show({ ...BASE, sections_omitted: ["activities"] });
 
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "what was said",
-    );
+    expect(withheldLine().textContent).toContain(en["today.source.activities"]);
     expect(screen.queryByText("Last exchange")).toBeNull();
   });
 
@@ -120,28 +133,24 @@ describe("what needs a person on this account today", () => {
   it("names both readings when the reader may not see whose move it is or what is at risk", () => {
     show({ ...BASE, sections_omitted: ["state_strip"] });
 
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "whose move it is and the signals",
-    );
+    expect(withheldLine().textContent).toContain(en["today.source.standing"]);
   });
 
-  // The best-route tile reads `people`. A caller scoped away from the
+  // The best-route tile reads `contacts`. A caller scoped away from the
   // roster must be told the reading is missing, not shown a brief that
   // silently never names a way in.
   it("names the contacts when the reader may not see who is here", () => {
-    show({ ...BASE, sections_omitted: ["people"] });
+    show({ ...BASE, sections_omitted: ["contacts"] });
 
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      en["today.source.people"],
-    );
+    expect(withheldLine().textContent).toContain(en["today.source.contacts"]);
   });
 
   it("distinguishes a failed read from a quiet account", () => {
     show(undefined, { failed: true });
-    // "We could not assemble this" and "nothing needs you" are different
+    // "This section couldn't load" and "nothing needs you" are different
     // sentences, and only one of them is about the account.
-    expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(screen.getByText(en["today.failed"])).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
   });
 
   // The account brief's own footer reports this with the baseline it counted
@@ -155,7 +164,7 @@ describe("what needs a person on this account today", () => {
         baseline_at: "2026-08-01T09:00:00Z",
       },
     });
-    expect(screen.getByText("Nothing here needs you today.")).toBeTruthy();
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
   });
 
   it("reports the failure even when a view is in hand", () => {
@@ -164,8 +173,8 @@ describe("what needs a person on this account today", () => {
     // view is present and quiet, and the failure still has to win.
     show(BASE, { failed: true });
 
-    expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(screen.getByText(en["today.failed"])).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
   });
 });
 
@@ -179,7 +188,7 @@ describe("the day's call, and which record it is read from", () => {
   // the wire sends.
   const FACTORS = { recency: 0, frequency: 0, reciprocity: 0, direction: 0 };
   const CONTACT = {
-    person_id: "p-1",
+    contact_id: "p-1",
     full_name: "Sarah Cole",
     strength: { score: 40, bucket: "moderate" as const, factors: FACTORS },
     deal_roles: [],
@@ -226,7 +235,7 @@ describe("the day's call, and which record it is read from", () => {
   // The route rule: strongest CONTACT, then that contact's strongest ROUTE.
 
   // The largest-open-deal reading moved to the Commercial panel
-  // (organizations.tsx) alongside the full open-deals list, so this file no
+  // (companies.tsx) alongside the full open-deals list, so this file no
   // longer picks or ranks a deal of its own.
 
   // Whose move it is used to be the strip's own tile ("Whose move"); it moved
@@ -271,7 +280,7 @@ describe("the day's call, and which record it is read from", () => {
     expect(screen.queryByText(/no answer in/)).toBeNull();
   });
 
-  // The button names the recipient it will write to, and hands that person to
+  // The button names the recipient it will write to, and hands that contact to
   // the composer: an account-started message has no thread to anchor on, so
   // the recipient is what grounds it.
   it("hands the named recipient to the composer", () => {
@@ -279,7 +288,7 @@ describe("the day's call, and which record it is read from", () => {
     show(
       {
         ...BASE,
-        people: {
+        contacts: {
           data: [
             {
               ...CONTACT,
@@ -302,7 +311,7 @@ describe("the day's call, and which record it is read from", () => {
       { onDraftTo: drafted },
     );
     fireEvent.click(screen.getByRole("button", { name: "Draft" }));
-    expect(drafted).toHaveBeenCalledWith(CONTACT.person_id);
+    expect(drafted).toHaveBeenCalledWith(CONTACT.contact_id);
   });
 
   // The MOVES half of the merged brief: a booked meeting's own verb renders
@@ -317,7 +326,7 @@ describe("the day's call, and which record it is read from", () => {
           activity_id: "a-1",
           starts_at: "2026-08-12T09:00:00Z",
           subject: "Renewal review",
-          participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
+          participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
         },
       },
       { onPrepareMeeting: prepared },
@@ -360,17 +369,81 @@ describe("the day's call, and which record it is read from", () => {
         },
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /What this rests on/ }));
-    // The verbatim words lead; the claim, the kind of record and the day it
-    // was said sit under them as the origin line.
+    // The evidence chip and its verbatim words sit under the reason,
+    // captioned rather than hidden behind a disclosure.
+    expect(screen.getByText(en["co.suggest.basedOn"])).toBeTruthy();
     expect(
       screen.getByText("We'll get the contract over to you by Friday."),
     ).toBeTruthy();
+    expect(screen.getByText("They will send the contract")).toBeTruthy();
+  });
+
+  // A task's evidence is its own subject: a disclosure that opens on the
+  // headline restated answers nothing, so the card draws none.
+  it("draws no rests-on box for a promise whose only evidence restates it", () => {
+    show({
+      ...BASE,
+      moment: {
+        claim_key: "moment:open_promise",
+        evidence_fingerprint: "fp-2",
+        rule: "open_promise",
+        headline: "You owe them: Send the signed contract",
+        why_now: "Due in 2 days.",
+        confidence: "observed_fact",
+        evidence: [
+          { type: "task", id: "a-2", label: "Send the signed contract" },
+        ],
+        recommended_action: {
+          kind: "complete_task",
+          label: "Open it from the task list",
+          state: "blocked",
+        },
+      },
+    });
     expect(
-      screen.getByText(
-        "They will send the contract · From an exchange · 03/08/2026",
-      ),
+      screen.getByText("You owe them: Send the signed contract"),
     ).toBeTruthy();
+    expect(screen.queryByText(en["co.suggest.basedOn"])).toBeNull();
+  });
+
+  // One row shape for the moment on every record page. What the account was
+  // read against is the byline's second clause, and the verb is the server's
+  // own wherever it named somewhere for the press to land.
+  it("draws the moment as a find of the agent's, read against a named rule", () => {
+    const opened = vi.fn();
+    show(
+      {
+        ...BASE,
+        moment: {
+          claim_key: "moment:gone_quiet",
+          evidence_fingerprint: "fp-3",
+          rule: "gone_quiet",
+          headline: "Acme has not written back for 18 days",
+          why_now: "Two messages went out and nothing came back.",
+          confidence: "observed_fact",
+          evidence: [],
+          recommended_action: {
+            kind: "open_record",
+            label: "Open the account",
+            state: "available",
+            destination: {
+              surface: "record",
+              entity_type: "company",
+              entity_id: "o-1",
+            },
+          },
+        },
+      },
+      { onOpenRecord: opened },
+    );
+
+    expect(screen.getByText(en["co.suggest.byline"])).toBeTruthy();
+    expect(screen.getByText(en["contact.moment.rule.gone_quiet"])).toBeTruthy();
+    expect(
+      screen.getByText("Acme has not written back for 18 days"),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open the account" }));
+    expect(opened).toHaveBeenCalledWith("company", "o-1");
   });
 
   it("carries the account's suggestions as moves alongside the context band", () => {
@@ -388,7 +461,62 @@ describe("the day's call, and which record it is read from", () => {
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not now" })).toBeTruthy();
   });
+
+  // The account card fires on owed promises alone, and the suggestions beside
+  // it fire on everything else. A quiet card over a row that asks for
+  // something is the panel disagreeing with itself, and the row is the half a
+  // reader can check.
+  it("drops the quiet card when the list still asks for something", () => {
+    show({
+      ...BASE,
+      moment: QUIET_MOMENT,
+      suggestions: [
+        {
+          kind: "no_reply",
+          fingerprint: "f-1",
+          reason: "You reached out 15 days ago and nobody has come back.",
+          evidence: [],
+        },
+      ],
+    });
+    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
+    expect(screen.queryByText("Nothing is owed to this account")).toBeNull();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
+  });
+
+  // Dropped only where it would contradict. On an account with nothing else in
+  // the list the quiet card IS the answer, and it keeps the reason and the
+  // verb the panel's bare sentence cannot carry.
+  it("keeps the quiet card when it is the whole answer", () => {
+    show({ ...BASE, moment: QUIET_MOMENT });
+    expect(screen.getByText("Nothing is owed to this account")).toBeTruthy();
+    expect(
+      screen.getByText("No promise to this account is open or coming due."),
+    ).toBeTruthy();
+    // Nobody SUGGESTED that nothing is owed. The byline and the rule beside
+    // it are an authorship claim over a find, and an all-clear is a reading.
+    expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
+    expect(
+      screen.queryByText(en["contact.moment.rule.nothing_needed"]),
+    ).toBeNull();
+  });
 });
+
+// The card the server sends for an account owing nothing.
+const QUIET_MOMENT: NonNullable<Company360["moment"]> = {
+  claim_key: "moment:nothing_needed",
+  evidence_fingerprint: "quiet",
+  rule: "nothing_needed",
+  headline: "Nothing is owed to this account",
+  why_now: "No promise to this account is open or coming due.",
+  confidence: "observed_fact",
+  evidence: [],
+  recommended_action: {
+    kind: "log_activity",
+    label: "Log something",
+    state: "will_confirm",
+  },
+};
 
 // Every 360 collection is a page of 25 with `has_more` beside it. A reading
 // that counts off that page states a fact about the PAGE, and the reader has
@@ -447,7 +575,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "running",
           findings: [ruleRow],
           findings_dropped: 0,
@@ -467,7 +595,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
@@ -495,7 +623,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "queued",
           resumes_at: "2026-08-07T09:30:00Z",
           findings: [ruleRow],
@@ -504,7 +632,7 @@ describe("the account scan on the needs list", () => {
       },
     );
     expect(
-      screen.getByText(/Reading resumes .*the AI budget deferred it/),
+      screen.getByText(/Reading resumes .*Paused by the AI budget/),
     ).toBeTruthy();
   });
 
@@ -513,7 +641,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
@@ -531,18 +659,82 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "degraded",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "deterministic",
           degrade_reason:
-            "No model lane is configured, so the rules' own advice stands alone.",
+            "No model is configured here, so only the rule-based advice is shown.",
           findings: [ruleRow],
           findings_dropped: 0,
         },
       },
     );
-    expect(screen.getByText(/No model lane is configured/)).toBeTruthy();
+    expect(screen.getByText(/No model is configured here/)).toBeTruthy();
     expect(screen.queryByText("Written by Margince")).toBeNull();
+  });
+});
+
+// The account offers ONE way to write to somebody, not two that disagree.
+//
+// The generic row picks the account's strongest contact; a `draft_reply`
+// suggestion names the contact actually waiting on an answer. On the demo
+// account those are two different contacts, so drawing both told a rep to write
+// to Sarah while the advice above said to answer Frédéric.
+describe("the generic draft row", () => {
+  const RECIPIENT = {
+    contact_id: "p-strongest",
+    full_name: "Sarah Cole",
+    strength: {
+      score: 40,
+      bucket: "moderate" as const,
+      factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+    },
+    deal_roles: [],
+    consent: {},
+  };
+  const withRecipient = {
+    ...BASE,
+    contacts: {
+      data: [RECIPIENT],
+      page: { has_more: false, next_cursor: null },
+    },
+  } satisfies Company360;
+
+  it("stands on its own when no advice names a message to answer", () => {
+    show(withRecipient, { onDraftTo: vi.fn() });
+
+    // The admit case. Without it the absence below would pass over a row that
+    // never renders at all.
+    expect(screen.getByText(en["today.draft.new"])).toBeTruthy();
+  });
+
+  it("gives way to a suggestion that names the message to answer", () => {
+    show(
+      {
+        ...withRecipient,
+        suggestions: [
+          {
+            kind: "no_reply",
+            fingerprint: "f-reply",
+            reason: "Frédéric asked about fallbacks and nobody answered.",
+            evidence: [],
+            action: { kind: "draft_reply", activity_id: "act-1" },
+          },
+        ],
+      },
+      { onDraftTo: vi.fn() },
+    );
+
+    expect(screen.queryByText(en["today.draft.new"])).toBeNull();
+    expect(screen.getByText(/nobody answered/)).toBeTruthy();
+  });
+
+  it("links the recipient's name to their own page", () => {
+    show(withRecipient, { onDraftTo: vi.fn() });
+
+    // The name used to be plain text inside the row's label, so a reader who
+    // wanted to know who Sarah Cole is had nowhere to press.
+    expect(screen.getByRole("link", { name: "Sarah Cole" })).toBeTruthy();
   });
 });

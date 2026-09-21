@@ -9,7 +9,7 @@ const hits = () =>
   jsonResponse({
     data: [
       {
-        type: "person",
+        type: "contact",
         id: "p1",
         title: "Dana Buyer",
         snippet: "…Dana at Acme…",
@@ -17,7 +17,7 @@ const hits = () =>
         trust_tier: "authoritative",
       },
       {
-        type: "organization",
+        type: "company",
         id: "o1",
         title: "Acme GmbH",
         snippet: "…Acme…",
@@ -44,7 +44,7 @@ const hits = () =>
       // contrast: an unverified row beside a verified one and a mirrored one is
       // the comparison a reader actually makes.
       {
-        type: "person",
+        type: "contact",
         id: "p2",
         title: "Sam Unknown",
         snippet: "…no source has vouched for this…",
@@ -100,8 +100,8 @@ export const EveryKind: Story = {
       "GET /search": () =>
         jsonResponse({
           data: [
-            { type: "person", id: "p1", title: "Dana Buyer", score: 0.91 },
-            { type: "organization", id: "o1", title: "Acme GmbH", score: 0.88 },
+            { type: "contact", id: "p1", title: "Dana Buyer", score: 0.91 },
+            { type: "company", id: "o1", title: "Acme GmbH", score: 0.88 },
             {
               type: "deal",
               id: "d1",
@@ -212,8 +212,8 @@ export const EveryKindGerman: Story = {
       "GET /search": () =>
         jsonResponse({
           data: [
-            { type: "person", id: "p1", title: "Dana Buyer", score: 0.91 },
-            { type: "organization", id: "o1", title: "Acme GmbH", score: 0.88 },
+            { type: "contact", id: "p1", title: "Dana Buyer", score: 0.91 },
+            { type: "company", id: "o1", title: "Acme GmbH", score: 0.88 },
             {
               type: "product",
               id: "pr1",

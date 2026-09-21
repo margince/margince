@@ -6,7 +6,9 @@ import type { Envelope } from "../types";
  *
  * MIRRORED BY HAND from agents.ReviewCommitmentsResult / agents.CommitmentItem
  * — see the account brief's fixture for why that is hand work rather than
- * generated, and issue 808 for the gate that does not exist yet.
+ * generated. It is HELD to that struct by
+ * backend/gates/appviewfixtures_test.go, which compares every member here
+ * against the tool's own output schema.
  *
  * The four items are the four states this view has to keep apart: badly
  * overdue, overdue by less than a day, upcoming, and a promise nobody dated.
@@ -45,7 +47,7 @@ export const commitmentsFixture: Envelope = {
         assignee_name: "Ravi Bhatt",
         about: [
           {
-            entity_type: "organization",
+            entity_type: "company",
             entity_id: "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6",
             name: "Acme GmbH",
           },

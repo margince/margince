@@ -26,7 +26,7 @@
  * the tree spells a warning in. It shares a line with the last-call note, so it
  * carries the colour rather than the whole detail block. */
 .ai-settings-missing {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* One lane, as a line: the lane's name, the vendor, the model it binds, what is
@@ -66,20 +66,6 @@
   min-width: 0;
 }
 
-/* The lane's id, which is the row's subject: it holds a column of its own so a
- * reader travels one edge down the card rather than re-finding the name behind
- * a vendor of a different width on every row. */
-.ai-lane-id {
-  font-weight: 600;
-}
-
-/* What the lane is for. Quieter and smaller than the id, because it explains
- * the id rather than competing with it — a reader who already knows the ladder
- * reads straight past it. */
-.ai-lane-gloss {
-  line-height: 1.35;
-}
-
 /* What a call on this lane costs. Meta weight beside the model it prices: the
  * figure is why the ladder is ordered the way it is, not a fact about the
  * binding's identity. */
@@ -103,13 +89,6 @@
   margin-inline-start: auto;
 }
 
-/* The broker an OpenAI-wire lane is reached at, beside the model it binds.
- * Quieter than the model id: the address qualifies the vendor badge rather than
- * naming the thing this row is about. */
-.ai-lane-host {
-  color: var(--textMeta);
-}
-
 /* One provider credential, as a line: who, whether it is keyed, and the way to
  * change that. Same skeleton as `.ai-lane`, because a reader crossing between
  * the two tabs is answering the same shape of question twice. */
@@ -130,12 +109,7 @@
   min-width: 0;
 }
 
-.ai-provider-vendor {
-  font-weight: 600;
-}
-
 .ai-provider-env {
-  color: var(--textMeta);
   overflow-wrap: anywhere;
 }
 

@@ -14,9 +14,9 @@
 }
 
 /* The trigger is the AVATAR and nothing else. The strip is chrome true of the
-   whole session rather than a row about a person, so it takes the strip's own
-   control size — from the token, so it follows the coarse-pointer bump its three
-   neighbours take instead of staying at whatever the pointer-precise number was.
+   whole session rather than a row about a contact, so it takes the strip's own
+   control size — from the token, so it stands on the one control height its
+   three neighbours take instead of a number of its own.
    The name and the address are not drawn: the sentence they carry reaches a
    screen reader through the clipped line (account.tsx), and the panel prints them
    when it opens, which is where the reader confirms whose account this is.
@@ -25,15 +25,15 @@
 .account .user {
   display: grid;
   place-items: center;
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
+  width: var(--controlHeight);
+  height: var(--controlHeight);
   padding: 0;
   border: 0;
   border-radius: var(--r-full);
   corner-shape: round;
   background: transparent;
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   cursor: pointer;
 }
 .account .user:hover {
@@ -62,8 +62,6 @@
   white-space: nowrap;
 }
 .acctwho b {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 /* ===== the menu =====
@@ -75,15 +73,21 @@
   top: calc(100% + 6px);
   right: 0;
   left: auto;
-  width: 236px;
-  /* The width above is the comfortable reading measure; this keeps it a measure
+  /* THE MENU ANATOMY's floor (design-system/listtable.css, .lt-menu): one
+     option list is one surface, and this one is the product's account menu
+     rather than a shape of its own. No block ceiling to go with it — the only
+     menu in the tree that hosts an absolutely positioned flyout, which a
+     scroll container would clip, and its rows are a fixed roster that cannot
+     grow past the viewport. */
+  min-inline-size: var(--menuMinInlineSize, 250px);
+  /* The floor above is the comfortable reading measure; this keeps it a measure
      rather than a promise the viewport cannot keep. A narrow phone at 200% zoom
      leaves less room than that plus the gutter, and the menu is anchored to an
      edge, so growing past the viewport clips it on the other side. */
   max-width: calc(100vw - 2 * var(--space-2));
   display: flex;
   flex-direction: column;
-  padding: 5px; /* ds:ignore popover inset carried over from the menu it replaces */
+  padding: var(--controlGap);
   gap: 1px; /* ds:ignore menu rows read as one list, not as spaced blocks */
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -142,14 +146,15 @@
   display: flex;
   align-items: center;
   gap: 9px; /* ds:ignore the menu row's own optics, unchanged from the menu it replaces */
-  padding: 7px 9px; /* ds:ignore the menu row's own optics, unchanged from the menu it replaces */
+  /* The anatomy's row: --controlGap above and below a --fontBody line is the
+     32px every option row in the product stands at. The inline inset stays the
+     menu's own optical value. */
+  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the menu row's own optics */
   width: 100%;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textContent);
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
+  font-family: var(--fontFamilyBody);
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -164,7 +169,6 @@
 }
 .acctrow:disabled:hover {
   background: transparent;
-  color: var(--textContent);
 }
 .acctrow:focus-visible {
   outline: var(--focus-ring);
@@ -179,7 +183,6 @@
 }
 .acctmore {
   flex: none;
-  color: var(--textMeta);
 }
 /* The groups: who you are, where you go, then the way out. An <hr> rather than a
    border on the first row of a group — it is a separator, and a screen reader is
@@ -187,11 +190,11 @@
 .accountmenu hr {
   height: 1px;
   border: 0;
-  /* Wall to wall. The panel carries a 5px inset so its rows clear the rounded
-     corner, and a separator that respected it read as a short line floating
-     inside the menu rather than as the division between two groups — so it
-     bleeds back out through the inset it sits in. */
-  margin: var(--space-1) -5px; /* ds:ignore bleeds the panel's own optical inset, not a rhythm */
+  /* Wall to wall. The panel carries the menu anatomy's inset so its rows clear
+     the rounded corner, and a separator that respected it read as a short line
+     floating inside the menu rather than as the division between two groups —
+     so it bleeds back out through the inset it sits in. */
+  margin: var(--space-1) calc(-1 * var(--controlGap));
   background: var(--borderSubtle);
 }
 
@@ -203,7 +206,7 @@
    anywhere. */
 .acctmenuwho {
   display: flex;
-  padding: 7px 9px; /* ds:ignore the row inset it lines up with, not a rhythm of its own */
+  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
 /* ===== the theme flyout =====
@@ -221,12 +224,18 @@
 .accountsub {
   position: absolute;
   top: 0;
-  right: calc(100% + 5px);
+  right: calc(100% + var(--controlGap));
   left: auto;
+  /* NOT the menu anatomy's 250px floor, and this is the one surface that
+     refuses it: the flyout opens INWARD from a menu already anchored to the
+     right edge, so every pixel of width is a pixel closer to the window's own
+     left edge — at 168 it already starts at a negative x below about 430px
+     (the phone rule at the foot of this file is what answers that). Its rows
+     carry the anatomy in full. */
   min-width: 168px;
   display: flex;
   flex-direction: column;
-  padding: 5px; /* ds:ignore the popover inset of the menu it flies out of */
+  padding: var(--controlGap);
   gap: 1px; /* ds:ignore one list, not spaced blocks */
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -247,6 +256,21 @@
   }
 }
 
+/* The appearance answers wear the menu's own row box, so the flyout reads as one
+   more page of the menu it flies out of rather than as a form dropped into it.
+   The tick's own surface is `.checkfield`'s and is untouched; what this adds is
+   the row — its inset, its corner and its hover. */
+.accountsub .choicelist {
+  gap: 1px; /* ds:ignore one list, as .accountsub's own rows above */
+}
+.accountsub .choicelist-choice {
+  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the menu row's own optics, as .acctrow above */
+  border-radius: var(--r-sm);
+}
+.accountsub .choicelist-choice:hover {
+  background: var(--bgHover);
+}
+
 @keyframes accountsub-open {
   from {
     opacity: 0;
@@ -257,22 +281,6 @@
     transform: scale(1);
   }
 }
-/* The tick keeps its column whether or not it is drawn, so the three labels stand
-   on one left edge instead of shifting as the choice moves. */
-.accttick {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  color: var(--accentText);
-}
-
-.acctthemelabel {
-  font-size: var(--fs-sm);
-  color: var(--textContent);
-}
-
 /* ===== the flyout at phone width =====
    A 168px flyout opening INWARD from a menu that is itself anchored to the right
    edge starts at a negative x once the viewport is narrower than about 430px:
@@ -297,8 +305,8 @@
 }
 
 /* A refused sign-out, stated in the menu it was asked from. It bleeds out
-   through the panel's optical inset like the separators do, so the callout meets
-   both edges instead of floating inside a 5px frame. */
+   through the panel's own inset like the separators do, so the callout meets both
+   edges instead of floating inside the menu's frame. */
 .acctrowalert {
   padding: var(--space-1) 0 0;
 }

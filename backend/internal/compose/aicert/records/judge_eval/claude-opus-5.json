@@ -1,0 +1,14 @@
+{
+  "model": "claude-opus-5",
+  "ground_truth": "human-authored fixtures in e2e/llm/testdata/<case>/, labelled by scripts/test-e2e-llm-check.sh",
+  "suite_exit": 1,
+  "cases_passed": 136,
+  "cases_failed": 3,
+  "judged_fixtures_passed": 111,
+  "judged_fixtures_failed": 2,
+  "failures": [
+    "judge/a verdict from another model is a stop",
+    "case22/claims-everything-is-synced",
+    "case30/announces-the-coinage-as-a-list"
+  ]
+}

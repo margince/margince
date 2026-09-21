@@ -61,12 +61,12 @@ export const bundle: Approval[] = [
     bundle_id: BUNDLE,
     proposed_change: { source_url: "https://acme.example" },
   }),
-  proposal("ap-lead-1", "Lead from acme.example: Anna Weber", {
+  proposal("ap-lead-1", "Found on acme.example: Anna Weber", {
     kind: "site_lead",
     bundle_id: BUNDLE,
     proposed_change: { name: "Anna Weber", role: "Head of Operations" },
   }),
-  proposal("ap-lead-2", "Lead from acme.example: Mira Osei", {
+  proposal("ap-lead-2", "Found on acme.example: Mira Osei", {
     kind: "site_lead",
     bundle_id: BUNDLE,
     proposed_change: { name: "Mira Osei", role: "Procurement" },
@@ -84,7 +84,7 @@ export const singles: Approval[] = [
   }),
   proposal("ap-3", "Promote Kilian Wenzel to a contact", {
     kind: "promote_lead",
-    proposed_change: { name: "Kilian Wenzel", organization: "Nordwind" },
+    proposed_change: { name: "Kilian Wenzel", company: "Nordwind" },
   }),
 ];
 
@@ -116,23 +116,23 @@ export function deal(id: string, name: string, over: Partial<Deal> = {}): Deal {
 }
 
 export const deals: Deal[] = [
-  deal("d-1", "Fleet retrofit", { organization_id: "org-nordwind" }),
+  deal("d-1", "Fleet retrofit", { company_id: "company-nordwind" }),
   deal("d-2", "PIM rollout", {
     amount_minor: 2_650_000,
-    organization_id: "org-acme",
+    company_id: "company-acme",
   }),
   deal("d-3", "Depot lighting", { amount_minor: 890_000, currency: "USD" }),
   // The two that have gone quiet: open, stalled, and named — the rail resolves
   // the company through the same naming the pipeline board uses.
   deal("d-9", "Ostwind refit", {
     amount_minor: 1_200_000,
-    organization_id: "org-nordwind",
+    company_id: "company-nordwind",
     stalled: true,
     last_activity_at: "2026-06-02T08:00:00Z",
   }),
   deal("d-10", "Cold store retrofit", {
     amount_minor: 3_400_000,
-    organization_id: "org-acme",
+    company_id: "company-acme",
     stalled: true,
     last_activity_at: "2026-05-28T08:00:00Z",
   }),
@@ -165,6 +165,7 @@ export const ranked: MorningBrief = {
   generated_at: "2026-08-21T05:30:00Z",
   as_of: "2026-08-21T05:00:00Z",
   candidate_count: 9,
+  factors_omitted: [],
   items: [
     briefItem("bi-1", "d-1", 1, 0.74),
     briefItem("bi-2", "d-2", 2, 0.61),
@@ -185,8 +186,8 @@ export const digest: MorningDigest = {
   capture: {
     messages_synced: 42,
     activities_created: 42,
-    people_created: 5,
-    organizations_created: 2,
+    contacts_created: 5,
+    companies_created: 2,
   },
   review: {
     dedupe_open: 3,
@@ -593,7 +594,7 @@ export const teamWeek: TeamWeeklyReview = {
       focus_label: "Three meetings closed without a next step",
     },
   ],
-  // Who is talked about first: the person who asked for help, then the one
+  // Who is talked about first: the contact who asked for help, then the one
   // whose meetings ended open, then the week that went well.
   agenda: ["u-tobias", "u-mira", "u-lena"],
   outlook: weeklyOutlook,
@@ -618,6 +619,7 @@ export function meetingRow(
   return {
     id,
     source: "meeting",
+    kind: prepared ? "prepared" : "unprepared",
     level: 3,
     category: "meetings",
     title: "Weber GmbH · quarterly review",
@@ -714,6 +716,55 @@ export function waitingRow(): WorklistItem {
   };
 }
 
+/**
+ * A customer's message waiting on an answer, with the message itself: the row
+ * the Brief leads a morning with, named by the canonical email row rather than
+ * by a sentence about it.
+ */
+export function waitingEmailRow(): WorklistItem {
+  return {
+    id: "waiting-sonya",
+    source: "customer_waiting",
+    category: "customer_waiting",
+    band: "now",
+    level: 1,
+    urgent: true,
+    consequence: "buyer_waits",
+    title: "Meet next Tues?",
+    because: [
+      { kind: "buyer_wrote_last" },
+      { kind: "waiting_days", value: { kind: "days", days: 13 } },
+    ],
+    subject: { type: "contact", id: "contact-sonya", label: "Sonya Beck" },
+    contact: {
+      id: "contact-sonya",
+      label: "Sonya Beck",
+      touch: {
+        last_inbound_at: "2026-09-03T16:46:00Z",
+        last_outbound_at: "2026-08-28T09:12:00Z",
+      },
+    },
+    email_summary: {
+      activity_id: "mail-sonya",
+      subject: "Meet next Tues?",
+      preview:
+        "Hey Josh — let's meet next Tues instead of Monday. You're going to be talking to the team about the rollout?",
+      occurred_at: "2026-09-03T16:46:00Z",
+      direction: "inbound",
+      counterparty: "Sonya Beck",
+      attachment_count: 0,
+      move: "needs_reply",
+      display_status: "team",
+      version: 1,
+    },
+    move: { action: "draft_reply", activity_id: "mail-sonya" },
+    actions: ["open"],
+    // Every way to put this row down, in the open: a waiting message can be
+    // deferred, handed back, or judged not to be a customer at all.
+    dispositions: ["snooze", "not_mine", "not_sales"],
+  };
+}
+
 type WorklistCount = components["schemas"]["WorklistCount"];
 
 /**
@@ -740,6 +791,11 @@ export function readingsDay(
     scope: "mine",
     scope_options: ["mine"],
     queue,
+    focus: {
+      items: queue.slice(0, 6),
+      total: queue.length,
+      urgent_remaining: 0,
+    },
     summary: {
       urgent: 0,
       due: 0,
@@ -748,9 +804,17 @@ export function readingsDay(
       ...summary,
     },
     sources_unavailable: [],
-    reach: [],
+    reach: counts
+      .filter((entry) => entry.category === "meetings")
+      .map((entry) => ({
+        source: "meeting",
+        considered: entry.considered,
+        shown: entry.shown,
+        more_available: entry.more_available,
+      })),
     counts,
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 3,
       prospecting: 2,
@@ -777,4 +841,60 @@ export function boundedMeetings(
   shown: number,
 ): WorklistCount {
   return { category: "meetings", considered, shown, more_available: true };
+}
+
+/**
+ * A decision on the queue, and whether it actually holds customer work up.
+ *
+ * The split is the ranker's own: a decision about a SEND is blocking, and
+ * contact hygiene — a duplicate pair, a captured counterparty — is not
+ * (classifydecision.go). A fixture that made every decision blocking could not
+ * tell the strip's two basis lines apart.
+ */
+export function decisionRow(id: string, blocking: boolean): WorklistItem {
+  return {
+    id,
+    source: "approval",
+    // `kind` is what the server actually decides on: blocksCustomerWork reads
+    // it and treats an absent one as hygiene, so a fixture without it could
+    // not be the blocking row it claims to be.
+    kind: blocking ? "send_email" : "capture_counterparty",
+    level: blocking ? 5 : 6,
+    category: "decisions",
+    title: blocking ? "Send the renewal quote" : "Add someone from your mail",
+    because: [{ kind: blocking ? "blocks_customer_work" : "routine" }],
+    consequence: blocking ? "work_blocked" : "data_drifts",
+    actions: ["decide"],
+  };
+}
+
+/** A decisions count read to the end. */
+export function wholeDecisions(n: number): WorklistCount {
+  return {
+    category: "decisions",
+    considered: n,
+    shown: n,
+    more_available: false,
+  };
+}
+
+/** A decisions count whose lane stopped at its bound. */
+export function boundedDecisions(
+  considered: number,
+  shown: number,
+): WorklistCount {
+  return { category: "decisions", considered, shown, more_available: true };
+}
+
+export function taskRow(id: string, title: string): WorklistItem {
+  return {
+    id,
+    source: "task",
+    level: 2,
+    category: "tasks",
+    title,
+    because: [],
+    consequence: "task_slips",
+    actions: ["complete", "open"],
+  };
 }

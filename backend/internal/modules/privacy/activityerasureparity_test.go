@@ -60,7 +60,7 @@ import (
 //
 // One entry, and it is a different SHAPE rather than a shortcut. The Art. 17
 // cascade erases everything about a SUBJECT, so its purges are scoped to the
-// person: raw_capture by every address of theirs and by every channel identity
+// contact: raw_capture by every address of theirs and by every channel identity
 // (purgeDerivedTraces, purgeChannelRawCapture), which reaches originals the
 // activity's own (source_system, source_id) join cannot — a channel poller
 // stores its original under the provider's redelivery key. Routing it through
@@ -70,8 +70,16 @@ import (
 // It does the rest too, on the same scope: redactApprovalsCitingActivities
 // under ErasedSourceWithdrawal (erasure.go), purgeTranscriptReadings over the
 // held ids (erasure_restrict.go), the attachments and the embeddings.
+//
+// This reason is prose, and prose is the weakness of this waiver: it asserts a
+// list without holding one, so the cascade could stop doing any item on it and
+// nothing here would say so. That is not hypothetical — the external identities
+// were missing from this arm for as long as the arm existed, while this
+// sentence read as though the erasure were complete. They are now retired
+// through retireActivityIdentities, which both arms call, and the integration
+// test named on it reads the rows back rather than trusting this sentence.
 var finishedAnotherWay = gatekit.Waive(map[string]string{
-	"method ErasePerson": "the Art. 17 cascade, whose purges are scoped to the SUBJECT rather than to one activity: raw_capture by every address and channel identity of theirs (purgeDerivedTraces, purgeChannelRawCapture) — which reaches originals an activity's own natural-key join cannot — plus redactApprovalsCitingActivities under ErasedSourceWithdrawal, purgeTranscriptReadings, the attachments and the embeddings. Per-activity purging here would be N statements for one subject and would still miss the channel lane",
+	"method EraseContact": "the Art. 17 cascade, whose purges are scoped to the SUBJECT rather than to one activity: raw_capture by every address and channel identity of theirs (purgeDerivedTraces, purgeChannelRawCapture) — which reaches originals an activity's own natural-key join cannot — plus redactApprovalsCitingActivities under ErasedSourceWithdrawal, purgeTranscriptReadings, retireActivityIdentities over the emptied ids, the attachments and the embeddings. Per-activity purging here would be N statements for one subject and would still miss the channel lane",
 })
 
 // contentPurger is the one function that finishes an activity-content erasure.

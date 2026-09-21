@@ -4,15 +4,23 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
-  Card,
+  Field,
   SegmentedControl,
   StatCard,
+  TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
+import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyCompact,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
@@ -27,7 +35,7 @@ import {
 type Readings = components["schemas"]["ForecastReadings"];
 
 // The forecast section: what the period is expected to bring in, what the
-// figure does not cover, and what a person believes instead.
+// figure does not cover, and what a contact believes instead.
 //
 // The three readings are not equal tiles by accident. A CALL is somebody's
 // judgement, EVIDENCE is the part with confirmed dates behind it, and ALREADY
@@ -108,6 +116,44 @@ export function ForecastView({
   );
 }
 
+// How far the call sits from the evidence, in the sentence that direction
+// needs.
+//
+// THREE sentences and an UNSIGNED magnitude, because a difference cannot be
+// said in one. A signed figure in a sentence ending "over evidence" printed a
+// call twenty thousand SHORT of its evidence as "-€20,000.00 over evidence",
+// which is the wrong direction stated twice and then contradicted by a minus
+// sign. Equal is its own arm rather than a zero: "±€0 over evidence" is a
+// difference nobody has.
+function callDetail(
+  call: NonNullable<Readings["current_call"]>,
+  readings: Readings,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string {
+  // The day the call was authored, cut in the zone the period itself was cut
+  // in: a reporting figure and the date beside it must not be bucketed on two
+  // different calendars.
+  const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
+  const difference = call.amount_minor - readings.evidence_minor;
+  if (difference === 0) {
+    return t("forecast.currentCallDetailEven", { date });
+  }
+  const gap = formatMoneyOrWord(
+    Math.abs(difference),
+    readings.base_currency,
+    locale,
+    t("format.notForecast"),
+    formatMoneyCompact,
+  );
+  return t(
+    difference > 0
+      ? "forecast.currentCallDetailOver"
+      : "forecast.currentCallDetailUnder",
+    { date, gap },
+  );
+}
+
 // The answer, in one sentence and then in three readings.
 function ForecastAnswer({
   readings,
@@ -115,30 +161,58 @@ function ForecastAnswer({
 }: Readonly<{ readings: Readings; locale: Locale }>) {
   const t = useT();
   const currency = readings.base_currency;
+  // The sentence carries the amount in FULL — it is read once, at prose width,
+  // and a call somebody authored to the cent is a number they should meet as
+  // they wrote it. The slots below carry the same figures compactly, because a
+  // slot is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
     formatMoneyOrAbsent(minor ?? null, currency, locale);
+  // Compact, and a WORD where the pair cannot be said as money at all: a slot
+  // is about a hundred points wide, and one compared across a row must not
+  // answer with a glyph. The landing cards at the end of this strip answer the
+  // same way, so the row reads as one comparison.
+  const slot = (minor: number | null | undefined) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
+  const call = readings.current_call;
 
   return (
     <>
-      <Callout tone="info" title={t("forecast.question")}>
-        {/* The call and the supported figure, and the gap between them. A
-            reader shown only one of the two has no way to tell whether the
-            call is ahead of the evidence or behind it. */}
-        {readings.current_call
-          ? t("forecast.answerWithCall", {
-              call: money(readings.current_call.amount_minor),
-              evidence: money(readings.evidence_minor),
-            })
-          : t("forecast.answerNoCall", {
-              evidence: money(readings.evidence_minor),
-            })}
-      </Callout>
+      {/* The screen's own answer, so it is the screen's own section: a Callout
+          says something ABOUT a surface, and this IS the surface's content —
+          the question as the panel's title and the answer as its body. */}
+      <Panel title={t("forecast.question")}>
+        <PanelBody>
+          {/* The call and the supported figure, and the gap between them. A
+              reader shown only one of the two has no way to tell whether the
+              call is ahead of the evidence or behind it. */}
+          <p>
+            {call
+              ? t("forecast.answerWithCall", {
+                  call: money(call.amount_minor),
+                  evidence: money(readings.evidence_minor),
+                })
+              : t("forecast.answerNoCall", {
+                  evidence: money(readings.evidence_minor),
+                })}
+          </p>
+        </PanelBody>
+      </Panel>
 
-      {/* An unpriced deal is real pipeline contributing zero money, so the gap
+      {/* An unpriced deal is a real deal contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
-        <Callout tone="warn" title={t("forecast.partialTitle")}>
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("forecast.partialTitle")}
+        >
           {t("forecast.partial", {
             priced: formatNumber(readings.priced_count, locale),
             eligible: formatNumber(readings.eligible_count, locale),
@@ -146,21 +220,30 @@ function ForecastAnswer({
         </Callout>
       )}
 
+      {/* EVERY slot declares the narrow shape, the landing pair included: the
+          fold is the strip's, so a card that did not declare it would keep its
+          box while the rows beside it lost theirs. */}
       <StatStrip>
         <StatCard
+          narrow="row"
           label={t("forecast.currentCall")}
-          value={money(readings.current_call?.amount_minor)}
-          numeric
+          // No call is a reading, not a missing figure: the sentence above
+          // already says the book is running on evidence alone, and a slot in a
+          // row compared across must not answer that with a glyph.
+          value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
+          detail={call ? callDetail(call, readings, locale, t) : undefined}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.evidence")}
-          value={money(readings.evidence_minor)}
-          numeric
+          value={slot(readings.evidence_minor)}
+          detail={t("forecast.evidenceDetail")}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.alreadyWon")}
-          value={money(readings.won_minor)}
-          numeric
+          value={slot(readings.won_minor)}
+          detail={t("forecast.alreadyWonDetail")}
         />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called
@@ -255,7 +338,7 @@ function ForecastCallEditor({
   if (!open) {
     return (
       <div className="card-actions">
-        <Button small onClick={() => setOpen(true)}>
+        <Button onClick={() => setOpen(true)}>
           {t("forecast.updateCall")}
         </Button>
       </div>
@@ -263,37 +346,49 @@ function ForecastCallEditor({
   }
 
   return (
-    <Card title={t("forecast.updateCall")}>
-      <p className="sub">{t("forecast.callExplains")}</p>
-      <label className="field">
-        <span>{t("forecast.expectedTotal")}</span>
-        <MoneyInput
-          valueMinor={amountMinor}
-          currency={readings.base_currency}
-          onChangeMinor={(next) => setAmountMinor(next ?? 0)}
-        />
-      </label>
-      <label className="field">
-        <span>{t("forecast.supportingNote")}</span>
-        <input
-          type="text"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </label>
-      <div className="card-actions">
-        <Button small onClick={() => setOpen(false)}>
-          {t("forecast.cancel")}
-        </Button>
-        <Button
-          small
-          variant="primary"
-          disabled={save.isPending}
-          onClick={() => save.mutate({ amountMinor, note })}
-        >
-          {t("forecast.saveCall")}
-        </Button>
-      </div>
-    </Card>
+    <Panel
+      title={t("forecast.updateCall")}
+      // Cancel and save both leave this editor, so they stand under what they
+      // act on rather than in the band that names it.
+      actions={
+        <>
+          <Button onClick={() => setOpen(false)}>{t("forecast.cancel")}</Button>
+          <Button
+            variant="primary"
+            disabled={save.isPending}
+            onClick={() => save.mutate({ amountMinor, note })}
+          >
+            {t("forecast.saveCall")}
+          </Button>
+        </>
+      }
+    >
+      <PanelBody>
+        {/* Two sentences: what a call is, and what recording one does not do.
+            The head band holds one line, and the half it would cut is the
+            half that says no deal moves. */}
+        <p className="t-sub">{t("forecast.callExplains")}</p>
+        <Field label={t("forecast.expectedTotal")}>
+          {(control) => (
+            <MoneyInput
+              {...control}
+              valueMinor={amountMinor}
+              currency={readings.base_currency}
+              onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+            />
+          )}
+        </Field>
+        <Field label={t("forecast.supportingNote")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="text"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          )}
+        </Field>
+      </PanelBody>
+    </Panel>
   );
 }

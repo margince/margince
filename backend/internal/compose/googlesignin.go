@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/settings"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -193,7 +192,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
 		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
-			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.SignIn,
+			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, googleProviderKey))
 		}
 		if !cfg.Enabled() {
@@ -248,12 +247,8 @@ func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured 
 		if err != nil {
 			return nil, fmt.Errorf("resolving the installation for the sign-in provider policy: %w", err)
 		}
-		readCtx := principal.WithCorrelationID(
-			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
-				Type: principal.PrincipalSystem,
-				ID:   enabledOidcProvidersReadActor,
-			}), ids.NewV7(),
-		)
+		readCtx := principal.SystemActing(
+			principal.WithWorkspaceID(ctx, wsID.UUID), enabledOidcProvidersReadActor)
 		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
 		if err != nil {
 			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)

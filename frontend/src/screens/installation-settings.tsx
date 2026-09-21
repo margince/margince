@@ -21,6 +21,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -34,38 +35,14 @@ import {
   QueryGate,
   throwProblem,
 } from "./common";
+import {
+  RegionalSettingsFields,
+  RegionalSettingsRows,
+} from "./installation-settings.regional";
 
-// The installation settings surface (ADR-0090/A135): the organization's name,
-// the IANA zone every reporting period is computed in, the ISO-4217 base
-// currency every roll-up converts to, the language AI writes the shared record
-// in, and the month its business year begins. Every role reads them — a rep reading amounts benefits from
-// knowing which currency they are in — and only admin/ops may change them, so
-// the facts are READ on the card for everyone and the verb that changes them is
-// refused with a reason for everyone else. Refusing without a reason is the
-// failure mode this avoids: it is indistinguishable from a bug, and a reader
-// cannot act on it either way.
-//
-// FIVE ROWS AND ONE FORM. The card is a list of decisions — what the
-// organization is called, when its periods start, which currency every amount
-// is re-expressed in, which language AI writes for the whole team in, and when
-// its financial year turns over — so each
-// is a row that shows its own answer, which is what lets a reader audit the
-// installation by travelling one column. The EDITING is one act: the server
-// takes ONE sparse PATCH, so the fields are submitted together with one Save,
-// and that belongs in a dialog rather than on the card (design-system README,
-// `SettingList` / `SettingRow`: a control needing two inputs submitted together
-// goes behind a verb, which keeps every row an answer). Each row's Edit opens
-// that one dialog with its own field focused, so the verb beside a fact leads
-// to the fact.
-//
-// The base currency carries a state the others do not: it stops being
-// changeable once a conversion rate has been frozen against it — by a closed
-// deal, a sent offer, a mirrored invoice, a contract, a commission entry or a
-// loaded rate sheet (ADR-0085 §7). The server reports that as a flag and a
-// reason, so the row and the field both carry the reason — an operator learns
-// why before typing a value they cannot save, rather than discovering it from
-// a 422. The base language never freezes: changing it re-means nothing already
-// written.
+// Installation facts are readable by every role; only admin/ops may change them.
+// Each row opens the shared sparse-patch form with its own field focused.
+// A frozen base currency remains visible with the server's reason in both views.
 
 // Both shapes come from the generated contract rather than being restated
 // here: a hand-written copy would drift the first time the contract gains a
@@ -82,6 +59,8 @@ const EDITABLE_FACTS = [
   "timezone",
   "base_currency",
   "base_language",
+  "date_format",
+  "time_format",
   "fiscal_year_start_month",
   "forecast_forward_measure",
 ] as const;
@@ -193,7 +172,7 @@ function languageName(code: string, t: ReturnType<typeof useT>): string {
 // Derived rather than typed out, so the list cannot go short of twelve.
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-// Which remaining pipeline a projected landing is built from, in the order the
+// Which remaining deals a projected landing is built from, in the order the
 // server offers them: strictest first, then the two that soften it.
 //
 // Typed as the schema's own union with `satisfies`, so a measure added to the
@@ -335,7 +314,6 @@ function InstallationSettingsForm({
 
   const editVerb = (fact: EditedFact, field: string) => (
     <Button
-      small
       variant="ghost"
       // Named by the fact it changes, not "Edit": three rows offering three
       // identically-named buttons make a screen reader's user count them.
@@ -348,13 +326,13 @@ function InstallationSettingsForm({
   );
 
   return (
-    <Panel title={t("installationSettings.orgTitle")}>
+    <Panel title={t("installationSettings.companyTitle")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("installationSettings.orgSub")}</p>
+        <p className="settings-panel-sub">
+          {t("installationSettings.companySub")}
+        </p>
         {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("installationSettings.readOnly")}
-          </p>
+          <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}
         <SettingList>
           <SettingRow
@@ -378,6 +356,7 @@ function InstallationSettingsForm({
               t("installationSettings.baseCurrency"),
             )}
           />
+          <RegionalSettingsRows settings={settings} editVerb={editVerb} />
           <SettingRow
             label={t("installationSettings.baseLanguage")}
             description={t("installationSettings.baseLanguageHint")}
@@ -479,6 +458,7 @@ function InstallationProfileDialog({
   onSubmit: () => void;
 }>) {
   const t = useT();
+  const refusalTitle = t("installationSettings.saveFailed");
   const { locale } = useLocale();
   const titleId = useId();
   // Focus lands on the field whose Edit was pressed — programmatic rather than
@@ -513,9 +493,9 @@ function InstallationProfileDialog({
   }, [focus]);
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
-        {t("installationSettings.orgTitle")}
-      </h2>
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
+        {t("installationSettings.companyTitle")}
+      </Heading>
       <form
         ref={form}
         className="form-stack"
@@ -567,7 +547,6 @@ function InstallationProfileDialog({
         <SectionHeader
           level={3}
           title={t("installationSettings.currencyTitle")}
-          sub={t("installationSettings.currencySub")}
         />
         <Field
           label={t("installationSettings.baseCurrency")}
@@ -588,6 +567,12 @@ function InstallationProfileDialog({
           )}
         </Field>
 
+        <RegionalSettingsFields
+          draft={draft}
+          canManage={canManage}
+          refused={refused}
+          onChange={onChange}
+        />
         <div data-fact="base_language">
           <Field
             label={t("installationSettings.baseLanguage")}
@@ -696,20 +681,18 @@ function InstallationProfileDialog({
           </Field>
         </div>
 
-        {/* Only what no field claimed. A refusal shown BOTH on the input and
-            again in a paragraph below states one problem twice, and the
-            paragraph is the copy a reader stops reading. */}
+        {/* Only what no field claimed: a refusal on the input AND again below
+            states one problem twice, and the second is what nobody reads. */}
         {blanketError !== null ? (
-          <Callout tone="danger" live="alert">
+          <Callout tone="danger" kind="outcome" title={refusalTitle}>
             {blanketError}
           </Callout>
         ) : null}
         <div className="form-actions">
-          <Button small variant="ghost" type="button" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!pending && (!canManage || !dirty)}

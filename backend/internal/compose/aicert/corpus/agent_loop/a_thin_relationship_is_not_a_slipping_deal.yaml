@@ -5,7 +5,7 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
   goal: >-
-    Which of my open deals are resting on one person? If that contact goes
+    Which of my open deals are resting on one contact? If that contact goes
     quiet we have nothing to fall back on.
   trigger_ref: manual:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21
   grounding:
@@ -29,13 +29,13 @@ expect:
     open deals and both read as "deals at risk", which is exactly why the
     confusion is worth measuring.
 
-    account_coverage is the second reach, and it is the same question asked of
+    company_coverage is the second reach, and it is the same question asked of
     ONE deal — the goal asks it of all of them, and the window carries no
     deal_id, so a turn calling it both narrowed the question and invented the
     id it narrowed by.
   near_misses:
     - whats_slipping_this_week
-    - account_coverage
+    - company_coverage
   bands:
     certified_min: 70
     degraded_min: 50

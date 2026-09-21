@@ -1,24 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, stub } from "./worklist.testkit";
 
-// Whose hidden work the guardrail is about.
-//
-// The panel says what the queue is NOT showing, which makes it the one surface
-// where attributing a figure to the wrong person does the most damage: a reader
-// checking whether their day is honest is told about somebody else's.
-//
-// The endpoint takes no owner and no scope. It derives its subject from the
-// authenticated principal, so wherever the queue beside it is about somebody
-// else, the panel is still answering about the reader — and there are TWO ways
-// to leave your own day, reached by different controls.
-//
-// Apart from worklist.test.tsx because that file is over the 1000-line ceiling
-// (frontend/AGENTS.md) and these cases are one question of their own.
+// Broad visibility diagnostics must not describe a personal or named queue.
 
 afterEach(() => {
   cleanup();
@@ -47,25 +36,25 @@ describe("the hidden-backlog panel is about the reader", () => {
   // colleague's name and reported the MANAGER's own hidden work: "412 hidden
   // from you" read as Lena's backlog. On the one surface whose whole job is to
   // say what a queue is not showing, that is the worst place in the product to
-  // attribute a figure to the wrong person.
+  // attribute a figure to the wrong contact.
   it("AC-WORKLIST-MGR-02: draws no hidden-backlog panel on a colleague's queue", async () => {
     stub(day({ scope_options: ["mine", "team"] }));
     renderWorklist("en", "11111111-1111-4111-8111-111111111111");
 
-    // Waited on the panel's own NEIGHBOUR rather than on a stopwatch. The
-    // coach control renders on this same drill-down and sits immediately before
-    // the panel in the tree, so seeing it proves React reached the point where
-    // the panel would have rendered and asked. A pause of N milliseconds proves
-    // the same thing only on a machine fast enough, which is a test that passes
-    // for a reason unrelated to what it checks.
+    // Waited on the page's own LANDMARKS rather than on a stopwatch. The coach
+    // panel renders on this same drill-down and the receipt renders after the
+    // panel under test, so seeing both proves React ran past the point where
+    // that panel would have rendered and asked. A pause of N milliseconds
+    // proves the same thing only on a machine fast enough, which is a test
+    // that passes for a reason unrelated to what it checks.
     //
     // The wait is load-bearing: asserting straight after the day's read reports
     // silence from a component that has not run yet, and this case passed with
     // the guard removed before the anchor was added.
-    await screen.findByRole("button", { name: "Leave a note" });
-    // And a line drawn after the panel, so the wait covers the panel's own
-    // position rather than only its neighbour's.
-    await screen.findByText("Nothing is waiting on you.");
+    await screen.findByRole("button", { name: "Add note" });
+    // The receipt is the LAST panel on the page, below the one under test, so
+    // the wait covers that panel's own position rather than only a neighbour's.
+    await screen.findByRole("heading", { name: "Handled for you" });
 
     // The panel is absent, and — the half that actually holds — it never ASKS.
     // The endpoint answers about the authenticated principal, so a request made
@@ -106,16 +95,16 @@ describe("the hidden-backlog panel is about the reader", () => {
     expect(hiddenRequests()).toEqual([]);
   });
 
-  // And it IS drawn on the reader's own day, where the figure is about them.
-  // Without this the assertion above passes on a panel deleted outright.
-  it("draws the hidden-backlog panel on the reader's own day", async () => {
-    stub(day({ scope_options: ["mine", "team"] }));
+  it("shows the broad diagnostic only after selecting all visible work", async () => {
+    const user = userEvent.setup();
+    stub(day({ scope_options: ["mine", "team", "all"] }));
     renderWorklist("en");
-
+    await screen.findByText("Nothing is waiting on you.");
+    expect(hiddenRequests()).toEqual([]);
+    await user.click(screen.getAllByRole("button", { name: "All" })[0]);
     expect(
       await screen.findByText("What the queue is not showing"),
     ).toBeTruthy();
-    // It asked, which is what makes the silence above mean something.
     await waitFor(() => expect(hiddenRequests().length).toBeGreaterThan(0));
   });
 });

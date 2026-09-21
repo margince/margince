@@ -38,6 +38,7 @@ type fakeAPI struct {
 	historyErr, getErr error
 	raws               map[string][]byte
 	sent               map[string]bool // ids Gmail filed under the SENT label
+	drafts             map[string]bool // ids Gmail filed under the DRAFT label
 	gone               map[string]bool
 	historyCalls       int
 	listCalls          int
@@ -50,8 +51,8 @@ type fakeAPI struct {
 
 // The backfill seam's stubs: tests that exercise it set the fields; the
 // sync-path tests never reach these.
-func (f *fakeAPI) EstimateAfter(context.Context, string, string) (int, error) {
-	return len(f.recent), nil
+func (f *fakeAPI) EstimateAfter(context.Context, string, string) (int, bool, error) {
+	return len(f.recent), false, nil
 }
 
 func (f *fakeAPI) ListAfter(_ context.Context, _ string, _ string, pageToken string, _ int) ([]string, string, error) {
@@ -95,7 +96,16 @@ func (f *fakeAPI) GetRaw(_ context.Context, _, id string) (Message, error) {
 	if f.getErr != nil {
 		return Message{}, f.getErr
 	}
-	return Message{RFC822: f.raws[id], FiledAsSent: f.sent[id]}, nil
+	msg := Message{RFC822: f.raws[id], FiledAsSent: f.sent[id]}
+	if f.drafts[id] {
+		// The real client carries Gmail's own label ids off the same
+		// messages.get response; a draft is one the owner has not sent.
+		msg.Labels = append(msg.Labels, draftLabelID)
+	}
+	if f.sent[id] {
+		msg.Labels = append(msg.Labels, sentLabelID)
+	}
+	return msg, nil
 }
 
 // The send seam's stubs: the sync/backfill tests that embed fakeAPI never
@@ -417,5 +427,70 @@ func TestSyncCarriesTheSentLabelOntoTheRecord(t *testing.T) {
 	}
 	if !attested["out@mail.gmail.com"] {
 		t.Error("a SENT-labelled message the owner wrote did not reach the record attested")
+	}
+}
+
+// TestSyncNeverPutsADraftOnTheTimeline.
+//
+// A draft was never sent, so a row for one claims the customer was told
+// something they were not — and it reads as a send, because an outbound row
+// with no delivery beside it is what a logged send looks like.
+//
+// Gmail mints a new message id on every autosave, so the reported symptom was
+// five "sent" rows in eleven minutes for one email under composition. Two
+// drafts here rather than one, so a rule that skipped only the first would
+// still fail.
+func TestSyncNeverPutsADraftOnTheTimeline(t *testing.T) {
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent:    []string{"d1@mail.gmail.com", "d2@mail.gmail.com", "m1@mail.gmail.com"},
+		raws: map[string][]byte{
+			"d1@mail.gmail.com": rawMsg("d1@mail.gmail.com", owner),
+			"d2@mail.gmail.com": rawMsg("d2@mail.gmail.com", owner),
+			"m1@mail.gmail.com": rawMsg("m1@mail.gmail.com", "alice@acme.com"),
+		},
+		drafts: map[string]bool{"d1@mail.gmail.com": true, "d2@mail.gmail.com": true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 {
+		t.Fatalf("captured %d records, want 1 — the two drafts must not reach the timeline", len(sink.recs))
+	}
+	if sink.recs[0].Source != "gmail:m1@mail.gmail.com" {
+		t.Errorf("Source = %q, want the one message that was actually sent", sink.recs[0].Source)
+	}
+}
+
+// TestSyncStillCapturesTheSendThatFollowsTheDraft.
+//
+// The message the owner finally sends carries SENT and not DRAFT, and must
+// still land — with the provider's own attestation intact. A rule that refused
+// anything the owner wrote would take the real send with the drafts, which is
+// the failure on the other side of this one.
+func TestSyncStillCapturesTheSendThatFollowsTheDraft(t *testing.T) {
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent:    []string{"d1@mail.gmail.com", "s1@mail.gmail.com"},
+		raws: map[string][]byte{
+			"d1@mail.gmail.com": rawMsg("d1@mail.gmail.com", owner),
+			"s1@mail.gmail.com": rawMsg("s1@mail.gmail.com", owner),
+		},
+		drafts: map[string]bool{"d1@mail.gmail.com": true},
+		sent:   map[string]bool{"s1@mail.gmail.com": true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:s1@mail.gmail.com" {
+		t.Fatalf("captured %+v, want only the sent message", sink.recs)
 	}
 }

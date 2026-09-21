@@ -20,11 +20,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const replyActivityMaxRunes = 12_000
@@ -58,19 +58,22 @@ type replyActivityData struct {
 	// rule sends to the familiar greeting rather than to a guess.
 	RecipientLastName string `json:"recipient_last_name,omitempty"`
 
-	Subject string `json:"subject,omitempty"`
-	Body    string `json:"body,omitempty"`
-	Intent  string `json:"intent,omitempty"`
-	// Thread carries whether a real INBOUND mail thread stands behind this
-	// subject, as a string because the whole payload decodes as a flat string
-	// map for the certification bound check. Only that earns a reply prefix:
-	// "Re:" on a meeting title, or on our own last outbound, claims a message
-	// nobody sent us.
+	Subject      string `json:"subject,omitempty"`
+	Body         string `json:"body,omitempty"`
+	Intent       string `json:"intent,omitempty"`
+	Conversation string `json:"conversation,omitempty"`
+	// Thread identifies inbound evidence for grounding and consent semantics.
+	// Outbound follow-ups get their subject header independently.
 	Thread string `json:"thread,omitempty"`
 }
 
 // Threaded reads the flag back as the bool the checks want.
 func (d replyActivityData) Threaded() bool { return d.Thread == "inbound_mail" }
+
+// Booked is false: a reply folds the anchor message and nothing else, so there
+// is no meeting here for a day to rest on. A reply that needs to name one is
+// answering a message that named it, and that text is the recipient's own.
+func (d replyActivityData) Booked() bool { return false }
 
 type replyDrafter struct {
 	brain completer
@@ -129,6 +132,10 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
+	conversation, err := d.replyConversation(ctx, activity)
+	if err != nil {
+		return activities.DraftResult{}, err
+	}
 	topic := stringValue(activity.Subject)
 	body := stringValue(activity.Body)
 	threaded := activities.IsMailThread(activity.Kind, activity.Direction)
@@ -170,6 +177,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Subject:           boundedRunes(topic, replyActivityMaxRunes),
 		Body:              boundedRunes(body, replyActivityMaxRunes),
 		Intent:            boundedRunes(strings.TrimSpace(intent), replyActivityMaxRunes),
+		Conversation:      conversation,
 	}
 
 	voice := d.loadVoice(ctx)
@@ -177,15 +185,25 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		// Drafting is an assistive read, not the authority to send. Preserve
 		// the deterministic floor and leave the routed ai_call failure visible.
+		//
+		// This branch is where every completeVoiced failure is contained, and it
+		// is the whole of the containment: that method propagates rather than
+		// degrading, and DraftEmailWithProvenance answers with the
+		// deterministic draft below — never with a retry that drops the voice
+		// profile. Weaken this and a transient model failure becomes a failed
+		// draft_reply instead of a plain one.
 		d.logger().WarnContext(ctx, "model reply draft unavailable; using deterministic draft", "err", err)
-		return activities.DraftResult{Subject: fallbackSubject, Body: fallbackBody, VoiceDegraded: voice.Degraded}, nil
+		return activities.DraftResult{Subject: activities.ReplySubject(activity.Kind, topic, fallbackSubject), Body: fallbackBody, VoiceDegraded: voice.Degraded}, nil
 	}
-	disclosure := signals.Art50Disclosure
+	// The draft's OWN language, from the envelope the drafter already resolved:
+	// a German reply used to carry an English legal line, which is the half of
+	// the drift a reader meets rather than a maintainer.
+	disclosure := draftfloor.AIProvenanceNotice(textlang.Lang(envelope.Language))
 	return activities.DraftResult{
-		Subject:             draft.Subject,
+		Subject:             activities.ReplySubject(activity.Kind, topic, draft.Subject),
 		Body:                draft.Body,
 		AIGenerated:         true,
-		AIDisclosure:        &disclosure,
+		AIProvenanceNotice:  &disclosure,
 		VoiceProfileVersion: voiceVersion,
 		DraftRef:            draftRef,
 		VoiceDegraded:       voice.Degraded,
@@ -212,7 +230,7 @@ const recipientMaxRunes = 200
 // recipientName is who this reply is written to, or nothing.
 //
 // A failure to resolve the name degrades to no name rather than failing the
-// draft: the person may be outside this caller's scope, the activity may be
+// draft: the contact may be outside this caller's scope, the activity may be
 // linked to nobody, and in both cases an unnamed greeting is the honest answer.
 // The reason is logged, so a lookup that breaks for some other cause is visible
 // rather than silently reading as "no recipient".
@@ -236,7 +254,7 @@ func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) 
 
 // conversationState places the message being answered on the silence axis.
 //
-// A reply reads its own anchor rather than the person's whole history, which is
+// A reply reads its own anchor rather than the contact's whole history, which is
 // the honest scope for this surface: the drafter was pointed at one activity
 // and asked to answer it. Which direction that message went decides what the
 // reply owes — an inbound message is a question waiting, an outbound one is our

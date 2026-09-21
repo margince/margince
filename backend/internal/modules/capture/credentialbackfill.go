@@ -37,7 +37,7 @@ import (
 )
 
 // CredentialBackfillActor names this pass on its ledger rows. A system id
-// rather than a person, for the reason the rows exist: an operator reading the
+// rather than a colleague, for the reason the rows exist: an operator reading the
 // trail has to be able to tell bytes the BOOT relocated from a credential a
 // colleague connected, and those are the two things that write this column.
 const CredentialBackfillActor = "system:capture-credential-backfill"
@@ -91,10 +91,7 @@ func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 		// The correlation id groups one boot's relocations as the single pass
 		// they are, exactly as the expiry sweep's does for one tick.
 		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-		wsCtx = principal.WithActor(wsCtx, principal.Principal{
-			Type: principal.PrincipalSystem, ID: CredentialBackfillActor,
-		})
+		wsCtx = principal.SystemActing(wsCtx, CredentialBackfillActor)
 		migrated, err := r.backfillWorkspace(wsCtx, ids.From[ids.WorkspaceKind](wsID))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("capture: backfilling workspace %s: %w", wsID, err))

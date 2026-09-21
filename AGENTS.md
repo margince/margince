@@ -12,8 +12,8 @@ A rule that binds the whole tree belongs in this file instead.
 
 **Rules live here; everything else lives in [docs/](docs/README.md).** Every line
 here is paid for by every session — the right price for a rule that binds a change,
-the wrong one for a procedure, a catalog or an explanation. `cli/craft` feeds this
-file's `## Craftsmanship` section into its gate prompt, so that section must stay.
+the wrong one for a procedure, a catalog or an explanation. The gate feeds this
+file's `## Craftsmanship` section into its prompt, so that section must stay.
 Links point one way: down into `docs/`, never back up.
 
 Margince CRM: the running Go software, its contract, its tests and its docs are
@@ -68,6 +68,18 @@ written for you as much as for a human. The code is still the authority on
 current behaviour, so check the code before you rely on a doc for anything a
 patch depends on.
 
+**A red `main` is claimed once.** Before diagnosing a failure you did not cause,
+run `gh pr list --state open --label "claim: main-red"` and read the bodies —
+each names the tests it covers. Covered: somebody is on it, so do not diagnose
+it, do not open a second fix, and do not poll it. Your red is inherited; carry on
+with your own work and look again at merge time. Not covered: you are first, even
+while another claim is open for a different cause — open a DRAFT pull request
+labelled `claim: main-red` naming the tests you take, BEFORE you start. Listing
+then creating is not atomic, so two claims can cover one test: the LOWER number
+wins and the other session closes its own, pointing at the winner.
+[docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md) has stale
+claims, releasing one, and why two half-fixes both stay red.
+
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) routes an
 exploitable weakness to a private advisory. The test: if you can write the
 reproduction, it belongs in an advisory, not here.
@@ -97,7 +109,7 @@ Three binaries, all wired through `internal/compose`: `cmd/api`, `cmd/worker`,
 
 Commands and flags: [docs/reference/make-targets.md](docs/reference/make-targets.md).
 Config and endpoints: [docs/reference/configuration.md](docs/reference/configuration.md).
-CI: [infra/ci-pipeline.md](infra/ci-pipeline.md).
+CI: [docs/explanation/ci-pipeline.md](docs/explanation/ci-pipeline.md).
 
 ## One dev stack per worktree
 
@@ -240,12 +252,19 @@ The incidents behind these, and the scan for auditing a subsystem:
 The rule under every rule: **code that reads best to a human reads best to the
 next agent that edits it.** Legibility is the product.
 
-The standard the gate applies is `cli/craft/rubric/rubric.json` — anti-tells
+The standard is the rubric the gate carries; `craft rubric` prints it. Anti-tells
 T1–T11 plus positive rules P1–P5 (idiomatic, small-focused, tests-as-spec,
-pr-tells-story, restraint). When this prose and the rubric disagree, the rubric is
-what blocked your push.
+pr-tells-story, restraint). When this prose and the rubric disagree, the rubric
+is what blocked your push; `make craft-prose` fails if they stop agreeing.
 
 - Comments say *why*, not *what* (T1). Domain names, not `data`/`tmp`/`helper` (T4).
+- **A comment costs a line and has to earn it.** Two lines is the ordinary size
+  of one; past that it carries a why the code cannot, or it is cut. Never
+  narrate the change — state the invariant in the present tense and let git hold
+  the history. Read T1's "match the surrounding file's density" as the floor to
+  beat, not the bar to meet: at 0.43 against the Go standard library's 0.20,
+  matching this tree keeps its drift. `make comment-budget` holds the diff at
+  1.0; `comment-density` holds the tree, which may fall and never rise.
 - **Never swallow an error** (T2) — no `_ = f()`, no empty `catch`, no ignored
   return. Errors flow through the sentinels; messages say what went wrong and what
   to do, and never leak internals (no stack, SQL or table names to a client).
@@ -273,9 +292,11 @@ this bar was armed, so the rule is simply that touched code is clean.
 - Size ceilings: 80 code lines per function and 500 per file; 160 and 1000 for
   `*_test.go`. A comment-only line is not length for the function ceiling — it
   asks how much a reader must hold at once, and an explanation reduces that.
+  `comment-budget` is the counterweight: free against the ceiling, not free
+  against each other.
 - Waive a genuine false positive in source, with a reason:
   `//craft:ignore <check> <reason>`. A reasonless waiver is itself a finding.
-- Whole-tree sweep: `make craft-static`. CI runs the same bar.
+- Whole-tree sweep: `make craft-static` and `make craft-prose`. Same bar in CI.
 
 ## License headers
 

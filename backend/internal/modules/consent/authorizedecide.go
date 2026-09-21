@@ -13,27 +13,29 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // resolveAndRecord answers the half of the question that rests on evidence, for
 // EITHER subject kind, and writes the ground down when it holds.
 //
-// Shared by the person arm and the lead arm because it is one invariant: a
+// Shared by the contact arm and the lead arm because it is one invariant: a
 // category borne out by the record allows on that ground, and the ground is
 // recorded before the send relies on it. Two spellings of that would be two
 // answers, and the lead one is the copy that would rot — leads reach this code
-// far less often than people do.
+// far less often than contacts do.
 //
 // The returned resolution's Supported reports whether it settled. When it did
 // not, the caller asks its own subject kind's grant, which is the ONLY part
-// that differs: a person's is VerdictForPerson and a lead's is grantedForLead,
+// that differs: a contact's is VerdictForContact and a lead's is grantedForLead,
 // and each reads a column the other's query does not.
-func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, suppressed bool) (resolution, error) {
+func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, stops []liveStop) (resolution, error) {
 	res, err := g.resolveCategory(ctx, tx, req, subject)
 	if err != nil {
 		return resolution{}, err
@@ -52,13 +54,32 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// UNSCOPED row matching every other unscoped one, collapsing the thread
 	// separation staging established. Transmit still re-checks the
 	// evidence; what it does not do is write a second, weaker record of it.
-	// NOT WHILE A SUPPRESSION STANDS. A basis row asserts we hold a lawful
-	// ground to write to this person; writing one about somebody whose
+	// NOT WHILE A SUPPRESSION BINDS THIS MESSAGE. A basis row asserts we hold a
+	// lawful ground to write to this contact; writing one about somebody whose
 	// processing is restricted is itself processing, and it lands in their own
 	// Art. 15 export as a claim made after they said stop. The category is
 	// still resolved — the decision row records what the message was — but the
 	// ground is not written down.
-	if phase == commsauthz.PhaseStaging && !suppressed {
+	//
+	// BINDS, not merely stands. This asked whether the subject held any live
+	// stop at all, which is a different question: an objection to marketing
+	// does not reach an invoice, and the invoice goes out lawfully with no
+	// record of the ground it went out on. Their own Art. 15 export then
+	// answered "we relied on nothing" for a send that was in fact lawful —
+	// the exact gap the paragraph above says this write exists to close.
+	//
+	// res.Category is what the decision resolves to on every path that reaches
+	// here: the supported arm sets d.Resolved from it whether it allows,
+	// contradicts, or finds a withdrawal. So this is the same test
+	// applySuppression will apply to the same message, asked once earlier.
+	//
+	// NIL PURPOSE, and not because one is merely unavailable yet: this write
+	// is reached only on the SUPPORTED arm, and every supported arm returns
+	// above legacyVerdictFor without consulting a purpose key at all. A send
+	// resolved on a thread or a live deal has no purpose for a narrow stop to
+	// match, so nil is the purpose it will still have when applySuppression
+	// asks — the same answer, not a guess standing in for one.
+	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) {
 		w, err := g.store.packRulesFor(ctx, tx)
 		if err != nil {
 			return resolution{}, err
@@ -83,7 +104,34 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	return d
 }
 
-// decideResolved answers about a person once nothing suppresses them: what the
+// contradictsClaim answers whether the caller named a category the record does
+// not bear out.
+//
+// ONE spelling, because the two paths that ask it would otherwise be two
+// answers to one question — and the first fix here proved that: the guard lived
+// on the legacy path alone, so a message whose thread or live deal resolved a
+// category the caller had not claimed went through with the claim never put to
+// anything. An empty claim is not a contradiction: naming nothing is how a
+// caller says the record should decide.
+func contradictsClaim(claimed, resolved commsauthz.Category) bool {
+	return claimed != "" && claimed != resolved
+}
+
+// denyContradiction is the refusal both paths give, with Resolved carrying the
+// RECORD's reading rather than the claim. An unproven claim must never reach
+// that column: it selects the rollout mode and decides whether the advertising
+// ceiling is counted, so a caller who set it would hold both
+// (TestAnUnsupportedClaimIsRecordedButNeverResolvedTo). The claim is already in
+// Requested, so the row still says what was asked for, what the record read,
+// and that the two disagree.
+func denyContradiction(d commsauthz.Decision, resolved commsauthz.Category) commsauthz.Decision {
+	d.Resolved = resolved
+	d.Verdict = commsauthz.VerdictDeny
+	d.ReasonCode = commsauthz.ReasonClaimContradictsResolution
+	return d
+}
+
+// decideResolved answers about a contact once nothing suppresses them: what the
 // record says this message is, and whether that is supported.
 //
 // The resolution decides the CATEGORY and the legacy verdict decides the
@@ -91,26 +139,60 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 // engine measurable: a row can say "this is a reply, and the old gate refused
 // it", which is exactly the disagreement a rollout needs to see before anybody
 // flips a mode.
-func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase, suppressed bool) (commsauthz.Decision, error) {
-	res, err := g.resolveAndRecord(ctx, tx, req, subject, phase, suppressed)
+//
+// Also returns the send's own resolved PURPOSE, for applySuppression: nil on
+// the evidence arms below (a thread or a live deal names a category, never a
+// purpose key), and set once legacyVerdictFor has read one off the record.
+func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+	res, err := g.resolveAndRecord(ctx, tx, req, subject, phase, stops)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
+	}
+	// ONLY EVIDENCE THIS CALLER WAS SHOWN TO HOLD travels any further.
+	//
+	// refuseUnreadableEvidence runs inside validate, and validate runs only for
+	// arm 3 of resolution — the thread and live-deal arms answer before it. So
+	// a message allowed by one of those two carries evidence ids nobody has
+	// checked this caller may see, and writing them to the decision row would
+	// hand them to the transmit phase. That phase runs under the system
+	// principal, for which auth.Require returns nil, so an unchecked id there
+	// becomes an authorization the sender could never have obtained: name any
+	// invoice in the installation, get allowed by an open deal at staging, and
+	// have the invoice arm allow it at transmit.
+	//
+	// EvidenceChecked is the resolution's own record of having passed that
+	// check, so what reaches the row is the intersection of "named" and
+	// "readable by the contact who named it".
+	if res.EvidenceChecked {
+		d.Evidence = req.Evidence
 	}
 	if res.Supported {
+		// The claim first, because the record bearing out a category is not the
+		// same as the caller having named it. A sender who says "this is
+		// marketing" about a thread the subject replied into is asking for two
+		// things at once, and the withdrawal read below would be asked about
+		// reply_to_inbound — so a live objection to direct marketing would
+		// never be put to a message its own sender called marketing.
+		if contradictsClaim(req.Context, res.Category) {
+			d.Requested = req.Context
+			// An evidence-borne category, not a purpose key: nothing here ever
+			// named one, so a narrow suppression cannot be about this send.
+			return denyContradiction(d, res.Category), nil, nil
+		}
 		// The record bears the category out — and the subject may still have
-		// said stop. The evidence arms never read person_consent, so this is
+		// said stop. The evidence arms never read contact_consent, so this is
 		// the only place a withdrawal is put to them.
 		stopped, err := withdrawalCovers(ctx, tx, subject, res.Category)
 		if err != nil {
-			return commsauthz.Decision{}, err
+			return commsauthz.Decision{}, nil, err
 		}
 		if stopped {
 			d.Resolved = res.Category
 			d.Verdict = commsauthz.VerdictDeny
 			d.ReasonCode = commsauthz.ReasonConsentWithdrawn
-			return d, nil
+			return d, nil, nil
 		}
-		return allowOn(d, res), nil
+		return allowOn(d, res), nil, nil
 	}
 	// AN UNSUPPORTED CLAIM IS RECORDED, NEVER RESOLVED TO.
 	//
@@ -135,26 +217,42 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d, suppressed)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, stops)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
 // category on its own.
 //
-// It calls VerdictForPerson rather than reimplementing the class model, which
+// It calls VerdictForContact rather than reimplementing the class model, which
 // is what keeps the engine, the legacy transmit gate and the guard endpoint
-// answering with one body of code about one person. A second implementation
+// answering with one body of code about one contact. A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, error) {
+//
+// Also returns the purpose this send resolved to, once defined below: the
+// caller's suppression re-check needs it to tell a narrow row that binds this
+// purpose from one that binds some OTHER marketing purpose, which
+// suppressionBinds cannot do from the category alone.
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
 	if !defined {
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = commsauthz.ReasonUnknownPurpose
-		return d, nil
+		// No purpose was resolved at all — not even a wrong one — so nothing
+		// downstream may narrow a suppression to it.
+		return d, nil, nil
+	}
+	// Parsed once here rather than deferred to the caller: every return below
+	// this point has a purpose ON THE RECORD, whatever the verdict on it turns
+	// out to be — a send denied for contradicting its own purpose still named
+	// one, and applySuppression's job is to ask about THAT send, not to redo
+	// the resolution.
+	purposeID, err := ids.Parse(purpose.ID)
+	if err != nil {
+		return commsauthz.Decision{}, nil, fmt.Errorf("consent: the resolved purpose is not an id: %w", err)
 	}
 	// The engine's OWN reading of what this message is, derived from the
 	// purpose row rather than from anything a caller said.
@@ -164,39 +262,96 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purpos
 	// there alone would keep it out. Neither is redundant — they fail in
 	// different directions, and a decision that never reaches this function
 	// (the supported arm) is covered only by the first.
-	d.Resolved = resolutionForClass(purpose.Class).Category
+	fromPurpose := resolutionForClass(purpose.Class).Category
+
+	// A CLAIM AND A PURPOSE THAT DISAGREE ARE REFUSED, never reconciled.
+	//
+	// The caller said what this message IS and named a purpose key meaning
+	// something else. Taking the purpose's reading is not a conservative
+	// fallback, it is a downgrade the caller did not ask for and cannot see: a
+	// send claiming `marketing` under the `business_correspondence` key
+	// resolved to reply_to_inbound, which the correspondence arm authorizes on
+	// any recent exchange with that contact — not evidence that THIS message is
+	// a reply to anything. The message then went out as correspondence
+	// carrying promotional content.
+	//
+	// And it went out past the subject. An Art. 21 objection binds
+	// CategoryMarketing and is tested against Resolved, so a message remapped
+	// to reply_to_inbound was never put to it: the stop was recorded, appeared
+	// in the subject's own export, and did not stop the mail.
+	//
+	// Resolved still takes the PURPOSE'S reading, not the claim. An unproven
+	// claim must never reach that column — it selects the rollout mode and
+	// decides whether the advertising ceiling is counted, so a caller who set
+	// it would hold both (TestAnUnsupportedClaimIsRecordedButNeverResolvedTo).
+	// The claim is already in Requested, which is the column that exists for
+	// it, so the row still says both things: what was asked for, what it would
+	// have been read as, and that the two disagree.
+	d.Resolved = fromPurpose
+	if contradictsClaim(claimed, fromPurpose) {
+		return denyContradiction(d, fromPurpose), &purposeID, nil
+	}
 
 	w, err := g.store.packRulesFor(ctx, tx)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
 	// NO Advertises. Nothing on a send names the GOODS it advertises: the
 	// nearest field, Request.MarketingPurpose, is a consent purpose key
 	// ("newsletter"), and similar_goods_note is free text a rep typed about a
 	// sale ("espresso machines"). Comparing the two is not a weak check, it is
 	// a satisfiable one — a rep who types the purpose key into the note field
-	// would hold §7(3) authority for that person forever, which is the hole
+	// would hold §7(3) authority for that contact forever, which is the hole
 	// this file exists to close, relocated.
 	//
 	// So an exception requiring similarity refuses here, exactly as it does for
 	// the legacy gate and the guard, until a caller can honestly say what a
 	// message advertises.
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, time.Now().Add(-w.reply),
+	verdict, err := VerdictForContact(ctx, tx, contactID, purpose, time.Now().Add(-w.reply),
 		MarketingContext{Exception: w.marketingException})
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
 	switch verdict.State {
 	case VerdictAllowed:
+		// THE TRANSACTIONAL CLASS DOES NOT CARRY ITSELF ON THE SEND PATH.
+		//
+		// VerdictForContact allows ClassTransactional unconditionally, because
+		// Art 6(1)(b) really does mean the contract is the basis and the guard
+		// endpoint has to say so about a contact who has an invoice coming. But
+		// that answer is about a CONTACT, and this function is about a MESSAGE:
+		// we are only here because resolveCategory found nothing supporting
+		// this one — no thread, no live deal, no accepted claim — and
+		// resolutionForClass already said so with legacy_transactional_unevidenced.
+		//
+		// Taking the allow anyway is what let any message calling itself
+		// operational become one, on nothing but the purpose key. The lead arm
+		// closed this hole already (TestALeadTakesNoAuthorityFromATransactionalPurpose);
+		// this is the same hole for contacts, and the reason code is the one the
+		// resolution had picked before the legacy gate overrode it.
+		//
+		// The guard endpoint and the legacy gate keep VerdictForContact's answer
+		// untouched: an invoice with real evidence resolves as supported and
+		// returns from decideResolved's supported arm, never reaching here.
+		if purpose.Class == ClassTransactional {
+			d.Verdict = commsauthz.VerdictReview
+			d.ReasonCode = commsauthz.ReasonLegacyTransactionalUnevidenced
+			break
+		}
 		// A basis this call DERIVED is written down before the send relies on
 		// it (Art. 5(2)). The engine is the only authority now, so it is the
 		// only thing left that can make that record: grantedForRecipient used
 		// to stamp here, and nothing calls it on the send path any more.
-		// Not while a suppression stands, for recordBasis's reason: the stamp
-		// writes a consent_qualifying_event asserting a ground to correspond,
-		// and the send is about to be refused anyway.
-		if err := stampDerivedBasis(ctx, tx, personID, verdict, suppressed); err != nil {
-			return commsauthz.Decision{}, err
+		// Not while a suppression BINDS, for recordBasis's reason and with its
+		// correction: the stamp writes a consent_qualifying_event asserting a
+		// ground to correspond, and a stop that does not reach this category —
+		// or reaches marketing but names another purpose — is not a reason to
+		// leave that ground unrecorded. fromPurpose is the category this arm
+		// resolves to and purposeID the purpose it resolved through, so the
+		// test is the one applySuppression will apply.
+		if err := stampDerivedBasis(ctx, tx, contactID, verdict,
+			suppressionBindsAny(stops, fromPurpose, &purposeID)); err != nil {
+			return commsauthz.Decision{}, nil, err
 		}
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
@@ -212,5 +367,5 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purpos
 		d.Verdict = commsauthz.VerdictReview
 		d.ReasonCode = res.Reason
 	}
-	return d, nil
+	return d, &purposeID, nil
 }

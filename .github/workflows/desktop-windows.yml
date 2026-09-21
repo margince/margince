@@ -6,9 +6,10 @@
 # execute it, so this runner IS the Windows host — the only place the scripts are
 # proved rather than reasoned about.
 #
-# Path-scoped on pull requests, plus manual dispatch, plus called by release.yml
-# when a release is cutting a downloadable bundle. It is NOT a required check and
-# never gates a merge: it downloads a 310 MB PostgreSQL archive and compiles
+# Path-scoped on pull requests, plus manual dispatch, plus called by
+# release-tag.yml when a release is cutting a downloadable bundle. It is NOT a
+# required check and never gates a merge: it downloads a 310 MB PostgreSQL
+# archive and compiles
 # Redis, which is not something to spend on every push. Run it when the lane
 # changes, or when someone needs a build to test.
 #
@@ -33,9 +34,10 @@ on:
       ref:
         description: Branch, tag or SHA to build
         required: false
-  # Called by release.yml, so a release's downloadable bundle is built by THIS
-  # lane and not by a second copy of it. A copy would drift, and the drift shows
-  # up as a release bundle differing from the one the pull-request check blessed.
+  # Called by release-tag.yml, so a release's downloadable bundle is built by
+  # THIS lane and not by a second copy of it. A copy would drift, and the drift
+  # shows up as a release bundle differing from the one the pull-request check
+  # blessed.
   workflow_call:
     inputs:
       ref:
@@ -51,6 +53,13 @@ on:
 
 permissions:
   contents: read
+
+# A module the proxy cannot serve is not a broken build: the PIPE falls through
+# to the source on any error, where Go's default comma falls through only on a
+# 404. Why that distinction reached `main` as a product break:
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
 
 jobs:
   build:

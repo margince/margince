@@ -19,12 +19,12 @@ func TestTheDraftTheJudgeFlooredIsCaught(t *testing.T) {
 	body := "Hello Priya, I am checking in to see if you have an update regarding " +
 		"the integration project we discussed earlier. Is this still a priority?"
 
-	findings := draftcheck.Body(body, textlang.English, convstate.BandMonths, false)
+	findings := draftcheck.Body(body, textlang.English, convstate.BandMonths, draftcheck.Grounds{})
 	if len(findings) == 0 {
 		t.Fatal("the phrasing the judge floored passed the check")
 	}
 	for _, f := range findings {
-		if f.Rule != "assumed-memory" {
+		if f.Rule != draftcheck.RuleAssumedMemory {
 			t.Errorf("unexpected rule %q for %q", f.Rule, f.Phrase)
 		}
 	}
@@ -36,11 +36,11 @@ func TestTheDraftTheJudgeFlooredIsCaught(t *testing.T) {
 func TestTheSameWordsAreFineWhileTheExchangeIsLive(t *testing.T) {
 	body := "Hi Marek, as discussed I am sending the scope over now. Anything else?"
 
-	if findings := draftcheck.Body(body, textlang.English, convstate.BandFresh, false); len(findings) != 0 {
+	if findings := draftcheck.Body(body, textlang.English, convstate.BandFresh, draftcheck.Grounds{}); len(findings) != 0 {
 		t.Fatalf("a live exchange may refer to what was discussed, got %d findings: %+v",
 			len(findings), findings)
 	}
-	if findings := draftcheck.Body(body, textlang.English, convstate.BandMonths, false); len(findings) == 0 {
+	if findings := draftcheck.Body(body, textlang.English, convstate.BandMonths, draftcheck.Grounds{}); len(findings) == 0 {
 		t.Fatal("the same sentence after months of silence should be caught")
 	}
 }
@@ -52,8 +52,8 @@ func TestAWellbeingOpenerIsCaughtAtEveryBand(t *testing.T) {
 	for _, band := range []convstate.Band{
 		convstate.BandNone, convstate.BandFresh, convstate.BandWeeks, convstate.BandMonths,
 	} {
-		findings := draftcheck.Body(body, textlang.English, band, false)
-		if len(findings) != 1 || findings[0].Rule != "wellbeing-opener" {
+		findings := draftcheck.Body(body, textlang.English, band, draftcheck.Grounds{})
+		if len(findings) != 1 || findings[0].Rule != draftcheck.RuleWellbeingOpener {
 			t.Errorf("at band %q: got %+v, want one wellbeing-opener finding", band, findings)
 		}
 	}
@@ -63,12 +63,12 @@ func TestAWellbeingOpenerIsCaughtAtEveryBand(t *testing.T) {
 // against German reflexes, not translated English ones.
 func TestEachLanguageIsJudgedAgainstItsOwnPhrases(t *testing.T) {
 	german := "Hallo Marek, wie besprochen melde ich mich nochmal zu dem Thema."
-	if findings := draftcheck.Body(german, textlang.German, convstate.BandMonths, false); len(findings) == 0 {
+	if findings := draftcheck.Body(german, textlang.German, convstate.BandMonths, draftcheck.Grounds{}); len(findings) == 0 {
 		t.Error("the German assumed-memory phrase should be caught")
 	}
 	// The same German text judged as English finds nothing, which is correct:
 	// the caller passes the language the draft was written in.
-	if findings := draftcheck.Body(german, textlang.English, convstate.BandMonths, false); len(findings) != 0 {
+	if findings := draftcheck.Body(german, textlang.English, convstate.BandMonths, draftcheck.Grounds{}); len(findings) != 0 {
 		t.Errorf("German text judged as English should find nothing, got %+v", findings)
 	}
 }
@@ -80,7 +80,7 @@ func TestAnHonestDraftPassesCleanly(t *testing.T) {
 		"Schnittstelle inzwischen fertiggestellt und ich wollte fragen, ob das Thema " +
 		"bei Ihnen noch aktuell ist.\n\nViele Grüße"
 
-	if findings := draftcheck.Body(body, textlang.German, convstate.BandMonths, false); len(findings) != 0 {
+	if findings := draftcheck.Body(body, textlang.German, convstate.BandMonths, draftcheck.Grounds{}); len(findings) != 0 {
 		t.Fatalf("an honest gap-acknowledging draft should pass, got %+v", findings)
 	}
 }
@@ -89,7 +89,7 @@ func TestAnHonestDraftPassesCleanly(t *testing.T) {
 // "try again" produces the same draft with different adjectives.
 func TestFeedbackNamesThePhraseAndTheReason(t *testing.T) {
 	findings := draftcheck.Body("I am just circling back on this.",
-		textlang.English, convstate.BandMonths, false)
+		textlang.English, convstate.BandMonths, draftcheck.Grounds{})
 	feedback := draftcheck.Feedback(findings)
 
 	if !strings.Contains(feedback, "circling back") {
@@ -108,12 +108,12 @@ func TestFeedbackNamesThePhraseAndTheReason(t *testing.T) {
 // recipient's OWN system as an invented pitch.
 func TestAPhraseInsideAnotherWordIsNotAMatch(t *testing.T) {
 	honest := "Hallo Marek, wie ist your solution bei Ihnen aufgebaut?"
-	if findings := draftcheck.Body(honest, textlang.English, convstate.BandNone, false); len(findings) != 0 {
+	if findings := draftcheck.Body(honest, textlang.English, convstate.BandNone, draftcheck.Grounds{}); len(findings) != 0 {
 		t.Errorf("%q should not match \"our solution\", got %+v", honest, findings)
 	}
 
 	invented := "Hi Marek, our solution helps companies like yours."
-	if findings := draftcheck.Body(invented, textlang.English, convstate.BandNone, false); len(findings) == 0 {
+	if findings := draftcheck.Body(invented, textlang.English, convstate.BandNone, draftcheck.Grounds{}); len(findings) == 0 {
 		t.Error("the real phrase should still be caught")
 	}
 }
@@ -126,7 +126,7 @@ func TestAPleasantryIsOnlyFillerAtTheOpening(t *testing.T) {
 		"side, including the test window we talked through.\n\n" +
 		"Let me know if the dates work. I hope you are doing well with the rollout."
 
-	if findings := draftcheck.Body(closing, textlang.English, convstate.BandFresh, false); len(findings) != 0 {
+	if findings := draftcheck.Body(closing, textlang.English, convstate.BandFresh, draftcheck.Grounds{}); len(findings) != 0 {
 		t.Errorf("a pleasantry far into the body is not an opener, got %+v", findings)
 	}
 }
@@ -136,7 +136,7 @@ func TestAPleasantryIsOnlyFillerAtTheOpening(t *testing.T) {
 //
 //	"Follow-up to previous introduction by Romina Medici"
 //
-// Romina did not make that introduction. The product holds no person-to-person
+// Romina did not make that introduction. The product holds no contact-to-contact
 // referral record at all, so any directed introduction fact in a draft was read
 // out of quoted correspondence — which is how the reported defect got the
 // direction backwards in the first place.
@@ -147,7 +147,7 @@ func TestAnInventedIntroductionInAChipIsCaught(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("the chip that shipped the original defect passed the check")
 	}
-	if findings[0].Rule != "invented-relationship" {
+	if findings[0].Rule != draftcheck.RuleInventedRelationship {
 		t.Errorf("expected an invented-relationship finding, got %q", findings[0].Rule)
 	}
 }
@@ -269,17 +269,17 @@ func TestGermanCompoundsCarryingTheStemAreCaught(t *testing.T) {
 
 // A German draft that opens formally and closes familiarly reads as
 // machine-written whichever register it should have picked. The prompt already
-// said to be consistent; three consecutive drafts to one person came back du,
+// said to be consistent; three consecutive drafts to one contact came back du,
 // du, Sie — which is why it is checked rather than merely instructed.
 func TestAMixedRegisterIsCaught(t *testing.T) {
 	mixed := "Hallo Frank,\n\nich würde mich gerne mit dir austauschen. " +
 		"Haben Sie in der kommenden Woche Zeit für ein kurzes Gespräch?"
 
-	findings := draftcheck.Body(mixed, textlang.German, convstate.BandFresh, false)
+	findings := draftcheck.Body(mixed, textlang.German, convstate.BandFresh, draftcheck.Grounds{})
 	if len(findings) == 0 {
 		t.Fatal("a draft using both du and Sie should be caught")
 	}
-	if findings[0].Rule != "mixed-register" {
+	if findings[0].Rule != draftcheck.RuleMixedRegister {
 		t.Errorf("expected a mixed-register finding, got %q", findings[0].Rule)
 	}
 }
@@ -293,7 +293,7 @@ func TestAConsistentRegisterPasses(t *testing.T) {
 		"Hallo Herr Miller,\n\nich melde mich bei Ihnen, sobald ich Ihre Notizen " +
 			"durchgesehen habe. Sagen Sie mir gerne, ob Ihnen das so passt.",
 	} {
-		if findings := draftcheck.Body(body, textlang.German, convstate.BandFresh, false); len(findings) != 0 {
+		if findings := draftcheck.Body(body, textlang.German, convstate.BandFresh, draftcheck.Grounds{}); len(findings) != 0 {
 			t.Errorf("a consistent draft should pass, got %+v for %q", findings, body[:40])
 		}
 	}
@@ -308,7 +308,7 @@ func TestEveryIchHoffeOpenerIsCaught(t *testing.T) {
 		"Hallo Frank, ich hoffe, es geht dir gut. Kurze Rückfrage...",
 		"Hallo Herr Miller, ich hoffe, Sie hatten einen guten Start.",
 	} {
-		if findings := draftcheck.Body(opener, textlang.German, convstate.BandFresh, false); len(findings) == 0 {
+		if findings := draftcheck.Body(opener, textlang.German, convstate.BandFresh, draftcheck.Grounds{}); len(findings) == 0 {
 			t.Errorf("%q was not caught", opener[:45])
 		}
 	}
@@ -326,11 +326,11 @@ func TestADraftMayNotDeclareTheirSideResolved(t *testing.T) {
 	invented := "Hello Priya, now that the budget round has concluded, I wanted to " +
 		"see whether the integration is moving forward."
 
-	findings := draftcheck.Body(invented, textlang.English, convstate.BandMonths, false)
+	findings := draftcheck.Body(invented, textlang.English, convstate.BandMonths, draftcheck.Grounds{})
 	if len(findings) == 0 {
 		t.Fatal("a draft asserting their side resolved something should be caught")
 	}
-	if findings[0].Rule != "assumed-resolution" {
+	if findings[0].Rule != draftcheck.RuleAssumedResolution {
 		t.Errorf("expected an assumed-resolution finding, got %q", findings[0].Rule)
 	}
 }
@@ -340,10 +340,10 @@ func TestADraftMayNotDeclareTheirSideResolved(t *testing.T) {
 func TestTheResolutionCheckIsOnlyForALongSilence(t *testing.T) {
 	same := "Hi Priya, now that the review has concluded, here is the scope."
 
-	if f := draftcheck.Body(same, textlang.English, convstate.BandFresh, false); len(f) != 0 {
+	if f := draftcheck.Body(same, textlang.English, convstate.BandFresh, draftcheck.Grounds{}); len(f) != 0 {
 		t.Errorf("a live exchange may refer to what it established, got %+v", f)
 	}
-	if f := draftcheck.Body(same, textlang.English, convstate.BandMonths, false); len(f) == 0 {
+	if f := draftcheck.Body(same, textlang.English, convstate.BandMonths, draftcheck.Grounds{}); len(f) == 0 {
 		t.Error("after months of silence the same sentence is an assertion about them")
 	}
 }
@@ -356,7 +356,7 @@ func TestTheStaleThreadPhrasingsAreCaught(t *testing.T) {
 		"Hello Priya, I am following up on our discussion regarding the integration timeline.",
 		"Hello Priya, picking up where we left off on the integration.",
 	} {
-		if f := draftcheck.Body(body, textlang.English, convstate.BandMonths, false); len(f) == 0 {
+		if f := draftcheck.Body(body, textlang.English, convstate.BandMonths, draftcheck.Grounds{}); len(f) == 0 {
 			t.Errorf("not caught: %q", body[:55])
 		}
 	}
@@ -410,4 +410,55 @@ func TestAnEmptySubjectIsCaught(t *testing.T) {
 	if f := draftcheck.Subject("   ", textlang.German, convstate.BandFresh, false); len(f) != 1 {
 		t.Errorf("an empty subject should be caught exactly once, got %+v", f)
 	}
+}
+
+func TestADayIsRefusedWhenNothingIsBooked(t *testing.T) {
+	t.Parallel()
+	// The reported draft. Every word of it is fluent and none of it is
+	// sourceable: the request asked for two untranslated product examples and
+	// named no meeting at all.
+	body := "Hallo Frau Malherbe,\n\nfür unsere geplante Demonstration der " +
+		"Übersetzungsregeln für morgen bräuchte ich zwei Produkte.\n\nViele Grüße"
+	got := draftcheck.Body(body, textlang.German, convstate.BandFresh, draftcheck.Grounds{})
+	if !refusedAsUnscheduled(got) {
+		t.Fatalf("a draft naming tomorrow with nothing booked passed: %+v", got)
+	}
+
+	// With a meeting on file the same sentence is the drafter doing its job —
+	// the contact prompt asks for exactly this phrasing over a timestamp.
+	if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, draftcheck.Grounds{Booked: true}); refusedAsUnscheduled(got) {
+		t.Errorf("a booked meeting still refused its own day: %+v", got)
+	}
+}
+
+func TestTheGermanMorningIsNotTomorrow(t *testing.T) {
+	t.Parallel()
+	// "morgen" is both "tomorrow" and "morning". A bare-word list would refuse
+	// these two, which schedule nothing.
+	for _, body := range []string{
+		"Guten Morgen Frau Malherbe,\n\nanbei die Unterlagen.\n\nViele Grüße",
+		"Hallo,\n\nich melde mich morgen früh mit den Zahlen.\n\nViele Grüße",
+	} {
+		if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, draftcheck.Grounds{}); refusedAsUnscheduled(got) {
+			t.Errorf("refused a message that books nothing: %q\n%+v", body, got)
+		}
+	}
+}
+
+func TestAnEnglishDayIsRefusedToo(t *testing.T) {
+	t.Parallel()
+	body := "Hi Anna,\n\nlooking forward to our demo tomorrow.\n\nBest"
+	if got := draftcheck.Body(body, textlang.English, convstate.BandFresh, draftcheck.Grounds{}); !refusedAsUnscheduled(got) {
+		t.Errorf("an English draft naming tomorrow with nothing booked passed: %+v", got)
+	}
+}
+
+// refusedAsUnscheduled reports whether the unscheduled-arrangement rule fired.
+func refusedAsUnscheduled(findings []draftcheck.Finding) bool {
+	for _, f := range findings {
+		if f.Rule == draftcheck.RuleUnscheduledArrangement {
+			return true
+		}
+	}
+	return false
 }

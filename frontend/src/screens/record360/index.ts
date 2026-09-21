@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The record-360 kit's public surface. Deal360, Company360 and Person360 all
+// The record-360 kit's public surface. Deal360, Company360 and Contact360 all
 // import from here; see README.md for what belongs in it.
 
 export { BriefTitle } from "./brieftitle";
@@ -17,6 +17,11 @@ export {
   WrittenBy,
   type WrittenByWriter,
 } from "./citations";
+export {
+  EvidenceSources,
+  fromCitations,
+  fromDealMove,
+} from "./evidencesources";
 export { incompleteGraph } from "./graphcompleteness";
 export {
   dealRoleLabel,
@@ -24,6 +29,8 @@ export {
   signalKindLabel,
   signalTone,
 } from "./labels";
+export { basisAddsARecord, momentIsARow, momentKicker } from "./moment";
+export { MomentEvidence } from "./momentevidence";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
 export {
   RecordSpine,

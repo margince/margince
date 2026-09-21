@@ -56,7 +56,7 @@ describe("grouping the account's chronology", () => {
     expect(groups).toHaveLength(1);
   });
 
-  it("folds a bulk send addressed to several people into one event", () => {
+  it("folds a bulk send addressed to several contacts into one event", () => {
     const groups = groupChronology([
       mail("1", "Update zu Margince", "2026-07-17T09:00:00Z"),
       mail("2", "Update zu Margince", "2026-07-17T09:00:01Z"),
@@ -72,6 +72,123 @@ describe("grouping the account's chronology", () => {
       mail("1", "Newsletter", "2026-07-17T09:00:00Z", { bulkAttested: true }),
     ]);
     expect(groups[0].kind).toBe("bulk");
+  });
+
+  it("folds an attested send whose copies each root their own thread", () => {
+    // Measured on a real mailshot: three copies, each attested by the sender's
+    // own List-Unsubscribe, and each carrying a thread_key EQUAL TO ITS OWN
+    // MESSAGE ID. A first message has no In-Reply-To to root on, so the
+    // provider's conversation id is the message itself — every copy of a send
+    // is a thread of one, and the keys are unique by construction.
+    //
+    // Before the attestation check, the thread branch took every one of these
+    // and drew three cards that each read "1 message". A send of fifty drew
+    // fifty.
+    const groups = groupChronology([
+      mail("m1", "Auf geht's zur digiWiesn, Joshua", "2026-09-16T08:12:29Z", {
+        bulkAttested: true,
+        threadKey: "m1",
+      }),
+      mail("m2", "Auf geht's zur digiWiesn, Lars", "2026-09-16T08:12:28Z", {
+        bulkAttested: true,
+        threadKey: "m2",
+      }),
+      mail(
+        "m3",
+        "Auf geht's zur digiWiesn, Charlotte",
+        "2026-09-16T08:10:09Z",
+        {
+          bulkAttested: true,
+          threadKey: "m3",
+        },
+      ),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].kind).toBe("bulk");
+    expect(groups[0].entries).toHaveLength(3);
+  });
+
+  it("keeps a real conversation grouped even when a member is attested", () => {
+    // Attestation only diverts a message from ITS OWN thread key. Two messages
+    // sharing one key are a conversation, and a reply that happens to carry the
+    // flag must not tear the thread apart.
+    const groups = groupChronology([
+      mail("b", "Re: Pricing", "2026-07-02T10:00:00Z", { threadKey: "t-9" }),
+      mail("a", "Pricing", "2026-07-01T10:00:00Z", { threadKey: "t-9" }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].kind).toBe("thread");
+  });
+
+  it("does not let the salutation strip merge two different sends", () => {
+    // The strip is the risky direction: returning too much would fold two
+    // unrelated mailshots into one card and hide a message. These two share no
+    // subject once the salutation is off, so they stay apart.
+    const groups = groupChronology([
+      mail("a", "Invoice overdue, Joshua", "2026-09-16T08:00:00Z", {
+        bulkAttested: true,
+        threadKey: "a",
+      }),
+      mail("b", "Welcome aboard, Joshua", "2026-09-16T08:00:01Z", {
+        bulkAttested: true,
+        threadKey: "b",
+      }),
+    ]);
+    expect(groups).toHaveLength(2);
+  });
+
+  it("keeps a subject whose tail is not a salutation", () => {
+    // A trailing clause is not a name. Stripping it would key two genuinely
+    // different sends the same way, so anything longer than a name, or carrying
+    // punctuation of its own, is left whole.
+    const groups = groupChronology([
+      mail("a", "Q3 results, revenue and outlook", "2026-09-16T08:00:00Z", {
+        bulkAttested: true,
+        threadKey: "a",
+      }),
+      mail("b", "Q3 results, costs and headcount", "2026-09-16T08:00:01Z", {
+        bulkAttested: true,
+        threadKey: "b",
+      }),
+    ]);
+    expect(groups).toHaveLength(2);
+  });
+
+  it("leaves an UNATTESTED personalized run as separate rows", () => {
+    // Without the sender's own attestation this is just three subjects that
+    // look alike, and folding them would be the subject matching this file
+    // refuses everywhere else.
+    //
+    // THREE copies, not two, and the count is what makes this test hold the
+    // attestation rule: two would stay apart anyway on BULK_COPIES, so the
+    // assertion would pass with the attestation check deleted and prove
+    // nothing. At three, only the missing attestation keeps them apart.
+    const groups = groupChronology([
+      mail("a", "Auf geht's zur digiWiesn, Joshua", "2026-09-16T08:00:00Z", {
+        threadKey: "a",
+      }),
+      mail("b", "Auf geht's zur digiWiesn, Lars", "2026-09-16T08:00:01Z", {
+        threadKey: "b",
+      }),
+      mail("c", "Auf geht's zur digiWiesn, Charlotte", "2026-09-16T08:00:02Z", {
+        threadKey: "c",
+      }),
+    ]);
+    expect(groups).toHaveLength(3);
+  });
+
+  it("keeps a threadless personalized run apart without attestation", () => {
+    // No thread key, so these reach the bulk key directly rather than returning
+    // at the thread branch. Three copies would fold on BULK_COPIES if the
+    // salutation were stripped — and nothing here attested a send, so they must
+    // stay three rows. This is the case that holds the attestation condition on
+    // the strip itself.
+    const groups = groupChronology([
+      mail("a", "Auf geht's zur digiWiesn, Joshua", "2026-09-16T08:00:00Z"),
+      mail("b", "Auf geht's zur digiWiesn, Lars", "2026-09-16T08:00:01Z"),
+      mail("c", "Auf geht's zur digiWiesn, Charlotte", "2026-09-16T08:00:02Z"),
+    ]);
+    expect(groups).toHaveLength(3);
   });
 
   it("leaves two same-subject messages as two rows", () => {

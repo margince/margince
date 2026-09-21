@@ -196,7 +196,7 @@ func setEnabled(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 
 // registerURL records where this connector talks back to.
 //
-// The address is validated where a person can still read the refusal, against
+// The address is validated where a contact can still read the refusal, against
 // what they typed, rather than at the moment something tries to dial it.
 func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
 	args, err := extension.DecodeArgs[struct {
@@ -277,7 +277,7 @@ func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtim
 }
 
 // errNoEndpoint is what every operation on an endpoint that was never opened
-// answers, worded for the person reading a screen.
+// answers, worded for the reader reading a screen.
 //
 // A function rather than a package-level var: a unit's declaration is read out
 // of its AST without compiling it, and an initializer that calls out would run
@@ -292,7 +292,7 @@ func errNoEndpoint() error {
 func callingMember(rt extension.Runtime, doing string) (string, error) {
 	member := rt.Caller().UserID
 	if member == "" {
-		return "", fmt.Errorf("%w: %s is something a person does, and this invocation has nobody behind it", extension.ErrForbidden, doing)
+		return "", fmt.Errorf("%w: %s is something a contact does, and this invocation has nobody behind it", extension.ErrForbidden, doing)
 	}
 	return member, nil
 }

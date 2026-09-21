@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -9,7 +9,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
@@ -36,9 +36,9 @@ beforeEach(() => {
 
 // Leads (B-EP09.10a/b, §3.5 segregation): visually SEGREGATED from the
 // contact graph — the ≥60/40–59/<40 score thresholds, eligibility-gated
-// promote, and a lead row navigating to the LEAD detail (never the person
+// promote, and a lead row navigating to the LEAD detail (never the contact
 // screen). Below that: the same P-14/15/16/1 shared-block wiring as contacts
-// (people.test.tsx) and companies (organizations.test.tsx) — search/sort/
+// (contacts.test.tsx) and companies (companies.test.tsx) — search/sort/
 // pagination + a status filter, the rich create modal (full_name/email/
 // linkedin_url/company_name), the lead-360 If-Match edit
 // (Promote + badges preserved), and the duplicate_email dedupe link.
@@ -50,8 +50,13 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-// The six shipped lead sources, as GET /lead-sources serves them on a fresh
-// installation.
+// Edit, Share and Disqualify live behind the header's overflow trigger, whose
+// panel mounts on the first open — so a test wanting one opens the menu first.
+async function openLeadActions(user: Pick<UserEvent, "click"> = userEvent) {
+  await user.click(await screen.findByRole("button", { name: "More actions" }));
+}
+
+// The six shipped lead sources GET /lead-sources serves on a fresh install.
 const SHIPPED_LEAD_SOURCES = {
   data: [
     ["manual", "Created manually", "neutral"],
@@ -141,8 +146,8 @@ describe("score thresholds (AC-leads colour bands)", () => {
   it("maps ≥60 accent-strong, 40–59 medium, <40 low", () => {
     expect(scoreTone(60)).toBe("success");
     expect(scoreTone(95)).toBe("success");
-    expect(scoreTone(59)).toBe("warn");
-    expect(scoreTone(40)).toBe("warn");
+    expect(scoreTone(59)).toBe("warning");
+    expect(scoreTone(40)).toBe("warning");
     expect(scoreTone(39)).toBeUndefined();
   });
 });
@@ -157,10 +162,10 @@ describe("promote eligibility gate", () => {
 });
 
 describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
-  it("names the owner on each row, the way the people and company lists do", async () => {
+  it("names the owner on each row, the way the contacts and company lists do", async () => {
     // The column this replaced rendered "typed by a person" for every
-    // human-captured row — the bug #1577 fixed on People and Companies while
-    // this list kept its own copy of the column. Same column, same test.
+    // human-captured row. The Contacts and Companies lists were corrected
+    // while this one kept its own copy of the column: same column, same test.
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
@@ -192,14 +197,12 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   // The queue opens on the seat's OWN leads or on every lead, and which one is
-  // the server's row scope rather than the caller's role keys. The screen used
-  // to read `roles` for this, which is a second reading of the same policy: a
-  // custom role, or a seeded role whose scope an operator edits, opened the
-  // wrong view while the server answered correctly.
-  //
-  // The assertion is the request the list actually makes, because that is where
-  // the filter lands — a rendered row count would pass for a screen that asked
-  // for everything and happened to be handed one lead.
+  // the server's row scope rather than the caller's role keys — reading
+  // `roles` is a second reading of one policy, and a custom role, or a seeded
+  // role whose scope an operator edits, opens the wrong view while the server
+  // answers correctly. The assertion is the request the list makes, because
+  // that is where the filter lands: a rendered row count would pass for a
+  // screen that asked for everything and happened to be handed one lead.
   describe("the queue's opening view follows the row scope, not the role", () => {
     const leadRequestFor = async (
       authorization: Record<string, unknown> | undefined,
@@ -270,7 +273,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
   });
 
-  it("a lead row navigates to the LEAD detail, not the person screen", async () => {
+  it("a lead row navigates to the LEAD detail, not the contact screen", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) =>
@@ -318,7 +321,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
-        return jsonResponse({ person: anna, merged: false, lead_id: "l-1" });
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
       }
       return jsonResponse({
         ...lead,
@@ -354,9 +357,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
-        return jsonResponse({ person: anna, merged: false, lead_id: "l-1" });
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
       }
-      if (url.includes("/people/")) {
+      if (url.includes("/contacts/")) {
         return jsonResponse(anna);
       }
       return jsonResponse(lead);
@@ -381,7 +384,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // The page stays (ADR-0119): the outcome is said here, with the contact.
     expect(window.location.hash).toBe("#/leads/l-1");
     expect(
-      await screen.findByText(/Jonas Petersen is now a person:/),
+      await screen.findByText(/Jonas Petersen is now a contact:/),
     ).toBeTruthy();
   });
 
@@ -392,7 +395,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
         return jsonResponse({
-          person: anna,
+          contact: anna,
           merged: false,
           lead_id: "l-1",
           deal_id: "d-1",
@@ -483,7 +486,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             {
               title: "already promoted",
               code: "already_promoted",
-              details: { promoted_person_id: "p-9" },
+              details: { promoted_contact_id: "p-9" },
             },
             409,
           );
@@ -662,7 +665,8 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // Each verb is refused in place, and the id it describes itself by
     // resolves to that one sentence — a disabled button whose reason is
     // nowhere on the page is a dead button.
-    for (const testId of ["edit-record", "lead-qualify", "lead-disqualify"]) {
+    await openLeadActions();
+    for (const testId of ["lead-qualify", "lead-disqualify"]) {
       const control = await screen.findByTestId(testId);
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(
@@ -676,7 +680,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {
-    // AC-leaddetail-5 (ADR-0119/A170). The page used to redirect here, which
+    // AC-leaddetail-5 (ADR-0119). The page used to redirect here, which
     // told the reader the lead had ceased to exist — untrue of a record this
     // product keeps, audits and can reverse — and left the reversal with
     // nowhere to start from. It also hid whether promotion merged into a
@@ -684,7 +688,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const promoted = {
       ...lead,
       status: "promoted",
-      promoted_person_id: "p-42",
+      promoted_contact_id: "p-42",
       promoted_at: "2026-06-20T08:00:00Z",
       archived_at: "2026-06-20T08:00:00Z",
     };
@@ -725,14 +729,14 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("the promote dialog says what promotion will do before the rep commits", async () => {
-    // ADR-0119/A170: merge-into-existing vs create is the difference between
-    // "my prospect is now a person" and "my prospect was already someone we
+    // ADR-0119: merge-into-existing vs create is the difference between
+    // "my prospect is now a contact" and "my prospect was already someone we
     // knew". The preview runs the same ladder the promotion runs.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
-        return jsonResponse({ outcome: "merge", person: anna });
+        return jsonResponse({ outcome: "merge", contact: anna });
       }
-      if (url.includes("/people/")) {
+      if (url.includes("/contacts/")) {
         return jsonResponse(anna);
       }
       return jsonResponse(lead);
@@ -740,18 +744,18 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
-      await screen.findByText(/Promoting will merge into the existing person/),
+      await screen.findByText(/Promoting will merge into the existing contact/),
     ).toBeTruthy();
   });
 
   it("a withheld merge target is never read as 'create'", async () => {
-    // An absent person on a merge means "outside your row scope", not "no
+    // An absent contact on a merge means "outside your row scope", not "no
     // match": promising a new contact here would be the wrong half to guess.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
         return jsonResponse({
           outcome: "merge",
-          person_withheld: true,
+          contact_withheld: true,
         });
       }
       return jsonResponse(lead);
@@ -771,7 +775,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const promoted = {
       ...lead,
       status: "promoted",
-      promoted_person_id: "p-42",
+      promoted_contact_id: "p-42",
       promoted_at: "2026-06-20T08:00:00Z",
       archived_at: "2026-06-20T08:00:00Z",
     };
@@ -782,7 +786,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
         return jsonResponse({
           lead: { ...lead, status: "contacted" },
           unwind: "reversed",
-          person_id: "p-42",
+          contact_id: "p-42",
         });
       }
       if (url.includes("/records/lead/")) {
@@ -815,7 +819,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("a promoted lead reads as promoted, not disqualified", async () => {
     // Both closures archive the row, so a page keying its terminal sentence off
     // archived_at alone told every promoted lead it had been disqualified. The
-    // redirect hid that until ADR-0119/A170 removed it.
+    // redirect hid that until ADR-0119 removed it.
     stubFetch(async (input: RequestInfo | URL) => {
       if (String(input).includes("/records/lead/")) {
         return jsonResponse({
@@ -826,7 +830,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -839,14 +843,10 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("asks for the promotion by verb, and reads it without a second page", async () => {
-    // What this replaced: the history is 20 rows to a page, so a lead worked
-    // long enough to collect other audit rows carried its promotion on a later
-    // one — and reading the first page reported "we cannot tell" on exactly the
-    // leads somebody had worked hardest. The client answer was to page on until
-    // it turned up; the server answer is to ask for the row (#1611).
-    //
-    // So the assertion is BOTH halves: the request names the verb, and there is
-    // exactly one request. A screen that still walked would pass the first.
+    // BOTH halves: the request names the verb, and there is exactly one of
+    // them. History pages at 20 rows, so a lead worked long enough to collect
+    // other audit rows carries its promotion on a page a walker has to find —
+    // and a screen that still walked would pass the first half alone.
     const historyURLs: string[] = [];
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -869,7 +869,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -894,7 +894,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -927,7 +927,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       const url = String(input);
       if (method === "POST" && url.includes("/promote")) {
         return jsonResponse({
-          person: { id: "p-42", full_name: "Jonas Petersen" },
+          contact: { id: "p-42", full_name: "Jonas Petersen" },
           merged: true,
           lead_id: "l-1",
         });
@@ -991,7 +991,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -1006,7 +1006,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("promote is disabled for an ineligible lead, and the button says why", async () => {
     // A LIVE lead with no email: ineligible, but still on screen. A promoted
     // lead is terminal and carries no promote control at all, so it cannot
-    // stand in for "ineligible" (ADR-0119/A170).
+    // stand in for "ineligible" (ADR-0119).
     stubFetch(async () => jsonResponse({ ...lead, email: null }));
     render(<LeadScreen id="l-1" />);
     const button = await screen.findByRole("button", { name: "Qualify" });
@@ -1091,13 +1091,10 @@ function stubFetch(
   return { fetchMock, urls };
 }
 
-// The columns picker also offers a "Status" checkbox (the status column
-// shares its header text with the filter attribute's label), so a plain
-// name match is ambiguous — scope both the attribute pick and the value
-// pick to the Filter button's own open menu.
-// The menu names the step it is on — "Filter" while it lists attributes, then
-// the attribute once one is picked — so each click is scoped to the menu as it
-// stands at that moment rather than to a class name.
+// The columns picker also offers a "Status" checkbox — the column shares its
+// header text with the filter attribute's label — so a plain name match is
+// ambiguous. Each click is scoped to the filter menu as it stands at that
+// moment, which names the step it is on: "Filter", then the attribute.
 async function pickFilter(attribute: string, value: string) {
   await userEvent.click(
     await screen.findByRole("button", { name: "Add a filter" }),
@@ -1107,7 +1104,7 @@ async function pickFilter(attribute: string, value: string) {
     within(step("Filter")).getByRole("button", { name: attribute }),
   );
   await userEvent.click(
-    within(step(attribute)).getByRole("button", { name: value }),
+    within(step(attribute)).getByRole("radio", { name: value }),
   );
 }
 
@@ -1195,19 +1192,21 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
       }),
     );
     render(<LeadScreen id="l-1" />);
-    expect(await screen.findByText(/First response due by/)).toBeTruthy();
+    // The label already says which response, so the detail says only when.
+    // The call at the head of the page states the same deadline, which is why
+    // more than one element carries it.
+    expect((await screen.findAllByText(/^Due /)).length).toBeGreaterThan(0);
     expect(screen.getByText("Due soon")).toBeTruthy();
   });
 
-  it("bulk-assigns selected leads one PATCH each, every row with its own If-Match, and names the row that refused", async () => {
-    // A naive fan-out sends one version to every row and 428s/409s on all but
-    // the row it came from. Each row carries the version the list holds; a
-    // row that moved under the reader is reported by name, not swallowed.
-    const patches: Array<{
-      id: string;
-      ifMatch: string | null;
-      body: unknown;
-    }> = [];
+  it("bulk-assigns in ONE request carrying each row's own version, and names the row that refused", async () => {
+    // One request, not one per row: the server owns the rule about who may
+    // receive a lead and answers for each lead in the same breath. Each row
+    // still carries the version the LIST holds — a single shared version would
+    // conflict on every row but the one it came from — and a row that moved
+    // under the reader is reported by name rather than swallowed.
+    let sent: { owner_id?: string; leads?: unknown } | null = null;
+    let patchCount = 0;
     stubFetch(async (url, method, request) => {
       if (url.includes("/users")) {
         return jsonResponse({
@@ -1216,27 +1215,17 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
         });
       }
       if (method === "PATCH") {
-        const id = url.split("/leads/")[1] ?? "";
-        patches.push({
-          id,
-          ifMatch: request.headers.get("If-Match"),
-          body: JSON.parse(await request.text()),
+        patchCount += 1;
+        return jsonResponse(lead);
+      }
+      if (url.includes("/leads/assign-bulk")) {
+        sent = JSON.parse(await request.text());
+        return jsonResponse({
+          results: [
+            { lead_id: "l-1", outcome: "assigned", version: 4 },
+            { lead_id: "l-2", outcome: "conflict" },
+          ],
         });
-        if (id === "l-2") {
-          return new Response(
-            JSON.stringify({
-              title: "Conflict",
-              status: 409,
-              code: "version_skew",
-              detail: "moved",
-            }),
-            {
-              status: 409,
-              headers: { "content-type": "application/problem+json" },
-            },
-          );
-        }
-        return jsonResponse({ ...lead, id, owner_id: "u-9", version: 8 });
       }
       return jsonResponse({
         data: [
@@ -1262,19 +1251,132 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     );
     await userEvent.click(screen.getByRole("button", { name: "Assign" }));
 
-    await waitFor(() => expect(patches).toHaveLength(2));
-    expect(patches.map((p) => [p.id, p.ifMatch])).toEqual([
-      ["l-1", "3"],
-      ["l-2", "7"],
-    ]);
-    expect(
-      patches.every(
-        (p) => JSON.stringify(p.body) === JSON.stringify({ owner_id: "u-9" }),
-      ),
-    ).toBe(true);
-    // The row that refused is named, with the server's reason.
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent).toEqual({
+      owner_id: "u-9",
+      leads: [
+        { id: "l-1", version: 3 },
+        { id: "l-2", version: 7 },
+      ],
+    });
+    // The old shape is gone, not merely unused: a per-row PATCH here would be
+    // the unvalidated path the bulk endpoint exists to replace.
+    expect(patchCount).toBe(0);
+    // The row that refused is named, with the outcome the server reported.
     expect(await screen.findByText(/1 not applied/)).toBeTruthy();
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
+  });
+
+  it("says so when the whole bulk assign is refused, not just when rows are", async () => {
+    // The per-row list reads outcomes, which only fill on success. A
+    // destination the server refused before touching any lead produces no
+    // outcomes at all, so without its own sentence the reader presses Assign
+    // and watches nothing happen.
+    stubFetch(async (url, _method, _request) => {
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", email: "lena@x.test", display_name: "Lena F." }],
+          page: { next_cursor: null },
+        });
+      }
+      if (url.includes("/leads/assign-bulk")) {
+        return new Response(
+          JSON.stringify({
+            title: "Unprocessable",
+            status: 422,
+            code: "owner_not_assignable",
+            detail:
+              "the owner must be an active colleague you may assign work to",
+          }),
+          {
+            status: 422,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }
+      return jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Select Jonas Petersen" }),
+    );
+    await userEvent.click(screen.getByLabelText("New owner"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Lena F." }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+
+    expect(
+      await screen.findByText(/active colleague you may assign work to/),
+    ).toBeTruthy();
+  });
+
+  it("the Unassigned view asks for ownerless leads, oldest first", async () => {
+    // The queue's whole point is the lead nobody has answered yet, and what
+    // makes one urgent is how long it has waited — so this view sorts against
+    // the others, ascending by arrival.
+    const { urls } = stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Unassigned queue" }),
+    );
+
+    // Both dials in the SAME request, and NOT the New & unassigned view's
+    // request, which also asks unassigned=true and also sorts by arrival. An
+    // assertion satisfied by either one is satisfied by the wrong one: the
+    // earlier version of this test stayed green with the sort deleted.
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("unassigned=true") &&
+            !url.includes("status=") &&
+            /[?&]sort=created_at(&|$)/.test(url),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("the New & unassigned view composes both dimensions in one ask", async () => {
+    // Status is lifecycle and ownership is ownership: a New lead may already
+    // have an owner, and an older Contacted one may have none. The view that
+    // answers "new work nobody has picked up" has to say both.
+    const { urls } = stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "New & unassigned" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("unassigned=true") && url.includes("status=new"),
+        ),
+      ).toBe(true),
+    );
   });
 
   it("fetches the next cursor page when the pager steps past the loaded page", async () => {
@@ -1387,11 +1489,11 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Title" }),
+    );
     const title = await screen.findByLabelText("Title");
-    await userEvent.type(title, "VP Sales");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(title, "VP Sales{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -1403,8 +1505,7 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
   it("preserves the Qualify button and score/status/company badges", async () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    expect(screen.getByRole("button", { name: "Qualify" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Qualify" })).toBeTruthy();
     // The score reads in the band AND on the folded score section's summary.
     expect(screen.getAllByText("Score: 72").length).toBeGreaterThan(0);
     // Status and company are READINGS in the band's strip, not pills among
@@ -1482,7 +1583,8 @@ describe("LeadScreen — disqualify (P-3)", () => {
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
-    await user.click(await screen.findByTestId("lead-disqualify"));
+    await openLeadActions(user);
+    await user.click(screen.getByTestId("lead-disqualify"));
     // Nothing is sent without a reason, and the button says so. The confirm is
     // named inside the dialog rather than by a test id: the trigger that
     // opened it carries the same word, so the dialog is what tells the two
@@ -1507,10 +1609,11 @@ describe("LeadScreen — disqualify (P-3)", () => {
 });
 
 // The address may name the verb the reader arrived to perform. A rep sent here
-// to log a call attempt lands on the composer already set to one; a rep who
-// simply opened the lead gets the ordinary note.
+// to log a call attempt lands on the header's Log activity drawer already
+// open and set to Call; a rep who simply opened the lead finds the drawer
+// closed, the same standing way in every other record header offers.
 describe("LeadScreen — arriving to log a call", () => {
-  it("opens the composer on a call when the address asks for one", async () => {
+  it("opens the header's Log activity drawer on a call when the address asks for one", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1?action=call";
     render(<LeadScreen id="l-1" />);
@@ -1520,27 +1623,37 @@ describe("LeadScreen — arriving to log a call", () => {
     );
   });
 
-  it("opens on a note for a reader who only opened the lead", async () => {
+  it("leaves the drawer closed for a reader who only opened the lead, open on a note from the header verb", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
+    await screen.findByRole("button", { name: "Log activity" });
+    expect(screen.queryByLabelText("Type")).toBeNull();
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Log activity" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Log activity" }));
     await waitFor(() =>
       expect(screen.getByLabelText("Type").textContent).toContain("Note"),
     );
   });
 
   // A link pressed on the record the reader is ALREADY on changes the address
-  // and nothing else — no remount, so a kind read once at mount stays put and
-  // the reader is handed the composer they asked for set to the wrong verb.
-  it("follows a call the address asks for after the composer is already open", async () => {
+  // and nothing else, no remount, so the drawer opens on the kind the address
+  // now names rather than staying shut.
+  it("opens the drawer on a call the address asks for after the page is already open", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
-    );
+    await screen.findByRole("button", { name: "Log activity" });
+    expect(screen.queryByLabelText("Type")).toBeNull();
 
     // What a second link does: the hash moves under a mounted screen. The
     // event is dispatched rather than waited for, because jsdom delivers its
@@ -1553,132 +1666,6 @@ describe("LeadScreen — arriving to log a call", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Type").textContent).toContain("Call"),
     );
-  });
-
-  // The composer is absent in overlay for every reader, because every write it
-  // makes answers unsupported_by_sor. For a reader who followed a link TO it
-  // that absence reads as a broken page, so the address is answered instead.
-  it("says why in overlay, rather than dropping the reader on a page with nothing", async () => {
-    stubFetch(async (url) => {
-      if (url.includes("/me")) {
-        return jsonResponse({
-          user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
-          roles: ["admin"],
-          teams: [],
-          system_of_record: { mode: "overlay" },
-        });
-      }
-      return jsonResponse(lead);
-    });
-    window.location.hash = "#/leads/l-1?action=call";
-    render(<LeadScreen id="l-1" />);
-
-    expect(await screen.findByText(en["lead.callNotInOverlay"])).toBeTruthy();
-    expect(screen.queryByLabelText("Type")).toBeNull();
-  });
-
-  // And it stays quiet for a reader who did not ask: a mirrored lead is not
-  // broken, and a refusal on every overlay lead is noise.
-  it("says nothing about a verb nobody asked for", async () => {
-    stubFetch(async (url) => {
-      if (url.includes("/me")) {
-        return jsonResponse({
-          user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
-          roles: ["admin"],
-          teams: [],
-          system_of_record: { mode: "overlay" },
-        });
-      }
-      return jsonResponse(lead);
-    });
-    window.location.hash = "#/leads/l-1";
-    render(<LeadScreen id="l-1" />);
-
-    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
-    expect(screen.queryByText(en["lead.callNotInOverlay"])).toBeNull();
-  });
-});
-
-describe("LeadScreen — overlay mode write affordances", () => {
-  // The mirror's own write-back seam serves update for a lead
-  // (overlay/provider_writes.go SupportsWrite), so Edit renders here.
-  // DELETE /leads/{id} is disqualify_lead, a cross-type lifecycle
-  // transition the seam refuses outright — Disqualify stays hidden.
-  function meResponse() {
-    return jsonResponse({
-      user: { id: "u1", email: "me@nordwind.example", locale: "en-US" },
-      roles: ["admin"],
-      teams: [],
-      authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
-      system_of_record: { mode: "overlay" },
-    });
-  }
-
-  it("serves Edit, hides Disqualify", async () => {
-    stubFetch(async (url, method) => {
-      if (url.includes("/me")) {
-        return meResponse();
-      }
-      if (method === "PATCH") {
-        return jsonResponse(lead);
-      }
-      return jsonResponse(lead);
-    });
-    render(<LeadScreen id="l-1" />);
-
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    expect(screen.queryByTestId("lead-disqualify")).toBeNull();
-    // The mirror owns the lead's mail, so the header offers no Email verb.
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
-  });
-
-  it("Edit's real click path PATCHes and the 360 shows the saved name", async () => {
-    // Mutable so the refetch after a successful save (useUpdateRecord
-    // invalidates the record query) reflects the write, not a stale echo —
-    // the same "mirror re-read reflects write-back" shape
-    // overlay.Provider.Update gives via mirrorWriteResult.
-    let current = lead;
-    stubFetch(async (url, method, request) => {
-      if (url.includes("/me")) {
-        return meResponse();
-      }
-      if (method === "PATCH") {
-        const body = JSON.parse(await request.text());
-        current = { ...current, ...body };
-        return jsonResponse(current);
-      }
-      return jsonResponse(current);
-    });
-    render(<LeadScreen id="l-1" />);
-
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
-    const fullName = await screen.findByLabelText("Full name *");
-    await userEvent.clear(fullName);
-    await userEvent.type(fullName, "Jonas Petersen-Berg");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-
-    // The saved name now reads in two places — the record header and the
-    // inline Details row — which is the point of the grid, not a duplicate.
-    expect(
-      (await screen.findAllByText("Jonas Petersen-Berg")).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it("names the partial write-back in the edit form", async () => {
-    stubFetch(async (url) => {
-      if (url.includes("/me")) {
-        return meResponse();
-      }
-      return jsonResponse(lead);
-    });
-    render(<LeadScreen id="l-1" />);
-
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    await userEvent.click(screen.getByTestId("edit-record"));
-    expect(
-      screen.getByText(/Only the fields HubSpot accepts are written back/),
-    ).toBeTruthy();
   });
 });
 
@@ -1700,9 +1687,10 @@ describe("LeadsScreen — archived marking (P-3)", () => {
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    expect(
-      screen.getByText("Disqualified", { selector: "span.badge-warn" }),
-    ).toBeTruthy();
+    const warned = screen
+      .getAllByText("Disqualified", { selector: ".badge-label" })
+      .filter((label) => label.closest(".badge.badge-warning"));
+    expect(warned).toHaveLength(1);
   });
 });
 
@@ -1745,7 +1733,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
   it("offers the unowned queue and asks the server for it as unassigned=true", async () => {
     // The lead list once carried its own owner chip with only "mine", because
     // listLeads lacked owner_team_id/unassigned. It binds the SAME dial the
-    // person and company lists use now — the fork is gone.
+    // contact and company lists use now — the fork is gone.
     const user = userEvent.setup();
     const { urls } = stubFetchWithMe(async (url) => {
       if (url.includes("/leads")) {
@@ -1770,7 +1758,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
       .find((button) => button.hasAttribute("aria-expanded"));
     if (!valueButton) throw new Error("owner value control is missing");
     await user.click(valueButton);
-    await user.click(within(owner).getByRole("button", { name: "Unassigned" }));
+    await user.click(within(owner).getByRole("radio", { name: "Unassigned" }));
 
     await waitFor(() =>
       expect(
@@ -1929,7 +1917,7 @@ describe("LeadScreen — status control (P-12)", () => {
     );
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await screen.findByTestId("lead-step-new");
     for (const step of ["new", "contacted", "engaged", "disqualified"]) {
       const control = screen.getByTestId(
         `lead-step-${step}`,
@@ -1973,7 +1961,7 @@ describe("LeadScreen — score explain + override (P-10)", () => {
     const submit = screen.getByRole("button", { name: "Save override" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
 
-    const scoreInput = screen.getByLabelText("Score");
+    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.clear(scoreInput);
     await userEvent.type(scoreInput, "90");
@@ -2010,7 +1998,7 @@ describe("LeadScreen — score explain + override (P-10)", () => {
     );
 
     const submit = screen.getByRole("button", { name: "Save override" });
-    const scoreInput = screen.getByLabelText("Score");
+    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
     const reasonInput = screen.getByLabelText("Reason");
     await userEvent.type(reasonInput, "Strong buying signal");
 
@@ -2065,11 +2053,24 @@ describe("LeadScreen — score explain + override (P-10)", () => {
 });
 
 describe("LeadScreen — owner display + assign to me (P-11)", () => {
-  it("shows Unassigned and assigning to yourself PATCHes owner_id to the current user", async () => {
-    let patchBody: unknown = null;
-    stubFetchWithMe(async (url, method, request) => {
+  // The server refuses a PATCH against a lead nobody owns — an ownerless row is
+  // nobody's to change — so the request this asserts is the claim, not the
+  // patch. Asserting the patch is what let the 403 ship: the stub answered a
+  // request the real backend would have rejected.
+  it("shows Unassigned and taking an unowned lead yourself goes through the claim door", async () => {
+    let claimed = false;
+    let patched = false;
+    stubFetchWithMe(async (url, method) => {
+      if (method === "POST" && url.includes("/records/lead/l-1/claim")) {
+        claimed = true;
+        return jsonResponse({
+          record_type: "lead",
+          record_id: "l-1",
+          owner_id: "u-9",
+        });
+      }
       if (method === "PATCH" && url.includes("/leads/l-1")) {
-        patchBody = JSON.parse(await request.text());
+        patched = true;
         return jsonResponse({ ...lead, owner_id: "u-9", version: 2 });
       }
       if (url.includes("/users")) {
@@ -2097,8 +2098,87 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
       await screen.findByRole("option", { name: "Assign to me" }),
     );
 
-    await waitFor(() => expect(patchBody).toBeTruthy());
-    expect(patchBody).toMatchObject({ owner_id: "u-9" });
+    await waitFor(() => expect(claimed).toBe(true));
+    expect(patched).toBe(false);
+  });
+
+  // The fixture above says `writable: true`, which an ownerless lead is NOT:
+  // the write arm refuses a row nobody owns, and the server answers the
+  // read with `writable: false`. A test that only ever renders the writable
+  // fixture cannot see the control being shut, which is how the first fix for
+  // this shipped with the picker still disabled for every ordinary seat.
+  it("offers assignment on an unowned lead the reader may not otherwise write", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", display_name: "Me" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(false);
+  });
+
+  // Dropping the per-row half of the write answer must not drop the other two.
+  // A read seat cannot be handed work and the server refuses its assignment, so
+  // an enabled control here would only ever fail in the reader's face.
+  it("offers no enabled assignment to a seat that may not write leads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
+        if (request.url.endsWith("/v1/me")) {
+          return jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["read_only"],
+            teams: [],
+            authorization: meFixture({ seat: "read", allow: LEAD_GRANTS })
+              .authorization,
+          });
+        }
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({ ...lead, owner_id: null, writable: false });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const assign = await screen.findByRole("button", { name: "Assign" });
+    expect(assign.hasAttribute("disabled")).toBe(true);
+  });
+
+  // Ownership lived only in the details pane, which is open by default and
+  // remembers being hidden — so for anyone who had ever collapsed it, the one
+  // control that takes a lead out of the queue sat behind a toggle they had to
+  // remember. It belongs where the reader acts.
+  it("keeps the owner reachable with the details pane collapsed", async () => {
+    stubFetchWithMe(async (url) => {
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse({ ...lead, owner_id: null, writable: false });
+      }
+      return undefined;
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+
+    // Collapse the pane the owner used to live in, then look again.
+    await userEvent.click(screen.getByRole("button", { name: "Hide details" }));
+    expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {
@@ -2121,7 +2201,10 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 });
 
 describe("LeadScreen — History tab", () => {
-  it("shows a History tab that lists record changes", async () => {
+  it("shows a History tab whose Changes cut lists the record's own audit", async () => {
+    // The default cut is All, the same chronology the contact and the
+    // account open on; the audit row here only surfaces once the reader
+    // narrows to Changes (leadhistory.test.tsx covers the rest of the cut).
     stubFetchWithMe(async (url) => {
       if (url.includes("/history")) {
         return jsonResponse({
@@ -2146,13 +2229,14 @@ describe("LeadScreen — History tab", () => {
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
     await waitFor(() =>
       expect(screen.getByText("Lead score changed")).toBeTruthy(),
     );
     // The identity header (name) must stay visible on the History tab, not
     // just the overview — it lives above the tab switch, matching
-    // person/company/deal's persistent RecordView header. Named by ROLE
+    // contact/company/deal's persistent RecordView header. Named by ROLE
     // rather than by text: the rail's details grid sits outside the tab
     // switch too and carries the same name in its editable Full name row,
     // which is the page working as intended and not a second header.
@@ -2160,32 +2244,46 @@ describe("LeadScreen — History tab", () => {
       screen.getByRole("heading", { level: 1, name: lead.full_name }),
     ).toBeTruthy();
   });
+
+  it("keeps the Overview tab's own content, without a second History section under it", async () => {
+    stubFetchWithMe(async () => undefined);
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { level: 1, name: lead.full_name }),
+      ).toBeTruthy(),
+    );
+    // The chronology is the History tab's own body now — Overview draws its
+    // cards and nothing else under them, rather than the record's whole
+    // history a second time beneath the ladder and the call.
+    expect(document.querySelector(".record-timeline")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Changes" })).toBeNull();
+  });
 });
 
 describe("terminalBadge (archived/terminal labelling)", () => {
   it("labels disqualified and promoted distinctly and leaves open leads unbadged", () => {
-    expect(terminalBadge("disqualified")).toEqual({
+    expect(terminalBadge({ status: "disqualified" })).toEqual({
       label: "lead.disqualified",
-      tone: "warn",
+      tone: "warning",
     });
     // A promoted lead IS archived, but reads "Archived" — never "Disqualified".
-    expect(terminalBadge("promoted")).toEqual({
+    expect(terminalBadge({ status: "promoted" })).toEqual({
       label: "record.archived",
-      tone: "warn",
+      tone: "warning",
     });
-    expect(terminalBadge("new")).toBeNull();
-    expect(terminalBadge("contacted")).toBeNull();
+    expect(terminalBadge({ status: "new" })).toBeNull();
+    expect(terminalBadge({ status: "contacted" })).toBeNull();
   });
 });
 
 describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
   it("a disqualified lead exposes no enabled mutation anywhere on the page", async () => {
-    // The stop-gate caught what the header-only check missed: Edit, Disqualify
-    // and Share were disabled while the score override, the clear-override and
-    // the owner picker stayed live, each able to fire a PATCH the server
-    // refuses. Asserted over EVERY button on the page rather than a list of
-    // the ones I remembered, so a control added later is covered by
-    // construction.
+    // A header-only check passed while the score override, the clear-override
+    // and the owner picker stayed live, each able to fire a PATCH the server
+    // refuses. So: EVERY button on the page rather than a remembered list, and
+    // a control added later is covered by construction.
     stubFetchWithMe(async (url) => {
       if (url.includes("/score")) {
         return jsonResponse({ score: 72, explained: false });
@@ -2205,6 +2303,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // and the terminal badge — so the wait names the badge it meant.
       expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
     );
+    // The sweep opens the menu: a census blind to half the header's buttons
+    // reports PASS on a page it never read.
+    await openLeadActions();
     // A control that changes what is DRAWN is not a control that changes the
     // record, and a terminal lead is read-only rather than unreadable: the tab
     // strip picks which body is open and the toggle puts the context column
@@ -2213,20 +2314,24 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // why a mutation added later is still caught by construction.
     const viewControls = new Set([
       "Overview",
+      "Deals & projects",
       "History",
-      "Details",
+      "Hide details",
+      // The trigger discloses; the open above sweeps the verbs behind it.
+      "More actions",
       // The day's work opens the task LIST: a door to another screen, which
       // writes nothing on this record.
-      "View tasks",
+      en["today.workQueue"],
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
       "Evidence",
-      // The status reading's own door: it opens the LEADS LIST narrowed to this
-      // status. Another screen, a read, and nothing on this record — the same
-      // species as "View tasks" above. A terminal lead is read-only rather than
-      // unreadable, and this is one of the reads.
-      "Open leads in this status →",
     ]);
+    // The one WRITE a terminal lead offers, in its own set so a reader cannot
+    // mistake it for a control that writes nothing: reopening is the undo of
+    // the state that makes the record read-only. Disabled, the page would say
+    // "Disqualified: <reason>" with no way back, and an operator re-keys the
+    // lead, losing its history and its score with it.
+    const closureReversals = new Set(["Reopen"]);
     // The pane's own controls are skipped structurally rather than by label:
     // what folds a disclosure in it is a view control, and "Hide" is too
     // ordinary a word to exempt everywhere it might appear.
@@ -2242,8 +2347,14 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       // count that changes with the record.
       if (
         viewControls.has(name) ||
+        closureReversals.has(name) ||
         contextColumn?.contains(button) ||
-        button.classList.contains("r360-rests-toggle")
+        button.classList.contains("r360-rests-toggle") ||
+        // A reading's door, skipped structurally: every stat card says the same
+        // word now, so a set keyed on "Open" would exempt any control sharing
+        // it. The class names a door OUT of the reading — another screen, a
+        // read, nothing written on this record.
+        button.classList.contains("stat-card-open")
       ) {
         continue;
       }
@@ -2254,11 +2365,51 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }
   });
 
+  // The way back, which is what a disqualified lead's page was missing: it
+  // could say "Disqualified: <reason>" and offer nothing to undo it. Nothing
+  // else in the suite fails if the button quietly stops calling the server —
+  // the read-only sweep above passes with it inert, because an exempt control
+  // is exempt whether or not it works.
+  it("offers Reopen on a disqualified lead, and it calls the reopen endpoint", async () => {
+    const calls: string[] = [];
+    stubFetchWithMe(async (url, method) => {
+      if (method !== "GET") {
+        calls.push(`${method} ${new URL(url, "http://localhost").pathname}`);
+        return jsonResponse({
+          ...lead,
+          status: "contacted",
+          archived_at: null,
+        });
+      }
+      if (url.includes("/score")) {
+        return jsonResponse({ score: 72, explained: false });
+      }
+      return jsonResponse({
+        ...lead,
+        status: "disqualified",
+        archived_at: "2026-07-13T00:00:00Z",
+      });
+    });
+    render(<LeadScreen id="l-1" />);
+
+    const reopen = await screen.findByRole("button", { name: "Reopen" });
+    expect((reopen as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(reopen);
+    // The dialog says what reopening does before it is done: the status comes
+    // back, the reason goes, the history stays.
+    expect(screen.getByText(en["lead.reopenExplain"] as string)).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: en["lead.reopenConfirm"] as string }),
+    );
+
+    await waitFor(() => expect(calls).toContain("POST /v1/leads/l-1/reopen"));
+  });
+
   it("a disqualified lead keeps its controls DISABLED with the reason, never hidden", async () => {
     // STATE-4a: blocked by state rather than permission means visible and
     // disabled with the reason — hiding the control hides the fact the
     // reader needs. (A PROMOTED lead never reaches this page; it redirects
-    // to the person it became.)
+    // to the contact it became.)
     stubFetchWithMe(async () =>
       jsonResponse({
         ...lead,
@@ -2274,7 +2425,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
     );
     const reason = "Disqualified — this lead is now read-only.";
-    for (const testId of ["edit-record", "lead-disqualify"]) {
+    await openLeadActions();
+    for (const testId of ["lead-disqualify"]) {
       const control = screen.getByTestId(testId) as HTMLButtonElement;
       expect(control.disabled).toBe(true);
       const describedBy = control.getAttribute("aria-describedby");
@@ -2297,7 +2449,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       }),
     );
     render(<LeadScreen id="l-1" />);
-    await waitFor(() => expect(screen.getByText("overridden")).toBeTruthy());
+    // The header's word stays lower-case because it sits inside a line the
+    // score begins; the readings card writes its own line and says so in
+    // sentence case.
+    await waitFor(() =>
+      expect(screen.getAllByText(/· overridden$/).length).toBeGreaterThan(0),
+    );
   });
 
   it("explains the score with its factors and the arithmetic that reconciles them", async () => {

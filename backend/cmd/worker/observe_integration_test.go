@@ -24,7 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 )
 
 // startProbeListener brings the surface up on a kernel-chosen port against the
@@ -55,7 +55,7 @@ func bootedGate() *bootGate {
 // wired into one surface and not the other would mean the two disagree about
 // the same process.
 func TestTheWorkerReadinessProbeAnswersFromItsRealDependencies(t *testing.T) {
-	base := startProbeListener(t, workerTestPool(t), budgettest.Client(t), bootedGate())
+	base := startProbeListener(t, workerTestPool(t), redistest.Client(t), bootedGate())
 
 	status, body := get(t, base+"/readyz")
 	if status != http.StatusOK {
@@ -89,7 +89,7 @@ func TestEachDeclaredReadinessCheckCanActuallyFail(t *testing.T) {
 		// A gate never marked complete is the state during boot. The listener
 		// comes up before the lanes and the runner on purpose, so this is the
 		// window a rollout must not read as ready.
-		base := startProbeListener(t, workerTestPool(t), budgettest.Client(t), &bootGate{})
+		base := startProbeListener(t, workerTestPool(t), redistest.Client(t), &bootGate{})
 
 		status, body := get(t, base+"/readyz")
 		if status != http.StatusServiceUnavailable {
@@ -105,7 +105,7 @@ func TestEachDeclaredReadinessCheckCanActuallyFail(t *testing.T) {
 		// this process: every acquire fails from here on. The pool is this
 		// subtest's own, so nothing else is reading it.
 		pool := workerTestPool(t)
-		base := startProbeListener(t, pool, budgettest.Client(t), bootedGate())
+		base := startProbeListener(t, pool, redistest.Client(t), bootedGate())
 		pool.Close()
 
 		status, body := get(t, base+"/readyz")
@@ -124,7 +124,7 @@ func TestEachDeclaredReadinessCheckCanActuallyFail(t *testing.T) {
 		// still putting down what it holds. The listener outlives the drain —
 		// it is stopped last — which is exactly why the answer has to change.
 		boot := bootedGate()
-		base := startProbeListener(t, workerTestPool(t), budgettest.Client(t), boot)
+		base := startProbeListener(t, workerTestPool(t), redistest.Client(t), boot)
 		if status, _ := get(t, base+"/readyz"); status != http.StatusOK {
 			t.Fatalf("GET /readyz = %d before the drain, want 200", status)
 		}

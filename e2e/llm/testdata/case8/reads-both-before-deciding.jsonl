@@ -1,0 +1,6 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__list_approvals", "mcp__margince__read_approval", "mcp__margince__decide_approval", "mcp__margince__decide_approval"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__list_approvals", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_approval", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__decide_approval", "input": {"decision": "approve"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__decide_approval", "input": {"decision": "reject"}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Two things are sitting in your queue. I can't approve anything I haven't read in full, so I opened both first.\n\n1. The company description rewrite — full staged text: \"Werkzeugbau und Vorrichtungsbau seit 1978\". Approved, as you said.\n2. The account owner change — rejected; we do not move accounts without talking to the rep."}

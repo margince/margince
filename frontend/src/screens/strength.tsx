@@ -5,16 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import { ActivityReferenceList } from "../design-system/activityreferencelist";
+import {
+  Badge,
+  Disclosure,
+  EmptyState,
+  Skeleton,
+} from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import {
-  OverlayUnavailable,
-  problemMessageOf,
-  throwProblem,
-  useSorMode,
-} from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 
 // The relationship-strength card (Phase 3, P-4): "no mystery number" — the
 // composite score NEVER renders alone. It always carries its bucket badge
@@ -29,20 +31,20 @@ type RelationshipStrength = components["schemas"]["RelationshipStrength"];
 
 const BUCKET_TONE: Record<
   RelationshipStrength["bucket"],
-  "success" | "accent" | "warn" | undefined
+  "success" | "accent" | "warning" | undefined
 > = {
   strong: "success",
   moderate: "accent",
-  weak: "warn",
+  weak: "warning",
   none: undefined,
 };
 
 async function fetchStrength(
-  kind: "person" | "organization",
+  kind: "contact" | "company",
   id: string,
 ): Promise<RelationshipStrength> {
-  if (kind === "person") {
-    const { data, error } = await api.GET("/people/{id}/strength", {
+  if (kind === "contact") {
+    const { data, error } = await api.GET("/contacts/{id}/strength", {
       params: { path: { id } },
     });
     if (error) {
@@ -50,7 +52,7 @@ async function fetchStrength(
     }
     return data;
   }
-  const { data, error } = await api.GET("/organizations/{id}/strength", {
+  const { data, error } = await api.GET("/companies/{id}/strength", {
     params: { path: { id } },
   });
   if (error) {
@@ -63,56 +65,62 @@ function factorPercent(value: number): number {
   return Math.round(value * 100);
 }
 
-export function StrengthCard({
+export function StrengthPanel({
   kind,
   id,
-}: Readonly<{ kind: "person" | "organization"; id: string }>) {
+  onOpenEmail,
+}: Readonly<{
+  kind: "contact" | "company";
+  id: string;
+  // Opens one cited message in the host's own drawer. A host that mounts none
+  // passes nothing, and the receipts render without an opener.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  // Relationship strength is computed over the native people graph, which the
-  // incumbent mirror does not hold (the endpoint 404s in overlay). Show the
-  // honest unavailable state and skip the doomed fetch.
-  const overlay = useSorMode() === "overlay";
   const query = useQuery({
     queryKey: ["strength", kind, id],
     queryFn: () => fetchStrength(kind, id),
-    enabled: !overlay,
   });
 
   return (
-    <Card
-      style={{ marginBottom: "var(--space-4)" }}
-      title={t("strength.title")}
-    >
-      {overlay && <OverlayUnavailable />}
-      {!overlay && query.isPending && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-          }}
-        >
-          <Skeleton width="40%" />
-          <Skeleton width="90%" />
-        </div>
-      )}
-      {!overlay && query.isError && (
-        <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
-      )}
-      {!overlay && query.isSuccess && (
-        <StrengthBody strength={query.data} locale={locale} />
-      )}
-    </Card>
+    <Panel title={t("strength.title")}>
+      <PanelBody>
+        {query.isPending && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+            }}
+          >
+            <Skeleton width="40%" />
+            <Skeleton width="90%" />
+          </div>
+        )}
+        {query.isError && (
+          <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
+        )}
+        {query.isSuccess && (
+          <StrengthBody
+            strength={query.data}
+            locale={locale}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 
 function StrengthBody({
   strength,
   locale,
+  onOpenEmail,
 }: Readonly<{
   strength: RelationshipStrength;
   locale: ReturnType<typeof useLocale>["locale"];
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
@@ -137,6 +145,7 @@ function StrengthBody({
     { key: "direction", value: factors.direction },
   ];
   const contributingCount = strength.contributing_activity_ids?.length ?? 0;
+  const named = strength.contributing_activities ?? [];
 
   return (
     <div>
@@ -146,30 +155,30 @@ function StrengthBody({
           alignItems: "center",
           gap: "var(--space-2)",
           flexWrap: "wrap",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <Badge tone={BUCKET_TONE[bucket]}>
           {t(`strength.bucket.${bucket}`)}
         </Badge>
-        <span className="t-mono">
+        <span className="t-num">
           {t("strength.score", { score: formatNumber(score, locale) })}
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+        }}
+      >
         {factorRows.map((row) => {
           const pct = factorPercent(row.value);
           return (
             <div key={row.key}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--fs-sm)",
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{t(`strength.factor.${row.key}`)}</span>
-                <span className="t-mono">{formatNumber(pct, locale)}%</span>
+                <span className="t-num">{formatNumber(pct, locale)}%</span>
               </div>
               <Meter
                 value={pct}
@@ -199,13 +208,36 @@ function StrengthBody({
           })}
         </p>
       )}
-      {contributingCount > 0 && (
-        <p className="t-caption">
-          {t("strength.computedFrom", {
-            count: formatNumber(contributingCount, locale),
-          })}
-        </p>
-      )}
+      {contributingCount > 0 &&
+        (named.length > 0 ? (
+          // The receipts, foldable. The count alone is a claim a reader cannot
+          // check: they cannot tell whether it counts the exchange they
+          // remember, and they cannot open any of it.
+          //
+          // The SUMMARY keeps the count from the id array, never from the
+          // named list. The two can differ — a row this reader cannot discover
+          // is omitted — and a number that shrank to what one reader may open
+          // would tell two readers different things about one score.
+          <Disclosure
+            summary={t("strength.computedFrom", {
+              count: formatNumber(contributingCount, locale),
+            })}
+          >
+            <ActivityReferenceList
+              references={named}
+              onOpenEmail={onOpenEmail}
+              formatWhen={(when) => formatDateTime(when, locale, recordZone)}
+            />
+          </Disclosure>
+        ) : (
+          // An older server names none, and so does a reader whose seat holds
+          // no activity grant. The line reads as it always did.
+          <p className="t-caption">
+            {t("strength.computedFrom", {
+              count: formatNumber(contributingCount, locale),
+            })}
+          </p>
+        ))}
     </div>
   );
 }

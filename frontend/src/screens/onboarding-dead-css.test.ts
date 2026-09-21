@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 // Dead CSS reads as intent. A rule with a comment explaining its layout is
 // indistinguishable from a live one until somebody greps the sources, so the
-// next person to touch a neighbouring rule has to decide whether they are
+// next contact to touch a neighbouring rule has to decide whether they are
 // about to break something. The onboarding sheets had carried 63 such rules —
 // a whole retired wizard (`.sdot`, `.urlbar`, `.wiz-*`), the pre-`fdz`
 // file-drop zone (`.dropzone`, `.dz-*`) and six `.ob-core-*` scenes — and
@@ -17,8 +17,7 @@ import { describe, expect, it } from "vitest";
 // onboarding tomorrow is gated the same day it lands, and NOTHING here is
 // scoped to a prefix: a gate that only knew `ob-` would have walked straight
 // past the dropzone set. The one hand-maintained list is `runtimeClasses`
-// below, and it is deliberately short. The sibling gate in
-// onboarding-typography.test.ts derives the same sheet list from the same rule.
+// below, and it is deliberately short.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const conversationDir = join(here, "onboarding-conversation");
@@ -103,7 +102,7 @@ const namedInSource = new Set(
 // first pass did, and it is too wide to hold: ANY template literal anywhere
 // donates one, so `.email-callout` — dead since the wizard it belonged to was
 // deleted — was vouched for by a React `key` of `` `email-${e.id}` `` on the
-// person page, which styles nothing and lives in another screen entirely.
+// contact page, which styles nothing and lives in another screen entirely.
 //
 // A HEAD written by hand is the same mistake one size smaller. `is-` was
 // entered for the three GateNotice tones and silently vouched for four more

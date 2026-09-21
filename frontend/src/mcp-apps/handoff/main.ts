@@ -12,7 +12,7 @@
 // visible: a warning with no source beside it is advice, and neither the tool
 // nor the view gives advice.
 
-import { day, el, money, onResult, warned } from "../bridge";
+import { day, el, heading, money, onResult, warned } from "../bridge";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -24,7 +24,7 @@ const SWEEP_TRUNCATED = "sweep_truncated";
 
 type Gap = { message: string; source: string };
 type Deal = { name: string; status: string; amount: string };
-type Seat = { person: string; role: string };
+type Seat = { contact: string; role: string };
 type Promise_ = { subject: string; state: string; dueAt: string };
 
 /** The gaps, and how many were unreadable.
@@ -65,14 +65,14 @@ function seatsOf(data: Record<string, unknown>): Seat[] {
     .map((entry) => asRecord(entry))
     .map((seat) => ({
       // The name where the answer has one, the id where it does not — a seat
-      // whose person the caller may not read comes back unnamed, and an id is
+      // whose contact the caller may not read comes back unnamed, and an id is
       // a worse answer than a name but a much better one than a blank.
-      person: asText(seat.name) || asText(seat.person_id),
+      contact: asText(seat.name) || asText(seat.contact_id),
       // "no recorded part", not an empty cell: an untitled seat is a gap the
       // panel above names, and the row has to agree with it.
       role: asText(seat.role) || "no recorded part",
     }))
-    .filter((seat) => seat.person !== "");
+    .filter((seat) => seat.contact !== "");
 }
 
 function promisesOf(data: Record<string, unknown>): Promise_[] {
@@ -91,7 +91,7 @@ function promisesOf(data: Record<string, unknown>): Promise_[] {
 function section(title: string, rows: HTMLElement[]): HTMLElement | null {
   if (rows.length === 0) return null;
   const block = el("div", "section");
-  block.appendChild(el("h2", "section-title", title));
+  block.appendChild(heading("large", title, { className: "section-title" }));
   const list = el("div", "rows");
   for (const row of rows) list.appendChild(row);
   block.appendChild(list);
@@ -188,7 +188,9 @@ function verdict(
   if (gaps.length > 0) {
     const block = el("div", "section");
     block.appendChild(
-      el("h2", "section-title", `${gaps.length} thing(s) still missing`),
+      heading("large", `${gaps.length} thing(s) still missing`, {
+        className: "section-title",
+      }),
     );
     for (const gap of gaps) block.appendChild(gapRow(gap));
     if (bounded) block.appendChild(el("div", "state", boundedNote));
@@ -250,7 +252,7 @@ export function render(
     return;
   }
   root.appendChild(
-    el("h1", undefined, asText(answer.name) || "Delivery handoff"),
+    heading("xlarge", asText(answer.name) || "Delivery handoff"),
   );
   root.appendChild(
     el("p", "meta", `${headline(answer)} · ${ownerLine(answer)}`),
@@ -261,7 +263,7 @@ export function render(
     section("What was sold", dealsOf(answer).map(dealRow)),
     section(
       "Who to call",
-      seatsOf(answer).map((seat) => twoLineRow(seat.person, [seat.role])),
+      seatsOf(answer).map((seat) => twoLineRow(seat.contact, [seat.role])),
     ),
     section("Already promised", promisesOf(answer).map(promiseRow)),
   ]) {

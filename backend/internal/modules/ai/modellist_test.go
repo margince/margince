@@ -46,7 +46,7 @@ func listerFor(
 	}))
 	t.Cleanup(srv.Close)
 	cfg.BaseURL = srv.URL
-	client, err := SelectBrain(cfg, cloudKeyFor(cfg.Provider, "test-key"))
+	client, err := selectLocalBrain(cfg, cloudKeyFor(cfg.Provider, "test-key"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestAnthropicSendsTheVersionHeaderTheAPIRequires(t *testing.T) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	client, err := SelectBrain(
+	client, err := selectLocalBrain(
 		ProviderConfig{Provider: providerAnthropic, BaseURL: srv.URL},
 		cloudKeyFor(providerAnthropic, "sk-test"),
 	)
@@ -147,7 +147,8 @@ func TestOpenAIWireListsAndCarriesNoLane(t *testing.T) {
 }
 
 func TestBrokerListKeepsItsLabelAndDropsItsPrices(t *testing.T) {
-	lister := listerFor(t,
+	lister := listerFor(
+		t,
 		ProviderConfig{Provider: providerOpenAICompatible},
 		"/v1/models",
 		map[string]any{"data": []map[string]any{{
@@ -231,7 +232,7 @@ func TestGeminiFollowsItsPages(t *testing.T) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	client, err := SelectBrain(
+	client, err := selectLocalBrain(
 		ProviderConfig{Provider: providerGemini, BaseURL: srv.URL},
 		cloudKeyFor(providerGemini, "k"),
 	)
@@ -280,7 +281,7 @@ func TestListModelsReportsTheStatusAndNotTheBody(t *testing.T) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	client, err := SelectBrain(
+	client, err := selectLocalBrain(
 		ProviderConfig{Provider: providerOpenAI, BaseURL: srv.URL},
 		cloudKeyFor(providerOpenAI, "k"),
 	)
@@ -463,7 +464,7 @@ func TestAListRedirectCarriesNoCredentialToTheNewHost(t *testing.T) {
 	}))
 	t.Cleanup(vendor.Close)
 
-	client, err := SelectBrain(
+	client, err := selectLocalBrain(
 		ProviderConfig{Provider: providerAnthropic, BaseURL: vendor.URL},
 		cloudKeyFor(providerAnthropic, "sk-must-not-travel"),
 	)

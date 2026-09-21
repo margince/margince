@@ -8,14 +8,15 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
-import type { Provenance } from "../design-system/trust";
+import { Callout } from "../design-system/callout";
+import type { Provenance, SourceAuthor } from "../design-system/trust";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./common.css";
 
 // Shared screen plumbing: honest loading / error / empty states (§3a screen-
-// state matrix), the captured_by → provenance mapping every list reuses, and
-// the ONE /me query the auth gate and every role-aware surface share.
+// state matrix), the ONE refused-write notice, the captured_by → provenance
+// mapping every list reuses, and the ONE /me query every surface reads.
 
 // Authentication and availability are different product states: a failed
 // session probe is typed so the auth boundary can render login (401), the
@@ -81,11 +82,12 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // The session principal (GET /v1/me): identity + effective role keys. One
 // spelling, one ["me"] cache entry — the App auth gate, the settings identity
 // card, and role-aware affordances all read the same probe. The server binds
-// the installation's singleton organization itself (A107/ADR-0061) — the
+// the installation's singleton company itself (ADR-0061) — the
 // probe needs nothing but the session cookie.
-export function useMe() {
+export function useMe(enabled = true) {
   return useQuery({
     queryKey: ["me"],
+    enabled,
     staleTime: 5 * 60_000,
     // A role change does not revoke live sessions, so this snapshot is the one
     // cache entry that must not sit stale for its full staleTime: the UI now
@@ -118,29 +120,6 @@ export function useMe() {
   });
 }
 
-// The workspace system-of-record mode, read off the shared ["me"] cache.
-// `native` is the safe default (full list capability) while /me is loading
-// or if an older server omits the field; the list surfaces gate on `overlay`
-// to drop sort/filter dials the incumbent mirror refuses (422). AuthGate
-// resolves /me before any list screen mounts, so a screen sees the real value.
-export function useSorMode(): "native" | "overlay" {
-  return useMe().data?.system_of_record?.mode === "overlay"
-    ? "overlay"
-    : "native";
-}
-
-// The honest "this surface can't be served from the incumbent mirror" state,
-// shown in overlay mode where a feature needs a capability the mirror does not
-// hold — entity-scoped timelines, relationship strength, the context graph,
-// task filtering, the morning brief. It is NOT an error: it is a deliberate,
-// documented read-subset gap that closes when the workspace flips to native.
-// Rendered in place of the feature so the user never hits "Couldn't load this
-// view" for a capability overlay mode was never going to answer.
-export function OverlayUnavailable() {
-  const t = useT();
-  return <EmptyState>{t("overlay.unavailable")}</EmptyState>;
-}
-
 /**
  * What a record's timeline zone shows when it has no entries to show YET.
  *
@@ -150,16 +129,12 @@ export function OverlayUnavailable() {
  * as complete — which both pops and pushes the rest of the column down.
  *
  * `undefined` for the ordinary case, because the zone's own renderer is right
- * once there is something to render. Overlay mode wins over the wait: a
- * capability the mirror will never answer is not a wait at all.
+ * once there is something to render.
  */
 export function timelineZoneNotice(
-  state: Readonly<{ overlay: boolean; pending: boolean }>,
+  state: Readonly<{ pending: boolean }>,
   t: ReturnType<typeof useT>,
 ): ReactNode {
-  if (state.overlay) {
-    return <OverlayUnavailable />;
-  }
   if (state.pending) {
     return <PendingBody label={t("record.timelineLoading")} lines={5} />;
   }
@@ -185,7 +160,7 @@ export function timelineZoneNotice(
 // Every caller is a place that learns the session is over: the deliberate
 // sign-out, and the 401 a long-lived read discovers for itself. What must not
 // happen is a cached answer outliving the member it was fetched for — the next
-// person to sign in inside the cache lifetime would be served it.
+// contact to sign in inside the cache lifetime would be served it.
 export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "me",
@@ -271,12 +246,11 @@ export function QueryStates({
             button is something to reach, not something to hear. */}
         <div role="alert">
           <p>{t("common.error")}</p>
-          <p className="t-mono" style={{ marginTop: "var(--space-2)" }}>
+          <p style={{ marginTop: "var(--space-2)" }}>
             {problemMessageOf(query.error, t)}
           </p>
         </div>
         <Button
-          small
           onClick={() => query.refetch()}
           style={{ marginTop: "var(--space-3)" }}
         >
@@ -286,6 +260,75 @@ export function QueryStates({
     );
   }
   return <>{children}</>;
+}
+
+/**
+ * A write the server refused, beside the control that asked for it: the
+ * screen's own claim as the heading, the cause the server sent under it.
+ *
+ * ONE spelling, because a dozen screens had each grown their own around the
+ * same nine lines — a dozen places for a refusal to stop interrupting or to
+ * lose the server's words. `outcome` + `danger` derives the interrupting role.
+ *
+ * The heading arrives as a KEY, so no caller can hand this a sentence the
+ * catalogue never said. The cause is `message` where the caller already holds
+ * the words and `error` where it holds only the thrown failure; with NEITHER
+ * there is nothing to report and nothing is drawn, so a caller states no
+ * condition of its own — answering that separately is how a band came to be
+ * drawn around a notice that rendered nothing.
+ */
+export function WriteRefused({
+  titleKey,
+  message,
+  error,
+  actions,
+}: Readonly<{
+  titleKey: MessageKey;
+  message?: string | null;
+  error?: unknown;
+  /** What the reader can do about it: a retry, a way back out. */
+  actions?: ReactNode;
+}>) {
+  const t = useT();
+  const cause =
+    message ??
+    (error === null || error === undefined ? null : problemMessageOf(error, t));
+  if (cause === null) {
+    return null;
+  }
+  return (
+    <Callout kind="outcome" tone="danger" title={t(titleKey)} actions={actions}>
+      {cause}
+    </Callout>
+  );
+}
+
+/**
+ * The same refusal WITHOUT a heading, on the one line a form has room for.
+ *
+ * `WriteRefused` above is the shape for a refusal that needs a claim of its own
+ * — a card, a whole screen. Inside a modal's field stack the claim is already
+ * the dialog's title, and a bordered notice between the last field and the
+ * Save row reads as a second surface stacked on the form. So this is the
+ * sentence and nothing else, in the danger ink, announced the moment it
+ * arrives.
+ *
+ * ONE spelling, for the reason the component above it is one: nineteen screens
+ * had grown the same `<p role="alert">` around the same call, and half of them
+ * had grown it without the ink, so a refusal and a caption read the same.
+ * Nothing is drawn when there is nothing to report, which is what lets a caller
+ * hand it a query's `error` straight.
+ */
+export function RefusalLine({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  if (error === null || error === undefined) {
+    return null;
+  }
+  return (
+    <p role="alert" className="t-danger">
+      {problemMessageOf(error, t)}
+    </p>
+  );
 }
 
 // The one "Load more" spelling for every keyset-paginated infinite query
@@ -307,7 +350,6 @@ export function LoadMoreButton({
   }
   return (
     <Button
-      small
       className="load-more"
       disabled={query.isFetchingNextPage}
       onClick={() => query.fetchNextPage()}
@@ -385,12 +427,17 @@ export function QueryGate<Data>({
 // agent tag unnamed, and a connector's member id is dropped a segment at a time.
 // The human remainder is the exception and is kept WHOLE, because it is compared
 // against the reader's own id and never printed — the tag resolves it through
-// the caller's `renderUser` or says a person entered it — and an id truncated to
+// the caller's `renderUser` or says a contact entered it — and an id truncated to
 // its first segment is how a colleague's entry would come to read "typed by
 // you".
 export function provenanceOf(
   capturedBy: string | undefined,
   viewerUserId?: string,
+  // Who wrote it in the system it was imported FROM, when the row carries one.
+  // An import runs as a single administrator, so captured_by names that one
+  // seat on every row it wrote — true, and useless as a statement about
+  // authorship. The author is the field that knows, and the tag prefers it.
+  author?: SourceAuthor | null,
 ): Provenance {
   if (!capturedBy) {
     return { kind: "unknown" };
@@ -404,10 +451,11 @@ export function provenanceOf(
       kind: "human",
       self: Boolean(viewerUserId) && userId === viewerUserId,
       userId,
+      author: author ?? undefined,
     };
   }
   if (source === "buyer") {
-    // The other side of a Deal Room: a person, outside the organization and in
+    // The other side of a Deal Room: a contact, outside the company and in
     // no member directory, so neither the human arm (which would send a reader
     // looking them up) nor `unknown` (which says nobody recorded a source) is
     // true of them. What follows the kind is the participant uuid — opaque, and
@@ -487,10 +535,10 @@ function connectorLabel(rest: string): string {
 }
 
 // The reader's own user id, for the provenance tags on this screen. Undefined
-// while /me is in flight, which the tags read as "a person, not provably you"
+// while /me is in flight, which the tags read as "a contact, not provably you"
 // — the honest reading until the session is known.
-export function useViewerId(): string | undefined {
-  return useMe().data?.user.id;
+export function useViewerId(enabled = true): string | undefined {
+  return useMe(enabled).data?.user.id;
 }
 
 // RFC 7807 bodies carry the honest detail; surface it instead of a generic
@@ -504,17 +552,6 @@ export function useViewerId(): string | undefined {
 // with catalog copy. A caller that cannot tell them apart either invents copy
 // over a real detail or shows a placeholder as though the server had spoken.
 //
-// A refusal overlay mode causes is a state, not a fault, but it is TWO
-// distinct states, not one: `unsupported_by_sor` is a WRITE the mirror
-// cannot serve (mutating a mirrored record — create/log-activity/advance/
-// merge/promote/disqualify); `unsupported_in_overlay_mode` is a READ whose
-// list/sort/filter dial the mirror does not hold (compose/overlayread.go's
-// unsupportedOverlayParam — e.g. tasks' `kind` filter). Collapsing both onto
-// one "can't serve this write" string would be false for the read case, so a
-// caller holding a translator gets copy naming which kind of refusal
-// happened. Callers without a translator — and every other problem code —
-// keep the server's own detail verbatim, exactly as before.
-//
 // A refusal is the OPPOSITE case: `permission_denied` is one code over two
 // authorities — an object-RBAC denial (this role does not admit the action on
 // this kind of record) and a row-authority denial (the record is on screen
@@ -527,7 +564,7 @@ export function useViewerId(): string | undefined {
 // knowing before anyone tries to "keep the more specific answer". `httperr`
 // builds a refusal's detail from `err.Error()`, and every producer of this
 // sentinel wraps it with INTERNALS: `auth.Require` sends the RBAC object and
-// verb ("person.update: permission denied"), the admission gate sends its own
+// verb ("contact.update: permission denied"), the admission gate sends its own
 // spec name and resolver state. None of that is copy, and showing it would
 // leak the shape of the authority model to a client. There is no path on which
 // the server sends a sentence written for a reader here.
@@ -537,7 +574,7 @@ export function useViewerId(): string | undefined {
 // reader whose role admits the action is refused anyway. Its server detail is
 // the bare sentinel ("seat tier insufficient"), which names a concept no
 // reader has met and offers nothing to do about it, so the catalog copy
-// replaces it and points at the one person who can lift the ceiling. It names
+// replaces it and points at the one contact who can lift the ceiling. It names
 // the SEAT rather than "your seat": the same code answers a read seat's own
 // mutation, an agent passport acting for one, and a grant that would give a
 // read seat write access. A surface that knows WHOSE seat it is (share.tsx
@@ -547,12 +584,6 @@ function problemDetail(
   t?: (key: MessageKey) => string,
 ): string | null {
   const code = problemCode(problem);
-  if (t && code === "unsupported_by_sor") {
-    return t("overlay.refused");
-  }
-  if (t && code === "unsupported_in_overlay_mode") {
-    return t("overlay.filterUnsupported");
-  }
   if (t && code === "gateway_unavailable") {
     return t("common.gatewayUnavailable");
   }
@@ -781,8 +812,8 @@ export function isAlreadyDecided(problem: unknown): boolean {
 }
 
 // A 409 whose code names the consent suppression gate: the send's recipients
-// have no active `granted` person_consent for the purpose it falls under
-// (default-deny per purpose, A22/ADR-0011). Distinguished from RBAC (403) and
+// have no active `granted` contact_consent for the purpose it falls under
+// (default-deny per purpose, ADR-0011). Distinguished from RBAC (403) and
 // validation (422) so the composer can point the user at the consent surface
 // rather than showing a raw server detail.
 export function isConsentNotGranted(problem: unknown): boolean {
@@ -832,59 +863,16 @@ export function coldFieldLabelKey(field: string): MessageKey | undefined {
   return COLD_FIELD_LABELS[field];
 }
 
-/**
- * What kind of page the crawl was looking at, in the reader's words. The enum
- * is closed and both read shapes carry it (`SiteReadPage.kind`, required, and
- * `CompanySiteReadPage.kind`, optional), so the vocabulary lives here once: a
- * company page, a deep-read report and the onboarding dossier must not name the
- * same page three different ways.
- */
-const SITE_READ_KIND_LABELS: Record<
-  components["schemas"]["SiteReadPage"]["kind"],
-  MessageKey
-> = {
-  home: "deepread.kindHome",
-  impressum: "deepread.kindImpressum",
-  about: "deepread.kindAbout",
-  team: "deepread.kindTeam",
-  services: "deepread.kindServices",
-  products: "deepread.kindProducts",
-  contact: "deepread.kindContact",
-  other: "deepread.kindOther",
-};
-
-/**
- * The same vocabulary for a caller that already has a label of its own and only
- * wants a better one. An absent kind and "other" both answer undefined: they say
- * nothing the caller's own wording does not, and "Other" in place of a real name
- * reads as information when it is not.
- */
-// The same map seen as a plain lookup, for callers whose kind is only a string
-// at compile time. Widening an assignment costs nothing and keeps the map above
-// exhaustive over the enum — a cast at the call site would give up both.
-const KIND_LABELS_BY_NAME: Readonly<Record<string, MessageKey>> =
-  SITE_READ_KIND_LABELS;
-
-export function namedSiteReadKind(
-  kind: string | null | undefined,
-): MessageKey | undefined {
-  if (!kind || kind === "other") {
-    return undefined;
-  }
-  return KIND_LABELS_BY_NAME[kind];
-}
-
 // The account's finance summary. It lives here rather than beside the finance
 // card because the KPI row reads the SAME figure: one query key, so the two
 // readings on a page agree and the second costs no request.
-export function useFinanceSummary(orgId: string) {
-  return useQuery<components["schemas"]["OrganizationFinanceSummary"]>({
-    queryKey: ["finance-summary", orgId],
+export function useFinanceSummary(companyId: string) {
+  return useQuery<components["schemas"]["CompanyFinanceSummary"]>({
+    queryKey: ["finance-summary", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/organizations/{id}/finance-summary",
-        { params: { path: { id: orgId } } },
-      );
+      const { data, error } = await api.GET("/companies/{id}/finance-summary", {
+        params: { path: { id: companyId } },
+      });
       if (error) {
         throwProblem(error);
       }

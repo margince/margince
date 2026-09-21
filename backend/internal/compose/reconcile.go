@@ -57,7 +57,7 @@ type followUpStager struct {
 	draft followUpReplySeam
 	// owner resolves the authority the DRAFT is read under. The reply carries a
 	// counterparty's address and the message it answers, both of which end up
-	// stored on the card — so they are read as the person the card is for, never
+	// stored on the card — so they are read as the contact the card is for, never
 	// under the sweep's own unbounded principal.
 	owner dealOwnerAuthority
 }
@@ -140,7 +140,32 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	if err != nil {
 		return fmt.Errorf("compose: marshal follow-up identity: %w", err)
 	}
-	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
+	// The task proposal records the deal's owner as the human it is FOR, the
+	// same as the drafted reply beside it.
+	//
+	// It is one rep's morning work: the follow-up it asks for lands on their
+	// deal, and approvals narrows a proposal to the seat it names. Staged under
+	// the sweep alone — as this path did — the row named nobody, so it appeared
+	// on every colleague's queue who held the grant, and a manager could answer
+	// a question the rep never saw.
+	//
+	// Only the owner's IDENTITY is needed here, not their authority: nothing in
+	// this staging reads under it. That is why this asks dealOwner rather than
+	// contextFor, which also resolves grants and would refuse a deal whose owner
+	// has since been suspended — a card that should still be filed for them.
+	staged := ctx
+	if s.owner.db != nil {
+		owner, err := s.owner.dealOwner(ctx, dealID)
+		if err != nil {
+			return err
+		}
+		// An unowned deal records nobody, which is what it honestly is: the
+		// proposal stays shared rather than being withheld from everyone.
+		if !owner.IsZero() {
+			staged = onBehalfOf(ctx, owner)
+		}
+	}
+	_, _, err = s.svc.StageUnlessDeclined(staged, approvals.StageInput{
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -169,12 +194,12 @@ func (s followUpStager) stageDraftedReply(
 ) (bool, error) {
 	// The draft is composed under the DEAL OWNER's authority, not the sweep's.
 	//
-	// ReplyAddress resolves the counterparty's email off the person record,
+	// ReplyAddress resolves the counterparty's email off the contact record,
 	// behind an object grant AND a row scope that a system principal walks
 	// straight past — auth.Require and auth.ScopeClauseFor both pass it
 	// unconditionally. That address is then stored in proposed_change, where
 	// the card's own decide grant (activity:create plus deal visibility) is
-	// what governs reading it back, and person:read is not in that set.
+	// what governs reading it back, and contact:read is not in that set.
 	//
 	// The message the draft answers is NOT the same question: the reconciler
 	// only ever picks evidence with audience = 'workspace', so its subject and
@@ -223,7 +248,7 @@ func (s followUpStager) stageDraftedReply(
 	// acting principal stays the sweep's, which is what keeps the row a server
 	// proposal (a NULL passport) the release executor may run, and what keeps
 	// its provenance honest — no rep asked for this card. on_behalf_of names
-	// the person the card is FOR, and approvals narrows a held draft to them:
+	// the contact the card is FOR, and approvals narrows a held draft to them:
 	// releasing one sends it from the approver's own mailbox, so a colleague
 	// who released it would be answering a customer under their own name.
 	//
@@ -240,7 +265,7 @@ func (s followUpStager) stageDraftedReply(
 // resolved as the human this staging acts for.
 //
 // The owner is taken from the context the draft was composed under rather than
-// re-read, so the card is filed for exactly the person whose authority wrote it.
+// re-read, so the card is filed for exactly the contact whose authority wrote it.
 // A context carrying no human leaves the principal untouched: the staging then
 // records nobody, which is what an ownerless deal honestly is.
 func onBehalfOfOwner(sweepCtx, ownerCtx context.Context) context.Context {
@@ -248,11 +273,23 @@ func onBehalfOfOwner(sweepCtx, ownerCtx context.Context) context.Context {
 	if !ok || owner.UserID.IsZero() {
 		return sweepCtx
 	}
+	return onBehalfOf(sweepCtx, owner.UserID)
+}
+
+// onBehalfOf stamps one member as the human a staging acts for, leaving the
+// acting principal the sweep's own.
+//
+// Both halves are load-bearing, which is why this is one function rather than a
+// line at each call site. The actor stays the sweep, so the row remains a server
+// proposal with a NULL passport that the release executor may run, and its
+// provenance stays honest — no rep asked for this card. on_behalf_of names who
+// it is FOR, and that is what approvals narrows the decision to.
+func onBehalfOf(sweepCtx context.Context, owner ids.UUID) context.Context {
 	sweep, ok := principal.Actor(sweepCtx)
 	if !ok {
 		return sweepCtx
 	}
-	sweep.OnBehalfOf = owner.UserID
+	sweep.OnBehalfOf = owner
 	return principal.WithActor(sweepCtx, sweep)
 }
 
@@ -264,6 +301,9 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// through, so an overnight reply and an automation's draft are one drafting
 	// engine. The zero SendPath matches that surface: nothing here sends, the
 	// held-draft release does, through the fully wired path it builds itself.
+	// No system-of-record seam: this adapter is built for DraftEmail alone and
+	// its empty SendPath reaches no send, so the guard that would need one is
+	// unreachable from here. It refuses rather than passes if that ever changes.
 	drafter := newCommsAdapter(pool, nil, SendPath{})
 	stager := followUpStager{
 		svc:   approvals.NewService(db),

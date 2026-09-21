@@ -132,7 +132,7 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 //
 // Only when the server advertises the extension, and a refusal is not fatal:
 // an introduction is a courtesy the session does not depend on, and declining
-// to read a person's mail because their provider would not take one would be
+// to read a contact's mail because their provider would not take one would be
 // the wrong trade entirely.
 func announceClient(client *imapclient.Client) {
 	if !client.Caps().Has(imapv2.CapID) {
@@ -208,7 +208,7 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// The standing connector is a registry singleton serving every IMAP
 	// connection, so all per-pull state lives on this local, never on c —
 	// concurrent syncs of different mailboxes must not see each other.
-	st := &syncState{owner: creds.Email, contacts: map[string]struct{}{}}
+	st := &syncState{owner: creds.Email, mailbox: creds.Mailbox, contacts: map[string]struct{}{}}
 	if err := netConn.SetDeadline(time.Now().Add(pullDeadline)); err != nil {
 		// Armed for the exchanges before v2 takes the deadline over — see
 		// pullDeadline, which says how much of the phase this really bounds.

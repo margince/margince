@@ -38,10 +38,10 @@ type offerLineDiffFields = struct {
 // handler): the offer AFTER staging, plus the same three facts flattened
 // so the handler needs no Offer-field archaeology to build its response.
 type DraftResult struct {
-	Offer        crmcontracts.Offer
-	AIGenerated  bool
-	AIDisclosure *string
-	Diff         *offerLineDiffFields
+	Offer              crmcontracts.Offer
+	AIGenerated        bool
+	AIProvenanceNotice *string
+	Diff               *offerLineDiffFields
 }
 
 // linesOf reads an offer's nested line items defensively — GetOffer

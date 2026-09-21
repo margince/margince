@@ -6,8 +6,8 @@ package activities
 // The one read the automation module's clock scan needs (Task 14a,
 // automation/seams.go's ActivityScan): which linked entities have gone
 // quiet. Sourced from this module's OWN tables (activity + activity_link)
-// rather than the schema-maintained last_activity_at columns (deal, person,
-// organization; migration 1787032690's triggers), because this scan asks a
+// rather than the schema-maintained last_activity_at columns (deal, contact,
+// company; migration 1787032690's triggers), because this scan asks a
 // narrower question those columns do not — it excludes automation-engine
 // writes and wants live-work eligibility — and a module
 // reaches records only through seams (ADR-0054 §9), and this file is the
@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -44,7 +45,7 @@ type LastTouchCandidate struct {
 // lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
 // recent genuine engagement, narrowed to the ones carrying live work. It is a
 // function rather than a constant because two of its fragments are built —
-// the link-id coalesce, and the organization walk — and it sits apart from the
+// the link-id coalesce, and the company walk — and it sits apart from the
 // scan so the scan reads as what it does with the rows.
 //
 // $1/$4/$5 are the source and captured_by the automation engine stamps —
@@ -60,64 +61,181 @@ func lastTouchCandidateQuery() string {
 				FROM activity a
 				WHERE a.archived_at IS NULL
 				  `+auth.OriginIsEngagement("a")+`
+				  `+auth.AudienceWorkspaceOnly("a")+`
 				  AND NOT (a.source = $1
 				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
+			), live_accounts AS (
+				SELECT o.id
+				FROM company o
+				JOIN deal d ON d.company_id = o.id
+				           AND d.status = 'open' AND d.archived_at IS NULL
+				WHERE o.archived_at IS NULL AND o.created_at < $2
 			), direct AS (
 				SELECT al.entity_type AS entity_type,
 				       %[1]s AS entity_id,
 				       max(g.occurred_at) AS last_touch
 				FROM activity_link al
 				JOIN genuine g ON g.id = al.activity_id
-				WHERE al.entity_type <> '%[3]s'
+				WHERE al.entity_type <> '%[2]s'
 				GROUP BY al.entity_type, %[1]s
 			), accounts AS (
-				SELECT '%[3]s' AS entity_type,
-				       reach.organization_id AS entity_id,
+				SELECT '%[2]s' AS entity_type,
+				       reach.company_id AS entity_id,
 				       max(g.occurred_at) AS last_touch
-				FROM (%[6]s) reach
+				FROM (%[3]s) reach
 				JOIN genuine g ON g.id = reach.activity_id
-				GROUP BY reach.organization_id
+				GROUP BY reach.company_id
 			), quiet AS (
 				SELECT entity_type, entity_id, last_touch FROM direct
 				UNION ALL
 				SELECT entity_type, entity_id, last_touch FROM accounts
+			), absorbing_accounts AS (
+				SELECT la.id
+				FROM live_accounts la
+				JOIN accounts a ON a.entity_id = la.id
+				WHERE a.last_touch < $2
 			)
 			SELECT q.entity_type, q.entity_id, q.last_touch
 			FROM quiet q
 			WHERE q.last_touch < $2
-			  AND ((q.entity_type = '%[2]s' AND EXISTS (
-			         SELECT 1 FROM deal d
-			         WHERE d.id = q.entity_id
-			           AND d.status = 'open' AND d.archived_at IS NULL
-			           AND d.created_at < $2))
-			   OR (q.entity_type = '%[3]s' AND EXISTS (
-			         SELECT 1 FROM organization o
-			         JOIN deal d ON d.organization_id = o.id
-			                    AND d.status = 'open' AND d.archived_at IS NULL
-			         WHERE o.id = q.entity_id
-			           AND o.archived_at IS NULL
-			           AND o.created_at < $2))
-			   OR (q.entity_type = '%[4]s' AND EXISTS (
-			         SELECT 1 FROM person p
-			         JOIN relationship r ON r.person_id = p.id
-			                    AND r.kind = 'deal_stakeholder'
-			                    AND r.ended_at IS NULL AND r.archived_at IS NULL
-			         JOIN deal d ON d.id = r.deal_id
-			                    AND d.status = 'open' AND d.archived_at IS NULL
-			         WHERE p.id = q.entity_id
-			           AND p.archived_at IS NULL
-			           AND p.created_at < $2))
-			   OR (q.entity_type = '%[5]s' AND EXISTS (
-			         SELECT 1 FROM lead l
-			         WHERE l.id = q.entity_id
-			           AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
-			           AND l.created_at < $2)))
+			  AND (%[4]s)
+			  AND NOT EXISTS (%[5]s)
 			ORDER BY q.last_touch, q.entity_id
 			LIMIT $3`,
 		linkIDCoalesceQualified("al"),
-		datasource.RecordDeal, datasource.RecordOrganization,
-		datasource.RecordPerson, datasource.RecordLead,
-		OrgReachSet())
+		datasource.RecordCompany,
+		CompanyReachSet(),
+		lastTouchEligibility(),
+		openReminderHoldsEntity())
+}
+
+// lastTouchEligibility is the per-type live-work test, and the collapse that
+// keeps one silence to one question.
+//
+// Each arm asks two things: does this record carry live work worth a reminder,
+// and is somebody else already being asked about the same silence. A deal and
+// an employed stakeholder fold into the account absorbing them; an account is
+// drawn on its own liveness, less any record it absorbs whose reminder is still
+// unanswered. A lead answers to nobody, so it has no collapse.
+func lastTouchEligibility() string {
+	return storekit.SQLf(`
+			(q.entity_type = '%[1]s' AND EXISTS (
+			   SELECT 1 FROM deal d
+			   WHERE d.id = q.entity_id
+			     AND d.status = 'open' AND d.archived_at IS NULL
+			     AND d.created_at < $2)
+			 AND NOT EXISTS (
+			   SELECT 1 FROM deal d
+			   JOIN absorbing_accounts aa ON aa.id = d.company_id
+			   WHERE d.id = q.entity_id))
+		 OR (q.entity_type = '%[2]s' AND EXISTS (
+			   SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id)
+			 AND NOT EXISTS (%[5]s))
+		 OR (q.entity_type = '%[3]s' AND EXISTS (
+			   SELECT 1 FROM contact p
+			   JOIN relationship r ON r.contact_id = p.id
+			              AND r.kind = 'deal_stakeholder'
+			              AND r.ended_at IS NULL AND r.archived_at IS NULL
+			   JOIN deal d ON d.id = r.deal_id
+			              AND d.status = 'open' AND d.archived_at IS NULL
+			   WHERE p.id = q.entity_id
+			     AND p.archived_at IS NULL
+			     AND p.created_at < $2)
+			 AND NOT EXISTS (%[4]s))
+		 OR (q.entity_type = '%[6]s' AND EXISTS (
+			   SELECT 1 FROM lead l
+			   WHERE l.id = q.entity_id
+			     AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
+			     AND l.created_at < $2))`,
+		datasource.RecordDeal, datasource.RecordCompany, datasource.RecordContact,
+		contactCollapsesIntoAccount(),
+		openChildReminderHoldsAccount(),
+		datasource.RecordLead)
+}
+
+// openChildReminderHoldsAccount stops an account being drawn while a record it
+// would absorb is still carrying an unanswered reminder.
+//
+// The hold in openReminderHoldsEntity is keyed on the entity its task is linked
+// to, so a task on a CONTACT is invisible when the query asks about that
+// contact's employer. Without this arm the two holds miss each other in one
+// ordinary sequence: a contact goes quiet while the account is being worked and
+// earns its own reminder; later the account goes quiet too and absorbs the
+// contact; nothing has answered the first question, so the rep is handed a
+// second open task about the same silence.
+//
+// The collapse and the hold have to agree on scope. Once an account can absorb
+// a record, an open reminder on that record is a question about the account,
+// and the account waits for the same answer.
+func openChildReminderHoldsAccount() string {
+	return `SELECT 1 FROM activity t
+		         JOIN activity_link tl ON tl.activity_id = t.id
+		         LEFT JOIN deal cd ON cd.id = tl.deal_id
+		         LEFT JOIN relationship ce ON ce.contact_id = tl.contact_id
+		                    AND ce.kind = 'employment'
+		                    AND ` + employment.IsCurrentSQL("ce.ended_at") + `
+		                    AND ce.archived_at IS NULL
+		         WHERE t.kind = 'task'
+		           AND t.is_done = false AND t.archived_at IS NULL
+		           AND t.source_system = $6
+		           AND t.source = $1
+		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)
+		           AND coalesce(cd.company_id, ce.company_id) = q.entity_id`
+}
+
+// contactCollapsesIntoAccount is the contact arm's collapse test: a stakeholder
+// currently employed by an ABSORBING account is already covered by that
+// account's own reminder, because CompanyReachSet folds a contact's touches
+// into their employer (companyscope.go's companyArms). Reminding them
+// separately asks one rep about one silence twice.
+//
+// Absorbing, not merely live: an account only absorbs a record when it is
+// ITSELF being drawn. A contact who has gone quiet while their employer is
+// worked regularly folds into an account no reminder is ever written for, and
+// the silence would be reported by nobody — five reminders turned into none,
+// which is worse than the duplication this collapse exists to end.
+//
+// Employment, not the stakeholder seat: the seat is what makes the contact a
+// candidate at all, while employment is what makes the account's anchor include
+// this contact's mail. A seat on a live account's deal does not fold the touch,
+// so collapsing on the seat would silence a contact nobody else covers.
+//
+// Its own statement rather than a clause on the arm above, so the employment
+// currency test stands alone: gates/employmentcurrency_test.go matches per
+// STATEMENT, and mixing this with the seat's own `ended_at IS NULL` would read
+// as an employment arm that skips the helper.
+func contactCollapsesIntoAccount() string {
+	return `SELECT 1 FROM relationship e
+		         JOIN absorbing_accounts aa ON aa.id = e.company_id
+		         WHERE e.contact_id = q.entity_id
+		           AND e.kind = 'employment'
+		           AND ` + employment.IsCurrentSQL("e.ended_at") + `
+		           AND e.archived_at IS NULL`
+}
+
+// openReminderHoldsEntity excludes an entity that already carries an OPEN
+// reminder from this handler — the SQL half of "a task still open is not asked
+// twice".
+//
+// Here rather than in the handler's Plan for the reason the eligibility arms
+// are here: one pass draws at most 200 candidates, so an entity whose reminder
+// is already open would occupy that batch every tick and starve the records
+// that still need one. A post-filter cannot give the batch back.
+//
+// Keyed on source_system so a handler holds only its OWN reminders: widened to
+// "any system task", a lead follow-up would hold an entity out of the check-in
+// draw entirely. The source/captured_by pair rides along because source alone
+// is a client's to spell, exactly as the genuine CTE reads it.
+func openReminderHoldsEntity() string {
+	return `SELECT 1 FROM activity t
+		         JOIN activity_link tl ON tl.activity_id = t.id
+		         WHERE tl.entity_type = q.entity_type
+		           AND ` + linkIDCoalesceQualified("tl") + ` = q.entity_id
+		           AND t.kind = 'task'
+		           AND t.is_done = false AND t.archived_at IS NULL
+		           AND t.source_system = $6
+		           AND t.source = $1
+		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`
 }
 
 // LastTouchBefore returns the entities that are BOTH quiet and worth
@@ -149,15 +267,15 @@ func lastTouchCandidateQuery() string {
 // What counts as live work, per type:
 //
 //   - deal — the deal itself is open and unarchived.
-//   - organization — it has at least one open, unarchived deal. The
+//   - company — it has at least one open, unarchived deal. The
 //     account is what the rep works, so the reminder belongs on the
 //     account, once.
 //
-// An account's last touch is read through the three-arm walk (OrgReachSet)
+// An account's last touch is read through the three-arm walk (CompanyReachSet)
 // rather than off its own links, and that is the difference between this
-// trigger working and not. Capture files mail against the PERSON it was with,
+// trigger working and not. Capture files mail against the CONTACT it was with,
 // so on a real workspace an account's correspondence carries no direct
-// organization link at all: counting only direct links, an account whose reps
+// company link at all: counting only direct links, an account whose reps
 // mailed a contact yesterday looked untouched and earned a reminder about a
 // relationship somebody is actively working, while an account that never got a
 // direct link was never drawn at all. The other three types keep their own
@@ -168,10 +286,10 @@ func lastTouchCandidateQuery() string {
 // being worked stop being. Eligibility is unchanged — an account still needs an
 // open unarchived deal — so the batch is spent on accounts somebody is working
 // rather than on ones nobody is.
-//   - person — they hold a live deal_stakeholder seat on an open deal.
+//   - contact — they hold a live deal_stakeholder seat on an open deal.
 //     Deliberately NOT "their employer has an open deal": that would mint
 //     one reminder per employee of every busy account, each one a
-//     duplicate of the single organization reminder that account already
+//     duplicate of the single company reminder that account already
 //     earns.
 //   - lead — still in the working part of its lifecycle ('new' or
 //     'contacted'); a promoted or disqualified lead is finished business.
@@ -184,7 +302,10 @@ func lastTouchCandidateQuery() string {
 // because activities backfilled onto it are older than N days. One
 // cutoff, one meaning — the coarse scan and the handler's precise Match
 // (automation/handlers_clock.go) cannot drift onto two thresholds.
-func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int) ([]LastTouchCandidate, error) {
+// reminder names the handler asking, so the draw can skip an entity whose
+// reminder from THAT handler is still open. Each clock handler passes its own
+// Spec().Name, which is also the source_system its task carries.
+func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]LastTouchCandidate, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -198,7 +319,7 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
 		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), systemSource, cutoff, limit,
-			systemCapturedBy, systemCapturedByPattern)
+			systemCapturedBy, systemCapturedByPattern, reminder)
 		if err != nil {
 			return err
 		}

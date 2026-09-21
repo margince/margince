@@ -59,10 +59,10 @@ func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, s
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		wsID, err = createInstallation(ctx, tx, InstallationBootstrap{
-			OrganizationName: slug,
-			AdminEmail:       "admin@" + slug + ".test",
-			AdminName:        "Admin",
-			AdminPassword:    agentSeatAdminPassword,
+			CompanyName:   slug,
+			AdminEmail:    "admin@" + slug + ".test",
+			AdminName:     "Admin",
+			AdminPassword: agentSeatAdminPassword,
 		}, originConfigured, nil, &[]string{})
 		return err
 	})
@@ -174,7 +174,7 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 
 	// The admin's real Identity, resolved the way the HTTP surface resolves it:
 	// the refusal has to hold for a caller who passes every other gate.
-	admin, _, err := svc.Login(wsCtx, "admin@"+slug+".test", agentSeatAdminPassword)
+	admin, _, err := svc.Login(wsCtx, "admin@"+slug+".test", agentSeatAdminPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 	_, _, err = svc.IssuePasswordLink(wsCtx, admin, ids.From[ids.UserKind](seat.id))
 	if !errors.Is(err, errAgentSeatHasNoPassword) {
 		t.Fatalf("issuing a set-password link for an agent identity returned %v, want the agent-seat "+
-			"refusal. Redeeming that link would give an identity with no person behind it a working "+
+			"refusal. Redeeming that link would give an identity with no contact behind it a working "+
 			"credential, and every session opened with it would read as the agent", err)
 	}
 

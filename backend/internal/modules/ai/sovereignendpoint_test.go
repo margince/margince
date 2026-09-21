@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -119,17 +120,22 @@ func verdictName(v hostVerdict) string {
 
 func TestWhichHostsCountAsCustomerControlled(t *testing.T) {
 	for host, want := range map[string]hostVerdict{
-		"127.0.0.1":       hostIsLocal,
-		"::1":             hostIsLocal,
-		"localhost":       hostIsLocal,
-		"LOCALHOST":       hostIsLocal, // host names are case-insensitive
-		"gpu.localhost":   hostIsLocal,
-		"10.4.1.20":       hostIsLocal,
-		"172.16.0.9":      hostIsLocal,
-		"172.32.0.9":      hostIsElsewhere, // just past RFC 1918, which ends at 172.31
-		"192.168.1.5":     hostIsLocal,
-		"fd00::1":         hostIsLocal, // IPv6 unique-local
-		"169.254.7.7":     hostIsLocal, // link-local
+		"127.0.0.1":     hostIsLocal,
+		"::1":           hostIsLocal,
+		"localhost":     hostIsLocal,
+		"LOCALHOST":     hostIsLocal, // host names are case-insensitive
+		"gpu.localhost": hostIsLocal,
+		"10.4.1.20":     hostIsLocal,
+		"172.16.0.9":    hostIsLocal,
+		"172.32.0.9":    hostIsElsewhere, // just past RFC 1918, which ends at 172.31
+		"192.168.1.5":   hostIsLocal,
+		"fd00::1":       hostIsLocal, // IPv6 unique-local
+		// Link-local is NOT ours. 169.254.169.254 is the cloud metadata service
+		// on every major provider, and inference is not served from an
+		// autoconfiguration address — an operator with a box on the same
+		// segment gives it a private address.
+		"169.254.7.7":     hostIsElsewhere,
+		"169.254.169.254": hostIsElsewhere,
 		"8.8.8.8":         hostIsElsewhere,
 		"2606:4700::1111": hostIsElsewhere,
 		// An IPv4-mapped IPv6 address is judged by its IPv4 rules, so the
@@ -150,9 +156,9 @@ func TestWhichHostsCountAsCustomerControlled(t *testing.T) {
 		// call local an endpoint the dial resolves elsewhere.
 		"localhost.": hostIsLocal,
 		"127.0.0.1.": hostIsAName,
-		// A zone says which interface a link-local address is reached on. It
-		// cannot make that address non-local.
-		"fe80::1%eth0": hostIsLocal,
+		// A zone says which interface an address is reached on; it cannot
+		// change what the address IS, and fe80::/10 is link-local either way.
+		"fe80::1%eth0": hostIsElsewhere,
 	} {
 		if got := classifyHost(host); got != want {
 			t.Errorf("classifyHost(%q) = %s, want %s", host, verdictName(got), verdictName(want))
@@ -186,9 +192,11 @@ func TestASchemeThisAdapterCannotCallIsRefusedEvenOnALocalHost(t *testing.T) {
 			t.Errorf("base_url %q must be refused for its scheme, got %v", baseURL, err)
 		}
 	}
-	// A bracketed IPv6 endpoint with a zone is the case this must not catch.
-	if err := requireSovereignEndpoint("tier local_large", providerVLLM, "http://[fe80::1%25eth0]:8000"); err != nil {
-		t.Errorf("a zoned link-local endpoint is local and must be accepted, got %v", err)
+	// A bracketed IPv6 endpoint with a zone is the case this must not catch: it
+	// is refused, but for its ADDRESS being link-local, never for its scheme.
+	err := requireSovereignEndpoint("tier local_large", providerVLLM, "http://[fd00::1%25eth0]:8000")
+	if err != nil {
+		t.Errorf("a zoned unique-local endpoint is local and must be accepted, got %v", err)
 	}
 }
 
@@ -234,6 +242,56 @@ func TestEveryLocalProviderWithAnEndpointIsChecked(t *testing.T) {
 		if _, ok := localBaseURLDefaults[provider]; !ok {
 			t.Errorf("local provider %q has no entry in localBaseURLDefaults, so a sovereign binding to it is never endpoint-checked", provider)
 		}
+	}
+}
+
+// Every refusal that names a base_url names NOTHING but its scheme and host.
+//
+// A credential pasted into a base_url reaches these errors through four
+// different fields, and which one depends only on where the operator's typo
+// landed: userinfo, Opaque (`http:sk-live-...@` parses with no host and the
+// whole payload there), Path, and the query. url.Redacted() covers half of one
+// of them. Each shape below took a different exit through the parser, so a rule
+// that grew back into a denylist fails here on the shape it forgot.
+func TestARefusalNamesNothingButTheSchemeAndHost(t *testing.T) {
+	const secret = "sk-live-stands-in-for-a-token"
+	for name, baseURL := range map[string]string{
+		"as the username":                 "http://" + secret + "@/",
+		"as the password":                 "http://user:" + secret + "@/",
+		"as the username on a bad scheme": "ftp://" + secret + "@example.test/",
+		"as the username with no host":    "http://" + secret + "@",
+		// No host at all, so url.Parse files the payload under Opaque and
+		// nothing about the value is userinfo any more.
+		"as an opaque url": "http:" + secret + "@",
+		"as a path":        "http:///v1/" + secret,
+		// These two reach the scheme exit, which names a value that HAS a host —
+		// the branch a userinfo-shaped rule leaves untouched.
+		"as a query parameter": "ftp://example.test/v1?api_key=" + secret,
+		"as a fragment":        "ftp://example.test/v1#" + secret,
+	} {
+		t.Run(name, func(t *testing.T) {
+			host, err := hostOf(baseURL)
+			if err == nil {
+				t.Fatalf("hostOf(%q) returned host %q and no error", baseURL, host)
+			}
+			if strings.Contains(err.Error(), secret) {
+				t.Errorf("the refusal carries the credential: %v", err)
+			}
+		})
+	}
+	// The rule the exits share, asked of the helper itself: everything but the
+	// scheme and the host is dropped, whichever field carried it.
+	parsed, err := url.Parse("https://" + secret + ":" + secret + "@vendor.example/v1?key=" + secret + "#" + secret)
+	if err != nil {
+		t.Fatalf("parsing the fixture: %v", err)
+	}
+	if shown := safeToName(parsed); shown != "https://vendor.example" {
+		t.Errorf("safeToName kept more than the scheme and host: %q", shown)
+	}
+	// And the refusal an operator is most likely to trigger with one.
+	err = requireDialableEndpoint("tier premium", providerAnthropic, "https://"+secret+"@vendor.example")
+	if err == nil || strings.Contains(err.Error(), secret) {
+		t.Errorf("the userinfo refusal must refuse and must not echo the credential, got %v", err)
 	}
 }
 

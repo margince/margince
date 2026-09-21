@@ -4,7 +4,7 @@
 package attention
 
 // The notice_case lane: the disclosure duties whose deadlines are running reach
-// the one person the case queue admits, and nobody else even learns the lane
+// the one contact the case queue admits, and nobody else even learns the lane
 // exists.
 
 import (
@@ -20,36 +20,37 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// theOwedPerson is whose duty the card must name — a fixed id, so the assertion
-// can tell "named the right person" from "named a person".
-var theOwedPerson = ids.MustParse("01a05500-0000-7000-8000-0000000000d1")
+// theOwedContact is whose duty the card must name — a fixed id, so the assertion
+// can tell "named the right contact" from "named a contact".
+var theOwedContact = ids.MustParse("01a05500-0000-7000-8000-0000000000d1")
 
 type stubNoticeCases struct {
-	rows []NoticeCase
-	err  error
+	scope TaskScope
+	owner ids.UUID
+	team  []ids.UUID
+	rows  []NoticeCase
+	err   error
 }
 
-func (s *stubNoticeCases) OpenDueSoonest(context.Context, int) ([]NoticeCase, error) {
+func (s *stubNoticeCases) OpenDueSoonest(_ context.Context, _ int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]NoticeCase, error) {
+	s.scope, s.owner, s.team = scope, owner, team
 	return s.rows, s.err
 }
 
 func noticeCaseLaneService(cases NoticeCases) *Service {
-	return NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithNoticeCases(cases))
+	return NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock, WithNoticeCases(cases))
 }
 
 func TestAnUndischargedDutyReachesTheAdminWithItsDeadline(t *testing.T) {
 	overdue := readInstant.Add(-24 * time.Hour)
 	svc := noticeCaseLaneService(&stubNoticeCases{rows: []NoticeCase{
-		{ID: ids.NewV7(), Rule: "art14", PersonID: theOwedPerson, DueAt: overdue},
+		{ID: ids.NewV7(), Rule: "art14", ContactID: theOwedContact, DueAt: overdue},
 		{
-			ID: ids.NewV7(), Rule: "art13", PersonID: ids.NewV7(),
+			ID: ids.NewV7(), Rule: "art13", ContactID: ids.NewV7(),
 			DueAt: readInstant.Add(72 * time.Hour),
 		},
 	}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -70,22 +71,22 @@ func TestAnUndischargedDutyReachesTheAdminWithItsDeadline(t *testing.T) {
 	if late.Overdue == nil || !*late.Overdue {
 		t.Error("a deadline already passed is not marked overdue")
 	}
-	// THE PERSON, and a verb to reach them. A notice case has no screen of its
-	// own — the disclosure is sent from the person's page — so a card carrying
+	// THE CONTACT, and a verb to reach them. A notice case has no screen of its
+	// own — the disclosure is sent from the contact's page — so a card carrying
 	// only an article and a date would prompt an admin with nowhere to go.
-	if late.Subject == nil || late.Subject.Type != "person" {
-		t.Fatalf("the card names no person, so nobody can act on it: %+v", late)
+	if late.Subject == nil || late.Subject.Type != "contact" {
+		t.Fatalf("the card names no contact, so nobody can act on it: %+v", late)
 	}
-	if late.Subject.Id != openapi_types.UUID(theOwedPerson) {
-		t.Errorf("the card names the wrong person: %v", late.Subject.Id)
+	if late.Subject.Id != openapi_types.UUID(theOwedContact) {
+		t.Errorf("the card names the wrong contact: %v", late.Subject.Id)
 	}
 	if len(late.Actions) != 1 || late.Actions[0] != actionOpen {
-		t.Errorf("the card offers %v, want the one verb that reaches the person", late.Actions)
+		t.Errorf("the card offers %v, want the one verb that reaches the contact", late.Actions)
 	}
 }
 
 func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
-	unwired, err := noticeCaseLaneService(nil).Assemble(context.Background())
+	unwired, err := noticeCaseLaneService(nil).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling without the reader: %v", err)
 	}
@@ -96,7 +97,7 @@ func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 	}
 
 	refused, err := noticeCaseLaneService(
-		&stubNoticeCases{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+		&stubNoticeCases{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with a refused read: %v", err)
 	}
@@ -105,7 +106,7 @@ func TestTheNoticeCaseLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Errorf("a refused lane is not named in lanes_omitted: %v", refused.LanesOmitted)
 	}
 
-	clearDay, err := noticeCaseLaneService(&stubNoticeCases{}).Assemble(context.Background())
+	clearDay, err := noticeCaseLaneService(&stubNoticeCases{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling a clear lane: %v", err)
 	}
@@ -143,5 +144,31 @@ func TestADueDutyReachesTheWorklist(t *testing.T) {
 	}
 	if found.DueAt == nil || found.Overdue == nil || !*found.Overdue {
 		t.Errorf("the row lost the deadline the whole lane exists for: %+v", found)
+	}
+}
+
+func TestNoticeLaneReceivesTheResolvedScope(t *testing.T) {
+	owner := ids.NewV7()
+	for _, tc := range []struct {
+		name  string
+		scope TaskScope
+		owner ids.UUID
+	}{
+		{"mine", TasksMine, ids.Nil},
+		{"unassigned", TasksUnassigned, ids.Nil},
+		{"named", TasksOwnedBy, owner},
+		{"all", TasksVisible, ids.Nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lane := &stubNoticeCases{}
+			svc := noticeCaseLaneService(lane)
+			svc.taskScope, svc.taskOwner = tc.scope, tc.owner
+			if _, err := svc.Assemble(pageReader()); err != nil {
+				t.Fatal(err)
+			}
+			if lane.scope != tc.scope || lane.owner != tc.owner {
+				t.Fatalf("scope/owner = %v/%v, want %v/%v", lane.scope, lane.owner, tc.scope, tc.owner)
+			}
+		})
 	}
 }

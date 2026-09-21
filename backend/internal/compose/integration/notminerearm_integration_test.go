@@ -28,27 +28,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// seedOwnedPerson creates a person a message can be filed under, owned by the
+// seedOwnedContact creates a contact a message can be filed under, owned by the
 // named rep — the owner is the whole subject here, and the shared seed leaves
 // it null.
-func seedOwnedPerson(t *testing.T, e *Env, owner ids.UUID) ids.UUID {
+func seedOwnedContact(t *testing.T, e *Env, owner ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := OwnerConn(t).Exec(context.Background(), `
-		INSERT INTO person (id, full_name, owner_id, source, captured_by, version, created_at, updated_at)
+		INSERT INTO contact (id, full_name, owner_id, source, captured_by, version, created_at, updated_at)
 		VALUES ($1, 'Handed Over', $2, 'system', $3, 1, now(), now())`,
 		id, owner, "human:"+e.AdminUser.String()); err != nil {
-		t.Fatalf("seeding the person a thread is filed under: %v", err)
+		t.Fatalf("seeding the contact a thread is filed under: %v", err)
 	}
 	return id
 }
 
 func TestAHandOffGivesTheMessageBackToEveryoneButItsNewOwner(t *testing.T) {
 	e := Setup(t)
-	// The person is owned by Rep2 — they are who it was just handed to.
-	person := seedOwnedPerson(t, e, e.Rep2)
+	// The contact is owned by Rep2 — they are who it was just handed to.
+	contact := seedOwnedContact(t, e, e.Rep2)
 	seedWaitingMessageLinked(t, e, "thread-handoff", "inbound", "Re: the renewal",
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, "Re: the renewal")
 
 	store := activities.NewStore(e.DB())
@@ -63,7 +63,7 @@ func TestAHandOffGivesTheMessageBackToEveryoneButItsNewOwner(t *testing.T) {
 		t.Fatal("a not-mine did not take, so this proves nothing about ending one")
 	}
 
-	cleared, err := store.ClearNotMineOnHandOff(e.AutomationCtx(e.AdminUser), datasource.EntityPerson, person)
+	cleared, err := store.ClearNotMineOnHandOff(e.AutomationCtx(e.AdminUser), datasource.EntityContact, contact)
 	if err != nil {
 		t.Fatalf("re-arming on the hand-off: %v", err)
 	}
@@ -86,9 +86,9 @@ func TestAHandOffGivesTheMessageBackToEveryoneButItsNewOwner(t *testing.T) {
 // would be work nobody asked for.
 func TestAnUnownedRecordEndsNobodysJudgement(t *testing.T) {
 	e := Setup(t)
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-unowned", "inbound", "Re: the pilot",
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, "Re: the pilot")
 
 	store := activities.NewStore(e.DB())
@@ -96,7 +96,7 @@ func TestAnUnownedRecordEndsNobodysJudgement(t *testing.T) {
 		t.Fatalf("the rep handing the message on: %v", err)
 	}
 
-	cleared, err := store.ClearNotMineOnHandOff(e.AutomationCtx(e.AdminUser), datasource.EntityPerson, person)
+	cleared, err := store.ClearNotMineOnHandOff(e.AutomationCtx(e.AdminUser), datasource.EntityContact, contact)
 	if err != nil {
 		t.Fatalf("re-arming on an unowned record: %v", err)
 	}
@@ -115,9 +115,9 @@ func TestAnUnownedRecordEndsNobodysJudgement(t *testing.T) {
 // is a different judgement about a different question.
 func TestAHandOffLeavesASnoozeAlone(t *testing.T) {
 	e := Setup(t)
-	person := seedOwnedPerson(t, e, e.Rep2)
+	contact := seedOwnedContact(t, e, e.Rep2)
 	seedWaitingMessageLinked(t, e, "thread-handoff-snooze", "inbound", "Re: the invoice",
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, "Re: the invoice")
 
 	twoDays := waitingInstant.Add(48 * time.Hour)
@@ -127,7 +127,7 @@ func TestAHandOffLeavesASnoozeAlone(t *testing.T) {
 	}
 
 	cleared, err := activities.NewStore(e.DB()).ClearNotMineOnHandOff(
-		e.AutomationCtx(e.AdminUser), datasource.EntityPerson, person)
+		e.AutomationCtx(e.AdminUser), datasource.EntityContact, contact)
 	if err != nil {
 		t.Fatalf("re-arming on the hand-off: %v", err)
 	}
@@ -149,9 +149,9 @@ func TestAHandOffLeavesASnoozeAlone(t *testing.T) {
 // worth a test rather than a comment.
 func TestAHumanMayNotReArmAColleaguesSetAside(t *testing.T) {
 	e := Setup(t)
-	person := seedOwnedPerson(t, e, e.Rep2)
+	contact := seedOwnedContact(t, e, e.Rep2)
 	seedWaitingMessageLinked(t, e, "thread-handoff-human", "inbound", "Re: the contract",
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, "Re: the contract")
 
 	store := activities.NewStore(e.DB())
@@ -161,7 +161,7 @@ func TestAHumanMayNotReArmAColleaguesSetAside(t *testing.T) {
 
 	// An ADMIN, so the refusal is about who is asking rather than about what
 	// they hold: no grant in this product admits this call.
-	_, err := store.ClearNotMineOnHandOff(e.Admin(), datasource.EntityPerson, person)
+	_, err := store.ClearNotMineOnHandOff(e.Admin(), datasource.EntityContact, contact)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a human re-arming a colleague's set-aside got %v, want permission denied", err)
 	}

@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -18,11 +18,14 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { Heading } from "../design-system/heading";
+import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
+import "./taskactions.css";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -37,7 +40,7 @@ type TaskPatch = {
   id: string;
   // The version the press was decided against. Every verb on a task goes
   // through this one mutation, so pinning it here pins all four at once — and
-  // an unpinned tick is a task two people can complete, each told it worked.
+  // an unpinned tick is a task two contacts can complete, each told it worked.
   version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
@@ -152,22 +155,7 @@ export function TaskCompleteCheck({
   );
 }
 
-/**
- * TaskQuickActions is the verbs a rep needs on a next-step row beyond the tick.
- *
- * Snooze, offered only for a DATED task, since one day after nothing is
- * nothing. And a date picker, offered always — an undated task is exactly the
- * one a rep wants to put a day on, and it is the one the snooze cannot serve.
- *
- * The two are not the same verb spelled twice. Snooze answers "not yet" in one
- * press and moves the task's own due date by a day; the picker answers
- * "Tuesday", which the snooze cannot reach in principle rather than merely in
- * clicks — a task three days overdue snoozes to two days overdue.
- *
- * Complete lives on `TaskCompleteCheck` instead — `showComplete` keeps it here
- * too for the one caller (the detail modal) that has no row-level checkbox of
- * its own to tick.
- */
+/** Complete, snooze a dated task, or explicitly choose its next due day. */
 export function TaskQuickActions({
   activityId,
   version,
@@ -196,7 +184,6 @@ export function TaskQuickActions({
     <>
       {showComplete && (
         <Button
-          small
           variant="primary"
           disabled={pending}
           onClick={() =>
@@ -208,7 +195,6 @@ export function TaskQuickActions({
       )}
       {nextDue && (
         <Button
-          small
           disabled={pending}
           onClick={() =>
             update.mutate({
@@ -330,8 +316,12 @@ export function TaskDetailModal({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
+  // Keep the task open while reading its original evidence.
+  const [openSource, setOpenSource] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["activity", activityId],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}", {
         params: { path: { id: activityId } },
@@ -344,54 +334,137 @@ export function TaskDetailModal({
   });
   const task: Activity | undefined = query.data;
   return (
+    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
+      <div className="drawer-head task-detail-head">
+        <Heading size="large" id={titleId} className="t-h2">
+          {task?.subject ?? t("tasks.detail")}
+        </Heading>
+      </div>
+      <div className="drawer-body">
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        {query.isError && (
+          <p className="form-error">{problemMessageOf(query.error, t)}</p>
+        )}
+        {task && (
+          <div className="form-stack">
+            {task.body && <p className="t-body">{task.body}</p>}
+            <div className="t-caption task-detail-meta">
+              {task.due_at ? (
+                <span>
+                  {t("co.next.due", {
+                    // The record's own clock, like every other date on this
+                    // surface. A deadline is a fact colleagues read back, so the
+                    // day it names cannot depend on where the reader is sitting:
+                    // `dueInstant` mints the picked day's end in this same zone,
+                    // and reading it in the browser's instead is what made an
+                    // approved 9 September arrive as a task due the 10th.
+                    when: formatDate(task.due_at, locale, recordZone),
+                  })}
+                </span>
+              ) : (
+                <span>{t("co.next.undated")}</span>
+              )}
+              <span>
+                {t("tasks.logged")}{" "}
+                {formatDateTime(task.occurred_at, locale, recordZone)}
+              </span>
+              {task.is_done && (
+                <Badge tone="success">{t("tasks.isDone")}</Badge>
+              )}
+              {task.assignee_id && (
+                <EntityRef kind="user" id={task.assignee_id} />
+              )}
+            </div>
+            {!task.is_done && !readOnly && (
+              <div className="form-actions task-detail-actions">
+                <TaskQuickActions
+                  activityId={task.id}
+                  version={task.version}
+                  dueAt={task.due_at}
+                  update={update}
+                  showDuePicker
+                />
+              </div>
+            )}
+            {/* The evidence LAST, under the verbs. A task's own verbs are what
+                the reader came to press, and a message long enough to scroll
+                would otherwise push them off the panel. */}
+            {task.source_activity_id && (
+              <SourceEvidence
+                activityId={task.source_activity_id}
+                onOpenTranscript={setOpenSource}
+              />
+            )}
+          </div>
+        )}
+      </div>
+      {openSource && (
+        <SourceActivity
+          activityId={openSource}
+          onClose={() => setOpenSource(null)}
+        />
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * The meeting transcript a task was read out of, opened whole.
+ *
+ * Only ever a transcript: `SourceEvidence` above draws an email in place and
+ * routes nothing else here, so this has one kind to render rather than a
+ * branch choosing between two readers.
+ */
+function SourceActivity({
+  activityId,
+  onClose,
+}: Readonly<{ activityId: string; onClose: () => void }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const titleId = useId();
+  const query = useQuery({
+    queryKey: ["activity", activityId],
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/activities/{id}", {
+        params: { path: { id: activityId } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+  });
+  // The CURRENT read decides what is shown, never the cache alone. A refused
+  // read leaves the last answer in `data`: this reader shares its query key
+  // with `SourceEvidence`, whose observer outlives the drawer, so an eviction
+  // that `gcTime: 0` would otherwise perform does not happen while a task is
+  // open. Rendering `data` beside the error paragraph would then show a
+  // transcript whose access had just been revoked.
+  const meeting: Activity | undefined = query.isError ? undefined : query.data;
+  return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
-        {task?.subject ?? t("tasks.detail")}
-      </h2>
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
+        {meeting?.subject ?? t("tasks.source")}
+      </Heading>
       {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
       {query.isError && (
-        <p className="t-caption form-error">
-          {problemMessageOf(query.error, t)}
-        </p>
+        <p className="form-error">{problemMessageOf(query.error, t)}</p>
       )}
-      {task && (
+      {meeting && (
         <div className="form-stack">
-          {task.body && <p className="t-body">{task.body}</p>}
-          <p className="t-caption task-detail-meta">
-            {task.due_at ? (
-              <span>
-                {t("co.next.due", {
-                  // The record's own clock, like every other date on this
-                  // surface. A deadline is a fact colleagues read back, so the
-                  // day it names cannot depend on where the reader is sitting:
-                  // `dueInstant` mints the picked day's end in this same zone,
-                  // and reading it in the browser's instead is what made an
-                  // approved 9 September arrive as a task due the 10th.
-                  when: formatDate(task.due_at, locale, recordZone),
-                })}
-              </span>
-            ) : (
-              <span>{t("co.next.undated")}</span>
-            )}
-            <span>
-              {t("tasks.logged")}{" "}
-              {formatDateTime(task.occurred_at, locale, recordZone)}
-            </span>
-            {task.is_done && <Badge tone="success">{t("tasks.isDone")}</Badge>}
-            {task.assignee_id && (
-              <EntityRef kind="user" id={task.assignee_id} />
-            )}
+          <p className="t-caption">
+            {formatDateTime(meeting.occurred_at, locale, recordZone)}
           </p>
-          {!task.is_done && !readOnly && (
-            <div className="form-actions">
-              <TaskQuickActions
-                activityId={task.id}
-                version={task.version}
-                dueAt={task.due_at}
-                update={update}
-                showDuePicker
-              />
-            </div>
+          {/* The transcript, as it was captured. `pre-wrap` because a
+              transcript is line-per-turn and reflowing it into a paragraph
+              takes away the one structure it has. */}
+          {meeting.body && (
+            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+              {meeting.body}
+            </p>
           )}
         </div>
       )}
@@ -525,9 +598,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The person's own card lists the same open claims, so a drawer standing
+      // The contact's own card lists the same open claims, so a drawer standing
       // on them would keep showing a promise that has just been settled.
-      queryClient.invalidateQueries({ queryKey: ["person"] });
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
     },
   });
 }

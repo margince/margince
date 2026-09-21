@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // DebugCaps echoes the caps the run enforced.
@@ -59,9 +59,9 @@ type DebugSkip struct {
 // DebugExtraction is the extraction half of the report: what survived
 // the gates, what the merges decided, and what was dropped.
 type DebugExtraction struct {
-	Fields []DebugField  `json:"fields"`
-	Facts  []DebugFact   `json:"facts"`
-	People []DebugPerson `json:"people"`
+	Fields   []DebugField   `json:"fields"`
+	Facts    []DebugFact    `json:"facts"`
+	Contacts []DebugContact `json:"contacts"`
 	// LegalEntities is the gated legal-entity census — the abstention's
 	// inspectable input.
 	LegalEntities []DebugLegalEntity `json:"legal_entities"`
@@ -92,13 +92,13 @@ type DebugDrop struct {
 	Reason          string `json:"reason"`
 }
 
-// DebugLogo is what the visual-identity lane made of the seed page: the mark
-// it chose, and every candidate it tried with what became of each. The
-// candidate list is the tuning signal — when a company's face comes out wrong,
-// what you need is why the obvious logo was passed over.
+// DebugLogo is what the visual-identity lane made of the seed page for ONE
+// slot: the mark it chose, and every candidate it tried with what became of
+// each. The candidate list is the tuning signal — when a company's face comes
+// out wrong, what you need is why the obvious logo was passed over.
 type DebugLogo struct {
 	// SourceURL is the asset the chosen mark came from; empty when the chain
-	// yielded nothing usable and the record would keep its monogram.
+	// yielded nothing usable and the slot would stay empty.
 	SourceURL string `json:"source_url,omitempty"`
 	// SourceSize is the chosen source's own dimensions ("512x512").
 	SourceSize string `json:"source_size,omitempty"`
@@ -133,8 +133,8 @@ type DebugFact struct {
 	SourceURL       string  `json:"source_url"`
 }
 
-// DebugPerson is one published person the people gate kept.
-type DebugPerson struct {
+// DebugContact is one published contact the contacts gate kept.
+type DebugContact struct {
 	Name            string `json:"name"`
 	Role            string `json:"role"`
 	PublishedEmail  string `json:"published_email,omitempty"`
@@ -238,13 +238,13 @@ var legalEntityNoise = map[string]bool{
 
 // debugProposal is byte-for-byte what siteDeepReadWorker.stage would
 // marshal, minus the identities a DB-less run does not have (zero
-// organization and read ids). Nil when nothing survived — the staged
+// company and read ids). Nil when nothing survived — the staged
 // path stages nothing then, too.
-func debugProposal(seedURL string, mergedFields []evidencedField, mergedFacts []people.DeepReadFact) *people.DeepReadProposal {
+func debugProposal(seedURL string, mergedFields []evidencedField, mergedFacts []contacts.DeepReadFact) *contacts.DeepReadProposal {
 	if len(mergedFields)+len(mergedFacts) == 0 {
 		return nil
 	}
-	return &people.DeepReadProposal{
+	return &contacts.DeepReadProposal{
 		SourceURL: seedURL,
 		Fields:    deepReadFields(mergedFields),
 		Facts:     mergedFacts,
@@ -262,7 +262,7 @@ func debugFields(fields []evidencedField) []DebugField {
 	return out
 }
 
-func debugFacts(facts []people.DeepReadFact) []DebugFact {
+func debugFacts(facts []contacts.DeepReadFact) []DebugFact {
 	out := make([]DebugFact, 0, len(facts))
 	for _, f := range facts {
 		out = append(out, DebugFact{
@@ -273,10 +273,10 @@ func debugFacts(facts []people.DeepReadFact) []DebugFact {
 	return out
 }
 
-func debugPeople(persons []sitePerson) []DebugPerson {
-	out := make([]DebugPerson, 0, len(persons))
-	for _, p := range persons {
-		out = append(out, DebugPerson{
+func debugContacts(contacts []siteContact) []DebugContact {
+	out := make([]DebugContact, 0, len(contacts))
+	for _, p := range contacts {
+		out = append(out, DebugContact{
 			Name: p.Name, Role: p.Role, PublishedEmail: p.PublishedEmail,
 			LinkedinURL: p.LinkedinURL, EvidenceSnippet: p.EvidenceSnippet, SourceURL: p.SourceURL,
 		})

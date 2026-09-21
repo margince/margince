@@ -149,7 +149,7 @@ func (h Handlers) DeleteVoiceProfile(w http.ResponseWriter, r *http.Request, id 
 
 // ListVoiceCorpusSources implements (GET /voice-profiles/{id}/sources):
 // the manifest + the live word/register meter.
-func (h Handlers) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ListVoiceCorpusSourcesParams) {
+func (h Handlers) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	sources, summary, err := h.voice.ListSources(r.Context(), ids.UUID(id))
 	if err != nil {
 		writeVoiceErr(w, r, err)

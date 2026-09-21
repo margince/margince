@@ -184,7 +184,7 @@ export function RedirectUris({
     return null;
   }
   return (
-    <div className="stack-sm">
+    <div>
       <p className="t-label">{t("oauthApp.redirectTitle")}</p>
       <p className="t-caption">{sub}</p>
       <SettingList>
@@ -194,10 +194,9 @@ export function RedirectUris({
             <SettingRow
               key={uri.purpose}
               label={purpose}
-              value={<code className="t-mono">{uri.url}</code>}
+              value={<code>{uri.url}</code>}
               control={
                 <Button
-                  small
                   onClick={() => {
                     // The object itself is guarded, not just the promise: the
                     // Clipboard API is absent outside a secure context, so on a
@@ -243,7 +242,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   //
   // `undefined` until the app has loaded, which is what separates "not typed in
   // yet" from "deliberately cleared": rotating a pinned app with this blank
-  // would send no tenant and silently widen it to every organization, which is
+  // would send no tenant and silently widen it to every company, which is
   // the one change on this card nobody would see happen.
   const [tenant, setTenant] = useState<string | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
@@ -265,7 +264,13 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
           {(status) => (
             <>
               {failure && (
-                <Callout tone="danger">{problemMessageOf(failure, t)}</Callout>
+                <Callout
+                  kind="outcome"
+                  tone="danger"
+                  title={t("oauthApp.writeFailed")}
+                >
+                  {problemMessageOf(failure, t)}
+                </Callout>
               )}
               {/* Three states, because there are three answers. `configured`
                   alone could not tell "nothing anywhere" from "the deployment
@@ -337,7 +342,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                       // The stored directory until somebody edits it, so a
                       // rotation carries the pinning forward. Emptying the
                       // field is then a deliberate act, which is what widening
-                      // an app to every organization ought to be.
+                      // an app to every company ought to be.
                       value={tenant ?? status.tenant ?? ""}
                       autoComplete="off"
                       disabled={!canManage || busy}

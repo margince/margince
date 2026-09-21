@@ -10,12 +10,18 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The states worth seeing side by side are the ones that differ in what the
 // surface may HONESTLY say: content it holds, content it deliberately does not,
 // and a sender whose question a verdict later closed.
+//
+// The funnel above them is this page's row of readings, and its tiles carry the
+// buckets' SHORT names — the full outcome sentences stay on the filter line and
+// on each row's chip, where a reader meets one at a time. `Filtered` below puts
+// both spellings on screen together.
 
 const ENTRIES = [
   {
     id: "01930000-0000-7000-8000-00000000c001",
     connector: "gmail",
     outcome: "captured",
+    outcome_now: "captured",
     reason: null,
     activity_id: "01930000-0000-7000-8000-0000000000a1",
     resolution: null,
@@ -27,6 +33,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c002",
     connector: "gmail",
     outcome: "internal",
+    outcome_now: "internal",
     reason: "internal_only",
     activity_id: null,
     resolution: null,
@@ -38,11 +45,14 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c003",
     connector: "telegram",
     outcome: "deferred",
+    // Deferred at capture, judged real since — so the server counts it under
+    // what the verdict decided rather than under the bucket it was filed in.
+    outcome_now: "captured",
     reason: null,
     activity_id: "01930000-0000-7000-8000-0000000000a3",
     resolution: {
       status: "real",
-      kind: "person",
+      kind: "contact",
       resolved_at: "2026-08-15T09:30:00Z",
     },
     counterparty: null,
@@ -53,6 +63,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c004",
     connector: "gmail",
     outcome: "deferred",
+    outcome_now: "deferred",
     reason: "deferral_capped",
     activity_id: "01930000-0000-7000-8000-0000000000a4",
     resolution: null,
@@ -64,6 +75,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c005",
     connector: "imap",
     outcome: "suppressed",
+    outcome_now: "suppressed",
     reason: "transactional_registry",
     activity_id: "01930000-0000-7000-8000-0000000000a5",
     resolution: null,
@@ -79,6 +91,15 @@ const WINDOW = {
   page: { next_cursor: null },
   payload_capture_enabled: false,
   window_hours: 24,
+  // Five messages still waiting, and the clock they are waiting on. Without it
+  // the strip is the state the ticket was about: a number that does not move
+  // and no sentence saying when it will.
+  sender_verdict: {
+    every_seconds: 3600,
+    running: false,
+    queued: false,
+    next_pass_at: "2026-08-15T22:21:00Z",
+  },
 };
 
 function story(body: Record<string, unknown>, allow: GrantSpec = {}) {
@@ -199,8 +220,19 @@ export const Filtered: Story = {
     // count line this story exists to show sits inside it, and a click with
     // nothing visible behind it demonstrates the opposite of the point.
     await user.click(await canvas.findByText("Messages"));
-    await user.click(
-      await canvas.findByRole("button", { name: /dropped as internal/i }),
-    );
+    await user.click(await canvas.findByRole("button", { name: /^internal/i }));
   },
+};
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+// The funnel is five BUTTON slots, so the fold is also a press-target question:
+// a folded row is space-3 above and below a 1.75rem figure, which clears the
+// 44px a coarse pointer needs without the tile keeping its box.
+export const FunnelPhone: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

@@ -40,19 +40,19 @@ import (
 // and the engine going to look.
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityPerson && category != commsauthz.CategoryReplyToInbound &&
+	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
 		category != commsauthz.CategoryRequestedFollowup {
 		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
 		// The correspondence arm asks who wrote to us, and both of its readers
 		// answer about a lead on their own: wroteToUsWithin shares the
 		// authorIsTheSubject spelling, which matches a lead through its bare
-		// address, and askedToBeContacted returns false for a non-person rather
-		// than querying a person-keyed table.
+		// address, and askedToBeContacted returns false for a non-contact rather
+		// than querying a contact-keyed table.
 		//
 		// Every other arm reads a record a lead cannot hold — an invoice or
-		// contract hangs off an organization reached through employment, and a
-		// confirmation link is minted against a person. Those stay unsupported
+		// contract hangs off a company reached through employment, and a
+		// confirmation link is minted against a contact. Those stay unsupported
 		// and fall through to the lead's own grant.
 		return unsupported, nil
 	}
@@ -67,6 +67,24 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	if err := refuseUnreadableEvidence(ctx, tx, req); err != nil {
 		return resolution{}, err
 	}
+	res, err := g.validateCategory(ctx, tx, req, subject, category, w, unsupported)
+	if err != nil {
+		return resolution{}, err
+	}
+	// PAST THE READABILITY CHECK, so the ids this request named may be written
+	// down for the transmit phase to ask about again.
+	//
+	// Stamped here rather than inside each arm because it is a fact about the
+	// PATH and not about the answer: refuseUnreadableEvidence ran and admitted,
+	// which is true of every arm below this line and of no arm above it.
+	res.EvidenceChecked = true
+	return res, nil
+}
+
+// validateCategory is validate's dispatch, split out so the readability check
+// above and the EvidenceChecked stamp bracket every arm — rather than being
+// repeated in six places and forgotten in the seventh somebody adds.
+func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules, unsupported resolution) (resolution, error) {
 	switch category {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
 		return g.validateRequestedFollowup(ctx, tx, subject, w, category)
@@ -76,12 +94,19 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		return validateContract(ctx, tx, req, subject)
 	case commsauthz.CategoryPrecontractQuote:
 		return validateQuote(ctx, tx, req, subject)
-	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation:
+	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
+		commsauthz.CategoryPrivacyNotice:
 		return validateConfirmation(ctx, tx, subject, category)
+	case commsauthz.CategoryOptoutConfirmation:
+		// A DIFFERENT EVIDENCE from the three above, which is why it is its own
+		// arm. Those carry a link and the live link is the evidence; an
+		// acknowledgement carries nothing to click, so what it shows is the
+		// standing stop it acknowledges.
+		return validateOptOutAcknowledgement(ctx, tx, subject, category)
 	default:
 		// Every other category — marketing, customer service, account notices,
-		// and the three subject-serving ones that carry no link — has no record
-		// evidence this file can read today. They stay unsupported and fall
+		// and the remaining subject-serving one that carries no link — has no
+		// record evidence this file can read today. They stay unsupported and fall
 		// through to the legacy verdict, which is exactly what they did before
 		// this file existed.
 		return unsupported, nil
@@ -89,11 +114,11 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 }
 
 // validateRequestedFollowup answers an unprompted follow-up: is there something
-// on file, inside the window, that says this person asked to hear from us.
+// on file, inside the window, that says this contact asked to hear from us.
 //
 // TWO SOURCES, and the second is why a first mail to somebody who phoned is not
 // refused. An inbound message is the obvious one. The other is the acquisition
-// evidence a contact was created with (person_acquisition_evidence, written by
+// evidence a contact was created with (contact_acquisition_evidence, written by
 // every creation door): a rep who logged "they asked me for a quote at the
 // trade fair" has recorded the request, and asking them to record it a second
 // time in a different table would be asking them to restate what the CRM
@@ -101,7 +126,7 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	// AUTHORSHIP, through the shared reader. An earlier version asked
 	// activity_link — a FILING link with no author concept — which read "some
-	// inbound activity is filed under this person". A caller may post an
+	// inbound activity is filed under this contact". A caller may post an
 	// activity with direction=inbound and a link to any contact they can read,
 	// so that let anybody manufacture their own evidence.
 	found, err := wroteToUsWithin(ctx, tx, subject, time.Now().Add(-w.reply))
@@ -130,18 +155,18 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 
 // validateInvoice answers a message about a named financial event.
 //
-// An invoice belongs to an ORGANIZATION, so reaching a person means going
+// An invoice belongs to an COMPANY, so reaching a contact means going
 // through employment. That is a real gap in ordinary CRM data — a finance
 // contact who was never linked to the customer record — and it is a data gap
 // rather than a legal one. So a missing link is unsupported with a reason a
 // human can act on, never a refusal: the legacy path still answers, and the
 // operator is told what to link.
 func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	return validateOrgDocument(ctx, tx, subject, commsauthz.CategoryInvoiceOrPayment,
+	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryInvoiceOrPayment,
 		commsauthz.BasisContract, `
 		SELECT EXISTS (
 			SELECT 1 FROM finance_invoice i
-			  JOIN relationship r ON r.organization_id = i.organization_id
+			  JOIN relationship r ON r.company_id = i.company_id
 			 WHERE i.id = $1::uuid
 			   -- A deleted or voided invoice is not a financial event anybody
 			   -- is owed a message about. The contract validator beside this
@@ -150,36 +175,36 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 			   AND i.archived_at IS NULL
 			   AND i.void_at IS NULL
 			   AND r.kind = 'employment'
-			   AND r.person_id = $2::uuid
+			   AND r.contact_id = $2::uuid
 			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.InvoiceID)
 }
 
 // validateContract answers a notice a live contract requires. Same shape and
-// same reasoning as the invoice: the document names an organization, and the
-// person is reached through employment.
+// same reasoning as the invoice: the document names a company, and the
+// contact is reached through employment.
 func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	return validateOrgDocument(ctx, tx, subject, commsauthz.CategoryContractNotice,
+	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryContractNotice,
 		commsauthz.BasisContract, `
 		SELECT EXISTS (
 			SELECT 1 FROM contract c
-			  JOIN relationship r ON r.organization_id = c.organization_id
+			  JOIN relationship r ON r.company_id = c.company_id
 			 WHERE c.id = $1::uuid
 			   AND c.archived_at IS NULL
 			   AND r.kind = 'employment'
-			   AND r.person_id = $2::uuid
+			   AND r.contact_id = $2::uuid
 			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.ContractID)
 }
 
 // validateQuote answers a requested quote or offer. The offer hangs off a deal,
-// and the person is reached as a stakeholder on that deal — the same edge the
+// and the contact is reached as a stakeholder on that deal — the same edge the
 // follow-up arm reads, because being on the opportunity is what makes somebody
-// the person a quote goes to.
+// the contact a quote goes to.
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
-	return validateOrgDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
+	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
 		commsauthz.BasisPrecontractRequest, `
 		SELECT EXISTS (
 			SELECT 1 FROM offer o
@@ -198,26 +223,26 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 			   AND d.status = 'open'
 			   AND d.archived_at IS NULL
 			   AND r.kind = 'deal_stakeholder'
-			   AND r.person_id = $2::uuid
+			   AND r.contact_id = $2::uuid
 			   AND r.ended_at IS NULL
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.DealID)
 }
 
 // wrapEvidenceRead names the read that failed without naming the record, the
-// recipient or the organization it was about. A decision's errors reach an
+// recipient or the company it was about. A decision's errors reach an
 // operator's lane.
 func wrapEvidenceRead(what string, err error) error {
 	return fmt.Errorf("consent: read %s: %w", what, err)
 }
 
-// validateOrgDocument runs the shared shape of the three document validators:
+// validateCompanyDocument runs the shared shape of the three document validators:
 // the caller named a record, and the recipient is reachable from it.
 //
 // One function because the three differ only in their query and their basis. A
 // second copy of "named nothing, so unsupported" is a second place for the
 // no-evidence answer to drift.
-func validateOrgDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID) (resolution, error) {
+func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if named == (ids.UUID{}) {
 		// The caller claimed the category and named no record. Nothing to look

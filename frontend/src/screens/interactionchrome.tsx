@@ -2,6 +2,7 @@ import {
   CalendarDays,
   CheckSquare,
   FileText,
+  type LucideIcon,
   Mail,
   MessageSquare,
   Phone,
@@ -29,26 +30,33 @@ import { useProviderLabel } from "./channelproviders";
 // because an icon for a kind this build has never heard of can only be a guess
 // about the transport, and the envelope that used to stand there was the wrong
 // guess for every kind but one.
+export function interactionGlyph(kind: string | null | undefined): LucideIcon {
+  switch (kind) {
+    case "email":
+      return Mail;
+    case "meeting":
+      return CalendarDays;
+    case "call":
+      return Phone;
+    case "note":
+      return StickyNote;
+    case "task":
+      return CheckSquare;
+    case "message":
+      return MessageSquare;
+    default:
+      return FileText;
+  }
+}
+
+// The same glyph drawn at a caller's size, for a slot that is not a `Badge`
+// (which takes the component and sizes it itself).
 export function interactionIcon(
   kind: string | null | undefined,
   size = 13,
 ): ReactNode {
-  switch (kind) {
-    case "email":
-      return <Mail size={size} aria-hidden="true" />;
-    case "meeting":
-      return <CalendarDays size={size} aria-hidden="true" />;
-    case "call":
-      return <Phone size={size} aria-hidden="true" />;
-    case "note":
-      return <StickyNote size={size} aria-hidden="true" />;
-    case "task":
-      return <CheckSquare size={size} aria-hidden="true" />;
-    case "message":
-      return <MessageSquare size={size} aria-hidden="true" />;
-    default:
-      return <FileText size={size} aria-hidden="true" />;
-  }
+  const Glyph = interactionGlyph(kind);
+  return <Glyph size={size} aria-hidden="true" />;
 }
 
 // useInteractionLabel names a captured interaction for a reader: the transport
@@ -71,20 +79,20 @@ export function useInteractionLabel(): (
     }
     switch (kind) {
       case "email":
-        return t("person.memory.channelEmail");
+        return t("contact.memory.channelEmail");
       case "meeting":
-        return t("person.memory.channelMeeting");
+        return t("contact.memory.channelMeeting");
       case "call":
-        return t("person.memory.channelCall");
+        return t("contact.memory.channelCall");
       case "note":
-        return t("person.memory.channelNote");
+        return t("contact.memory.channelNote");
       case "task":
-        return t("person.memory.channelTask");
+        return t("contact.memory.channelTask");
       case "message":
         // A message the contract says must name a transport, arriving without
         // one. Naming it plainly is the honest read; inventing a transport for
         // it would be the defect this module exists to stop.
-        return t("person.memory.channelMessage");
+        return t("contact.memory.channelMessage");
       default:
         return kind ?? "";
     }

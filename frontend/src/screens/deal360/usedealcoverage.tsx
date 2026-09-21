@@ -28,7 +28,7 @@ type DealCoverage = components["schemas"]["DealCoverage"];
  * The cache key every coverage reader shares.
  *
  * Built on the prefix the WRITERS name (activitykeys.DEAL_COVERAGE_KEY): a
- * stakeholder edge is created from the person's page as readily as from the
+ * stakeholder edge is created from the contact's page as readily as from the
  * deal's, so the writer usually knows only that some deal's seats moved and
  * drops the prefix. Two spellings of it would leave the map on this page
  * confidently stale.
@@ -37,14 +37,8 @@ export function dealCoverageKey(dealId: string) {
   return [...DEAL_COVERAGE_KEY, dealId] as const;
 }
 
-/**
- * useDealCoverage reads who is on a deal and what is wrong with that.
- *
- * `enabled` is the caller's: overlay mode serves a mirrored deal whose
- * coverage this installation cannot assemble, and a doomed fetch there would
- * render as "nobody is on this deal".
- */
-export function useDealCoverage(dealId: string, enabled: boolean) {
+/** useDealCoverage reads who is on a deal and what is wrong with that. */
+export function useDealCoverage(dealId: string) {
   const query = useQuery({
     queryKey: dealCoverageKey(dealId),
     queryFn: async (): Promise<DealCoverage> => {
@@ -56,7 +50,6 @@ export function useDealCoverage(dealId: string, enabled: boolean) {
       }
       return data;
     },
-    enabled,
   });
   return {
     coverage: query.data,

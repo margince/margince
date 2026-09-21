@@ -1,0 +1,19 @@
+{
+  "scenario": "case1_log_it",
+  "criteria": [
+    8,
+    14
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "usage": {
+    "input_tokens": 70,
+    "output_tokens": 9598,
+    "cache_creation_input_tokens": 101206,
+    "cache_read_input_tokens": 2129760,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.9303
+  }
+}

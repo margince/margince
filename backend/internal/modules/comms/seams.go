@@ -55,15 +55,13 @@ var _ deliveryStore = (*Store)(nil)
 // MessageIdentityReconciler re-keys the timeline row for a message whose
 // provider stamped an identity different from the one this system minted.
 //
-// It takes the caller's transaction so the delivery's own re-key and the
-// timeline row commit together — but that transaction is NOT the receipt's.
-// The ordering between the two is not symmetric: the receipt commits whenever
-// the provider accepted the message, and the re-key is bookkeeping subordinate
-// to it, run afterwards and best effort. A re-key that could roll the receipt
-// back would return the delivery to a retry ladder whose prior-send lookup
-// cannot see a rewritten identity, and the recipient would be mailed twice over
-// a bookkeeping fault. So an error from here is recorded and dropped, never
-// reported to the dispatcher, and an implementer may fail freely.
+// It takes the caller's transaction so the re-key and the timeline row commit
+// together — but that transaction is NOT the receipt's. The receipt commits
+// whenever the provider accepted the message, and the re-key is bookkeeping
+// subordinate to it: one that could roll the receipt back would return the
+// delivery to a ladder whose prior-send lookup cannot see a rewritten identity,
+// mailing the recipient twice over a bookkeeping fault. So an error here is
+// recorded and dropped, and an implementer may fail freely.
 //
 // previous is the identity the message was staged under, so the implementer
 // can tell a conversation ROOT (thread_key == previous) from a reply, which
@@ -76,18 +74,14 @@ type MessageIdentityReconciler interface {
 // purpose. It is default-deny: a recipient who never granted the purpose, and
 // one who withdrew it, are refused alike.
 //
-// It asks in RECIPIENTS rather than addresses because one delivery ladder
-// carries both transports: a channel recipient has no address, and a gate that
-// could only be handed addresses would be handed an empty list for every
-// channel delivery — a default-deny gate asked about nobody refuses nobody, so
-// the whole channel would pass a check that never ran.
+// It asks in RECIPIENTS rather than addresses because one ladder carries both
+// transports: a channel recipient has no address, so an address-only gate would
+// be handed an empty list for every channel delivery — and a default-deny gate
+// asked about nobody refuses nobody.
 //
-// The dispatcher's call is THE AUTHORITATIVE CHECK. Consent is also verified
-// when the send is requested, but transmission happens later and a recipient
-// can withdraw in between; transmitting after a withdrawal is exactly the
-// failure a default-deny gate exists to prevent. The request-time check exists
-// to fail fast and keep the response ordering honest, not to stand in for this
-// one.
+// The dispatcher's call is THE AUTHORITATIVE CHECK. Consent is also verified at
+// request time, but transmission happens later and a recipient can withdraw in
+// between; that earlier check fails fast and does not stand in for this one.
 //
 // It must distinguish an ANSWER from a FAULT: apperrors.ErrConsentNotGranted
 // says consent is absent, and every other error says the question could not be
@@ -101,22 +95,51 @@ type ConsentGate interface {
 	AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error)
 }
 
-// SeatAuthority answers whether the human whose mailbox is about to transmit
-// is still a live, mutation-capable seat, and if not, why. Deactivating a
-// user revokes their sessions and passports, but a delivery staged before
-// that moment carries no session of its own — so without this the off-boarded
-// account's staged batch keeps leaving their mailbox for as long as the
-// maximum age allows. A DOWNGRADE binds the same way: seat_type is the
-// A62/ADR-0047 licensing ceiling every other seam enforces before it lets a
-// principal mutate, and a delivery staged under a full seat must not outrun a
-// downgrade to read that lands before it transmits — a read seat may read but
-// never send, whatever staged it.
+// BounceObserver is told when a delivery report says an address is permanently
+// gone, so the module that owns communication policy can stop writing to it.
 //
-// It reports an ANSWER as (false, reason) and a FAULT as an error, the same
-// split the consent gate makes and for the same reason: a deactivation or a
-// downgrade is a decision the dispatcher must honour by parking with the
-// reason named, while a database timeout is a failure to learn the decision
-// and must not destroy a legitimate send.
+// Declared HERE by the consumer and implemented by consent: comms owns the send
+// ledger and must not know what a suppression is.
+//
+// It runs in the SAME transaction as the bounce mark, so the stop and the
+// failure that earned it commit together. A stop against a rolled-back report
+// would refuse mail on a failure that never happened; a bounce without its stop
+// leaves the address dead on the record and live to the send path.
+//
+// An error FAILS the bounce recording, which is the safe direction: the provider
+// redelivers the report, so failing costs a retry while swallowing costs a dead
+// address nobody stops writing to.
+type BounceObserver interface {
+	HardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) error
+}
+
+// HardBounceFact is one permanently failed delivery, as the observer needs it.
+//
+// It carries the address rather than the whole report: the reason text is
+// external input already stored on the comms_outbound row, and handing it
+// across the seam would invite a second copy of unbounded remote text into
+// another module's tables.
+// It carries NO contact id, deliberately. Resolving an address to the record
+// that owns it is a question about contacts, and the observer's own module
+// already reads contact_email to answer questions like it — asking comms to do
+// it would put a cross-module read in the ledger that has no other reason to
+// know records exist.
+type HardBounceFact struct {
+	Address    string
+	DeliveryID ids.UUID
+}
+
+// SeatAuthority answers whether the human whose mailbox is about to transmit is
+// still a live, mutation-capable seat, and if not, why. Deactivation revokes
+// sessions and passports, but a delivery staged beforehand carries no session of
+// its own, so without this an off-boarded account's batch keeps leaving their
+// mailbox. A DOWNGRADE binds the same way: a read seat may read but never send,
+// whatever staged it.
+//
+// It reports an ANSWER as (false, reason) and a FAULT as an error, the split the
+// consent gate makes: a decision the dispatcher honours by parking with the
+// reason named, against a failure to learn it that must not destroy a
+// legitimate send.
 type SeatAuthority interface {
 	// ActiveSeat reports whether userID is a live, mutation-capable seat in
 	// the workspace bound on ctx. reason is empty exactly when active is
@@ -132,15 +155,11 @@ type SeatAuthority interface {
 //
 // A DELIVERY IS NOT SENT WHEN IT IS STAGED. Between the human pressing send and
 // the provider call, a document can be archived and the sender can lose the row
-// scope that let them attach it. The staging check answered those questions
-// about a moment that has passed, so it cannot answer them about this one — a
-// message that mails a file its sender may no longer read would carry that
-// sender's own address out with it.
+// scope that let them attach it, so the staging check cannot answer for this
+// moment — and a message mailing a file its sender may no longer read carries
+// that sender's own address out with it.
 //
-// It reports an ANSWER as (false, reason) and a FAULT as an error, the same
-// split SeatAuthority makes: an archived file or a lost grant is a decision the
-// dispatcher honours by parking with the reason named, while a database timeout
-// is a failure to LEARN the decision and must not destroy a legitimate send.
+// Same answer-versus-fault split as SeatAuthority.
 type AttachmentAuthority interface {
 	// EnsureTransmittable reports whether every attachment is still visible
 	// to userID in the workspace bound on ctx. reason is empty
@@ -197,25 +216,18 @@ var ErrProviderNotConfigured = errors.New("comms: no integration for this provid
 type ConnectionResolver interface {
 	Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error)
 
-	// ResolveChannel resolves the transmitting channel binding for provider,
-	// AS userID. For a workspace-wide core connector (telegram today) userID is
-	// ignored — the binding is the workspace's, bound once by an admin, not
-	// granted per seat, so the credential lookup is keyed on the workspace RLS
-	// already binds. It is threaded through now so a PER-MEMBER credential (a
-	// unit's own) has somewhere to resolve against without a second signature
-	// change later. What does NOT move is the seat check: the human who staged
-	// the message is still re-read at transmit time (gateSeat), so a rep who
-	// lost their seat between staging and transmission is refused on either
-	// transport.
+	// ResolveChannel resolves the transmitting channel binding for provider, AS
+	// userID. A workspace-wide core connector ignores userID — the binding is the
+	// workspace's — and it is threaded through so a PER-MEMBER credential has
+	// somewhere to resolve against later. The seat check does not move: the human
+	// who staged is re-read at transmit time on either transport.
 	//
-	// There is no scope list, for the reason SendsWithoutScope names: a bot token
-	// carries no OAuth grant, so there is nothing for the authority gate to
-	// intersect and an empty list would be a refusal rather than an absence.
+	// No scope list, for the reason SendsWithoutScope names: a bot token carries
+	// no OAuth grant, and an empty list would be a refusal rather than an absence.
 	//
-	// It reports the SAME three deployment facts Resolve does, and every other
-	// error is transient for the same reason — including a workspace holding more
-	// than one live binding, which is a fault an operator repairs, not a fact
-	// about the deployment.
+	// It reports the SAME three deployment facts Resolve does; every other error
+	// is transient, including a workspace holding two live bindings, which is a
+	// fault an operator repairs.
 	ResolveChannel(ctx context.Context, userID ids.UserID, provider string) (connector.MessageSender, connector.Auth, error)
 }
 
@@ -239,27 +251,22 @@ func consentRecipients(del Delivery) []connector.Recipient {
 	return connector.EmailRecipients(addressees(del))
 }
 
-// addressees is every person this delivery reaches — To, Cc and Bcc together,
+// addressees is every contact this delivery reaches — To, Cc and Bcc together,
 // in that order, deduplicated case- and space-insensitively the way a mail
 // server treats an address.
 //
 // The delivery stores the three lists apart because the wire needs them apart,
-// and consent is owed to EVERY addressee however they were addressed. Gating on
-// the To list alone would leave a Cc'd person no suppression at all: their
-// one-click unsubscribe, and an erasure of their record, would both land
-// between staging and transmit and change nothing about the message they
-// receive. A blind copy is the same person with less visibility, not less
-// standing — and the invisibility is exactly why omitting them here would go
+// and consent is owed to EVERY addressee. Gating on To alone would leave a Cc'd
+// contact no suppression at all, and a blind copy is the same contact with less
+// visibility, not less standing — the invisibility is why omitting them would go
 // unnoticed.
 //
-// It fills a slice of its own and never appends onto the delivery's, because
-// the wire rendering downstream reads Recipients and Cc as the separate lists
-// they are.
+// It fills a slice of its own rather than appending onto the delivery's, because
+// the wire rendering reads Recipients and Cc as the separate lists they are.
 //
-// What it appends is the NORMALIZED address, not the stored spelling: the key
-// it dedupes on and the value it hands the gate are then one string. Handing on
-// the padded spelling would make two addresses equivalent here and then ask
-// about one the gate cannot resolve — a legitimate send parked as "consent not
+// It appends the NORMALIZED address, so the key it dedupes on and the value it
+// hands the gate are one string. Passing the padded spelling would ask about an
+// address the gate cannot resolve — a legitimate send parked as "consent not
 // granted", which reads as a recipient who opted out.
 func addressees(del Delivery) []string {
 	size := len(del.Recipients) + len(del.Cc) + len(del.Bcc)
@@ -340,6 +347,11 @@ func SetChannelProviders(providers []string) {
 var mailSendScopes = map[string]string{
 	"gmail": "https://www.googleapis.com/auth/gmail.send",
 	"graph": "Mail.Send",
+	// test_mailbox has no real OAuth grant — the connector always reports
+	// holding this scope (testmailbox.GrantedScopes) — so mailAppConfigured
+	// (the deployment flag) is the one gate that decides whether it can
+	// transmit at all.
+	"test_mailbox": "urn:margince:test_mailbox:send",
 }
 
 // MailSendProviders names every provider this module hands a send scope to.
@@ -361,16 +373,13 @@ func MailSendProviders() []string {
 // SendScopeFor answers whether a provider can transmit and, when its grant must
 // carry an OAuth scope to do so, which scope.
 //
-// It is exported so the request-time pre-flight — which refuses a send this
-// installation already knows cannot leave — asks the SAME question as the
-// authority gate. Two spellings of "may this grant send" could disagree, and a
-// pre-flight that accepted what the gate then parks is worse than none.
+// Exported so the request-time pre-flight asks the SAME question as the
+// authority gate: two spellings of "may this grant send" could disagree, and a
+// pre-flight accepting what the gate then parks is worse than none.
 //
-// The MAIL arm reads mailSendScopes above: gmail and graph are not, and never
-// will be, activity_kinds (DESIGN-SP4 §4 — the channel_provider table FKs into
-// activity_kind, and neither names an activity kind), so there is no registry
-// for them to derive from. See that map for why the strings are second
-// spellings and what holds them to the first.
+// The MAIL arm reads mailSendScopes above: gmail and graph are not activity
+// kinds, so there is no registry to derive from. See that map for what holds
+// those strings to the first spelling.
 //
 // The CHANNEL arm derives from channelProviders — the same registry
 // activities.IsChannelKind reads — so a provider clearing it is answerable

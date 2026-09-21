@@ -389,11 +389,33 @@ func geminiResponseError(out geminiResponse) error {
 	}
 	for _, cand := range out.Candidates {
 		if cand.FinishReason != "" && cand.FinishReason != "STOP" {
-			return fmt.Errorf("ai: gemini: generation stopped: %s", cand.FinishReason)
+			return stoppedError{reason: cand.FinishReason}
 		}
 	}
 	return nil
 }
+
+// stoppedError is an abnormal finishReason as an error that still NAMES the
+// terminal.
+//
+// Carrying it as data is what keeps the distinction recoverable: every
+// abnormal terminal classifies to the one `provider_error` sentinel, so a
+// truncated answer (MAX_TOKENS), a refused one (SAFETY) and a recited one
+// (RECITATION) are indistinguishable in a stored call unless the reason
+// itself survives. They call for opposite responses — retry smaller, do not
+// retry, change the prompt — so a row that cannot separate them cannot be
+// acted on.
+//
+// The message is byte-identical to the plain error it replaces: callers and
+// tests match on the text, so the reason is additive rather than a reword.
+type stoppedError struct{ reason string }
+
+func (e stoppedError) Error() string { return "ai: gemini: generation stopped: " + e.reason }
+
+// FinishReason satisfies the accessor tracing.go probes for with errors.As,
+// so the terminal reaches the trace without this package's error type
+// leaking into the tracing path's imports.
+func (e stoppedError) FinishReason() string { return e.reason }
 
 // geminiSawStop reports whether any candidate finished with the clean STOP
 // terminal. Intermediate stream chunks legitimately carry no finishReason —

@@ -133,7 +133,7 @@
    and a floating rule with daylight above and below reads as a third band
    nobody put there. Most visible mid-scroll, where the gap showed a strip of
    bare column between a cut-off sentence and the row. */
-.mw-conversation > .mw-person {
+.mw-conversation > .mw-contact {
   margin-block-start: calc(-1 * var(--space-5));
 }
 
@@ -159,11 +159,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* The type is .t-eyebrow's, carried by the element rather than restated here.
-     Only the face is set: this chrome runs on the body font where the shared
-     class is agnostic, and the colour it brings (--textMeta) is the AA floor
-     tokens.css names for everything under 13px, which every label here is. */
-  font-family: var(--f-body);
+  /* The face only: this chrome runs on the body font, where the shared
+     `.t-eyebrow` class the element carries is agnostic. */
+  font-family: var(--fontFamilyBody);
 }
 
 /* The hairline that makes five stops one rail. Drawn, not marked up: a
@@ -182,24 +180,21 @@
   width: 17px;
   height: 17px;
   place-items: center;
-  color: var(--textMeta);
   /* --borderStrong, matching the connector between stops: the discs and the
      hairline joining them are one drawing, and two greys made it two. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
 }
 
 /* Done carries no label colour of its own: at this size every label needs the
    AA role, so what separates done from still-to-come is the FILLED numeral
    below — a difference in shape, not one 2%-apart pair of greys. */
 .mw-step.is-done b {
-  color: var(--textOnAccentControl);
+  color: var(--textOnStatusControl);
   border-color: transparent;
-  background: var(--accent);
+  background: var(--successText);
 }
 
 .mw-step.is-now {
@@ -222,7 +217,7 @@
  */
 .mw-brand,
 .mw-shell.is-rail .mw-aifooter,
-.mw-shell.is-rail .mw-person {
+.mw-shell.is-rail .mw-contact {
   margin-inline: calc(-1 * var(--mw-gutter));
   padding-inline: var(--mw-gutter);
 }
@@ -259,16 +254,13 @@
    respelled it is how five of them came to disagree at 11px and 12px. */
 .mw-identity span {
   display: block;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .mw-identity h1 {
   margin: 2px 0 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 .mw-identity p {
@@ -276,8 +268,6 @@
   align-items: center;
   gap: 6px;
   margin: 2px 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .mw-identity i {
@@ -318,7 +308,11 @@
      an intrinsic floor here would spend that length on the row rather than on
      the chip — the rail's own width is the budget. */
   min-width: 0;
-  padding: 5px var(--space-2);
+  /* The height is the invariant and the inset falls out of it, the way every
+     other control in the tree states it — this said 5px above and below a 20px
+     line and arrived at the same 32 by arithmetic nobody could check. */
+  min-block-size: var(--controlHeight);
+  padding-inline: var(--space-2);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-full);
   corner-shape: round;
@@ -360,8 +354,6 @@
 
 .mw-aistat-btn strong {
   color: var(--aiText);
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -388,12 +380,7 @@
 .mw-aistat-h,
 .mw-aistat-f {
   margin: 0;
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
+  font-family: var(--fontFamilyBody);
 }
 
 /* The popover's subject is the machine, so its header reads the AI family
@@ -406,8 +393,6 @@
   margin-top: var(--space-3);
   padding-top: var(--space-2);
   border-top: 1px solid var(--borderSubtle);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
 }
 
 .mw-aistat-rows {
@@ -426,16 +411,9 @@
   border-top: 0;
 }
 
-.mw-aistat-r dt {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 .mw-aistat-r dd {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -443,9 +421,8 @@
 .mw-aistat-r dd small {
   display: block;
   margin-top: 2px;
-  color: var(--warn);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
+  color: var(--warningText);
+  font-family: var(--fontFamilyBody);
 }
 
 /* --- right column: the artifact --------------------------------------- */
@@ -554,14 +531,9 @@
 }
 
 .mw-progress-label {
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
+  font-family: var(--fontFamilyBody);
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -647,12 +619,7 @@
 }
 
 .mw-shell.is-rail .mw-aifooter-label {
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
+  font-family: var(--fontFamilyBody);
 }
 
 .mw-shell.is-rail .mw-aistat,
@@ -670,20 +637,15 @@
 }
 
 .mw-aistat-tok {
-  color: var(--textMeta);
-  font-family: var(--f-mono);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
 /* Plain language under the spend, one quiet line that never wraps — the
    exact identifiers are one hover (title) or one chip-press away, so this
-   line never has to carry them. Prose, not an id, so body rather than mono. */
+   line never has to carry them. */
 .mw-shell.is-rail .mw-aifooter-model {
   overflow: hidden;
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
+  font-family: var(--fontFamilyBody);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -695,7 +657,7 @@
 }
 
 /* Who is signed in, at the rail's very foot. */
-.mw-shell.is-rail .mw-person {
+.mw-shell.is-rail .mw-contact {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -704,16 +666,14 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.mw-shell.is-rail .mw-person-id {
+.mw-shell.is-rail .mw-contact-id {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.mw-shell.is-rail .mw-person-id b {
+.mw-shell.is-rail .mw-contact-id b {
   color: var(--textPrimary);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -722,17 +682,15 @@
 /* Pushed to the row's right-hand end, the way the runtime chip's caret is. The
    `auto` margin also holds the control against the right edge when the identity
    beside it has not resolved yet and the row is otherwise empty. */
-.mw-shell.is-rail .mw-person-action {
+.mw-shell.is-rail .mw-contact-action {
   display: flex;
   align-items: center;
   flex: none;
   margin-left: auto;
 }
 
-.mw-shell.is-rail .mw-person-id small {
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
+.mw-shell.is-rail .mw-contact-id small {
+  font-family: var(--fontFamilyBody);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

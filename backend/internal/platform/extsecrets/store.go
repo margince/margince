@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package extsecrets is the extension tier's secret namespace: the one
-// implementation of the published extension.Secrets port (ADR-0069).
+// implementation of the published extension.Secrets port (ADR-0120).
 //
 // It sits between two things that each own half the problem and neither of
 // which can own the other's. platform/keyvault is the custodian of secret

@@ -16,7 +16,7 @@ import "./linkedin-reach.css";
 // Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
 // answer the whole import is for.
 //
-// It is the half that works on a one-person workspace: asking which COLLEAGUE
+// It is the half that works on a one-contact workspace: asking which COLLEAGUE
 // knows an account has no content when there is one member, while asking
 // whether your own network reaches it has content immediately.
 //
@@ -105,7 +105,11 @@ export function LinkedInReachCard() {
             reached" chrome around the server's own refusal, so a read nobody
             managed to make looked exactly like a network that reaches nobody. */}
         {query.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("linkedinReach.readFailed")}
+          >
             {problemMessageOf(query.error, t)}
           </Callout>
         )}
@@ -184,8 +188,8 @@ function ReachTable({
           header: t("linkedinReach.account"),
           render: (account: ReachAccount) => (
             <a
-              className="li-reach-cell li-reach-link"
-              href={`#/companies/${account.organization_id}`}
+              className="li-reach-cell "
+              href={`#/companies/${account.company_id}`}
             >
               {account.display_name}
             </a>
@@ -195,7 +199,7 @@ function ReachTable({
           key: "connections",
           header: t("linkedinReach.connections"),
           render: (account: ReachAccount) => (
-            <span className="t-mono li-reach-cell li-reach-figure">
+            <span className="li-reach-cell li-reach-figure">
               {/* Grouped, like the pair in the column beside it: two spellings
                   of one count in one table is the drift this closes. */}
               {formatNumber(account.connections, locale)}
@@ -204,11 +208,11 @@ function ReachTable({
         },
         {
           key: "onFile",
-          // The GAP is the finding: people you know there who are not
+          // The GAP is the finding: contacts you know there who are not
           // contacts. Rendering only the total would hide it.
           header: t("linkedinReach.onFile"),
           render: (account: ReachAccount) => (
-            <span className="t-mono li-reach-cell li-reach-figure">
+            <span className="li-reach-cell li-reach-figure">
               {t("linkedinReach.onFileOf", {
                 onFile: formatNumber(account.contacts_on_file, locale),
                 total: formatNumber(account.connections, locale),
@@ -218,7 +222,7 @@ function ReachTable({
         },
       ]}
       rows={[...accounts]}
-      rowKey={(account) => account.organization_id}
+      rowKey={(account) => account.company_id}
     />
   );
 }

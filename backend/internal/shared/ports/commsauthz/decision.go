@@ -142,6 +142,15 @@ type Decision struct {
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
+	// PurposeID is the purpose this send itself resolved to, when resolution
+	// read one off a purpose key (legacyVerdictFor, decideLeadOnItsRecord) —
+	// nil on the evidence arms, which never consult a purpose key at all. It
+	// is the same value applySuppression already compares a narrow stop's own
+	// purpose against; carrying it here is what lets a REVIEW opened from this
+	// decision ask the identical question later, once the local it started as
+	// would otherwise have been discarded (aStopThatBindsTheMessage,
+	// consent/reviewcontext.go).
+	PurposeID *ids.UUID
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.
@@ -153,7 +162,7 @@ type DecisionSet struct {
 //
 // It is a conjunction, and that is a decision rather than an oversight: one
 // denied recipient refuses the message rather than quietly sending a smaller
-// version of it. A rep who wrote to four people and reached three, without
+// version of it. A rep who wrote to four contacts and reached three, without
 // being told which, has been lied to about what happened.
 func (s DecisionSet) Allowed() bool {
 	if len(s.Decisions) == 0 {
@@ -205,6 +214,20 @@ type TransmitTicket struct {
 	DecisionSetID ids.UUID
 	Allowed       bool
 	Reason        string
+	// ConsentRefused says the engine refused this message ON CONSENT GROUNDS,
+	// as distinct from every other reason a transmit can be refused.
+	//
+	// THE DISTINCTION IS LOAD-BEARING and exists for exactly one caller. A
+	// named human's recorded decision authorizes a message the engine refused
+	// about its RECIPIENTS — that is what they were shown and what they signed
+	// for. It authorizes nothing else: a message edited after it was checked is
+	// refused for a reason nobody has looked at, and a delivery that could
+	// waive every refusal because it carries an instruction would send the
+	// wrong message under somebody's name.
+	//
+	// False on an allowed ticket, and false on a refusal about anything but
+	// consent.
+	ConsentRefused bool
 }
 
 // Current reports whether this ticket authorizes THIS attempt of THIS

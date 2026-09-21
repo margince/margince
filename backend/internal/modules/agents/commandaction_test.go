@@ -51,13 +51,13 @@ func TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.T) {
 }
 
 // setStakeholder and removeStakeholder stage against the PROJECT. Only
-// removeStakeholder carries a path operand (PersonID) into the summary —
-// setStakeholder's person/role arrive in the body, which the inbox shows
+// removeStakeholder carries a path operand (ContactID) into the summary —
+// setStakeholder's contact/role arrive in the body, which the inbox shows
 // beside the summary line (proposed_change), the same reasoning patchResolver
 // gives for not repeating a patch's values.
 func TestStakeholderCommandsStageTheProject(t *testing.T) {
 	projectID := ids.NewV7()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	// project IS served (unlike custom_field), so staging it needs a readable
 	// provider — an unreadable one would fail at Guards before Subject ever ran.
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityProject, projectID, true)}
@@ -71,29 +71,29 @@ func TestStakeholderCommandsStageTheProject(t *testing.T) {
 	}
 
 	removeInfo, err := StageSubject(context.Background(),
-		NewRemoveStakeholderCall(provider, RemoveStakeholderCommand{ID: projectID, PersonID: personID}))
+		NewRemoveStakeholderCall(provider, RemoveStakeholderCommand{ID: projectID, ContactID: contactID}))
 	if err != nil {
 		t.Fatalf("staging a remove-stakeholder answered %v, want it staged", err)
 	}
 	if removeInfo.TargetType != "project" || removeInfo.TargetID != projectID {
 		t.Errorf("staged target = (%s,%s), want (project,%s)", removeInfo.TargetType, removeInfo.TargetID, projectID)
 	}
-	if !strings.Contains(removeInfo.Summary, personID.String()) {
-		t.Errorf("remove-stakeholder summary %q does not name the person being detached — Subject owes a "+
-			"line distinct per person even though no door renders it today", removeInfo.Summary)
+	if !strings.Contains(removeInfo.Summary, contactID.String()) {
+		t.Errorf("remove-stakeholder summary %q does not name the contact being detached — Subject owes a "+
+			"line distinct per contact even though no door renders it today", removeInfo.Summary)
 	}
 }
 
 // A project the caller cannot see is refused before anything is staged, for
 // both stakeholder commands.
 func TestStakeholderCommandsRefuseAnUnreadableProject(t *testing.T) {
-	id, personID := ids.NewV7(), ids.NewV7()
+	id, contactID := ids.NewV7(), ids.NewV7()
 	cases := []struct {
 		name string
 		call GovernedCall
 	}{
 		{"set", NewSetStakeholderCall(unreadableProvider{}, SetStakeholderCommand{ID: id})},
-		{"remove", NewRemoveStakeholderCall(unreadableProvider{}, RemoveStakeholderCommand{ID: id, PersonID: personID})},
+		{"remove", NewRemoveStakeholderCall(unreadableProvider{}, RemoveStakeholderCommand{ID: id, ContactID: contactID})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -106,13 +106,13 @@ func TestStakeholderCommandsRefuseAnUnreadableProject(t *testing.T) {
 
 // A project held in another system of record is refused too.
 func TestStakeholderCommandsRefuseAProjectHeldElsewhere(t *testing.T) {
-	id, personID := ids.NewV7(), ids.NewV7()
+	id, contactID := ids.NewV7(), ids.NewV7()
 	cases := []struct {
 		name string
 		call GovernedCall
 	}{
 		{"set", NewSetStakeholderCall(elsewhereProvider{}, SetStakeholderCommand{ID: id})},
-		{"remove", NewRemoveStakeholderCall(elsewhereProvider{}, RemoveStakeholderCommand{ID: id, PersonID: personID})},
+		{"remove", NewRemoveStakeholderCall(elsewhereProvider{}, RemoveStakeholderCommand{ID: id, ContactID: contactID})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -125,12 +125,12 @@ func TestStakeholderCommandsRefuseAProjectHeldElsewhere(t *testing.T) {
 
 // A served, readable project is admitted rather than refused.
 func TestStakeholderCommandsAdmitAReadableProject(t *testing.T) {
-	id, personID := ids.NewV7(), ids.NewV7()
+	id, contactID := ids.NewV7(), ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityProject, id, true)}
 	if err := NewSetStakeholderCall(provider, SetStakeholderCommand{ID: id}).Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative project (set) answered %v, want it admitted", err)
 	}
-	if err := NewRemoveStakeholderCall(provider, RemoveStakeholderCommand{ID: id, PersonID: personID}).Guards(context.Background()); err != nil {
+	if err := NewRemoveStakeholderCall(provider, RemoveStakeholderCommand{ID: id, ContactID: contactID}).Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative project (remove) answered %v, want it admitted", err)
 	}
 }

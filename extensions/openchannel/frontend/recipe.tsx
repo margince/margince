@@ -4,7 +4,7 @@ import { type Endpoint, inboundUrl } from "./contract";
 
 // The member's own address, and a request that actually verifies against it.
 //
-// A `curl` that does not verify is worse than no `curl` at all: the person who
+// A `curl` that does not verify is worse than no `curl` at all: the contact who
 // pastes it learns that the connector is broken rather than that the example
 // is, and the refusal they get back is the same opaque 401 a forged request
 // gets — deliberately, because a refusal that said which part was wrong would
@@ -47,7 +47,7 @@ function shellQuoted(value: string): string {
 }
 
 /**
- * The whole command, as one block a person copies.
+ * The whole command, as one block a contact copies.
  *
  * Kept a pure function of its inputs so what a member pastes is exactly what a
  * test holds against the verifier's rule, rather than something assembled
@@ -109,23 +109,30 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
   });
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.recipe.title")}
-        sub={t("extOpenchannel.recipe.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.recipe.title")} />
+      <p>{t("extOpenchannel.recipe.sub")}</p>
       {/* Said WHERE THE URL IS, not in a tooltip: a member who believes the
           link is the secret will paste it where a secret goes, and the link is
-          in every access log and proxy between a sender and this
-          installation. */}
-      <Callout tone="warn">{t("extOpenchannel.recipe.urlNotSecret")}</Callout>
-      <p className="t-caption">{t("extOpenchannel.recipe.urlLabel")}</p>
-      <pre className="code-block t-mono" data-testid="openchannel-inbound-url">
+          in every access log and proxy between a sender and this installation.
+          `info`, because nothing here goes wrong if the reader does nothing —
+          it states what the address IS, and the one `warning` in this section is
+          the command below, which really does leak a key. */}
+      <Callout
+        kind="standing"
+        title={t("extOpenchannel.recipe.urlNotSecretTitle")}
+      >
+        {t("extOpenchannel.recipe.urlNotSecret")}
+      </Callout>
+      <span className="code-label t-eyebrow">
+        {t("extOpenchannel.recipe.urlLabel")}
+      </span>
+      <pre className="code-block" data-testid="openchannel-inbound-url">
         {url}
       </pre>
-      <p className="t-caption">
+      <span className="code-label t-eyebrow">
         {t("extOpenchannel.recipe.signedOver", { material: SIGNED_MATERIAL })}
-      </p>
-      <pre className="code-block t-mono" data-testid="openchannel-curl">
+      </span>
+      <pre className="code-block" data-testid="openchannel-curl">
         {curlRecipe(
           url,
           endpoint.slug,
@@ -138,7 +145,11 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
           is no environment-variable or stdin form to route it through instead
           — so a shared host really does show it in the process list for as
           long as the command runs. Said here rather than left silent. */}
-      <Callout tone="warn">
+      <Callout
+        tone="warning"
+        kind="standing"
+        title={t("extOpenchannel.recipe.secretInProcessArgsTitle")}
+      >
         {t("extOpenchannel.recipe.secretInProcessArgs")}
       </Callout>
     </>

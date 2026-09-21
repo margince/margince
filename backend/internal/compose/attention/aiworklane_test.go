@@ -31,7 +31,7 @@ func (s *stubAIWork) Troubled(_ context.Context, since time.Time, _ int) ([]Trou
 func aiWorkLaneService(work AIWork) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, work, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, work, nil, nil, nil, nil, fixedClock)
 }
 
 func TestATroubledRunCarriesItsOwnWordsAndItsSubject(t *testing.T) {
@@ -40,7 +40,7 @@ func TestATroubledRunCarriesItsOwnWordsAndItsSubject(t *testing.T) {
 		{ID: ids.NewV7(), State: "stalled", SubjectLabel: "Weber GmbH", OccurredAt: readInstant.Add(-time.Hour)},
 		{ID: ids.NewV7(), State: "failed", Summary: "I could not finish reading the attachment.", OccurredAt: failedAt},
 	}}
-	out, err := aiWorkLaneService(stub).Assemble(context.Background())
+	out, err := aiWorkLaneService(stub).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestATroubledRunCarriesItsOwnWordsAndItsSubject(t *testing.T) {
 }
 
 func TestARefusedAIWorkReadIsNamedAsWithheld(t *testing.T) {
-	out, err := aiWorkLaneService(&stubAIWork{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	out, err := aiWorkLaneService(&stubAIWork{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestARefusedAIWorkReadIsNamedAsWithheld(t *testing.T) {
 // Quiet AI work is an EMPTY lane — the feed looked — which the absent lane
 // never promises.
 func TestQuietAIWorkReadsAsAnEmptyLane(t *testing.T) {
-	out, err := aiWorkLaneService(&stubAIWork{}).Assemble(context.Background())
+	out, err := aiWorkLaneService(&stubAIWork{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

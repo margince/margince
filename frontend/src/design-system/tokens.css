@@ -6,7 +6,7 @@
  *
  * Semantic split (§2, UX review 2026-06-29): the brand accent (deep emerald) means
  * PRIMARY ACTION and brand only; AI/agent-authored surfaces carry their own indigo
- * hue; status (success/warn/danger) is a third family. One meaning per colour —
+ * hue; status (success/warning/danger) is a third family. One meaning per colour —
  * success stays a brighter grass-green than the brand emerald on purpose.
  */
 :root {
@@ -25,7 +25,7 @@
    *
    *   --bgSidebarHover #dde1de  a pointer resting on a rail row
    *   --bgSidebar      #e6eae7  the application's left edge, BELOW the page
-   *   --bgCard         #eaedeb  a well inside a card: a chip, an inset row
+   *   --bgCard         #eaedeb  a well inside a card: an inset row, a plate
    *   --bgHover        #edf0ee  a pointer resting on a row on the page
    *   --bgPage         #f1f5f2  the reading ground
    *   --bgElevated     #fbfcfb  a card, a panel, a menu, and the ACTIVE rail row
@@ -36,7 +36,7 @@
    *
    * The page is no longer the brightest thing on screen; --bgElevated is, and
    * a card is therefore separated by its own lightness rather than by the
-   * shadow alone. That is what lets --shadow-card be as slight as it now is.
+   * shadow alone. That is what lets --shadow-rest be as slight as it is.
    */
   --bgPage: #f1f5f2;
   --bgElevated: #fbfcfb;
@@ -44,6 +44,20 @@
    * --bgPage: one step off BOTH its hosts. The old value was one step off white
    * only, which is invisible once the page stops being white. */
   --bgCard: #eaedeb;
+  /* A small inline fill drawn ON one of these rungs — a badge, a key-cap, a
+   * segmented strip, the trough of a meter. TRANSLUCENT rather than a rung of
+   * its own, because a chip has to read one step deeper than whatever it lands
+   * on, and an opaque value can only be a step off ONE ground: --bgCard on a
+   * --bgCard plate is the same colour, which is a chip nobody can see. The same
+   * ink and nearly the same alpha as --paneEdge, which stays a BORDER token —
+   * an edge and a fill are two different jobs, and one name for both would hide
+   * it.
+   *
+   * 0.07 and not deeper: --accentText on this fill over --bgCard — the worst of
+   * the four grounds tokens.test.ts measures a chip over — is 4.57:1, and 0.08
+   * would take it to 4.49:1, under the floor. The ceiling is what the ink on the
+   * chip can pay for, so the fill is chosen last. */
+  --bgChip: rgba(16, 26, 21, 0.07);
   --bgHover: #edf0ee;
   /* A RECESS in an elevated surface — the well a board's stage is drawn as.
    * One hair under --bgElevated (1.03:1), which is what lets the panes inside
@@ -71,7 +85,7 @@
   /* One translucent pane per zone (DESIGN.md §5): white over the lit ground
    * with a blur behind it, and a hairline for its edge. The two glows are the
    * chrome — an emerald light at the top-left corner behind the sidebar and an
-   * indigo one at the bottom-right — faint enough that the eye does not find
+   * indigo one at the top-right — faint enough that the eye does not find
    * them; they are atmosphere, not a feature. */
   --pane: rgba(255, 255, 255, 0.72);
   --paneEdge: rgba(16, 26, 21, 0.08);
@@ -87,7 +101,7 @@
    * would drift, and the one a client sees is the one nobody is looking at. */
   --groundLit:
     radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
-    radial-gradient(900px 620px at 100% 100%, var(--glowB), transparent 70%)
+    radial-gradient(900px 620px at 100% 0, var(--glowB), transparent 70%)
     no-repeat,
     var(--bgPage);
 
@@ -108,28 +122,35 @@
   --accentLight: rgba(11, 122, 83, 0.09);
   --accentMed: rgba(11, 122, 83, 0.17);
 
+  /* Headings, and a record's name where that name IS the title. */
   --textPrimary: #15201b;
-  --textContent: #36433d;
-  /* Darkened with the grounds, not independently of them: this is body text on
-   * every surface in the ladder, and the darkest one it sits on is the rail
-   * (--bgSidebar). At #68756e it measured 4.42:1 on the page and 3.98:1 on the
-   * rail once those stopped being white — under the 4.5:1 AA needs for text this
-   * size, which axe caught on seven elements of the Brief glance alone. 4.64:1 at
-   * its worst ground now. A text tone answers to the ground it is read on, so
-   * moving one without the other is what breaks it. */
-  --textSecondary: #5f6a64;
-  --textTertiary: #9aa6a0;
-  --textMuted: #cbd2cd;
+  /* The one SECONDARY neutral, for text that supports rather than carries: a
+     placeholder is the first of them, and each further role is decided at the
+     element rather than granted here in advance. One token and not a family —
+     "quieter than the body" is a single question, and the two greys this tree
+     grew for it were the same answer typed twice. */
+  --textSecondary: lch(40% 1 282);
   --textOnAccent: #fff;
   /* The ink for a control filled with --accent SPECIFICALLY (a primary
    * button, a filled step numeral) — split from --textOnAccent because dark
    * mode lightens --accent and not every --textOnAccent consumer's fill.
    * Unthemed here; the dark palette below is what makes it diverge. */
   --textOnAccentControl: #fff;
-  /* The ink for a control filled with --success or --danger — split out for
-   * the same reason as --textOnAccentControl: dark mode lightens both fills
-   * and white stops clearing contrast on them. Unthemed here; the dark
-   * palette below is what makes it diverge. */
+  /* The ink for a control FILLED with a state tone — a destructive button, a
+   * completion disc, a primary badge. Its ground is the tone's *Text token and
+   * never the base hue. A base is tuned to be SEEN at a figure's or a bar's
+   * size, and no ink sits on the set of them: white pays 3.68:1 on --info,
+   * 2.19:1 on --success, 2.04:1 on --warning and 3.57:1 on --danger, while a
+   * near-black pays 3.19:1 on --discovery — and in dark the danger base clears
+   * neither, 4.46:1 for white and 3.72:1 for the near-black. So the fill is the
+   * Text token, which was chosen to carry ink, and this one flips with the
+   * theme because the ground under it does: a Text red is deep in light, where
+   * white reads on it, and bright in dark, where near-black does. White here
+   * gives 6.26:1 on --infoText, 5.92:1 on --successText, 5.98:1 on
+   * --warningText, 6.19:1 on --dangerText and 12.46:1 on --discoveryText; the
+   * dark block states the other half. Kept a token of its own rather than
+   * folded into --textOnAccentControl: the accent and the state hues are
+   * different fills that retune independently. */
   --textOnStatusControl: #fff;
 
   --borderSubtle: #e3eae6;
@@ -145,22 +166,14 @@
      since controls sit on both. */
   --borderControl: #868f89;
 
-  --online: #22c55e;
+  /* Identity, not status: the teal pair marks OUR side of a diagram apart from
+   * the agent's indigo and the counterparty's neutral. It says nothing about
+   * how anything is going — a reading that does belongs to one of the five
+   * states below. --teal is unthemed; --tealText is lifted for dark, because it
+   * carries a mark on a dark card. */
   --teal: #0e7490;
-  /* Readable teal text for a chip on the --tealLight fill. Split from --teal
-   * (a fill/accent) so the dark theme can lift the text without shifting the
-   * pill fills that read --teal — and so LIGHT can darken it without them, which
-   * the grey grounds now require: --tealLight is an alpha tint over whatever is
-   * behind it, and on the grey page the pair measured 4.30:1. 5.17:1 now. The
-   * same move as --accentText, for the same reason; neither --teal nor
-   * --tealLight shifts. */
   --tealText: #0d6882;
-  /* low-alpha teal fill — the read-access pill's tint, tonally distinct from
-   * the emerald --accentLight the write pill uses (record-share safety split,
-   * mirrors share.html's read/write pill colours). Derived from --teal. */
-  --tealLight: rgba(14, 116, 144, 0.1);
-  --away: #fbbf24;
-  /* Monogram tones: the six backgrounds a company/person avatar picks from by
+  /* Monogram tones: the six backgrounds a company/contact avatar picks from by
    * name, so the same record reads the same colour everywhere without storing
    * one. Low-alpha fills over the card surface, paired with a readable text
    * tone — they identify a record at a glance, they never encode status, and
@@ -177,7 +190,6 @@
   --mono4Text: #0d5596;
   --mono5Fill: rgba(159, 18, 57, 0.12);
   --mono5Text: #8d1034;
-  --dnd: #ef4444;
   --bgRail: #13231d;
   /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
    * (white-alpha icons on the dark green field in BOTH themes), and the
@@ -193,10 +205,6 @@
   --railIconActive: #fff;
   --railHover: rgba(255, 255, 255, 0.1);
   --railActive: rgba(255, 255, 255, 0.16);
-  /* textMeta: the canonical AA small-text role (design §2 contrast law,
-   * ADR-0040 amendment) — all 11–13px meta/caption text reads it. */
-  --textMeta: #5e6c65;
-
   /* The one hue that means a MACHINE did this — wrote the draft, read the
    * record, found the thing, or holds the evidence behind a claim. It marks
    * authorship and reasoning, never status: nothing good, bad or urgent is
@@ -238,7 +246,7 @@
    *
    * The three tones that are NOT work keep their own hues, because those are
    * status and status is a different question from provenance: amber asks a
-   * person for something, red failed, grey cannot reach a source. An orb that
+   * contact for something, red failed, grey cannot reach a source. An orb that
    * went indigo when it failed would say who was working and stop saying how it
    * went.
    *
@@ -256,33 +264,90 @@
   --orbInk: #2e3168;
   --orbDeep: #1a1c40;
 
-  --success: #15803d;
-  --successBg: rgba(34, 197, 94, 0.12);
-  /* Text and glyphs ON --successBg, split out for the reason --aiText is split
-   * out: --success over its own family's tint measures 4.48:1 at 12px, which
-   * axe reads as a serious AA failure, and the two writers of that pair
-   * (FieldDiff's new value, badge-success) each looked fine in isolation. The
-   * other two status families need no such token — --warn and --danger clear AA
-   * on their own tints — and tokens.test.ts now measures all three so a retune
-   * finds out there. */
-  --successText: #146c36;
-  --warn: #92400e;
-  --warnBg: rgba(251, 191, 36, 0.16);
-  --warnBorder: rgba(251, 191, 36, 0.45);
-  --danger: #b91c1c;
-  --dangerBg: rgba(239, 68, 68, 0.1);
-  /* Text and glyphs ON --dangerBg. It coincides with --danger in this theme —
-   * the light red clears AA on its own tint over every ground — and does NOT
-   * in dark, where the lifted --danger measures 3.88:1 over --bgHover. Named in
-   * both so a call site reads the role rather than knowing which theme
-   * collapses it, exactly as --successText and --textOnAccentControl do. */
-  --dangerText: #b91c1c;
+  /* ===== The five states =====
+   * INFORMATION is the neutral report and the work still in flight: an info
+   * mark, a spinner's ring, a row a job has not finished writing. SUCCESS is a
+   * favourable outcome — the thing finished the way the reader hoped. WARNING
+   * is caution BEFORE the fact, the sentence that stops a mistake while it can
+   * still be stopped. DANGER is the serious or irreversible one: the write that
+   * failed, the record that cannot be brought back. DISCOVERY is what is NEW to
+   * this reader — onboarding, a capability they have not met — and it is the
+   * one of the five that is not a verdict about the record.
+   *
+   * Five states and no sixth. A hue that means something else is a family of
+   * its own: --accent is brand and primary action, --ai is agent provenance
+   * (indigo is a claim about WHO decided, never about how it went), --orbAmber
+   * / --orbRed are the outcome of an agent's run at a size chrome colours go
+   * muddy at, and the --tag* row means only "not that other tag".
+   *
+   * ONE BASE PER STATE, and the base is the only value in the family anyone
+   * chooses. Everything else is derived HERE and nowhere else, so a retune
+   * moves the whole family at once:
+   *
+   *   --<state>        the hue. A fill, a bar, a dot, a border, the figure on
+   *                    a stat card — everything SEEN with nothing read on it.
+   *   --<state>Text    the same hue walked down in lightness (light) or up
+   *                    (dark) in OKLCh, chroma kept, until it clears 4.5:1 on
+   *                    every ground it lands on AND on its own Surface. Ink:
+   *                    badge lettering, an error line, a caption. It is also
+   *                    the GROUND of a filled control — see
+   *                    --textOnStatusControl for why the base cannot be.
+   *   --<state>Surface the opaque tint, for a badge: a translucent one takes
+   *                    its contrast from whatever it lands on, and this reads
+   *                    the same on every surface.
+   *   --<state>Bg      the same share left TRANSLUCENT, for a wash that has to
+   *                    sit on a ground the token cannot know — a page-level
+   *                    tint, a row, a gradient stop.
+   *   --<state>Border  the hairline, the tint at 45%.
+   *
+   * The dark block restates the bases rather than letting them stand, so a
+   * call site reads the role and never has to know which of the five a theme
+   * happens to leave where it was.
+   *
+   * Discovery's LIGHT ink, surface and border are stated as hexes because the
+   * design source gives that ramp directly, and no share of #964ac0 over
+   * --bgElevated reproduces it: #eed7fc is bluer than the ground it would have
+   * to be mixed into. They are held by hue and by value in tokens.test.ts
+   * instead of by the share rule, which is the form the other four take.
+   *
+   * tokens.test.ts measures every Text token on every ground and on its own
+   * tint, in both themes, holds each Text token to its base's OKLCh hue, and
+   * fails when a state is missing from either theme. */
+  --info: #0485f7;
+  --infoText: #0060b7;
+  --infoSurface: color-mix(in srgb, var(--info) 12%, var(--bgElevated));
+  --infoBg: color-mix(in srgb, var(--info) 12%, transparent);
+  --infoBorder: color-mix(in srgb, var(--info) 45%, transparent);
+
+  --success: #17c964;
+  --successText: #007435;
+  --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
+  --successBg: color-mix(in srgb, var(--success) 12%, transparent);
+  --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
+
+  --warning: #f5a524;
+  --warningText: #8a5900;
+  --warningSurface: color-mix(in srgb, var(--warning) 16%, var(--bgElevated));
+  --warningBg: color-mix(in srgb, var(--warning) 16%, transparent);
+  --warningBorder: color-mix(in srgb, var(--warning) 45%, transparent);
+
+  --danger: #ff383c;
+  --dangerText: #c5001b;
+  --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
+  --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
+  --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
+
+  --discovery: #964ac0;
+  --discoveryText: #48245d;
+  --discoverySurface: #eed7fc;
+  --discoveryBg: color-mix(in srgb, var(--discovery) 12%, transparent);
+  --discoveryBorder: #d8a0f7;
 
   /* ===== Tag tones =====
    * The eight hues an admin picks from when naming a tag, and the ONLY colours
    * in the product that carry no meaning: a tag's colour says "not that other
    * tag", nothing more. Named as their own family rather than borrowed from
-   * --accent/--warn/--danger, which is what the first four did: a tag that
+   * --accent/--warning/--danger, which is what the first four did: a tag that
    * reads --danger looks like a warning to anyone who knows the rest of the
    * palette, and a retune of the status colours would silently recolour every
    * tag in the workspace.
@@ -317,28 +382,125 @@
   --r-lg: 20px; /* the pane */
   --r-full: 9999px;
 
-  /* The height of an interactive control, in its two sizes. A button, a text
+  /* The geometry of an interactive control, in ONE size. A button, a text
      input and the select's trigger are the same box on screen, and until this
      existed each computed its own number out of padding and line-height: the
      input landed on 40.25px, the primary button on 38.25px and the ghost button
      on 40.25px because its 1px border was added rather than absorbed. A
      [Cancel][Save] pair was therefore never the same height, and a button beside
-     a field never sat on the field's own line. The value is a floor rather than
-     a fixed height, so a control whose label wraps grows instead of clipping —
-     nothing here assumes a one-line label. 36px clears the 24px AA target of
-     WCAG 2.5.8 with room (the touch arm below raises it to 44), and the small
-     rung stays a deliberate step below it for dense rows rather than drifting
-     to whatever its padding produced. */
-  --control-h: 36px;
-  --control-h-sm: 32px;
-  /* One rung ABOVE the form control, for the verbs a page owns rather than the
-     ones inside a card: a record's own actions stand beside a name set at the
-     record rung, and at the form rung they read as chrome that happens to sit
-     near it. Under touch the pointer arm below takes every rung to 44, so this
-     one stops being a step up there — a bigger target is the right answer to a
-     finger, and a verb taller than 44 would be the only oversized thing on the
-     screen. */
-  --control-h-lg: 40px;
+     a field never sat on the field's own line. The height is a floor rather than
+     a fixed value, so a control whose label wraps grows instead of clipping —
+     nothing here assumes a one-line label. 32px is the height at every input,
+     a finger's included: it clears WCAG 2.5.8's 24px target with room, and a
+     control that changed size under a touchscreen was one more thing that had
+     to be remembered on every surface and was not.
+
+     There is no small rung any more. It existed for dense rows and for icon
+     affordances, and a second height is a second answer to "how tall is a
+     control": the pair drifted apart on screens that mixed them, and an icon
+     button one rung shorter than the input beside it is the thing a reader sees
+     as misaligned without being able to name why. An icon button takes
+     --controlHeight too. */
+  --controlHeight: 32px;
+  /* The inset from a control's edge to its label — the one horizontal padding
+     a control has, so a button and a field with the same label start their text
+     at the same place. */
+  --controlPaddingX: var(--space-3);
+  /* Icon-to-label gap INSIDE a control, and the one 6px in the product. The 4px
+     scale carries 4 and 8 and neither is this gap: at 4 the mark touches the
+     word, at 8 they read as two things standing side by side. A ROLE token here
+     and nowhere else — it is not a rung, and nothing outside a control may
+     reach for it. */
+  --controlGap: 6px;
+  /* The line icon a control carries. Sized by the control rather than at the
+     call site, because lucide's own default is 24px. */
+  --controlIcon: 16px;
+  /* The vertical inset of ONE option inside a segmented track. Off the 4px
+     scale on purpose and therefore a token rather than a raw value: the track
+     draws its own 3px around the options, and the option repeats it so a
+     pressed one sits centred in a control that measures --controlHeight. */
+  --segmentPaddingY: 3px;
+
+  /* A TEXT INPUT is taller than a button, and that is the one place the two
+     part company: a button is a verb you hit, an input is a place you put
+     something, and the room inside it is what says so. Stated as three tokens
+     rather than one height so a field that has to grow (a textarea, a token
+     input) keeps the same insets while its line count changes.
+
+     The parts are --fontBody's 20px line, --inputPaddingY above and below, and
+     a 1px edge on each side: 38px. The height is 40, and the 2px is CHOSEN —
+     breathing room above what the parts sum to, so a descender, a taller
+     script, or a browser rounding the line box a hair upward has somewhere to
+     go instead of pressing on the edge. A height equal to the sum is an input
+     that looks correct in the one font it was measured in.
+
+     So the height is a floor rather than a total, and type-tokens.test.ts holds
+     the parts INSIDE it rather than equal to it: what breaks something is
+     padding taller than the height, which clips the text being typed, and that
+     stays true whatever the margin is set to.
+
+     The select's TRIGGER takes this height too: it holds a closed face rather
+     than a caret, but it stands in a form column where a text box would, and a
+     trigger 8px shorter than the field above it is the ragged form column this
+     height was bought to end. Every BUTTON stays on --controlHeight. */
+  --inputHeight: 40px;
+  --inputPaddingX: 6px;
+  --inputPaddingY: var(--space-2);
+  /* The gap between a field's label and the control it names. Off the 4px scale
+     because a name and the box under it are ONE object: at a rung's distance the
+     pair reads as two things stacked, and the label starts belonging to whatever
+     sits above it instead. */
+  --fieldGap: 2px;
+
+  /* The height of a panel's header band, and it is a token for the same reason
+     --controlHeight is one: every panel on every screen draws the SAME band,
+     so the number belongs to the house rather than to whichever rule reaches
+     for it first. Left to each caller it drifted — a head carrying a description stood
+     taller than a head carrying a button, and two screens re-spaced the band
+     themselves — so the same card was a different object on two pages. Fixed
+     rather than a floor: what does not fit on one band is not header content
+     and goes in the body. One value at every viewport, the touch arm below
+     included, because the band holds no target of its own — the controls inside
+     it take the pointer rungs. */
+  --panel-head-h: 56px;
+
+  /* A MENU'S FLOOR AND CEILING, and they are tokens because one option list is
+     one surface: a menu, a dropdown, a suggestion list and an overflow panel
+     are the same object to a reader, and the product drew five of them with
+     five widths and five insets. 250px is where a two-word label and the figure
+     beside it stop deciding how wide the surface is — below it the list is
+     sized by whichever row happens to be longest, which is why one menu stood
+     at 180 and its neighbour at 236. 400px is where a list stops being
+     scannable: past it a reader is reading rather than choosing, so the surface
+     scrolls instead of growing.
+
+     The INSET is --controlGap rather than a third number: 6 above a --fontBody
+     line and 6 below is the --controlHeight every other control stands at, so a
+     row in a menu is the same height as the control that opened it.
+
+     A surface ANCHORED to its trigger takes neither — its width is the box it
+     drops from and its ceiling is the room measured to the viewport — and says
+     so in menu-anatomy.test.ts, which holds this anatomy over every one of
+     them. */
+  --menuMinInlineSize: 250px;
+  --menuMaxBlockSize: 400px;
+
+  /* THE SETTINGS MEASURE. A settings page is a column of decisions read top to
+     bottom, and the row language puts the naming on the left and the answer on
+     the right — at the page's own --pageColumn that pair is separated by half a
+     wide screen of nothing. 720 keeps a label and its answer in one glance and
+     holds a description to a readable line.
+
+     A token rather than a number in one sheet, because TWO sheets read it: the
+     stack takes it as its width (screens/settings.css) and the shell takes it
+     as the width of the page's NAME above that stack (app/shell.css). A name
+     that began anywhere but where its page begins is the page disagreeing with
+     itself, and two spellings of one measure is how that happens.
+
+     Here rather than beside --pageColumn on `.app`, because the stack is also
+     drawn outside the shell — a settings card's own story renders one — and a
+     measure that resolved to nothing there would silently uncap it. */
+  --settingsColumn: 720px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
@@ -407,81 +569,76 @@
    * is, and the two went out of step by 60px of viewport width. */
   --stickyBottomInset: var(--space-2);
 
-  /* Three families (DESIGN.md §4): a display face with character for the one
-   * line a reader identifies a record by, a quiet grotesk for everything read,
-   * and a mono with tabular figures for every number, so figures align in a
-   * column and never look like words. */
-  --f-display: "Outfit", system-ui, sans-serif;
-  --f-body: "Geist", system-ui, sans-serif;
-  --f-mono: "Geist Mono", ui-monospace, monospace;
+  /* Type. Every size, leading and paragraph spacing below is rem, on the
+     browser's own 1rem = 16px, so a reader who enlarges that moves the whole
+     document rather than the parts that were typed in px. `--fontBody` and
+     `--paragraphSpacing` are the pair app.css declares on `body`; every other
+     level is chosen by the context it is used in. */
 
-  /*
-   * Type scale (design §2 three-family rule, this file's numeric half).
-   *
-   * The families were tokenised from the start; the SIZES were not, and the
-   * screens answered that by inventing 42 of them — 9/9.5/10/10.5/11/11.5/12/
-   * 12.5/13/13.5/14/14.5/15 in px on one side of the feature and the same
-   * ladder respelled in sixteenths of a rem on the other. Half a pixel is not
-   * a design decision anyone can defend twice, so the ladder below is the
-   * whole vocabulary: eleven rungs, each far enough from its neighbour to be
-   * a deliberate choice.
-   *
-   * Named by ROLE, not by number, because a rung's job is what a reader has to
-   * agree with — `--fs-eyebrow` says where it belongs, `--fs-10` only says how
-   * big it is and invites the next 10.5px.
-   */
-  --fs-eyebrow: 10.5px; /* uppercase kickers, section labels */
-  --fs-meta: 12px; /* counts, provenance, timestamps */
-  --fs-sm: 13px; /* dense UI: chips, table cells, helper text */
-  --fs-body: 13.5px; /* the default reading size */
-  --fs-lead: 15px; /* the one paragraph under a heading; inputs */
-  --fs-h3: 17px; /* card title */
-  --fs-h2: 20px; /* section title */
-  --fs-h1: 24px; /* the title of a step */
-  --fs-display: 32px; /* the title of a full-viewport moment */
-  /* Four fluid rungs, for the surfaces that own their width and therefore have
-     room to answer to it: the gate, the handoff scene, a RECORD's own name, and
-     the greeting.
+  /* Three WEIGHTS, and every one of them a file the browser actually loads
+     (weights.test.ts). Named by role, so a rule asks for what its text IS
+     rather than for a number, and a retune moves every call site at once.
+     Read by the shorthands below: `var()` substitution happens before the
+     `font` shorthand's own grammar is checked, so a var() weight in a `font`
+     value is valid CSS (CSS Variables §3, "unresolved at parse time"). */
+  /* Regular: generic paragraphs. */
+  --fontWeightRegular: 400;
+  /* Medium: text beside a line icon, and most component text. */
+  --fontWeightMedium: 500;
+  /* Bold: emphasis, used sparingly, and headings. */
+  --fontWeightBold: 700;
 
-     A record's name is the largest thing on its page, so it is the first thing
-     to stop being a name and start being a banner when the header narrows —
-     which happens whenever a reader opens the nav rail. Measured in `cqi` and
-     not `vw` for that reason: the window does not change when the rail does,
-     and the header is what the name has to fit. `.record-head-wide` declares
-     the container; with none in the tree the unit falls back to the viewport,
-     which is the pre-container answer.
+  /* Three families (DESIGN.md §4): a face with character for a heading and for
+   * the one line a reader identifies a record by, a quiet grotesk for
+   * everything read, and a mono for code — `code`, `pre`, `samp` and
+   * `.code-block` (base.css) and nothing else. Both text families ship three
+   * weights and index.html loads exactly those three, 400 / 500 / 700, so a
+   * fourth is a face the browser synthesized rather than one anybody drew.
+   * Figures stay in the grotesk and align through tabular-nums (`.t-num`); an
+   * id or a key is read, not compiled, so it is body text too. */
+  --fontFamilyHeading: "Outfit", system-ui, sans-serif;
+  --fontFamilyBody: "Geist", system-ui, sans-serif;
+  --fontFamilyMono: "Geist Mono", ui-monospace, monospace;
 
-     The greeting takes a rung of its own rather than the hero one set larger,
-     because it is the one line in the product with nothing else competing for
-     the screen: no form beside it, no step above it, no ladder of rows below.
-     Reusing the hero rung there would either leave the greeting undersized or
-     drag every hero on a working surface up with it. */
-  --fs-display-fluid: clamp(24px, 2.6vw, 32px);
-  --fs-hero-fluid: clamp(30px, 6vw, 46px);
-  --fs-record-fluid: clamp(26px, 3.7cqi, 44px);
-  --fs-greeting-fluid: clamp(32px, 4.6vw, 54px);
+  /* L — comfortable reading: marketing and blog prose, rare in the product. */
+  --fontBodyLarge: var(--fontWeightRegular) 1rem / 1.5rem var(--fontFamilyBody);
+  /* The gap between two blocks of L prose. */
+  --paragraphSpacingLarge: 1rem;
+  /* M — the platform default: every screen, until a role rule says otherwise. */
+  --fontBody: var(--fontWeightRegular) 0.875rem / 1.25rem var(--fontFamilyBody);
+  /* The gap between two blocks of default prose; app.css's paragraph rule
+     reads this one. */
+  --paragraphSpacing: 0.75rem;
+  /* S — used sparingly: secondary-level content and semantic messaging. */
+  --fontBodySmall:
+    var(--fontWeightRegular) 0.75rem / 1rem var(--fontFamilyBody);
+  /* The gap between two blocks of S prose. */
+  --paragraphSpacingSmall: 0.5rem;
 
-  /* Four weights. Outfit and DM Sans are both variable, so 550/560/580/600/620/
-     650 rendered as six genuinely different weights for one "emphasis" role —
-     which is why the same label looked heavier on one screen than the next. */
-  --fw-regular: 400;
-  --fw-medium: 500; /* emphasis inside running text */
-  --fw-semibold: 600; /* labels, buttons, headings */
-  --fw-bold: 700; /* reserved: the rare word that must outrank a heading */
-
-  /* Leading, by how much work the text is doing — tight for display type that
-     is read as a shape, relaxed for prose that is read as sentences. */
-  --lh-tight: 1.15;
-  --lh-snug: 1.3;
-  --lh-normal: 1.55;
-  --lh-relaxed: 1.6;
-
-  /* Tracking. Only two directions matter: display type set large enough that
-     the default spacing reads loose, and uppercase micro-type where the
-     default reads cramped. Everything else is 0 and says so. */
-  --tracking-display: -0.03em;
-  --tracking-normal: 0;
-  --tracking-eyebrow: 0.08em;
+  /* Heading sizes, chosen by the CONTEXT a heading sits in. The level an
+     `<h1>`–`<h6>` carries is structure and is chosen separately — README's
+     "Type comes from the tokens" has the pair of rules and why they are two. */
+  /* Brand and marketing content. */
+  --fontHeadingXXLarge:
+    var(--fontWeightBold) 2rem / 2.25rem var(--fontFamilyHeading);
+  /* Brand and marketing, and the largest page title in the product. */
+  --fontHeadingXLarge:
+    var(--fontWeightBold) 1.75rem / 2rem var(--fontFamilyHeading);
+  /* A page title in the product: a view's or a form's. */
+  --fontHeadingLarge:
+    var(--fontWeightBold) 1.5rem / 1.75rem var(--fontFamilyHeading);
+  /* A large component with room — a modal's title, over Body M. */
+  --fontHeadingMedium:
+    var(--fontWeightBold) 1.25rem / 1.5rem var(--fontFamilyHeading);
+  /* A title in a small component where space is tight. */
+  --fontHeadingSmall:
+    var(--fontWeightBold) 1rem / 1.25rem var(--fontFamilyHeading);
+  /* The same, tighter still — a flag's own title. */
+  --fontHeadingXSmall:
+    var(--fontWeightBold) 0.875rem / 1.25rem var(--fontFamilyHeading);
+  /* Sparingly: fine print, over Body S. */
+  --fontHeadingXXSmall:
+    var(--fontWeightBold) 0.75rem / 1rem var(--fontFamilyHeading);
 
   /* Material overlays, NOT part of the §2 Ledger-Green canon and deliberately
    * not pinned by tokens.test.ts's canonical map: a highlight and a scrim are
@@ -493,20 +650,27 @@
   --overlayLight: #ffffff;
   --overlayDark: #000000;
 
-  /* ONE layer, and a tight one: a card is separated from the page by its own
-   * lightness (--bgElevated white on the --bgPage grey above), so the shadow's
-   * job is only to say which of the two is in front. The two-layer version this
-   * replaces was carrying the separation on its own, because the page it sat on
-   * was also white — a 16px ambient wash under every card, on every screen,
-   * which read as a product of soft floating tiles rather than of surfaces. The
-   * negative spread is what keeps the shadow narrower than the card: it hugs the
-   * bottom edge instead of haloing all four.
+  /* ONE resting layer, worn by everything AT REST that has a FACE: a pane, a
+   * card, a reading, a filled control, a field. Not to make them float — at
+   * 1px and 5% it is under the threshold a reader would call a shadow — but to
+   * give a flat rectangle on a flat ground a top side. It stays tight because
+   * separation is the surface ladder's job (--bgElevated over --bgPage); the
+   * 16px wash it replaces carried that alone and read as soft floating tiles.
    *
-   * Read by every panel and card in the tree through this one token, so the
-   * elevation of a card is not a decision any screen gets to make. */
-  /* A pane is separated by its ground and its hairline (--paneEdge), not by a
-   * drop shadow; the card shadow is kept as a hairline so nothing floats. */
-  --shadow-card: 0 0 0 1px #0000000a;
+   * A CONTROL drops it on hover, active and focus: the shadow is the gap
+   * between the control and the page, so removing it is the control pressed
+   * INTO the page. Deepening it instead lifts the control toward the pointer,
+   * which is backwards, and is a second depth to keep in step with this one.
+   *
+   * Changed here and nowhere else — every consumer reads the token, so how
+   * deep a resting thing sits is no screen's decision. --shadow-pop is the
+   * other half, for what is genuinely above the plane; nothing wears both. */
+  --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* The same layer turned inside, for a field. A surface and a verb have a top
+   * side; a field is a place to PUT something, so its depth goes inward and it
+   * has a floor instead. One light source, two ways of meeting it — which is
+   * why the geometry is --shadow-rest's exactly and only `inset` differs. */
+  --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-pop: 0 8px 30px rgba(41, 37, 36, 0.14);
 
   /*
@@ -545,7 +709,7 @@
   --focus-glow-danger: 0 0 0 3px var(--dangerBg);
   /* The same glow in the AI family, for a field on a surface a machine authored
    * — the onboarding conversation, the composer. An accent ring there would be
-   * the one colour in the product that says "a person decided this" drawn on a
+   * the one colour in the product that says "a contact decided this" drawn on a
    * card that says the opposite, so this is a variant for the same reason
    * --focus-glow-danger is one, not a second spelling. Six rules hand-spelled
    * it before it existed. */
@@ -553,15 +717,14 @@
 
   /*
    * Motion. Three durations and three curves, and the reason there are so few is
-   * the same reason there are four font weights: the tree had 43 distinct
-   * duration literals and 7 curves, which is not a vocabulary, it is the absence
-   * of one — the same chevron turned in 0.15s in three files and 0.16s in a
-   * fourth, and one comment claimed two components shared "the shell's own
-   * curve" while they used different ones.
+   * that the tree had 43 distinct duration literals and 7 curves, which is not a
+   * vocabulary, it is the absence of one — the same chevron turned in 0.15s in
+   * three files and 0.16s in a fourth, and one comment claimed two components
+   * shared "the shell's own curve" while they used different ones.
    *
-   * Named by ROLE, like the type scale above: a rung's job is what a reader has
-   * to agree with. `--dur-state` says which kind of change it times;
-   * `--dur-140` would only say how long and would invite the next 130ms.
+   * Named by ROLE, because a duration's job is what a reader has to agree with:
+   * `--dur-state` says which kind of change it times; `--dur-140` would only say
+   * how long and would invite the next 130ms.
    *
    * Every value here is one this tree already used. The fold is deliberate and it
    * is the point — 0.12s, 0.14s, 0.15s and 0.16s were four spellings of one
@@ -610,6 +773,7 @@
   --bgPage: #0c1311;
   --bgElevated: #161d1a;
   --bgCard: #1a211e;
+  --bgChip: rgba(255, 255, 255, 0.09);
   --bgHover: #1f2623;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
@@ -640,9 +804,11 @@
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (the rail toast on
      --bgRail, the AI FAB on --ai, the voice orb over the Core's own glass,
-     the --online disc) — dark ink there is a control-boundary failure, not
-     a contrast fix, on backgrounds this palette never touches. --success
-     and --danger are NOT in that set: see --textOnStatusControl below. */
+     the Core's own glass) — dark ink there is a control-boundary failure,
+     not a contrast fix, on backgrounds this palette never touches. The five
+     state tones are NOT in that set: --textOnStatusControl is their ink, and
+     it flips here for the same reason --textOnAccentControl does — see its
+     declaration below. */
   /* Lifted off --accent, which cannot move. #4ade80 is the tone --mono0Text
      already uses for emerald text on an emerald tint here, so the accent
      reads as the same colour those chips do rather than as a second green. */
@@ -657,17 +823,16 @@
      in", "Send reset link", "Set new password". This ink gives 5.04:1.
      Light theme keeps white at 5.35:1. Scoped to --textOnAccentControl, not
      --textOnAccent: the latter still inks the fills that stay dark here
-     (--bgRail, --ai, --online), where this same dark ink would fail rather
-     than fix contrast. */
+     (--bgRail, --ai), where this same dark ink would fail rather than fix
+     contrast. */
   --textOnAccentControl: #04240f;
-  /* --success and --danger lighten in dark mode exactly like --accent does
-     (#15803d/#b91c1c to #4ade80/#f87171), so white — safe on both in light
-     theme, 5.02:1 and 6.47:1 — fails on both here: 1.74:1 on --success,
-     2.77:1 on --danger, under even the 3:1 non-text floor. This ink (the
-     same value as --textOnAccentControl; the two fills happen to share one
-     working ink, not one meaning) gives 9.54:1 on --success and 6.00:1 on
-     --danger — kept as its own token because status and accent are
-     different fills that could retune independently later. */
+  /* The same flip, one theme later: a filled state control's ground is the
+     tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
+     near-black pane barely has to move a hue before it reads on it. So the ink
+     that clears AA on that ground inverts with the theme rather than staying
+     put. Near-black gives 5.69:1 on --infoText, 7.57:1 on --successText,
+     9.37:1 on --warningText, 5.63:1 on --dangerText and 5.78:1 on
+     --discoveryText; white would give 3.08:1 on the red. */
   --textOnStatusControl: #04240f;
   /* Dark: the fills lift and the text tones brighten, so a monogram keeps the
    * same identity and the same contrast floor on the dark surface. */
@@ -684,11 +849,8 @@
   --mono5Fill: rgba(251, 113, 133, 0.18);
   --mono5Text: #fda4af;
 
-  --textPrimary: #e8eeeb;
-  --textContent: #c3cec8;
-  --textSecondary: #8fa099;
-  --textTertiary: #66776f;
-  --textMuted: #43524b;
+  --textPrimary: #fff;
+  --textSecondary: lch(63.304% 1.425 272);
 
   --borderSubtle: #22352e;
   --borderStrong: #31463d;
@@ -696,39 +858,59 @@
      control boundary, held to the same 1.4.11 floor. */
   --borderControl: #5f7a6e;
 
-  /* Themed, because the light hairline is a 4% black — invisible on the near-black page.
-     Any card whose separation depends on it simply lost its edge in dark, and
-     the login surface's brand pane is exactly that case: its fill sits within
-     a couple of ΔE of the pane behind it. The GEOMETRY is the light theme's
-     (a hairline, not a drop shadow); only the ink is a theme's decision, and
-     on a dark ground the edge is a faint white rather than a faint black. */
-  --shadow-card: 0 0 0 1px #ffffff14;
+  /* Themed, because a 5% black is invisible on a near-black page: any surface
+     whose face depends on this simply loses its top side in dark. Only the INK
+     is a theme's decision — the offset and the blur are the light block's and
+     must not diverge, or one button would sit at two different heights in the
+     two themes. A deeper alpha for the same apparent step. */
+  --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
-  /* higher alpha so the teal read-pill fill stays legible on the darker card
-   * surface (same light→dark bump --accentLight makes). --teal is unthemed. */
-  --tealLight: rgba(14, 116, 144, 0.28);
-  /* Lifted teal text: the light --tealText (#0e7490) is dark-on-dark on the
-   * --tealLight fill over a dark card, below AA — brighten it for dark. */
+  /* Lifted teal mark: the light --tealText (#0e7490) is dark-on-dark over a
+   * dark card, below AA — brighten it for dark. --teal is unthemed. */
   --tealText: #5cb6cf;
 
   --aiText: #9ba0f0;
-  --textMeta: #8fa099;
 
-  --success: #4ade80;
-  /* Dark inverts the problem: the lifted --success IS the readable ink on the
-   * tint over a dark card, so the two coincide here. Named anyway, because the
-   * call sites read the role and must not have to know which theme collapses
-   * it — the same reason --textOnAccentControl exists. */
-  --successText: #4ade80;
-  --warn: #fbbf24;
-  --danger: #f87171;
-  --dangerBg: rgba(248, 113, 113, 0.16);
-  /* Lifted further than --danger: the tint is painted on --bgCard and --bgHover
-   * as well as on the elevated ground, and --danger over the darker two is
-   * 4.22:1 and 3.88:1. --danger itself stays put — it is also a FILL, under
-   * white ink, and lightening that would cost the fill its own contrast. */
-  --dangerText: #fb9a9a;
+  /* The five states on a dark ground. Information and success keep their light
+   * base — a hue that reads on both papers needs no second value — while
+   * warning, danger and discovery step to one this ground can carry: the light
+   * amber and red go shrill against near-black, and the light violet
+   * disappears into it. All five bases are STATED here even where the value is
+   * unchanged, so a call site reads the role and never has to know which of
+   * them a theme leaves where it was.
+   *
+   * The Text tokens walk the other way from light: UP in lightness until the
+   * hue clears 4.5:1 on every dark ground and on its own tint. Success and
+   * warning ask for no walk at all — on this paper the bright hue already IS
+   * the readable ink — and are named anyway, for the same reason the bases
+   * are.
+   *
+   * Everything a base derives follows it here without being restated. Only two
+   * things move on their own: danger's tint share, because the same share of a
+   * bright ink reads weaker on a near-black ground and at 0.10 the red wash
+   * stops reading as a wash; and discovery's surface and border, which are
+   * hexes in light because the design source gives that ramp and are ordinary
+   * derivations of the dark base here. */
+  --info: #0485f7;
+  --infoText: #3d99ff;
+  --success: #17c964;
+  --successText: var(--success);
+  --warning: #f7b750;
+  --warningText: var(--warning);
+  --danger: #db3b3e;
+  --dangerText: #ff615e;
+  --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
+  --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
+  --discovery: #b76be3;
+  --discoveryText: #c478f1;
+  --discoverySurface: color-mix(
+    in srgb,
+    var(--discovery) 12%,
+    var(--bgElevated)
+  );
+  --discoveryBorder: color-mix(in srgb, var(--discovery) 45%, transparent);
 
   /* The tag tones lift on a dark ground. Each keeps its hue and its distance
    * from its neighbours — a tag that reads teal in light must not read sky in
@@ -773,6 +955,7 @@
     --bgPage: #0c1311;
     --bgElevated: #161d1a;
     --bgCard: #1a211e;
+    --bgChip: rgba(255, 255, 255, 0.09);
     --bgHover: #1f2623;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
@@ -793,7 +976,6 @@
     --accentMed: rgba(22, 163, 74, 0.26);
 
     --textOnAccentControl: #04240f;
-
     --textOnStatusControl: #04240f;
 
     --mono0Fill: rgba(22, 163, 74, 0.22);
@@ -809,33 +991,40 @@
     --mono5Fill: rgba(251, 113, 133, 0.18);
     --mono5Text: #fda4af;
 
-    --textPrimary: #e8eeeb;
-    --textContent: #c3cec8;
-    --textSecondary: #8fa099;
-    --textTertiary: #66776f;
-    --textMuted: #43524b;
+    --textPrimary: #fff;
+    --textSecondary: lch(63.304% 1.425 272);
 
     --borderSubtle: #22352e;
     --borderStrong: #31463d;
 
     --borderControl: #5f7a6e;
 
-    --shadow-card: 0 0 0 1px #ffffff14;
+    --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
-
-    --tealLight: rgba(14, 116, 144, 0.28);
 
     --tealText: #5cb6cf;
 
     --aiText: #9ba0f0;
-    --textMeta: #8fa099;
 
-    --success: #4ade80;
-    --successText: #4ade80;
-    --warn: #fbbf24;
-    --danger: #f87171;
-    --dangerBg: rgba(248, 113, 113, 0.16);
-    --dangerText: #fb9a9a;
+    --info: #0485f7;
+    --infoText: #3d99ff;
+    --success: #17c964;
+    --successText: var(--success);
+    --warning: #f7b750;
+    --warningText: var(--warning);
+    --danger: #db3b3e;
+    --dangerText: #ff615e;
+    --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
+    --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
+    --discovery: #b76be3;
+    --discoveryText: #c478f1;
+    --discoverySurface: color-mix(
+      in srgb,
+      var(--discovery) 12%,
+      var(--bgElevated)
+    );
+    --discoveryBorder: color-mix(in srgb, var(--discovery) 45%, transparent);
 
     --tagTeal: #2dd4bf;
     --tagAmber: #fbbf24;
@@ -845,32 +1034,6 @@
     --tagViolet: #a78bfa;
     --tagLime: #a3e635;
     --tagOrange: #fb923c;
-  }
-}
-
-/* A finger is not a pointer, and a 40px control under one is a control you
- * miss. The height floor rises wherever the primary input is coarse — a phone,
- * a tablet, a touchscreen laptop — which is where SC 2.5.5's 44×44 was actually
- * aimed; AA's own SC 2.5.8 asks 24×24, and 40px clears that on a mouse with
- * room to spare.
- *
- * Raised on the TOKEN, so the button, the field, the select's trigger and the
- * password reveal all grow together instead of one surface remembering and the
- * next forgetting. The sign-in screens used to hold their own 46px for exactly
- * this reason, and they were the only fields in the product that did — every
- * other form was 40px on a phone as much as on a desk.
- *
- * `pointer: coarse` rather than a width breakpoint, because the question is
- * what is touching the screen, not how wide it is. AFTER both palettes on
- * purpose: neither themes it, and a media query opened INSIDE :root ends that
- * block early and strands every token below it — which is exactly how this
- * rule got written the first time, and what the shape test now refuses.
- */
-@media (pointer: coarse) {
-  :root {
-    --control-h: 44px;
-    --control-h-sm: 36px;
-    --control-h-lg: 44px;
   }
 }
 

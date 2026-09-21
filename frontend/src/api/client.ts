@@ -7,7 +7,7 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // regenerate with `pnpm gen:api` after a crm.yaml change; never hand-edit.
 //
 // The specifier is the composition alias, not "./schema", and that is the whole
-// of what makes an extension unit's screen able to use this client (ADR-0069).
+// of what makes an extension unit's screen able to use this client (ADR-0120).
 // The VANILLA lane resolves it to src/api/schema.d.ts — the base contract — so
 // `api.GET("/ext/notes")` is correctly a type error there: that
 // installation does not serve the route. The COMPOSED lane
@@ -19,8 +19,8 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // It is a TYPE-ONLY import, so nothing changes at runtime and no bundler alias
 // is needed: `verbatimModuleSyntax` erases the line entirely.
 //
-// One installation serves one organization (A107/ADR-0061): the server
-// resolves its singleton organization itself — the client sends no tenant
+// One installation serves one company (ADR-0061): the server
+// resolves its singleton company itself — the client sends no tenant
 // selector, only the session cookie.
 
 // The reader's language, read from where the shell stores it. Sent on every
@@ -51,7 +51,40 @@ function readerLanguage(): string | undefined {
 // reason. It sits above the server's own ceiling now, so the SERVER is what
 // ends a hopeless request — it knows what the work was — and this remains what
 // it was for: the request that opened and will never answer at all.
+//
+// NOT what a request to a model route waits for — see MODEL_ROUTE_TIMEOUT_MS
+// below. This value covers "sits above CallCeiling" and stops there: it is
+// well below RouteWriteDeadline, the bound that actually governs the response
+// a model route is writing, so a request to one of those routes must use the
+// longer of the two or it gives up on work the server is still doing.
 export const REQUEST_TIMEOUT_MS = 360_000;
+
+// How long a request to a MODEL route may stay open — a declared mirror of
+// the server's ai.RouteWriteDeadline (backend/internal/modules/ai/outboundtransport.go),
+// held to it (never shorter) by backend/gates/modelroutes_test.go's
+// TestTheClientsModelRouteDeadlineMatchesTheServers.
+//
+// Using REQUEST_TIMEOUT_MS here was the bug this constant exists to fix: 360s
+// sits 1470s — 24.5 minutes — short of the server's own deadline, so the
+// client gave up on a model route that was still legitimately working, the
+// reader saw a stall, and their own retry served the answer instantly from
+// cache because the first request had finished in the meantime.
+//
+// 30 seconds ABOVE the server's own ai.RouteWriteDeadline (1,800,000ms),
+// mirroring the headroom the server's own formula already adds for the same
+// reason (writeHeadroom, outboundtransport.go): this clock starts when fetch
+// is called, before the request has even reached the network, while the
+// server's starts only once the request has arrived — so a client deadline
+// merely EQUAL to the server's is still shorter in practice by however long
+// that transit took.
+//
+// Deliberately its OWN constant rather than raising REQUEST_TIMEOUT_MS itself:
+// this client seam is shared by every route, and a single 30-minute deadline
+// on GET /v1/contacts would leave a request into a dead socket "pending" for
+// half an hour — exactly the eternal-pending state this deadline exists to
+// remove. modelWaitOf (below) is what routes a request to the right one of
+// the two.
+export const MODEL_ROUTE_TIMEOUT_MS = 1_860_000;
 
 /**
  * A request that opened and never answered.
@@ -61,7 +94,7 @@ export const REQUEST_TIMEOUT_MS = 360_000;
  * carrying what the server said, and this one carries the fact that the server
  * said nothing at all. It is deliberately NOT retried (app/queryclient.ts
  * retries only what the server reported as its own fault) — the surface whose
- * read failed offers the reader a retry, which is a person deciding to wait
+ * read failed offers the reader a retry, which is a contact deciding to wait
  * again rather than this client deciding for them.
  */
 export class RequestTimeoutError extends Error {
@@ -84,6 +117,12 @@ export class RequestTimeoutError extends Error {
 // that one counts on a clock inside the platform, which no test can advance, and
 // a deadline nothing can exercise is a deadline nobody knows still works.
 async function fetchWithDeadline(request: Request): Promise<Response> {
+  // A model route gets the longer deadline; every other request keeps the
+  // shorter one. modelWaitOf is declared further down this file — safe to
+  // call here because nothing calls fetchWithDeadline until the module has
+  // finished loading and every binding below is initialised.
+  const timeoutMs =
+    modelWaitOf(request) === null ? REQUEST_TIMEOUT_MS : MODEL_ROUTE_TIMEOUT_MS;
   const deadline = new AbortController();
   // The REQUEST's own signal is what React Query aborts when a screen unmounts
   // or a query is cancelled. Without this the deadline was the only way a call
@@ -102,9 +141,9 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
   }
   const expiry = globalThis.setTimeout(() => {
     deadline.abort(
-      new RequestTimeoutError(request.method, request.url, REQUEST_TIMEOUT_MS),
+      new RequestTimeoutError(request.method, request.url, timeoutMs),
     );
-  }, REQUEST_TIMEOUT_MS);
+  }, timeoutMs);
   try {
     return withGatewayProblem(
       await globalThis.fetch(request, { signal: deadline.signal }),
@@ -139,14 +178,14 @@ const GATEWAY_STATUSES = new Set([502, 503, 504]);
 // TWO readers want this set, for the same reason: duration. A model call runs
 // for tens of seconds, so a proxy giving up on one really does leave work in
 // flight and really does make a retry a second call rather than a repeat
-// (`withGatewayProblem`), and a person who pressed the button really is waiting
+// (`withGatewayProblem`), and a contact who pressed the button really is waiting
 // on the agent for that whole time (`model-inflight.ts`, which is what lights
 // the AI-activity rail the instant the request leaves rather than at its next
 // poll of the feed).
 //
 // `always` is a handler that generates on every call. `on-miss` is one that
 // serves a stored reading and generates only when it has none: the dossier, the
-// growth-fit band, the person brief, the deal status, the morning brief. Those
+// growth-fit band, the contact brief, the deal status, the morning brief. Those
 // answer from the store in well under a second and from the model in many, and
 // the two are told apart by nothing the client can see at the moment the
 // request leaves. So an `on-miss` call is counted as the agent working only
@@ -164,10 +203,10 @@ type ModelWait = "always" | "on-miss";
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "GET /activities/{id}/meeting-brief": "always",
   "GET /deals/{id}/status": "on-miss",
-  "GET /organizations/{id}/brief": "on-miss",
-  "GET /organizations/{id}/dossier": "on-miss",
-  "GET /organizations/{id}/growth-fit": "on-miss",
-  "GET /people/{id}/brief": "on-miss",
+  "GET /companies/{id}/brief": "on-miss",
+  "GET /companies/{id}/dossier": "on-miss",
+  "GET /companies/{id}/growth-fit": "on-miss",
+  "GET /contacts/{id}/brief": "on-miss",
   "POST /activities/{id}/draft-email": "always",
   "POST /brief": "on-miss",
   "POST /coldstart": "always",
@@ -178,16 +217,16 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /leads/{id}/draft-email": "always",
   "POST /offers/{id}/regenerate": "always",
   "POST /onboarding/company/messages": "always",
-  "POST /organizations/{id}/ask": "always",
-  "POST /organizations/{id}/brief": "always",
-  "POST /organizations/{id}/dossier": "always",
-  "POST /organizations/{id}/draft-email": "always",
-  "POST /organizations/{id}/enrich": "always",
-  "POST /organizations/{id}/growth-fit": "always",
-  "POST /organizations/{id}/intro-request-draft": "always",
-  "POST /people/{id}/brief": "always",
-  "POST /people/{id}/draft-email": "always",
-  "POST /people/{id}/intro-note-draft": "always",
+  "POST /companies/{id}/ask": "always",
+  "POST /companies/{id}/brief": "always",
+  "POST /companies/{id}/dossier": "always",
+  "POST /companies/{id}/draft-email": "always",
+  "POST /companies/{id}/enrich": "always",
+  "POST /companies/{id}/growth-fit": "always",
+  "POST /companies/{id}/intro-request-draft": "always",
+  "POST /contacts/{id}/brief": "always",
+  "POST /contacts/{id}/draft-email": "always",
+  "POST /contacts/{id}/intro-note-draft": "always",
 };
 
 // How long an `on-miss` request may stay open before it counts as the agent

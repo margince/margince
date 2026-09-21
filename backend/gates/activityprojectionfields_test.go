@@ -16,7 +16,7 @@ package gates
 // The field is optional on the wire. A reason that leaks and a reason that was
 // never set produce responses no client can tell apart, and no downstream
 // assertion fails on either. Both halves of that have already happened: the
-// person 360 assembles its own SELECT rather than using the shared projection
+// contact 360 assembles its own SELECT rather than using the shared projection
 // and shipped without the column at all, so the record timeline — the one
 // screen where an owner decides whether to share a thread — never received it.
 //
@@ -52,7 +52,10 @@ import (
 // does not exist.
 var audienceReasonWriters = map[string]string{
 	"internal/modules/activities/activityprojection.go": "TestAWithheldRowCarriesNoAudienceReason",
-	"internal/compose/person360/sectionstimeline.go":    "TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague",
+	// The scan moved out of sectionstimeline.go when that file crossed the
+	// length cap; the behaviour and its proof are unchanged, only the file that
+	// assigns the field.
+	"internal/compose/contact360/timelinerow.go": "TestTheContactPageWithholdsALimitedMessagesReasonFromAColleague",
 }
 
 func TestEveryAudienceReasonWriterIsProvedToWithholdIt(t *testing.T) {

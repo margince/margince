@@ -9,7 +9,7 @@ package capture
 // Neither survived the decision before this. The engine compared the confidence
 // against a floor and dropped it, so afterwards a 0.71 answer and a 0.99 one
 // were indistinguishable — an operator asking why a department was filed as a
-// person could see the answer and never how close it came to being refused. The
+// contact could see the answer and never how close it came to being refused. The
 // served model matters for the same reason: this lane runs on whatever local
 // model a deployment bound, and a wrong answer is evidence about that model only
 // if the model is named.

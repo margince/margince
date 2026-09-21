@@ -11,7 +11,7 @@
 // test-binary process and records the empty schema's physical size; every later
 // test in that process rides the already-migrated schema and only resets the
 // data. Correctness holds because no migration seeds reference data a test
-// depends on — the only data-touching migration (person_social backfill) is a
+// depends on — the only data-touching migration (contact_social backfill) is a
 // no-op on an empty database.
 //
 // Once per process is still not the same as once per RUN, and most of the time
@@ -97,7 +97,7 @@ var (
 // that EnsureSchema's emptiness proof has to make an exception for.
 //
 // ext is in scope for exactly the reason public is. Since 0202 every extension
-// unit's tables live there (ADR-0069), applied by the same lane, and an ext_
+// unit's tables live there (ADR-0120), applied by the same lane, and an ext_
 // table left out of this fragment is one no reset ever empties: the rows an
 // integration test writes through a unit survive into every later test in the
 // process, and the failure surfaces somewhere else entirely as a flake. The
@@ -125,8 +125,10 @@ const resetTables = `
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
-	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', 'overlay_mode', ` +
-	`'currency_minor_digits')`
+	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
+	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
+	`'maskable_field', ` +
+	`'activity_review_template')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
@@ -214,9 +216,6 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	// and search_path-independent.
 	if _, err := tx.Exec(ctx, `DELETE FROM `+strings.Join(tables, `; DELETE FROM `)+`;`); err != nil {
 		return fmt.Errorf("emptying data tables: %w", err)
-	}
-	if err := resetInstallationSingletons(ctx, tx); err != nil {
-		return err
 	}
 	if err := restartSequences(ctx, tx); err != nil {
 		return err
@@ -372,7 +371,7 @@ func restartSequences(ctx context.Context, tx execQuerier) error {
 }
 
 // dropCustomFieldColumns reverts the runtime DDL the customfields engine adds —
-// the cf_<slug> columns it appends to record tables (people, deals, …) as the
+// the cf_<slug> columns it appends to record tables (contacts, deals, …) as the
 // system's single sanctioned ALTER-TABLE chokepoint. Emptying rows leaves the
 // columns, so without this a cf_ column created by one test leaks into the next
 // and is rejected as "taken platform-wide". No migrated baseline table carries a
@@ -452,30 +451,4 @@ func queryIdents(ctx context.Context, q execQuerier, sql string) ([]string, erro
 		return nil, err
 	}
 	return idents, nil
-}
-
-// resetInstallationSingletons returns the one-row tables a migration seeds to
-// their declared defaults.
-//
-// overlay_mode is the installation's system-of-record mode. It is spared the
-// DELETE batch above — deleting it would leave the installation with no mode at
-// all, and the dispatcher's first read would fail with "no rows in result set",
-// surfacing as a 500 on an unrelated write with nothing pointing back here. But
-// sparing it alone is the other half of the same bug: a suite that flips the
-// installation into overlay mode would leave it there for whatever ran next.
-// The row has to survive AND be the default, so it is spared and then reset.
-//
-// Guarded on the table existing because it belongs to the fork-owned custom
-// namespace (ADR-0054 §7): a tree composed without the overlay pack has no such
-// table, and a reset there has nothing to put back.
-func resetInstallationSingletons(ctx context.Context, tx execQuerier) error {
-	if _, err := tx.Exec(ctx, `
-		DO $$ BEGIN
-			IF to_regclass('public.overlay_mode') IS NOT NULL THEN
-				UPDATE public.overlay_mode SET sor_mode = DEFAULT, incumbent = DEFAULT;
-			END IF;
-		END $$`); err != nil {
-		return fmt.Errorf("returning the installation's overlay mode to its default: %w", err)
-	}
-	return nil
 }

@@ -129,6 +129,50 @@ func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze briefItemRe
 			t.Fatal("the home read still shows a mid-snooze item — it must hide until snoozed_until passes")
 		}
 	}
+
+	assertUnsnoozeReturnsItem(t, e, toSnooze)
+}
+
+// assertUnsnoozeReturnsItem drives the take-back: the item comes out of the
+// snooze, the home read shows it again, and a second take-back is refused.
+//
+// Over HTTP rather than through the engine, because the wiring is half the
+// claim. A generated stub carries the same method name as the real handler and
+// answers 501; which one the route resolves to is a property of the server
+// struct, not of the engine the unit lane exercises.
+func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed briefItemResponse) {
+	t.Helper()
+	var back briefItemResponse
+	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.Id+"/unsnooze",
+		nil, nil, &back); status != http.StatusOK {
+		t.Fatalf("unsnooze = %d, want 200", status)
+	}
+	if back.State != "new" || back.SnoozedUntil != "" {
+		t.Fatalf("item after the take-back = %+v, want state new with no snoozed_until", back)
+	}
+
+	// BACK IN THE QUEUE is the claim, and the home read is where it is true or
+	// not: a row that says `new` and does not come back has not been returned.
+	var afterUnsnooze briefResponse
+	if status := e.Call(t, "GET", "/v1/brief", nil, nil, &afterUnsnooze); status != http.StatusOK {
+		t.Fatalf("GET /v1/brief after the take-back = %d, want 200", status)
+	}
+	var found bool
+	for _, it := range afterUnsnooze.Items {
+		if it.Id == snoozed.Id {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the home read still hides the item after its snooze was taken back")
+	}
+
+	// And pressing it twice is refused rather than silently stamping the row
+	// again, which is what makes the control safe on a stale screen.
+	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.Id+"/unsnooze",
+		nil, nil, nil); status != http.StatusConflict {
+		t.Fatalf("second unsnooze = %d, want 409", status)
+	}
 }
 
 // findBriefItem resolves the queue entry for a deal — rank order between

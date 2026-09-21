@@ -48,6 +48,5 @@
 .extunits-open > svg {
   width: 16px;
   height: 16px;
-  color: var(--textMeta);
   flex: none;
 }

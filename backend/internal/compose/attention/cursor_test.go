@@ -194,7 +194,7 @@ func TestNoCursorStartsAtTheTop(t *testing.T) {
 	}
 }
 
-// A cursor minted while reading one person's queue must not open another's.
+// A cursor minted while reading one contact's queue must not open another's.
 //
 // This is the end-to-end shape of the fingerprint rule, driven through
 // Worklist rather than decodeCursor: the mint reads `s.taskOwner` off the
@@ -208,7 +208,7 @@ func TestACursorFromOneQueueCannotOpenAnothers(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	// Three waits each, so a page of two leaves a third behind and the read
 	// actually mints a cursor.
 	waits := []WaitingCustomer{}
@@ -238,7 +238,7 @@ func TestACursorFromOneQueueCannotOpenAnothers(t *testing.T) {
 	_, err = svc.Worklist(managerReading(), "", "", ids.UUID{}, 2, *first.NextCursor)
 	if err == nil {
 		t.Error("a cursor minted on the rep's queue was accepted on the manager's own; " +
-			"page two would answer about a different person with nothing saying so")
+			"page two would answer about a different contact with nothing saying so")
 	}
 
 	// And it still works on the queue it was minted for.
@@ -321,7 +321,7 @@ func TestEquivalentSpellingsOfOneQuestionShareACursor(t *testing.T) {
 		svc := NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 			stubBriefing{}, nil, nil, nil, nil,
-			nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 		waits := []WaitingCustomer{}
 		for i := range 3 {
 			waits = append(waits, WaitingCustomer{
@@ -372,7 +372,7 @@ func TestNamingYourselfAnswersTheSamePageAsOmittingTheOwner(t *testing.T) {
 		svc := NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 			stubBriefing{}, nil, nil, nil, nil,
-			nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 		svc.waiting = waitingOwnedBy{
 			{
 				ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000b1"),

@@ -8,6 +8,7 @@ import { Building2, Contact, Handshake } from "lucide-react";
 import { api } from "../api/client";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { isTagTone } from "../design-system/tagpill";
@@ -58,7 +59,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   }
 
   const usage = tag.data.usage;
-  const total = usage.people + usage.companies + usage.deals;
+  const total = usage.contacts + usage.companies + usage.deals;
 
   return (
     <div className="wrap tagresult">
@@ -70,7 +71,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
           small type, so a page title drawn as one renders chip-sized. The
           tag's colour still reads, as the pill's own dot. */}
       <header className="tagresult-head">
-        <h1 className="tagresult-title">
+        <Heading size="xlarge" className="tagresult-title">
           {isTagTone(tag.data.color) && !tag.data.archived_at && (
             <span
               className={`tagpill-dot tagpill-dot-${tag.data.color}`}
@@ -83,7 +84,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
               {t("tags.archived")}
             </span>
           )}
-        </h1>
+        </Heading>
         {/* Not drawn for a RETIRED word. The usage total counts assignments
             that still exist, while every record list requires the tag to be
             live — so on a retired tag the sentence is the one line on the page
@@ -108,14 +109,14 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
       ) : (
         <div className="tagresult-groups">
           <ResultGroup
-            kind="person"
-            title={t("tagResult.people")}
+            kind="contact"
+            title={t("tagResult.contacts")}
             icon={Contact}
-            count={usage.people}
+            count={usage.contacts}
             tagID={tagID}
           />
           <ResultGroup
-            kind="organization"
+            kind="company"
             title={t("tagResult.companies")}
             icon={Building2}
             count={usage.companies}
@@ -136,8 +137,8 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
 
 /** What each record type is called on the wire, and where its rows live. */
 const GROUPS = {
-  person: { path: "/people", screen: "contacts" },
-  organization: { path: "/organizations", screen: "companies" },
+  contact: { path: "/contacts", screen: "contacts" },
+  company: { path: "/companies", screen: "companies" },
   deal: { path: "/deals", screen: "deals" },
 } as const;
 
@@ -201,7 +202,7 @@ function ResultGroup({
   // The HEADER counts the rows, not the tag's usage. The two are answers to
   // different questions and they disagree in a state a reader can reach: the
   // usage count admits a retired tag, while the list filter every record screen
-  // uses requires the tag to be live. A retired word would head "People (2)"
+  // uses requires the tag to be live. A retired word would head "Contacts (2)"
   // over an empty group. Once more rows exist than the preview shows, the total
   // is the honest ceiling and the footer says so.
   const shown = formatNumber(
@@ -246,7 +247,6 @@ function ResultGroup({
             test here for the same reason it is not the header. */}
         {listed.length >= PREVIEW_ROWS && (
           <Button
-            small
             variant="ghost"
             onClick={() => {
               window.location.hash = allRecordsHref(group.screen, tagID).slice(
@@ -265,7 +265,7 @@ function ResultGroup({
 /**
  * What to call one record.
  *
- * The three types name themselves differently on the wire — a person carries
+ * The three types name themselves differently on the wire — a contact carries
  * `full_name`, a company `display_name`, a deal `name` — and a row whose name
  * is empty is named as unnamed rather than rendered as a blank line nobody can
  * press with confidence.

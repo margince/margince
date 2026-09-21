@@ -16,6 +16,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // serveUntilSignal serves the composed handler with explicit operational
@@ -30,8 +32,10 @@ func serveUntilSignal(ctx context.Context, cfg apiConfig, handler http.Handler, 
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       2 * time.Minute,
+		// The chassis's own figure, because the request context is bounded by
+		// the same one: a handler may run exactly as long as its response has.
+		WriteTimeout: httpserver.ResponseDeadline,
+		IdleTimeout:  2 * time.Minute,
 	}
 
 	errCh := make(chan error, 1)

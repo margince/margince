@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 import { ComposeModal, type RelinkKind } from "./compose";
 import { isMailbox } from "./connectorproviders";
 import { useConnectors } from "./connectors";
@@ -10,7 +16,7 @@ import { useConnectors } from "./connectors";
  * Writing to an address, from wherever the address is shown.
  *
  * An address on a record header, in a rail's details row, on a card listing
- * the account's people: each is a way to ACT, and the act is the product's
+ * the account's contacts: each is a way to ACT, and the act is the product's
  * composer — the one place a message is drafted, gated on consent, sent and
  * filed against the record it was written from. Handing the address to the
  * reader's own mail client instead (a `mailto:`) sent the message AROUND the
@@ -99,28 +105,44 @@ export function WriteToProvider({
  * from, and nothing otherwise.
  */
 export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
-  const [target, setTarget] = useState<WriteToTarget | null>(null);
+  // The target OUTLIVES the close: the composer stays mounted so it can animate
+  // out, and a target dropped at the moment of closing would empty the drawer
+  // the reader is watching leave. `writing` is what is open, and `seq` counts
+  // the opens — it rides in the key below, so every press mounts a fresh
+  // composer, which is the reset the old unmount gave for free.
+  const [target, setTarget] = useState<
+    (WriteToTarget & Readonly<{ seq: number }>) | null
+  >(null);
+  const [writing, setWriting] = useState(false);
   const connected = useMailboxConnected();
+  const writeTo = useCallback((next: WriteToTarget) => {
+    setTarget((prior) => ({ ...next, seq: (prior?.seq ?? 0) + 1 }));
+    setWriting(true);
+  }, []);
   return (
-    <WriteToContext.Provider value={connected ? setTarget : null}>
+    <WriteToContext.Provider value={connected ? writeTo : null}>
       {children}
-      {target && (
-        // Keyed by the record, so a press on another record's address while
-        // the composer is open remounts it rather than re-pointing it — the
-        // text written for one record must not be filed against another.
+      {/* The guard falls only before the first address is ever pressed: the
+          target outlives the close, so from then on the composer stays mounted
+          and can animate out. */}
+      {target !== null && (
+        // Keyed by the record AND the open, so a press on another record's
+        // address while the composer is open remounts it rather than
+        // re-pointing it — the text written for one record must not be filed
+        // against another.
         <ComposeModal
-          key={target.entityId}
+          key={`${target.entityId}:${target.seq}`}
           entityType={target.entityType}
           entityId={target.entityId}
-          // A person IS the contact the composer files under; every other
-          // record resolves its people from its own links.
-          personId={
-            target.entityType === "person" ? target.entityId : undefined
+          // A contact IS the contact the composer files under; every other
+          // record resolves its contacts from its own links.
+          contactId={
+            target.entityType === "contact" ? target.entityId : undefined
           }
           recordAddress={target.address}
           kind="email"
-          open
-          onClose={() => setTarget(null)}
+          open={writing}
+          onClose={() => setWriting(false)}
         />
       )}
     </WriteToContext.Provider>

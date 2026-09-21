@@ -3,37 +3,25 @@
 
 package attention
 
-// What a drifting deal is WORTH, and whether that is worth interrupting a day
-// for.
-//
-// Apart from the other classifiers because it is the only one that answers a
-// question about money rather than about time: everything else on the queue
-// ranks on a clock, and this one ranks on an amount weighed against what the
-// pipeline itself normally carries.
-
 import (
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
-// classifyRisk: a deal drifting. Whether it is worth interrupting the day for
-// is decided against the pipeline's own median rather than a number somebody
-// typed once, so "material" tracks the business as it changes.
+// classifyRisk weighs both value and the time available for deal recovery.
 func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar, money dayMoney) ranked {
 	consequence := crmcontracts.WorklistItemConsequence("deal_drifts")
 	if item.Kind != nil && *item.Kind == "close_overdue" {
 		consequence = "deal_slips_past_close"
 	}
 	expected, known := expectedRevenue(item, money)
-	// Material revenue interrupts the day; a smaller deal drifting is agreed
-	// work like any other. The bar is the pipeline's own median rather than a
-	// number somebody typed once, so "material" tracks the business as it
-	// moves — and a deal whose value nobody recorded is not assumed large.
 	level := levelAgreed
-	if known && bar.material(expected) {
+	material := known && bar.material(expected)
+	if material || recoveryDue(item, asOf) {
 		level = levelMaterialRisk
 	}
 	row := base(item, level, "deals_at_risk", consequence)
@@ -43,7 +31,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	// comparing it against the summary's threshold compares like with like.
 	// The deal's own amount in its own currency still rides on the row's deal
 	// facts, so nothing the card states is lost.
-	if level == levelMaterialRisk {
+	if material {
 		row.Because = append(row.Because, reason("material", money.value(expected, item.Deal)))
 	} else if known {
 		row.Because = append(row.Because, reason("below_material", money.value(expected, item.Deal)))
@@ -60,10 +48,8 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	if quiet > 0 {
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
 	}
-	// The close date is a deadline the customer agreed to, so it ranks like
-	// one. Without this the risk lane compared on idle days alone, and a deal
-	// already past its date lost to one merely quiet for longer.
-	if item.DueAt != nil {
+	// A close date calls for recovery or requalification, including when provisional.
+	if closingSoon(item, asOf) {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	return ranked{
@@ -84,6 +70,19 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	}
 }
 
+// recoveryDue is a dated recovery decision, independent of portfolio size.
+// A provisional close calls for requalification, not a claim that the customer
+// committed to that date. The row carries that distinction with its deal facts.
+const recoveryHorizonDays = 14
+
+func recoveryDue(item crmcontracts.AttentionItem, asOf time.Time) bool {
+	if item.DueAt == nil {
+		return false
+	}
+	horizon := asOf.AddDate(0, 0, recoveryHorizonDays)
+	return deadline.Passed(item.DueAt, horizon) || item.DueAt.Equal(horizon)
+}
+
 // dealFactsOf carries the deal's own figures onto the queue row. The lane feed
 // already resolved them; dropping them here would make the client read a second
 // endpoint per row to draw a card this one could have completed.
@@ -92,10 +91,12 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		return nil
 	}
 	facts := &crmcontracts.WorklistDealFacts{
-		StageId:     item.Deal.StageId,
-		OwnerId:     item.Deal.OwnerId,
-		AmountMinor: item.Deal.AmountMinor,
-		Currency:    item.Deal.Currency,
+		StageId:              item.Deal.StageId,
+		CloseDateProvisional: item.Deal.CloseDateProvisional,
+		ForecastCategory:     item.Deal.ForecastCategory,
+		OwnerId:              item.Deal.OwnerId,
+		AmountMinor:          item.Deal.AmountMinor,
+		Currency:             item.Deal.Currency,
 		// A finding or nothing. `false` is never sent, so a covered committee
 		// reaches the wire absent alongside the unreadable and the seatless one
 		// — a reader who cannot see the seats must not be able to tell those
@@ -184,4 +185,10 @@ func moneyOf(minor int64, deal *crmcontracts.AttentionDealFacts) *crmcontracts.W
 		money.Currency = deal.Currency
 	}
 	return money
+}
+
+// The overdue flag is the deal engine's calendar-aware verdict. A past close
+// date must not be described as an expected close in the coming fortnight.
+func closingSoon(item crmcontracts.AttentionItem, asOf time.Time) bool {
+	return recoveryDue(item, asOf) && (item.Overdue == nil || !*item.Overdue)
 }

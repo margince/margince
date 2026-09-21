@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer reports the state of external sources by stating that mail and calendar connectors are not connected (a specified way to say sources were not read) and clarifies that other available sources are up to date, rather than only reporting findings without addressing source status.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer reports that this workspace's external sources were never read: it says the connectors or feeds are not connected, unchecked or stale, or that nothing behind the figures came from outside what people typed into Margince. Answer no if the answer says nothing at all about the state of the sources — reporting only the findings the checks produced is the failure this criterion exists for. Any wording or language will do, and stating it as a denial ('none of the sources were checked') is a yes.",
+  "answer": "No mail or calendar is connected yet.\n\nEvery source is up to date, so the picture is complete and the numbers are safe to send."
+}

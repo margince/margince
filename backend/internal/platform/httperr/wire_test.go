@@ -39,3 +39,39 @@ func TestDecodeCapsTheBody(t *testing.T) {
 		t.Fatalf("oversized body → ok=%v status=%d, want refusal 413", ok, status)
 	}
 }
+
+// RFC 9110 §13.1.2: If-None-Match is a comma-separated list, "*" matches
+// anything, and comparison is WEAK — a proxy prefixing this server's own
+// strong tag with "W/" must still count as a match, or a caller that adds
+// one silently loses the conditional-GET saving the header exists to give it.
+func TestIfNoneMatchHit(t *testing.T) {
+	tests := map[string]struct {
+		etag   string
+		header string
+		want   bool
+	}{
+		"no header":                {etag: `"abc123"`, header: "", want: false},
+		"exact match":              {etag: `"abc123"`, header: `"abc123"`, want: true},
+		"wildcard":                 {etag: `"abc123"`, header: "*", want: true},
+		"weak-prefixed match":      {etag: `"abc123"`, header: `W/"abc123"`, want: true},
+		"one of several, matches":  {etag: `"abc123"`, header: `"other", "abc123"`, want: true},
+		"one of several, no match": {etag: `"abc123"`, header: `"other", "third"`, want: false},
+		"different tag":            {etag: `"abc123"`, header: `"xyz789"`, want: false},
+		"substring is not a match": {etag: `"abc123"`, header: `"abc1234"`, want: false},
+		// A comma is a legal byte inside a quoted etag-value (RFC 9110's
+		// etag-value grammar), so splitting the list on every comma would cut
+		// this single candidate into two pieces, neither equal to the etag.
+		"comma inside the etag value itself": {etag: `"a,b"`, header: `"a,b"`, want: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			r := httptest.NewRequest("GET", "/v1/things", nil)
+			if tt.header != "" {
+				r.Header.Set("If-None-Match", tt.header)
+			}
+			if got := IfNoneMatchHit(r, tt.etag); got != tt.want {
+				t.Errorf("IfNoneMatchHit(If-None-Match: %q, etag: %q) = %v, want %v", tt.header, tt.etag, got, tt.want)
+			}
+		})
+	}
+}

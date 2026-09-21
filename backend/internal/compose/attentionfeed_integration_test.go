@@ -11,7 +11,7 @@ package compose
 // assembly and nothing about the producers: a stub returns a row because the
 // test told it to, so a producer that stopped reaching the surface would leave
 // every one of them green. These drive the REAL writers — the staging service,
-// the activity store, the person store — and read the whole feed back through
+// the activity store, the contact store — and read the whole feed back through
 // the same wiring the HTTP handler uses, so a break anywhere between the write
 // and the lane fails here.
 //
@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,7 +42,7 @@ import (
 // which is exactly the gap the feed's stub-driven unit tests leave.
 func assembleFeed(ctx context.Context, t *testing.T, e *integration.Env, now time.Time) crmcontracts.Attention {
 	t.Helper()
-	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), func() time.Time { return now })
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
 	day, err := feed.Assemble(ctx)
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)
@@ -96,7 +96,7 @@ func logTask(t *testing.T, e *integration.Env, subject string, due time.Time, do
 // it — not a link to somewhere else it could be answered.
 func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 	e := integration.Setup(t)
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
 		t.Fatalf("creating the target: %v", err)
 	}
@@ -106,8 +106,8 @@ func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
 		DiffHash:       "feed-" + ids.NewV7().String(),
 		Summary:        "Send the follow-up to Anna Weber",
-		TargetType:     "person",
-		TargetID:       ids.UUID(person.Id),
+		TargetType:     "contact",
+		TargetID:       ids.UUID(contact.Id),
 	}); err != nil {
 		t.Fatalf("staging the proposal: %v", err)
 	}
@@ -133,10 +133,10 @@ func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 // nobody can answer.
 func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	e := integration.Setup(t)
-	if _, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Lucy Vo"}); err != nil {
+	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Lucy Vo"}); err != nil {
 		t.Fatalf("creating the incumbent: %v", err)
 	}
-	if _, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "LUCY VO"}); err != nil {
+	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "LUCY VO"}); err != nil {
 		t.Fatalf("creating the near-match: %v", err)
 	}
 
@@ -153,8 +153,12 @@ func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	}
 }
 
-// An overdue task is today's agreed work. Both halves of the filter are pinned:
-// what is due is carried, and what is done or still ahead is not.
+// An overdue task is today's agreed work, and a FINISHED one is not.
+//
+// Work still ahead is carried too, in its own run: the lane answers what is
+// owed and what is landing, and a rep whose next deadline is invisible until
+// the morning it arrives has no warning of it. What must never appear is a task
+// somebody already did.
 func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
@@ -164,8 +168,13 @@ func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
 
 	day := assembleFeed(e.Admin(), t, e, now)
 	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Ring the buyer back" {
-		t.Fatalf("the planned lane = %v, want only the task actually due", got)
+	if len(got) == 0 || got[0] != "Ring the buyer back" {
+		t.Fatalf("the planned lane = %v, want the overdue task leading it", got)
+	}
+	for _, title := range got {
+		if title == "Already handled" {
+			t.Errorf("a finished task reached the lane: %v", got)
+		}
 	}
 	if day.Planned[0].Overdue == nil || !*day.Planned[0].Overdue {
 		t.Error("the task is not marked overdue, so the reader cannot see which work slipped")
@@ -212,7 +221,7 @@ func containsAction(actions []crmcontracts.AttentionItemActions, want string) bo
 // The lane now reads the decision's own marker, which a deletion cannot rewrite.
 func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) {
 	e := integration.Setup(t)
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
 		t.Fatalf("creating the target: %v", err)
 	}
@@ -222,8 +231,8 @@ func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) 
 		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
 		DiffHash:       "receipt-" + ids.NewV7().String(),
 		Summary:        "Send the follow-up to Anna Weber",
-		TargetType:     "person",
-		TargetID:       ids.UUID(person.Id),
+		TargetType:     "contact",
+		TargetID:       ids.UUID(contact.Id),
 	})
 	if err != nil {
 		t.Fatalf("staging the proposal: %v", err)
@@ -247,7 +256,7 @@ func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) 
 
 	day := assembleFeed(e.Admin(), t, e, time.Now().UTC())
 	if got := sourcesOn(day.DoneForYou); len(got) != 0 {
-		t.Fatalf("the done-for-you lane = %v, want nothing: a person decided this", got)
+		t.Fatalf("the done-for-you lane = %v, want nothing: a human decided this", got)
 	}
 }
 
@@ -262,10 +271,22 @@ func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
 	logTask(t, e, "Due a moment before midnight", endOfDay.Add(-time.Second), false)
 	logTask(t, e, "Due exactly at midnight", endOfDay, false)
 
+	// Both are carried now — the lane also holds what is coming — so the
+	// boundary is read off the GROUP each row was given rather than off which
+	// of them reached the page.
 	day := assembleFeed(e.Admin(), t, e, now)
-	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Due a moment before midnight" {
-		t.Fatalf("the planned lane = %v, want only the task due before the day ends", got)
+	groups := map[string]string{}
+	for _, item := range day.Planned {
+		if item.Title != nil && item.DueGroup != nil {
+			groups[*item.Title] = string(*item.DueGroup)
+		}
+	}
+	if got := groups["Due a moment before midnight"]; got != "today" {
+		t.Errorf("a task due a second before midnight is grouped %q, want today", got)
+	}
+	if got := groups["Due exactly at midnight"]; got != "tomorrow" {
+		t.Errorf("a task due exactly at midnight is grouped %q, want tomorrow — the "+
+			"bound is the END of the day, so a promise dated at it is tomorrow's", got)
 	}
 }
 
@@ -280,14 +301,14 @@ func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
 func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
 		t.Fatalf("creating the target: %v", err)
 	}
 	svc := approvals.NewService(e.DB())
 	// The receipt: staged first, so every later staging sorts above it, and
 	// marked as the system's own act decided just now.
-	old := stageFor(t, e, svc, person, "Filed a message under Riverty")
+	old := stageFor(t, e, svc, contact, "Filed a message under Riverty")
 	e.WsExec(t, `UPDATE approval
 		    SET status = 'approved', decided_by_system = true, decided_at = now(),
 		        created_at = now() - interval '7 days'
@@ -295,7 +316,7 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	// Enough newer stagings, decided outside the window, to fill any page the
 	// lane would ask for.
 	for i := 0; i < doneLaneWidth+4; i++ {
-		id := stageFor(t, e, svc, person, fmt.Sprintf("An older act %d", i))
+		id := stageFor(t, e, svc, contact, fmt.Sprintf("An older act %d", i))
 		e.WsExec(t, `UPDATE approval
 			    SET status = 'approved', decided_by_system = true,
 			        decided_at = now() - interval '30 days'
@@ -308,9 +329,9 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	}
 }
 
-// stageFor stages one proposal against a person through the real service.
+// stageFor stages one proposal against a contact through the real service.
 func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
-	person crmcontracts.Person, summary string,
+	contact crmcontracts.Contact, summary string,
 ) ids.ApprovalID {
 	t.Helper()
 	id, err := svc.Stage(e.Admin(), approvals.StageInput{
@@ -318,8 +339,8 @@ func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
 		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
 		DiffHash:       "receipt-" + ids.NewV7().String(),
 		Summary:        summary,
-		TargetType:     "person",
-		TargetID:       ids.UUID(person.Id),
+		TargetType:     "contact",
+		TargetID:       ids.UUID(contact.Id),
 	})
 	if err != nil {
 		t.Fatalf("staging %q: %v", summary, err)
@@ -343,11 +364,22 @@ func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
 	logTask(t, e, "Due late tonight, local", time.Date(2026, 6, 15, 16, 30, 0, 0, time.UTC), false)
 	logTask(t, e, "Due tomorrow morning, local", time.Date(2026, 6, 15, 18, 0, 0, 0, time.UTC), false)
 
+	// Read off the GROUPS rather than off which rows reached the page: the lane
+	// carries tomorrow's work too, so what the boundary decides is which run
+	// each task lands in.
 	day := assembleFeed(e.Admin(), t, e, now)
-	got := titlesOn(day.Planned)
-	if len(got) != 1 || got[0] != "Due late tonight, local" {
-		t.Fatalf("the planned lane = %v, want only tonight's work: 18:00 UTC is 01:00 tomorrow "+
-			"where this installation is, and UTC's midnight is not its day", got)
+	groups := map[string]string{}
+	for _, item := range day.Planned {
+		if item.Title != nil && item.DueGroup != nil {
+			groups[*item.Title] = string(*item.DueGroup)
+		}
+	}
+	if got := groups["Due late tonight, local"]; got != "today" {
+		t.Errorf("tonight's work is grouped %q, want today", got)
+	}
+	if got := groups["Due tomorrow morning, local"]; got != "tomorrow" {
+		t.Errorf("work at 18:00 UTC is grouped %q, want tomorrow: that is 01:00 "+
+			"tomorrow where this installation is, and UTC's midnight is not its day", got)
 	}
 }
 

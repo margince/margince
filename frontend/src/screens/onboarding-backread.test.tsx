@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,8 +10,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { OnboardingBackread } from "./onboarding-backread";
@@ -57,6 +58,11 @@ const previewOf = (body: Record<string, unknown>) =>
     ...body,
   });
 
+let user: ReturnType<typeof userEvent.setup>;
+beforeEach(() => {
+  user = userEvent.setup();
+});
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -64,6 +70,40 @@ afterEach(() => {
 });
 
 describe("the scope preview", () => {
+  it("previews and starts ten years, naming the date and the capped estimate", async () => {
+    const starts: unknown[] = [];
+    installFetchStub({
+      [PREVIEW_ROUTE]: (body) =>
+        previewOf({
+          ...(typeof body === "object" && body !== null ? body : {}),
+          after_date: "2016-07-31",
+          estimated_messages: 20000,
+          estimate_is_floor: true,
+          estimated_cost_minor: 300,
+          currency: "USD",
+        }),
+      [START_ROUTE]: (body) => {
+        starts.push(body);
+        return jsonResponse({ state: "queued", window: "120m" }, 202);
+      },
+    });
+    render({ state: "none" });
+    await screen.findByRole("combobox", { name: "Import window" });
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Import window" }),
+      "10 years",
+    );
+    await screen.findByText(/Import emails since/);
+    expect(screen.getByText(/At least 20,000 messages/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/full import can contain more messages and cost more/),
+    ).toBeInTheDocument();
+    expect(starts).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Connect and read" }));
+    await waitFor(() => expect(starts).toEqual([{ window: "120m" }]));
+  });
+
   it("previews the default window, then the window the user picks", async () => {
     const windows: unknown[] = [];
     installFetchStub({
@@ -79,16 +119,20 @@ describe("the scope preview", () => {
       await screen.findByText("About 1,234 messages in that window."),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("radio", { name: /12 months/ }));
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Import window" }),
+      "1 year",
+    );
     await waitFor(() =>
       expect(windows).toEqual([{ window: "6m" }, { window: "12m" }]),
     );
   });
 
-  // Changing the window must not leave the old window's estimate on screen,
-  // and Start must not fire for a scope the reader never actually saw a
-  // preview for.
-  it("clears the previous window's estimate and holds Start until the new one settles", async () => {
+  // Changing the window must not leave the old window's estimate on screen —
+  // and while the new one is being counted the scope says so, rather than
+  // standing empty behind a start nobody can press.
+  it("clears the previous window's estimate and says it is counting the new one", async () => {
     // A box, not a bare `let`: TS's control-flow narrowing otherwise loses
     // the function type across the callback boundary that assigns it.
     const deferred: { resolve: ((r: Response) => void) | null } = {
@@ -107,13 +151,12 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     await screen.findByText("About 100 messages in that window.");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Connect and read" }),
-      ).not.toBeDisabled(),
-    );
 
-    await userEvent.click(screen.getByRole("radio", { name: /12 months/ }));
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Import window" }),
+      "1 year",
+    );
 
     // The steady pending state for the new window: no estimate for ANY
     // window is on screen — not the old one, and not a "new" one, since none
@@ -122,18 +165,46 @@ describe("the scope preview", () => {
       screen.queryByText(/messages in that window\./),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Connect and read" }),
-    ).toBeDisabled();
+      screen.getByText("Counting the messages in that window…"),
+    ).toBeInTheDocument();
 
     deferred.resolve?.(previewOf({ estimated_messages: 900 }));
     expect(
       await screen.findByText("About 900 messages in that window."),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Connect and read" }),
-      ).not.toBeDisabled(),
+    expect(screen.queryByText(/Counting the messages/)).not.toBeInTheDocument();
+  });
+
+  // The count is a description of the window, not the consent to it: the
+  // reader picked the window, and holding the verb shut until a number lands
+  // reads as a broken button on exactly the mailbox slow enough to need one.
+  it("starts on the picked window while its count is still running", async () => {
+    const starts: unknown[] = [];
+    installFetchStub({
+      // Never settles: the whole case is what the reader can do meanwhile.
+      [PREVIEW_ROUTE]: () => new Promise<Response>(() => {}),
+      [START_ROUTE]: (body) => {
+        starts.push(body);
+        return jsonResponse({ state: "queued" }, 202);
+      },
+      [STATUS_ROUTE]: () => jsonResponse({ state: "queued" }),
+    });
+    render({ state: "none" });
+
+    expect(
+      await screen.findByText("Counting the messages in that window…"),
+    ).toBeInTheDocument();
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Import window" }),
+      "3 months",
     );
+    const start = screen.getByRole("button", { name: "Connect and read" });
+    expect(start).toBeEnabled();
+    await user.click(start);
+
+    await waitFor(() => expect(starts).toEqual([{ window: "3m" }]));
   });
 
   it("qualifies an estimate the server only guessed at", async () => {
@@ -203,7 +274,7 @@ describe("the scope preview", () => {
 
     const start = screen.getByRole("button", { name: "Connect and read" });
     expect(start).toBeEnabled();
-    await userEvent.click(start);
+    await user.click(start);
     await waitFor(() => expect(starts).toEqual([{ window: "6m" }]));
   });
 
@@ -242,10 +313,12 @@ describe("starting the read", () => {
     render({ state: "none" });
 
     await screen.findByText("About 1,234 messages in that window.");
-    await userEvent.click(screen.getByRole("radio", { name: /3 months/ }));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Connect and read" }),
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Import window" }),
+      "3 months",
     );
+    await user.click(screen.getByRole("button", { name: "Connect and read" }));
 
     await waitFor(() => expect(starts).toEqual([{ window: "3m" }]));
     expect(
@@ -268,18 +341,15 @@ describe("starting the read", () => {
     });
     render({ state: "cancelled", window: "12m", counts: { captured: 4 } });
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Start another import" }),
     );
     expect(
-      (screen.getByRole("radio", { name: /12 months/ }) as HTMLInputElement)
-        .checked,
-    ).toBe(true);
+      screen.getByRole("combobox", { name: "Import window" }).textContent,
+    ).toContain("1 year");
 
     await screen.findByText("About 90 messages in that window.");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Connect and read" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Connect and read" }));
     await waitFor(() => expect(starts).toEqual([{ window: "12m" }]));
   });
 
@@ -295,9 +365,7 @@ describe("starting the read", () => {
     render({ state: "none" });
 
     await screen.findByText("About 1,234 messages in that window.");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Connect and read" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Connect and read" }));
 
     expect(
       await screen.findByText(/I could not start the backread/),
@@ -306,7 +374,9 @@ describe("starting the read", () => {
       screen.queryByRole("heading", { name: "Reading your mailbox" }),
     ).not.toBeInTheDocument();
     // Still the setup view: the window pick is where the user was left.
-    expect(screen.getByRole("radio", { name: /6 months/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Import window" }),
+    ).toHaveTextContent("6 months");
   });
 
   it("shows a read that is already running without starting a second one", async () => {
@@ -375,7 +445,7 @@ describe("the tallies", () => {
     expect(await screen.findByText("messages read")).toBeInTheDocument();
     expect(screen.getByText("kept")).toBeInTheDocument();
     expect(screen.queryByText("ignored")).not.toBeInTheDocument();
-    expect(screen.queryByText("people found")).not.toBeInTheDocument();
+    expect(screen.queryByText("contacts found")).not.toBeInTheDocument();
     expect(screen.queryByText("companies found")).not.toBeInTheDocument();
     // The absent counts are absent, not zero.
     expect(screen.queryByText("0")).not.toBeInTheDocument();
@@ -389,9 +459,8 @@ describe("the tallies", () => {
         messages_scanned: 600,
         captured: 512,
         skipped: 88,
-        people_created: 90,
-        organizations_created: 20,
-        dedupe_candidates: 7,
+        contacts_created: 90,
+        companies_created: 20,
       },
     });
 
@@ -474,7 +543,7 @@ describe("outcomes", () => {
     });
     render({ state: "running", counts: { messages_scanned: 1 } });
 
-    await userEvent.click(screen.getByRole("button", { name: "Stop reading" }));
+    await user.click(screen.getByRole("button", { name: "Stop reading" }));
     expect(
       await screen.findByText(
         "I could not stop the read: There is no read to stop. Try again — it keeps running meanwhile.",
@@ -519,7 +588,7 @@ describe("outcomes", () => {
     expect(
       await screen.findByText(/import status can't be read right now/),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    await user.click(screen.getByRole("button", { name: /^done$/i }));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
@@ -540,7 +609,7 @@ describe("leaving", () => {
       counts: { messages_scanned: 5 },
     });
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Continue while it reads" }),
     );
     // Leaving the backread is not leaving the step: the read keeps running
@@ -573,7 +642,7 @@ describe("leaving", () => {
       name: "Continue while it reads",
     });
     expect(exit).toBeDisabled();
-    await userEvent.click(exit);
+    await user.click(exit);
     expect(onDone).not.toHaveBeenCalled();
   });
 
@@ -589,7 +658,7 @@ describe("leaving", () => {
     const { onDone } = render({ state: "none" });
 
     await screen.findByText("About 1,234 messages in that window.");
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Do not read history now" }),
     );
 

@@ -99,9 +99,10 @@ type AvailableModels struct {
 // The provider and the LANE are named; the endpoint is not. Both are closed
 // vocabularies — the adapter names this build accepts, and the tiers the stored
 // document already binds — and the host is read from that document or from the
-// adapter's compiled default, never from the request. The AI outbound client
-// carries no egress allowlist, so accepting a URL here would let anyone holding
-// this grant point the server at an arbitrary host.
+// adapter's compiled default, never from the request. A URL accepted here would
+// be a destination chosen by a caller holding only READ on this setting, while
+// the stored one had to be written by someone holding update and passed the
+// endpoint rule on the way in (outboundegress.go).
 //
 // The lane matters because one vendor may be bound at two hosts: a broker on one
 // tier and a self-hosted gateway on another is a configuration the routing

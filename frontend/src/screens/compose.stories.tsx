@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ComposeModal, RelinkModal } from "./compose";
-import type { Transport } from "./persontransports";
+import type { Transport } from "./contacttransports";
 import {
   installFetchStub,
   jsonResponse,
@@ -19,6 +19,17 @@ import {
 // interesting states are reachable only through the form (draft, send-confirm),
 // so each story that needs one drives it in `play` with the same userEvent
 // steps the unit tests use, keeping the captured frame faithful to a real run.
+
+// The composer's "why are you writing?" dial and the answer these frames give
+// it — the same pair compose.test.tsx addresses. Named rather than reached for
+// by role alone: To and Cc are comboboxes of their own, so a bare role query
+// matches three controls and picks whichever comes first in the document.
+//
+// It is the WHY that satisfies the send precondition. The consent purposes are
+// served below because the composer reads them, but a reader never picks one —
+// the answer here is what the send derives its purpose from.
+const WHY_ASK = "Why are you writing?";
+const WHY_ANSWER = "They asked me to get in touch";
 
 // One consent purpose is enough to satisfy the Send precondition and populate
 // the purpose dropdown; its `label` is what the story clicks and its `key`
@@ -102,15 +113,22 @@ function composeStory(routes: RouteMap) {
       // for.
       "GET /me": meRoute({}),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          subject: "Q3 numbers",
+          occurred_at: "2026-09-01T09:00:00Z",
+        }),
       ...routes,
     });
     return (
       <StoryProviders>
         <ComposeModal
           activityId="act-1"
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
-          personId="p-1"
+          contactId="p-1"
           open
           onClose={() => {}}
         />
@@ -134,26 +152,43 @@ async function composerOnScreen() {
   await dialog.findByLabelText("To");
 }
 
-// Fills the four Send preconditions (To, subject, body, purpose) then confirms
-// — the same sequence fillSendableForm drives in compose.test.tsx, so a story
-// reaches the send outcome (409 gate / 501 unavailable) it means to capture.
+// Fills the four Send preconditions (To, subject, body, purpose) then confirms,
+// so a story reaches the send outcome (409 gate / 501 unavailable) it captures.
+//
+// EVERY FIELD BY THE NAME A READER SEES, never by a placeholder: the subject's
+// placeholder is the example copy ("What it is about") and the body is a
+// contentEditable `RichText` that has none at all, so the placeholder queries
+// this helper used to make could not match anything the composer draws.
+//
+// Driven with `storybook/test`'s own userEvent and nothing else. compose.test.tsx
+// reaches the same two controls through `writeMessage` and `pickOption`, and both
+// import `@testing-library/react` — whose `act` shim is not the one the story
+// runner installs, so importing either here replaces a passing story with
+// `t.act is not a function`. In a real browser the typing those helpers exist to
+// work around is simply what a keystroke does.
+//
 // `screen` rather than the story canvas throughout: this composer IS a Modal,
 // portalled to document.body, so a canvas-scoped query searches an empty div.
 async function fillAndSend() {
   await composerOnScreen();
-  const canvas = screen;
-  await userEvent.type(canvas.getByLabelText("To"), "buyer@acme.test");
+  await userEvent.type(screen.getByLabelText("To"), "buyer@acme.test");
   await userEvent.tab();
-  await userEvent.type(canvas.getByPlaceholderText("Subject"), "Following up");
-  await userEvent.type(canvas.getByPlaceholderText("Body"), "As promised.");
-  // The purpose control is a button plus a listbox the component portals to the
-  // body, so the option is reached OUTSIDE the story canvas — and by the label a
-  // reader clicks, never by the wire key behind it.
-  await userEvent.click(canvas.getByRole("combobox"));
-  await userEvent.click(
-    screen.getByRole("option", { name: PURPOSES.data[0].label }),
+  await screen.findByDisplayValue("Re: Q3 numbers");
+  await userEvent.clear(screen.getByLabelText("Subject"));
+  await userEvent.type(screen.getByLabelText("Subject"), "Following up");
+  await userEvent.type(
+    screen.getByRole("textbox", { name: "Body" }),
+    "As promised.",
   );
-  await userEvent.click(canvas.getByRole("button", { name: "Send" }));
+  // The dial is a button over a listbox the component portals to the body, so
+  // the option is reached OUTSIDE the dialog. One click opens it and one click
+  // commits: the trigger TOGGLES, so a second attempt would close the list the
+  // first one opened.
+  await userEvent.click(screen.getByRole("combobox", { name: WHY_ASK }));
+  await userEvent.click(
+    await screen.findByRole("option", { name: WHY_ANSWER }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Send" }));
 }
 
 const meta: Meta = {
@@ -173,8 +208,13 @@ export const Empty: Story = {
 };
 
 // "Draft with AI" fills To/Subject/Body from the returned EmailDraft and
-// discloses it: the Art. 50 banner, the voice version that styled it, and the
-// provisional label its profile currently carries.
+// discloses it: the AI provenance notice, the voice version that styled it, and
+// the provisional label its profile currently carries.
+//
+// The disclosure is the house card in its machine-authored tone — indigo edge,
+// indigo head band, its title the disclosure's own — rather than the drawer's
+// own indigo box, so the one mark of machine authorship in the product is drawn
+// by the one component that owns it.
 export const Drafted: Story = {
   render: composeStory({
     "GET /voice-profiles": () => jsonResponse(VOICE_PROFILE),
@@ -182,9 +222,11 @@ export const Drafted: Story = {
   }),
   play: async () => {
     await composerOnScreen();
+    await screen.findByDisplayValue("Re: Q3 numbers");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: "Draft reply with AI" }),
     );
+    await screen.findByText(DRAFT.body);
   },
 };
 
@@ -193,7 +235,7 @@ export const Drafted: Story = {
 // conversation this is before they commit to answering it.
 //
 // A plain info callout rather than the indigo band: the band claims machine
-// provenance, and this is one person's mail landing in another's screen.
+// provenance, and this is one contact's mail landing in another's screen.
 export const ColleaguesMailbox: Story = {
   render: composeStory({
     "GET /users": () =>
@@ -224,7 +266,8 @@ export const ColleaguesMailbox: Story = {
 
 // The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
 // back 409 consent_not_granted, so the modal stays open with the pointed
-// "Review consent" copy instead of a raw server error.
+// "Review consent" copy instead of a raw server error, and the action the
+// server says this rep may take.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
@@ -233,6 +276,38 @@ export const ConsentBlocked: Story = {
           code: "consent_not_granted",
           title: "Conflict",
           detail: "suppressed",
+          // WHAT THE SERVER ACTUALLY ANSWERS. Without the details this story
+          // showed only the explanation, and the action beside it — the whole
+          // point of the refusal now — was never rendered in Storybook.
+          details: {
+            review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
+            available_actions: ["request_decision"],
+          },
+        },
+        409,
+      ),
+  }),
+  play: async () => {
+    await fillAndSend();
+  },
+};
+
+// A SERVER NEWER THAN THIS CLIENT names an action whose label this build does
+// not have. The action is dropped rather than rendered as a raw wire enum — and
+// what the rep keeps is the reference, which is the whole reason dropping it is
+// safe. Without this story that fallback was never looked at.
+export const ConsentBlockedUnknownAction: Story = {
+  render: composeStory({
+    "POST /activities/act-1/send-email": () =>
+      jsonResponse(
+        {
+          code: "consent_not_granted",
+          title: "Conflict",
+          detail: "suppressed",
+          details: {
+            review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002",
+            available_actions: ["send_anyway_somehow"],
+          },
         },
         409,
       ),
@@ -315,9 +390,9 @@ function channelReplyStory(conversation: RouteMap[string]) {
       <StoryProviders>
         <ComposeModal
           activityId="act-1"
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
-          personId="p-1"
+          contactId="p-1"
           kind="message"
           open
           onClose={() => {}}
@@ -341,7 +416,7 @@ export const ChannelReplyFiled: Story = {
     jsonResponse({
       ...CHANNEL_CONVERSATION,
       links: [
-        { entity_type: "person", entity_id: "p-1" },
+        { entity_type: "contact", entity_id: "p-1" },
         { entity_type: "project", entity_id: "proj-1" },
       ],
     }),
@@ -360,7 +435,11 @@ export const ChannelReplyUnfiled: Story = {
   ),
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByPlaceholderText("Body");
+    // The MIRROR of the frame above, and it has to be: an assertion that only
+    // found the editor would pass just as well over a reply that announced a
+    // filing nobody asked for, which is the whole subject of this story.
+    await dialog.findByRole("textbox", { name: "Body" });
+    expect(dialog.queryByText(/Will be filed under/)).toBeNull();
   },
 };
 
@@ -373,8 +452,8 @@ export const Default: Story = {
         jsonResponse({
           data: [
             { type: "deal", id: "d-9", title: "Acme renewal" },
-            { type: "organization", id: "o-2", title: "Acme GmbH" },
-            { type: "person", id: "pp-1", title: "Jane Doe" },
+            { type: "company", id: "o-2", title: "Acme GmbH" },
+            { type: "contact", id: "pp-1", title: "Jane Doe" },
           ],
           page: { has_more: false },
         }),
@@ -383,7 +462,7 @@ export const Default: Story = {
       <StoryProviders>
         <RelinkModal
           activityId="act-1"
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
           open
           onClose={() => {}}
@@ -405,7 +484,7 @@ export const Default: Story = {
 // record's own library.
 const CONTACT_360 = {
   as_of: "2026-08-15T09:00:00Z",
-  person: {
+  contact: {
     id: "p-1",
     full_name: "Dana Brandt",
     emails: [
@@ -420,21 +499,21 @@ const RECORD_FILES = {
   data: [
     {
       id: "att-1",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Offer_Nordwand_v3.pdf",
       byte_size: 412_000,
     },
     {
       id: "att-2",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Site_survey.jpg",
       byte_size: 2_100_000,
     },
     {
       id: "att-3",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Retrofit_timeline.xlsx",
       byte_size: 88_000,
@@ -446,7 +525,7 @@ const RECORD_FILES = {
 const HEAD_ROUTES: RouteMap = {
   "GET /me": meRoute({}),
   "GET /consent-purposes": () => jsonResponse(PURPOSES),
-  "GET /people/p-1/360": () => jsonResponse(CONTACT_360),
+  "GET /contacts/p-1/360": () => jsonResponse(CONTACT_360),
   "GET /attachments": () => jsonResponse(RECORD_FILES),
 };
 
@@ -457,9 +536,9 @@ function headStory(transports?: readonly Transport[], extra: RouteMap = {}) {
     return (
       <StoryProviders>
         <ComposeModal
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
-          personId="p-1"
+          contactId="p-1"
           recordAddress="dana@brandt.example"
           transports={transports}
           open
@@ -489,7 +568,7 @@ export const Head: Story = {
 
 /**
  * The recipient offer. A reader remembers a colleague's NAME and not their
- * address, so the person is the label and the address is the value — and the
+ * address, so the contact is the label and the address is the value — and the
  * one already standing in the To line is not offered back.
  */
 export const RecipientOffer: Story = {

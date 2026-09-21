@@ -41,8 +41,16 @@ func (t qualifyLead) Spec() mcp.ToolSpec {
 		Description:   qualifyLeadCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getLead + updateLead",
-		InputSchema: schema(`{"type":"object","required":["record_id"],"properties":{
-			"record_id":{"type":"string","format":"uuid","description":"The lead to qualify"}},
+		// `lead_id`, not `record_id`, and the difference is a convention this
+		// surface keeps everywhere else. `record_id` is the companion of a
+		// `record_type` argument — anchorSchema and taggingSchema pair them, and
+		// every generic verb that takes one takes both. A verb hard-wired to one
+		// type names that type's id: deal_id, project_id, tag_id, lead_id. This
+		// was the only tool on the surface carrying `record_id` with no
+		// `record_type` beside it, so a caller who learned `lead_id` from
+		// promote_lead and disqualify_lead was refused by their sibling.
+		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
+			"lead_id":{"type":"string","format":"uuid","description":"The lead to qualify"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[QualifyLeadResult](),
 	}
@@ -50,12 +58,12 @@ func (t qualifyLead) Spec() mcp.ToolSpec {
 
 func (t qualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		RecordID ids.UUID `json:"record_id"`
+		LeadID ids.UUID `json:"lead_id"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: args.RecordID})
+	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: args.LeadID})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +75,7 @@ func (t qualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		Title       *string `json:"title"`
 	}
 	if err := json.Unmarshal(rec.Fields, &lead); err != nil {
-		return nil, fmt.Errorf("crmagents: lead %s read back with unreadable fields: %w", args.RecordID, err)
+		return nil, fmt.Errorf("crmagents: lead %s read back with unreadable fields: %w", args.LeadID, err)
 	}
 
 	patch := map[string]string{}
@@ -96,7 +104,7 @@ func (t qualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		// if the lead changed underneath, the honest answer is skew, not a
 		// blind write over whatever it became.
 		if _, err := t.p.Update(ctx, datasource.UpdateInput{
-			Ref:       datasource.EntityRef{Type: datasource.EntityLead, ID: args.RecordID},
+			Ref:       datasource.EntityRef{Type: datasource.EntityLead, ID: args.LeadID},
 			Patch:     raw,
 			Source:    ToolSource,
 			IfVersion: &rec.Version,
@@ -122,7 +130,7 @@ func (t qualifyLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 			gaps = append(gaps, field)
 		}
 	}
-	return json.Marshal(QualifyLeadResult{RecordID: args.RecordID, Filled: filled, Gaps: gaps})
+	return json.Marshal(QualifyLeadResult{RecordID: args.LeadID, Filled: filled, Gaps: gaps})
 }
 
 func isBlank(s *string) bool { return s == nil || strings.TrimSpace(*s) == "" }

@@ -99,7 +99,7 @@ type occurrence struct {
 	state      string
 	// waitingOnAHuman suppresses the lease. A suspended run reports as running —
 	// the agent is still working on the reader's behalf — but it is waiting on a
-	// PERSON, and the abandoned-run sweep deliberately never touches it ("may
+	// CONTACT, and the abandoned-run sweep deliberately never touches it ("may
 	// wait indefinitely"). Leasing it would have the rail call it stalled half
 	// an hour into a perfectly healthy wait, which is a verdict the server never
 	// reaches and cannot act on.

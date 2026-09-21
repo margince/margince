@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -19,9 +20,9 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
-// person reads, an address they forward from.
+// contact reads, an address they forward from.
 //
-// Mail among a person's own addresses is not correspondence with anybody, so
+// Mail among a contact's own addresses is not correspondence with anybody, so
 // declaring one keeps those messages out of the CRM and stops the address being
 // minted as a contact. Until this card there was no way to say so — the endpoint
 // shipped and nothing reached it.
@@ -31,7 +32,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // list exists to protect.
 
 type OwnerIdentity = components["schemas"]["CaptureOwnerIdentity"];
-type Kind = components["schemas"]["CaptureExclusionKind"];
+type Kind = components["schemas"]["CaptureOwnerIdentityKind"];
 
 const KINDS: readonly Kind[] = ["address", "domain"];
 
@@ -105,7 +106,7 @@ export function OwnerIdentitiesCard() {
             label={t("ownerIdentities.addLabel")}
             description={t("ownerIdentities.addDescription")}
             control={
-              <Button small onClick={() => setDeclaring(true)}>
+              <Button onClick={() => setDeclaring(true)}>
                 {t("ownerIdentities.add")}
               </Button>
             }
@@ -134,7 +135,11 @@ export function OwnerIdentitiesCard() {
           />
         </SettingList>
         {remove.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("ownerIdentities.removeFailed")}
+          >
             {problemMessageOf(remove.error, t)}
           </Callout>
         )}
@@ -155,7 +160,7 @@ const kindLabel: Record<Kind, MessageKey> = {
  * An address somebody typed needs no explanation. One the product LEARNED does:
  * a seat scanning this card would otherwise find an address they never entered
  * and have no way to tell whether they forgot adding it or something else did —
- * and they are the person who decides whether it stays.
+ * and they are the colleague who decides whether it stays.
  */
 function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
   switch (source) {
@@ -207,13 +212,12 @@ function IdentityRows({
             value={t(kindLabel[identity.kind])}
             control={
               <Button
-                small
                 variant="ghost"
                 disabled={pending}
                 aria-label={t("ownerIdentities.remove")}
                 onClick={() => onRemove(identity.id)}
               >
-                <Trash2 aria-hidden size={16} />
+                <Trash2 aria-hidden />
               </Button>
             }
           />
@@ -234,9 +238,9 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const value = draft.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("ownerIdentities.addLabel")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -268,7 +272,11 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           }
         />
         {add.isError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("ownerIdentities.addFailed")}
+          >
             {problemMessageOf(add.error, t)}
           </Callout>
         )}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -58,7 +58,13 @@ const WITHHELD: HeldThread = {
   activity_id: undefined,
 };
 
-function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
+type Clock = components["schemas"]["CaptureVerdictClock"];
+
+function renderCard(
+  rows: HeldThread[],
+  share?: Record<string, unknown>,
+  threadVerdict?: Clock,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -76,10 +82,13 @@ function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
         });
       }
       if (key === "GET /capture/held-threads") {
-        return new Response(JSON.stringify({ data: rows }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ data: rows, thread_verdict: threadVerdict }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
       // The drawer's own read. Served here so opening a thread does not throw
       // on a body with no access block; what the drawer draws from it is
@@ -294,4 +303,55 @@ it("says a thread is not the reader's without offering to open it", async () => 
   // it. Only the message's words are refused.
   expect(screen.getByText("Legal")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /not shared/i })).toBeNull();
+});
+
+// A held thread that says only "waiting" is the same defect the capture
+// counters had: the classifier runs every ten minutes, the screen never said
+// so, and an owner watching an unchanged row can only read it as broken.
+it("says when the thread pass runs while a row is pending", async () => {
+  renderCard([PENDING], undefined, {
+    every_seconds: 600,
+    running: false,
+    queued: false,
+    next_pass_at: "2026-08-30T09:20:00Z",
+  });
+
+  const note = await screen.findByTestId("verdict-pass-threads");
+  expect(note).toHaveTextContent(/every 10 minutes/i);
+  expect(note).toHaveTextContent(/next pass/i);
+});
+
+// A thread held because the model judged it personnel is not waiting for
+// anything. Telling its owner when the next pass runs would promise a change
+// that is not coming.
+it("says nothing about the pass when no row is waiting on it", async () => {
+  renderCard([JUDGED], undefined, {
+    every_seconds: 600,
+    running: false,
+    queued: false,
+    next_pass_at: "2026-08-30T09:20:00Z",
+  });
+
+  await screen.findByText("Legal");
+  expect(screen.queryByTestId("verdict-pass-threads")).toBeNull();
+});
+
+// The classifier can name a kind this build has no word for — the vocabulary is
+// the server's and it moves independently of the app. The badge then shows the
+// server's own token rather than nothing: an untranslated word is a fact the
+// reader can carry to whoever knows it, and a blank is the "judged nothing" the
+// pending badge exists to be told apart from.
+it("shows a kind it has no translation for, rather than an empty badge", async () => {
+  renderCard([{ ...JUDGED, thread_key: "t-unknown", kind: "export_control" }]);
+
+  await screen.findByText("export_control");
+});
+
+// And a row that reached a verdict carrying no kind at all falls back to the
+// status, which is the one thing every held row has. Without it the badge is
+// empty and the row says nothing about why it is here.
+it("falls back to the status when a judged row carries no kind", async () => {
+  renderCard([{ ...JUDGED, thread_key: "t-nokind", kind: undefined }]);
+
+  await screen.findByText("held");
 });

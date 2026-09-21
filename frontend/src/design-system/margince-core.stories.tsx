@@ -80,10 +80,10 @@ export const IngestWithProgress: Story = {
 };
 
 /**
- * Stopped and waiting for a person: a record contradicts reality, an action
+ * Stopped and waiting for a contact: a record contradicts reality, an action
  * needs permission it does not have, a source it cannot reach, a licence it
  * does not carry. Amber, slow, and breathing hard enough to be caught out of
- * the corner of an eye — the orb only ever reports that a person is needed,
+ * the corner of an eye — the orb only ever reports that a contact is needed,
  * never which of these it is; the surface around it says that in words.
  */
 export const Warning: Story = { args: { state: "warning" } };
@@ -178,17 +178,7 @@ export const Ladder: Story = {
             size="md"
             feed={false}
           />
-          <figcaption
-            style={{
-              color: "var(--textMeta)",
-              fontFamily: "var(--f-mono)",
-              fontSize: "var(--fs-eyebrow)",
-              letterSpacing: "var(--tracking-eyebrow)",
-              textTransform: "uppercase",
-            }}
-          >
-            {state}
-          </figcaption>
+          <figcaption>{state}</figcaption>
         </figure>
       ))}
     </div>

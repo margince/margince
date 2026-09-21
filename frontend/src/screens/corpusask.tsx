@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -23,7 +23,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // What makes the free-text box defensible here, and what the whole surface has
 // to keep visible: the search is BOUNDED. "Everything" is one finite set the
 // workspace chose, so the answer can prove what it did not find — which is
-// exactly what `POST /organizations/{id}/ask` refused to promise, and why that
+// exactly what `POST /companies/{id}/ask` refused to promise, and why that
 // one takes its questions from a fixed list instead.
 //
 // So the three refusals are drawn as three different things, never as one
@@ -96,12 +96,16 @@ function preferredSet(sets: readonly Corpus[]): string {
 
 export function CorpusAskCard({
   carriedQuestion,
-}: Readonly<{ carriedQuestion?: string | null }>) {
+  onCarriedAsked,
+}: Readonly<{
+  carriedQuestion?: string;
+  onCarriedAsked?: () => void;
+}>) {
   const t = useT();
   const canAsk = useCan("knowledge_corpus", "read");
   const sets = useAskableSets(canAsk);
   const [corpusId, setCorpusId] = useState("");
-  const [question, setQuestion] = useState(carriedQuestion ?? "");
+  const [question, setQuestion] = useState("");
   const ask = useAsk();
 
   // The set is chosen once the list arrives, and only while nothing is chosen:
@@ -114,6 +118,42 @@ export function CorpusAskCard({
     }
   }, [items, corpusId]);
 
+  // A question carried in has already been ASKED, so arriving with one fills
+  // the box AND submits it. It arrives as a change of ADDRESS and not as a
+  // mount — the reader is as often as not already standing on this screen — so
+  // it is an effect: a `useState` initialiser runs once per mount and would
+  // miss every arrival that is not one.
+  //
+  // `asked` is what keeps one arrival to one ask. The effect is replayed for
+  // the set list landing, for the grant landing, for a caller's callback
+  // changing identity, and twice over on a development mount, and a model call
+  // is not a thing to make twice. It clears when the address does, which is
+  // what makes the same question carried again a second ask rather than a row
+  // that does nothing.
+  const carried = carriedQuestion?.trim() ?? "";
+  const asked = useRef("");
+  const submit = ask.mutate;
+  useEffect(() => {
+    if (carried === "") {
+      asked.current = "";
+      return;
+    }
+    // Two things have to be known first, and neither is on the first render.
+    // A set, because an ask with none to search is one the mutation refuses.
+    // And the GRANT: the set is chosen from whatever the corpora cache holds,
+    // and a warm cache outlives the grant that filled it, so without this the
+    // card would ask on behalf of a reader it is not even drawn for and spend
+    // the question doing it. Held rather than dropped either way, so a grant
+    // that lands a moment later still asks it.
+    if (!canAsk || corpusId === "" || asked.current === carried) {
+      return;
+    }
+    asked.current = carried;
+    setQuestion(carried);
+    submit({ corpusId, question: carried });
+    onCarriedAsked?.();
+  }, [canAsk, carried, corpusId, submit, onCarriedAsked]);
+
   // Nothing is offered until we KNOW there is something to ask. The three
   // cases collapse to one answer — no grant, no sets, or not yet told — and
   // that is deliberate: rendering the box while the list is still in flight
@@ -125,9 +165,15 @@ export function CorpusAskCard({
   }
 
   return (
-    <Panel title={t("corpusAsk.title")}>
+    <Panel
+      title={t("corpusAsk.title")}
+      // Indigo, and the badge with it: the answer under this head is a model's
+      // reading of the set, and the verb the head offers is the model's too.
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+    >
       <PanelBody className="form-stack">
-        <p className="t-caption">{t("corpusAsk.sub")}</p>
+        <p>{t("corpusAsk.sub")}</p>
         {items && items.length > 1 ? (
           <Field label={t("corpusAsk.whichSet")}>
             {(control) => (
@@ -154,6 +200,9 @@ export function CorpusAskCard({
         </Field>
         <div className="form-actions">
           <Button
+            // The one AI call to action on this surface: the model does the
+            // reading and writes the sentence.
+            variant="ai"
             disabled={question.trim() === "" || corpusId === ""}
             pending={ask.isPending}
             onClick={() => ask.mutate({ corpusId, question: question.trim() })}
@@ -162,7 +211,9 @@ export function CorpusAskCard({
           </Button>
         </div>
         {ask.isError ? (
-          <Callout tone="danger">{problemMessageOf(ask.error, t)}</Callout>
+          <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
+            {problemMessageOf(ask.error, t)}
+          </Callout>
         ) : null}
         {/* Only while it still belongs to the set on screen. useMutation keeps
             its last result across a change of selection, so without this a
@@ -179,7 +230,7 @@ export function CorpusAskCard({
 
 function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
   const t = useT();
-  // A line and a column are MAGNITUDES a person counts with, so they take the
+  // A line and a column are MAGNITUDES a contact counts with, so they take the
   // reader's own notation like every other figure on the page.
   const { locale } = useLocale();
   if (answer.outcome !== "answered" && answer.outcome !== "unreviewed") {
@@ -194,7 +245,13 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
           read the nearest passage as the answer. It leads the panel rather
           than sitting under it for that reason. */}
       {answer.outcome === "unreviewed" ? (
-        <Callout tone="warn">{t("corpusAsk.unreviewed")}</Callout>
+        <Callout
+          tone="warning"
+          kind="outcome"
+          title={t("corpusAsk.unreviewedTitle")}
+        >
+          {t("corpusAsk.unreviewed")}
+        </Callout>
       ) : null}
       {/* WHO WROTE THIS. Never omitted, and never inferred from whether the
           claims carry sentences: a reader deciding how much to trust a line
@@ -245,16 +302,25 @@ function Refusal({ answer }: Readonly<{ answer: Answer }>) {
   const { locale } = useLocale();
   if (answer.outcome === "not_ready") {
     return (
-      <Callout tone="info">
-        {t("corpusAsk.notReady", {
-          embedded: formatNumber(answer.coverage.chunks_embedded, locale),
-          total: formatNumber(answer.coverage.chunks_total, locale),
-        })}
-      </Callout>
+      // The same plate the not_covered branch below draws: all three refusals
+      // stand where the answer would have been, so a reader who pressed Ask
+      // and got none reads one shape rather than three.
+      <EmptyState title={t("corpusAsk.notReadyTitle")}>
+        <p>
+          {t("corpusAsk.notReady", {
+            embedded: formatNumber(answer.coverage.chunks_embedded, locale),
+            total: formatNumber(answer.coverage.chunks_total, locale),
+          })}
+        </p>
+      </EmptyState>
     );
   }
   if (answer.outcome === "retrieval_unavailable") {
-    return <Callout tone="warn">{t("corpusAsk.retrievalUnavailable")}</Callout>;
+    return (
+      <EmptyState title={t("corpusAsk.retrievalUnavailableTitle")}>
+        <p>{t("corpusAsk.retrievalUnavailable")}</p>
+      </EmptyState>
+    );
   }
   // not_covered: the set WAS searched, in full. The topic statement is quoted
   // back because it is the only thing on screen that tells the reader what this

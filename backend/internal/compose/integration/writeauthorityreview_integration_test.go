@@ -29,9 +29,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -67,16 +67,16 @@ func grantsAtTeamScope(objects ...string) principal.Permissions {
 func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("deal", "organization", "contract"))
-	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("deal", "organization", "contract"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("deal", "company", "contract"))
+	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("deal", "company", "contract"))
 
-	org := ids.NewV7()
-	e.WsExec(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, org, e.Rep3)
+	company := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, company, e.Rep3)
 	deal := ids.NewV7()
-	e.WsExec(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id, source, captured_by)
+	e.WsExec(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id, source, captured_by)
 		VALUES ($1, $2, 'Anchored Deal', $3, $4, $5, 'manual', 'human:x')`,
-		deal, e.Rep3, pipeline, open, org)
+		deal, e.Rep3, pipeline, open, company)
 
 	store := ContractsStore(e.DB(), e.Deals)
 	// Fixed, because nothing here is about WHEN: the term's dates never reach an
@@ -84,12 +84,12 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	// reason its own name does not mention.
 	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
 	contract, err := store.CreateContract(owner, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		DealID:         idPtr(ids.From[ids.DealKind](deal)),
-		Title:          "Framework agreement",
-		StartsOn:       &starts,
-		ValueBasis:     "total",
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		DealID:     idPtr(ids.From[ids.DealKind](deal)),
+		Title:      "Framework agreement",
+		StartsOn:   &starts,
+		ValueBasis: "total",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("the owner creates the contract → %v", err)
@@ -140,30 +140,30 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("person", "approval"))
-	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("person", "approval"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("contact", "approval"))
+	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("contact", "approval"))
 
-	person := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-		VALUES ($1, $2, 'Staged Subject', 'manual', 'human:x')`, person, e.Rep3)
+	contact := ids.NewV7()
+	e.WsExec(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+		VALUES ($1, $2, 'Staged Subject', 'manual', 'human:x')`, contact, e.Rep3)
 
 	staged, err := svc.Stage(e.AgentCtx(), approvals.StageInput{
 		Kind: "archive_record", ProposedChange: json.RawMessage(`{}`),
-		DiffHash: "h-" + ids.NewV7().String(), TargetType: "person",
-		TargetID: person, Summary: "archive the shared contact",
+		DiffHash: "h-" + ids.NewV7().String(), TargetType: "contact",
+		TargetID: contact, Summary: "archive the shared contact",
 	})
 	if err != nil {
-		t.Fatalf("staging against the shared person → %v", err)
+		t.Fatalf("staging against the shared contact → %v", err)
 	}
 
-	shareRecord(owner, t, e, "person", person, e.Rep1, "read")
+	shareRecord(owner, t, e, "contact", contact, e.Rep1, "read")
 	assertCannotDecideStagedApproval(holder, t, svc,
 		"a colleague holding only a read share of the target", staged)
 
 	// The allow arm, on the same row and the same seat: only the access column
 	// moved. Without it every assertion above would pass against a gate that
 	// refused this seat for some other reason entirely.
-	shareRecord(owner, t, e, "person", person, e.Rep1, "write")
+	shareRecord(owner, t, e, "contact", contact, e.Rep1, "write")
 	if _, err := svc.Get(holder, staged); err != nil {
 		t.Fatalf("a write share does not open the staged change: %v", err)
 	}
@@ -179,16 +179,16 @@ func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
 func TestAReadShareCannotRevokeSomebodyElsesShare(t *testing.T) {
 	e := Setup(t)
 	svc := identity.NewService(e.Pool)
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("person"))
-	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("person"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("contact"))
+	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("contact"))
 
-	person := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-		VALUES ($1, $2, 'Twice Shared', 'manual', 'human:x')`, person, e.Rep3)
-	shareRecord(owner, t, e, "person", person, e.Rep2, "write")
-	shareRecord(owner, t, e, "person", person, e.Rep1, "read")
-	colleagues := grantIDsFor(t, e, person, e.Rep2)
-	mine := grantIDsFor(t, e, person, e.Rep1)
+	contact := ids.NewV7()
+	e.WsExec(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+		VALUES ($1, $2, 'Twice Shared', 'manual', 'human:x')`, contact, e.Rep3)
+	shareRecord(owner, t, e, "contact", contact, e.Rep2, "write")
+	shareRecord(owner, t, e, "contact", contact, e.Rep1, "read")
+	colleagues := grantIDsFor(t, e, contact, e.Rep2)
+	mine := grantIDsFor(t, e, contact, e.Rep1)
 
 	if err := svc.RevokeRecordGrant(holder, colleagues); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a read-share holder revoking a colleague's write share → %v, want permission-denied", err)
@@ -206,50 +206,50 @@ func TestAReadShareCannotRevokeSomebodyElsesShare(t *testing.T) {
 }
 
 // The seat the self-revocation arm exists for, and the one an object gate in
-// front of it would have locked out: a READ-ONLY member holds no person:update
-// at all, so if declining a share had to pass that check first, the person least
+// front of it would have locked out: a READ-ONLY member holds no contact:update
+// at all, so if declining a share had to pass that check first, the contact least
 // able to do anything with the record would be the only one unable to give it
 // back.
 func TestAReadOnlySeatCanStillDeclineItsOwnShare(t *testing.T) {
 	e := Setup(t)
 	svc := identity.NewService(e.Pool)
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("person"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("contact"))
 	readOnly := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"read_only"},
-		Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 		RowScope: principal.RowScopeTeam,
 	})
 
-	person := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-		VALUES ($1, $2, 'Unwanted Share', 'manual', 'human:x')`, person, e.Rep3)
-	shareRecord(owner, t, e, "person", person, e.Rep1, "read")
+	contact := ids.NewV7()
+	e.WsExec(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+		VALUES ($1, $2, 'Unwanted Share', 'manual', 'human:x')`, contact, e.Rep3)
+	shareRecord(owner, t, e, "contact", contact, e.Rep1, "read")
 
-	if err := svc.RevokeRecordGrant(readOnly, grantIDsFor(t, e, person, e.Rep1)); err != nil {
+	if err := svc.RevokeRecordGrant(readOnly, grantIDsFor(t, e, contact, e.Rep1)); err != nil {
 		t.Fatalf("a read-only seat declining its own share → %v, want allowed", err)
 	}
 }
 
 // The partner row's own comment already stated this invariant — "promotion
-// flips organization.classification — that is an org mutation, so the org's own
+// flips company.classification — that is a company mutation, so the company's own
 // write grant is required too" — and only the OBJECT half of it was enforced.
 // The row half probed for sight, so a `read` share of a company let its holder
 // reclassify it as a partner.
 func TestAReadShareOfACompanyCannotMakeItAPartner(t *testing.T) {
 	e := Setup(t)
-	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("organization", "partner"))
-	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("organization", "partner"))
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("company", "partner"))
+	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("company", "partner"))
 
-	// Captured privately by Rep3: an organization that is merely owned is
+	// Captured privately by Rep3: a company that is merely owned is
 	// readable by every seat with the grant, and capture privacy is what
 	// makes the share the holder's only path to it.
-	org := ids.NewV7()
-	e.WsExec(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
-		VALUES ($1, $2, 'Reseller GmbH', 'owner', 'manual', 'human:x')`, org, e.Rep3)
+	company := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
+		VALUES ($1, $2, 'Reseller GmbH', 'owner', 'manual', 'human:x')`, company, e.Rep3)
 
 	promote := func(as context.Context) error {
-		_, err := people.NewStore(e.DB()).UpsertPartner(as, people.UpsertPartnerInput{
-			OrganizationID: ids.From[ids.OrganizationKind](org), PartnerRole: "hosting",
+		_, err := contacts.NewStore(e.DB()).UpsertPartner(as, contacts.UpsertPartnerInput{
+			CompanyID: ids.From[ids.CompanyKind](company), PartnerRole: "hosting",
 		})
 		return err
 	}
@@ -257,11 +257,11 @@ func TestAReadShareOfACompanyCannotMakeItAPartner(t *testing.T) {
 	if err := promote(holder); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("promoting an unshared company → %v, want not-found", err)
 	}
-	shareRecord(owner, t, e, "organization", org, e.Rep1, "read")
+	shareRecord(owner, t, e, "company", company, e.Rep1, "read")
 	if err := promote(holder); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("promoting under a read share → %v, want permission-denied", err)
 	}
-	shareRecord(owner, t, e, "organization", org, e.Rep1, "write")
+	shareRecord(owner, t, e, "company", company, e.Rep1, "write")
 	if err := promote(holder); err != nil {
 		t.Fatalf("promoting under a write share → %v, want allowed", err)
 	}

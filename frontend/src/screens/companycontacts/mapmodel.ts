@@ -1,0 +1,371 @@
+import type { components } from "../../api/schema";
+import type {
+  MapBand,
+  MapEdge,
+  MapEngagement,
+  MapLane,
+  MapNode,
+  RelationshipMapModel,
+} from "../../design-system/relationshipmap.layout";
+import { strongest } from "../../design-system/relationshipmap.layout";
+import type { IntroTarget } from "./introrequest";
+
+// The wire read, as the picture the map draws.
+//
+// One place, and a pure function: the map is data-only by design, so if this
+// lived inside the screen the states worth looking at — a hole in the team, a
+// contact nobody can reach, a route through a colleague who has left — could
+// only be seen by seeding an account that has them.
+
+type Coverage = components["schemas"]["CompanyCoverage"];
+type Seat = components["schemas"]["CompanyCoverageSeat"];
+
+// A colleague's id in the drawing. Nodes of different kinds share one id
+// space, so a contact and a colleague carrying the same uuid must not collide —
+// and the prefix is written HERE alone, because a second spelling of it is a
+// lookup that silently matches nothing.
+const USER_PREFIX = "u:";
+
+function colleagueNodeId(userId: string): string {
+  return `${USER_PREFIX}${userId}`;
+}
+
+/** The lanes a committee reads in, and the order they read. */
+const ROLES = [
+  "champion",
+  "economic_buyer",
+  "influencer",
+  "blocker",
+  "user",
+] as const;
+
+export type MapCopy = Readonly<{
+  /** What a seat says when the reader may not see who can reach them. */
+  routesWithheld: string;
+  ourSide: string;
+  account: string;
+  roles: Record<(typeof ROLES)[number], string>;
+  otherRoles: string;
+  /** "{role} missing" — the words in a gap node. */
+  missing: (role: string) => string;
+  assign: string;
+  engagement: Record<MapEngagement, string>;
+  /** How an edge reads, given which way the conversation is owed. */
+  awaitingReply: string;
+  replyOwed: string;
+  theyReplied: string;
+  neverWritten: string;
+  onDeal: string;
+  /** The verb on a contact somebody on our side can actually reach. */
+  askIntro: string;
+}>;
+
+/**
+ * mapModelFromCoverage builds the picture.
+ *
+ * Colleagues are derived from the seats' own routes rather than listed
+ * separately: a colleague with no route to anybody here would be a node with no
+ * edges, which tells a reader nothing and costs them a tab stop.
+ */
+export function mapModelFromCoverage(
+  coverage: Coverage,
+  accountName: string,
+  copy: MapCopy,
+  // The reader, when the session has answered. They are ranked among the
+  // colleagues who can reach a seat like anybody else, and an introduction is
+  // asked of somebody ELSE — so the verb below is offered on their behalf and
+  // never from them.
+  viewerId?: string,
+): RelationshipMapModel {
+  const committee = coverage.committee;
+  if (!committee) {
+    return { nodes: [], lanes: [], edges: [] };
+  }
+  const nodes: MapNode[] = [];
+  const lanes: MapLane[] = [];
+  const edges: MapEdge[] = [];
+
+  // Our side, in the order the routes rank them: strongest relationship first,
+  // which is the order a reader deciding whom to ask wants to read.
+  const colleagues = new Map<string, string>();
+  for (const seat of committee.seats) {
+    for (const route of seat.routes?.top ?? []) {
+      if (!colleagues.has(route.user_id)) {
+        colleagues.set(route.user_id, route.display_name);
+      }
+    }
+  }
+  for (const [id, name] of colleagues) {
+    nodes.push({ id: colleagueNodeId(id), kind: "user", label: name });
+  }
+  if (colleagues.size > 0) {
+    lanes.push({
+      id: "ourside",
+      column: "left",
+      label: copy.ourSide,
+      nodeIds: [...colleagues.keys()].map(colleagueNodeId),
+    });
+  }
+
+  // The account, and the deal the committee belongs to.
+  nodes.push({
+    id: "company",
+    kind: "company",
+    label: accountName,
+    sublabel: copy.account,
+  });
+  const centre = ["company"];
+  const deal = coverage.deals.find(
+    (candidate) => candidate.deal_id === coverage.selected_deal_id,
+  );
+  if (deal) {
+    nodes.push({ id: `d:${deal.deal_id}`, kind: "deal", label: deal.name });
+    centre.push(`d:${deal.deal_id}`);
+  }
+  lanes.push({ id: "centre", column: "center", label: "", nodeIds: centre });
+
+  // Their contacts, by role, with a gap where a critical role is unheld.
+  buildRoleLanes(committee, deal, copy, viewerId, nodes, lanes, edges);
+
+  return { nodes, lanes, edges };
+}
+
+function contactNode(
+  seat: Seat,
+  copy: MapCopy,
+  viewerId: string | undefined,
+): MapNode {
+  const engagement = seat.engagement as MapEngagement | undefined;
+  // The verb goes ONLY on a seat SOMEBODY ELSE can reach. Asking for an
+  // introduction from nobody is not a move, and offering it on a contact with
+  // no route would send the reader to a dialog that can only refuse — the
+  // endpoint requires a recorded route and answers 404 without one. A seat only
+  // the reader reaches is the same dead control for a different reason: the
+  // endpoint refuses an introduction whose introducer is the caller, and the
+  // reader had the relationship all along.
+  const reachable = (seat.routes?.top ?? []).some(
+    (route) => route.user_id !== viewerId,
+  );
+  return {
+    id: `p:${seat.contact_id}`,
+    kind: "contact",
+    label: seat.full_name,
+    // ABSENT routes and EMPTY routes are opposite facts. Absent means the
+    // reader may not ask who can reach this contact; empty is the answer that
+    // nobody can. Drawing both as a contact with no line would report a
+    // withholding as a recorded absence.
+    sublabel: seat.routes ? undefined : copy.routesWithheld,
+    engagement,
+    engagementLabel: engagement ? copy.engagement[engagement] : undefined,
+    actions: reachable ? [{ id: ASK_INTRO, label: copy.askIntro }] : undefined,
+  };
+}
+
+/** The action a contact node offers when somebody on our side can reach them. */
+export const ASK_INTRO = "ask_intro";
+
+/**
+ * routeEdges turns one seat's colleagues into lines.
+ *
+ * The words carry the direction, because a line cannot: "awaiting reply" and
+ * "they replied" are opposite next moves and would otherwise be one grey line
+ * apiece. The band the server already decided is used as it stands — a second
+ * banding here would let the map disagree with the row beneath it.
+ */
+function routeEdges(seat: Seat, copy: MapCopy): MapEdge[] {
+  return (seat.routes?.top ?? []).map((route) => ({
+    id: `e:${route.user_id}:${seat.contact_id}`,
+    from: colleagueNodeId(route.user_id),
+    to: `p:${seat.contact_id}`,
+    kind: "route" as const,
+    band: route.strength_bucket as MapBand,
+    lastAt: route.last_interaction_at ?? null,
+    words: wordsFor(seat.engagement as MapEngagement | undefined, copy),
+  }));
+}
+
+function wordsFor(
+  engagement: MapEngagement | undefined,
+  copy: MapCopy,
+): string {
+  if (engagement === "waiting") {
+    return copy.replyOwed;
+  }
+  if (engagement === "answered") {
+    return copy.theyReplied;
+  }
+  if (engagement === "no_reply") {
+    return copy.awaitingReply;
+  }
+  return copy.neverWritten;
+}
+
+/**
+ * buildRoleLanes walks the committee once, laying out one lane per role.
+ *
+ * A lane appears only when it holds somebody or a gap: an empty heading reads
+ * as a section that failed to load rather than as a role nobody holds.
+ */
+function buildRoleLanes(
+  committee: NonNullable<Coverage["committee"]>,
+  deal: Coverage["deals"][number] | undefined,
+  copy: MapCopy,
+  viewerId: string | undefined,
+  nodes: MapNode[],
+  lanes: MapLane[],
+  edges: MapEdge[],
+): void {
+  // One node per CONTACT, in the first role they hold. A stakeholder can sit on
+  // a deal twice (the table's key is deal, contact AND role), and drawing them
+  // once per role produced two nodes with the same id, two identical edges and
+  // two React keys — a picture that cannot say which of the two a click meant.
+  const drawn = new Set<string>();
+  for (const role of ROLES) {
+    const seats = committee.seats.filter(
+      (seat) => seat.role === role && !drawn.has(seat.contact_id),
+    );
+    for (const seat of seats) {
+      drawn.add(seat.contact_id);
+    }
+    const ids: string[] = [];
+    for (const seat of seats) {
+      nodes.push(contactNode(seat, copy, viewerId));
+      ids.push(`p:${seat.contact_id}`);
+      edges.push(...routeEdges(seat, copy));
+      if (deal) {
+        edges.push(dealEdge(seat.contact_id, deal.deal_id, copy));
+      }
+    }
+    if (seats.length === 0 && committee.gaps.includes(role)) {
+      const id = `gap:${role}`;
+      nodes.push({
+        id,
+        kind: "gap",
+        label: copy.missing(copy.roles[role]),
+        sublabel: copy.assign,
+      });
+      ids.push(id);
+    }
+    if (ids.length > 0) {
+      lanes.push({
+        id: role,
+        column: "right",
+        label: copy.roles[role],
+        nodeIds: ids,
+      });
+    }
+  }
+
+  buildOtherLane(committee, deal, copy, viewerId, drawn, nodes, lanes, edges);
+}
+
+/**
+ * buildOtherLane catches the seats no named lane claimed.
+ *
+ * `role` is a free string on the wire, and a seat carrying one this board has
+ * no lane for is still a contact the summary counted — dropping it sends a
+ * reader looking for somebody the picture never drew.
+ */
+function buildOtherLane(
+  committee: NonNullable<Coverage["committee"]>,
+  deal: Coverage["deals"][number] | undefined,
+  copy: MapCopy,
+  viewerId: string | undefined,
+  drawn: Set<string>,
+  nodes: MapNode[],
+  lanes: MapLane[],
+  edges: MapEdge[],
+): void {
+  const known = new Set<string>(ROLES);
+  const other = committee.seats.filter(
+    (seat) => !known.has(seat.role) && !drawn.has(seat.contact_id),
+  );
+  if (other.length === 0) {
+    return;
+  }
+  for (const seat of other) {
+    drawn.add(seat.contact_id);
+    nodes.push(contactNode(seat, copy, viewerId));
+    edges.push(...routeEdges(seat, copy));
+    if (deal) {
+      edges.push(dealEdge(seat.contact_id, deal.deal_id, copy));
+    }
+  }
+  lanes.push({
+    id: "other",
+    column: "right",
+    label: copy.otherRoles,
+    nodeIds: other.map((seat) => `p:${seat.contact_id}`),
+  });
+}
+
+/** dealEdge joins one seat to the deal it sits on. */
+function dealEdge(contactId: string, dealId: string, copy: MapCopy): MapEdge {
+  return {
+    id: `m:${contactId}`,
+    from: `p:${contactId}`,
+    to: `d:${dealId}`,
+    kind: "membership",
+    words: copy.onDeal,
+  };
+}
+
+/**
+ * introTargetFor names the colleague to ask, from the map the reader is
+ * looking at.
+ *
+ * The STRONGEST route the reader can actually ask for, ranked by the drawing's
+ * own comparison — so the dialog names the colleague the panel beside it named,
+ * rather than whichever edge happened to be first. The one case where the two
+ * differ is the reader's own route being the warmest: the picture still lights
+ * it, because it is the most useful fact on the page, and the ask goes to the
+ * best colleague there is to ask.
+ *
+ * It refuses anything that is not a CONTACT. A route edge runs colleague →
+ * contact, so reading `from` as the colleague is only true for a contact focus;
+ * on a colleague focus the same edge points the other way and this would ask
+ * the contact to introduce the reader to their own colleague. Today the action
+ * only sits on contact nodes, which makes that unreachable — and a function
+ * that is correct only because of where it happens to be called is one the
+ * next caller breaks silently.
+ */
+export function introTargetFor(
+  model: RelationshipMapModel,
+  nodeId: string,
+  viewerId?: string,
+): IntroTarget | null {
+  const contact = model.nodes.find((node) => node.id === nodeId);
+  if (contact?.kind !== "contact") {
+    return null;
+  }
+  // The strongest route SOMEBODY ELSE holds. The reader is ranked among the
+  // colleagues who can reach this contact like anybody else, and the endpoint
+  // refuses an introduction whose introducer is the caller — so their own
+  // route is filtered out BEFORE the ranking rather than after it, which is
+  // what lets the second-best colleague be asked instead of nobody.
+  //
+  // `strongest` is the drawing's own comparison, borrowed rather than repeated:
+  // a second one here would light one route on the picture and open a dialog
+  // about another.
+  const mine = viewerId === undefined ? null : colleagueNodeId(viewerId);
+  const best = strongest(
+    model.edges.filter(
+      (edge) =>
+        edge.kind === "route" && edge.to === nodeId && edge.from !== mine,
+    ),
+  );
+  const colleague = best && model.nodes.find((node) => node.id === best.from);
+  if (!best || colleague?.kind !== "user") {
+    return null;
+  }
+  return {
+    // The ids the map draws with are PREFIXED so a contact and a colleague
+    // cannot collide; the endpoint wants the bare uuid. Stripped by the node's
+    // own kind rather than by pattern, so a value that merely starts with the
+    // letters cannot be trimmed into a different record.
+    contactId: nodeId.slice("p:".length),
+    contactName: contact.label,
+    viaUserId: colleague.id.slice(USER_PREFIX.length),
+    viaName: colleague.label,
+  };
+}

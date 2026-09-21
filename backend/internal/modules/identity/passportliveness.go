@@ -79,7 +79,7 @@ func agentAuthQuery(predicate string) string {
 // asks it again at every tool ADMISSION, because a run authenticates once and
 // then executes for its whole wall clock — so without the second asking, a
 // revoked passport keeps working until the run ends on its own. Held by
-// TestTheLivenessRuleIsAskedTheSameWayTwice.
+// TestBothAgentAuthenticationPathsExecuteTheOneLivenessQuery.
 var agentLivenessWhere = `
 		  AND p.revoked_at IS NULL
 		  AND now() < p.expires_at

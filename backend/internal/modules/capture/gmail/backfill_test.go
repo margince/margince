@@ -42,18 +42,19 @@ func (staleOAuth) AccessToken(context.Context, string) (string, error) {
 // deliberately absent from backfill tests.
 type pagedAPI struct {
 	fakeAPI
-	estimate    int
-	estimateErr error
-	pages       map[string][]string // pageToken -> ids ("" is the first page)
-	next        map[string]string   // pageToken -> next token
-	listErr     error
+	estimate      int
+	estimateErr   error
+	pages         map[string][]string // pageToken -> ids ("" is the first page)
+	next          map[string]string   // pageToken -> next token
+	listErr       error
+	estimateFloor bool
 }
 
-func (p *pagedAPI) EstimateAfter(context.Context, string, string) (int, error) {
+func (p *pagedAPI) EstimateAfter(context.Context, string, string) (int, bool, error) {
 	if p.estimateErr != nil {
-		return 0, p.estimateErr
+		return 0, false, p.estimateErr
 	}
-	return p.estimate, nil
+	return p.estimate, p.estimateFloor, nil
 }
 
 func (p *pagedAPI) ListAfter(_ context.Context, _ string, _ string, pageToken string, _ int) ([]string, string, error) {
@@ -79,8 +80,25 @@ func TestAfterQueryRendersGmailDateOperator(t *testing.T) {
 func TestEstimateBackfillPassesProviderNumberThrough(t *testing.T) {
 	c := New(fakeOAuth{access: "access-1"}, &pagedAPI{estimate: 4321})
 	got, err := c.EstimateBackfill(context.Background(), authBytes(t), time.Now())
-	if err != nil || got != 4321 {
-		t.Fatalf("EstimateBackfill = %d, %v — want the provider's 4321 untouched", got, err)
+	if err != nil || got.Messages != 4321 {
+		t.Fatalf("EstimateBackfill = %d, %v — want the provider's 4321 untouched", got.Messages, err)
+	}
+	if got.Floor {
+		t.Error("a count that reached the end of the mailbox was reported as a floor")
+	}
+}
+
+// The cap binding is the case the preview must be able to say out loud: the
+// window holds AT LEAST this many, and a surface that shows the number without
+// the qualifier is short by multiples on exactly the mailboxes where it binds.
+func TestEstimateBackfillCarriesTheCapAsAFloor(t *testing.T) {
+	c := New(fakeOAuth{access: "access-1"}, &pagedAPI{estimate: 20000, estimateFloor: true})
+	got, err := c.EstimateBackfill(context.Background(), authBytes(t), time.Now())
+	if err != nil {
+		t.Fatalf("EstimateBackfill: %v", err)
+	}
+	if !got.Floor {
+		t.Errorf("the capped count %d is reported as a total, so a reader cannot tell it is a bound", got.Messages)
 	}
 }
 
@@ -253,9 +271,12 @@ func TestHTTPAPIEstimateAfterCountsIDsExactlyAcrossPages(t *testing.T) {
 	defer srv.Close()
 
 	api := NewAPI(srv.Client(), srv.URL)
-	got, err := api.EstimateAfter(context.Background(), "tok", "after:2026/01/05")
+	got, floor, err := api.EstimateAfter(context.Background(), "tok", "after:2026/01/05")
 	if err != nil || got != 3 {
 		t.Fatalf("EstimateAfter = %d, %v — want an exact id count of 3, not the estimate", got, err)
+	}
+	if floor {
+		t.Error("a mailbox that paged to its end was reported as capped")
 	}
 	if len(queries) != 2 {
 		t.Fatalf("made %d list calls, want 2 (paged to the end)", len(queries))
@@ -312,5 +333,34 @@ func TestHTTPAPIListAfterFirstPageOmitsToken(t *testing.T) {
 	}
 	if _, present := gotQuery["pageToken"]; present {
 		t.Fatal("a first page must not send an empty pageToken")
+	}
+}
+
+// TestBackfillPageNeverPutsADraftOnTheTimeline is the same rule on the OTHER
+// ingest path. Both walk their own enumeration — messages.list here,
+// history.list in Sync — and a draft rule spelled at one of them is a rule the
+// other puts back, which is why each path has its own case.
+//
+// A draft is SCANNED and skipped rather than unseen: the tally is what an
+// operator reads to know the run covered the window.
+func TestBackfillPageNeverPutsADraftOnTheTimeline(t *testing.T) {
+	api := &pagedAPI{pages: map[string][]string{"": {"d1@mail.gmail.com", "m1@mail.gmail.com"}}}
+	api.raws = map[string][]byte{
+		"d1@mail.gmail.com": rawMsg("d1@mail.gmail.com", owner),
+		"m1@mail.gmail.com": rawMsg("m1@mail.gmail.com", "alice@acme.com"),
+	}
+	api.drafts = map[string]bool{"d1@mail.gmail.com": true}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+
+	res, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", sink)
+	if err != nil {
+		t.Fatalf("BackfillPage: %v", err)
+	}
+	if res.Scanned != 2 || res.Captured != 1 || res.Skipped != 1 {
+		t.Fatalf("page = %+v, want scanned 2 / captured 1 / skipped 1", res)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:m1@mail.gmail.com" {
+		t.Fatalf("captured %+v, want only the message that was sent", sink.recs)
 	}
 }

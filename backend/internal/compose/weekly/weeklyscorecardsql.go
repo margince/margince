@@ -63,6 +63,10 @@ func insertScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, card Sco
 		add("deal_close_date_sound", d.CloseDateSound)
 		add("deal_forecast_up", d.ForecastUp)
 		add("deal_forecast_down", d.ForecastDown)
+		// Zero is a real answer here and means every deal reconstructed. NULL is
+		// reserved for scorecards frozen before the reconstruction existed, so a
+		// block measured now always writes a number.
+		add("deal_unreconstructible", d.Unreconstructible)
 	}
 
 	_, err := tx.Exec(ctx, fmt.Sprintf(
@@ -86,7 +90,7 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 	// Every nullable column scans through a pointer, because a block's absence
 	// is exactly what NULL means here.
 	var la, ld, lp, lat, lb, mb, mh, mn, mp *int
-	var da, dr, dns, do, dmt, dcd, dfu, dfd *int
+	var da, dr, dns, do, dmt, dcd, dfu, dfd, dun *int
 	err := tx.QueryRow(ctx, `
 		SELECT has_lead_block, lead_advanced, lead_disqualified, lead_promoted,
 		       lead_answered_in_target, lead_breached, meetings_booked,
@@ -94,10 +98,11 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 		       has_deal_block, deal_advances, deal_regressions,
 		       deal_median_days_in_stage, deal_with_next_step, deal_open,
 		       deal_multi_threaded, deal_close_date_sound,
-		       deal_forecast_up, deal_forecast_down
+		       deal_forecast_up, deal_forecast_down, deal_unreconstructible
 		  FROM weekly_review_scorecard WHERE weekly_review_id = $1`, reviewID).
 		Scan(&hasLead, &la, &ld, &lp, &lat, &lb, &mb, &mh, &mn, &mp,
-			&hasDeal, &da, &dr, &d.MedianDaysInStage, &dns, &do, &dmt, &dcd, &dfu, &dfd)
+			&hasDeal, &da, &dr, &d.MedianDaysInStage, &dns, &do, &dmt, &dcd, &dfu, &dfd,
+			&dun)
 	if errors.Is(err, pgx.ErrNoRows) {
 		//nolint:nilnil // a review written before scorecards existed HAS none; the panel draws nothing rather than the read failing.
 		return nil, nil
@@ -118,6 +123,11 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 		d.WithNextStep, d.Open = deref(dns), deref(do)
 		d.MultiThreaded, d.CloseDateSound = deref(dmt), deref(dcd)
 		d.ForecastUp, d.ForecastDown = deref(dfu), deref(dfd)
+		// NOT deref'd, unlike every column above it. NULL here means the week was
+		// scored before the reconstruction existed, and folding that to zero would
+		// claim those old weeks were rebuilt completely when they were never
+		// rebuilt at all.
+		d.Unreconstructible = dun
 		card.Deal = &d
 	}
 	return &card, nil

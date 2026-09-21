@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -82,13 +81,10 @@ func (w *authzDisagreementWorker) Work(ctx context.Context, _ *river.Job[AuthzDi
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_authz_disagreement: resolving the installation: %w", err))
 	}
 	// The system principal, because this is the installation asking about its
-	// own rollout rather than a seat asking about a person. Nothing the reading
+	// own rollout rather than a seat asking about a contact. Nothing the reading
 	// returns names a subject: no address, no consent state, only how two rules
 	// have compared.
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:authz_disagreement",
-	})
+	ctx = principal.SystemActing(ctx, "system:authz_disagreement")
 
 	since := w.now().Add(-disagreementWindow)
 	report, err := w.store.DisagreementReportSince(ctx, since)

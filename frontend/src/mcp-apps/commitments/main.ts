@@ -12,7 +12,7 @@
 // judged in. A promise with no owner renders as unowned, which is the state a
 // reviewer is looking for rather than a blank to be filled in silently.
 
-import { count, day, el, onResult, warned } from "../bridge";
+import { count, day, el, heading, onResult, warned } from "../bridge";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -176,7 +176,7 @@ export function render(
     return;
   }
   const commitments = known(answer);
-  root.appendChild(el("h1", undefined, "Open commitments"));
+  root.appendChild(heading("xlarge", "Open commitments"));
   root.appendChild(
     el(
       "p",

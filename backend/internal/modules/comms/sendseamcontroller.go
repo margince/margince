@@ -30,7 +30,7 @@ import (
 
 // ControllerRelay transmits a message the installation sends as itself.
 //
-// Separate from the mail connectors because there is no person behind it: the
+// Separate from the mail connectors because there is no contact behind it: the
 // relay is deployment configuration, its from-address belongs to the
 // installation, and no subject's mailbox grant is involved.
 type ControllerRelay interface {

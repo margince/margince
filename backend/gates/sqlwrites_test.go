@@ -6,7 +6,7 @@ package gates
 // Reading a SQL literal for what it WRITES.
 //
 // Its own file because it is not one gate's helper: table ownership, the PII
-// censuses, the satellite lifecycle, the person scrub and the pending-writer
+// censuses, the satellite lifecycle, the contact scrub and the pending-writer
 // claim all ask it, and the last time two of them read statements separately
 // the two answers drifted.
 //

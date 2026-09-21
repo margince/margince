@@ -92,7 +92,7 @@ export type CustomScreen = {
    * registry holds components (app/extensions.ts).
    */
   component: ComponentType;
-  /** A rail entry, if this screen is a destination a person navigates TO. */
+  /** A rail entry, if this screen is a destination a contact navigates TO. */
   nav?: {
     /**
      * Which of the rail's existing groups it joins. Not a new group: the three
@@ -147,7 +147,7 @@ export type CustomScreenRegistry = ReadonlyMap<string, CustomScreen>;
  * The registry, keyed by the address segment that reaches it.
  *
  * Built from `key` rather than from the directory name, so a fork renaming a
- * folder does not silently change a URL people have bookmarked. A module that
+ * folder does not silently change a URL contacts have bookmarked. A module that
  * exports no `screen` is skipped rather than failing the build: the directory
  * is a fork's, and a work-in-progress file there must not stop the product
  * compiling.

@@ -122,19 +122,19 @@ func TestAMachineAddressIsRecognisedWithoutHeaders(t *testing.T) {
 		"jira-no-reply@atlassian.net", "automated@billing.example.com",
 	} {
 		if !IsMachineAddress(address) {
-			t.Errorf("%q was taken for a person", address)
+			t.Errorf("%q was taken for a contact", address)
 		}
 	}
 }
 
-// And a person must not be mistaken for one. Over-recognising hides a customer,
+// And a contact must not be mistaken for one. Over-recognising hides a customer,
 // which the reader cannot recover from; under-recognising costs a row.
-func TestAPersonIsNeverTakenForAMachine(t *testing.T) {
+func TestAContactIsNeverTakenForAMachine(t *testing.T) {
 	for _, address := range []string{
 		"anna.weber@acme.com", "lars@gradion.com", "sales@acme.com",
 		"info@acme.com", "kontakt@acme.de", "", "not-an-address",
 		// Separator-created false positives. Stripping dots and dashes before
-		// matching turned a person's name into a marker: `connor.eply` became
+		// matching turned a contact's name into a marker: `connor.eply` became
 		// `connoreply`, which contains "noreply".
 		"connor.eply@customer.example",
 		"anna.notify.weber@customer.example",
@@ -147,10 +147,10 @@ func TestAPersonIsNeverTakenForAMachine(t *testing.T) {
 	}
 }
 
-func TestRecordWorthyRefusesAnAddressNoPersonAnswers(t *testing.T) {
+func TestRecordWorthyRefusesAnAddressNoContactAnswers(t *testing.T) {
 	sink := &Sink{transactional: NewTransactionalList(nil, nil)}
 	// T1's evidence is that the workspace WROTE to an address, which is honest
-	// evidence of intent and silent about whether a person is there. A mailbox
+	// evidence of intent and silent about whether a contact is there. A mailbox
 	// owner books flights, files expenses and answers their own robots, so
 	// before this gate every one of those became a contact.
 	unreachable := []string{
@@ -165,10 +165,10 @@ func TestRecordWorthyRefusesAnAddressNoPersonAnswers(t *testing.T) {
 	}
 	for _, address := range unreachable {
 		if sink.recordWorthy(counterpartyOf(address)) {
-			t.Errorf("recordWorthy(%q) = true, want false — no person answers that address", address)
+			t.Errorf("recordWorthy(%q) = true, want false — no contact answers that address", address)
 		}
 	}
-	// The refusal has to stay narrow. A person at an ordinary company is a
+	// The refusal has to stay narrow. A contact at an ordinary company is a
 	// contact whatever their employer does, and a rule that swept a domain on
 	// suspicion would refuse them.
 	reachable := []string{
@@ -216,6 +216,61 @@ func counterpartyOf(address string) connector.Counterparty {
 	return connector.Counterparty{Email: address, Domain: domain}
 }
 
+// The same refusal, asked the way the verdict lane asks it — by address, with no
+// Sink to hold the registry.
+//
+// The lane needs its own entry point because a deferred sender reaches a model,
+// and a model's stray answer is enough to create the record: a ten-year import
+// produced fifteen `transactional` verdicts for an expense tool's receipts
+// address and one `contact` at 0.95, and the one created a contact called
+// "Receipts". Nothing re-read the fifteen.
+func TestTheVerdictLaneRefusesTheSameAddressesTheLadderDoes(t *testing.T) {
+	// A billing product sends under its customer's letterhead, so the display
+	// name names a company the owner really deals with while the address belongs
+	// to the tool. That pair minted a contact called "BERATUNG JUDITH ANDRESEN".
+	for _, address := range []string{
+		"receipts@expensify.com",
+		"noreply@fastbill.com",
+		"invoice-receipts@fastbill.com",
+	} {
+		if AddressCouldNameAContact(address, domainOf(address), nil) {
+			t.Errorf("AddressCouldNameAContact(%q) = true — no human answers it", address)
+		}
+	}
+	// A personal-service domain refuses its named staff too, exactly as it does
+	// for the tools already on that list — the owner's traffic with a product
+	// they use is the product's, whoever signs it. An operator who genuinely
+	// sells to one of these declares it (the allowlist case below), which is the
+	// escape hatch that keeps the refusal honest rather than absolute.
+	if AddressCouldNameAContact("anna.mueller@fastbill.com", "fastbill.com", nil) {
+		t.Error("a personal-service domain admitted a named local part — expensify's support@ is refused the same way")
+	}
+	// And it gives the Sink's answer rather than a second one.
+	sink := &Sink{transactional: NewTransactionalList(nil, nil)}
+	for _, address := range []string{
+		"receipts@expensify.com", "noreply@acme.com", "jane@github.com", "info@acme.com",
+	} {
+		want := sink.recordWorthy(counterpartyOf(address))
+		if got := AddressCouldNameAContact(address, domainOf(address), nil); got != want {
+			t.Errorf("AddressCouldNameAContact(%q) = %v, recordWorthy = %v — two answers to one question", address, got, want)
+		}
+	}
+	// The operator's allowlist still outranks the domain lists, and still says
+	// nothing about a robot on a vouched domain.
+	vouched := NewTransactionalList(nil, []string{"expensify.com"})
+	if !AddressCouldNameAContact("anna@expensify.com", "expensify.com", vouched) {
+		t.Error("an allowlisted domain refused a named human")
+	}
+	if AddressCouldNameAContact("receipts@expensify.com", "expensify.com", vouched) {
+		t.Error("an allowlisted domain admitted a machine local part — nobody answers it whoever vouched")
+	}
+}
+
+func domainOf(address string) string {
+	_, domain, _ := strings.Cut(address, "@")
+	return domain
+}
+
 func TestTheAttentionQueueStillSeesHumansAtPersonalServiceCompanies(t *testing.T) {
 	// IsMachineAddress is read by the attention queue to drop rows from "who is
 	// waiting on me". Its own contract says over-recognising hides a real
@@ -223,7 +278,7 @@ func TestTheAttentionQueueStillSeesHumansAtPersonalServiceCompanies(t *testing.T
 	// the page says somebody was hidden.
 	//
 	// So the personal-service product domains are kept OUT of the baseline this
-	// reads. They are companies with salespeople, not relay infrastructure, and
+	// reads. They are companies with salescontacts, not relay infrastructure, and
 	// the reason to refuse them a CRM record is about the mailbox owner's own
 	// traffic — not about whether a human there is waiting for an answer.
 	visible := []string{

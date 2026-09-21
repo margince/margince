@@ -131,17 +131,17 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 // Work method reaches, so a zero-value job is enough to drive it.
 func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 	return map[string]func(context.Context) error{
-		GeocodeOrganizationArgs{}.Kind(): func(ctx context.Context) error {
-			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeOrganizationArgs]{})
+		GeocodeCompanyArgs{}.Kind(): func(ctx context.Context) error {
+			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeCompanyArgs]{})
 		},
 		AccountScanArgs{}.Kind(): func(ctx context.Context) error {
 			return (&accountScanWorker{}).Work(ctx, &river.Job[AccountScanArgs]{})
 		},
-		CheckOrganizationVatArgs{}.Kind(): func(ctx context.Context) error {
-			return (&vatCheckWorker{}).Work(ctx, &river.Job[CheckOrganizationVatArgs]{})
+		CheckCompanyVatArgs{}.Kind(): func(ctx context.Context) error {
+			return (&vatCheckWorker{}).Work(ctx, &river.Job[CheckCompanyVatArgs]{})
 		},
-		TechnicalEnrichOrganizationArgs{}.Kind(): func(ctx context.Context) error {
-			return (&technicalEnrichWorker{}).Work(ctx, &river.Job[TechnicalEnrichOrganizationArgs]{})
+		TechnicalEnrichCompanyArgs{}.Kind(): func(ctx context.Context) error {
+			return (&technicalEnrichWorker{}).Work(ctx, &river.Job[TechnicalEnrichCompanyArgs]{})
 		},
 		KnowledgeIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&knowledgeIngestWorker{}).Work(ctx, &river.Job[KnowledgeIngestArgs]{})
@@ -199,10 +199,6 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 			return (&voiceBuildWorker{}).Work(ctx, &river.Job[VoiceBuildArgs]{
 				Args: VoiceBuildArgs{RequestedBy: ids.NewV7().String()},
 			})
-		},
-		OverlayRefetchArgs{}.Kind(): func(ctx context.Context) error {
-			return (&overlayRefetchWorker{log: slog.New(slog.DiscardHandler)}).Work(
-				ctx, &river.Job[OverlayRefetchArgs]{})
 		},
 		SiteDeepReadArgs{}.Kind(): func(ctx context.Context) error {
 			return (&siteDeepReadWorker{}).Work(ctx, &river.Job[SiteDeepReadArgs]{

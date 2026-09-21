@@ -24,8 +24,6 @@
    nothing, and there are few enough of them that two lines is affordable. */
 .waterfall-label {
   order: 2;
-  font-size: var(--fs-meta);
-  color: var(--textMuted);
   overflow-wrap: anywhere;
 }
 .waterfall-fill {
@@ -38,7 +36,7 @@
 /* The two anchors are the totals, drawn recessed so the movement between them
    is what the eye lands on. */
 .waterfall-anchor .waterfall-fill {
-  background: var(--textMuted);
+  background: var(--borderSubtle);
 }
 .waterfall-up .waterfall-fill {
   background: var(--success);
@@ -48,6 +46,5 @@
 }
 .waterfall-warning {
   margin: var(--space-2) 0 0;
-  color: var(--danger);
-  font-size: var(--fs-sm);
+  color: var(--dangerText);
 }

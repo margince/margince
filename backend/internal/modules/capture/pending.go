@@ -10,7 +10,7 @@ package capture
 // a wrong registry entry is queryable rather than only a log line.
 //
 // This file owns the ledger's SQL and nothing else — capture never touches
-// person/organization tables, and the resolver seam stays the only way records
+// contact/company tables, and the resolver seam stays the only way records
 // come into being.
 
 import (
@@ -42,24 +42,41 @@ const (
 	PendingStatusRejected = "rejected"
 )
 
+// PendingStatuses is every state a ledger row can hold, and the same closed set
+// the column's CHECK constraint holds.
+//
+// A list rather than six constants alone because two readers have to account
+// for ALL of them: the trace's funnel fold decides which bucket each settled
+// verdict counts under, and the ladder names each one to a member. A status
+// added to the column and to neither would leave a settled sender reading as
+// one still being judged, forever. The list cannot grow in the database alone:
+//
+// Held by: TestTheLedgerStatusSetMatchesItsConstraint (backend/gates/captureledgerstatuses_test.go)
+func PendingStatuses() []string {
+	return []string{
+		PendingStatusPending, PendingStatusUnsure, PendingStatusReal,
+		PendingStatusNoise, PendingStatusSuppressed, PendingStatusRejected,
+	}
+}
+
 // The sender kinds a verdict can report — WHO wrote, which is a different
 // question from the row's lifecycle status above and is stored in its own
 // column (migration 0222).
 //
-// Only KindPerson may become a person record. The old binary vocabulary put "a
-// person or company" on one side of a single line, so an organization writing
+// Only KindContact may become a contact record. The old binary vocabulary put "a
+// contact or company" on one side of a single line, so a company writing
 // under its own name became a contact named after the company — the real import
-// produced people called "Docsign", "VINASA" and "Expensify".
+// produced contacts called "Docsign", "VINASA" and "Expensify".
 const (
-	// KindPerson is a human with an interest in this business.
-	KindPerson = "person"
-	// KindRoleMailbox is an address an organization answers rather than a
-	// person: support@, info@, a shared team mailbox. The correspondence is
+	// KindContact is a human with an interest in this business.
+	KindContact = "contact"
+	// KindRoleMailbox is an address a company answers rather than a
+	// contact: support@, info@, a shared team mailbox. The correspondence is
 	// real; there is simply no human named to record.
 	KindRoleMailbox = "role_mailbox"
-	// KindOrganizationSender is the organization itself writing under its own
+	// KindCompanySender is the company itself writing under its own
 	// name.
-	KindOrganizationSender = "organization_sender"
+	KindCompanySender = "company_sender"
 	// KindNewsletter is bulk editorial mail. Subscribing to one is not a
 	// business relationship.
 	KindNewsletter = "newsletter"
@@ -135,6 +152,20 @@ type PendingCounterparty struct {
 	Subject     string
 	Body        string
 
+	// Direction says who reached whom: 'inbound' is a stranger writing in,
+	// 'outbound' is the mailbox owner writing TO this address.
+	//
+	// On the row because the judgment turns on it and the prompt cannot infer
+	// it. A mailbox the owner wrote to was described to the model as "From:",
+	// so a property manager the founder emailed was judged as though it had
+	// written in — and a service desk reads very differently depending on which
+	// way the message went.
+	Direction string
+	// WroteBack reports that this address has ever answered us in a thread we
+	// started. An address that never has is an intention rather than a
+	// relationship, whatever the outbound message says about it.
+	WroteBack bool
+
 	// Claim is this lease's token, minted by the ClaimDue that handed the row
 	// out. Every write back to the ledger presents it, so a worker holding an
 	// expired lease can no longer resolve a row that someone else has since
@@ -160,7 +191,7 @@ type PendingCounterparty struct {
 // can never reach it. That is a statement about this ledger only: the channel
 // key needs the same refusal, and it needs it wherever the record becomes
 // durable. It is taken in Sink.Upsert's own transaction (sink.go), under the
-// account's advisory lock; people's EnsureChannelCounterparty probes again
+// account's advisory lock; contacts's EnsureChannelCounterparty probes again
 // afterwards, but it runs after the activity has committed, so it is the second
 // gate and never the only one.
 func recordDisposition(ctx context.Context, tx pgx.Tx, in dispositionRow) (string, error) {
@@ -264,69 +295,11 @@ type PendingStore struct{ db *database.DB }
 // workspace it serves.
 func NewPendingStore(db *database.DB) *PendingStore { return &PendingStore{db: db} }
 
-// ClaimDue atomically leases up to limit due rows for this workspace. FOR UPDATE
-// SKIP LOCKED lets several replicas drain the ledger without double-judging a
-// row or serializing on each other; the lease is what a crashed worker releases
-// by expiry.
-//
-// Claiming bumps attempts, so a row that keeps failing walks toward its bound
-// rather than being retried forever, and stamps a fresh claim token every
-// batch shares — the key Resolve and Defer demand back.
-func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounterparty, error) {
-	claim := ids.NewV7()
-	var out []PendingCounterparty
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			UPDATE capture_pending_counterparty p
-			   SET attempts = p.attempts + 1,
-			       claimed_until = now() + make_interval(secs => $2),
-			       claimed_by = $4,
-			       updated_at = now()
-			 WHERE p.id IN (
-			   SELECT id FROM capture_pending_counterparty
-			    WHERE status = 'pending'
-			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
-			      AND (claimed_until IS NULL OR claimed_until <= now())
-			      -- The bound is a property of the ROW, not of a live worker.
-			      -- A worker that crashes, is killed, or outruns its lease never
-			      -- reaches Defer, so a row whose content reliably kills the
-			      -- verdict step would otherwise be re-claimed every lease
-			      -- expiry forever, at one model call a time.
-			      AND attempts < $3
-			    ORDER BY next_attempt_at
-			    LIMIT $1
-			    FOR UPDATE SKIP LOCKED)
-			RETURNING p.id, p.email, coalesce(p.domain, ''), coalesce(left(p.display_name, $5), ''),
-			          p.activity_id, p.owner_id,
-			          coalesce(left((SELECT a.subject FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $6), ''),
-			          coalesce(left((SELECT a.body FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $7), '')`,
-			limit, pendingLease.Seconds(), PendingMaxAttempts, claim,
-			MaxCapturedNameChars, MaxCapturedSubjectChars, MaxCapturedBodyChars)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			p := PendingCounterparty{Claim: claim}
-			if err := rows.Scan(&p.ID, &p.Email, &p.Domain, &p.DisplayName,
-				&p.ActivityID, &p.OwnerID, &p.Subject, &p.Body); err != nil {
-				return err
-			}
-			out = append(out, p)
-		}
-		return rows.Err()
-	})
-	if err != nil {
-		return nil, fmt.Errorf("capture: claiming due dispositions: %w", err)
-	}
-	return out, nil
-}
-
 // Resolve closes a claimed row with its verdict, recording no sender kind.
 //
 // The no-opinion path: a registry rule or an erasure resolves a row without
 // concluding what kind of correspondent the address is. byOwner is false for the
-// same reason — none of these callers is a person deciding about a sender.
+// same reason — none of these callers is a contact deciding about a sender.
 func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, reason string) (bool, error) {
 	// No measurement: a registry rule and an erasure are not model answers.
 	return s.ResolveAs(ctx, tx, p, status, "", reason, false, VerdictMeasurement{})
@@ -350,7 +323,7 @@ func (s *PendingStore) Resolve(ctx context.Context, tx pgx.Tx, p PendingCounterp
 // and a fabricated 1.0 would read as a model that was certain.
 //
 // byOwner records WHICH AUTHORITY answered. The purge of personal mail reads it
-// to decide how long to wait before destroying, so a caller that is not a person
+// to decide how long to wait before destroying, so a caller that is not a human
 // acting deliberately passes false — the classifier, a sweep, a registry rule.
 func (s *PendingStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string, byOwner bool,
@@ -443,8 +416,8 @@ func (s *PendingStore) Defer(ctx context.Context, p PendingCounterparty, backoff
 //
 // measured is the LAST answer, and this is the row where it matters most. A
 // sender retired here is one the model had an opinion about and could not hold
-// with enough confidence — "it said person at 0.78 twice" is the whole reason a
-// person is now being asked, and dropping it would leave the human with the
+// with enough confidence — "it said contact at 0.78 twice" is the whole reason a
+// contact is now being asked, and dropping it would leave the human with the
 // question and none of the evidence.
 func (s *PendingStore) Retire(
 	ctx context.Context, p PendingCounterparty, reason string, measured VerdictMeasurement,
@@ -467,8 +440,47 @@ func (s *PendingStore) Retire(
 	return nil
 }
 
+// TimesJudgedNotAContact counts the settled answers this workspace already has
+// for an address that named no contact.
+//
+// It exists because one stray answer is permanently enough. A ten-year import
+// asked about an expense tool's receipts address sixteen times: fifteen came
+// back `transactional`, one came back `contact` at 0.95, and the one created a
+// contact called "Receipts". Nothing re-read the fifteen — a verdict acts on
+// the answer in front of it, so the rare wrong answer wins by being last.
+//
+// Deliberately NOT bounded by noiseVerdictReach. That window governs how far a
+// `noise` answer reaches over MAIL, and expires because later mail is new
+// evidence about the message. This asks a different question — how often the
+// workspace has already concluded there is nobody here — and a sender judged
+// fifteen times does not become unjudged because the sixteenth message arrived
+// three weeks after the fifteenth.
+//
+// `unsure` is not counted: a row a human was asked about is an open question,
+// not a settled non-contact.
+func (s *PendingStore) TimesJudgedNotAContact(ctx context.Context, email string) (int, error) {
+	normalized := normalizeEmail(email)
+	if normalized == "" {
+		return 0, nil
+	}
+	var n int
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*)
+			  FROM capture_pending_counterparty
+			 WHERE email = $1
+			   AND status = $2
+			   AND kind IS NOT NULL
+			   AND kind <> $3`, normalized, PendingStatusNoise, KindContact).Scan(&n)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("capture: counting settled non-contact answers for a sender: %w", err)
+	}
+	return n, nil
+}
+
 // normalizeEmail is the ONE spelling of the ledger's identity: lowercased and
-// trimmed, matching activity.counterparty_email and person_email so the verdict,
+// trimmed, matching activity.counterparty_email and contact_email so the verdict,
 // the correspondence gate, and the dedupe chokepoint agree on what the same
 // address is.
 func normalizeEmail(email string) string {

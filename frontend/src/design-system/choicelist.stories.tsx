@@ -22,13 +22,13 @@ type Story = StoryObj<typeof ChoiceList>;
 const REACH = [
   {
     value: "everyone_except" as const,
-    label: "Everyone I talk to — except the people I leave out",
+    label: "Everyone I talk to — except the contacts I leave out",
     description:
       "Every conversation goes into the CRM until you name somebody to leave out.",
   },
   {
     value: "only_chosen" as const,
-    label: "Only the people I choose",
+    label: "Only the contacts I choose",
     description: "Nothing goes in until you name somebody.",
   },
 ];

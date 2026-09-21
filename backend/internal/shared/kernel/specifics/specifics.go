@@ -112,7 +112,7 @@ func anyKnown(keys []string, known map[string]bool) bool {
 	return false
 }
 
-// Texts renders the missing specifics for a message a person reads.
+// Texts renders the missing specifics for a message a reader reads.
 func Texts(missing []Specific) string {
 	words := make([]string, 0, len(missing))
 	for _, fact := range missing {

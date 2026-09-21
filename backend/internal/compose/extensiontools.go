@@ -103,6 +103,9 @@ func buildExtensionTools(exts []extension.Extension, verbs []extension.Verb) ([]
 // only place that fact exists, and the handler must never be able to supply
 // it.
 func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension.Verb) (extensionTool, error) {
+	if verb.HumanOnly {
+		return adaptHumanOnlyExtensionTool(unit, tool, verb)
+	}
 	tier, err := mcpTier(verb.Tier)
 	if err != nil {
 		return extensionTool{}, err
@@ -133,7 +136,7 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 	// no longer that the core egress verbs are 🟡 — since ADR-0055 they are not.
 	// send_email, send_message and book_meeting now run directly, because a
 	// passport carries the granting human's own seat and grants, and every one
-	// of those sends is something that person could make unaided in the app.
+	// of those sends is something that contact could make unaided in the app.
 	//
 	// The reason that survives is what an extension is: code the workspace did
 	// not write, reaching a destination the product did not choose, on authority
@@ -222,6 +225,42 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 		unit:    string(unit),
 		version: verb.Version,
 		subject: verb.Subject,
+		handle:  tool.Handle,
+	}, nil
+}
+
+// adaptHumanOnlyExtensionTool is adaptExtensionTool's other branch: a verb
+// declaring x-agent-access: human-only requests no agent authority, so none
+// of the tier/scope/subject/egress refusals that exist only to validate an
+// MCP-served tool's governance apply — extension.Verb.Validate already
+// refused a HumanOnly verb carrying any of them. What still applies: a served
+// tool needs a real Description/Version, the same reason the core registry's
+// Register would otherwise panic on an empty one.
+func adaptHumanOnlyExtensionTool(unit extension.Name, tool extension.Tool, verb extension.Verb) (extensionTool, error) {
+	if strings.TrimSpace(verb.Description) == "" {
+		return extensionTool{}, errors.New("a served human-only tool declares no Description — the text an operator reads to know what it is")
+	}
+	if strings.TrimSpace(verb.Version) == "" {
+		return extensionTool{}, errors.New("a served human-only tool declares no Version — every result carries it as schema_version")
+	}
+	input := verb.InputSchema
+	if input == nil {
+		input = json.RawMessage(`{"type":"object"}`)
+	}
+	return extensionTool{
+		rbacObject: verb.RbacObject,
+		rbacAction: verb.RbacAction,
+		spec: mcp.ToolSpec{
+			Name:         tool.Name,
+			Title:        cmp.Or(verb.Title, tool.Name),
+			Description:  verb.Description,
+			Version:      verb.Version,
+			InputSchema:  input,
+			OutputSchema: verb.OutputSchema,
+			HumanOnly:    true,
+		},
+		unit:    string(unit),
+		version: verb.Version,
 		handle:  tool.Handle,
 	}, nil
 }
@@ -426,5 +465,13 @@ func (t extensionTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	// still finished with its Runtime, and a panic recovered upstream must
 	// not leave a live one behind.
 	defer rt.release()
-	return t.handle(ctx, rt, in)
+	out, err := t.handle(ctx, rt, in)
+	// The same classification the mounted route applies, for the same reason
+	// and on the other transport. A unit's four published sentinels are the
+	// extension surface's own, so nothing in the core taxonomy recognised them
+	// here: an agent that mistyped an argument was told the tool "failed for an
+	// internal reason" and to RETRY — which re-issues the same rejected call
+	// until a scheduled run's step budget is gone. One invariant spelled on two
+	// sides of a wire is one item, so both sides read it from unitRefusal.
+	return out, unitRefusal(err)
 }

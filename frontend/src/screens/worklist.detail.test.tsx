@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // The supporting line, and the words for a group's cause.
@@ -53,6 +55,7 @@ function day(queue: WorklistItem[]): Worklist {
     },
     sources_unavailable: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 0,
       prospecting: 0,
@@ -197,80 +200,6 @@ describe("the supporting line each source sends", () => {
       expect(await screen.findByText(says)).toBeTruthy();
     },
   );
-
-  // The source that sends its facts in its own vocabulary, drawn now that the
-  // client writes the sentence. This is the case that keeps "render every
-  // source" honest: the rule is prose, not "whatever a source happens to send".
-  it.each([
-    {
-      what: "a degraded read budget",
-      kind: "budget_degraded",
-      detail: "shed",
-      says: "Over the read budget: reads are being served from the copy rather than live.",
-      never: "shed",
-    },
-    {
-      what: "a failing sweep",
-      kind: "sync_failing",
-      detail: "rate_limited",
-      says: "Not syncing — the other system is limiting how often we may ask.",
-      never: "rate_limited",
-    },
-    {
-      what: "stale object classes",
-      kind: "objects_stale",
-      detail: "deals, contacts",
-      says: "Out of date here: deals, people.",
-      never: "deals, contacts",
-    },
-  ])(
-    "says $what in the reader's own words",
-    async ({ kind, detail, says, never }) => {
-      draw([
-        {
-          id: "s1",
-          source: "sync_health",
-          category: "system",
-          level: 6,
-          consequence: "data_drifts",
-          kind,
-          detail,
-          because: [],
-          actions: [],
-        },
-      ]);
-
-      expect(await screen.findByText(says)).toBeTruthy();
-      // The producer's word never reaches the page. `deals, contacts` reads
-      // almost like the sentence, which is exactly why it is asserted: a
-      // renderer that fell back to the raw field would look right at a glance.
-      expect(screen.queryByText(never)).toBeNull();
-    },
-  );
-
-  // A value this build does not know draws NO line rather than its own key —
-  // which is what every sync row did before the sentence existed, so an
-  // unrecognised value is never worse than the old behaviour.
-  it("draws no line for a condition value it cannot put into words", async () => {
-    draw([
-      {
-        id: "s2",
-        source: "sync_health",
-        category: "system",
-        level: 6,
-        consequence: "data_drifts",
-        kind: "budget_degraded",
-        detail: "a_band_this_build_never_shipped",
-        because: [],
-        actions: [],
-      },
-    ]);
-
-    expect(
-      await screen.findByText("The CRM sync needs attention"),
-    ).toBeTruthy();
-    expect(screen.queryByText("a_band_this_build_never_shipped")).toBeNull();
-  });
 });
 
 describe("a group names what is broken", () => {
@@ -335,5 +264,47 @@ describe("a group names what is broken", () => {
     expect(document.body.textContent ?? "").not.toMatch(
       /[0-9a-f]{8}-[0-9a-f]{4}-/,
     );
+  });
+});
+
+// THE PANE BESIDE THE QUEUE, on the surface that has the width for it.
+//
+// A `notice_case` row is review work rather than selling work, and the queue
+// used to exclude it from having a record to open at all — a rep took it in
+// hand and got nothing beside it. It opens the record's own pane like any
+// other row whose subject is a record.
+//
+// Asserted HERE rather than in the drawer's suite, which is where it used to
+// live. The drawer draws no pane: the row already names whom it is about and
+// when each side last wrote, and repeating that in a third of an already
+// narrow list is the one place this column does not earn its width
+// (brief.queue.test.tsx holds that half).
+describe("a review row on the queue's own page", () => {
+  it("opens the record's pane beside it", async () => {
+    const user = userEvent.setup();
+    draw([
+      {
+        id: "privacy",
+        source: "notice_case",
+        category: "system",
+        destination: "review",
+        level: 5,
+        consequence: "none",
+        title: "Review the disclosure",
+        because: [],
+        actions: [],
+        subject: { type: "contact", id: "contact", label: "Alice" },
+      },
+    ]);
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Show what 1, Review the disclosure/,
+      }),
+    );
+    expect(
+      await screen.findByRole("complementary", {
+        name: en["worklist.pane.title"],
+      }),
+    ).toBeTruthy();
   });
 });

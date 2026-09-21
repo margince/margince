@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CaptureNotice } from "./capture-notice";
 import { StoryProviders } from "./story-utils";
 
-// What a person is told before their mailbox is read. One state, because it has
+// What a contact is told before their mailbox is read. One state, because it has
 // one: it takes no props, reads nothing, and says the same thing on every
 // connect surface — which is the point of it being a component rather than
 // three copies of a paragraph.

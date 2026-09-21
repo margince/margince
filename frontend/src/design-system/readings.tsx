@@ -23,12 +23,12 @@ export function Meter({
   value: number;
   max: number;
   label: string;
-  // What colour the FILL takes. The accent gradient by default; "warn" and
+  // What colour the FILL takes. The accent gradient by default; "warning" and
   // "danger" for a reading the caller has decided is bad news at this value,
   // whichever end that is — a coverage bar that has run low, an overdue bar
   // that has run high.
-  tone?: "warn" | "danger";
-  // The gradient's second colour (`--away`) reads as a warning creeping in at
+  tone?: "warning" | "danger";
+  // The gradient's second colour (`--warning`) reads as a warning creeping in at
   // the high end, which is wrong for a reading with no low-is-bad meaning.
   // `flat` keeps the accent solid instead of fading toward it.
   flat?: boolean;
@@ -83,7 +83,7 @@ function meterClass({
   dense,
   restTone,
 }: Readonly<{
-  tone?: "warn" | "danger";
+  tone?: "warning" | "danger";
   flat?: boolean;
   dense?: boolean;
   restTone?: "accent";
@@ -161,16 +161,26 @@ export function Chip({
   icon: Icon,
   children,
   href,
+  dense,
 }: Readonly<{
   icon: LucideIcon;
   children: ReactNode;
   // An external destination. Present → the chip is an anchor and opens in a
   // new tab with `noreferrer`, since these point off our origin.
   href?: string;
+  // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
+  // a cell with badges there, and a fact drawn a rung larger than the status
+  // beside it outweighs the name the row is actually about.
+  //
+  // A size on the primitive rather than a height each caller sets, for the
+  // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
+  // first time either moves.
+  dense?: boolean;
 }>) {
+  const shape = dense ? "chip chip-dense" : "chip";
   const body = (
     <>
-      <Icon size={14} aria-hidden="true" />
+      <Icon size={dense ? 12 : 14} aria-hidden="true" />
       <span>{children}</span>
     </>
   );
@@ -178,7 +188,7 @@ export function Chip({
   if (destination) {
     return (
       <a
-        className="chip chip-link"
+        className={`${shape} chip-link`}
         href={destination}
         target="_blank"
         rel="noreferrer"
@@ -189,7 +199,7 @@ export function Chip({
   }
   // A chip whose href was refused still shows the FACT — the reader loses the
   // link, not the value.
-  return <span className="chip">{body}</span>;
+  return <span className={shape}>{body}</span>;
 }
 
 // A ranked set of one-dimensional readings: label, bar, formatted amount, one
@@ -225,7 +235,7 @@ export function BarList({
   const largestRow = rows.reduce((high, row) => Math.max(high, row.value), 0);
   const denominator = Math.max(max ?? 0, largestRow);
   return (
-    <div className="barlist">
+    <div>
       {/* The bars carry the shape and the table carries the figures. A reader
           on a screen reader gets the second, which is the one with the values
           in it — so the bars are hidden rather than announced twice. */}
@@ -241,7 +251,7 @@ export function BarList({
               dense
               flat
             />
-            <span className="barlist-amount num">{row.amount}</span>
+            <span className="barlist-amount t-num">{row.amount}</span>
           </li>
         ))}
       </ul>
@@ -270,5 +280,5 @@ export type BarListRow = Readonly<{
   value: number;
   // The same figure, spelled for a human by the caller's own formatter.
   amount: string;
-  tone?: "warn" | "danger";
+  tone?: "warning" | "danger";
 }>;

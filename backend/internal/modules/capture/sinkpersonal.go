@@ -24,7 +24,7 @@ import (
 // READ, the tier ladder decided what got CREATED, and nothing carried the first
 // answer to the second. Deciding a conversation is somebody's private life and
 // then filing its author as a business contact is one system disagreeing with
-// itself in front of the person it is about.
+// itself in front of the contact it is about.
 //
 // It reads the KIND and not only the status. A thread can be held for many
 // reasons — legal, personnel, an explicit confidentiality marking — and those
@@ -33,7 +33,7 @@ import (
 //
 // Scoped to this seat's own verdict row, because that is how the ledger is keyed
 // and because the question is about THEIR mailbox: another seat's conversation
-// with the same person says nothing about whose this one is.
+// with the same contact says nothing about whose this one is.
 //
 // The caller refuses the CREATE and writes no ledger row. That is deliberate:
 // the disposition ledger is keyed on the ADDRESS and this is a fact about one
@@ -42,7 +42,7 @@ import (
 // becoming a contact, on a decision that was never about them as a sender.
 //
 // The message itself commits and keeps its audience. A personal thread is
-// already held to the people on it, and refusing the record is not a reason to
+// already held to the contacts on it, and refusing the record is not a reason to
 // lose the mail.
 func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
 	user := actorUserID(ctx)
@@ -88,9 +88,9 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 // somebody capture created whose correspondence with this seat is now entirely
 // private.
 type PrivateThreadContact struct {
-	PersonID ids.PersonID
-	OwnerID  ids.UUID
-	Email    string
+	ContactID ids.ContactID
+	OwnerID   ids.UUID
+	Email     string
 }
 
 // ContactsOrphanedByPrivacyTx answers which contacts a thread's personal
@@ -101,16 +101,48 @@ type PrivateThreadContact struct {
 // catches only the messages that arrive afterwards. This is what answers for the
 // records already made.
 //
-// It asks about the person's WHOLE correspondence with this seat, not about the
+// It asks about the contact's WHOLE correspondence with this seat, not about the
 // thread that triggered it. Somebody who writes about a private matter on
 // Monday and a contract on Tuesday is a business contact who also has a private
 // thread, and retracting them would lose a real counterparty. Only somebody
 // whose every conversation here is personal has no business reason to be in the
 // CRM.
 //
-// It reads addresses rather than person ids from the thread, because that is
+// What counts as a business conversation is EVIDENCE, not the absence of an
+// answer. A thread with no verdict row was read as business for a year, and it
+// is the single reason a founder's clinic kept its contact: the clinic's second
+// thread had never been judged at all, because it arrived before alias
+// discovery knew the address it was sent to. There are three states, and only
+// one of them protects the record:
+//
+//   - JUDGED, and not personal-held — cleared, shared, or held for a business
+//     reason like legal or personnel. Evidence. The contact stays. A row the
+//     OWNER held carries no kind at all, and NULL is not `personal`: they held
+//     a conversation without saying it was their private life, which is a
+//     business hold like any other. `IS NOT DISTINCT FROM` is what makes that
+//     read true rather than NULL.
+//   - OPEN TO THE WORKSPACE already, whatever the ledger says. A cleared
+//     sender's mail is born workspace-visible and opens no question at all, so
+//     requiring a verdict row would retract exactly the contacts the workspace
+//     has already agreed are its own.
+//   - Anything else — never judged, or still pending. NOT evidence. A pending
+//     row is a question in flight and resolving it personal runs this again;
+//     an unjudged thread is silence, and silence is not a business
+//     relationship.
+//
+// The thread that triggered the verdict is excluded explicitly, because the
+// engine recomputes its rows' audience AFTER this runs — reading their stored
+// audience here would read the answer from before the verdict.
+//
+// It reads addresses rather than contact ids from the thread, because that is
 // what the activity carries; the caller resolves each to the record capture
 // made for it.
+//
+// One bound to know: it matches on counterparty_email, so business
+// correspondence reaching the same human at a DIFFERENT address does not
+// protect them. Widening to contact identity would also widen the retraction
+// across seats, which the owner bound deliberately narrows; the address is the
+// unit the thread ledger and the activity rows both key on.
 func ContactsOrphanedByPrivacyTx(
 	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
 ) ([]PrivateThreadContact, error) {
@@ -120,14 +152,15 @@ func ContactsOrphanedByPrivacyTx(
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id, p.owner_id, pe.email
 		  FROM activity a
-		  JOIN person_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
-		  JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+		  JOIN contact_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
+		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 		 WHERE a.thread_key = $1
 		   AND a.counterparty_email <> ''
 		   AND p.owner_id = $2
-		   -- Every thread this seat shares with them is personal. One ordinary
+		   -- No thread this seat shares with them is business. One ordinary
 		   -- conversation makes them a business contact who also has a private
-		   -- one, and retracting that loses a real counterparty.
+		   -- one, and retracting that loses a real counterparty — but silence
+		   -- about a thread is not that conversation.
 		   AND NOT EXISTS (
 		         SELECT 1
 		           FROM activity other
@@ -135,9 +168,14 @@ func ContactsOrphanedByPrivacyTx(
 		             ON tv.thread_key = other.thread_key AND tv.user_id = $2
 		          WHERE other.counterparty_email = a.counterparty_email
 		            AND other.thread_key <> ''
-		            AND (tv.kind IS DISTINCT FROM $3
-		                 OR tv.status NOT IN ($4, $5)))`,
-		threadKey, user, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner)
+		            AND other.thread_key <> $1
+		            AND other.archived_at IS NULL
+		            AND other.restricted_at IS NULL
+		            AND ((tv.id IS NOT NULL
+		                  AND NOT (tv.kind IS NOT DISTINCT FROM $3
+		                           AND tv.status IN ($4, $5)))
+		                 OR other.audience = $6))`,
+		threadKey, user, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner, audienceWorkspace)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
 	}
@@ -145,13 +183,81 @@ func ContactsOrphanedByPrivacyTx(
 	var out []PrivateThreadContact
 	for rows.Next() {
 		var c PrivateThreadContact
-		if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email); err != nil {
+		if err := rows.Scan(&c.ContactID, &c.OwnerID, &c.Email); err != nil {
 			return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
 		}
 		out = append(out, c)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
+	}
+	return out, nil
+}
+
+// SettledPersonalThread is one thread already judged private, and the seat
+// whose mailbox it arrived in.
+type SettledPersonalThread struct {
+	ThreadKey string
+	UserID    ids.UUID
+}
+
+// SettledPersonalThreads lists private threads that still have a contact
+// standing against them.
+//
+// The verdict-time retraction runs once, inside the transaction that settles
+// the thread, and that is the whole of it. A SENDER verdict landing afterwards
+// mints its own record — ThreadHoldsItsCounterparty is true of a settled
+// `personal` thread, so createContactForVerdict takes the owner-scoped arm —
+// and nothing looks at that record again. One ordering of two background
+// passes, and a private correspondent has a contact record the product
+// promised would not be created.
+//
+// A CANDIDATE scan, deliberately: it asks only whether some live contact of
+// this seat's stands on the thread's counterparty addresses, and leaves the
+// full bound — no other business thread with the same address, no human touch,
+// no workspace promotion — to ContactsOrphanedByPrivacyTx and the retraction
+// itself, re-read per thread inside their own transaction. Same shape as the
+// noise sweep beside it: a broad scan and a precise recheck, because the scan
+// commits before the write opens.
+//
+// Drawn at random for the reason that one does: a thread whose contacts the
+// retraction refuses stays selectable, and under a stable order a page of
+// refusals would starve every thread behind it while reporting success.
+func (s *PendingStore) SettledPersonalThreads(ctx context.Context, limit int) ([]SettledPersonalThread, error) {
+	var out []SettledPersonalThread
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT tv.thread_key, tv.user_id
+			  FROM capture_thread_verdict tv
+			 WHERE tv.kind = $1
+			   AND tv.status IN ($2, $3)
+			   AND tv.thread_key <> ''
+			   AND EXISTS (
+			         SELECT 1
+			           FROM activity a
+			           JOIN contact_email pe ON pe.email = a.counterparty_email
+			                                AND pe.archived_at IS NULL
+			           JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
+			          WHERE a.thread_key = tv.thread_key
+			            AND a.counterparty_email <> ''
+			            AND p.owner_id = tv.user_id)
+			 ORDER BY random()
+			 LIMIT $4`, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner, limit)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var t SettledPersonalThread
+			if err := rows.Scan(&t.ThreadKey, &t.UserID); err != nil {
+				return err
+			}
+			out = append(out, t)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("capture: listing private threads whose contacts still stand: %w", err)
 	}
 	return out, nil
 }

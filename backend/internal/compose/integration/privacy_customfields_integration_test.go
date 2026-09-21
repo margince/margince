@@ -30,17 +30,17 @@ import (
 // eur is the ISO-4217 pointer FieldSpec.Currency wants.
 var eur = "EUR"
 
-// definePersonFieldPerType creates one active custom field of every
-// closed type on person, returning the physical column names.
-func definePersonFieldPerType(t *testing.T, f cfvFixture) []string {
+// defineContactFieldPerType creates one active custom field of every
+// closed type on contact, returning the physical column names.
+func defineContactFieldPerType(t *testing.T, f cfvFixture) []string {
 	t.Helper()
 	specs := []customfields.FieldSpec{
-		{Object: "person", Label: "Secret Note", Type: customfields.TypeText, Source: "ui"},
-		{Object: "person", Label: "Risk Score", Type: customfields.TypeNumber, Source: "ui"},
-		{Object: "person", Label: "Birthday", Type: customfields.TypeDate, Source: "ui"},
-		{Object: "person", Label: "Net Worth", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"},
-		{Object: "person", Label: "Tier Band", Type: customfields.TypePicklist, Options: []string{"gold", "silver"}, Source: "ui"},
-		{Object: "person", Label: "Is Vip", Type: customfields.TypeBoolean, Source: "ui"},
+		{Object: "contact", Label: "Secret Note", Type: customfields.TypeText, Source: "ui"},
+		{Object: "contact", Label: "Risk Score", Type: customfields.TypeNumber, Source: "ui"},
+		{Object: "contact", Label: "Birthday", Type: customfields.TypeDate, Source: "ui"},
+		{Object: "contact", Label: "Net Worth", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"},
+		{Object: "contact", Label: "Tier Band", Type: customfields.TypePicklist, Options: []string{"gold", "silver"}, Source: "ui"},
+		{Object: "contact", Label: "Is Vip", Type: customfields.TypeBoolean, Source: "ui"},
 	}
 	cols := make([]string, len(specs))
 	for i, spec := range specs {
@@ -52,15 +52,15 @@ func definePersonFieldPerType(t *testing.T, f cfvFixture) []string {
 // writeSubjectCustomValues stores one value of every type on the subject
 // row, raw SQL on purpose: the suite proves the privacy engines against
 // what the DATABASE holds, independent of the record surface's write path.
-func writeSubjectCustomValues(t *testing.T, e *Env, personID ids.UUID, cols []string) {
+func writeSubjectCustomValues(t *testing.T, e *Env, contactID ids.UUID, cols []string) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
-			`UPDATE person SET %s = 'route-66-secret', %s = 42.5, %s = '2026-01-02',
+			`UPDATE contact SET %s = 'route-66-secret', %s = 42.5, %s = '2026-01-02',
 			   %s = 199900, %s = 'gold', %s = true WHERE id = $1`,
 			quoted(cols[0]), quoted(cols[1]), quoted(cols[2]),
 			quoted(cols[3]), quoted(cols[4]), quoted(cols[5]),
-		), personID)
+		), contactID)
 		return err
 	})
 	if err != nil {
@@ -118,12 +118,12 @@ func countStoredCustomValues(t *testing.T, e *Env, table string, rowID ids.UUID,
 
 func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 	f := setupCFV(t)
-	personCols := definePersonFieldPerType(t, f)
+	contactCols := defineContactFieldPerType(t, f)
 	leadCol := f.defineField(t, customfields.FieldSpec{
 		Object: "lead", Label: "Private Remark", Type: customfields.TypeText, Source: "ui",
 	})
 
-	personID := seedSubject(t, f.e)
+	contactID := seedSubject(t, f.e)
 	leadID := ids.NewV7()
 	err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
@@ -137,12 +137,12 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the lead twin: %v", err)
 	}
-	writeSubjectCustomValues(t, f.e, personID, personCols)
+	writeSubjectCustomValues(t, f.e, contactID, contactCols)
 
 	// A retired field's column keeps its stored value, so the scrub must
 	// cover retired columns too — retire one AFTER its value landed.
 	retiredField, err := f.svc.Create(f.ctx, customfields.FieldSpec{
-		Object: "person", Label: "Legacy Code", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Legacy Code", Type: customfields.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the to-be-retired field: %v", err)
@@ -150,8 +150,8 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 	retiredCol := *retiredField.ColumnName
 	err = database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
-			`UPDATE person SET %s = 'legacy-77' WHERE id = $1`, quoted(retiredCol),
-		), personID)
+			`UPDATE contact SET %s = 'legacy-77' WHERE id = $1`, quoted(retiredCol),
+		), contactID)
 		return err
 	})
 	if err != nil {
@@ -161,43 +161,43 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 		t.Fatalf("retiring the field: %v", err)
 	}
 
-	allPersonCols := catalogColumns(t, f.e, "person")
-	if len(allPersonCols) != len(personCols)+1 {
-		t.Fatalf("person catalog carries %d columns, want %d", len(allPersonCols), len(personCols)+1)
+	allContactCols := catalogColumns(t, f.e, "contact")
+	if len(allContactCols) != len(contactCols)+1 {
+		t.Fatalf("contact catalog carries %d columns, want %d", len(allContactCols), len(contactCols)+1)
 	}
-	if stored := countStoredCustomValues(t, f.e, "person", personID, allPersonCols); stored != len(allPersonCols) {
-		t.Fatalf("fixture stored %d custom values, want %d — the scrub assertion would be vacuous", stored, len(allPersonCols))
-	}
-
-	if err := privacy.NewEraser(f.e.DB()).ErasePerson(f.e.Admin(), personID, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if stored := countStoredCustomValues(t, f.e, "contact", contactID, allContactCols); stored != len(allContactCols) {
+		t.Fatalf("fixture stored %d custom values, want %d — the scrub assertion would be vacuous", stored, len(allContactCols))
 	}
 
-	if left := countStoredCustomValues(t, f.e, "person", personID, allPersonCols); left != 0 {
-		t.Fatalf("%d custom-field values survived erasure on the person row", left)
+	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.e.Admin(), contactID, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
+	}
+
+	if left := countStoredCustomValues(t, f.e, "contact", contactID, allContactCols); left != 0 {
+		t.Fatalf("%d custom-field values survived erasure on the contact row", left)
 	}
 	if left := countStoredCustomValues(t, f.e, "lead", leadID, catalogColumns(t, f.e, "lead")); left != 0 {
 		t.Fatalf("%d custom-field values survived erasure on the lead twin", left)
 	}
 
-	assertEraseTombstoneShape(t, f.e, personID)
+	assertEraseTombstoneShape(t, f.e, contactID)
 }
 
 // assertEraseTombstoneShape proves the scrub left the audit contract
-// alone: one erase tombstone on the person carrying counts-only
+// alone: one erase tombstone on the contact carrying counts-only
 // evidence, and no tombstone anywhere re-storing a scrubbed cf_ value.
-func assertEraseTombstoneShape(t *testing.T, e *Env, personID ids.UUID) {
+func assertEraseTombstoneShape(t *testing.T, e *Env, contactID ids.UUID) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var tombstones int
 		if err := tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM audit_log
-			WHERE action = 'erase' AND entity_type = 'person' AND entity_id = $1
-			  AND evidence->>'reason' = 'test'`, personID).Scan(&tombstones); err != nil {
+			WHERE action = 'erase' AND entity_type = 'contact' AND entity_id = $1
+			  AND evidence->>'reason' = 'test'`, contactID).Scan(&tombstones); err != nil {
 			return err
 		}
 		if tombstones != 1 {
-			return fmt.Errorf("erase tombstones on the person = %d, want 1", tombstones)
+			return fmt.Errorf("erase tombstones on the contact = %d, want 1", tombstones)
 		}
 		var leaked bool
 		if err := tx.QueryRow(context.Background(), `
@@ -220,25 +220,25 @@ func assertEraseTombstoneShape(t *testing.T, e *Env, personID ids.UUID) {
 func TestSARExportsCustomFieldValues(t *testing.T) {
 	f := setupCFV(t)
 	segmentCol := f.defineField(t, customfields.FieldSpec{
-		Object: "person", Label: "Segment", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Segment", Type: customfields.TypeText, Source: "ui",
 	})
 	volumeCol := f.defineField(t, customfields.FieldSpec{
-		Object: "person", Label: "Annual Volume", Type: customfields.TypeNumber, Source: "ui",
+		Object: "contact", Label: "Annual Volume", Type: customfields.TypeNumber, Source: "ui",
 	})
 	legacyField, err := f.svc.Create(f.ctx, customfields.FieldSpec{
-		Object: "person", Label: "Legacy Code", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Legacy Code", Type: customfields.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining the to-be-retired field: %v", err)
 	}
 	legacyCol := *legacyField.ColumnName
 
-	personID := seedSubject(t, f.e)
+	contactID := seedSubject(t, f.e)
 	err = database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
-			`UPDATE person SET %s = 'vip', %s = 1234.5, %s = 'legacy-77' WHERE id = $1`,
+			`UPDATE contact SET %s = 'vip', %s = 1234.5, %s = 'legacy-77' WHERE id = $1`,
 			quoted(segmentCol), quoted(volumeCol), quoted(legacyCol),
-		), personID)
+		), contactID)
 		return err
 	})
 	if err != nil {
@@ -248,7 +248,7 @@ func TestSARExportsCustomFieldValues(t *testing.T) {
 		t.Fatalf("retiring the field: %v", err)
 	}
 
-	pkg, err := privacy.AssembleSAR(f.e.Admin(), f.e.DB(), ids.From[ids.PersonKind](personID))
+	pkg, err := privacy.AssembleSAR(f.e.Admin(), f.e.DB(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}

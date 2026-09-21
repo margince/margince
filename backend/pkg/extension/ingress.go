@@ -129,7 +129,7 @@ const (
 //
 // It is identified by EMAIL or by a channel identity, and which one NAMES the
 // human is the core's decision, not a unit's: a channel identity outranks an
-// address, because it is the key a reply is routed on and the one a person is
+// address, because it is the key a reply is routed on and the one a contact is
 // bound by. A record may carry both — the address then corroborates rather than
 // names, and the core admits it only from a source that declared
 // MergeKeyEmail.
@@ -154,7 +154,7 @@ type Counterparty struct {
 	// at a messaging provider, for a record that has no address to carry.
 	//
 	// It is what makes a captured message REPLIABLE. The core binds it to the
-	// person it resolves, and the reply path resolves its recipient from that
+	// contact it resolves, and the reply path resolves its recipient from that
 	// binding — so a channel record that leaves this empty lands a message
 	// nobody can answer, which looks exactly like a message with no reply box.
 	//
@@ -223,12 +223,12 @@ const (
 	// remote-party text like every other bound here.
 	MaxChannelUserIDLength = 256
 	// MaxParticipants caps a record's roster, and it is a SHAPE guard rather
-	// than a performance one: a message naming more people than this is a
+	// than a performance one: a message naming more contacts than this is a
 	// broadcast list, and every name on it is evidence of a list membership
 	// rather than of a conversation.
 	//
 	// Past it Record.Validate refuses the whole record, so a unit is TOLD
-	// rather than left believing a sixty-person group landed as one. A fitness
+	// rather than left believing a sixty-contact group landed as one. A fitness
 	// test outside this package holds the number equal to the core's own bound,
 	// so a unit that checks itself against this and a core that applies its own
 	// cannot answer differently about the same group.
@@ -261,7 +261,7 @@ type Record struct {
 	// second copy of the record on every poll, and nothing fails.
 	Key string
 
-	// KeyNamesAPerson reports that Key embeds the provider's identifier for a
+	// KeyNamesAContact reports that Key embeds the provider's identifier for a
 	// HUMAN — a chat id that is the customer's own account id, say — rather
 	// than naming a message, a notification or an event.
 	//
@@ -270,7 +270,7 @@ type Record struct {
 	// false for the ordinary case, which is what a provider id almost always
 	// is; a message id in the trace is what makes a support question
 	// answerable, and ADR-0082 §1 permits it for exactly that reason.
-	KeyNamesAPerson bool
+	KeyNamesAContact bool
 
 	// Activity is the record itself. One field rather than a kind-tagged union
 	// because one kind is landable today (see KindActivity); a second kind
@@ -305,7 +305,7 @@ type Record struct {
 	Addresses []string
 
 	// Participants is everyone else the record names — the roster of a group
-	// conversation, the people neither end of the exchange.
+	// conversation, the contacts neither end of the exchange.
 	//
 	// It answers "who was in the room", and that is ALL it answers. A party here
 	// is recorded on the timeline and resolved to a contact the installation
@@ -315,7 +315,7 @@ type Record struct {
 	// rule that refuses to bind a colleague from a Cc line a sender typed.
 	//
 	// Optional and bounded by MaxParticipants. Past the cap the RECORD is
-	// refused, not silently trimmed: a message naming a hundred people is a
+	// refused, not silently trimmed: a message naming a hundred contacts is a
 	// broadcast list, half of one reads like a small conversation, and a unit
 	// that reads the refusal can decide what its provider actually sent.
 	Participants []Participant
@@ -405,6 +405,35 @@ const (
 	// connector's watermark, so a unit treats this exactly as it treats
 	// Accepted: move the cursor past it.
 	DispositionSkipped Disposition = "skipped"
+
+	// DispositionUnrepresentable is a record the core's grammar refuses: the
+	// unit built something this contract cannot express.
+	//
+	// It was an ErrInvalid, and that put the one distinction a unit most needs
+	// into error matching. A unit polling a provider cannot stop on a single
+	// malformed message — that parks the whole connection over one record — so
+	// it moves its cursor past it either way. What it could not do was tell
+	// "the core skipped this deliberately" from "I built something the core
+	// cannot use", because the first arrived as a Disposition and the second as
+	// an error class, and a provider format change that made EVERY record
+	// unrepresentable then presented exactly like a healthy quiet feed.
+	//
+	// It is a SUCCESS carrying a zero Ref, on the same terms as Skipped: the
+	// cursor advances, because waiting does not make a malformed record
+	// representable. And it is the one disposition a unit must COUNT. A run
+	// answering it for everything it pulled is a broken unit or a changed
+	// provider, and nothing else in the system is in a position to say so —
+	// the unit's own logs are not somewhere an installation reads. The core
+	// keeps its own count beside the unit's: one row per unit per refusal class
+	// per day, carrying the class and never the record, which is what
+	// /admin/extension-ingest-health reports.
+	//
+	// A unit switching on Disposition without a default gains an unhandled
+	// case here. Go does not enforce exhaustiveness, so nothing stops
+	// compiling; a unit that wants the count treats an unknown disposition as
+	// this one, which is the safe direction — an unrecognised outcome is not an
+	// acceptance.
+	DispositionUnrepresentable Disposition = "unrepresentable"
 )
 
 // Ref names a record the core holds.
@@ -415,12 +444,30 @@ type Ref struct {
 
 // Result is what one ingest did.
 //
-// BOTH DISPOSITIONS ADVANCE A CURSOR, and that is the point of returning one
-// instead of an error for the skip: a unit's watermark moves past every record
-// the core has finished deciding about, whether or not a row came of it.
+// EVERY DISPOSITION ADVANCES A CURSOR, and that is the point of returning one
+// instead of an error: a unit's watermark moves past every record the core has
+// finished deciding about, whether or not a row came of it — a deliberate skip
+// and a record the grammar refuses are both finished, and re-offering either on
+// the next poll would repeat it forever.
 type Result struct {
 	Ref         Ref
 	Disposition Disposition
+	// Refusal names WHICH check refused an unrepresentable record, from the
+	// closed vocabulary in ingressrefusal.go, and is empty for every other
+	// disposition. It is what a unit counts BY: "all of them" and "all of them
+	// on the participants" are different bugs, and Reason beside it cannot be
+	// grouped on because it is prose.
+	Refusal RecordRefusal
+	// Reason says WHY, for the dispositions that are a refusal. It carries the
+	// core's complaint about an unrepresentable record so a unit can log the
+	// same sentence it used to read off the error — and it is empty for an
+	// acceptance and for a deliberate skip, where there is nothing the unit
+	// could act on.
+	//
+	// Prose for a log, never a value to branch on: the Disposition is what a
+	// unit decides from, and a unit parsing this string would be reading core
+	// text that is free to change.
+	Reason string
 }
 
 // The refusals an ingest can answer. Sentinels rather than typed errors,

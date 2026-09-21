@@ -85,11 +85,11 @@ var ratifiedFleetScans = map[string]ratifiedFleetScan{
 	},
 	"internal/modules/identity/installation.go": {
 		1,
-		"boot path: resolves the singleton organization and refuses to serve when a second exists (ADR-0061 §3) — it IS the workspace authority, not a consumer of it",
+		"boot path: resolves the singleton company and refuses to serve when a second exists (ADR-0061 §3) — it IS the workspace authority, not a consumer of it",
 	},
 	"internal/compose/archivedpredecessor.go": {
 		1,
-		"boot path, and it counts ARCHIVED workspaces rather than enumerating live ones: an archived organization's rows merged into this installation when ADR-0091 §8 phase D took the tenant column, and that row is the only surviving evidence a merge happened. It reads the count to say so once and does no tenant work at all",
+		"boot path, and it counts ARCHIVED workspaces rather than enumerating live ones: an archived company's rows merged into this installation when ADR-0091 §8 phase D took the tenant column, and that row is the only surviving evidence a merge happened. It reads the count to say so once and does no tenant work at all",
 	},
 	"internal/modules/capture/registry_connections.go": {
 		1,
@@ -110,10 +110,6 @@ var ratifiedFleetScans = map[string]ratifiedFleetScan{
 	"internal/modules/ai/voice_build_complete.go": {
 		1,
 		"the voice_build_retry DISPATCHER's due-scan: enqueues one voice_build per due build, a finer fan-out than per-workspace",
-	},
-	"internal/modules/overlay/connectionreads.go": {
-		1,
-		"overlayModeWorkspaces is the ONE fleet enumeration overlay makes, and the three callers that used to spell it themselves now share it: DueOverlayConnections (the overlay_reconcile DISPATCHER's due-scan, whose next_sweep_at gate is the sweep backoff — the registry_connections shape), WorkspaceForPortal (tenant resolution: which workspace an incoming webhook portal belongs to) and SourceLagByClass in metrics.go (a /metrics read that writes nothing). Collapsing the fan-out itself is #1857's",
 	},
 	"internal/modules/search/binding.go": {
 		1,

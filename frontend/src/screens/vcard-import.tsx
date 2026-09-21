@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -20,11 +21,11 @@ type VCardResult = components["schemas"]["VCardImportResult"];
  * resembles somebody was written nowhere, and nobody finds that out unless the
  * report says so. */
 const OUTCOMES: Readonly<
-  Record<VCardResult["outcome"], { label: MessageKey; tone?: "warn" }>
+  Record<VCardResult["outcome"], { label: MessageKey; tone?: "warning" }>
 > = {
   created: { label: "vcardImport.outcome.created" },
   updated: { label: "vcardImport.outcome.updated" },
-  needs_review: { label: "vcardImport.outcome.needsReview", tone: "warn" },
+  needs_review: { label: "vcardImport.outcome.needsReview", tone: "warning" },
   skipped: { label: "vcardImport.outcome.skipped" },
 };
 
@@ -51,7 +52,7 @@ function useImportVCards() {
       const body = new FormData();
       body.append("file", file);
       // contract-fetch:allow multipart — see the note above
-      const response = await fetch("/v1/people/vcard-import", {
+      const response = await fetch("/v1/contacts/vcard-import", {
         method: "POST",
         body,
         credentials: "include",
@@ -71,16 +72,16 @@ function useImportVCards() {
       return payload;
     },
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["people"] });
+      await client.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }
 
 /**
- * VCardImport is the button a person presses to import address cards, and the
+ * VCardImport is the button a contact presses to import address cards, and the
  * report of what became of each one.
  *
- * A handed-over card is first-party data — the person gave it — which is what
+ * A handed-over card is first-party data — the contact gave it — which is what
  * justifies storing their details, and a human pressing this is what makes the
  * import WRITE rather than stage. So the verb lives on the contact list beside
  * the other ways a contact comes to exist, not in a settings page.
@@ -104,48 +105,53 @@ export function VCardImport() {
           creating a contact beside it are `CreateAction`s, which are small, and
           one control a rung taller in a row of three reads as a different kind
           of thing. */}
-      <Button small data-testid="vcard-import" onClick={() => setOpen(true)}>
+      <Button data-testid="vcard-import" onClick={() => setOpen(true)}>
         {t("vcardImport.action")}
       </Button>
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId}>{t("vcardImport.title")}</h2>
-        <div data-testid="vcard-import-file">
-          {/* Withdrawn while an import is running. A second file chosen mid-
-              flight would start a second write, and this dialog holds ONE
-              report — so one set of contact changes would land with nothing on
-              screen saying what happened to it. Taking the control away is
-              honest; leaving it live and dropping the pick would not be. */}
-          {importer.isPending ? (
-            <p className="t-sub">{t("vcardImport.working")}</p>
-          ) : (
-            <FileDropzone
-              label={t("vcardImport.fileLabel")}
-              hint={t("vcardImport.whichFile")}
-              emptyLabel={t("vcardImport.choose")}
-              accept=".vcf,text/vcard"
-              file={picked}
-              onPick={(file) => {
-                setPicked(file);
-                importer.mutate(file);
-              }}
-            />
-          )}
-        </div>
-
-        {importer.isError && (
-          <div data-testid="vcard-import-error">
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(importer.error, t)}
-            </Callout>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {t("vcardImport.title")}
+        </Heading>
+        {/* One stack owns every interval in this dialog, so the dropzone, a
+            refusal and the report do not each set a margin of their own — the
+            report is drawn whether or not the refusal above it is. */}
+        <div className="form-stack">
+          <div data-testid="vcard-import-file">
+            {/* Withdrawn while an import is running. A second file chosen mid-
+                flight would start a second write, and this dialog holds ONE
+                report — so one set of contact changes would land with nothing
+                on screen saying what happened to it. Taking the control away is
+                honest; leaving it live and dropping the pick would not be. */}
+            {importer.isPending ? (
+              <p className="t-sub">{t("vcardImport.working")}</p>
+            ) : (
+              <FileDropzone
+                label={t("vcardImport.fileLabel")}
+                hint={t("vcardImport.whichFile")}
+                emptyLabel={t("vcardImport.choose")}
+                accept=".vcf,text/vcard"
+                file={picked}
+                onPick={(file) => {
+                  setPicked(file);
+                  importer.mutate(file);
+                }}
+              />
+            )}
           </div>
-        )}
-        {importer.isSuccess && <ImportReport report={importer.data} />}
-
-        {/* card-actions for the reason the org history drawer takes it: the
-            import report above sets `margin: var(--space-4) 0 0` — a top margin
-            only — so a row bringing none of its own left Done touching the last
-            imported row. */}
-        <div className="card-actions">
+          {importer.isError && (
+            <div data-testid="vcard-import-error">
+              <Callout
+                tone="danger"
+                kind="outcome"
+                title={t("vcardImport.failed")}
+              >
+                {problemMessageOf(importer.error, t)}
+              </Callout>
+            </div>
+          )}
+          {importer.isSuccess && <ImportReport report={importer.data} />}
+        </div>
+        <div className="actions">
           <Button variant="ghost" onClick={close}>
             {t("vcardImport.done")}
           </Button>
@@ -171,10 +177,10 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
         const outcome = OUTCOMES[card.outcome];
         return (
           <li key={card.index}>
-            <span className="vcard-import-name">{card.full_name}</span>
+            <span>{card.full_name}</span>
             <span
               className={
-                outcome?.tone === "warn" ? "vcard-import-warn" : "t-sub"
+                outcome?.tone === "warning" ? "vcard-import-warning" : "t-sub"
               }
             >
               {/* An outcome this build has no name for is a server newer than

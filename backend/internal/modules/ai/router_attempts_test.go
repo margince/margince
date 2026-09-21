@@ -190,8 +190,7 @@ func TestEmbedRecordsConfiguredDimensionInProviderParams(t *testing.T) {
 		map[Tier]routeMeta{TierEmbedLane: {provider: "fake", model: "fake-embed"}},
 		false, nil,
 	)
-	stamped := r.binding().withConfigSnapshot(RoutingConfig{sourceHash: "routing-hash", Embeddings: EmbeddingsConfig{Dimensions: 768}})
-	r.bound.Store(&stamped)
+	r.install(r.binding().withConfigSnapshot(RoutingConfig{sourceHash: "routing-hash", Embeddings: EmbeddingsConfig{Dimensions: 768}}))
 
 	if _, err := r.Embed(wsCtx(), model.EmbedRequest{Inputs: []string{"embed me"}}); err != nil {
 		t.Fatalf("embed: %v", err)
@@ -387,11 +386,24 @@ func TestMetricsCountOneCallPerLogicalCallNotPerAttempt(t *testing.T) {
 	var b strings.Builder
 	r.metrics.WritePrometheus(&b)
 	out := b.String()
-	if !strings.Contains(out, `margince_ai_calls_total{provider="openai",task="cold_start",tier="cheap_cloud"} 1`) {
+	const served = `provider="openai",model="gpt-cheap",served_identity_source="configured",task="cold_start",tier="cheap_cloud"`
+	const failed = `provider="anthropic",model="claude-premium",served_identity_source="configured",task="cold_start",tier="premium"`
+	if !strings.Contains(out, "margince_ai_calls_total{"+served+"} 1") {
 		t.Fatalf("want exactly one counted call on the served tier, got:\n%s", out)
 	}
-	if strings.Contains(out, `provider="anthropic"`) {
-		t.Fatalf("the non-terminal failed rung must not surface in /metrics at all:\n%s", out)
+	// calls_total is the DECISION count, so the rung that failed on the way
+	// there must not appear in it — that is the grain this test was written for.
+	if strings.Contains(out, "margince_ai_calls_total{"+failed) {
+		t.Fatalf("the failed rung was counted as a logical call, inflating the call rate:\n%s", out)
+	}
+	// It must appear in the attempt and error families, though. Counting only
+	// terminals makes a tier that fails over on every single call look
+	// identical to one that never does, which is the fault worth seeing.
+	if !strings.Contains(out, "margince_ai_call_attempts_total{"+failed+"} 1") {
+		t.Fatalf("the failed rung cost a provider round trip and is missing from the attempt count:\n%s", out)
+	}
+	if !strings.Contains(out, "margince_ai_call_errors_total{"+failed+`,sentinel="provider_error"} 1`) {
+		t.Fatalf("the failed rung is missing from the error count, or lost its sentinel:\n%s", out)
 	}
 }
 

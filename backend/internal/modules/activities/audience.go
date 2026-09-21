@@ -6,7 +6,7 @@ package activities
 // Who may read one activity's content. The row scope decides who may learn an
 // activity EXISTS (the link walk, platform/auth); the audience set here decides
 // who reads what was said. It is per message by design — limiting one email
-// says nothing about its thread siblings or the people on it — and it is a
+// says nothing about its thread siblings or the contacts on it — and it is a
 // human's call about correspondence they have write authority over.
 
 import (
@@ -72,7 +72,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
-		// A CAPTURED message is not one person's to set.
+		// A CAPTURED message is not one contact's to set.
 		//
 		// Its audience is derived across every mailbox that imported it, and
 		// each importer's contribution is theirs alone — so writing the column
@@ -108,12 +108,12 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// Not NULL, and not the previous reason. Leaving the previous one would
 		// re-narrow the row: RecomputeAudienceTx reads audience_reason to
 		// recognise a hold no capture_import row records, so a stale
-		// `workspace_floor` on a row a person just opened is read as a live hold
+		// `workspace_floor` on a row a contact just opened is read as a live hold
 		// on the next sync of any mailbox that has the message. Clearing it to
 		// NULL loses the opposite thing — that a HUMAN decided this — and the
 		// derivation would widen the row back for the same reason.
 		//
-		// `manual` says both: a person set this, and no derivation may move it.
+		// `manual` says both: a contact set this, and no derivation may move it.
 		if _, err := tx.Exec(ctx,
 			`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
 			id, in.Audience, ReasonManual); err != nil {
@@ -258,7 +258,7 @@ func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion 
 // LIVE is both halves. Deactivating an account sets `status` and leaves
 // `archived_at` NULL, so the archived-only test admitted a colleague who has
 // left — this comment said "live" while the query asked something weaker, and
-// an audience is a list of people expected to read the thing. Spelled out
+// an audience is a list of contacts expected to read the thing. Spelled out
 // because a module never imports a sibling (ADR-0054 §3); identity owns
 // app_user and TestOnlyOneSpellingOfALiveMember holds the two together.
 func ensureAudienceSubjectsExist(ctx context.Context, tx pgx.Tx, members []AudienceMember) error {
@@ -426,5 +426,5 @@ func (e *OrphanedAudienceError) Error() string {
 func (e *OrphanedAudienceError) FieldFault() (field, code, message string) {
 	return "audience", "audience_leaves_no_reader",
 		"Nobody would be able to read this message afterwards, including you, and it " +
-			"could not be re-opened. Choose people to share it with instead."
+			"could not be re-opened. Choose contacts to share it with instead."
 }

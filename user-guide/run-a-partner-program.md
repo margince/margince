@@ -6,7 +6,7 @@ Some deals come to you because somebody else brought them — an agency that
 recommended you, a consultancy that sells you into its clients, a hosting
 company whose customers need your software.
 
-A partner program is how you keep track of those people and pay them. In
+A partner program is how you keep track of those contacts and pay them. In
 Margince you can:
 
 - **Mark a company as a partner** and record what kind of partner they are.
@@ -22,7 +22,7 @@ One thing is deliberately absent and is covered at the end: partners cannot
 log in to see their own numbers.
 
 **Margince does not pay anybody.** You settle a partner in whatever system you
-pay people from; what Margince holds is the record of what was earned, agreed
+pay contacts from; what Margince holds is the record of what was earned, agreed
 and settled. Marking an entry *Paid* here says your finance system already
 paid it.
 

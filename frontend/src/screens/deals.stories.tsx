@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { DealScreen, DealsScreen, FxLine } from "./deals";
 import {
@@ -106,12 +108,44 @@ const withheldDeal = {
   ...deal,
   amount_minor: null,
   currency: null,
-  organization_id: null,
-  partner_org_id: null,
-  masked_fields: ["amount_minor", "organization_id", "partner_org_id"],
+  company_id: null,
+  partner_company_id: null,
+  masked_fields: ["amount_minor", "company_id", "partner_company_id"],
 };
 
-function installDealStub(offers: unknown[], record: unknown = deal) {
+// One staged move waiting on this deal's own page: what the confirm-first
+// queue looks like when it has something in it. Every other DealScreen story
+// answers /approvals empty, so the panel is absent from all of them.
+const stagedApproval = {
+  id: "ap-1",
+  kind: "advance_deal",
+  status: "pending",
+  summary: "Move Fleet retrofit to Proposal",
+  proposed_by: "agent:capture",
+  target_entity_type: "deal",
+  target_entity_id: "d1",
+  created_at: "2026-07-01T08:00:00Z",
+  evidence: [],
+};
+
+// The caller the page asks about by default. It holds no grant at all, which is
+// the reading the frames below document; a frame about an AVAILABLE verb has to
+// name the grant that verb reads, or the page draws a refusal.
+//
+// A fixture like the records above it, so it is named with them rather than
+// written inline as a parameter default.
+const ungrantedCaller = {
+  user: { id: "u-9", display_name: "Me" },
+  roles: ["rep"],
+  teams: [],
+};
+
+function installDealStub(
+  offers: unknown[],
+  record: unknown = deal,
+  approvals: unknown[] = [],
+  me: unknown = ungrantedCaller,
+) {
   installFetchStub({
     "GET /deals/d1": () => jsonResponse(record),
     "GET /deals/d1/offers": () =>
@@ -121,16 +155,12 @@ function installDealStub(offers: unknown[], record: unknown = deal) {
       }),
     "GET /deals/d1/stakeholders": () => jsonResponse(emptyPage),
     "GET /pipelines": () => jsonResponse(emptyPage),
-    "GET /approvals": () => jsonResponse(emptyPage),
+    "GET /approvals": () =>
+      jsonResponse({ data: approvals, page: { next_cursor: null } }),
     "GET /activities": () => jsonResponse(emptyPage),
     "GET /records/deal/d1/context": () =>
       jsonResponse({ anchor: { type: "deal", id: "d1" }, sections: [] }),
-    "GET /me": () =>
-      jsonResponse({
-        user: { id: "u-9", display_name: "Me" },
-        roles: ["rep"],
-        teams: [],
-      }),
+    "GET /me": () => jsonResponse(me),
   });
 }
 
@@ -156,9 +186,65 @@ export const NoOffers: Story = {
   },
 };
 
+export const PendingApprovals: Story = {
+  render: () => {
+    installDealStub([offer], deal, [stagedApproval]);
+    return (
+      <StoryProviders>
+        <DealScreen id="d1" />
+      </StoryProviders>
+    );
+  },
+};
+
 export const WithheldReferences: Story = {
   render: () => {
     installDealStub([], withheldDeal);
+    return (
+      <StoryProviders>
+        <DealScreen id="d1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// WON and writable, which is the only reading that offers all four rows: Reopen
+// answers a closed deal and nothing else, and the other stories' deal carries no
+// `writable`, which fails closed — a menu of four refusals would document the
+// state this frame is not about.
+const wonDeal = { ...deal, status: "won", stage_id: "s3", writable: true };
+
+// The seat and the grant those verbs read alongside the row's own `writable`
+// — app/capability.ts asks all three, so a row flag on its own still refuses.
+const writer = meFixture({ allow: { deal: ["read", "update", "delete"] } });
+
+/**
+ * The header's overflow, open.
+ *
+ * The head carries identity and ONE verb, the mail; edit, share, reopen and
+ * archive are worded rows in this list, because each is a verb whose
+ * consequence a reader has to read before pressing and a row is where a verb
+ * can say what it does. No glyphs in it: a column of icons beside four labels
+ * is decoration to scan past. Archive goes last, farthest from the press that
+ * opened the menu.
+ */
+export const HeaderMenu: Story = {
+  name: "Header overflow, open",
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // FOUND, not got: the screen renders its pending skeleton first, so a
+    // synchronous read runs against a `role="status"` with no verbs in it.
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "More actions" }),
+    );
+    // The panel is portalled to the body — a Panel clips its own overflow —
+    // so the frame is settled when an ITEM is in the document, not the canvas.
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Archive deal",
+    });
+  },
+  render: () => {
+    installDealStub([offer], wonDeal, [], writer);
     return (
       <StoryProviders>
         <DealScreen id="d1" />
@@ -192,16 +278,31 @@ const boardStages = [
   },
 ];
 
+// Relative to the moment the story renders, so the mail chip says "10 d ago"
+// on every day the canvas is opened rather than counting up from a fixed date.
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 const boardDeals = [
-  { ...deal, id: "b1", name: "Fleet retrofit", organization_id: "o1" },
+  {
+    ...deal,
+    id: "b1",
+    name: "Fleet retrofit",
+    company_id: "o1",
+    // The buyer wrote last, two days ago.
+    last_email: { occurred_at: daysAgo(2), direction: "inbound" },
+  },
   {
     ...deal,
     id: "b2",
     name: "Depot rollout",
     stage_id: "s2",
     amount_minor: 1_250_000,
-    organization_id: "o1",
+    company_id: "o1",
     stalled: true,
+    // We wrote last, and nobody answered in ten days: the stall, on the chip.
+    last_email: { occurred_at: daysAgo(10), direction: "outbound" },
   },
   // The reader may not read this one's company: the wire sends no id and names
   // the field, so the card carries the mask rather than an empty slot.
@@ -209,8 +310,8 @@ const boardDeals = [
     ...deal,
     id: "b3",
     name: "Northgate framework",
-    organization_id: null,
-    masked_fields: ["organization_id"],
+    company_id: null,
+    masked_fields: ["company_id"],
   },
 ];
 
@@ -270,7 +371,7 @@ function installBoardStub() {
         ],
         page: { next_cursor: null },
       }),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({
         data: [{ id: "o1", display_name: "Acme GmbH" }],
         page: { next_cursor: null },
@@ -287,6 +388,20 @@ function installBoardStub() {
 export const BoardInListSurface: Story = {
   render: () => {
     installBoardStub();
+    return (
+      <StoryProviders>
+        <DealsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// The same deals as rows: the mail chip is a column here, so a reader who
+// switches views reads the same fact off the same field.
+export const TableInListSurface: Story = {
+  render: () => {
+    installBoardStub();
+    window.location.hash = "#/deals?view=table";
     return (
       <StoryProviders>
         <DealsScreen />

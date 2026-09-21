@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render as rtlRender } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { vi } from "vitest";
+import { afterEach, expect, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
@@ -58,26 +58,33 @@ export type Call = { method: string; path: string; body: unknown };
 
 export type Routes = Record<
   string,
-  (body: unknown) => Response | Promise<Response>
+  (body: unknown, query: URLSearchParams) => Response | Promise<Response>
 >;
 
 // Every read Brief fans out to, answered honestly by default so each case
 // declares only the route it is about: a session, no nightly digest, no brief
-// run, and a pipeline report with no rows. The report matters — the fallback
-// empty PAGE carries no `rows`, which the pipeline reading would read as a
-// failure and put a refusal in the rail of every case in this file.
+// run.
+//
+// The table is exhaustive, and `stubApi` fails a case that asks for anything
+// not in it. So a route leaves here when its caller does — the deals-by-stage
+// report went with Brief's open-pipeline panel — and a read that arrives by
+// accident is named rather than quietly served an empty page.
 const DEFAULTS: Routes = {
   "GET /me": () => jsonResponse(meFixture()),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   "GET /digest": () =>
     jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
-  "POST /reports/deals-by-stage": () =>
-    jsonResponse({ report: "deals-by-stage", plan: {}, columns: [], rows: [] }),
   // The Brief's strip, sentence and Do next section are all drawn from this ONE
   // answer, so an unrouted read has to reply with the real shape. The generic
   // empty page carries no `readings` and no `counts`, and a screen reading a
   // required field off it fails in a way no server could produce.
   "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+  "GET /worklist/handled": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      receipts: [],
+      truncated: false,
+    }),
   // The plan panel reads `commitments` off this, which the contract marks
   // required. The generic empty page carries none, so an unrouted read would
   // fail the panel in a way no server could produce — the same reason
@@ -98,6 +105,21 @@ const DEFAULTS: Routes = {
       status: "open",
       commitments: [],
     }),
+  // The archive's index, as the weeks this rep has a review for. `weeks` is
+  // what the hook reads; the generic empty page carries none.
+  "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
+  // 404 and not an empty body: a rep whose first Monday has not come round has
+  // no review, and the hook reads that status as "no review yet" rather than as
+  // a failure. An empty 200 would reach the branch that checks
+  // `local_week_start` instead, which is the same answer by a path no server
+  // takes.
+  "GET /weekly-reviews/latest": () => jsonResponse({ title: "Not Found" }, 404),
+  // Both answer `{ data, page }`, which the empty page already is — declared
+  // anyway, because the point of this table is that every read Brief makes is
+  // one somebody chose to answer. A read that arrives by accident and is served
+  // the fallback is exactly what nothing could see before.
+  "GET /users": () => jsonResponse(emptyPage),
+  "GET /agent-tools": () => jsonResponse(emptyPage),
 };
 
 /**
@@ -112,11 +134,41 @@ export function stubApi(routes: Routes): Call[] {
     calls.push(call);
     const route = `${call.method} ${call.path}`;
     const handler = routes[route] ?? DEFAULTS[route];
-    return handler ? handler(call.body) : jsonResponse(emptyPage);
+    if (!handler) {
+      unrouted.push(route);
+      return jsonResponse(emptyPage);
+    }
+    return handler(
+      call.body,
+      new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test.local",
+      ).searchParams,
+    );
   });
   vi.stubGlobal("fetch", mock);
   return calls;
 }
+
+// Routes asked for that neither the case nor DEFAULTS named.
+//
+// Answering one with a well-formed empty page is how a read nobody vetted stays
+// invisible: no case can tell "Brief made no such request" from "Brief made one
+// nobody stubbed", so a regression reintroducing a removed read leaves every
+// case green. Collected rather than thrown from inside the stub — a throw there
+// arrives as a query failure the screen renders as its empty state, which looks
+// exactly the same.
+let unrouted: string[] = [];
+
+// Registered on import, so a suite gets this by using the harness rather than
+// by remembering to ask. A per-suite opt-in is the version that decays: the
+// twenty-first Brief suite is written by copying the twentieth, and whichever
+// line was easiest to leave out is the one it leaves out.
+afterEach(() => {
+  const asked = unrouted;
+  unrouted = [];
+  expect(asked).toEqual([]);
+});
 
 /** One outbound request, read the two ways the client can have spelled it. */
 async function readCall(
@@ -161,8 +213,10 @@ async function readBody(
  * Everything that left the browser as a write, in the order it went.
  *
  * `/reports/{report}` is excluded because it is a READ spelled as a POST — the
- * query plan does not fit a URL — and the rail runs one on every mount. Counting
- * it would make "nothing was sent" untrue of a page that sent nothing.
+ * query plan does not fit a URL — and counting it would make "nothing was sent"
+ * untrue of a page that sent nothing. No Brief surface runs one today; the
+ * exclusion stays because what makes a report POST not a write is its shape,
+ * which does not change with the caller.
  */
 export function writes(calls: readonly Call[]): Call[] {
   return calls.filter(
@@ -177,7 +231,7 @@ export function writeRoutes(calls: readonly Call[]): string[] {
 
 /** Brief's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#brief-decisions, #brief-feed")].map(
+  return [...document.querySelectorAll("#brief-decisions, #brief-today")].map(
     (section) => section.id,
   );
 }
@@ -203,6 +257,7 @@ export const run: MorningBrief = {
   generated_at: "2026-07-05T05:30:00Z",
   as_of: "2026-07-05T05:00:00Z",
   candidate_count: 1,
+  factors_omitted: [],
   items: [
     {
       id: "bi-1",

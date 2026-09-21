@@ -74,8 +74,8 @@ func (baselineConsumerMail) IsConsumer(_ context.Context, domain string) (bool, 
 }
 
 type qualifyWire struct {
-	RecordID string `json:"record_id"`
-	Filled   map[string]struct {
+	LeadID string `json:"lead_id"`
+	Filled map[string]struct {
 		Value    string `json:"value"`
 		Evidence []struct {
 			Source  string `json:"source"`
@@ -88,7 +88,7 @@ type qualifyWire struct {
 func qualify(t *testing.T, p *fakeSoR, id ids.UUID) qualifyWire {
 	t.Helper()
 	raw, err := qualifyLead{p: p, consumerMail: baselineConsumerMail{}}.Handle(context.Background(),
-		json.RawMessage(`{"record_id":"`+id.String()+`"}`))
+		json.RawMessage(`{"lead_id":"`+id.String()+`"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestQualifyLeadRefusesRatherThanGuessingWhenTheListIsUnreadable(t *testing.
 		`{"email":"jane@acme.com","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
 
 	_, err := qualifyLead{p: p, consumerMail: brokenConsumerMail{}}.Handle(context.Background(),
-		json.RawMessage(`{"record_id":"`+leadID.String()+`"}`))
+		json.RawMessage(`{"lead_id":"`+leadID.String()+`"}`))
 
 	if err == nil {
 		t.Fatal("qualify answered while the consumer-mail list was unreadable — a fill decided on an unknown is a guess")
@@ -318,7 +318,7 @@ func TestQualifyLeadRefusesWhenNoConsumerMailListIsWired(t *testing.T) {
 		`{"email":"jane@acme.com","full_name":"Jane","company_name":"","title":"x","source":"import"}`, 1)
 
 	_, err := qualifyLead{p: p}.Handle(context.Background(),
-		json.RawMessage(`{"record_id":"`+leadID.String()+`"}`))
+		json.RawMessage(`{"lead_id":"`+leadID.String()+`"}`))
 
 	if err == nil {
 		t.Fatal("qualify answered with no consumer-mail list wired at all")

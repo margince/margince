@@ -5,17 +5,17 @@ package approvals
 
 // The track record a rep builds by deciding, one kind of proposal at a time.
 //
-// Trust is not a property of the software. It is one person's experience of one
+// Trust is not a property of the software. It is one contact's experience of one
 // kind of proposal: a rep who has approved fourteen close-date confirmations
 // unchanged has evidence about close dates and none about outbound mail. So the
 // grain is (rep, kind), and approval_autonomy_policy holds one row per pair.
 //
 // WHAT IS HERE. Decisions are counted as they are made, so the record exists by
 // the time there is something to weigh it for. Beside the counters sit the mode
-// a rep has chosen per kind, read by the auto-applier and written by the rep
-// themselves: an agent principal carrying the owner's authority is the decider
-// approvals were missing, so a mode column that once described a promise the
-// product could not keep now describes one it keeps.
+// stored for each kind, read by the auto-applier. A row can begin with the
+// default at the first decision or with a setting the rep changes themselves.
+// Stored modes are preserved in either case: older counter-created rows cannot
+// be distinguished from deliberate opt-outs.
 //
 // The counters are stored rather than counted from the approval table, which
 // was the first design. Approvals expire and are swept, and a retention policy
@@ -56,11 +56,11 @@ func countDecisionTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, kind strin
 	// caller's string, so it is safe to format in — and it must be, because a
 	// counter name is an identifier rather than a value.
 	_, err = tx.Exec(ctx, fmt.Sprintf(
-		`INSERT INTO approval_autonomy_policy (user_id, kind, %[1]s)
-		 VALUES ($1, $2, 1)
+		`INSERT INTO approval_autonomy_policy (user_id, kind, mode, %[1]s)
+		 VALUES (@user, @kind, @mode, 1)
 		 ON CONFLICT (user_id, kind) DO UPDATE
 		   SET %[1]s = approval_autonomy_policy.%[1]s + 1`, column),
-		userID, kind)
+		pgx.NamedArgs{"user": userID, "kind": kind, "mode": string(unsetAutonomy(kind))})
 	return err
 }
 
@@ -123,10 +123,57 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 // about the KIND, not about one rep's history with it. A row naming a kind
 // outside this set is inert: SetAutoApply refuses to write it, so no reader has
 // to defend against one.
+// closeDateCorrectionKind is the nightly close-date sweep's own kind. Named
+// because this module makes three statements about it — the grant deciding one
+// takes, that it is auto-appliable, and that it applies by default — and a typo
+// across them would leave the kind half-governed with nothing saying so.
+const closeDateCorrectionKind = "close_date_correction"
+
 var AutoApplyKinds = map[string]bool{
-	"close_date_correction": true,
-	"org_name_promotion":    true,
-	"lifecycle_change":      true,
+	closeDateCorrectionKind:  true,
+	"company_name_promotion": true,
+	"lifecycle_change":       true,
+}
+
+// AdminGovernedAutoKinds are the kinds that may apply without asking on an
+// ADMIN's authority rather than a rep's own.
+//
+// A SECOND set, not more members of AutoApplyKinds, and the split is the whole
+// design. AutoApplyKinds is what a rep may put on auto for themselves, and its
+// bound is that the product can put each one back through the restore path —
+// one Undo and the field is as it was. A stage move is not that: it writes
+// deal_stage_history and the ledger beside the field, so restoring the column
+// alone would leave the history saying the deal is somewhere it is not. It
+// carries its own revert instead.
+//
+// The authority is different too. Nobody's own history earns a stage move the
+// right to skip the question; a transition earns it, per pipeline, measured
+// against thresholds an admin set — which is why membership here grants
+// nothing on its own. The kind still has to pass the governing policy in the
+// transaction that would apply it.
+var AdminGovernedAutoKinds = map[string]bool{
+	"stage_progression": true,
+}
+
+// AutoAppliableKinds is every kind either ladder can apply, in a stable order.
+//
+// The sweep that looks for work and the check that admits it read this same
+// function, because they must agree: a scan over one set feeding a check
+// against the other either misses kinds it should apply or wakes on rows it
+// will always refuse.
+//
+// Held by: TestTheAutoApplySweepScansTheKindsTheApplierAdmits
+// (backend/gates/governedkindseams_test.go)
+func AutoAppliableKinds() []string {
+	kinds := make([]string, 0, len(AutoApplyKinds)+len(AdminGovernedAutoKinds))
+	for kind := range AutoApplyKinds {
+		kinds = append(kinds, kind)
+	}
+	for kind := range AdminGovernedAutoKinds {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	return kinds
 }
 
 // SortedAutoApplyKinds is AutoApplyKinds in a stable order.
@@ -149,7 +196,7 @@ func SortedAutoApplyKinds() []string {
 type AutonomyMode string
 
 const (
-	// ModeManual asks every time. What every rep has until they choose.
+	// ModeManual disables automatic application.
 	ModeManual AutonomyMode = "manual"
 	// ModeAuto applies on sight, undoably.
 	ModeAuto AutonomyMode = "auto"
@@ -158,7 +205,7 @@ const (
 // AutoApplyMode reports whether the rep this call acts for has put this kind on
 // automatic.
 //
-// NO OBJECT GATE, and it needs none: a policy row is one person's answer about
+// NO OBJECT GATE, and it needs none: a policy row is one contact's answer about
 // their own queue, and this reads the row of the principal on the context. It
 // takes no user id, so there is no row a caller could ask for but not be —
 // which is a stronger bound than a grant, because a grant could be held over
@@ -169,10 +216,8 @@ const (
 // principal, so the policy it reads is the owner's own — the same row that rep
 // would see in their settings.
 //
-// Absence is 'manual', which is why a missing row is not an error: a rep who
-// has never decided this kind has no policy row, and "never chose" and "chose
-// to be asked" are the same answer. Reading them differently would make the
-// first decision of a kind behave unlike every one after it.
+// Missing preferences use the same defaults as Settings. Stored choices,
+// including manual and veto, always take precedence.
 //
 // The kind is checked against AutoApplyKinds here as well as on the write. A
 // set that shrinks — a kind that stops being reversible — must stop applying
@@ -184,7 +229,7 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 	}
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
-		return ModeManual, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+		return ModeManual, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var mode string
@@ -194,12 +239,22 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 			rep.UserID, kind).Scan(&mode)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ModeManual, nil
+		return unsetAutonomy(kind), nil
 	}
 	if err != nil {
 		return ModeManual, fmt.Errorf("crmapprovals: reading the autonomy mode: %w", err)
 	}
 	return AutonomyMode(mode), nil
+}
+
+// unsetAutonomy is shared by the settings read, the applier and the first
+// decision counter insert. The insert stores today's default; future default
+// changes leave that stored mode intact, just like an explicit setting.
+func unsetAutonomy(kind string) AutonomyMode {
+	if AutoApplyKinds[kind] {
+		return ModeAuto
+	}
+	return ModeManual
 }
 
 // KindAutonomy is one kind's standing with one rep: whether it applies without
@@ -222,8 +277,7 @@ type KindAutonomy struct {
 // It returns the whole of AutoApplyKinds rather than the rows the table holds. A
 // rep who has never met a kind has no row, and a settings screen that listed
 // only rows would hide exactly the choices nobody has made yet — the ones a rep
-// opens the screen to make. Absence is 'manual', the same reading AutoApplyMode
-// takes.
+// opens the screen to make. Defaults match AutoApplyMode.
 //
 // NO OBJECT GATE, for the reason the single-kind read gives: this reads the rows
 // of the principal on the context and takes no user id, so there is no row a
@@ -231,7 +285,7 @@ type KindAutonomy struct {
 func (s *Service) AutoApplySettings(ctx context.Context) ([]KindAutonomy, error) {
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
-		return nil, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+		return nil, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var settings []KindAutonomy
@@ -279,7 +333,7 @@ func autonomySettingsInTx(ctx context.Context, tx pgx.Tx, repID ids.UUID) ([]Kin
 	for _, kind := range kinds {
 		row, held := stored[kind]
 		if !held {
-			row = KindAutonomy{Kind: kind, Mode: ModeManual}
+			row = KindAutonomy{Kind: kind, Mode: unsetAutonomy(kind)}
 		}
 		// The stored mode is reported as it stands. The table's CHECK admits a
 		// third rung, 'veto', that nothing writes yet — and rewriting it to
@@ -328,7 +382,7 @@ func (s *Service) SetAutoApply(ctx context.Context, kind string, on bool) ([]Kin
 	}
 	rep, ok := principal.Actor(ctx)
 	if !ok || rep.UserID.IsZero() {
-		return nil, fmt.Errorf("a policy belongs to a person, and this call names none: %w",
+		return nil, fmt.Errorf("a policy belongs to a contact, and this call names none: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	mode := ModeManual

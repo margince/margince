@@ -20,9 +20,9 @@ package integration
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -34,31 +34,31 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	title := "Changed by the writable suite"
 
-	mine := e.SeedPerson(t, "My contact", &e.Rep1)
-	theirs := e.SeedPerson(t, "Their contact", &e.Rep3)
-	shared := e.SeedPerson(t, "Shared contact", &e.Rep3)
+	mine := e.SeedContact(t, "My contact", &e.Rep1)
+	theirs := e.SeedContact(t, "Their contact", &e.Rep3)
+	shared := e.SeedContact(t, "Shared contact", &e.Rep3)
 	if _, err := svc.CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
-		RecordType: "person", RecordID: shared,
+		RecordType: "contact", RecordID: shared,
 		SubjectType: "user", SubjectID: e.Rep1, Access: "write",
 	}); err != nil {
-		t.Fatalf("sharing the person at write: %v", err)
+		t.Fatalf("sharing the contact at write: %v", err)
 	}
 	myDeal := e.SeedDeal(t, "My deal", pipeline, open, &e.Rep1)
 	theirDeal := e.SeedDeal(t, "Their deal", pipeline, open, &e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
-	// person
+	// contact
 	for _, row := range []struct {
 		name string
 		id   ids.UUID
 		want bool
 	}{
-		{"a person they own", mine, true},
-		{"a colleague's person", theirs, false},
-		{"a person shared with them at write", shared, true},
+		{"a contact they own", mine, true},
+		{"a colleague's contact", theirs, false},
+		{"a contact shared with them at write", shared, true},
 	} {
-		got, err := e.People.GetPerson(rep, ids.From[ids.PersonKind](row.id), storekit.LiveOnly)
+		got, err := e.Contacts.GetContact(rep, ids.From[ids.ContactKind](row.id), storekit.LiveOnly)
 		if err != nil {
 			t.Fatalf("reading %s: %v", row.name, err)
 		}
@@ -72,8 +72,8 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 		// The flag is only worth anything if it agrees with the gate. Drive the
 		// mutation and compare: a flag that said yes to a write the server
 		// refuses is the defect this field was added to prevent.
-		_, err = e.People.UpdatePerson(rep, ids.From[ids.PersonKind](row.id),
-			people.UpdatePersonInput{Title: &title})
+		_, err = e.Contacts.UpdateContact(rep, ids.From[ids.ContactKind](row.id),
+			contacts.UpdateContactInput{Title: &title})
 		if admitted := err == nil; admitted != row.want {
 			t.Errorf("%s says writable=%v but the update was admitted=%v — the flag and the gate "+
 				"disagree, and the flag is what a client draws its buttons from",
@@ -115,14 +115,14 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 // the owner in the moment right after they saved.
 func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, orgWriterPermsFor(t))
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, companyWriterPermsFor(t))
 	name := "Echo Test GmbH"
 
-	created, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	created, err := e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
 		DisplayName: name, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("creating the organization: %v", err)
+		t.Fatalf("creating the company: %v", err)
 	}
 	if created.Writable == nil || !*created.Writable {
 		t.Errorf("the CREATE echo reports writable=%v for the row its own caller just made and owns",
@@ -130,10 +130,10 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 	}
 
 	changed := "Echo Test GmbH II"
-	updated, err := e.People.UpdateOrganization(rep, ids.From[ids.OrganizationKind](ids.UUID(created.Id)),
-		people.UpdateOrganizationInput{DisplayName: &changed})
+	updated, err := e.Contacts.UpdateCompany(rep, ids.From[ids.CompanyKind](ids.UUID(created.Id)),
+		contacts.UpdateCompanyInput{DisplayName: &changed})
 	if err != nil {
-		t.Fatalf("updating the organization: %v", err)
+		t.Fatalf("updating the company: %v", err)
 	}
 	if updated.Writable == nil || !*updated.Writable {
 		t.Errorf("the UPDATE echo reports writable=%v for a row the same caller just wrote",
@@ -147,23 +147,23 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 // the server declines.
 func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, orgWriterPermsFor(t))
-	created, err := e.People.CreateOrganization(rep, people.CreateOrganizationInput{
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, companyWriterPermsFor(t))
+	created, err := e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
 		DisplayName: "Archived Co", Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("creating the organization: %v", err)
+		t.Fatalf("creating the company: %v", err)
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(created.Id))
-	if _, err := e.People.ArchiveOrganization(rep, orgID, nil); err != nil {
+	companyID := ids.From[ids.CompanyKind](ids.UUID(created.Id))
+	if _, err := e.Contacts.ArchiveCompany(rep, companyID, nil); err != nil {
 		t.Fatalf("archiving: %v", err)
 	}
-	got, err := e.People.GetOrganization(rep, orgID, storekit.IncludeArchived)
+	got, err := e.Contacts.GetCompany(rep, companyID, storekit.IncludeArchived)
 	if err != nil {
-		t.Fatalf("reading the archived organization: %v", err)
+		t.Fatalf("reading the archived company: %v", err)
 	}
 	if got.Writable != nil && *got.Writable {
-		t.Error("an archived organization reports writable=true, but every mutation takes the LIVE " +
+		t.Error("an archived company reports writable=true, but every mutation takes the LIVE " +
 			"probe and refuses it — the flag is promising an edit the server declines")
 	}
 }
@@ -173,11 +173,11 @@ func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
 // writable would put an edit affordance on every colleague's record at once.
 func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
 	e := Setup(t)
-	mine := e.SeedPerson(t, "Mine on the page", &e.Rep1)
-	theirs := e.SeedPerson(t, "Theirs on the page", &e.Rep3)
+	mine := e.SeedContact(t, "Mine on the page", &e.Rep1)
+	theirs := e.SeedContact(t, "Theirs on the page", &e.Rep3)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
-	page, _, err := e.People.ListPeople(rep, people.ListPeopleInput{})
+	page, _, err := e.Contacts.ListContacts(rep, contacts.ListContactsInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,17 +203,17 @@ func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
 	}
 }
 
-// orgWriterPermsFor is AccountRepPerms plus organization.update. No shipped rep
+// companyWriterPermsFor is AccountRepPerms plus company.update. No shipped rep
 // fixture grants it, and several suites read those fixtures as a rep who cannot
 // write a company, so widening one there would make them pass while proving
 // nothing.
-func orgWriterPermsFor(t *testing.T) principal.Permissions {
+func companyWriterPermsFor(t *testing.T) principal.Permissions {
 	t.Helper()
 	perms := AccountRepPerms
 	perms.Objects = map[string]principal.ObjectGrant{}
 	for object, grant := range AccountRepPerms.Objects {
 		perms.Objects[object] = grant
 	}
-	perms.Objects["organization"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	perms.Objects["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return perms
 }

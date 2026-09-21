@@ -8,7 +8,7 @@ package capture
 // Capture never writes the attachment table. It owns the transaction and the
 // provenance; the timeline module owns the row shape, the account roll-up and
 // the idempotency key, exactly as it does for a human upload. This is the same
-// arrangement capture already has with people for counterparties — the seam is
+// arrangement capture already has with contacts for counterparties — the seam is
 // how capture stays out of a sibling's tables.
 //
 // Nothing here decides bounds, filenames or content types, and the two halves of

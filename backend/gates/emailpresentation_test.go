@@ -9,7 +9,7 @@ package gates
 // anywhere.
 //
 // The tree once held five independent renderings of one message — the
-// timeline's, the account page's recent list, the person memory's fold, the
+// timeline's, the account page's recent list, the contact memory's fold, the
 // relationship spine's and search's — each deciding for itself which parts of
 // an email to show and whether it could be opened. They drifted, because
 // nothing failed when they did: a surface that grew a sixth reading looked
@@ -35,7 +35,7 @@ package gates
 // other, and it names no type at all. An earlier version of this gate looked
 // only for the type name and argued in a comment that there was no other way
 // in. Three surfaces were drawing their own email rows while it reported PASS:
-// the person page's memory card, the account page's recent list and the held
+// the contact page's memory card, the account page's recent list and the held
 // threads table. Under-recognition is the one way a census must not break,
 // because a smaller corpus fails silently and reads exactly like a clean tree.
 //
@@ -95,6 +95,13 @@ const (
 var emailRenderers = map[string]bool{
 	"design-system/emailentry.tsx":  true,
 	"design-system/emaildetail.tsx": true,
+	// The message a task was read out of, drawn IN the task instead of behind
+	// a second drawer over the first. It is a renderer, not a passthrough: it
+	// shows the subject, the date and the body (through EmailText, the same
+	// body reading EmailDetail mounts), holds EmailDetail's withheld line, and
+	// deliberately carries none of the drawer's verbs — no audience editor, no
+	// filed-record links, no reply.
+	"design-system/sourceemailpanel.tsx": true,
 }
 
 // emailPassthroughs hold an `entry` type without rendering it: they carry the
@@ -110,7 +117,11 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"screens/openemail.ts":               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
 	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
 	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
+	"screens/brief.focus.tsx":            "draws no part of the message: the moment it arrived, for the card's label row, and its audience status as one more fact about whose row it is — the same access reading emailaccesseditor.tsx takes. No subject, no body, no party, no attachment: the ranked column beside the card names its rows from the row's own `title` and `contact` (itemTitle, aboutRecord), never off the message. The message itself is handed to WorklistRow, which draws it through EmailEntry",
+	"screens/brief.fixtures.ts":          "builds the rows a story and a test hand to the Brief; it constructs an EmailSummary and renders nothing",
 	"screens/emailaccesseditor.tsx":      "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
+	"screens/emailrecords.tsx":           "draws WHICH RECORDS the message is filed against and no part of the message: each link is an EntityRef naming a contact, an account or a deal. No subject, no body, no party, no attachment. It takes the whole presentation because the drawer hands it one",
+	"screens/emailreply.tsx":             "draws no part of the message at all: it reads can_reply and links to decide whether the drawer may offer the verb and which record a reply files under, and mounts ChannelReplyAction, which is the product's one reply affordance",
 	"app/searchkinds.ts":                 "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
 })
 
@@ -363,7 +374,7 @@ func rendersCanonically(t *testing.T, consumer string) bool {
 //
 // The tag must OPEN a line, or follow `(` or `return`. A bare `<Name` also
 // matches TypeScript generics — `PipelineBoard<Record extends BoardRecord>`,
-// `Person360["conversation_memory"]` — and reading those as markup put three
+// `Contact360["conversation_memory"]` — and reading those as markup put three
 // mappers in front of a rule about rendering.
 var jsxTag = regexp.MustCompile(`(?m)(^\s*|\(\s*|return\s+)<[A-Za-z][A-Za-z0-9.]*[\s/>]`)
 

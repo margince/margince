@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -197,8 +197,8 @@ it("stays open when the item it just ran opened a dialog", async () => {
 // own primitive: it draws the ellipsis on every record header in the product, so
 // a rectangle here is a rectangle everywhere at once. `btn-icon` is what makes a
 // button square and drops the width floor a WORD needs, and the trigger has no
-// word — it was a bare `.btn.btn-sm` with a padding rule of its own, which is
-// how a 32px square came to be drawn 30px or 36px wide depending on which of two
+// word — it was a bare `.btn` with a padding rule of its own, which is how a
+// square came to be drawn 30px or 36px wide depending on which of two
 // equal-specificity rules the sheet order happened to put last.
 it("draws its trigger as the square the icon-only button defines", () => {
   render(
@@ -209,7 +209,6 @@ it("draws its trigger as the square the icon-only button defines", () => {
 
   const trigger = screen.getByRole("button", { name: "More actions" });
   expect(trigger.classList.contains("btn-icon")).toBe(true);
-  expect(trigger.classList.contains("btn-sm")).toBe(true);
 });
 
 // The panel is FIXED, so the viewport is all the room there is: a menu placed
@@ -336,7 +335,7 @@ it("pairs a Field's label with its control, and two Fields never collide", () =>
 // as a name, the whole help text is announced on every focus.
 it("describes a Field's control by its hint without naming it that", () => {
   render(
-    <Field label="Reason" hint="Shown to the person you are sharing with">
+    <Field label="Reason" hint="Shown to the contact you are sharing with">
       {(control) => <Textarea {...control} />}
     </Field>,
   );
@@ -345,7 +344,7 @@ it("describes a Field's control by its hint without naming it that", () => {
   const describedBy = control.getAttribute("aria-describedby");
   expect(describedBy).toBeTruthy();
   expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-    "Shown to the person you are sharing with",
+    "Shown to the contact you are sharing with",
   );
 });
 
@@ -583,10 +582,9 @@ it("keeps a delayed pending body up while it stays mounted", async () => {
 function Reading({ onOpen }: Readonly<{ onOpen: () => void }>) {
   return (
     <StatCard
-      label="The people"
+      label="The contacts"
       value="1 of 3 engaged"
       detail="a champion is named"
-      openLabel="Open people"
       onOpen={onOpen}
       basis={<p>Carol Wagner replied twice this month.</p>}
     />
@@ -598,9 +596,46 @@ it("opens the tab from the door's own words", async () => {
   const onOpen = vi.fn();
   render(<Reading onOpen={onOpen} />);
 
-  await user.click(screen.getByRole("button", { name: /Open people/ }));
+  // The word is the COMPONENT's — every door in the product says the same
+  // thing, so a caller has no string to spell a second way — and the arrow
+  // beside it is a glyph, hidden from a reader who is being read to. The
+  // reading's name is the DESCRIPTION, so a label that itself begins with
+  // "Open" is not announced twice.
+  const door = screen.getByRole("button", {
+    name: "Open",
+    description: "The contacts",
+  });
+  const arrow = door.querySelector(".stat-card-arrow");
+  expect(door.textContent).toBe(`Open${"\u2192"}`);
+  expect(arrow?.textContent).toBe("\u2192");
+  expect(arrow?.getAttribute("aria-hidden")).toBe("true");
+
+  await user.click(door);
 
   expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
+// Five readings on one page are five doors reading "Open", and a screen reader
+// announcing the list gives back five identical rows. What tells them apart is
+// the description, taken from the name already ON the card — including when the
+// label starts with the door's own word, which as a name read "Open Open deals".
+it("describes each door by the reading it belongs to", () => {
+  render(
+    <>
+      <StatCard label="Open deals" value="4" onOpen={() => {}} />
+      <StatCard label="The money" value="€185,000" onOpen={() => {}} />
+    </>,
+  );
+
+  expect(screen.getAllByRole("button", { name: "Open" })).toHaveLength(2);
+  // Asked by description: each door is reachable by the reading it belongs to,
+  // and neither answers to the other's.
+  expect(
+    screen.getByRole("button", { name: "Open", description: "Open deals" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Open", description: "The money" }),
+  ).toBeTruthy();
 });
 
 // The one press the stretched target must not swallow. A reader asking what a

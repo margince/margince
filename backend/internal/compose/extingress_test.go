@@ -102,6 +102,9 @@ func ingestingRuntime(t *testing.T) *callRuntime {
 	rt := unattendedRuntimeFor(
 		principal.WithWorkspaceID(context.Background(), ids.NewV7()),
 		"probe-unit", "1.0.0", "job", extensionRuntimeBinding{
+			// A zero pool, which is what the port's own wiring check asks for:
+			// it answers "this role bound no pool" for a nil one, and every
+			// case in this file stops before the pool is dialled.
 			pool:        &pgxpool.Pool{},
 			captureSink: &capture.Sink{},
 		},
@@ -209,13 +212,17 @@ func TestAnIngestInsideTheUnitsOwnTransactionIsRefused(t *testing.T) {
 	rt.leaveTx()
 	// And it lifts: a counter that only ever counted up would refuse every
 	// ingest a unit made after its first transaction, forever. Probed with a
-	// record the grammar refuses, because that answer comes from the step
-	// AFTER this one — so it says the nesting gate let the call past without
-	// this test needing a database to prove it.
-	unkeyed := aRecord()
-	unkeyed.Key = ""
-	if _, err := rt.Ingest(context.Background(), member, unkeyed); !errors.Is(err, extension.ErrInvalid) {
-		t.Fatalf("err = %v, want the next refusal along — the nesting one outlived the transactions it is about", err)
+	// record refused by the TRANSPORT check, which is the last step before any
+	// of this reaches a database — so the answer says the nesting gate let the
+	// call past, and this test still needs no Postgres to prove it. (A record
+	// the GRAMMAR refuses would do as well on its own terms, but the core now
+	// writes a breadcrumb for one, and a hermetic test may not.)
+	undeclared := aRecord()
+	undeclared.Activity.Kind = "message"
+	undeclared.Activity.ChannelProvider = "a_transport_this_unit_never_declared"
+	if _, err := rt.Ingest(context.Background(), member, undeclared); !errors.Is(err, extension.ErrInvalid) {
+		t.Fatalf("err = %v, want the call to reach the transport check — the nesting refusal outlived "+
+			"the transactions it is about", err)
 	}
 }
 
@@ -252,7 +259,7 @@ func TestAUnitCannotOpenATransactionWhileItIsIngesting(t *testing.T) {
 // A role that composes no capture pipeline has nowhere to put a record, and
 // says so by name. The alternative this refusal exists against is worse than an
 // error: a sink assembled at the call from the pool alone would compile, run,
-// land activities and silently create no people.
+// land activities and silently create no contacts.
 func TestARoleThatComposedNoCaptureRefusesByName(t *testing.T) {
 	composeIngressFor(t, "probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
@@ -278,23 +285,6 @@ func TestAReleasedRuntimeCannotIngest(t *testing.T) {
 	_, err := rt.Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
 	if !errors.Is(err, extension.ErrRuntimeExpired) {
 		t.Fatalf("err = %v, want ErrRuntimeExpired", err)
-	}
-}
-
-// The port runs the published Record.Validate before it spends anything, so a
-// record the core would refuse costs no transaction. The exhaustive arms of
-// that grammar are its own package's tests; what is asserted here is that this
-// side calls it, and answers the published class.
-func TestARecordTheGrammarRefusesNeverReachesCapture(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
-		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
-	})
-	unkeyed := aRecord()
-	unkeyed.Key = ""
-
-	_, err := ingestingRuntime(t).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), unkeyed)
-	if !errors.Is(err, extension.ErrInvalid) {
-		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
 }
 
@@ -390,7 +380,7 @@ func TestTheConversionCarriesAWholeRecord(t *testing.T) {
 
 // The refusal classes are a MAPPING, and the property that matters is what does
 // not survive it: capture's errors carry table names, constraint names and SQL
-// state, and a unit is other people's code.
+// state, and a unit is other contacts's code.
 func TestIngressMapsRefusalsAndLeaksNoDetail(t *testing.T) {
 	rt := ingestingRuntime(t)
 	for name, probe := range map[string]struct {

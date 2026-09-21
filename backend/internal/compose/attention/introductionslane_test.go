@@ -33,10 +33,7 @@ func (s *stubIntroductions) Pending(context.Context, int) ([]PendingIntroduction
 }
 
 func introductionsLaneService(i Introductions) *Service {
-	return NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	).WithIntroductions(i)
+	return NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithIntroductions(i)
 }
 
 func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {
@@ -44,13 +41,13 @@ func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {
 	due := readInstant.Add(7 * 24 * time.Hour)
 	svc := introductionsLaneService(&stubIntroductions{rows: []PendingIntroduction{
 		{
-			ID: ids.NewV7(), PersonID: contact,
+			ID: ids.NewV7(), ContactID: contact,
 			Reason:      "Dana reopened the retrofit conversation after 41 days.",
 			RequestedAt: readInstant, DueAt: due,
 		},
 	}})
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -92,7 +89,7 @@ func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {
 func TestARefusedIntroductionsReadIsNamedAsWithheld(t *testing.T) {
 	svc := introductionsLaneService(&stubIntroductions{err: apperrors.ErrPermissionDenied})
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -110,7 +107,7 @@ func TestARefusedIntroductionsReadIsNamedAsWithheld(t *testing.T) {
 // An unbound lane is ABSENT, and a bound-but-empty one is empty. The two are
 // different answers and a colleague acts differently on each.
 func TestAnUnboundIntroductionsLaneIsAbsentAndAnEmptyOneIsEmpty(t *testing.T) {
-	unbound, err := introductionsLaneService(nil).Assemble(context.Background())
+	unbound, err := introductionsLaneService(nil).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling without the lane: %v", err)
 	}
@@ -118,7 +115,7 @@ func TestAnUnboundIntroductionsLaneIsAbsentAndAnEmptyOneIsEmpty(t *testing.T) {
 		t.Errorf("an unbound lane rendered %v; want absent", unbound.Introductions)
 	}
 
-	empty, err := introductionsLaneService(&stubIntroductions{}).Assemble(context.Background())
+	empty, err := introductionsLaneService(&stubIntroductions{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with an empty lane: %v", err)
 	}

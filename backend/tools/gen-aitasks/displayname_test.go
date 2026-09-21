@@ -3,7 +3,7 @@
 
 package main
 
-// A task's display name is what a person is shown when it breaks, and the
+// A task's display name is what a contact is shown when it breaks, and the
 // contract is where it cannot be forgotten.
 //
 // The AI-work incident row folds several failures of one task into one line,

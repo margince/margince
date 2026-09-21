@@ -67,7 +67,7 @@ Full target list: [docs/reference/make-targets.md](docs/reference/make-targets.m
 - **Branch off `main`**: `git switch -c <type>/<slug> origin/main`.
   Direct pushes to `main` are blocked; there is no other path to merge.
 - **Conventional commit subjects**, scoped to the module:
-  `fix(overlay): a mirrored deal reports the incumbent's last-modified`.
+  `fix(deals): a closed deal reports the stage it closed in`.
   Write the subject as the behaviour after the change, not as the task
   you performed.
 - **Squash-merge** is the house style, and only over green checks.
@@ -109,9 +109,12 @@ loop your PR will run:
    tree was cleared to zero findings before this bar was armed, so
    `make craft-static` is green and CI runs the same bar as a required
    check. A *genuine* false positive is waived in-source
-   with a reason: `//craft:ignore <check> <reason>`. The gate tool
-   (`cli/craft/`) is part of this repo — don't edit it to silence a
-   finding on your own PR; fix the gate in its own reviewed change.
+   with a reason: `//craft:ignore <check> <reason>` — that is the only
+   way to stand a finding down, and the reason is read by the next
+   contact to touch the line. The gate itself is a checksum-pinned
+   binary that `scripts/craft-pin.sh` fetches on first use, so there is
+   nothing to install and nothing in this repo to edit: the verdict you
+   get on your laptop is the verdict your pull request gets.
 3. **CI must be all green before merge**: the same deterministic gates
    plus automated review and static analysis. Address findings
    rather than dismissing them; squash-merge is the house style.

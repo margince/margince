@@ -24,9 +24,13 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivertest"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // workClient is the insert-only client a working job carries, built here
@@ -46,9 +50,9 @@ func workClient(t *testing.T, e *integration.Env) *river.Client[pgx.Tx] {
 func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	org := insertOrg(t, e, e.Rep1, "acme.example", "")
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
-	_, args := startDeepRead(t, e, org)
+	_, args := startDeepRead(t, e, company)
 
 	ctx := rivertest.WorkContext(context.Background(), workClient(t, e))
 	if err := worker.run(ctx, args); err != nil {
@@ -59,10 +63,10 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	// read was about — a lookup pointed at another record would enrich the
 	// wrong account while looking exactly like this one.
 	job := rivertest.RequireInserted(ctx, t, riverpgxv5.New(e.Pool),
-		TechnicalEnrichOrganizationArgs{}, nil)
-	if job.Args.OrganizationID != org || job.Args.Workspace != e.WS {
+		TechnicalEnrichCompanyArgs{}, nil)
+	if job.Args.CompanyID != company || job.Args.Workspace != e.WS {
 		t.Fatalf("queued lookup = %+v, want the company this read was about (%s in %s)",
-			job.Args, org, e.WS)
+			job.Args, company, e.WS)
 	}
 	if job.Queue != technicalLookupQueue {
 		t.Fatalf("queued on %q, want %q — the lookup's pacing is the queue's, not the crawl's",
@@ -82,12 +86,62 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 
 	// The triage lane's shape: a claim whose read is about a DOMAIN, with no
 	// account resolved behind it yet.
-	worker.askWhatTheCompanyRuns(ctx, people.SiteReadClaim{
-		OrganizationID: nil,
-		TargetKind:     "domain",
-		SeedURL:        "https://acme.example",
+	worker.askWhatTheCompanyRuns(ctx, contacts.SiteReadClaim{
+		CompanyID:  nil,
+		TargetKind: "domain",
+		SeedURL:    "https://acme.example",
 	})
 
 	rivertest.RequireNotInserted(ctx, t, riverpgxv5.New(e.Pool),
-		TechnicalEnrichOrganizationArgs{}, nil)
+		TechnicalEnrichCompanyArgs{}, nil)
+}
+
+// A deployment that configures no technical enricher still registers this kind
+// (api/jobs.yaml declares `absent: registers_anyway`), so the row a site read
+// or a rep's press queues reaches a worker rather than being refused at insert
+// with a message about River's worker bundle. What that worker owes is an
+// answer in the ledger the status poll reads — otherwise the button says
+// "queued" and nothing ever says anything else.
+func TestALookupWithNoEnricherConfiguredRecordsWhatItCouldNotRead(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	worker := &technicalEnrichWorker{pool: e.Pool, enricher: nil}
+
+	err := worker.Work(context.Background(), &river.Job[TechnicalEnrichCompanyArgs]{
+		JobRow: &rivertype.JobRow{},
+		Args:   TechnicalEnrichCompanyArgs{Workspace: e.WS, CompanyID: company},
+	})
+	if err != nil {
+		t.Fatalf("a lookup this deployment cannot perform failed the job: %v", err)
+	}
+
+	lanes := technicalLedger(t, e, company)
+	if len(lanes) != len(enricherLanes) {
+		t.Fatalf("recorded %d lanes, want one per lane the engine answers for (%v)", len(lanes), enricherLanes)
+	}
+	for _, lane := range lanes {
+		if lane.Outcome != contacts.TechnicalOutcomeFailed {
+			t.Errorf("lane %s recorded %q, want %q — a deployment that read nothing must not claim an answer",
+				lane.Lane, lane.Outcome, contacts.TechnicalOutcomeFailed)
+		}
+		if lane.NextAttemptAt == nil {
+			t.Errorf("lane %s earned no backoff, so every site read would ask this question again", lane.Lane)
+		}
+	}
+}
+
+// technicalLedger reads what each lane last did for one company, as the status
+// route does.
+func technicalLedger(t *testing.T, e *integration.Env, company ids.UUID) []contacts.TechnicalLaneState {
+	t.Helper()
+	store := contacts.NewStore(database.Bind(e.Pool, func(context.Context) (ids.WorkspaceID, error) {
+		return ids.From[ids.WorkspaceKind](e.WS), nil
+	}))
+	lanes, err := store.TechnicalLaneState(
+		technicalActor(principal.WithWorkspaceID(context.Background(), e.WS)),
+		ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("reading the technical ledger: %v", err)
+	}
+	return lanes
 }

@@ -4,12 +4,14 @@
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
-import { Badge, StatCard } from "../design-system/atoms";
+import { useUrlParams } from "../app/urlstate";
+import { Badge, Disclosure, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
+import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
@@ -20,6 +22,7 @@ import {
 } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { openAnalyticsSection } from "./analytics.address";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
@@ -28,6 +31,7 @@ import {
 import { OutlookPanel } from "./brief.waterfall";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
+import { WeeklyWorkings } from "./brief.weekly.workings";
 
 import "./brief.weekly.css";
 
@@ -39,7 +43,7 @@ type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
 // The week just gone, on Brief.
 //
 // NO NAV ENTRY, deliberately. The product's own argument against one is in
-// nav.ts: Today is the single door to the work that waits on a person, and
+// nav.ts: Today is the single door to the work that waits on a contact, and
 // three sidebar rows for one question read as three separate piles. A
 // retrospective of the week is a view of that same work, so it lives here and
 // past weeks open through the picker rather than through a second destination.
@@ -53,25 +57,17 @@ export function WeeklySection() {
   const recordZone = useRecordZone();
   // undefined = the most recent. A chosen week is a different read, keyed
   // separately, so moving between weeks does not overwrite the cache of either.
-  const [week, setWeek] = useState<string | undefined>(undefined);
+  const [params, setParams] = useUrlParams();
+  const week = params.get("week");
+  const setWeek = (next: string) =>
+    setParams(new Map([...params, ["week", next]]));
   const review = useWeeklyReview(week);
   const index = useWeeklyReviewIndex();
 
   return (
-    <section id="brief-weekly" aria-label={t("brief.panel.weekly")}>
+    <section id="brief-weekly">
       <Panel
         title={t("brief.panel.weekly")}
-        sub={
-          review.data
-            ? t("brief.weekly.weekOf", {
-                day: formatDate(
-                  review.data.local_week_start,
-                  locale,
-                  recordZone,
-                ),
-              })
-            : undefined
-        }
         // The mark and the way out of the week, in that order.
         //
         // FROZEN is the claim that separates this panel from every other on
@@ -87,11 +83,19 @@ export function WeeklySection() {
           <span className="brief-weekly-mark">
             {review.data && (
               <>
-                <Badge quiet>{t("brief.weekly.frozen")}</Badge>
+                <Badge>{t("brief.weekly.frozen")}</Badge>
+                {/* Two badges, two different facts: the one beside it says how
+                    settled the week is, this says part of what is under it was
+                    written by a model. Drawn only when a narrative actually
+                    arrived — the numbers under it are a deterministic pass, so
+                    a standing mark would claim the whole panel. */}
+                {narratedByModel(review.data) && (
+                  <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                )}
                 {/* When it was written, which is what makes the badge a fact
                     rather than a decoration — a reader can tell a week closed
                     an hour ago from one closed on Monday. */}
-                <span className="t-caption brief-weekly-written">
+                <span className="t-caption">
                   {t("brief.weekly.written", {
                     at: formatDateTime(
                       review.data.generated_at,
@@ -109,81 +113,24 @@ export function WeeklySection() {
                 onChange={(next) => setWeek(next)}
                 options={index.data.map((start) => ({
                   value: start,
-                  label: formatDate(start, locale, recordZone),
+                  label: formatDate(
+                    middayInstant(start, recordZone),
+                    locale,
+                    recordZone,
+                  ),
                 }))}
               />
             )}
           </span>
         }
       >
-        <PanelBody>
-          <WeeklyBody review={review.data ?? null} state={readState(review)} />
-        </PanelBody>
+        {/* No body around the whole week: the panel's sections are its own
+            direct children, so each one takes the pane's interval and the seam
+            between two of them is the panel's rather than a margin a screen
+            picked. */}
+        <WeeklyBody review={review.data ?? null} state={readState(review)} />
       </Panel>
     </section>
-  );
-}
-
-/**
- * The week's workings, under the strip.
- *
- * Five readings that answer "how did the week go" rather than "what did the week
- * produce" — how much of the queue was worked, how proposals were decided, how
- * many deals moved without closing. They were slots six to ten of a ten-slot
- * strip, where they made the row fold into two ranks and cost the outcomes their
- * one-comparison reading.
- *
- * A definition list, not more cards: these are looked up one at a time by
- * somebody who already read the strip, which is the opposite of the strip's
- * read-across claim.
- */
-function WeeklyWorkings({
-  counts,
-}: Readonly<{ counts: WeeklyReview["counts"] }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const n = (value: number) => formatNumber(value, locale);
-  return (
-    <dl className="brief-weekly-workings">
-      <Working
-        label={t("brief.weekly.tasksDelivered")}
-        value={t("brief.weekly.ofDue", {
-          done: n(counts.tasks_done),
-          due: n(counts.tasks_due),
-        })}
-      />
-      <Working
-        label={t("brief.weekly.dealsMoved")}
-        value={n(counts.deals_moved)}
-      />
-      <Working
-        label={t("brief.weekly.dealsLost")}
-        value={n(counts.deals_lost)}
-      />
-      <Working
-        label={t("brief.weekly.decided")}
-        value={t("brief.weekly.acceptedRejected", {
-          accepted: n(counts.proposals_accepted),
-          rejected: n(counts.proposals_rejected),
-        })}
-      />
-      <Working
-        label={t("brief.weekly.queueWorked")}
-        value={t("brief.weekly.actedDismissed", {
-          acted: n(counts.brief_items_acted),
-          dismissed: n(counts.brief_items_dismissed),
-        })}
-      />
-    </dl>
-  );
-}
-
-function Working({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <div className="brief-weekly-working">
-      <dt className="t-caption">{label}</dt>
-      <dd className="t-body">{value}</dd>
-    </div>
   );
 }
 
@@ -201,23 +148,31 @@ function Working({ label, value }: Readonly<{ label: string; value: string }>) {
  * in fact nobody looked.
  */
 function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
-  const t = useT();
   if (!review.narrated_at) {
-    return (
-      <p className="brief-weekly-narrative brief-weekly-narrative-absent t-caption">
-        {t("brief.weekly.noNarrative")}
-      </p>
-    );
+    return null;
   }
   if (!review.narrative) {
     return null;
   }
+  // Indigo on the SENTENCE and not on the panel around it. The panel also
+  // carries the week's outlook, its scorecard and its five frozen figures, and
+  // every one of those is a deterministic pass — a tinted panel head would
+  // claim a model wrote the numbers too.
   return (
-    <div className="brief-weekly-narrative">
-      <ProvenanceTag provenance={{ kind: "agent" }} />
-      <p>{review.narrative}</p>
-    </div>
+    <Panel tone="ai" className="brief-weekly-narrative">
+      <PanelBody className="brief-weekly-narrative-text">
+        <ProvenanceTag provenance={{ kind: "agent" }} />
+        <p>{review.narrative}</p>
+      </PanelBody>
+    </Panel>
   );
+}
+
+/** Whether a model actually wrote a sentence about this week — which is neither
+ *  "a pass ran" nor "there is a sentence field". Both the head's badge and the
+ *  narrative's own tint answer to it, so they cannot come to disagree. */
+function narratedByModel(review: WeeklyReview): boolean {
+  return Boolean(review.narrated_at && review.narrative);
 }
 
 /** The outcome as a word. A lookup rather than a template key, because a
@@ -275,18 +230,21 @@ function wonPace(
   review: WeeklyReview,
   locale: Locale,
   t: Translator,
+  zone: string,
 ): string | undefined {
   const pipeline = review.pipeline;
   if (pipeline === undefined) {
     return undefined;
   }
   const value = formatMoney(pipeline.won_minor, pipeline.currency, locale);
-  const before = review.prior?.pipeline;
-  if (before === undefined || before.currency !== pipeline.currency) {
+  const prior = review.prior;
+  const before = prior?.pipeline;
+  if (!prior || before === undefined || before.currency !== pipeline.currency) {
     return value;
   }
   return t("brief.weekly.wonVsPrior", {
     value,
+    week: formatDate(middayInstant(prior.local_week_start, zone), locale, zone),
     delta: formatSignedMoney(
       pipeline.won_minor - before.won_minor,
       pipeline.currency,
@@ -345,129 +303,180 @@ function WeeklyBody({
     }
     const delta = now - before;
     return (
-      <span className="brief-weekly-delta t-caption">
+      <span className="t-caption">
         {t("brief.weekly.sincePrior", {
           delta: formatSignedNumber(delta, locale),
+          week: formatDate(
+            middayInstant(
+              review.prior?.local_week_start ?? review.local_week_start,
+              recordZone,
+            ),
+            locale,
+            recordZone,
+          ),
         })}
       </span>
     );
   };
   return (
     <>
-      <WeeklyNarrative review={review} />
-      {/* Where the week was landing, before what the rep did about it: a
-          retrospective is read outcome-first, and the counts below answer
-          "what did I do" against the figure this answers "about what". */}
-      <OutlookPanel
-        outlook={review.outlook ?? []}
-        locale={locale}
-        horizon={horizon}
-        onHorizon={setHorizon}
-      />
-      {/* How well the week went, after where it was landing and before the
+      {/* The week SAID, in one block: the sentence about it and where it was
+          landing. Two readings of the same week, so they share a body and the
+          body's own stack sets the interval — before this each paid a browser
+          margin and an empty state's padding on top of it, which put two
+          sentences 40px apart with nothing between them. */}
+      <PanelBody className="brief-weekly-outcomes">
+        <p className="t-sub">{t("brief.weekly.basis")}</p>
+        {/* On a phone the strip is a list, not ten boxes stacked. */}
+        <StatStrip testId="weekly-strip">
+          {c.tasks_completed !== undefined && (
+            <StatCard
+              narrow="row"
+              label={t("brief.weekly.tasksCompleted")}
+              value={formatNumber(c.tasks_completed, locale)}
+              detail={since(c.tasks_completed, prior?.tasks_completed)}
+            />
+          )}
+          <StatCard
+            narrow="row"
+            label={t("brief.week.lostLabel")}
+            value={formatNumber(c.deals_lost, locale)}
+            detail={since(c.deals_lost, prior?.deals_lost)}
+          />
+          {/* No stage-change slot: the workings list below already reports the
+              deals that moved without closing, and one fact spelled on two
+              surfaces of one screen makes a reader check whether they differ.
+              The strip carries the week's OUTCOMES; movement is a working. */}
+          <StatCard
+            narrow="row"
+            label={t("brief.weekly.planCommitmentsKept")}
+            value={
+              c.commitments_due === 0
+                ? t("brief.weekly.noCommitments")
+                : t("brief.weekly.ofDue", {
+                    done: formatNumber(c.commitments_kept, locale),
+                    due: formatNumber(c.commitments_due, locale),
+                  })
+            }
+            detail={since(c.commitments_kept, prior?.commitments_kept)}
+          />
+          <StatCard
+            narrow="row"
+            label={t("brief.weekly.dealsWon")}
+            value={formatNumber(c.deals_won, locale)}
+            // Value uses the frozen close-time exchange rates.
+            detail={
+              wonPace(review, locale, t, recordZone) ??
+              since(c.deals_won, prior?.deals_won)
+            }
+          />
+          <StatCard
+            narrow="row"
+            label={t("brief.weekly.leadsAnswered")}
+            value={
+              c.leads_routed === 0
+                ? t("brief.weekly.noLeads")
+                : t("brief.weekly.ofRouted", {
+                    answered: formatNumber(c.leads_answered_in_target, locale),
+                    routed: formatNumber(c.leads_routed, locale),
+                  })
+            }
+            detail={since(
+              c.leads_answered_in_target,
+              prior?.leads_answered_in_target,
+            )}
+          />
+          <StatCard
+            narrow="row"
+            label={t("brief.weekly.meetingsHeld")}
+            value={
+              c.meetings_held === 0
+                ? t("brief.weekly.noMeetings")
+                : t("brief.weekly.ofMeetings", {
+                    withStep: formatNumber(c.meetings_with_next_step, locale),
+                    held: formatNumber(c.meetings_held, locale),
+                  })
+            }
+            detail={since(c.meetings_held, prior?.meetings_held)}
+          />
+          <StatCard
+            narrow="row"
+            label={t("brief.weekly.carriedOver")}
+            value={formatNumber(c.tasks_carried_over, locale)}
+            detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
+          />
+        </StatStrip>
+        <Disclosure summary={t("brief.readings.summary")}>
+          <WeeklyWorkings counts={c} />
+        </Disclosure>
+      </PanelBody>
+      {review.deals.length > 0 && (
+        <PanelBody>
+          <ul className="brief-weekly-deals">
+            {review.deals.map((deal) => (
+              <li key={`${deal.deal_id}-${deal.occurred_at}`}>
+                {/* The LABEL, not a lookup. It was frozen when the review was
+                    written, so a deal renamed or deleted since still reads as
+                    it did that week — which is why this is a plain anchor and
+                    not `EntityRef`: resolving the name would undo the freeze.
+                    The ADDRESS is safe to build from the frozen id either way;
+                    a deal that has since gone answers 404, which is the honest
+                    outcome for a week that is over. */}
+                <a
+                  className="brief-weekly-deal-name link-button"
+                  href={routeHash({ screen: "deals", id: deal.deal_id })}
+                >
+                  {deal.label}
+                </a>
+                <span className="t-caption">
+                  {outcomeWord(t, deal.outcome)}
+                  {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
+                </span>
+                <time
+                  className="brief-weekly-deal-when t-caption"
+                  dateTime={deal.occurred_at}
+                >
+                  {formatDate(deal.occurred_at, locale, recordZone)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        </PanelBody>
+      )}
+      <Disclosure summary={t("brief.week.supporting")}>
+        <PanelBody className="brief-weekly-week">
+          <WeeklyNarrative review={review} />
+          {/* Where the week was landing, before what the rep did about it: a
+            retrospective is read outcome-first, and the counts below answer
+            "what did I do" against the figure this answers "about what". */}
+          <OutlookPanel
+            outlook={review.outlook ?? []}
+            locale={locale}
+            horizon={horizon}
+            onHorizon={setHorizon}
+            onOpenForecast={() => openAnalyticsSection("forecast")}
+          />
+        </PanelBody>
+        {/* How well the week went, after where it was landing and before the
           outcome strip's tallies. Absent blocks draw nothing at all — the
           panel never substitutes zeros for work the rep did not have. */}
-      <ScorecardPanel scorecard={review.scorecard} />
-      {/* What the week TAUGHT, after how well it went. Last because it is the
+        <ScorecardPanel scorecard={review.scorecard} />
+        {/* What the week TAUGHT, after how well it went. Last because it is the
           only part of the retrospective that is a claim rather than a count,
           and a reader should meet the numbers before the lessons drawn from
           them. */}
-      <LearningsPanel learnings={review.learnings} />
-      {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
-          is a table wearing a strip's clothes — at 1280 the row folded to two
-          ranks of five and stopped being one reading at all (#3709).
-          These five are the week's outcomes: what the rep planned and kept,
-          what closed, how fast new business was answered, whether meetings led
-          anywhere, and what did not get finished. The other five are workings
-          — how the queue was worked, how proposals were decided — and they
-          read as a list under the strip, where they are still available to
-          anyone who wants them and no longer compete with the outcomes. */}
-      <StatStrip testId="weekly-strip">
-        <StatCard
-          label={t("brief.weekly.planCommitmentsKept")}
-          value={t("brief.weekly.ofDue", {
-            done: formatNumber(c.commitments_kept, locale),
-            due: formatNumber(c.commitments_due, locale),
-          })}
-          detail={since(c.commitments_kept, prior?.commitments_kept)}
-        />
-        <StatCard
-          label={t("brief.weekly.dealsWon")}
-          value={formatNumber(c.deals_won, locale)}
-          // What those wins were WORTH, at each deal's own close-time rate.
-          //
-          // The count alone says a week of five small renewals and a week of
-          // one company-making deal are the same week. The money was computed,
-          // FX-converted, stored with the currency it is in, and served — and
-          // read by nothing until now.
-          //
-          // It rides the won slot rather than taking a sixth: five is what a
-          // strip can be read across as one comparison, and a tenth slot folded
-          // the row into two ranks at 1280 (#3709). The one detail line carries
-          // the value AND its change against the week before, which is the
-          // pace reading — it belongs here rather than on the morning, whose
-          // strip is bound to one same-set population.
-          detail={
-            wonPace(review, locale, t) ?? since(c.deals_won, prior?.deals_won)
-          }
-        />
-        <StatCard
-          label={t("brief.weekly.leadsAnswered")}
-          value={t("brief.weekly.ofRouted", {
-            answered: formatNumber(c.leads_answered_in_target, locale),
-            routed: formatNumber(c.leads_routed, locale),
-          })}
-          detail={since(
-            c.leads_answered_in_target,
-            prior?.leads_answered_in_target,
-          )}
-        />
-        <StatCard
-          label={t("brief.weekly.meetingsHeld")}
-          value={t("brief.weekly.ofMeetings", {
-            withStep: formatNumber(c.meetings_with_next_step, locale),
-            held: formatNumber(c.meetings_held, locale),
-          })}
-          detail={since(c.meetings_held, prior?.meetings_held)}
-        />
-        <StatCard
-          label={t("brief.weekly.carriedOver")}
-          value={formatNumber(c.tasks_carried_over, locale)}
-          detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
-        />
-      </StatStrip>
-      <WeeklyWorkings counts={c} />
-      {review.deals.length > 0 && (
-        <ul className="brief-weekly-deals">
-          {review.deals.map((deal) => (
-            <li key={`${deal.deal_id}-${deal.occurred_at}`}>
-              {/* The LABEL, not a lookup. It was frozen when the review was
-                  written, so a deal renamed or deleted since still reads as it
-                  did that week — which is why this is a plain anchor and not
-                  `EntityRef`: resolving the name would undo the freeze. The
-                  ADDRESS is safe to build from the frozen id either way; a deal
-                  that has since gone answers 404, which is the honest outcome
-                  for a week that is over. */}
-              <a
-                className="brief-weekly-deal-name link-button"
-                href={routeHash({ screen: "deals", id: deal.deal_id })}
-              >
-                {deal.label}
-              </a>
-              <span className="brief-weekly-deal-outcome t-caption">
-                {outcomeWord(t, deal.outcome)}
-                {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
-              </span>
-              <time
-                className="brief-weekly-deal-when t-caption"
-                dateTime={deal.occurred_at}
-              >
-                {formatDate(deal.occurred_at, locale, recordZone)}
-              </time>
-            </li>
-          ))}
-        </ul>
-      )}
+        <LearningsPanel learnings={review.learnings} />
+        {/* THE STRIP CARRIES OUTCOMES, THE LIST UNDER IT CARRIES WORKINGS. A
+          strip is read ACROSS as one comparison, and a row that grew to ten
+          was a table wearing a strip's clothes: at 1280 it folded to two ranks
+          and stopped being one reading at all. So what the rep planned and
+          kept, what closed, how fast new business was answered, whether
+          meetings led anywhere and what did not get finished stay in the row,
+          and how the queue was worked, how proposals were decided and how many
+          deals moved without closing read as a list beneath it — still
+          available to anyone who wants them, no longer competing with the
+          outcomes, and each fact on one surface only. */}
+      </Disclosure>
     </>
   );
 }

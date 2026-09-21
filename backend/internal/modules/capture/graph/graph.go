@@ -276,7 +276,7 @@ func (c *Connector) pullFolder(
 			// cursor so the next cycle retries from the same watermark.
 			return "", err
 		}
-		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, sentByOwner); err != nil {
+		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, sentByOwner); err != nil {
 			return "", err
 		}
 	}
@@ -308,7 +308,7 @@ func (c *Connector) selectMessages(ctx context.Context, access, folder, start st
 // a no-op; only a real Sink write fault returns a non-nil error (which stops
 // the pull). It is a package function (no receiver) so a pull holds no shared
 // state.
-func captureOne(ctx context.Context, raw []byte, sink connector.Sink, bounces connector.BounceSink, owner string, sentByOwner bool) (captured bool, err error) {
+func captureOne(ctx context.Context, raw []byte, sink connector.Sink, bounces connector.BounceSink, owner, folderID string, sentByOwner bool) (captured bool, err error) {
 	msg, err := mailmap.Parse(raw, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the Gmail connector)
@@ -317,7 +317,17 @@ func captureOne(ctx context.Context, raw []byte, sink connector.Sink, bounces co
 		return false, mailmap.RecordIfBounce(ctx, raw, bounces)
 	}
 	msg = msg.AttestSentByOwner(sentByOwner)
-	if _, err := sink.Upsert(ctx, msg.ToRecord(connectorName, raw)); err != nil {
+	rec := msg.ToRecord(connectorName, raw)
+	// Which folder Graph filed it in, so an owner who keeps one out of the CRM
+	// is answered before the message is stored. Set here rather than in
+	// mailmap.ToRecord because the folder is provider metadata off the message
+	// resource and not in the MIME bytes — which is also why Normalize, the
+	// pure re-parse of those bytes, carries none. Empty on a delta round that
+	// did not name a folder, which simply matches no rule.
+	if folderID != "" {
+		rec.Containers = []string{connector.Container(connectorName, folderID)}
+	}
+	if _, err := sink.Upsert(ctx, rec); err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return false, nil
 		}

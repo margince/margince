@@ -40,7 +40,7 @@ func TestCompanyContextRolloutStagesAreMonotonic(t *testing.T) {
 
 func TestCompanyContextCapabilitiesDefaultToOnboarding(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	companyHandlers{}.GetCompanyContextCapabilities(
+	companyHandlers{}.GetAnchorCompanyContextCapabilities(
 		recorder,
 		httptest.NewRequest(http.MethodGet, "/v1/company/context/capabilities", nil),
 	)
@@ -67,13 +67,13 @@ func TestCompanySiteReadHandlersRefuseWhenRolloutIsOff(t *testing.T) {
 		call func(http.ResponseWriter, *http.Request)
 	}{
 		{name: "start", call: func(w http.ResponseWriter, r *http.Request) {
-			handlers.StartCompanySiteRead(w, r, crmcontracts.StartCompanySiteReadParams{})
+			handlers.StartAnchorCompanySiteRead(w, r, crmcontracts.StartAnchorCompanySiteReadParams{})
 		}},
 		{name: "get", call: func(w http.ResponseWriter, r *http.Request) {
-			handlers.GetCompanySiteRead(w, r, openapi_types.UUID{})
+			handlers.GetAnchorCompanySiteRead(w, r, openapi_types.UUID{})
 		}},
 		{name: "confirm", call: func(w http.ResponseWriter, r *http.Request) {
-			handlers.ConfirmCompanySiteRead(w, r, openapi_types.UUID{}, crmcontracts.ConfirmCompanySiteReadParams{})
+			handlers.ConfirmAnchorCompanySiteRead(w, r, openapi_types.UUID{}, crmcontracts.ConfirmAnchorCompanySiteReadParams{})
 		}},
 	}
 	for _, test := range tests {
@@ -93,7 +93,7 @@ func TestSiteReadResolutionsPreserveDecisions(t *testing.T) {
 	}
 	value := "Owner-entered value"
 	input := []crmcontracts.CompanySiteReadResolution{{
-		Key: "profile:industry", Action: crmcontracts.UseValue, Value: &value,
+		Key: "profile:industry", Action: crmcontracts.CompanySiteReadResolutionActionUseValue, Value: &value,
 	}}
 	got := siteReadResolutions(&input)
 	if len(got) != 1 || got[0].Key != input[0].Key || got[0].Action != string(input[0].Action) ||

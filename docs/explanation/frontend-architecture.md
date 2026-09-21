@@ -30,7 +30,7 @@ consequences are load-bearing:
   other is `screens/connected-agents.tsx` reading
   `/.well-known/oauth-protected-resource`, which is **not a `/v1` route at all**
   and so was never the typed client's to carry.
-- **No tenant selector on the wire.** One installation serves one organization
+- **No tenant selector on the wire.** One installation serves one company
   (A107/ADR-0061) and the server resolves it itself. The client sends the
   session cookie and nothing else — `auth.test.tsx` and `preferences.test.tsx`
   assert the absence of a workspace header, so re-introducing one fails the
@@ -86,7 +86,7 @@ it, so a `?utm=…` never leaks into a screen name.
   only when it is a state machine rather than a page, and exactly one has:
   `screens/onboarding-conversation/`, where the conversation machine, its acts,
   its scenes and its restore logic each need their own file. Everything else —
-  including surfaces as large as `organizations.tsx` and `deals.tsx` — stays a
+  including surfaces as large as `companies.tsx` and `deals.tsx` — stays a
   file with co-located `*.test.tsx` and `*.stories.tsx`. A route with no screen
   behind it renders the honest pending state (`App.tsx`'s `PendingScreen`),
   never a blank page.
@@ -150,7 +150,7 @@ the splash) use the same rail-less frame.
 
 ### A nav label is presentation and never a route id
 
-This is the convention most likely to be got wrong by the next person adding a
+This is the convention most likely to be got wrong by the next contact adding a
 destination, so it is stated in `nav.ts`, again in `palette.tsx`, and here.
 `NavItem.screen` is the **route id** — the stable English name in the hash, in
 `App.tsx`'s switch, and in every `href`. `NavItem.labelKey` is a **catalog key**
@@ -245,7 +245,7 @@ than brand colour, and a literal anywhere else fails the gate.
 ## Provenance
 
 **`EvidenceMark` is THE provenance affordance.** A value that came from
-somewhere other than a person typing it carries a dotted underline; opening the
+somewhere other than a contact typing it carries a dotted underline; opening the
 mark says where it came from, how sure the system was, the text it was read
 from, when — and offers a way through to that field's full history.
 
@@ -266,7 +266,7 @@ The older primitives survive in two places, both deliberate:
   (`screens/onboarding-conversation/confirm-card.tsx`,
   `screens/onboarding-company-form.tsx`), the Company-context settings screen,
   and the record surfaces that show a single provenance line
-  (`people.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
+  (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
   `StagedProposal`/`FieldDiff`/`ApprovalGate` are the composed forms of the same
   vocabulary.
 
@@ -320,11 +320,11 @@ discipline even if the test tree regresses.
 | Gate | Where it lives | What fails it |
 |---|---|---|
 | Token purity | `frontend/scripts/check-ds-purity.sh` | a hex/`rgb()`/`rgba()`/`hsl()`/`hsla()`/`oklch()` literal in hand-written shipped `.ts`/`.tsx`/`.css` under `frontend/src` or `extensions/*/frontend`. It skips four names: `tokens.css` (the literals are its job), `provider-mark.tsx` (third-party brand marks), `*.test.*` (fixtures) and the generated `schema.d.ts`. `index.html` is exempt from the *discipline* too, but for a different reason — the script walks `frontend/src` and `extensions/*/frontend`, and `index.html` sits above both, so it is not scanned at all. Fails closed if it scans zero files |
-| Font lock | `frontend/scripts/check-font-lock.sh` | a `font-family` outside Outfit / DM Sans / JetBrains Mono + the named generic fallbacks |
+| Font lock | `frontend/scripts/check-font-lock.sh` | a `font-family` outside Outfit (display) / Geist (body, figures included) / Geist Mono (code only) + the named generic fallbacks; and mono anywhere but `code`, `pre`, `samp` and `.code-block`, which `design-system/mono.test.ts` refuses too |
 | Icon glyphs | `frontend/scripts/check-icon-glyph.sh` | an emoji in rendered code (comments are stripped — the 🟢/🟡 tier notation is house style and renders through `AutonomyDot`) |
 | Spacing | `frontend/scripts/check-ds-spacing.sh` | a **newly added** inline `margin`/`padding`/`gap` px literal; diff-scoped vs `origin/main`, waived in-line with `// ds:ignore <reason>` |
 | Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that re-spaces a design-system primitive the design system spaces, or re-sizes one it sizes — `font-size`, `line-height`, `letter-spacing` (both corpora are derived from `design-system/*.css` on every run), or that spells a rung where a role exists: `*-actions` gap, `*-cards` gap, `*-card`/`*-panel` padding. **Whole-tree**, not diff-scoped — the tree was cleared to zero first, and promoting a class into the design system turns untouched screen rules into findings that no diff contains. A variant with no role to name it is waived in-line with `/* ds:ignore <reason> */`. Its verdict is tested directly, against fixture trees, in `check-ds-spacing-roles.test.sh` |
-| Type utilities | `design-system/type-one-spelling.test.ts` | a screen or app-chrome rule whose own declarations say everything a `.t-*` utility in `base.css` says — `font-size: var(--fs-meta); color: var(--textMeta)` is `.t-caption` under any name — instead of the element carrying the class (the utilities are read from `base.css`, never listed); and, as a per-sheet ratchet that may only fall, a rule drawing uppercase micro-type by hand. `design-system/` and `mcp-apps/` are exempt from the first arm: one defines the primitives, the other does not load the class layer. Waived on the `font-size` line with `/* ds:ignore <reason> */` |
+| Type source | `design-system/type-source.test.ts` | type declared by VALUE anywhere but `tokens.css`. Every `.css` under `frontend/src` and every non-test style object: `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`, `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two layout facts are excepted and only inside the two UA resets. It refuses capitals by every road — `font-variant-caps`, the `font-variant` shorthand, the small-caps features — and a `.toUpperCase()` whose result is RENDERED. Fails closed: a corpus missing `app.css`, under 100 stylesheets or under 100 components is a failure rather than an empty pass |
 | Action rows | `design-system/actionrow.test.ts` | a container whose element children are two or more buttons and nothing else, that does not get `gap: var(--gapActions)` from a class it names or from its own inline style — including a class **no stylesheet defines**, which is the failure a CSS-only gate cannot see. Waived in line with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` produces a diff in `src/api/schema.d.ts` / `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | formatting and lint findings over `src` + `index.html` |

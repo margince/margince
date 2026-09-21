@@ -66,7 +66,7 @@ func (m attentionMeetings) Today(
 		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
-			NeedsPrep: needsPrep, PrepKnown: known, PersonID: personOnMeeting(row),
+			NeedsPrep: needsPrep, PrepKnown: known, ContactID: contactOnMeeting(row),
 			HostUserID: hostOfMeeting(row),
 		})
 	}
@@ -84,7 +84,7 @@ func (m attentionMeetings) Today(
 //
 // It follows openTasksDueBy exactly, including where each answer comes FROM:
 // "mine" is the acting reader, read off the context, while "owned by" is the
-// named person the caller passed. A false answer means there is no reader to
+// named contact the caller passed. A false answer means there is no reader to
 // answer for, which is a page of nothing rather than a refusal — reading every
 // meeting and calling the result theirs is the widening this narrowing exists to
 // prevent.
@@ -140,7 +140,7 @@ func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 // whether that question could be answered at all.
 //
 // The signals are the two the row already carries: a body (the agenda or the
-// notes somebody typed) and a link to a record outside this organization (the
+// notes somebody typed) and a link to a record outside this company (the
 // customer the meeting is with). A meeting with neither is one nobody has
 // prepared.
 //
@@ -176,24 +176,24 @@ func subjectOfMeeting(row crmcontracts.Activity) string {
 	return ""
 }
 
-// personOnMeeting is whose page this meeting's brief is read on.
+// contactOnMeeting is whose page this meeting's brief is read on.
 //
-// The FIRST person link in the row's own order, which is the store's, so two
+// The FIRST contact link in the row's own order, which is the store's, so two
 // reads of an unchanged meeting choose the same page. A meeting with several
 // attendees has several honest answers and the row shows one link; picking by
 // anything cleverer here would be a ranking this lane has no basis for, and
 // picking a different one each read would move a control under the reader.
 //
-// Zero where the meeting links no person at all — an internal meeting, or one
+// Zero where the meeting links no contact at all — an internal meeting, or one
 // whose attendees this reader may not see, since the links come back already
 // scoped. The row then offers no brief rather than a link to somebody's page
 // chosen at random.
-func personOnMeeting(row crmcontracts.Activity) ids.UUID {
+func contactOnMeeting(row crmcontracts.Activity) ids.UUID {
 	if row.Links == nil {
 		return ids.UUID{}
 	}
 	for _, link := range *row.Links {
-		if link.EntityType == crmcontracts.ActivityLinkEntityTypePerson {
+		if link.EntityType == crmcontracts.ActivityLinkEntityTypeContact {
 			return ids.UUID(link.EntityId)
 		}
 	}
@@ -206,20 +206,44 @@ func personOnMeeting(row crmcontracts.Activity) ids.UUID {
 // The STATUS FILTER IS IN SQL here, unlike the forward lane above, and the
 // difference is the direction. That lane's window is the rest of today, so the
 // non-booked rows it drops in Go come out of a set the database already made
-// small. This window is the day so far, where almost every meeting is settled:
-// filtering after the read would spend the page on rows to discard and push the
-// genuinely unreported meeting off the end, so the lane would draw "nothing to
-// report" over real work. `AwaitingOutcome` asks the database instead.
+// small. This window reaches back a fortnight, where almost every meeting is
+// settled: filtering after the read would spend the page on rows to discard and
+// push the genuinely unreported meeting off the end, so the lane would draw
+// "nothing to report" over real work. `AwaitingOutcome` asks the database
+// instead.
+//
+// AND IT READS DEEPER THAN IT RENDERS, which the forward lane has no need to.
+// The store orders `occurred_at DESC` (activityread.orderClause) and applies
+// the limit in SQL, so asking it for the lane's cap returns the NEWEST rows in
+// the window — while this lane shows the OLDEST first, because the meeting
+// waiting longest is the one whose record has been wrong longest. Asked for
+// exactly the cap, a fortnight holding more unanswered meetings than fit would
+// hand back the freshest dozen and sort those, dropping the very rows the
+// ordering exists to surface. So it reads a deeper page, sorts, and trims to
+// the cap at the end.
 type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
+
+// unansweredReadDepth is how many rows the read above asks for per lane card.
+//
+// The multiple is what makes the oldest-first ordering true rather than
+// approximately true: it is the number of unanswered meetings a fortnight may
+// hold before the newest-first page stops containing the whole set. Deep enough
+// that an ordinary backlog sorts correctly, bounded so a pathological one costs
+// a page rather than a scan. A window holding more than this still renders its
+// cap and still reports itself cut — the reader is told there is more, which is
+// the honest answer — but the dozen it shows are no longer guaranteed to be the
+// dozen oldest.
+const unansweredReadDepth = 8
 
 func (m attentionMeetingsAwaitingOutcome) Since(
 	ctx context.Context, from, until time.Time, limit int,
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.MeetingAwaitingOutcome, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
+	deep := limit * unansweredReadDepth
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, Limit: &limit, ReadableOnly: true,
+		AwaitingOutcome: true, Limit: &deep, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -240,9 +264,15 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 		})
 	}
 	// Longest unanswered first: the store returns activities newest-first, and
-	// the meeting that ended this morning has been waiting longer than the one
-	// that ended ten minutes ago. A reader clearing the top of this lane is
-	// clearing the oldest debt rather than the freshest.
+	// the meeting that ended last week has been waiting longer than the one that
+	// ended ten minutes ago. A reader clearing the top of this lane is clearing
+	// the oldest debt rather than the freshest.
 	sort.SliceStable(over, func(i, j int) bool { return over[i].StartedAt.Before(over[j].StartedAt) })
+	// Trimmed AFTER the sort, so what the cap keeps is the oldest rather than
+	// whichever rows the database happened to return first. The caller bounds
+	// the lane by what it renders, and the truncation flag counts this slice.
+	if len(over) > limit {
+		over = over[:limit]
+	}
 	return over, nil
 }

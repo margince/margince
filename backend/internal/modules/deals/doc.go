@@ -11,10 +11,16 @@
 //
 // Tables owned: deal, deal_stage_history, deal_forecast_history, pipeline,
 // stage, stage_exit_criterion, deal_stage_evidence,
-// stage_progression_outcome, fx_rate,
+// stage_progression_outcome, stage_progression_policy, fx_rate,
+// close_date_run, close_date_run_member (the nightly close-date pass and the
+// eligible set frozen at its start, so a pass resumes where it stopped and can
+// say how much of that set it covered), deal_correction (one correction's
+// lifecycle, so it can be named, taken back, and not re-applied afterwards),
 // product, offer, offer_line_item, offer_template (the E03.16-.20 offer
 // engine: rate-card products, versioned deal-bound offers with derived money
-// totals).
+// totals), deal_acquisition_source (the administered business channels a deal
+// is attributed to — the opportunity's origin, distinct from the lead
+// vocabulary's record provenance).
 //
 // The project moved OUT of this module into modules/projects, superseding
 // ADR-0073 — see that package's doc.go for the reasoning and for the two

@@ -1,6 +1,7 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "./design-system/heading";
 import {
   memoryStorage,
   renderApp,
@@ -62,10 +63,10 @@ vi.mock("@composition/extensions", () => ({
 
 vi.mock("@composition/screens", () => ({
   extensionScreens: {
-    notes: () => <h1>Demo Notepad</h1>,
+    notes: () => <Heading size="xlarge">Demo Notepad</Heading>,
     // A unit this installation did NOT compose. It must never render: the
     // descriptor lookup is the gate, and an entry here is not one.
-    "crm-ghost": () => <h1>Ghost</h1>,
+    "crm-ghost": () => <Heading size="xlarge">Ghost</Heading>,
   },
 }));
 
@@ -119,7 +120,6 @@ describe("extension routes (composed screen registry)", () => {
   it("falls back to the descriptor card for a unit whose name is an Object.prototype member", async () => {
     window.location.hash = "#/ext/constructor";
     renderApp();
-    expect(await screen.findByText("Published operations")).toBeTruthy();
     expect(await screen.findByText(/Ping/)).toBeTruthy();
   });
 

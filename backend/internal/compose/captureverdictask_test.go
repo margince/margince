@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The request is the whole security perimeter of this site: the sender's own
@@ -84,7 +85,7 @@ func TestVerdictRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 	asked := capture.PendingCounterparty{ID: ids.NewV7()}
 	other := ids.NewV7()
-	ok := verdictResult{ID: asked.ID.String(), Verdict: capture.KindPerson, Confidence: 0.9}
+	ok := verdictResult{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 0.9}
 
 	cases := []struct {
 		name    string
@@ -99,7 +100,7 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 			// An answer about someone who was not the subject of this call must
 			// never be applied.
 			name:    "an id nobody asked about",
-			results: []verdictResult{{ID: other.String(), Verdict: capture.KindPerson, Confidence: 0.9}},
+			results: []verdictResult{{ID: other.String(), Verdict: capture.KindContact, Confidence: 0.9}},
 			wantMsg: "was not requested",
 		},
 		{
@@ -116,12 +117,12 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 		},
 		{
 			name:    "confidence above one",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindPerson, Confidence: 1.5}},
+			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 1.5}},
 			wantMsg: "outside [0,1]",
 		},
 		{
 			name:    "confidence below zero",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindPerson, Confidence: -0.1}},
+			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: -0.1}},
 			wantMsg: "outside [0,1]",
 		},
 		{
@@ -154,7 +155,7 @@ func TestValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 	asked := capture.PendingCounterparty{ID: ids.NewV7()}
 	flood := strings.Repeat("A", 100_000)
 	msg := validateVerdictPayload(verdictPayload{
-		Results: []verdictResult{{ID: flood, Verdict: capture.KindPerson, Confidence: 0.9}},
+		Results: []verdictResult{{ID: flood, Verdict: capture.KindContact, Confidence: 0.9}},
 	}, asked)
 
 	if msg == "" {
@@ -202,4 +203,78 @@ func TestVerdictPayloadStillRefusesAnOutOfRangeConfidence(t *testing.T) {
 	if !strings.Contains(msg, "outside [0,1]") {
 		t.Errorf("refusal %q does not say what was wrong with the value", msg)
 	}
+}
+
+// The prompt says WHO REACHED WHOM, and it is the fact the judgment turns on.
+//
+// Every sender used to be rendered "From:", including addresses the mailbox
+// owner had written TO. That is how a property manager the founder emailed was
+// judged as a stranger writing in and became a workspace-visible contact: the
+// model was told the desk had contacted the business, which it never had.
+func TestTheVerdictPromptSaysWhichWayTheMessageWent(t *testing.T) {
+	t.Parallel()
+	outbound := capture.PendingCounterparty{
+		ID: ids.NewV7(), Email: "desk@example.com", DisplayName: "Some Desk",
+		Direction: "outbound", Subject: "Access card", Body: "Could you reissue it?",
+	}
+
+	prompt := promptTextOf(verdictRequest(outbound))
+
+	if strings.Contains(prompt, "From: Some Desk") {
+		t.Error("an address the owner WROTE TO is described as having written in")
+	}
+	if !strings.Contains(prompt, "To: Some Desk") {
+		t.Errorf("the prompt does not say the owner wrote to this address:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "never written back") {
+		t.Error("the prompt does not say the address has never answered, which is what " +
+			"separates an intention from a relationship")
+	}
+}
+
+// An address that HAS answered is described as one, so the model is not told to
+// discount a real correspondent.
+func TestTheVerdictPromptSaysWhenAnAddressHasAnswered(t *testing.T) {
+	t.Parallel()
+	answered := capture.PendingCounterparty{
+		ID: ids.NewV7(), Email: "desk@example.com", DisplayName: "Some Desk",
+		Direction: "outbound", WroteBack: true,
+	}
+
+	prompt := promptTextOf(verdictRequest(answered))
+
+	if strings.Contains(prompt, "never written back") {
+		t.Error("an address that answered us is reported as never having written back")
+	}
+	if !strings.Contains(prompt, "has written back") {
+		t.Errorf("the prompt does not report the answer we already have:\n%s", prompt)
+	}
+}
+
+// A row written before the direction was recorded says nothing rather than
+// guessing. Reading an empty direction as inbound would put the old defect back
+// for exactly the rows that carry it.
+func TestAnUnknownDirectionClaimsNeitherWay(t *testing.T) {
+	t.Parallel()
+	old := capture.PendingCounterparty{
+		ID: ids.NewV7(), Email: "desk@example.com", DisplayName: "Some Desk",
+	}
+
+	prompt := promptTextOf(verdictRequest(old))
+
+	if strings.Contains(prompt, "From: Some Desk") || strings.Contains(prompt, "To: Some Desk") {
+		t.Errorf("a row with no recorded direction is claimed to have one:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "Some Desk") {
+		t.Error("the sender is not named at all")
+	}
+}
+
+// promptTextOf reads the user message out of a built request.
+func promptTextOf(req model.Request) string {
+	var out strings.Builder
+	for _, message := range req.Messages {
+		out.WriteString(message.Content)
+	}
+	return out.String()
 }

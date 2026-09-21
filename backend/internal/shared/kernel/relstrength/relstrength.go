@@ -9,10 +9,16 @@
 // questions. PO-F-3 asks how warm a contact is to the WORKSPACE, folding
 // every activity linked to them. PO-F-3b asks how warm they are to ONE
 // COLLEAGUE, folding only the interactions that colleague was actually in
-// (ADR-0078). Same half-life, same saturation point, same reciprocity floor —
-// two scores a user will see side by side on the same screen, so a constant
-// tuned in one copy and not the other is a visible contradiction, not a
-// rounding difference.
+// (ADR-0078). Same half-life, same saturation point, same reciprocity floor,
+// and the same counting unit — two scores a user will see side by side on the
+// same screen, so a constant tuned in one copy and not the other is a visible
+// contradiction, not a rounding difference. The unit is on that list because
+// the two gather from different tables — the workspace score from
+// activity_link, the colleague score from activity_participant — and one unit
+// across both is what keeps a chat-only relationship from reading as warm on
+// the one and as never having spoken on the other.
+// Held by: TestEveryInteractionCountReadsTheSharedUnit
+// (backend/gates/interactionunit_test.go).
 //
 // The package holds no query and no storage. Callers gather counts however
 // their question requires and hand them here; that separation is what lets

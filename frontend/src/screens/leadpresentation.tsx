@@ -31,31 +31,37 @@ import { sourceLabelFor } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
 
-export function scoreTone(score: number): "success" | "warn" | undefined {
+export function scoreTone(score: number): "success" | "warning" | undefined {
   if (score >= 60) return "success";
-  if (score >= 40) return "warn";
+  if (score >= 40) return "warning";
   return undefined;
 }
 
-export const LEAD_STATUS_FILTER_OPTIONS = [
-  { value: "new", label: "lead.statusNew" },
-  { value: "contacted", label: "lead.statusContacted" },
-  { value: "engaged", label: "lead.statusEngaged" },
-  { value: "promoted", label: "lead.statusPromoted" },
-  { value: "disqualified", label: "lead.statusDisqualified" },
-] as const;
+// The word for every rung, TOTAL over the contract's union: a status the server
+// can send has a word here or this file does not compile, so no surface is left
+// with a branch for a raw enum to reach a reader through.
+const STATUS_LABEL: Record<Lead["status"], MessageKey> = {
+  new: "lead.statusNew",
+  contacted: "lead.statusContacted",
+  engaged: "lead.statusEngaged",
+  promoted: "lead.statusPromoted",
+  disqualified: "lead.statusDisqualified",
+};
+
+// The picker's ORDER, the one thing the map above does not carry: the ladder
+// reads as a progression, not an alphabet. Annotated because inferring
+// `MessageKey` five times over is more than the compiler will serialise.
+type StatusOption = Readonly<{ value: Lead["status"]; label: MessageKey }>;
+export const LEAD_STATUS_FILTER_OPTIONS: readonly StatusOption[] = (
+  ["new", "contacted", "engaged", "promoted", "disqualified"] as const
+).map((value) => ({ value, label: STATUS_LABEL[value] }));
 
 /**
- * The catalogue key for a status, shared by the badge and the record page's
- * readings strip. Exported because the strip states the SAME word the badge
- * does — a second spelling here is how one lead comes to read "Qualified" in
- * a pill and "promoted" in the slot beside it.
+ * The catalogue key for a status, shared by the badge and the readings strip,
+ * so one lead cannot read "Qualified" in a pill and "promoted" beside it.
  */
-export function leadStatusLabel(status: Lead["status"]): MessageKey | null {
-  return (
-    LEAD_STATUS_FILTER_OPTIONS.find((option) => option.value === status)
-      ?.label ?? null
-  );
+export function leadStatusLabel(status: Lead["status"]): MessageKey {
+  return STATUS_LABEL[status];
 }
 
 // The ladder's colours: a new lead is quiet, contact is in motion, engaged
@@ -73,8 +79,7 @@ function statusTone(status: Lead["status"]): "accent" | "success" | undefined {
 
 export function StatusBadge({ status }: Readonly<{ status: Lead["status"] }>) {
   const t = useT();
-  const label = leadStatusLabel(status);
-  return <Badge tone={statusTone(status)}>{label ? t(label) : status}</Badge>;
+  return <Badge tone={statusTone(status)}>{t(leadStatusLabel(status))}</Badge>;
 }
 
 export function SlaBadge({ state }: Readonly<{ state: Lead["sla_state"] }>) {
@@ -83,7 +88,7 @@ export function SlaBadge({ state }: Readonly<{ state: Lead["sla_state"] }>) {
     return <Badge tone="danger">{t("lead.sla.breached")}</Badge>;
   }
   if (state === "at_risk") {
-    return <Badge tone="warn">{t("lead.sla.atRisk")}</Badge>;
+    return <Badge tone="warning">{t("lead.sla.atRisk")}</Badge>;
   }
   return null;
 }
@@ -100,7 +105,7 @@ const LEAD_BOARD_STAGES = [
 // the leads-by-status report instead.
 //
 // They are not statuses a card can simply be MOVED to. Qualifying promotes the
-// lead into a person (and maybe a deal) and disqualifying records a reason, so
+// lead into a contact (and maybe a deal) and disqualifying records a reason, so
 // each drop opens the dialog that collects what the transition needs — the
 // server refuses a bare status PATCH into either, and rightly.
 const LEAD_TERMINAL_STAGES = [
@@ -113,6 +118,9 @@ const LEAD_TERMINAL_STAGES = [
 ] as const;
 
 type TerminalDialog = (typeof LEAD_TERMINAL_STAGES)[number]["dialog"];
+// The lead a terminal decision is waiting on: `open` outlives the close so the
+// copy still names it, and `seq` keys the dialog so a second drop asks clean.
+type Ask = { lead: Lead; dialog: TerminalDialog; open: boolean; seq: number };
 
 // How many leads each status holds, INCLUDING the archived terminal ones.
 //
@@ -211,18 +219,18 @@ function LeadCard({
         {leadIdentityName(lead) || t("lead.unnamed")}
       </span>
       {lead.company_name && (
-        <span className="deal-org">
-          <span className="deal-org-name">{lead.company_name}</span>
+        <span className="deal-company">
+          <span className="deal-company-name">{lead.company_name}</span>
         </span>
       )}
-      <span className="deal-meta">
+      <span>
         <Badge tone={scoreTone(lead.score)}>
           {t("lead.score")}: {formatNumber(lead.score, locale)}
         </Badge>
         <SlaBadge state={lead.sla_state} />
         {lead.title && <span>{lead.title}</span>}
       </span>
-      <span className="deal-meta">
+      <span>
         <span>{sourceLabelFor(lead, undefined, t)}</span>
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
@@ -257,10 +265,7 @@ export function LeadBoard({
   // where leads go to stop being work: a reader opening the board wants the
   // three they still act on, and the terminal pair folded to a count each.
   const [openTerminal, setOpenTerminal] = useState<TerminalStatus | null>(null);
-  const [pending, setPending] = useState<{
-    lead: Lead;
-    dialog: TerminalDialog;
-  } | null>(null);
+  const [pending, setPending] = useState<Ask | null>(null);
   const counts = useLeadStatusCounts();
   const terminalRows = useTerminalLeads(
     openTerminal ?? "promoted",
@@ -351,7 +356,7 @@ export function LeadBoard({
   // WHERE a dropped card lands, as one decision.
   //
   // A terminal column FIRST. Neither of those transitions is a status change:
-  // qualifying promotes the lead into a person and maybe a deal, disqualifying
+  // qualifying promotes the lead into a contact and maybe a deal, disqualifying
   // records a reason, and the server refuses a bare status PATCH into either.
   // The drop opens the dialog that collects what the transition needs; only an
   // open stage is a move.
@@ -364,9 +369,9 @@ export function LeadBoard({
     const terminal = LEAD_TERMINAL_STAGES.find((s) => s.stage === stage);
     if (terminal) {
       // No "is it already there" test: the guard above has already ruled out
-      // every terminal status, and the compiler says so — the comparison this
-      // replaced was dead code once the source had to be live.
-      setPending({ lead, dialog: terminal.dialog });
+      // every terminal status, and the compiler says so.
+      const seq = (pending?.seq ?? 0) + 1;
+      setPending({ lead, dialog: terminal.dialog, open: true, seq });
       return;
     }
     const target = LEAD_BOARD_STAGES.find((s) => s.stage === stage);
@@ -378,24 +383,24 @@ export function LeadBoard({
   return (
     <>
       {move.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(move.error, t)}
         </p>
       )}
       {rows.length > 0 && live.length === 0 && (
-        <p className="t-caption">{t("lead.boardTerminalOnly")}</p>
+        <p>{t("lead.boardTerminalOnly")}</p>
       )}
       {/* The two reads behind the terminal columns, when they fail. A failed
           report renders as 0 and a failed row read as an empty column, and
           both read as fact — "nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("lead.boardCountsUnavailable")}
         </p>
       )}
       {terminalRows.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("lead.boardTerminalRowsUnavailable")}
         </p>
       )}
@@ -405,7 +410,6 @@ export function LeadBoard({
         columnExtras={(column) =>
           column.stage === openTerminal && terminalRows.hasNextPage ? (
             <Button
-              small
               onClick={() => {
                 terminalRows.fetchNextPage();
               }}
@@ -483,33 +487,29 @@ export function LeadBoard({
           },
         })}
       />
-      {hasMore && (
-        <Button small onClick={loadMore}>
-          {t("list.loadMore")}
-        </Button>
-      )}
+      {hasMore && <Button onClick={loadMore}>{t("list.loadMore")}</Button>}
       {/* Keyed by lead so a half-filled deal block for one never carries to
           the next, the same reason the detail screen keys its pair. */}
       {pending?.dialog === "qualify" && (
         <QualifyDialog
-          key={`qualify-${pending.lead.id}`}
+          key={`qualify-${pending.lead.id}-${pending.seq}`}
           lead={pending.lead}
-          open
-          onClose={() => setPending(null)}
+          open={pending.open}
+          onClose={() => setPending({ ...pending, open: false })}
           onQualified={() => {
-            setPending(null);
+            setPending({ ...pending, open: false });
             onMoved();
           }}
         />
       )}
       {pending?.dialog === "disqualify" && (
         <DisqualifyDialog
-          key={`disqualify-${pending.lead.id}`}
+          key={`disqualify-${pending.lead.id}-${pending.seq}`}
           lead={pending.lead}
-          open
-          onClose={() => setPending(null)}
+          open={pending.open}
+          onClose={() => setPending({ ...pending, open: false })}
           onDisqualified={() => {
-            setPending(null);
+            setPending({ ...pending, open: false });
             onMoved();
           }}
         />
@@ -520,26 +520,6 @@ export function LeadBoard({
 
 export function promoteEligible(lead: Lead): boolean {
   return isOpenStatus(lead.status) && Boolean(lead.email);
-}
-
-// The terminal badge a lead status earns (null = live/open, no badge). A lead
-// is archived iff it is promoted or disqualified; keying the label off the
-// status — not a bare archived_at — is what stops a promoted lead reading
-// "Disqualified". Exhaustive over the four statuses: a new value is a compile
-// error here, not a silently-unlabelled row.
-export function terminalBadge(
-  status: Lead["status"],
-): { label: MessageKey; tone: "warn" } | null {
-  switch (status) {
-    case "disqualified":
-      return { label: "lead.disqualified", tone: "warn" };
-    case "promoted":
-      return { label: "record.archived", tone: "warn" };
-    case "new":
-    case "contacted":
-    case "engaged":
-      return null;
-  }
 }
 
 // The open ladder, as the page's open-step predicate reads it.

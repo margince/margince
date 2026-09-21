@@ -46,8 +46,8 @@ type Handlers struct {
 	timer ScheduleTimer
 	// The public-booking capture seams; nil fails closed
 	// (WithPublicBooking wires them).
-	publicPeople  PersonEnsurer
-	publicConsent ConsentCapturer
+	publicContacts ContactEnsurer
+	publicConsent  ConsentCapturer
 	// uploadLimit is the deployment's ceiling for this module's upload route
 	// (OPS-CFG-12), injected by WithUploadLimit. Zero refuses every upload,
 	// which is the honest reading of "nobody has said" for a bound.
@@ -64,7 +64,7 @@ type Handlers struct {
 }
 
 // ColleagueDomains reports whether an address belongs to this installation's
-// own people — by registered email domain, which is how a co-worker with no
+// own contacts — by registered email domain, which is how a co-worker with no
 // login is recognised at all.
 //
 // The predicate it returns is what ReplyAddressFor walks its candidates past,

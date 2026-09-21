@@ -15,16 +15,24 @@
   border-radius: var(--r-sm);
 }
 
-.compose-audience-member {
+/* The row is a `Checkbox`, so its box and gap are `.checkfield`'s; what the
+   roster adds is that the seat's two lines share one row and neither pushes the
+   box out of it. Both classes are named so this wins whichever order the route
+   split loads the two stylesheets in. */
+.compose-audience-member.checkfield {
+  grid-template-columns: auto 1fr;
+  min-width: 0;
+}
+.compose-audience-member > span {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
   min-width: 0;
 }
 
-/* The note is the seat's address, which is how two people with one name are
+/* The note is the seat's address, which is how two contacts with one name are
    told apart. It truncates; the name does not. */
-.compose-audience-member > .t-caption {
+.compose-audience-member .t-caption {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -1,4 +1,4 @@
-import { Check, ChevronRight, LogOut, UserRound } from "lucide-react";
+import { ChevronRight, LogOut, UserRound } from "lucide-react";
 import {
   type KeyboardEvent,
   type RefObject,
@@ -11,6 +11,7 @@ import {
 import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ChoiceList } from "../design-system/choicelist";
 import { useT } from "../i18n";
 import { problemMessageOf, useLogout, useMe } from "../screens/common";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
@@ -58,7 +59,7 @@ const SEAT_COUNT = 3;
 /**
  * Who is signed in, in the shapes the block prints them in.
  *
- * Everything here is derived from what the session actually carries: a person
+ * Everything here is derived from what the session actually carries: a contact
  * without a display name is their address, and nobody is ever given a name the
  * product made up to fill the line.
  */
@@ -86,7 +87,7 @@ function identityOf(user: SessionUser | undefined) {
 type Identity = ReturnType<typeof identityOf>;
 
 /**
- * The person, printed: their display name when the record carries one, otherwise
+ * The contact, printed: their display name when the record carries one, otherwise
  * the address alone — which is then not repeated underneath itself.
  *
  * One spelling, because the trigger, the panel and the phone sheet all print it
@@ -178,7 +179,7 @@ function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
           alert is not one. */}
       {logout.isError && (
         <div className="acctrowalert" role="none">
-          <Callout tone="danger" live="alert">
+          <Callout tone="danger" kind="outcome" title={t("shell.signOutErr")}>
             {problemMessageOf(logout.error, t)}
           </Callout>
         </div>
@@ -219,17 +220,16 @@ function nextSeat(
 }
 
 /**
- * Light / Dark / System, as a radio group that happens to be a menu.
+ * Light / Dark / System: one question with three answers, so it is the product's
+ * radio GROUP and not a second spelling of one. `ChoiceList` carries the
+ * `fieldset` that names the question and the native radios that answer it —
+ * which is also the keyboard contract, since a radio group already owns the
+ * roving tabstop and the arrow walk this hand-rolled before.
  *
- * `menuitemradio` rather than `menuitem`, because these three are one answer to
- * one question and `aria-checked` is the only thing that says which answer is
- * standing — the tick is its visible half, and a tick with no `aria-checked`
- * behind it is a decoration.
- *
- * Picking one does NOT close the menu. This is the appearance control, and the
- * whole of its feedback is the document repainting under the open panel with the
- * tick moving to the row that did it; closing on pick would take that away and
- * make the reader re-open the menu to see what they chose.
+ * Picking one does NOT close the panel. This is the appearance control, and the
+ * whole of its feedback is the document repainting under the open flyout with
+ * the tick moving to the answer that did it; closing on pick would take that
+ * away and make the reader re-open it to see what they chose.
  *
  * Escape is deliberately absent here. `usePopoverDismiss` (app/popover.ts) is
  * what dismisses this layer, and the parent menu's copy of the same hook stands
@@ -237,91 +237,61 @@ function nextSeat(
  * One keystroke, one layer, one implementation.
  */
 function ThemeSubmenu({
+  id,
   panel,
   onBack,
 }: Readonly<{
+  /** What the row that opened this points `aria-controls` at. */
+  id: string;
   panel: RefObject<HTMLDivElement | null>;
   onBack: () => void;
 }>) {
   const t = useT();
   const choice = useThemeChoice();
-  const items = useRef<(HTMLButtonElement | null)[]>([]);
-  const [active, setActive] = useState(() => {
-    const at = THEME_CHOICES.indexOf(choice);
-    return at < 0 ? 0 : at;
-  });
-  // Where the reader starts, captured at mount: the row that is already checked,
-  // so opening the chooser puts them on the appearance they currently have.
-  const opensAt = useRef(active);
 
+  // Where the reader starts: the answer that is already standing, so opening the
+  // chooser puts them on the appearance they currently have. A radio group makes
+  // that one the group's only tab stop, so it is the one to focus.
   useEffect(() => {
-    items.current[opensAt.current]?.focus();
-  }, []);
-
-  const move = (at: number) => {
-    setActive(at);
-    items.current[at]?.focus();
-  };
+    panel.current
+      ?.querySelector<HTMLInputElement>('input[type="radio"]:checked')
+      ?.focus();
+  }, [panel]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const last = THEME_CHOICES.length - 1;
-    switch (event.key) {
-      case "ArrowDown":
-        move(active === last ? 0 : active + 1);
-        break;
-      case "ArrowUp":
-        move(active === 0 ? last : active - 1);
-        break;
-      case "Home":
-        move(0);
-        break;
-      case "End":
-        move(last);
-        break;
-      case "ArrowLeft":
-        onBack();
-        break;
-      default:
-        return;
+    // Left is the way BACK to the row that opened this, as it was when these
+    // were menu items; the group's own walk keeps Up and Down, which is the
+    // whole of it for a column of three.
+    if (event.key === "ArrowLeft") {
+      onBack();
+      event.preventDefault();
+      event.stopPropagation();
+      return;
     }
-    // Handled HERE and nowhere else: the parent menu listens on the same bubble
-    // path, and without this its own roving tabstop would move under a reader
-    // who is standing in this one.
-    event.preventDefault();
-    event.stopPropagation();
+    // The parent menu listens on the same bubble path, so without this its own
+    // roving tabstop moves under a reader who is standing in here. Not
+    // prevented: the arrow walk that must run is the radio group's.
+    if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+      event.stopPropagation();
+    }
   };
 
   return (
-    <div
-      className="accountsub"
-      role="menu"
-      aria-label={t("shell.theme")}
-      ref={panel}
-      onKeyDown={onKeyDown}
-    >
-      {THEME_CHOICES.map((option, index) => (
-        <button
-          key={option}
-          type="button"
-          className="acctrow"
-          role="menuitemradio"
-          aria-checked={option === choice}
-          tabIndex={index === active ? 0 : -1}
-          ref={(element) => {
-            items.current[index] = element;
-          }}
-          onFocus={() => setActive(index)}
-          onClick={() => setThemeChoice(option)}
-        >
-          {/* The tick keeps its column whether or not it is drawn, so the three
-              labels stand on one left edge instead of shifting as the choice
-              moves. */}
-          <span className="accttick" aria-hidden>
-            {option === choice && <Check size={14} />}
-          </span>
-          {t(THEME_LABEL_KEYS[option])}
-        </button>
-      ))}
+    // The flyout is the positioned box and the group is what it holds: the ref
+    // this hands back is what `usePopoverDismiss` tests containment against, and
+    // a fieldset is not what the sheet-at-phone-width rules are written about.
+    // biome-ignore lint/a11y/noStaticElementInteractions: the handler is a guard on the PARENT menu's bubble path, not an affordance — the controls a reader operates are the radios inside
+    <div className="accountsub" id={id} ref={panel} onKeyDown={onKeyDown}>
+      <ChoiceList
+        legend={t("shell.theme")}
+        hideLegend
+        value={choice}
+        choices={THEME_CHOICES.map((option) => ({
+          value: option,
+          label: t(THEME_LABEL_KEYS[option]),
+        }))}
+        onChange={setThemeChoice}
+      />
     </div>
   );
 }
@@ -356,6 +326,7 @@ function AccountPanel({
   const [active, setActive] = useState(SETTINGS_SEAT);
   const [themeOpen, setThemeOpen] = useState(false);
   const submenu = useRef<HTMLDivElement>(null);
+  const themeId = useId();
 
   // The menu takes focus when it opens. A panel that leaves focus on the trigger
   // is one the keyboard reader has to walk into with a key nothing told them
@@ -437,6 +408,10 @@ function AccountPanel({
           ? `${t("shell.accountAria")} — ${identity.spoken}`
           : t("shell.accountAria")
       }
+      // Focusable, and only programmatically: the roving tabstop lives on the
+      // rows, and the effect above lands the reader on one of them the moment
+      // this opens. See ThemeSubmenu for why the value is -1 rather than 0.
+      tabIndex={-1}
       ref={panel}
       onKeyDown={onKeyDown}
     >
@@ -459,8 +434,13 @@ function AccountPanel({
           type="button"
           className="acctrow"
           role="menuitem"
-          aria-haspopup="menu"
+          // No `aria-haspopup`: what this opens is a group of radios, and every
+          // value that attribute takes names a widget this is not. Expanded, and
+          // NAMING what it expanded, is the honest pair — and it is also what
+          // tells the menu's own dismissal that a layer inside it owns Escape
+          // (app/popover.ts).
           aria-expanded={themeOpen}
+          aria-controls={themeOpen ? themeId : undefined}
           tabIndex={active === THEME_SEAT ? 0 : -1}
           ref={(element) => {
             rows.current[THEME_SEAT] = element;
@@ -479,7 +459,9 @@ function AccountPanel({
           <span className="acctrowlabel">{t("shell.theme")}</span>
           <ChevronRight size={14} className="acctmore" aria-hidden />
         </button>
-        {themeOpen && <ThemeSubmenu panel={submenu} onBack={closeTheme} />}
+        {themeOpen && (
+          <ThemeSubmenu id={themeId} panel={submenu} onBack={closeTheme} />
+        )}
       </div>
       {/* The groups: where you go, then the way out. An <hr> rather than a border
           on the last row — it separates a group, and a screen reader is told so. */}
@@ -548,10 +530,10 @@ export function AccountMenu() {
         type="button"
         className="user"
         ref={trigger}
-        // Where the row PRINTS the person's name, WCAG 2.5.3 (Label in Name)
+        // Where the row PRINTS the contact's name, WCAG 2.5.3 (Label in Name)
         // requires that visible text to be part of the accessible name. This
         // trigger prints none — it is the avatar alone — so it is named by what
-        // it does, and the person it belongs to is carried as its DESCRIPTION
+        // it does, and the contact it belongs to is carried as its DESCRIPTION
         // below.
         aria-label={t("shell.accountAria")}
         aria-haspopup="menu"
@@ -570,14 +552,14 @@ export function AccountMenu() {
         {identity.label ? (
           // The one chip, from the design system. The tint is keyed on the
           // address rather than the display name, so it survives a rename and
-          // matches every other chip drawn for the same person.
+          // matches every other chip drawn for the same contact.
           <Avatar
             identity={identity.email || undefined}
             name={identity.label}
           />
         ) : (
           // The session has not resolved yet. The chip keeps its box so the row
-          // does not jump when the name arrives, and shows a person glyph rather
+          // does not jump when the name arrives, and shows a contact glyph rather
           // than an empty circle or initials of a name nobody has.
           <span className="avatar avatar-sm" aria-hidden>
             <UserRound size={15} />

@@ -5,12 +5,17 @@ import {
   Button,
   Card,
   EmptyState,
+  Field,
   Skeleton,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { PrivacyNotice } from "./confirmprivacy";
+import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
+import { SubscriptionConfirm } from "./confirmsubscription";
 import {
   explainPublicError,
   LinkInvalidError,
@@ -32,7 +37,7 @@ import "./confirm.css";
 // Art. 4(11) and Recital 32, settled in Planet49.
 
 // The fields the page shows, in the order it shows them. `company` is
-// deliberately absent from the correctable set: which organization employs
+// deliberately absent from the correctable set: which company employs
 // somebody is a relationship the workspace maintains, and correcting it would
 // mean creating or merging a company record.
 const CORRECTABLE = ["full_name", "title", "email", "phone"] as const;
@@ -83,7 +88,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
     },
   });
 
-  // Edits are held against what the server sent, so a field the person did not
+  // Edits are held against what the server sent, so a field the contact did not
   // touch is never submitted as a correction. Submitting an untouched field
   // would stage a proposal nobody made, and a rep would have to read it.
   const [edits, setEdits] = useState<Partial<Record<CorrectableField, string>>>(
@@ -94,6 +99,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   );
   const [erasure, setErasure] = useState(false);
   const [done, setDone] = useState(false);
+  const [receipts, setReceipts] = useState<RightsCaseReceipt[]>([]);
 
   const card = details.data;
 
@@ -102,31 +108,51 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // is how the two drift.
   const marketingWording = t("confirm.marketing.ask");
 
+  // Narrowed BEFORE any record field is read, including here. A subscription
+  // body carries no correctable field at all, and indexing it by `full_name` is
+  // the same mistake the discriminator exists to stop. The typechecker says so
+  // now that the union is honest, which is how this one was found — it ran on
+  // both bodies before, silently.
+  const record = card?.kind === "record_confirmation" ? card : undefined;
+
   const corrections = useMemo(() => {
-    if (!card) {
+    if (!record) {
       return [];
     }
     return CORRECTABLE.filter(
-      (field) => edits[field] !== undefined && edits[field] !== card[field],
+      (field) => edits[field] !== undefined && edits[field] !== record[field],
     ).map((field) => ({ field, value: edits[field] ?? "" }));
-  }, [card, edits]);
+  }, [record, edits]);
 
   const submit = useMutation({
+    // THE RECORD PAGE'S OWN SUBMIT, and only that.
+    //
+    // A consent link never reaches here — SubscriptionConfirm owns its own
+    // mutation. This one used to serve both, which is what let a subscription
+    // post the record page's marketing sentence as its consent evidence.
     mutationFn: async () => {
-      const { error, response } = await api.POST("/public/confirm/{token}", {
-        params: { path: { token } },
-        body: {
-          corrections,
-          request_erasure: erasure,
-          ...(marketing
-            ? {
-                marketing_choice: marketing,
-                marketing_wording: marketingWording,
-              }
-            : {}),
+      const body = {
+        corrections,
+        request_erasure: erasure,
+        ...(marketing
+          ? { marketing_choice: marketing, marketing_wording: marketingWording }
+          : {}),
+      };
+      const { data, error, response } = await api.POST(
+        "/public/confirm/{token}",
+        {
+          params: { path: { token } },
+          body,
         },
-      });
-      if (error) {
+      );
+      // GATED ON THE STATUS, NOT ON `error`.
+      //
+      // openapi-fetch returns `{error: undefined}` for a non-2xx whose body is
+      // empty — a 502 from a proxy, a 500 that wrote no problem document. A
+      // guard that only asks whether `error` is truthy therefore reads those as
+      // success, and this page's success state tells somebody their consent
+      // was recorded when the request never reached the writer.
+      if (!response.ok) {
         if (response.status === 404) {
           throw new LinkInvalidError();
         }
@@ -135,8 +161,15 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         }
         throwProblem(error);
       }
+      // The references the subject quotes when chasing what they asked for.
+      // Older servers answered 204 with no body at all, so an absent list is
+      // read as "no cases" rather than as a failure.
+      return data?.cases ?? [];
     },
-    onSuccess: () => setDone(true),
+    onSuccess: (cases) => {
+      setReceipts(cases);
+      setDone(true);
+    },
   });
 
   if (details.isPending) {
@@ -153,12 +186,36 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </div>
     );
   }
+  // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
+  //
+  // This endpoint answers two bodies and always has: a record card for a
+  // record link, one subscription question for a consent link. Until the
+  // contract grew `kind` nothing on the wire said which had arrived, so every
+  // read below — `card.provenance.length` above all — was taken off a body
+  // that might not carry it.
+  //
+  // The consent link goes to its own page, which owns its own submit. Sharing
+  // one meant posting the record page's marketing sentence as the proof of a
+  // subscription, and rendering a refusal nowhere.
+  if (card.kind === "subscription_confirmation") {
+    return <SubscriptionConfirm token={token} card={card} />;
+  }
+  // A privacy notice has its own page and NO form. It discharges a duty to tell
+  // somebody something, so it takes no answer — and falling through to the
+  // record page below would show them their file and offer a subscription box,
+  // neither of which the mail that carried this link described.
+  if (card.kind === "privacy_notice") {
+    return <PrivacyNotice card={card} />;
+  }
   if (done) {
     return (
       <div className="pref-page">
         <Card>
-          <h1 className="t-h2">{t("confirm.done.title")}</h1>
+          <Heading size="xlarge" className="t-h2">
+            {t("confirm.done.title")}
+          </Heading>
           <p className="t-body">{t("confirm.done.body")}</p>
+          <RequestReceipts receipts={receipts} />
         </Card>
       </div>
     );
@@ -166,28 +223,33 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
 
   return (
     <div className="pref-page">
-      <h1 className="t-h2">{t("confirm.title")}</h1>
+      <Heading size="xlarge" className="t-h2">
+        {t("confirm.title")}
+      </Heading>
       <p className="t-body confirm-intro">{t("confirm.intro")}</p>
 
       <Card>
-        <h2 className="t-h3">{t("confirm.card.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("confirm.card.title")}
+        </Heading>
         <ul className="confirm-fields">
           {CORRECTABLE.map((field) => (
-            <li key={field} className="confirm-field">
-              <label className="t-caption" htmlFor={`confirm-${field}`}>
-                {t(FIELD_LABELS[field])}
-              </label>
-              <TextInput
-                id={`confirm-${field}`}
-                value={edits[field] ?? card[field]}
-                onChange={(event) =>
-                  setEdits({ ...edits, [field]: event.target.value })
-                }
-              />
+            <li key={field}>
+              <Field label={t(FIELD_LABELS[field])}>
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    value={edits[field] ?? card[field]}
+                    onChange={(event) =>
+                      setEdits({ ...edits, [field]: event.target.value })
+                    }
+                  />
+                )}
+              </Field>
             </li>
           ))}
           <li className="confirm-field">
-            <span className="t-caption">{t("confirm.field.company")}</span>
+            <span>{t("confirm.field.company")}</span>
             <span className="confirm-readonly">
               {card.company || t("confirm.field.none")}
             </span>
@@ -196,7 +258,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </Card>
 
       <Card>
-        <h2 className="t-h3">{t("confirm.marketing.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("confirm.marketing.title")}
+        </Heading>
         <p className="t-body">{marketingWording}</p>
         <div className="confirm-choices">
           <Button
@@ -218,9 +282,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </Card>
 
       <details className="confirm-provenance">
-        <summary className="t-caption">{t("confirm.provenance.title")}</summary>
+        <summary>{t("confirm.provenance.title")}</summary>
         {card.provenance.length === 0 ? (
-          <p className="t-caption">{t("confirm.provenance.empty")}</p>
+          <p>{t("confirm.provenance.empty")}</p>
         ) : (
           <ul>
             {card.provenance.map((origin) => (
@@ -240,9 +304,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </details>
 
       {submit.error && (
-        <p className="t-caption confirm-error">
-          {explainPublicError(submit.error, t)}
-        </p>
+        <p className="confirm-error">{explainPublicError(submit.error, t)}</p>
       )}
 
       <div className="confirm-actions">

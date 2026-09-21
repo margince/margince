@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -23,7 +23,7 @@ const oneWriteThreeFields: FieldHistoryEntry[] = [
   "legal_name",
 ].map((field) => ({
   id: "a-1",
-  entity_type: "organization",
+  entity_type: "company",
   entity_id: "o-1",
   field,
   old_value: null,

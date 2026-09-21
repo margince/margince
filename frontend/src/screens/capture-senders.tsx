@@ -17,11 +17,11 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 //
 // The page exists because the posture rests on being checkable. A product that
 // decides silently which of your correspondents becomes a contact — and which
-// of them is family, and whose mail gets destroyed — is one a person has to
+// of them is family, and whose mail gets destroyed — is one a contact has to
 // trust rather than audit. This is the audit.
 //
 // Read-only for everybody but the owner: the endpoint answers the caller's own
-// senders and has no admin view, because whose mail a person keeps out is
+// senders and has no admin view, because whose mail a colleague keeps out is
 // itself private.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
@@ -31,9 +31,9 @@ type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 // to the raw token rather than rendering nothing, so a new kind shows up as
 // something to name instead of a blank cell.
 const kindLabel: Record<string, MessageKey> = {
-  person: "senders.kind.person",
+  contact: "senders.kind.contact",
   role_mailbox: "senders.kind.roleMailbox",
-  organization_sender: "senders.kind.organizationSender",
+  company_sender: "senders.kind.companySender",
   newsletter: "senders.kind.newsletter",
   transactional: "senders.kind.transactional",
   spam: "senders.kind.spam",
@@ -44,7 +44,7 @@ const kindLabel: Record<string, MessageKey> = {
 // Which kinds mean "this sender's mail is in the CRM as a contact". The tone
 // carries it at a glance down the column; the words still say it, because
 // colour is never the only signal.
-const admitted = new Set(["person", "role_mailbox", "organization_sender"]);
+const admitted = new Set(["contact", "role_mailbox", "company_sender"]);
 
 function useSenders() {
   return useQuery({
@@ -163,7 +163,6 @@ export function CaptureSendersCard() {
                           {!admitted.has(row.kind ?? "") &&
                             row.decision !== "business" && (
                               <Button
-                                small
                                 variant="ghost"
                                 disabled={setDecision.isPending}
                                 onClick={() =>
@@ -178,7 +177,6 @@ export function CaptureSendersCard() {
                             )}
                           {row.decision !== "keep_out" && (
                             <Button
-                              small
                               variant="ghost"
                               disabled={setDecision.isPending}
                               onClick={() => setKeepingOut(row.address)}
@@ -188,7 +186,6 @@ export function CaptureSendersCard() {
                           )}
                           {row.overruled && (
                             <Button
-                              small
                               variant="ghost"
                               disabled={withdraw.isPending}
                               onClick={() => withdraw.mutate(row.address)}
@@ -256,7 +253,7 @@ function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
   }
   return (
     <>
-      <Badge tone={admitted.has(kind) ? "success" : undefined} quiet>
+      <Badge tone={admitted.has(kind) ? "success" : undefined}>
         {words || t("senders.kind.undecided")}
       </Badge>
       {/* The deadline, not just the verdict. A personal verdict does not hide
@@ -265,7 +262,7 @@ function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
           what turns a silent classification into something they can act on, and
           "mark as business" beside it is the act that cancels it. */}
       {row.deletes_at && (
-        <div className="cell-note">
+        <div>
           {t("senders.deletesOn", {
             date: formatDate(row.deletes_at, locale, zone),
           })}

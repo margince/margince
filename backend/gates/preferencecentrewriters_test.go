@@ -17,19 +17,23 @@ package gates
 // the client renders an absent array as "nothing refused", which is
 // exactly the sentence a dropped field makes false.
 //
-// The PRIMARY ADDRESS: the preference centre and the confirm card both
-// show a person their own address, and they must agree on which one that
-// is. The ordering (is_primary DESC, created_at) is the whole rule, and a
-// hand-copied second spelling that dropped the tiebreak would show two
-// surfaces two different addresses for the same person — each looking
-// correct on its own screen.
+// THE PRIMARY ADDRESS CLAIM MOVED, and it was always too narrow here. This
+// counted one spelling of `is_primary DESC, created_at` inside the consent
+// module, which held the preference centre and the confirm card to each other
+// — and left them free to disagree with the rest of the product, which they
+// did: consent left `position` out, so a contact who had arranged their own
+// addresses was shown one here and another on a reply.
+//
+// Which address a contact is known by is one question for the whole tree, and
+// TestOneAnswerToWhichAddressAContactIsKnownBy
+// (backend/gates/reachableaddress_test.go) is what holds it now — tree-wide
+// rather than module-local, and with the archived filter besides. Keeping this
+// arm as well would be two gates over one promise, and the narrower one is the
+// one that would go stale.
 //
 // WHAT THIS GATE CAN AND CANNOT SEE. It matches the call, by name, in the
 // consent module's Go. A caller that reached the same statement through a
-// variable holding the SQL, or a copy that spelled the ORDER BY without
-// going through the helper, is outside what an AST walk can judge; the
-// second is the real gap, and it is why the address census below counts
-// the ORDER BY itself rather than the function name.
+// variable holding the SQL is outside what an AST walk can judge.
 
 import (
 	"fmt"
@@ -66,29 +70,6 @@ func TestThePreferenceCentreAnswersInOneShape(t *testing.T) {
 		t.Errorf("the preference-centre response body is written %d time(s), want exactly 1: %s\n\n"+
 			"The read and the save must answer in one shape — a second writer is how one of them "+
 			"starts omitting a field the page reads as meaningful.", total, strings.Join(where, ", "))
-	}
-}
-
-// TestThePreferenceCentreResolvesOnePrimaryAddress holds the "cannot
-// disagree" claim on primaryEmailTx.
-func TestThePreferenceCentreResolvesOnePrimaryAddress(t *testing.T) {
-	t.Parallel()
-	// The ORDERING is the rule, so the ordering is what is counted. A
-	// copy that named the helper but re-spelled the ORDER BY is the
-	// defect; a copy that omitted the tiebreak would show a different
-	// address on a person carrying two.
-	const key = "pe.is_primary DESC, pe.created_at"
-	scope := gatekit.Scope{
-		Roots:   []string{consentRoot},
-		Subject: fileContains(key),
-		Exempt:  gatekit.Waive(map[string]string{}),
-	}
-	total, where := countAcross(t, scope, key)
-	if total != 1 {
-		t.Errorf("the person's primary address is resolved %d time(s) in consent, want exactly 1: %s\n\n"+
-			"The preference centre and the confirm card show a person their own address and must "+
-			"agree which one it is; a second spelling that drops the tiebreak shows two surfaces "+
-			"two different addresses.", total, strings.Join(where, ", "))
 	}
 }
 

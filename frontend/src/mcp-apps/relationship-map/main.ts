@@ -11,7 +11,7 @@
 // It renders and nothing else. Introducing someone is a human act with its own
 // route; a button here would be this view inventing authority it was not given.
 
-import { count, el, onResult, warned } from "../bridge";
+import { count, el, heading, onResult, warned } from "../bridge";
 import {
   asFiniteNumber,
   asList,
@@ -98,11 +98,11 @@ function colleagueRow(colleague: Colleague, position: number): HTMLElement {
 /** The meta line. "warmest first" is only true of a COMPLETE ranking: when the
  *  read stopped at its bound these are the warmest FOUND, and saying otherwise
  *  is the claim the tool itself refuses to make. */
-function metaLine(found: number, personID: string, bounded: boolean): string {
+function metaLine(found: number, contactID: string, bounded: boolean): string {
   if (bounded) {
     return `${found} colleague(s) found — more know this contact than are listed, so this is not the whole network`;
   }
-  return `${found} colleague(s), warmest first · ${personID}`;
+  return `${found} colleague(s), warmest first · ${contactID}`;
 }
 
 export function render(
@@ -123,14 +123,14 @@ export function render(
   }
   const answer = asRecord(data);
   const colleagues = known(answer);
-  root.appendChild(el("h1", undefined, "Who knows this contact"));
+  root.appendChild(heading("xlarge", "Who knows this contact"));
   root.appendChild(
     el(
       "p",
       "meta",
       metaLine(
         colleagues.length,
-        asText(answer.person_id),
+        asText(answer.contact_id),
         warned(warnings, SWEEP_TRUNCATED),
       ),
     ),

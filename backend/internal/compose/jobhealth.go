@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -20,9 +21,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -143,25 +145,11 @@ type jobHealthHandlers struct {
 // right.
 func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	// No principal at all is a refusal, not a server fault. The session
-	// middleware answers 401 before this handler is reached on the real
-	// wire — proved in the integration lane — but auth.RequireHuman reports
-	// an unbound actor with an unmapped error, which httperr renders as a
-	// 500. A security surface should not have a 500 as its answer to
-	// "nobody asked".
-	if _, ok := principal.Actor(ctx); !ok {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
-		return
-	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	// Queue depth and retry ladders: what an operator on call needs, so ops holds
-	// the read too. RequireHuman above is unchanged — this is an operator surface,
-	// not an agent one.
-	if err := auth.Require(ctx, "job_health", principal.ActionRead); err != nil {
-		httperr.Write(w, r, err)
+	// Queue depth and retry ladders: what an operator on call needs, and the
+	// same reader the other two System health cards have — so the same ladder
+	// admits all three (adminhealth.go), which is where the ORDER of its rungs
+	// is stated once.
+	if !admitHealthReader(w, r) {
 		return
 	}
 	wsID, ok := principal.WorkspaceID(ctx)
@@ -179,10 +167,17 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(ctx, jobHealthReadTimeout)
 	defer cancel()
 
+	window, err := deadWorkWindow(ctx, h.pool)
+	if err != nil {
+		slog.ErrorContext(ctx, "reading the dead-work banner window", "err", err)
+		httperr.Write(w, r, err)
+		return
+	}
+
 	// wsID.String(), not the uuid: ->> yields text, and a uuid-typed bind
 	// gives pgx the uuid OID and Postgres "operator does not exist: text =
 	// uuid".
-	health, err := jobs.WorkspaceHealth(ctx, h.pool, wsID.String(), dispatcherKinds())
+	health, err := jobs.WorkspaceHealth(ctx, h.pool, wsID.String(), dispatcherKinds(), window)
 	if err != nil {
 		// Never a partial 200. A page that renders half the fleet as if it
 		// were the whole one is the failure this endpoint exists to end.
@@ -191,11 +186,40 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httperr.WriteJSON(w, http.StatusOK, jobHealthResponse(health))
+	httperr.WriteJSON(w, http.StatusOK, jobHealthResponse(health, window))
+}
+
+// deadWorkBannerReadActor names the entry read this endpoint performs after it
+// has already admitted the caller.
+//
+// A SYSTEM actor for the reason SignInPolicy gives for its own: the entry is
+// defined on installation_settings so that an admin changes it beside the rest
+// of the installation's identity, and every role may read this page. Demanding
+// installation_settings.read here would refuse the job-health screen to an
+// operator holding exactly the grant the screen is named for. The caller's own
+// authority is settled two gates above this line.
+const deadWorkBannerReadActor = "system:dead_work_banner_read"
+
+// deadWorkWindow answers how far back the banner looks.
+func deadWorkWindow(ctx context.Context, pool *pgxpool.Pool) (time.Duration, error) {
+	readCtx := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem,
+		ID:   deadWorkBannerReadActor,
+	})
+	hours, err := settings.Get(readCtx, NewSettingsStore(pool), identity.DeadWorkBannerHours)
+	if err != nil {
+		return 0, fmt.Errorf("compose: reading the dead-work banner window: %w", err)
+	}
+	return time.Duration(hours) * time.Hour, nil
 }
 
 // jobHealthResponse maps the scoped read onto the contract.
-func jobHealthResponse(health jobs.Health) crmcontracts.JobHealth {
+//
+// The window travels with the counts, so the client can say which one it is
+// rendering. A banner that names a number without naming its span asks a reader
+// to guess, and the guess a reader makes is "since forever" — which is the
+// reading this whole change exists to stop.
+func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.JobHealth {
 	kinds := make([]crmcontracts.JobKindHealth, 0, len(health.Kinds))
 	for _, k := range health.Kinds {
 		kinds = append(kinds, crmcontracts.JobKindHealth{
@@ -206,6 +230,7 @@ func jobHealthResponse(health jobs.Health) crmcontracts.JobHealth {
 			Running:                 int(k.Running),
 			Retrying:                int(k.Retrying),
 			Dead:                    int(k.Dead),
+			DeadRecent:              int(k.DeadRecent),
 			OldestWaitingAgeSeconds: secondsOrAbsent(k.OldestWaitingAgeSeconds),
 		})
 	}
@@ -233,9 +258,10 @@ func jobHealthResponse(health jobs.Health) crmcontracts.JobHealth {
 	}
 
 	return crmcontracts.JobHealth{
-		GeneratedAt:    time.Now().UTC(),
-		Kinds:          kinds,
-		RecentFailures: failures,
+		GeneratedAt:     time.Now().UTC(),
+		DeadWindowHours: int(window / time.Hour),
+		Kinds:           kinds,
+		RecentFailures:  failures,
 	}
 }
 

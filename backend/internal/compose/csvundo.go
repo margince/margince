@@ -6,9 +6,10 @@ package compose
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -27,44 +28,51 @@ var _ migration.UndoWriters = (*csvWriters)(nil)
 // a row whose archive committed but whose checkpoint advance did not, and an
 // already-archived row is left exactly as it is rather than re-archived (or
 // erroring on a live-only read that no longer finds it).
-func (w *csvWriters) Reverse(ctx context.Context, object string, nativeID ids.UUID) error {
+func (w *csvWriters) Reverse(
+	ctx context.Context, object string, nativeID ids.UUID, importedAt time.Time,
+) error {
+	// The precondition each archive re-asks under its own row lock. The undo's
+	// page-level check already skipped the rows it found touched; this is what
+	// puts the question in the same transaction as the write, since that check
+	// and this write are different transactions and a human can act between them.
+	untouched := contacts.NotTouchedByHumanSince(importedAt)
 	switch object {
 	case migration.ObjectLead:
-		lead, err := w.people.GetLead(ctx, ids.From[ids.LeadKind](nativeID), storekit.IncludeArchived)
+		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](nativeID), storekit.IncludeArchived)
 		if err != nil {
 			return fmt.Errorf("import undo: reading lead %s: %w", nativeID, err)
 		}
 		if lead.ArchivedAt != nil {
 			return nil
 		}
-		if _, err := w.people.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), people.DisqualifyLeadInput{}); err != nil {
+		if _, err := w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched); err != nil {
 			return fmt.Errorf("import undo: reversing lead %s: %w", nativeID, err)
 		}
 		return nil
-	case migration.ObjectOrganization:
-		org, err := w.people.GetOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), storekit.IncludeArchived)
+	case migration.ObjectCompany:
+		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](nativeID), storekit.IncludeArchived)
 		if err != nil {
-			return fmt.Errorf("import undo: reading organization %s: %w", nativeID, err)
+			return fmt.Errorf("import undo: reading company %s: %w", nativeID, err)
 		}
-		if org.ArchivedAt != nil {
+		if company.ArchivedAt != nil {
 			return nil
 		}
-		if _, err := w.people.ArchiveOrganization(ctx, ids.From[ids.OrganizationKind](nativeID), nil); err != nil {
-			return fmt.Errorf("import undo: reversing organization %s: %w", nativeID, err)
+		if _, err := w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched); err != nil {
+			return fmt.Errorf("import undo: reversing company %s: %w", nativeID, err)
 		}
 		return nil
-	case migration.ObjectPerson:
-		person, err := w.people.GetPerson(ctx, ids.From[ids.PersonKind](nativeID), storekit.IncludeArchived)
+	case migration.ObjectContact:
+		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](nativeID), storekit.IncludeArchived)
 		if err != nil {
-			return fmt.Errorf("import undo: reading person %s: %w", nativeID, err)
+			return fmt.Errorf("import undo: reading contact %s: %w", nativeID, err)
 		}
-		if person.ArchivedAt != nil {
+		if contact.ArchivedAt != nil {
 			return nil
 		}
-		// The archive cascades to person_email, person_phone and the person's
+		// The archive cascades to contact_email, contact_phone and the contact's
 		// relationships, so the child rows this run created go with it.
-		if _, err := w.people.ArchivePerson(ctx, ids.From[ids.PersonKind](nativeID), nil); err != nil {
-			return fmt.Errorf("import undo: reversing person %s: %w", nativeID, err)
+		if _, err := w.contacts.ArchiveContact(ctx, ids.From[ids.ContactKind](nativeID), nil, untouched); err != nil {
+			return fmt.Errorf("import undo: reversing contact %s: %w", nativeID, err)
 		}
 		return nil
 	default:

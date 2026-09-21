@@ -53,6 +53,9 @@ var apiPublic = map[string]bool{
 	"MARGINCE_GMAIL_JWKS_URL":             true,
 	"MARGINCE_GMAIL_PUSH_AUDIENCE":        true,
 	"MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT": true,
+	// A posture word, token or open: it says which credential /metrics
+	// requires, and is not one.
+	"MARGINCE_METRICS_ACCESS": true,
 }
 
 // apiConfigItems is this role's whole configurable surface: its own flags, plus
@@ -81,16 +84,16 @@ func apiUnflaggedItems() []config.Item {
 	both := []string{config.RoleAPI, config.RoleWorker}
 	return []config.Item{
 		{
-			Name: overlayBackfillLimitEnv, Kind: config.KindInt, Default: "0", Roles: both,
-			Doc: "per-object-class cap on the overlay initial backfill; 0 runs it uncapped",
-		},
-		{
 			Name: oauthAccessTokenTTLEnv, Kind: config.KindDuration, Default: "0", Roles: []string{config.RoleAPI},
 			Doc: "lifetime of a minted OAuth access token; 0 takes the compiled default",
 		},
 		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,
 			Doc: "enrichment provider: live|offline|off; an unknown value is a boot error rather than a silently disabled feature",
+		},
+		{
+			Name: compose.AutoEnrichDailyCapEnv, Kind: config.KindInt, Default: "0", Roles: both,
+			Doc: "daily cap on automatic site deep reads (company auto-enrich and domain triage spend one budget); 0 takes the compiled default",
 		},
 	}
 }

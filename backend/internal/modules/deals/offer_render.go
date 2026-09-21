@@ -77,6 +77,19 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		if err != nil {
 			return err
 		}
+		// The document says no more about the buyer than this caller's own
+		// read of the offer does. An offer is anchored on its DEAL, which
+		// every seat reads; the company it names is not, and the block
+		// below carries the buyer's display name and legal name — strictly
+		// more than the id the API withholds.
+		//
+		// Applied to the OFFER rather than probed inside the block, so the
+		// two spellings of the same withholding cannot diverge: with the
+		// reference gone, the live read has nothing to look up and the frozen
+		// snapshot has nothing to return.
+		if err := withholdUnreadableBuyerOn(ctx, tx, &offer); err != nil {
+			return err
+		}
 		lines, err := readOfferLines(ctx, tx, id)
 		if err != nil {
 			return err
@@ -104,9 +117,9 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 
 // resolveRenderBuyerBlock answers the buyer legal block the renderer
 // shows: the frozen buyer_snapshot once sent (SendOffer already froze it
-// as the legal record), the LIVE organization read fresh while still
+// as the legal record), the LIVE company read fresh while still
 // draft (so an offer edited but never sent never shows a stale block), or
-// nil when the offer carries no buyer org at all. This is deliberately a
+// nil when the offer carries no buyer company at all. This is deliberately a
 // fresh, independent query rather than a refactor of offer_lifecycle.go's
 // sendSnapshots — the plan's boundary keeps Send/Accept/Reject/Regenerate
 // and their snapshot logic untouched.
@@ -114,23 +127,23 @@ func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.
 	if offer.BuyerSnapshot != nil {
 		return *offer.BuyerSnapshot, nil
 	}
-	if offer.BuyerOrgId == nil {
+	if offer.BuyerCompanyId == nil {
 		return block, err
 	}
 	var displayName string
 	var legalName *string
 	scanErr := tx.QueryRow(ctx,
-		`SELECT display_name, legal_name FROM organization WHERE id = $1`,
-		ids.UUID(*offer.BuyerOrgId)).Scan(&displayName, &legalName)
+		`SELECT display_name, legal_name FROM company WHERE id = $1`,
+		ids.UUID(*offer.BuyerCompanyId)).Scan(&displayName, &legalName)
 	if errors.Is(scanErr, pgx.ErrNoRows) {
 		return block, err
 	}
 	if scanErr != nil {
-		return nil, fmt.Errorf("render: read buyer organization: %w", scanErr)
+		return nil, fmt.Errorf("render: read buyer company: %w", scanErr)
 	}
 	block = map[string]any{
-		"organization_id": offer.BuyerOrgId.String(),
-		"display_name":    displayName,
+		filterCompanyID: offer.BuyerCompanyId.String(),
+		"display_name":  displayName,
 	}
 	if legalName != nil {
 		block["legal_name"] = *legalName
@@ -152,11 +165,40 @@ func (s *Store) resolveRenderIssuerName(ctx context.Context, tx pgx.Tx, offer cr
 			return name, nil
 		}
 	}
-	name, err := s.installation.Name(ctx, tx)
+	name, err := s.issuerName(ctx, tx)
 	if err != nil {
 		return "", fmt.Errorf("render: read the installation's issuer name: %w", err)
 	}
 	return name, nil
+}
+
+// issuerName is who this installation issues a document AS, and it is the one
+// answer the draft render and the send snapshot both take.
+//
+// A confirmed legal name first. An offer names two companies, and until this
+// existed they were sourced by two different rules: the buyer block reads
+// `legal_name` off a company record with its whole provenance sidecar behind
+// it, while the issuer — the party making the legal claim on the same page —
+// read a settings value with no provenance at all. The one with less evidence
+// was the one signing.
+//
+// The settings name otherwise, and that fallback is not a lesser answer: it is
+// what an installation has been printing, and it goes on printing until
+// somebody confirms another. contacts.ConfirmedIssuerLegalName carries why
+// an unconfirmed proposal must never reach a document.
+//
+// ONE resolver for both callers, because the two must not disagree: a draft
+// that renders one name and a send that freezes another would put a different
+// issuer on the page the customer sees than on the record of what was sent.
+func (s *Store) issuerName(ctx context.Context, tx pgx.Tx) (string, error) {
+	confirmed, err := s.installation.IssuerLegalName(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	if confirmed != "" {
+		return confirmed, nil
+	}
+	return s.installation.Name(ctx, tx)
 }
 
 // resolveRenderTemplate resolves an offer's render locale AND layout

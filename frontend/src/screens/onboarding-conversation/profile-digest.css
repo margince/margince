@@ -2,7 +2,7 @@
    document a reader reads it as when they ask for the whole record. Reading
    matter either way, so it is set as prose rather than as a table of rows: a
    record somebody is about to stand behind should read like something a
-   person wrote. */
+   contact wrote. */
 
 /* ---- the companion ---- */
 
@@ -18,7 +18,6 @@
 
 .pdigest-eyebrow {
   margin: 0;
-  color: var(--textMeta);
 }
 
 .pdigest-count {
@@ -37,9 +36,6 @@
 
 .pdigest-line {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 /* The line the deck is deciding right now, marked in the agent's colour
@@ -55,16 +51,12 @@
   color: var(--aiText);
 }
 
-.pdigest-label {
-  color: var(--textMeta);
-}
 .pdigest-line[data-active="true"] .pdigest-label {
   color: var(--aiText);
 }
 
 .pdigest-value {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 .pdigest-line[data-active="true"] .pdigest-value {
   color: var(--aiText);
@@ -74,7 +66,6 @@
    draws one un-actionably. The deck is what fills these, and a row of blanks
    beside it would be the outstanding work listed a second time. */
 .pdigest-blank {
-  color: var(--textTertiary);
   font-style: italic;
 }
 
@@ -82,10 +73,9 @@
 .pdigest-ref {
   margin-inline-start: var(--space-1);
   color: var(--aiText);
-  font-size: var(--fs-eyebrow);
 }
 
-/* No page behind it: typed by a person, or carried in from a profile that was
+/* No page behind it: typed by a contact, or carried in from a profile that was
    already there. Named rather than left blank, because "everything here is
    sourced" is only true if the exceptions say so. */
 .pdigest-yours {
@@ -94,21 +84,27 @@
 
 /* ---- the document's unanswered row ---- */
 
-/* Dashed, on the agent's ground: staged, not yet real, per the provenance
-   rule in design-system/README.md — nothing here is on the record until the
-   deck writes it. The pill is the whole point of drawing this as its own row
-   rather than a plain blank line: reading the whole record is exactly where a
-   gap gets noticed, and this is the one press back to where it gets filled. */
+/* Staged, not yet real: the dashed edge and the agent's ground are
+   `.staging-card`'s, worn by the row itself — nothing here is on the record
+   until the deck writes it. The pill is the whole point of drawing this as its
+   own row rather than a plain blank line: reading the whole record is exactly
+   where a gap gets noticed, and this is the one press back to where it gets
+   filled. */
 .pdigest-open {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: 0;
+}
+/* What is left here is the MEASURE — this is a ROW in the document's rhythm,
+   where the staged card's reading padding and 16px corner would make one gap
+   taller and rounder than every line it sits between. Two classes, so that
+   measure wins wherever the two sheets land in the bundle. */
+.pdigest-open.staging-card {
+  /* ds:ignore a line in the document's rhythm, matching .pdigest-line's own
+     inset, not a card's reading inset */
   padding: var(--space-2) var(--space-3);
-  border: 1.5px dashed var(--aiMed);
   border-radius: var(--r-sm);
-  background: var(--aiLight);
-  font-size: var(--fs-sm);
 }
 /* Text on --aiLight takes --aiText (design-system/README.md): the label's
    meta grey and the blank's tertiary grey both fail AA on this ground. */
@@ -161,8 +157,6 @@
 .pdigest-hero-name {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
 }
 
 .pdigest-hero-sub {
@@ -183,19 +177,16 @@
 
 .pdigest-figure-value {
   color: var(--textPrimary);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 
 /* Warn only past zero: nothing left open is not a finding, and dyeing a
    settled count the same colour as an outstanding one would say otherwise. */
-.pdigest-figure[data-warn="true"] .pdigest-figure-value {
-  color: var(--warn);
+.pdigest-figure[data-warning="true"] .pdigest-figure-value {
+  color: var(--warning);
 }
 
 .pdigest-figure-caption {
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -234,7 +225,6 @@
 
 .pdigest-heading {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* One category of facts inside the Proof section: a subhead naming the
@@ -247,7 +237,6 @@
 
 .pdigest-subhead {
   margin: 0;
-  font-weight: var(--fw-medium);
 }
 
 .pdigest-sources {
@@ -274,15 +263,9 @@
 .pdigest-source-n {
   flex: none;
   color: var(--aiText);
-  font-size: var(--fs-eyebrow);
 }
 .pdigest-source-path {
   overflow-wrap: anywhere;
-  font-family: var(--f-mono);
-}
-.pdigest-source-label {
-  color: var(--textTertiary);
-  font-size: var(--fs-meta);
 }
 .pdigest-source-note {
   margin: 0;
@@ -313,13 +296,10 @@
 .pdigest-side-label {
   display: block;
   margin: 0 0 var(--space-1);
-  color: var(--textMeta);
 }
 
 .pdigest-side-value {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 
@@ -346,7 +326,7 @@
   border: 0;
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
 }
@@ -365,7 +345,6 @@
   border-radius: var(--r-sm);
   background: none;
   cursor: text;
-  font: inherit;
   text-align: start;
 }
 .pdigest-editable:hover {

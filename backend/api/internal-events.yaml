@@ -15,6 +15,17 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventAiBudgetUpdated:
+      type: object
+      x-event-type: ai_budget.updated
+      x-entity-type: ai_budget
+      description: The shared company allowance changed; workers reconsider deferred work.
+      required: [before_revision, after_revision, tokens_per_full_user]
+      properties:
+        before_revision: { type: string }
+        after_revision: { type: string }
+        tokens_per_full_user: { type: integer, format: int64 }
+        company_monthly_tokens: { type: integer, format: int64 }
     InternalEventAiTaskStateChanged:
       type: object
       x-event-type: ai_task.state_changed
@@ -122,14 +133,14 @@ components:
             keeps the old name on a settled line, which is what that line was
             actually about. The corollary is that it cannot be re-gated either,
             so a source emits a label only where the occurrence's own actor is
-            the person the record was already displayed to.
+            the contact the record was already displayed to.
         quantity:
           type: integer
           minimum: 0
           description: How much the occurrence handled, in quantity_unit.
         quantity_unit:
           type: string
-          enum: [messages, records, people, documents]
+          enum: [messages, records, contacts, documents]
           x-go-type: string
           description: What quantity counts.
         degrade_reason:

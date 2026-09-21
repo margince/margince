@@ -8,7 +8,7 @@ package consent
 //
 // A staging decision answers "may this be written down and queued". It cannot
 // answer "may this go out NOW", because the two are separated by a queue: a
-// person can withdraw consent, object, or have their address hard-bounce in
+// contact can withdraw consent, object, or have their address hard-bounce in
 // between, and a delivery that waited a day on a retry ladder was authorized
 // against a world that no longer exists. So the question is asked again here,
 // and the answer is persisted before any provider I/O rather than after — a
@@ -21,7 +21,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,6 +57,12 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	}
 	setID := ids.NewV7()
 	ticket := commsauthz.TransmitTicket{DeliveryID: req.DeliveryID, Attempt: req.Attempt, DecisionSetID: setID}
+	// Counted after the commit, not beside the insert. Two arms below return an
+	// error once the decisions are already written — an unanswerable legacy
+	// gate, and the wording comparison — and each rolls the rows back. A
+	// counter incremented inside the transaction would keep those, and report
+	// decisions the record does not hold.
+	var recorded []commsauthz.Decision
 
 	// The legacy gate's answer, recorded beside the engine's on every row so a
 	// disagreement is readable in the record rather than only in a counter that
@@ -88,13 +93,29 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 			return err
 		}
 		modeFor := func(c commsauthz.Category) commsauthz.Mode { return ModeFor(modes, c) }
+		// WHICH RULES ARE ABOUT TO JUDGE THIS, read ONCE and before any of them
+		// do, so the row records the ruleset the decisions were actually taken
+		// under.
+		//
+		// Asking again after decideRecipients would let an installation that
+		// changed its declared country mid-transmit record a pack that judged
+		// nothing: the frequency ceiling would have been applied under the old
+		// country while the row named the new one. The reads are separate
+		// unlocked SELECTs under READ COMMITTED, so sharing this transaction
+		// does not make two of them agree — asking once does.
+		stamp, err := g.rulesetStamp(ctx, tx)
+		if err != nil {
+			return err
+		}
 		set, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor)
 		if err != nil {
 			return err
 		}
-		if err := g.recordDecisions(ctx, tx, req, setID, set); err != nil {
+		written, err := g.recordDecisions(ctx, tx, req, setID, set, stamp)
+		if err != nil {
 			return err
 		}
+		recorded = written
 		// AN UNANSWERABLE LEGACY GATE IS ONLY FATAL WHERE ITS ANSWER IS USED.
 		//
 		// Effective consults legacyAllowed only when no recipient's category is
@@ -112,29 +133,43 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		}
 		ticket.Allowed = set.Effective(modeFor, legacyAllowed)
 		ticket.Reason = refusalReason(set, legacyAllowed)
+		// THIS REFUSAL IS ABOUT THE RECIPIENTS, which is the one a recorded
+		// human decision can answer — they were shown the engine's verdict
+		// about the contacts, and that is what they signed for.
+		//
+		// Set here, from the engine's own answer, and never widened below: the
+		// wording check that follows refuses for a reason NOBODY has looked at,
+		// so it must not inherit this flag. See TransmitTicket.ConsentRefused.
+		ticket.ConsentRefused = !ticket.Allowed
 		// The message that goes must be the message that was authorized.
 		//
-		// Asked LAST, and only of a send the engine would otherwise allow: a
-		// delivery already refused is parked with a reason about the recipient,
-		// and replacing that with "the wording changed" would tell an operator
-		// to re-approve a message somebody had objected to. A changed body on
-		// an allowed send is its own refusal, and it parks rather than denying
-		// forever — the wording is a thing a human can look at and re-send.
-		if ticket.Allowed {
-			changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
-			if err != nil {
-				return err
-			}
-			if changed {
-				ticket.Allowed = false
-				ticket.Reason = "this message was edited after it was authorized, so the wording that " +
-					"was checked is not the wording that would go"
-			}
+		// ASKED OF EVERY MESSAGE THAT MIGHT ACTUALLY GO, which is not the same
+		// as every message the engine allows. A delivery the engine refused can
+		// still leave on a named human's recorded decision, and that decision
+		// was about specific words — so skipping this check for a refused
+		// delivery would let a directed send carry whatever the payload holds
+		// now rather than what was acknowledged. That was the defect: the check
+		// ran only under `if ticket.Allowed`, and a directed send is never
+		// allowed.
+		//
+		// It does not REPLACE the recipient refusal for a message that is not
+		// going anyway: an operator reading "the wording changed" about a
+		// message somebody had objected to would be told to re-approve the
+		// wrong thing. So the reason is only rewritten when the recipient
+		// verdict would otherwise have let it through, and the flag is cleared
+		// either way — a wording refusal is nobody's to waive.
+		changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
+		if err != nil {
+			return err
 		}
+		applyWordingVerdict(&ticket, changed)
 		return nil
 	})
 	if err != nil {
 		return commsauthz.TransmitTicket{}, err
+	}
+	for _, d := range recorded {
+		countDecision(d)
 	}
 	return ticket, nil
 }
@@ -165,6 +200,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	// The records this delivery's activity is filed under — the live-deal
+	// arm's own evidence, absent from TransmitRequest for deliveryThreadKey's
+	// reason.
+	links, err := deliveryLinks(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
@@ -172,7 +214,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey), commsauthz.PhaseTransmit)
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey, links), commsauthz.PhaseTransmit)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -204,10 +246,10 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // consulted, as the weakest of the four grounds.
 func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
-	personID, found, err := resolvePerson(ctx, tx, r)
+	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		// Ambiguity refuses rather than picking, and that is an ANSWER about
-		// this send: no verdict can be about one person.
+		// this send: no verdict can be about one contact.
 		if errors.Is(err, apperrors.ErrConsentNotGranted) {
 			d.Verdict = commsauthz.VerdictDeny
 			d.ReasonCode = commsauthz.ReasonNoSubject
@@ -216,7 +258,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		return commsauthz.Decision{}, err
 	}
 	if !found {
-		// No person: this may still be a LEAD, which is a subject the engine
+		// No contact: this may still be a LEAD, which is a subject the engine
 		// can answer about. Without this arm every lead-only recipient came
 		// back `review`, so a category moved to enforce would refuse exactly
 		// the sends the legacy gate allows — an inversion rather than a
@@ -224,20 +266,20 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// mode rather than the day this code was written.
 		return g.decideLead(ctx, tx, r, req, d, phase)
 	}
-	parsed, err := ids.Parse(personID)
+	parsed, err := ids.Parse(contactID)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: the resolved subject is not an id: %w", err)
 	}
-	d.SubjectKind, d.SubjectID = entityPerson, parsed
+	d.SubjectKind, d.SubjectID = entityContact, parsed
 
 	// READ FIRST, APPLY AFTER THE CATEGORY IS KNOWN. What a suppression binds
 	// depends on what the message is, and nothing knows that until the record
 	// has been resolved — see applySuppression.
-	kinds, err := liveSuppression(ctx, tx, personID, r)
+	stops, err := liveSuppression(ctx, tx, contactID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	if kind, absolute := bindsEveryCategory(kinds); absolute {
+	if kind, absolute := bindsEveryCategory(stopKinds(stops)); absolute {
 		// Nothing a category could say would change this answer, so the record
 		// is not resolved at all. An objection and a restriction do NOT come
 		// through here — both need the category before they can be applied.
@@ -246,13 +288,20 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		d.Suppression = kind
 		return d, nil
 	}
-	d, err = g.decideResolved(ctx, tx, req, subjectRef{
-		Kind: entityPerson, ID: personID, Address: r.Email,
-	}, d, phase, len(kinds) > 0)
+	address, channelProvider, channelUserID := recipientSubjectAddress(r)
+	d, sendPurpose, err := g.decideResolved(ctx, tx, req, subjectRef{
+		Kind: entityContact, ID: contactID, Address: address,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
+	}, d, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	d = applySuppression(d, kinds)
+	// Carried onto the decision, not only into applySuppression's local
+	// argument: a review opened from a refused decision needs this same
+	// purpose later, to ask whether a narrow stop binds the send that refusal
+	// snapshots (aStopThatBindsTheMessage, reviewcontext.go).
+	d.PurposeID = sendPurpose
+	d = applySuppression(d, stops, sendPurpose)
 	return d, nil
 }
 
@@ -263,7 +312,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // prose meant an ordinary copy edit in verdict.go could silently reclassify a
 // legal fact, and it collapsed three different blocks into "objection" — a
 // withdrawal under Art. 7(3), and a purpose class this installation has no
-// transport for, both recorded as though the person had objected. A subject
+// transport for, both recorded as though the contact had objected. A subject
 // access request discloses these rows, so a wrong label there is a false
 // statement about somebody.
 //
@@ -278,6 +327,12 @@ func blockedReasonCode(v Verdict) string {
 		return commsauthz.ReasonConsentWithdrawn
 	case BlockNoChannel:
 		return commsauthz.ReasonNoEvidence
+	case BlockSuppressed:
+		// v.Suppression carries the kind that actually bound, so a caller
+		// reading Code alone gets the record's own reason rather than the
+		// unrelated default below — the same mislabelling this file's own
+		// doc comment exists to prevent.
+		return v.Suppression
 	default:
 		return commsauthz.ReasonObjection
 	}
@@ -325,147 +380,24 @@ func refusalReason(set commsauthz.DecisionSet, legacyAllowed bool) string {
 		len(denied), len(set.Decisions), denied[0].ReasonCode)
 }
 
-// recordDecisions writes one immutable row per recipient.
+// applyWordingVerdict folds the wording answer into the ticket.
 //
-// The content fingerprint is a hash of subject and body, never the text: it
-// exists so a later reader can tell whether the message that went is the
-// message that was authorized, and storing the words themselves would make the
-// decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) error {
-	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return err
-	}
-	for _, d := range set.Decisions {
-		// Both or neither, which the table's own CHECK also demands: a
-		// subject_kind naming a row with no id describes nothing.
-		subjectKind := nullableText(d.SubjectKind)
-		var subjectID *ids.UUID
-		if d.SubjectKind != "" {
-			id := d.SubjectID
-			subjectID = &id
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO communication_decision
-			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
-			   phase, resolved_category, verdict, reason_code, basis, suppression,
-			   content_fingerprint, legacy_verdict, mode, actor)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
-			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
-			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
-			d.ReasonCode, nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], d.LegacyVerdict, string(d.Mode), by); err != nil {
-			return fmt.Errorf("consent: record the transmit decision: %w", err)
-		}
-	}
-	return nil
-}
-
-// nullableBasis and nullableText carry the difference between "no value" and
-// "the empty string" to Postgres. A *string is what pgx reads as NULL, and the
-// distinction matters on both columns: a decision with no basis recorded is not
-// the same fact as one whose basis is blank.
-func nullableBasis(b commsauthz.Basis) *string {
-	if b == "" {
-		return nil
-	}
-	v := string(b)
-	return &v
-}
-
-func nullableText(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-// liveSuppression reads what stops a message reaching this recipient
-// independently of any consent grant.
+// Split out so the rule can be stated without a database behind it, and because
+// it is the rule a directed send hangs on: a message edited after it was
+// checked is refused for a reason NOBODY has looked at, so the flag that lets a
+// recorded decision waive the recipient refusal must not survive it.
 //
-// Two shapes, and the address arm matters as much as the person arm: a hard
-// bounce is a fact about a MAILBOX, so it is recorded against the address and
-// keeps applying when the same address later appears on a different record.
-// The person arm carries objections and restrictions, which follow the human.
-func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connector.Recipient) ([]string, error) {
-	// EVERY live kind, not the strongest one.
-	//
-	// An earlier version took one row ordered by a fixed strength, which was
-	// sound while every kind refused everything: whichever won, the answer was
-	// the same. It stopped being sound when reach became category-dependent —
-	// a marketing objection sorts first and binds the LEAST, so a person
-	// carrying both an objection and a hard bounce had the bounce masked and
-	// their invoice sent to a dead mailbox. Strength is no longer a total
-	// order, so the caller is given all of them and applies each.
-	//
-	// Reading the row is not applying it: what a suppression BINDS depends on
-	// the category, which is not known here. applySuppression decides that,
-	// after resolution.
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT kind FROM communication_suppression
-		 WHERE revoked_at IS NULL
-		   AND (person_id = $1
-		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
-		personID, r.Email)
-	if err != nil {
-		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+// The REASON is only rewritten when the recipient verdict would otherwise have
+// let the message through. An operator reading "the wording changed" about a
+// message somebody had objected to would be told to re-approve the wrong thing.
+func applyWordingVerdict(ticket *commsauthz.TransmitTicket, changed bool) {
+	if !changed {
+		return
 	}
-	defer rows.Close()
-	var kinds []string
-	for rows.Next() {
-		var kind string
-		if err := rows.Scan(&kind); err != nil {
-			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
-		}
-		kinds = append(kinds, reasonForSuppressionKind(kind))
+	if ticket.Allowed {
+		ticket.Reason = "this message was edited after it was authorized, so the wording that " +
+			"was checked is not the wording that would go"
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
-	}
-	return kinds, nil
-}
-
-// reasonForSuppressionKind maps a stored kind onto the reason code a decision
-// row carries.
-//
-// A kind this code does not recognise gets its OWN code rather than being
-// folded onto a known one: suppressionBinds refuses an unrecognised code
-// outright, and folding it onto a recognised one would hand it that code's
-// narrower reach. That is exactly how subject_request came to permit five
-// categories of mail while wearing the statutory restriction's name.
-func reasonForSuppressionKind(kind string) string {
-	switch kind {
-	case "marketing_objection":
-		return commsauthz.ReasonObjection
-	case "processing_restriction":
-		return commsauthz.ReasonRestricted
-	case "subject_request":
-		return commsauthz.ReasonSubjectRequest
-	case "hard_bounce":
-		return commsauthz.ReasonHardBounce
-	default:
-		return "unrecognised_suppression:" + kind
-	}
-}
-
-// decisionRecipientKey is the stored identity of one recipient, and it is
-// deliberately NOT recipientLabel.
-//
-// recipientLabel exists to name a refused recipient in an operator's error
-// message, where a channel account id is withheld on purpose — the caller never
-// supplied it, so a refusal must not hand it back. That is right for a sentence
-// and wrong for a key: every channel recipient would store the same words, so
-// two recipients on one delivery would collide on the uniqueness index and the
-// second decision — possibly the refusal — would be dropped.
-//
-// A channel identity is therefore stored structurally. It stays inside the
-// installation, where the timeline already holds the same id.
-func decisionRecipientKey(r connector.Recipient) string {
-	if r.Channel != nil {
-		return r.Channel.Provider + ":" + r.Channel.ChannelUserID
-	}
-	return r.Email
+	ticket.Allowed = false
+	ticket.ConsentRefused = false
 }

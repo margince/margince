@@ -38,12 +38,12 @@ const redacted = "[redacted]"
 // segment names what was asked for rather than who was allowed to ask.
 //
 // Nor does "the holder published it" put a route outside this list. Published
-// to the people a host chooses and written into every log aggregator, support
+// to the contacts a host chooses and written into every log aggregator, support
 // paste and third-party log service are not the same audience, and only the
 // first is a decision the holder made.
 var credentialPrefixes = []string{
 	// The preference centre: the token resolves straight to a
-	// (workspace, person) consent state and can change it.
+	// (workspace, contact) consent state and can change it.
 	"/v1/public/preferences/",
 	// The confirm-details link: the token opens the subject's own record,
 	// so a token in a log line is a readable copy of somebody's personal
@@ -51,7 +51,7 @@ var credentialPrefixes = []string{
 	"/v1/public/confirm/",
 	// The public booking page. The slug is the ONLY admission check on a
 	// route that WRITES: an anonymous request holding it creates or matches a
-	// person by email, records a consent grant against them, and books a
+	// contact by email, records a consent grant against them, and books a
 	// meeting on the host's calendar (activities.BookPublicMeeting). That is
 	// the criterion above, whatever the host does with the URL afterwards.
 	//

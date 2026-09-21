@@ -1,6 +1,6 @@
 /* ===== the top bar =====
  * The session's own strip: the sidebar control, the trail, the search, and the
- * person. It is the application's one bar and every screen has it (DESIGN.md
+ * contact. It is the application's one bar and every screen has it (DESIGN.md
  * §6); nothing that belongs to a record sits in it. It stands on the same glass
  * as the sidebar with one hairline under it, so the two halves of the chrome
  * are one pane wrapped around the content rather than two panels meeting at a
@@ -29,7 +29,10 @@
      carries the logomark is sized against it so the first destination's row
      begins exactly where this bar's rule ends. */
   height: var(--topbarH);
-  padding: var(--space-2) var(--pageGutter);
+  /* The gutter, and no vertical padding: the strip's height is the token above
+     and its children centre in it, so vertical padding only narrows the box the
+     40px search already stands taller than. */
+  padding: 0 var(--pageGutter);
   /* Translucent over the page that scrolls beneath, with the blur that makes
      text readable through it. `position: relative` + a z-index because the
      scroller reaches up behind this strip: in flow but pulled up, it would
@@ -64,12 +67,11 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
+  width: var(--controlHeight);
+  height: var(--controlHeight);
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textMeta);
   /* The cursor says which way the panel will move, the way a pane divider does:
      expanded this control narrows the sidebar, collapsed it widens it. `pointer`
      said only "pressable", which every control in the bar already is. */
@@ -94,13 +96,21 @@
 .topbar-searchslot {
   width: min(420px, 34vw);
 }
+/* This is a BUTTON that opens the palette, and it is drawn as the field the
+   palette opens with — so it takes the field's box and the field's type, not a
+   control's. A reader reads the shape: something shaped like a search box that
+   stands 8px shorter than the one it opens, in type a rung off it, reads as a
+   different object mid-gesture. `font: inherit` because the app reset hands a
+   button the body FAMILY and nothing else, and root type at the root weight is
+   what a field wears. */
 .topbar-search {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: var(--control-h-sm);
-  padding: 0 var(--space-2) 0 var(--space-3);
+  min-block-size: var(--inputHeight);
+  padding-inline: var(--inputPaddingX);
+  font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
   border: 1px solid var(--paneEdge);
@@ -108,46 +118,49 @@
   background: var(--pane);
   text-align: left;
   cursor: pointer;
+  /* What is drawn as a field takes a field's depth: this is a button, but it
+     is shaped like the search box it opens, and a reader reads the shape. */
+  box-shadow: var(--shadow-well);
+  /* Named, never `all` — the border and ink this button changes on hover have
+     always snapped, and only the depth is introduced here. */
+  transition: box-shadow var(--dur-state) var(--ease-out);
+}
+/* And a press takes it away, like every other verb: the button is a field to
+   look at and a verb to use, so it rests as one and answers as the other. */
+.topbar-search:hover,
+.topbar-search:active,
+.topbar-search:focus-visible {
+  box-shadow: none;
 }
 .topbar-search:hover {
   border-color: var(--borderStrong);
-  color: var(--textSecondary);
 }
 .topbar-search:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
+/* The words in the box are this field's PLACEHOLDER — nobody typed them, and
+   they go the moment the palette opens — so they take the placeholder's tone
+   rather than the ink of a value. */
 .topbar-searchlabel {
   flex: 1;
   min-width: 0;
+  color: var(--textSecondary);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 /* One cap per KEY. Two small squares read as keys because they are shaped like
-   keys; the single wide box they replace read as a label. */
+   keys; the single wide box they replace read as a label. This rule only PLACES
+   them in the strip — the cap itself is `Kbd`, the one key cap
+   (design-system/atoms.css `.kbd`), so the strip cannot draw a second key.
+   Each cap is still sized to its own character: ⌘ and K are different widths
+   and two caps forced to one width read as a pair of buttons. */
 .topbar-keys {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   flex: none;
-}
-.topbar-keys kbd {
-  display: grid;
-  place-items: center;
-  /* Sized to the character, not to a common floor: ⌘ and K are different widths
-     and two caps forced to one width read as a pair of buttons. 18px tall, 4px
-     inset, 6px radius, 11px at medium — the reference's own measurements. */
-  height: 18px;
-  padding: 0 4px; /* ds:ignore optical inset on a key cap, not rhythm */
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgPage);
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-medium);
-  line-height: 1;
 }
 
 /* Focus rings in this strip take `--accent`, the THEMED state colour, not
@@ -161,7 +174,7 @@
 .topbar .accountmenu {
   top: calc(
     100% +
-    (var(--topbarH) - var(--control-h-sm)) /
+    (var(--topbarH) - var(--controlHeight)) /
     2 +
     var(--space-2) +
     1px
@@ -195,11 +208,14 @@
      are what say "type here"; with no room for the label they said nothing and
      left one of three icons in a box. */
   .topbar-search {
-    width: var(--control-h-sm);
+    width: var(--controlHeight);
     justify-content: center;
     padding: 0;
     border-color: transparent;
     background: transparent;
+    /* And the floor with them: nothing here is drawn as a field any more, and
+       a well under nothing is a line on the page. */
+    box-shadow: none;
   }
   .topbar-search:hover {
     border-color: transparent;
@@ -220,7 +236,6 @@
    way: where they are, how to search, and who they are. */
 @media (max-width: 700px) {
   .topbar {
-    padding: var(--space-2) var(--pageGutter);
     gap: var(--space-2);
   }
   .topbar-toggle {

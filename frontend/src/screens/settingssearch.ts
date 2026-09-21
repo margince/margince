@@ -44,6 +44,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "signature",
     "profile",
     "brief",
+    "home",
     "theme",
     "appearance",
   ],
@@ -72,7 +73,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "microsoft",
     "app",
   ],
-  members: ["users", "people", "invite", "seat", "deactivate", "roles"],
+  members: ["users", "contacts", "invite", "seat", "deactivate", "roles"],
   teams: ["team", "group", "manager"],
   seats: ["license", "licence", "entitlement", "capacity", "headcount"],
   pipelines: ["stage", "deal", "funnel", "won", "lost"],
@@ -81,7 +82,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   tags: ["tag", "label", "vocabulary"],
   products: ["product", "offer", "template", "price", "catalog"],
   capture: ["mail", "email", "domain", "sharing", "inbox", "rules"],
-  integrations: ["webhook", "overlay", "hubspot", "mirror", "sync"],
+  integrations: ["webhook", "api"],
   knowledge: ["document", "corpus", "rag", "upload"],
   import: ["csv", "upload", "migration", "bulk"],
   models: ["ai", "routing", "provider", "anthropic", "openai", "key"],
@@ -96,7 +97,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
 };
 
 /**
- * A form of the text that matches the way people actually type.
+ * A form of the text that matches the way contacts actually type.
  *
  * Diacritics folded, because a reader searching a German or Vietnamese label
  * types what their keyboard gives them and a fold in one direction only would
@@ -136,7 +137,7 @@ export function settingsSearch(
   // "email signature" as one thought, but the two words live in different
   // fields — "email" in the page's aliases, "signature" in another alias
   // beside it — so demanding that the whole phrase be one substring answered
-  // nothing for exactly the queries a person composes naturally.
+  // nothing for exactly the queries a contact composes naturally.
   const words = fold(query)
     .split(/\s+/)
     .filter((word) => word !== "");

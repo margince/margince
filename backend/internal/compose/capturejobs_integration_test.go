@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // A completed connect-time backfill must build the day's digest itself, so the
@@ -38,7 +39,7 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 
 	// The run's job is enqueued by hand further down, once the boot digest has
 	// been drained — so the start itself deliberately schedules nothing.
-	run, err := b.registry.StartBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1), 6, 25,
+	run, err := b.registry.StartBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1), 6, connector.BackfillEstimate{Messages: 25},
 		func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
@@ -162,7 +163,7 @@ func TestCaptureOvernightJobsRegisterAndRun(t *testing.T) {
 		GmailRegistry:     b.registry,
 		// Zero-value scripts: the classify brain labels whatever backlog
 		// the fake connector synced; the enrich pass finds no
-		// connector-created person (this registry wires no ensurer) and
+		// connector-created contact (this registry wires no ensurer) and
 		// completes as an honest no-op.
 		ClassifyBrain: &scriptedClassifyBrain{},
 		EnrichBrain:   &signatureScriptBrain{},

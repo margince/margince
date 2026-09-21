@@ -39,6 +39,19 @@ func inboundMail(at time.Time) crmcontracts.Activity {
 	return a
 }
 
+// booked is what the deal's own next-meeting read answers. The rules take a
+// meeting from there rather than from the timeline page, so a test that wants
+// one in play seeds this and not a row in the list.
+func booked(at time.Time) *activities.BookedMeeting {
+	return &activities.BookedMeeting{ID: ids.NewV7(), Subject: "Detailabstimmung", StartsAt: at}
+}
+
+// seat is one stakeholder as the card reads them: named, and open to filed work,
+// because most readers may do both and the tests about the exceptions say so.
+func seat(role, name string) Seat {
+	return Seat{Role: role, Name: name, ContactID: ids.NewV7(), Attachable: true}
+}
+
 func TestAnOpenTaskIsReusedInsteadOfDuplicated(t *testing.T) {
 	taskID := ids.NewV7()
 	f := facts{
@@ -58,109 +71,43 @@ func TestAnOpenTaskIsReusedInsteadOfDuplicated(t *testing.T) {
 func TestABookedMeetingOutranksEverythingElse(t *testing.T) {
 	f := facts{
 		deal: openDeal(), now: testNow,
-		timeline: []crmcontracts.Activity{
-			act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3)),
-			inboundMail(testNow.AddDate(0, 0, -3)),
-		},
+		nextMeeting: booked(testNow.AddDate(0, 0, 3)),
+		timeline:    []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))},
 	}
 	if mv := decideMove(f); mv.Action != ActionOpenMeetingBrief {
 		t.Fatalf("action = %q, want the meeting brief: a dated meeting beats an unanswered mail", mv.Action)
 	}
 }
 
-func TestAnUnansweredInboundMailBecomesADraft(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))}}
+func TestAnOutstandingRequestOffersAnEvidenceLinkedTask(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))}}
 	mv := decideMove(f)
-	if mv.Action != ActionDraftEmail {
-		t.Fatalf("action = %q, want a drafted reply", mv.Action)
+	if mv.Action != ActionCreateTask {
+		t.Fatalf("action = %q, want a task accepting the request", mv.Action)
 	}
-	if mv.Arguments == nil || (*mv.Arguments)["activity_id"] == nil {
-		t.Fatalf("the draft names no mail to answer: %+v", mv.Arguments)
-	}
-}
-
-func TestAnAnsweredInboundMailIsNotStillWaiting(t *testing.T) {
-	outbound := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2))
-	dir := crmcontracts.ActivityDirectionOutbound
-	outbound.Direction = &dir
-	// The timeline is newest first, so the reply sits above the mail it answers.
-	f := facts{
-		deal: openDeal(), now: testNow,
-		timeline: []crmcontracts.Activity{outbound, inboundMail(testNow.AddDate(0, 0, -5))},
-	}
-	if mv := decideMove(f); mv.Action == ActionDraftEmail {
-		t.Fatal("a mail that was already answered was offered as unanswered")
+	if mv.Arguments == nil || (*mv.Arguments)["request_activity_id"] == nil {
+		t.Fatalf("the task names no source request: %+v", mv.Arguments)
 	}
 }
 
-// A reply this reader may not READ is still a reply. Skipping it would walk
-// past it to the inbound behind it and offer to answer a mail somebody has
-// already answered — the card would send a rep to write a duplicate.
-func TestAWithheldReplyStillCountsAsAnAnswer(t *testing.T) {
-	outbound := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2))
-	dir := crmcontracts.ActivityDirectionOutbound
-	outbound.Direction = &dir
-	state := crmcontracts.ActivityContentStateWithheld
-	outbound.ContentState = &state
-	outbound.Subject = nil
-	f := facts{
-		deal: openDeal(), now: testNow,
-		timeline: []crmcontracts.Activity{outbound, inboundMail(testNow.AddDate(0, 0, -5))},
-	}
-	if _, ok := unansweredInbound(f); ok {
-		t.Fatal("a withheld reply was ignored, so an answered mail read as unanswered")
-	}
-}
-
-// The card's move and the deal page's email box both answer "is an answer
-// owed?", and they must never answer it differently: a rep told "draft the
-// reply" by one and offered "send an email" by the other cannot tell which is
-// right. This fails if either stops reading unansweredInbound.
 func TestTheMoveAndReplyToNameTheSameMail(t *testing.T) {
-	cases := map[string][]crmcontracts.Activity{
-		"an unanswered mail": {inboundMail(testNow.AddDate(0, 0, -3))},
-		"nothing logged":     {},
-		// The mail is NOT the newest row. Without this case both readings
-		// coincide on every input and the comparison can never fail — which is
-		// exactly how the first version of this test passed against a reply_to
-		// that named the wrong record.
-		"a newer note sits above the mail": {
-			act(crmcontracts.ActivityKindNote, testNow.AddDate(0, 0, -1)),
-			inboundMail(testNow.AddDate(0, 0, -4)),
-		},
-		"only an outbound": func() []crmcontracts.Activity {
-			out := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -1))
-			dir := crmcontracts.ActivityDirectionOutbound
-			out.Direction = &dir
-			return []crmcontracts.Activity{out}
-		}(),
-	}
-	for name, timeline := range cases {
-		t.Run(name, func(t *testing.T) {
-			f := facts{deal: openDeal(), now: testNow, timeline: timeline}
-			card := composeDeterministic(f, decideMove(f))
+	for _, status := range []crmcontracts.DealStatus{crmcontracts.DealStatusOpen, crmcontracts.DealStatusWon, crmcontracts.DealStatusLost} {
+		t.Run(string(status), func(t *testing.T) {
+			request := inboundMail(testNow.AddDate(0, 0, -200))
+			deal := openDeal()
+			deal.Status = status
+			f := facts{deal: deal, now: testNow, timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindNote, testNow)}, requests: []crmcontracts.Activity{request, inboundMail(testNow.AddDate(0, 0, -201))}}
 			mv := decideMove(f)
-
-			// What the button would open, and what the box would open.
-			var fromMove string
-			if mv.Action == ActionDraftEmail && mv.Arguments != nil {
-				if id, ok := (*mv.Arguments)["activity_id"].(openapi_types.UUID); ok {
-					fromMove = id.String()
-				}
+			card := composeDeterministic(f, mv)
+			if mv.Action != ActionCreateTask || mv.Arguments == nil || (*mv.Arguments)["request_activity_id"] != request.Id || card.ReplyTo == nil || *card.ReplyTo != request.Id {
+				t.Fatalf("request was lost or its two actions disagree: move=%+v card=%+v", mv, card)
 			}
-			var fromBox string
-			if card.ReplyTo != nil {
-				fromBox = card.ReplyTo.String()
+			in := project(f, mv)
+			if !citableIDs(in)[request.Id.String()] {
+				t.Fatal("old request lost its evidence outside the timeline")
 			}
-			// A draft_email move ALWAYS names a mail. Asserting that here is
-			// what stops the comparison below going vacuous: read the operand
-			// out with the wrong type and fromMove stays empty, the comparison
-			// is skipped, and the test passes having compared nothing.
-			if mv.Action == ActionDraftEmail && fromMove == "" {
-				t.Fatalf("the move offers a draft but names no mail: %#v", *mv.Arguments)
-			}
-			if fromMove != "" && fromMove != fromBox {
-				t.Fatalf("the move answers %q and the email box answers %q", fromMove, fromBox)
+			if _, ok := citedRecord(f, request.Id.String()); !ok {
+				t.Fatal("old request cannot be cited")
 			}
 		})
 	}
@@ -224,8 +171,8 @@ func TestAWithheldRowIsNeverNamedAsTheOperand(t *testing.T) {
 	state := crmcontracts.ActivityContentStateWithheld
 	withheldMail.ContentState = &state
 	withheldMail.Subject = nil
-	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{withheldMail}}
-	if mv := decideMove(f); mv.Action == ActionDraftEmail {
+	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{withheldMail}}
+	if _, ok := unansweredInbound(f); ok {
 		t.Fatal("a withheld mail was offered as the one to answer")
 	}
 }
@@ -251,16 +198,16 @@ func TestTheFirstMoveOnAnUncontactedDealNamesWhoToOpenWith(t *testing.T) {
 		t.Errorf("the advice does not name who to open with: %q", mv.Reason)
 	}
 	if !strings.Contains(mv.Reason, "champion") {
-		t.Errorf("the advice does not say why that person: %q", mv.Reason)
+		t.Errorf("the advice does not say why that contact: %q", mv.Reason)
 	}
 	// The count is what makes the sentence checkable against the page.
-	if !strings.Contains(mv.Reason, "3 people") {
+	if !strings.Contains(mv.Reason, "3 contacts") {
 		t.Errorf("the advice does not say how many are named: %q", mv.Reason)
 	}
 }
 
 func TestTheFirstMoveNeverOpensWithTheBlocker(t *testing.T) {
-	// A deal whose ONLY named seat is the person most likely to refuse it. No
+	// A deal whose ONLY named seat is the contact most likely to refuse it. No
 	// advice is the right answer; naming them would be worse than silence.
 	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
 		{Role: "blocker", Name: "Patrick Ganzmann"},
@@ -295,7 +242,7 @@ func TestTheFirstMoveTakesTheBestAvailableRole(t *testing.T) {
 }
 
 func TestASeatTheReaderMayNotNameStillCarriesItsRole(t *testing.T) {
-	// The reader holds deal:read without person:read, so the seam supplies the
+	// The reader holds deal:read without contact:read, so the seam supplies the
 	// seats unnamed. The role is not the secret and the advice still works.
 	f := facts{deal: openDeal(), now: testNow, seats: []Seat{{Role: "champion"}}}
 
@@ -326,9 +273,225 @@ func TestAContactedDealKeepsItsOwnMove(t *testing.T) {
 	}
 }
 
+// The deal this whole change came from: contacted, quiet, nothing booked, and
+// the only open task minted by the product. The old card said "complete the
+// existing task"; the contact page said "book a meeting with the champion". The
+// records said the contact page was right.
+func TestAQuietContactedDealNamesTheChampionToMeet(t *testing.T) {
+	champion := seat("champion", "Annabelle Malherbe")
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
+		seats:    []Seat{{Role: "blocker", Name: "Nadine Pichelot"}, champion},
+	}
+
+	mv := decideMove(f)
+
+	if mv.Action != ActionCreateTask {
+		t.Fatalf("action = %q, want the meeting filed as work", mv.Action)
+	}
+	subject, _ := (*mv.Arguments)["subject"].(string)
+	if subject != "Book a meeting with Annabelle Malherbe" {
+		t.Errorf("the filed task does not say what it is for: %q", subject)
+	}
+	if !strings.Contains(mv.Reason, "23 days ago") {
+		t.Errorf("the advice does not say how long it has been quiet: %q", mv.Reason)
+	}
+	if !strings.Contains(mv.Reason, "nothing is booked") {
+		t.Errorf("the advice does not say why now: %q", mv.Reason)
+	}
+	if !strings.Contains(mv.Reason, "champion") {
+		t.Errorf("the advice does not say why that contact: %q", mv.Reason)
+	}
+	// Both records: the deal it is about, and the contact it is with.
+	links, _ := (*mv.Arguments)["links"].([]map[string]any)
+	if len(links) != 2 {
+		t.Fatalf("the task is not filed against both the deal and the contact: %+v", links)
+	}
+	if links[1]["entity_id"] != champion.ContactID {
+		t.Errorf("the task names a contact nobody chose: %+v", links[1])
+	}
+}
+
+func TestTheMeetingRequestTakesTheBestAvailableRole(t *testing.T) {
+	// No champion on the deal. The economic buyer is the next best answer, and
+	// the influencer beside them is not.
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -30))},
+		seats:    []Seat{seat("influencer", "Ines Eschbacher"), seat("economic_buyer", "Philipp Königs")},
+	}
+
+	mv := decideMove(f)
+
+	if !strings.Contains(mv.Reason, "Philipp Königs") {
+		t.Errorf("the economic buyer was not chosen over the influencer: %q", mv.Reason)
+	}
+}
+
+func TestTheMeetingRequestNeverNamesTheBlocker(t *testing.T) {
+	// The same refusal the opening move makes: the contact most likely to
+	// refuse the deal is not who to send a rep to meet.
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -30))},
+		seats:    []Seat{seat("blocker", "Nadine Pichelot")},
+	}
+
+	mv := decideMove(f)
+
+	if strings.Contains(mv.Reason, "Nadine Pichelot") {
+		t.Errorf("the blocker was offered as the meeting to book: %q", mv.Reason)
+	}
+	if !strings.Contains(mv.Reason, "agree the next step") {
+		t.Errorf("the card did not fall back to the sentence that names nobody: %q", mv.Reason)
+	}
+}
+
+func TestASeatTheReaderMayNotFileAgainstIsNamedByRoleOnly(t *testing.T) {
+	// A read-only share shows this reader the champion and does not let them add
+	// to that contact's record. Two things follow, and the second is the one
+	// that took a review to see.
+	//
+	// The link is withheld, because a task pointing at a contact the reader may
+	// not write to fails at the server after the click.
+	//
+	// And the NAME goes with it. The card is stored and served again from the
+	// queue, where the only id that survives is the one in the link — so a move
+	// naming somebody it does not link is a name nothing can ever re-check, and
+	// it would still be printed after the reader lost the contact entirely. The
+	// role is what the card says instead, exactly as when it may not read the
+	// name at all.
+	champion := seat("champion", "Annabelle Malherbe")
+	champion.Attachable = false
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
+		seats:    []Seat{champion},
+	}
+
+	mv := decideMove(f)
+
+	if strings.Contains(mv.Reason, "Annabelle Malherbe") {
+		t.Errorf("a contact was named in a move that cannot carry their id: %q", mv.Reason)
+	}
+	if subject, _ := (*mv.Arguments)["subject"].(string); strings.Contains(subject, "Annabelle Malherbe") {
+		t.Errorf("the filed task names a contact the move cannot link: %q", subject)
+	}
+	if !strings.Contains(mv.Reason, "champion") {
+		t.Errorf("the advice dropped the role along with the name: %q", mv.Reason)
+	}
+	links, _ := (*mv.Arguments)["links"].([]map[string]any)
+	if len(links) != 1 {
+		t.Fatalf("a task was filed against a contact this reader may not write to: %+v", links)
+	}
+	if links[0][argEntityType] != linkDeal {
+		t.Errorf("the surviving link is not the deal: %+v", links[0])
+	}
+}
+
+func TestAFreshMoveNamesItsContactToTheCacheAndTheAudience(t *testing.T) {
+	// NamedContacts reads the move BEFORE it has been through JSON, where the
+	// links are Go maps and the ids are typed. It used to understand only the
+	// stored shape and answered "this move names nobody" for every fresh one —
+	// silently, which cost the fingerprint its operand and let the audience
+	// check pass because it had found nothing to check.
+	champion := seat("champion", "Annabelle Malherbe")
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
+		seats:    []Seat{champion},
+	}
+
+	mv := decideMove(f)
+
+	named := NamedContacts(mv)
+	if len(named) != 1 || named[0] != champion.ContactID {
+		t.Fatalf("NamedContacts = %v on a freshly built move, want the champion %s", named, champion.ContactID)
+	}
+	// And the same move once stored, which is the shape the queue re-reads.
+	encoded, err := json.Marshal(mv)
+	if err != nil {
+		t.Fatalf("encoding the move: %v", err)
+	}
+	var stored crmcontracts.DealStatusCardMove
+	if err := json.Unmarshal(encoded, &stored); err != nil {
+		t.Fatalf("decoding the stored move: %v", err)
+	}
+	if got := NamedContacts(stored); len(got) != 1 || got[0] != champion.ContactID {
+		t.Fatalf("NamedContacts = %v on the stored move, want the same answer as the fresh one", got)
+	}
+}
+
+func TestTheCacheKeyMovesWhenTheContactDoes(t *testing.T) {
+	// Two stakeholders who share a display name. The sentence and the subject
+	// are then byte-identical, and only the operand differs — so a key built
+	// from the prose alone would serve the first contact's task body for the
+	// second, filing work onto somebody nobody chose.
+	base := func(contactID ids.UUID) facts {
+		champion := seat("champion", "Alex Weber")
+		champion.ContactID = contactID
+		return facts{
+			deal: openDeal(), now: testNow,
+			timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
+			seats:    []Seat{champion},
+		}
+	}
+	first, second := base(ids.NewV7()), base(ids.NewV7())
+	// Same deal, so nothing but the stakeholder differs.
+	second.deal = first.deal
+
+	firstMove, secondMove := decideMove(first), decideMove(second)
+	if firstMove.Reason != secondMove.Reason {
+		t.Fatalf("the fixture no longer tests what it claims: the two reasons differ\n%q\n%q",
+			firstMove.Reason, secondMove.Reason)
+	}
+	if moveKey(firstMove) == moveKey(secondMove) {
+		t.Fatal("two different stakeholders produced one cache key, so the stored card " +
+			"would file the meeting onto whichever contact was written first")
+	}
+}
+
+func TestAMeetingBookedBeyondTheHorizonOutranksOpeningOutreach(t *testing.T) {
+	// Too far off to prepare for, and still an agreed next step. A deal nobody
+	// has written to yet must not be told to open outreach as though nothing
+	// had been arranged.
+	f := facts{
+		deal: openDeal(), now: testNow,
+		nextMeeting: booked(testNow.AddDate(0, 0, 20)),
+		seats:       []Seat{seat("champion", "Roland Martinez")},
+	}
+
+	mv := decideMove(f)
+
+	if mv.Action != ActionOpenMeetingBrief {
+		t.Fatalf("action = %q, want the booked meeting to be the answer", mv.Action)
+	}
+	if strings.Contains(mv.Reason, "Nobody has been contacted") {
+		t.Errorf("a deal with a meeting on the calendar was told to open outreach: %q", mv.Reason)
+	}
+}
+
+func TestAHousekeepingTaskDoesNotDecideTheMove(t *testing.T) {
+	// The gather read excludes system-minted work in SQL, so by the time the
+	// rules run there is nothing in openTasks to outrank the advice. This holds
+	// the rules to that contract: a card whose only "work" was the product's
+	// own reminder must still say what a colleague should do.
+	f := facts{
+		deal: openDeal(), now: testNow,
+		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
+		seats:    []Seat{seat("champion", "Annabelle Malherbe")},
+	}
+
+	if mv := decideMove(f); mv.Action != ActionCreateTask ||
+		!strings.Contains(mv.Reason, "Book a meeting") {
+		t.Fatalf("a deal with no human task filed got no advice: %+v", mv)
+	}
+}
+
 func TestADealWithNoSeatsSaysNothingItCannotKnow(t *testing.T) {
 	// Nobody is named, so there is nobody to open with. The card falls back to
-	// its old sentence rather than inventing a person.
+	// its old sentence rather than inventing a contact.
 	f := facts{deal: openDeal(), now: testNow}
 
 	mv := decideMove(f)
@@ -359,5 +522,34 @@ func TestAMoveWithNoOperandShipsAnEmptyObjectNotNull(t *testing.T) {
 	}
 	if !bytes.Contains(encoded, []byte(`"arguments":{}`)) {
 		t.Errorf("a move with no operand did not ship an empty object: %s", encoded)
+	}
+}
+
+func TestRemindersAndNotesDoNotCountAsCustomerContact(t *testing.T) {
+	request := inboundMail(testNow.AddDate(0, 0, -200))
+	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{
+		act(crmcontracts.ActivityKindTask, testNow), act(crmcontracts.ActivityKindNote, testNow), request,
+	}}
+	last, ok := lastContact(f)
+	if !ok || last.Id != request.Id {
+		t.Fatal("internal work reset the last customer contact")
+	}
+}
+
+func TestACoveredRequestDoesNotOfferAnotherReadersPrivateTask(t *testing.T) {
+	request := inboundMail(testNow.Add(-time.Hour))
+	covered := true
+	request.EmailSummary = &crmcontracts.EmailSummary{RequestHasReminder: &covered}
+	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{request}}
+	mv := decideMove(f)
+	if mv.Action != ActionDraftEmail {
+		t.Fatalf("covered request offered %s", mv.Action)
+	}
+	if (*mv.Arguments)["activity_id"] != request.Id {
+		t.Fatal("covered request must name only its readable source")
+	}
+	card := composeDeterministic(f, mv)
+	if card.ReplyTo == nil || *card.ReplyTo != request.Id {
+		t.Fatal("source reply remains unavailable")
 	}
 }

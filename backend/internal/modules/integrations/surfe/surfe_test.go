@@ -11,7 +11,7 @@ package surfe
 // The awkward parts of the real payload are the point — an absent emailType
 // under the professional cascade, empty strings where the vendor has no
 // value, month-precision job dates — because those are what a naive mapping
-// gets wrong and what the person page then renders as blanks or lies.
+// gets wrong and what the contact page then renders as blanks or lies.
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func testAdapter(rec *recorder) *Adapter {
 func aRequest() provider.Request {
 	return provider.Request{
 		CorrelationID: "corr-1",
-		Identifiers: provider.PersonIdentifiers{
+		Identifiers: provider.ContactIdentifiers{
 			FirstName: "Anna", LastName: "Muster", CompanyDomain: "example.com",
 		},
 		Categories: []provider.Category{"professional_email", "mobile", "job_history"},
@@ -91,11 +91,11 @@ func TestSubmitSendsTheDocumentedBodyAndNothingElse(t *testing.T) {
 	if len(body.People) != 1 {
 		t.Fatalf("sent %d people, want exactly one — a run is one subject, and batching would tie their fates together", len(body.People))
 	}
-	person := body.People[0]
-	if person.FirstName != "Anna" || person.LastName != "Muster" || person.CompanyDomain != "example.com" {
-		t.Errorf("identifiers = %+v, want the ones the run froze", person)
+	contact := body.People[0]
+	if contact.FirstName != "Anna" || contact.LastName != "Muster" || contact.CompanyDomain != "example.com" {
+		t.Errorf("identifiers = %+v, want the ones the run froze", contact)
 	}
-	if person.ExternalID != "corr-1" {
+	if contact.ExternalID != "corr-1" {
 		t.Error("the correlation id did not ride as externalID: a returned result cannot be matched back to its run")
 	}
 	// The request asked for no LinkedIn category, so the flag must be off —
@@ -385,7 +385,7 @@ func TestAnUnreadablePollReadsAsPendingRatherThanFailingTheSweep(t *testing.T) {
 }
 
 // Surfe returns EVERY address it found from the one lookup the run paid for.
-// Charging per value would bill a well-documented person more than a thinly
+// Charging per value would bill a well-documented contact more than a thinly
 // documented one for the same question, and would exceed the reservation.
 func TestSpendIsOnePerPoolHoweverManyValuesComeBack(t *testing.T) {
 	body := `{"status":"COMPLETED","people":[{

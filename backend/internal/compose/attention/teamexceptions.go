@@ -5,7 +5,7 @@ package attention
 
 // What is going wrong on a lead's team.
 //
-// The team board answers "who is carrying what" and routes a lead to a person.
+// The team board answers "who is carrying what" and routes a lead to a contact.
 // This answers "what is going wrong", which is the question they open the page
 // for and which counts structurally cannot reach: three numbers per teammate
 // cannot say that one customer has waited past the target while another rep's
@@ -35,15 +35,30 @@ import (
 //
 // A page a lead cannot finish is a page they stop opening. Twenty-five is the
 // queue's own page size, which is the number this product has already decided
-// a person reads in one sitting — and `truncated` says when it was reached, so
+// a reader reads in one sitting — and `truncated` says when it was reached, so
 // a bounded page is never read as a clear team.
 const exceptionsBound = 25
 
 // TeamExceptions is what a lead can act on across their team.
 func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptions, error) {
+	// ONE snapshot, and this page needs it most: it reads the roster, the whole
+	// assembled day and the money on top, which measured as 54 transactions per
+	// request against the worklist's 33 (margince#4912).
+	// Admission BEFORE the snapshot, for the reason worklist.go gives.
 	if err := requireLeadTier(ctx); err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
+	var out crmcontracts.TeamExceptions
+	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.teamExceptionsIn(ctx)
+		return err
+	})
+	return out, err
+}
+
+// teamExceptionsIn is TeamExceptions' body, inside the snapshot it opened.
+func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExceptions, error) {
 	if s.teammates == nil {
 		// A REFUSAL, the same answer TeamBoard gives: a page assembled without
 		// the membership reader has no team to answer for, and reporting that
@@ -51,17 +66,28 @@ func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptio
 		// looked.
 		return crmcontracts.TeamExceptions{}, apperrors.ErrPermissionDenied
 	}
+	roster, rosterCut, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	if err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
 	day, err := s.Assemble(ctx)
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
-	found := exceptionsFor(classifyDay(day, day.AsOf, dayMoney{}), day.AsOf)
+	if err := s.nameTheMoney(ctx, &day); err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
+	money, err := s.priceTheDay(ctx, day)
+	if err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
+	found := exceptionsFor(rowsForRoster(classifyDay(day, day.AsOf, money), roster), day.AsOf)
 	out := crmcontracts.TeamExceptions{
 		AsOf:       day.AsOf,
 		Exceptions: found,
-		Truncated:  len(found) > exceptionsBound,
+		Truncated:  rosterCut || len(found) > exceptionsBound,
 	}
-	if out.Truncated {
+	if len(found) > exceptionsBound {
 		out.Exceptions = found[:exceptionsBound]
 	}
 	return out, nil
@@ -121,11 +147,11 @@ func sortExceptions(found []crmcontracts.TeamException) {
 // exceptionRank is the order a lead reads the four kinds in.
 func exceptionRank(kind crmcontracts.TeamExceptionKind) int {
 	switch kind {
-	case crmcontracts.TeamExceptionResponseBreached:
+	case crmcontracts.TeamExceptionKindTeamExceptionResponseBreached:
 		return 0
-	case crmcontracts.TeamExceptionRevenueAtRisk:
+	case crmcontracts.TeamExceptionKindTeamExceptionRevenueAtRisk:
 		return 1
-	case crmcontracts.TeamExceptionUnassigned:
+	case crmcontracts.TeamExceptionKindTeamExceptionUnassigned:
 		return 2
 	default:
 		return 3
@@ -136,7 +162,7 @@ func exceptionRank(kind crmcontracts.TeamExceptionKind) int {
 // it was judged against.
 //
 // FOUR KINDS, and each is a thing a lead can DO something about: talk to the
-// person, protect the revenue, give the work an owner, or fix what keeps
+// contact, protect the revenue, give the work an owner, or fix what keeps
 // failing. A row that is merely urgent for the rep is not an exception — the
 // rep's own queue already ranks it, and repeating it here would make this page
 // a second copy of theirs with a different heading.
@@ -153,24 +179,24 @@ func exceptionOf(row ranked, asOf time.Time) (crmcontracts.TeamException, bool) 
 	// A first reply the policy says is already late. The THRESHOLD is that
 	// policy's own state, so the manager and the rep read one rule.
 	case row.item.Source == sourceLeadResponse && breachedReply(row):
-		return exception(row, owner, crmcontracts.TeamExceptionResponseBreached,
-			string(crmcontracts.LeadSlaStateBreached), asOf), true
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionResponseBreached,
+			string(crmcontracts.LeadSlaStateLeadSlaStateBreached), asOf), true
 	// Revenue the day already judged material — the pipeline's own median,
 	// which is what makes "material" track the business rather than a number
 	// somebody typed once.
 	case row.item.Source == sourceAtRisk && row.item.Level <= levelMaterialRisk:
-		return exception(row, owner, crmcontracts.TeamExceptionRevenueAtRisk,
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionRevenueAtRisk,
 			thresholdMaterial, asOf), true
 	// Work nobody has taken. Stated by the producer rather than inferred: an
 	// unstated owner is a lane that never answered, which is not the same as
 	// nobody holding the row.
-	case owner != nil && owner.Kind == crmcontracts.WorklistOwnerUnassigned:
-		return exception(row, owner, crmcontracts.TeamExceptionUnassigned,
+	case owner != nil && owner.Kind == crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned:
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionUnassigned,
 			thresholdUnowned, asOf), true
 	// One broken thing reported many times. The fold already decided these are
 	// one condition rather than a pile, so the count is the evidence.
 	case row.item.Batch != nil && row.item.Batch.Key == keySystemIncident:
-		return exception(row, owner, crmcontracts.TeamExceptionRepeatedFailure,
+		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionRepeatedFailure,
 			thresholdRepeated, asOf), true
 	}
 	return crmcontracts.TeamException{}, false

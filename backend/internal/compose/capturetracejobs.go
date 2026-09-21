@@ -72,10 +72,7 @@ func (w *captureTraceSweepWorker) sweepWorkspace(ctx context.Context, workspace 
 	// A SYSTEM principal rather than any member's: expiring a diagnostic trace
 	// is the installation keeping its own retention promise, and there is no
 	// human on whose authority one of these rows should or should not go.
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: traceSweepActorID,
-	})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.SystemActing(wsCtx, traceSweepActorID)
 
 	// workspaceJobDB, NOT InstallationDB: the installation resolver answers
 	// ErrMultipleWorkspaces the moment a database holds more than one live

@@ -85,7 +85,7 @@ func TestEdgeSummaryFallsBackToTheOtherEndsIDRatherThanABlank(t *testing.T) {
 
 func TestTheDelegatedSubjectReadsTheSameOnAnEdgeLine(t *testing.T) {
 	// Attribution that read one way on a record line and another on an edge line,
-	// on the same page, is what this phrasing exists to prevent: a person can be
+	// on the same page, is what this phrasing exists to prevent: a contact can be
 	// asked about a change, and a machine is not a party to anything.
 	devin := "Devin"
 	subject := recordSummarySubject(actorTypeAgent, "agent:enrich", &devin, false, nil)

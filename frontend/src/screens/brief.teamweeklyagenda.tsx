@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { routeHash } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EntityRef } from "./entityref";
+import { TeamPlanReview } from "./brief.teamplan";
 import type {
   TeamWeeklyFocusKind,
   TeamWeeklyRep,
@@ -33,6 +34,7 @@ const CELEBRATED: ReadonlySet<TeamWeeklyFocusKind> = new Set([
 
 const FOCUS_LABEL: Readonly<Record<TeamWeeklyFocusKind, MessageKey>> = {
   help_requested: "teamweekly.focus.help_requested",
+  deals_at_risk: "teamweekly.focus.deals_at_risk",
   leads_breached: "teamweekly.focus.leads_breached",
   commitments_missed: "teamweekly.focus.commitments_missed",
   meetings_without_next_step: "teamweekly.focus.meetings_without_next_step",
@@ -136,11 +138,15 @@ function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
 
   return (
     <>
-      <Button small onClick={() => void copy()}>
+      <Button onClick={() => void copy()}>
         {copied ? t("teamweekly.agenda.copied") : t("teamweekly.agenda.copy")}
       </Button>
       {failed && (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("teamweekly.agenda.copyFailedTitle")}
+        >
           {t("teamweekly.agenda.copyFailed")}
         </Callout>
       )}
@@ -153,7 +159,7 @@ function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
  * the top and the quiet week last.
  *
  * Every member gets an item, including the one whose week went well — a meeting
- * that lists only the troubled people reads as a team where only those people
+ * that lists only the troubled contacts reads as a team where only those contacts
  * exist, which is both untrue and demoralising to be named in.
  */
 export function AgendaPanel({
@@ -161,11 +167,14 @@ export function AgendaPanel({
 }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
-  const rows = agendaRows(review);
+  const rows = agendaRows(review).map((rep) =>
+    rep.focus_kind === "quiet_week"
+      ? { ...rep, focus_label: t("teamweekly.noPriority") }
+      : rep,
+  );
   return (
     <Panel
       title={t("teamweekly.agenda.title")}
-      sub={t("teamweekly.agenda.sub")}
       titleAction={rows.length > 0 ? <CopyAgenda rows={rows} /> : undefined}
     >
       {rows.length === 0 && (
@@ -180,12 +189,23 @@ export function AgendaPanel({
               {formatNumber(index + 1, locale)}
             </span>
             <span className="teamweekly-agenda-name">
-              <EntityRef kind="user" id={rep.user_id} name={rep.display_name} />
+              <a
+                className="entity-link"
+                href={routeHash({ screen: "worklist", id: rep.user_id })}
+              >
+                {rep.display_name}
+              </a>
+              <TeamPlanReview owner={rep.user_id} name={rep.display_name} />
             </span>
             <span className="teamweekly-agenda-focus">
               <Badge
-                quiet
-                tone={CELEBRATED.has(rep.focus_kind) ? "success" : "warn"}
+                tone={
+                  rep.focus_kind === "quiet_week"
+                    ? undefined
+                    : CELEBRATED.has(rep.focus_kind)
+                      ? "success"
+                      : "warning"
+                }
               >
                 {t(FOCUS_LABEL[rep.focus_kind])}
               </Badge>

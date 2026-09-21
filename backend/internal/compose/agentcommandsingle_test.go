@@ -30,11 +30,11 @@ import (
 // singlePurposeTools are the fourteen verbs whose every contract operation
 // this task put on the seam. Named as VERBS rather than as operationIds
 // because the mapping is the point: two of them serve two operations each
-// (merge_records is the person and organization halves, enrich is the two
+// (merge_records is the contact and company halves, enrich is the two
 // depths), so a walk keyed on tool names finds sixteen routes and would find a
 // seventeenth the contract grew for any of them.
 var singlePurposeTools = []string{
-	"send_email", "send_message", "send_account_email", "book_meeting",
+	"send_email", "send_message", "send_company_email", "book_meeting",
 	"promote_lead", "disqualify_lead", "advance_project_phase", "advance_deal",
 	"merge_records", "enrich",
 	"log_activity", "draft_email", "relink_activity", "run_report",
@@ -44,7 +44,7 @@ var singlePurposeTools = []string{
 // contractBodies is each route's own minimal request body, as crm.yaml declares
 // it — every required member present and nothing else.
 //
-// They are real bodies rather than nil because the walk below asserts that a
+// They are real bodies rather than nil because the walks below assert that a
 // decoder ACCEPTS the shape its route produces, and commandBody short-circuits
 // an empty body before it decodes anything at all: passing nil would exercise
 // that short-circuit for every route and prove nothing about the structs
@@ -52,11 +52,19 @@ var singlePurposeTools = []string{
 // stated here — a route that declares a requestBody must have one, and one that
 // declares none must not.
 //
+// ONE map for both walks that decode a synthetic request — the single-purpose
+// walk here and the operand walk in agentcommandoperand_test.go. They ask the
+// same question of the same operations ("what is the minimal body this route
+// declares"), and the two families overlap: advanceDeal and the merges are
+// operand-shaped as well as single-purpose. Two maps answered it twice, and the
+// second held two entries for routes its own walk filtered out — dead fixtures
+// nothing read, which is what a duplicated fixture set decays into.
+//
 // gatekit:fixture the request body crm.yaml declares for each route — expected input the walk decodes, not a waived cost
 var contractBodies = map[string]string{
 	"sendEmail":        `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales"}`,
 	"sendMessage":      `{"body":"hi","consent_purpose":"support"}`,
-	"sendAccountEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"organization","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
+	"sendCompanyEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
 	"bookMeeting":      `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000002"}]}`,
 	"promoteLead":      `{"trigger":"inbound_reply"}`,
 	// Optional on the wire so a governed agent disqualify works bare; the
@@ -64,8 +72,8 @@ var contractBodies = map[string]string{
 	"disqualifyLead":      `{"reason_id":"019ff000-0000-7000-8000-000000000007","note":"went with a competitor"}`,
 	"advanceProjectPhase": `{"to_phase":"pursuing"}`,
 	"advanceDeal":         `{"to_stage_id":"019ff000-0000-7000-8000-000000000003"}`,
-	"mergePerson":         `{"target_id":"019ff000-0000-7000-8000-000000000004"}`,
-	"mergeOrganization":   `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
+	"mergeContact":        `{"target_id":"019ff000-0000-7000-8000-000000000004"}`,
+	"mergeCompany":        `{"target_id":"019ff000-0000-7000-8000-000000000005"}`,
 	"scrapeCompany":       `{"url":"https://acme.test/about"}`,
 	"deepReadCompany":     `{"url":"https://acme.test"}`,
 	"logActivity":         `{"kind":"note","body":"hi"}`,
@@ -85,6 +93,24 @@ var contractBodies = map[string]string{
 	"rejectApproval":        `{"reason":"not this quarter"}`,
 	"approveApprovalBundle": `{"reason":"all six corrections check out"}`,
 	"rejectApprovalBundle":  `{"reason":"the run misread the thread"}`,
+
+	// The operand family's own bodies, on the same rule: every required member
+	// crm.yaml declares, and nothing else.
+	"setProjectStakeholder":     `{"contact_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,
+	"setProjectCompany":         `{"company_id":"019ff000-0000-7000-8000-000000000032","role":"partner"}`,
+	"applyTag":                  `{"entity_type":"contact","entity_id":"019ff000-0000-7000-8000-000000000033"}`,
+	"removeTag":                 `{"entity_type":"contact","entity_id":"019ff000-0000-7000-8000-000000000034"}`,
+	"mergeTags":                 `{"into_tag_id":"019ff000-0000-7000-8000-000000000035"}`,
+	"demoteLead":                `{"reason":"the account went quiet"}`,
+	"createOffer":               `{"currency":"EUR","source":"manual"}`,
+	"addOfferLineItem":          `{"quantity":2}`,
+	"updateOfferLineItem":       `{"quantity":3}`,
+	"openDealRoomThread":        `{"body":"can we revisit the delivery date?"}`,
+	"replyDealRoomThread":       `{"body":"yes — moving it a week."}`,
+	"createCompanyFact":         `{"category":"company","field":"headcount","value":"240"}`,
+	"updateCompanyFact":         `{"value":"260"}`,
+	"updateCompanyProfileField": `{"value":"Acme GmbH"}`,
+	"updateCustomFieldOptions":  `{"options":["bronze","silver","gold"]}`,
 }
 
 // What a registration does not say: that the decoder bound to a route can
@@ -185,7 +211,7 @@ func mergeRequest(collection string, routed ids.UUID, body []byte) *http.Request
 // The behaviour change a merge's command buys, and it is a correction rather
 // than an addition.
 //
-// POST /v1/people/{id}/merge merges the ROUTED person INTO the body's
+// POST /v1/contacts/{id}/merge merges the ROUTED contact INTO the body's
 // target_id: the routed row is the one archived. The route walk read that
 // routed id as the staged target, so the approval bound to — and the pin was
 // taken from — the record about to be retired, while the tool door had always
@@ -195,8 +221,8 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 		op, collection string
 		recordType     agentRecordType
 	}{
-		{"mergePerson", "/v1/people", recordTypePerson},
-		{"mergeOrganization", "/v1/organizations", recordTypeOrganization},
+		{"mergeContact", "/v1/contacts", recordTypeContact},
+		{"mergeCompany", "/v1/companies", recordTypeCompany},
 	} {
 		t.Run(c.op, func(t *testing.T) {
 			source, survivor := ids.NewV7(), ids.NewV7()
@@ -234,14 +260,14 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 func TestTheTwoEnrichRoutesStageTheDepthTheirOwnRouteMeans(t *testing.T) {
 	staged := map[string]string{}
 	for _, c := range []struct{ op, path string }{
-		{"scrapeCompany", "/v1/organizations/%s/enrich"},
-		{"deepReadCompany", "/v1/organizations/%s/deep-read"},
+		{"scrapeCompany", "/v1/companies/%s/enrich"},
+		{"deepReadCompany", "/v1/companies/%s/deep-read"},
 	} {
-		org := ids.NewV7()
-		pol := agentPolicy{Op: c.op, Access: accessTool, Tool: "enrich", RecordType: recordTypeOrganization}
-		req := httptest.NewRequest(http.MethodPost, strings.Replace(c.path, "%s", org.String(), 1), nil)
+		company := ids.NewV7()
+		pol := agentPolicy{Op: c.op, Access: accessTool, Tool: "enrich", RecordType: recordTypeCompany}
+		req := httptest.NewRequest(http.MethodPost, strings.Replace(c.path, "%s", company.String(), 1), nil)
 		rctx := chi.NewRouteContext()
-		rctx.URLParams.Add("id", org.String())
+		rctx.URLParams.Add("id", company.String())
 		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 		decode := restCommands[c.op]

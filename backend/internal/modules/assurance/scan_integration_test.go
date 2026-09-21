@@ -188,7 +188,7 @@ func TestAResolvedExceptionSurvivesTheNextScan(t *testing.T) {
 		t.Fatal(err)
 	}
 	if status != "resolved" {
-		t.Errorf("a resolved exception came back as %q after the next scan — the person "+
+		t.Errorf("a resolved exception came back as %q after the next scan — the contact "+
 			"who answered it would be asked again every morning", status)
 	}
 	// The value it was resolved AGAINST is kept, which is what lets a later

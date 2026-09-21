@@ -43,6 +43,12 @@ var (
 	// classRefusedByTheCore is the core refusing the built record as invalid —
 	// over-long text, a field it will not take. Also terminal: the same bytes
 	// build the same record on every attempt.
+	//
+	// Reached from the DispositionUnrepresentable the ingest answers, rather
+	// than from an error class: the core moved that distinction into its return
+	// value so a unit can tell "the core skipped this deliberately" from "I
+	// built something it cannot use" without matching on an error. What a
+	// member reads on their own screen is the same sentence either way.
 	classRefusedByTheCore = extension.FailureClass{
 		Class:    "refused_by_the_core",
 		Sentence: "the CRM refused a captured message as invalid, so no timeline entry was created for it",

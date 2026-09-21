@@ -31,10 +31,11 @@ export const RETENTION_SCOPES: readonly RetentionScope[] = [
   "lead/unconverted",
   "activity",
   "activity/transcript",
-  "person/no_consent_no_deal",
+  "contact/no_consent_no_deal",
   "deal/lost",
   "deal/won",
   "ai_call_payload/content",
+  "raw_capture",
 ];
 
 // Ordered by how much they take away — archive keeps the record, erase does
@@ -52,10 +53,11 @@ export const SCOPE_LABEL_KEYS: Record<RetentionScope, MessageKey> = {
   "lead/unconverted": "retention.scopeLeadUnconverted",
   activity: "retention.scopeActivity",
   "activity/transcript": "retention.scopeActivityTranscript",
-  "person/no_consent_no_deal": "retention.scopePersonNoConsentNoDeal",
+  "contact/no_consent_no_deal": "retention.scopeContactNoConsentNoDeal",
   "deal/lost": "retention.scopeDealLost",
   "deal/won": "retention.scopeDealWon",
   "ai_call_payload/content": "retention.scopeAiCallPayloadContent",
+  raw_capture: "retention.scopeRawCapture",
 };
 
 export function scopeLabelKey(scope: RetentionScope): MessageKey {
@@ -114,15 +116,15 @@ export function effectReasonKey(effect: PolicyEffect): MessageKey | null {
   return EFFECT_REASON_KEYS[effect];
 }
 
-const EFFECT_TONES: Record<PolicyEffect, "success" | "warn" | undefined> = {
+const EFFECT_TONES: Record<PolicyEffect, "success" | "warning" | undefined> = {
   acting: "success",
-  suppressed: "warn",
+  suppressed: "warning",
   disabled: undefined,
 };
 
 export function effectTone(
   effect: PolicyEffect,
-): "success" | "warn" | undefined {
+): "success" | "warning" | undefined {
   return EFFECT_TONES[effect];
 }
 

@@ -6,9 +6,9 @@ package meetingbrief
 // Who from OUR side is in the room.
 //
 // `activity_participant.user_id` is the seat a colleague holds in a meeting, as
-// against `person_id`, which is the counterparty. The coaching projection needs
+// against `contact_id`, which is the counterparty. The coaching projection needs
 // the first: it is deciding whether the reader is a lead looking at somebody
-// else's meeting, and a room full of the buyer's people says nothing about that.
+// else's meeting, and a room full of the buyer's contacts says nothing about that.
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -27,7 +27,7 @@ import {
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it
 // refused and by whom — so what it must never do is lose the difference between
-// a machine's refusal and a person's, claim an empty list is a broken one, or
+// a machine's refusal and a contact's, claim an empty list is a broken one, or
 // offer a write it has no reason to send.
 //
 // The write is three inputs submitted together, so it lives in a dialog behind
@@ -37,10 +37,11 @@ import {
 
 const LIST = "GET /capture/blocked-domains";
 const WRITE = "PUT /capture/blocked-domains";
+const REOPEN = "POST /capture/blocked-domains/pwc.example/reopen";
 
-// Read is every human role's; changing an entry is organization:update.
-const OPS: GrantSpec = { organization: ["read", "update"] };
-const READER: GrantSpec = { organization: ["read"] };
+// Read is every human role's; changing an entry is company:update.
+const OPS: GrantSpec = { company: ["read", "update"] };
+const READER: GrantSpec = { company: ["read"] };
 
 const BY_HEURISTIC = {
   domain: "expensify.example",
@@ -48,7 +49,7 @@ const BY_HEURISTIC = {
   reason: "bulk sender: no reply address",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HUMAN = {
   domain: "mckinsey.example",
@@ -56,7 +57,22 @@ const BY_HUMAN = {
   reason: "they became a client in July",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
-  organization_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_id: "018f3a1b-0000-7000-8000-00000000c001",
+};
+
+// A domain nothing decided: the machine gave up, cleared its retry cursor, and
+// nothing will ask again on its own.
+const UNDECIDED = {
+  domain: "pwc.example",
+  admission: "undecided",
+  // Distinct from the source LABEL beside it on purpose: the two cells say
+  // different things, and a fixture whose reason repeats its source makes an
+  // assertion about either one ambiguous.
+  reason:
+    "Nothing on the site named a company, and the sender's name did not explain the domain.",
+  source: "unevidenced",
+  decided_at: "2026-08-14T11:20:00Z",
+  company_id: null,
 };
 
 function mount(allow: GrantSpec, routes: RouteMap) {
@@ -98,7 +114,7 @@ afterEach(() => {
 });
 
 describe("BlockedDomainsCard", () => {
-  it("says of every decision whether a machine or a person made it", async () => {
+  it("says of every decision whether a machine or a contact made it", async () => {
     mount(OPS, {
       [LIST]: () => jsonResponse({ data: [BY_HEURISTIC, BY_HUMAN], total: 2 }),
     });
@@ -279,6 +295,65 @@ describe("BlockedDomainsCard", () => {
       }),
     ).toHaveTextContent(en["blockedDomains.admission.suppressed"]);
     expect(within(dialog).getByTestId("blocked-domain-reason")).toHaveValue("");
+  });
+
+  it("offers an undecided domain a re-ask rather than a decision it has no grounds for", async () => {
+    const user = userEvent.setup();
+    const asked: string[] = [];
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [UNDECIDED, BY_HUMAN], total: 2 }),
+      [REOPEN]: () => {
+        asked.push("pwc.example");
+        return jsonResponse(UNDECIDED);
+      },
+    });
+
+    await screen.findByText("pwc.example");
+    const row = rowFor("pwc.example");
+    // The decision verbs are absent on this row. Offering "Allow this one"
+    // where nothing has been judged invites a call the operator has no grounds
+    // for — not knowing yet is the whole reason the row is in the list.
+    expect(
+      within(row).queryByRole("button", {
+        name: en["blockedDomains.rowAdmit"],
+      }),
+    ).toBeNull();
+    expect(
+      within(row).queryByRole("button", {
+        name: en["blockedDomains.rowRefuse"],
+      }),
+    ).toBeNull();
+    // And the decided row beside it still carries its own.
+    expect(
+      within(rowFor("mckinsey.example")).getByRole("button", {
+        name: en["blockedDomains.rowRefuse"],
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(row).getByRole("button", { name: en["blockedDomains.rowReopen"] }),
+    );
+    await waitFor(() => expect(asked).toEqual(["pwc.example"]));
+    // A re-ask changes nothing visible in the row — the domain stays undecided
+    // until a crawl answers — so the press has to say that it landed.
+    expect(await screen.findByRole("status")).toHaveTextContent("pwc.example");
+  });
+
+  it("says what stopped the machine deciding, not merely that nothing did", async () => {
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [UNDECIDED], total: 1 }),
+    });
+
+    await screen.findByText("pwc.example");
+    const row = rowFor("pwc.example");
+    expect(
+      within(row).getByText(en["blockedDomains.admission.undecided"]),
+    ).toBeInTheDocument();
+    // The source column is what an operator can act on: a site that named
+    // nothing is a different problem from mail too old to trust.
+    expect(
+      within(row).getByText(en["blockedDomains.source.unevidenced"]),
+    ).toBeInTheDocument();
   });
 
   it("keeps the list readable for a seat that may not change it, and says so", async () => {

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -16,7 +16,7 @@ import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
-import type { Transport } from "./persontransports";
+import type { Transport } from "./contacttransports";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -31,7 +31,7 @@ import {
 // the thread pane, the conversation offers and the permission preview. The dial
 // lives in the shared drawer now.
 //
-// The rules about WHICH transports exist are `persontransports.test.ts` — they
+// The rules about WHICH transports exist are `contacttransports.test.ts` — they
 // are statements about reachability and anchors, and asserting them through a
 // rendered composer meant mounting a drawer to find out whether a list had two
 // entries. What is here is what the DRAWER does with the answer.
@@ -116,9 +116,9 @@ function render(ui: ReactNode) {
 function drawer(transports: readonly Transport[], initial?: string) {
   return (
     <ComposeModal
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
-      personId="p-1"
+      contactId="p-1"
       recordAddress="dana@brandt.example"
       transports={transports}
       initialTransportId={initial}
@@ -225,9 +225,9 @@ describe("the composer's transport dial", () => {
   it("says so when the conversation a caller named is gone", async () => {
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         transports={[MAIL]}
         staleThread
         open
@@ -235,5 +235,109 @@ describe("the composer's transport dial", () => {
       />,
     );
     expect(await screen.findByText(/can no longer be answered/i)).toBeTruthy();
+  });
+});
+
+// The carriage bounds a channel publishes, held in FRONT of the send. A file the
+// transport cannot carry parks the delivery today (comms/gates.go
+// carriageRefusal); the composer reads the same published bounds and refuses
+// before staging, so the rep learns while the offer is still in front of them
+// rather than from a bounced message later.
+describe("a channel reply held to its carriage bounds", () => {
+  // Dispact takes files, but only small ones. The offer is four times the
+  // per-file cap; the survey is under it.
+  const OFFER = {
+    id: "att-1",
+    entity_type: "contact",
+    entity_id: "p-1",
+    filename: "Offer_Nordwand_v3.pdf",
+    byte_size: 412_000,
+  };
+  const SURVEY = {
+    id: "att-2",
+    entity_type: "contact",
+    entity_id: "p-1",
+    filename: "Site_note.txt",
+    byte_size: 40_000,
+  };
+  const DIRECTORY = {
+    data: [
+      {
+        provider: "dispact",
+        label: "Dispact",
+        credential_model: "workspace_bot",
+        supplies_transport: true,
+        attachments: {
+          carries: true,
+          max_files: 10,
+          max_bytes_per_file: 100_000,
+          max_total_bytes: 20_000_000,
+          max_body_with_files: 0,
+        },
+      },
+    ],
+  };
+
+  const withCarriage = () =>
+    stubRoutes({
+      "GET /attachments": () =>
+        jsonResponse({ data: [OFFER, SURVEY], page: { has_more: false } }),
+      "GET /channel-providers": () => jsonResponse(DIRECTORY),
+      "POST /activities/a-chat/send-message": () => jsonResponse(ACTIVITY, 202),
+    });
+
+  const attach = async (
+    user: ReturnType<typeof userEvent.setup>,
+    name: RegExp,
+  ) => {
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    await user.click(await screen.findByRole("button", { name }));
+  };
+
+  it("warns and refuses to send a file the channel cannot carry", async () => {
+    const user = userEvent.setup();
+    const sent = withCarriage();
+    render(drawer([MAIL, CHAT], "dispact"));
+
+    await screen.findByLabelText("How to send");
+    writeMessage("Body", "Here is the offer.");
+    await attach(user, /^Offer_Nordwand_v3\.pdf/);
+
+    // The reason names the file AND the transport, so the rep knows which of the
+    // two to change rather than guessing.
+    expect(
+      await screen.findByText(
+        /Offer_Nordwand_v3\.pdf is larger than .* Dispact accepts/,
+      ),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    // A message that would only park at the door never goes to the door.
+    expect(
+      sent.some((r) => r.key === "POST /activities/a-chat/send-message"),
+    ).toBe(false);
+  });
+
+  it("sends a file the channel can carry, by id", async () => {
+    const user = userEvent.setup();
+    const sent = withCarriage();
+    render(drawer([MAIL, CHAT], "dispact"));
+
+    await screen.findByLabelText("How to send");
+    writeMessage("Body", "Here is the note.");
+    await attach(user, /^Site_note\.txt/);
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    const req = await waitFor(() => {
+      const found = sent.find(
+        (r) => r.key === "POST /activities/a-chat/send-message",
+      );
+      expect(found).toBeTruthy();
+      return found;
+    });
+    const body = req?.body as { attachment_ids?: string[] } | undefined;
+    expect(body?.attachment_ids).toEqual(["att-2"]);
   });
 });

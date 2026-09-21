@@ -25,6 +25,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -33,6 +34,7 @@ import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AuditEntryLine } from "./audit";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,
   CF_OBJECTS,
@@ -52,7 +54,7 @@ import { stable } from "../format/collate";
 // immutable cf_-prefixed API key and the pending DDL are shown before Confirm so
 // the schema change is legible, a structural-sounding label is refused up front,
 // and the 🟡 gate states that Confirm writes a live column + an audit row. This
-// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warn` Callout,
+// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warning` Callout,
 // which is what the surface saying something about itself already looks like
 // everywhere else.
 
@@ -65,6 +67,7 @@ const TYPE_ICON: Record<CfType, LucideIcon> = {
   date: Calendar,
   currency: Euro,
   picklist: List,
+  multiselect: List,
   boolean: ToggleRight,
 };
 
@@ -101,7 +104,8 @@ export function FieldBuilder({
   // needs a well-formed 3-letter ISO-4217 code — Confirm stays disabled until
   // the type-specific shape is valid, not just the label.
   const typeShapeValid =
-    (type !== "picklist" || options.some((opt) => opt.trim().length > 0)) &&
+    ((type !== "picklist" && type !== "multiselect") ||
+      options.some((opt) => opt.trim().length > 0)) &&
     (type !== "currency" || /^[A-Za-z]{3}$/.test(currency.trim()));
   const canConfirm =
     !pending && label.trim().length > 0 && !structural && typeShapeValid;
@@ -114,9 +118,9 @@ export function FieldBuilder({
     // A picklist without an option is not a picklist — the last row is a floor,
     // not a delete target, so the intent is surfaced as a toast, not swallowed.
     if (options.length <= 1) {
-      // `mark: false`: this is a refusal, and the completion dot beside it said
-      // the opposite of what the sentence says.
-      toast.show(t("cf.lastOptionBlocked"), { mark: false });
+      // `danger`: this is a refusal, and the completion dot the default tone
+      // draws said the opposite of what the sentence says.
+      toast.show(t("cf.lastOptionBlocked"), { tone: "danger" });
       return;
     }
     setOptions((current) => current.filter((_, i) => i !== idx));
@@ -132,7 +136,7 @@ export function FieldBuilder({
   return (
     <div className="cf-builder">
       <div className="cf-builder-head">
-        <p className="cf-hint t-caption">{t("cf.builder.intro")}</p>
+        <p className="cf-hint">{t("cf.builder.intro")}</p>
         <Badge>{t("cf.builder.noCode")}</Badge>
       </div>
 
@@ -146,15 +150,10 @@ export function FieldBuilder({
             />
           )}
         </Field>
-        <Field
-          label={t("cf.apiKey")}
-          className="cf-field"
-          hint={t("cf.apiKeyHint")}
-        >
+        <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={apiKey(object, label)}
               disabled
               readOnly
@@ -181,15 +180,10 @@ export function FieldBuilder({
       </div>
 
       {type === "currency" && (
-        <Field
-          label={t("cf.currencyCode")}
-          className="cf-field"
-          hint={t("cf.currencyHint")}
-        >
+        <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={currency}
               maxLength={3}
               onChange={(event) =>
@@ -200,7 +194,7 @@ export function FieldBuilder({
         </Field>
       )}
 
-      {type === "picklist" && (
+      {(type === "picklist" || type === "multiselect") && (
         <div className="field">
           <span className="t-label">{t("cf.options")}</span>
           <div className="cf-options">
@@ -216,7 +210,6 @@ export function FieldBuilder({
                   onChange={(event) => setOptionAt(idx, event.target.value)}
                 />
                 <Button
-                  small
                   iconOnly
                   aria-label={t("cf.removeOption")}
                   onClick={() => removeOption(idx)}
@@ -226,28 +219,25 @@ export function FieldBuilder({
               </div>
             ))}
           </div>
-          <Button
-            small
-            onClick={() => setOptions((current) => [...current, ""])}
-          >
+          <Button onClick={() => setOptions((current) => [...current, ""])}>
             {t("cf.addOption")}
           </Button>
         </div>
       )}
 
       {structural && (
-        <Callout tone="danger" live="alert" title={t("cf.refuse.title")}>
+        <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
           <p>{t("cf.refuse.body")}</p>
           <p>{t("cf.refuse.route")}</p>
         </Callout>
       )}
 
-      {/* `warn` because nothing is wrong yet and something will be if the
-          reader confirms without reading: the column goes live on every record
-          of this object. The autonomy dot rides in the title so the confirm
-          tier and the sentence it qualifies are one line, not two. */}
+      {/* `warning`: nothing is wrong yet, and something will be if the reader
+          confirms unread — the column goes live on every record of this object.
+          The dot rides in the title, so tier and sentence are one line. */}
       <Callout
-        tone="warn"
+        tone="warning"
+        kind="standing"
         title={
           <>
             <AutonomyDot tier="confirm" /> {t("cf.gate.title")}
@@ -255,7 +245,7 @@ export function FieldBuilder({
         }
       >
         <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
-        <code className="cf-ddl">
+        <code className="cf-ddl t-caption">
           {ddlPreview(object, label, type, currency)}
         </code>
       </Callout>
@@ -266,15 +256,10 @@ export function FieldBuilder({
           this form used to live in: closing the dialog discards the draft, so
           a control that empties the inputs in place has nothing left to do. */}
       <div className="cf-actions">
-        <Button small variant="ghost" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-        <Button
-          small
-          variant="primary"
-          disabled={!canConfirm}
-          onClick={confirm}
-        >
+        <Button variant="primary" disabled={!canConfirm} onClick={confirm}>
           {t("cf.confirm")}
         </Button>
       </div>
@@ -287,26 +272,6 @@ export function FieldBuilder({
 // every key is checked against the catalog at compile time — a mapped
 // `Object.fromEntries` would need a cast to get back to Record<Option, string>,
 // and a cast is exactly what stops a missing translation being a build error.
-function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
-  return {
-    text: t("cf.type.text"),
-    number: t("cf.type.number"),
-    date: t("cf.type.date"),
-    currency: t("cf.type.currency"),
-    picklist: t("cf.type.picklist"),
-    boolean: t("cf.type.boolean"),
-  };
-}
-
-function objectLabels(t: ReturnType<typeof useT>): Record<CfObject, string> {
-  return {
-    deal: t("cf.obj.deal"),
-    organization: t("cf.obj.organization"),
-    person: t("cf.obj.person"),
-    lead: t("cf.obj.lead"),
-  };
-}
-
 type CustomField = components["schemas"]["CustomField"];
 type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 type AuditLogEntry = components["schemas"]["AuditLogEntry"];
@@ -349,7 +314,7 @@ export function FieldTable({
 
   const typeChip = (field: CustomField): string => {
     const base = t(`cf.type.${field.type}`);
-    if (field.type === "picklist") {
+    if (field.type === "picklist" || field.type === "multiselect") {
       return `${base} · ${field.options?.length ?? 0}`;
     }
     if (field.type === "currency") {
@@ -384,10 +349,10 @@ export function FieldTable({
               <span className="cf-fieldname">
                 <span className={cellClass}>{field.label}</span>
                 {field.status === "retired" && (
-                  <Badge tone="warn">{t("cf.retired")}</Badge>
+                  <Badge tone="warning">{t("cf.retired")}</Badge>
                 )}
               </span>
-              <span className="cf-key t-mono">
+              <span className="cf-key">
                 {`${field.object}.${field.column_name}`}
               </span>
             </div>
@@ -399,13 +364,7 @@ export function FieldTable({
       key: "type",
       header: t("cf.col.type"),
       render: (field) => {
-        const Icon = TYPE_ICON[field.type];
-        return (
-          <span className="cf-typechip">
-            <Icon aria-hidden />
-            {typeChip(field)}
-          </span>
-        );
+        return <Badge icon={TYPE_ICON[field.type]}>{typeChip(field)}</Badge>;
       },
     },
     {
@@ -437,12 +396,8 @@ export function FieldTable({
                 the shout a reader learns to ignore. An `aria-label` repeating
                 the button's own words is not a name either; the text is the
                 name. */}
-            <Button small onClick={() => onRename(field)}>
-              {t("cf.edit")}
-            </Button>
-            <Button small onClick={() => onArchive(field)}>
-              {t("cf.archive")}
-            </Button>
+            <Button onClick={() => onRename(field)}>{t("cf.edit")}</Button>
+            <Button onClick={() => onArchive(field)}>{t("cf.archive")}</Button>
           </div>
         ),
     });
@@ -525,7 +480,7 @@ function auditState(
 }
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
-// `source:"manual"` (the FE convention across deals/leads/organizations), and the
+// `source:"manual"` (the FE convention across deals/leads/companies), and the
 // two conditional shapes ride only on their own type — currency on a currency
 // field, options on a picklist — never on the others.
 function createBody(
@@ -537,7 +492,7 @@ function createBody(
     type: draft.type,
     source: "manual",
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
-    ...(draft.type === "picklist"
+    ...(draft.type === "picklist" || draft.type === "multiselect"
       ? { options: cleanOptions(draft.options) }
       : {}),
   };
@@ -574,7 +529,10 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
     status: "active",
     column_name: columnName(draft.label),
     currency: draft.type === "currency" ? draft.currency : null,
-    options: draft.type === "picklist" ? cleanOptions(draft.options) : null,
+    options:
+      draft.type === "picklist" || draft.type === "multiselect"
+        ? cleanOptions(draft.options)
+        : null,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
@@ -598,7 +556,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
 // as the section name and again as the card title. The object is now named by
 // the segmented control alone, and the two surfaces most visits do not want —
 // the builder and the change trail — are Disclosures. What is left open is the
-// answer to the question people actually arrive with: which fields exist.
+// answer to the question contacts actually arrive with: which fields exist.
 export function CustomFieldsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();
@@ -618,10 +576,12 @@ export function CustomFieldsAdmin() {
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
-  // The builder is mounted only while its dialog is open, which is what stops a
-  // second Confirm resubmitting the same, now-committed, draft (m6): a
-  // successful create closes the dialog and the form's state goes with it.
+  // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
+  // each open a builder of its own: it re-keys the form, which discards a
+  // half-typed label rather than leaving it waiting under an object nobody
+  // re-chose, and stops a second Confirm resubmitting a draft already created.
   const [adding, setAdding] = useState(false);
+  const [addSeq, setAddSeq] = useState(0);
   const renameId = useId();
   const addId = useId();
 
@@ -689,7 +649,7 @@ export function CustomFieldsAdmin() {
       if (context) {
         queryClient.setQueryData(context.key, context.previous);
       }
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
     onSuccess: (_data, draft) => {
       queryClient.invalidateQueries({
@@ -726,7 +686,7 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
   });
 
@@ -745,7 +705,7 @@ export function CustomFieldsAdmin() {
       toast.show(t("cf.archived", { label: field.label }));
     },
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
   });
 
@@ -758,7 +718,6 @@ export function CustomFieldsAdmin() {
 
   return (
     <Panel
-      className="cf-screen"
       title={t("cf.title")}
       // The create verb is the card's, so it stands in the header band. As a
       // trailing row its label ("Add a field to Deal") said the same thing as
@@ -769,7 +728,12 @@ export function CustomFieldsAdmin() {
       // being there.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button
+            onClick={() => {
+              setAddSeq((seq) => seq + 1);
+              setAdding(true);
+            }}
+          >
             {t("cf.builder.open")}
           </Button>
         )
@@ -861,34 +825,29 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      {/* Mounted only while it is open, so a half-typed label is gone the next
-          time the dialog opens rather than waiting there under an object
-          nobody re-chose.
-
-          `wide` is the variant's stated case: the builder carries the pending
+      {/* `wide` is the variant's stated case: the builder carries the pending
           DDL, and a 440px dialog wraps
-          `ALTER organization ADD COLUMN cf_contract_end_date (date)` into an
+          `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
           unreadable stack — the one line a reader is meant to check before
           confirming a live schema change. It also keeps the label and the API
           key derived from it side by side. */}
-      {adding && (
-        <Modal
-          open
-          size="wide"
-          onClose={() => setAdding(false)}
-          labelledBy={addId}
-        >
-          <h2 id={addId} className="t-h2 modal-title">
-            {t("cf.builder.addTo", { object: objectName })}
-          </h2>
-          <FieldBuilder
-            object={object}
-            pending={create.isPending}
-            onSubmit={(draft) => create.mutate(draft)}
-            onCancel={() => setAdding(false)}
-          />
-        </Modal>
-      )}
+      <Modal
+        open={adding}
+        size="wide"
+        onClose={() => setAdding(false)}
+        labelledBy={addId}
+      >
+        <Heading size="large" id={addId} className="t-h2 modal-title">
+          {t("cf.builder.addTo", { object: objectName })}
+        </Heading>
+        <FieldBuilder
+          key={addSeq}
+          object={object}
+          pending={create.isPending}
+          onSubmit={(draft) => create.mutate(draft)}
+          onCancel={() => setAdding(false)}
+        />
+      </Modal>
 
       <Modal
         open={renaming !== null}
@@ -903,9 +862,9 @@ export function CustomFieldsAdmin() {
             the modal's own padding. `.modal-title` is the catalog's own name for
             the interval under a dialog title, so the twelve pixels are declared
             once for every dialog rather than typed in here. */}
-        <h2 id={renameId} className="t-h2 modal-title">
+        <Heading size="large" id={renameId} className="t-h2 modal-title">
           {t("cf.edit")}
-        </h2>
+        </Heading>
         <Field label={t("cf.renamePrompt")}>
           {(control) => (
             <TextInput
@@ -916,11 +875,10 @@ export function CustomFieldsAdmin() {
           )}
         </Field>
         <div className="cf-actions">
-          <Button small variant="ghost" onClick={() => setRenaming(null)}>
+          <Button variant="ghost" onClick={() => setRenaming(null)}>
             {t("deals.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             disabled={rename.isPending || renameLabel.trim().length === 0}
             onClick={() => {

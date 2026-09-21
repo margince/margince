@@ -30,8 +30,6 @@
 /* A mailbox address is one unbroken token, and it must not be what makes the
    page scroll sideways on a phone. */
 .connector-account {
-  color: var(--textSecondary);
-  font-weight: var(--fw-regular);
   overflow-wrap: anywhere;
 }
 
@@ -44,7 +42,7 @@
 /* The row's own failure sentence. A class rather than an inline style, so the
    danger tone is named in a stylesheet like every other colour in the tree. */
 .connector-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* Two badges answering one row — the status, and the send refusal that can ride
@@ -69,18 +67,6 @@
   align-items: center;
   gap: var(--gapActions);
   flex-wrap: wrap;
-}
-
-/* A row's control column when it has to report as well as offer: the strip of
-   verbs, and under it the reason the last press failed. The reason belongs
-   directly beneath the button that produced it — a shared error band further
-   down the card names no button at all. */
-.connector-control {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  min-width: 0;
 }
 
 /* The history import belongs to the mailbox row ABOVE it, not beside it, so it

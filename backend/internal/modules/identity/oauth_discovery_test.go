@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,7 +25,7 @@ import (
 // token's expiry with a live refresh credential in hand.
 func TestServerMetadataAdvertisesBothGrantTypes(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Handlers{}.OAuthServerMetadata(rec, httptest.NewRequest(http.MethodGet,
+	Handlers{mcpResource: "https://crm.example.com/mcp"}.OAuthServerMetadata(rec, httptest.NewRequest(http.MethodGet,
 		"https://crm.example.com/.well-known/oauth-authorization-server", nil))
 
 	var doc struct {
@@ -127,12 +128,10 @@ func TestOnlyTheAuthorizationServerAdvertisesOfflineAccess(t *testing.T) {
 func TestProtectedResourceMetadataNamesTheMCPURLNotTheOrigin(t *testing.T) {
 	h := Handlers{mcpResource: "https://crm.example.com/mcp"}
 	rec := httptest.NewRecorder()
+	// Addressed to the process's internal listener, as a request behind a
+	// terminating proxy is: the document must still name the public origin.
 	req := httptest.NewRequest(http.MethodGet,
-		"https://crm.example.com/.well-known/oauth-protected-resource", nil)
-	// The forwarded-proto signal a terminating proxy supplies in production.
-	// Stating it means the https assertions below rest on the header this
-	// deployment actually relies on, not on whatever r.TLS happens to be.
-	req.Header.Set("X-Forwarded-Proto", "https")
+		"http://10.0.0.7:8080/.well-known/oauth-protected-resource", nil)
 	h.ProtectedResourceMetadata(rec, req)
 
 	var doc struct {
@@ -150,5 +149,94 @@ func TestProtectedResourceMetadataNamesTheMCPURLNotTheOrigin(t *testing.T) {
 	}
 	if len(doc.AuthorizationServers) != 1 || doc.AuthorizationServers[0] != "https://crm.example.com" {
 		t.Fatalf("authorization_servers = %v, want the issuer origin first", doc.AuthorizationServers)
+	}
+}
+
+// discoveryDocuments are the two metadata documents a client reads before it
+// holds any credential, by the path it reads each from.
+func discoveryDocuments(h Handlers) map[string]http.HandlerFunc {
+	return map[string]http.HandlerFunc{
+		"/.well-known/oauth-authorization-server": h.OAuthServerMetadata,
+		"/.well-known/oauth-protected-resource":   h.ProtectedResourceMetadata,
+	}
+}
+
+// advertisedURLs returns every absolute URL a discovery document names, keyed
+// by the field that names it.
+func advertisedURLs(t *testing.T, body []byte) map[string][]string {
+	t.Helper()
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatal(err)
+	}
+	out := map[string][]string{}
+	for field, raw := range doc {
+		var single string
+		var many []string
+		if json.Unmarshal(raw, &single) == nil {
+			many = []string{single}
+		} else if json.Unmarshal(raw, &many) != nil {
+			continue
+		}
+		for _, value := range many {
+			if strings.Contains(value, "://") {
+				out[field] = append(out[field], value)
+			}
+		}
+	}
+	return out
+}
+
+// The documents name the endpoints a client hands its authorization code,
+// PKCE verifier and registration to, so no part of the request may choose
+// them: not the Host it was addressed to, not a forwarded host or scheme a
+// proxy passes on. Every URL in either document must sit on the configured
+// origin, and a shared cache must not keep a copy.
+func TestDiscoveryNamesTheConfiguredOriginWhateverTheRequestClaims(t *testing.T) {
+	h := Handlers{mcpResource: "https://crm.example.com/mcp"}
+	for path, document := range discoveryDocuments(h) {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://elsewhere.example"+path, nil)
+			req.Header.Set("X-Forwarded-Host", "elsewhere.example")
+			req.Header.Set("X-Forwarded-Proto", "http")
+			rec := httptest.NewRecorder()
+			document(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", rec.Code)
+			}
+			if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+				t.Errorf("Cache-Control = %q, want no-store", got)
+			}
+			urls := advertisedURLs(t, rec.Body.Bytes())
+			if len(urls) == 0 {
+				t.Fatalf("document names no URL at all, so nothing below is checked: %s", rec.Body.String())
+			}
+			for field, values := range urls {
+				for _, value := range values {
+					if !strings.HasPrefix(value, "https://crm.example.com/") && value != "https://crm.example.com" {
+						t.Errorf("%s = %q, want it on the configured origin https://crm.example.com", field, value)
+					}
+				}
+			}
+		})
+	}
+}
+
+// With no configured resource there is no origin to name, and a document whose
+// endpoints are relative to nowhere is worse than none: both answer the 404 a
+// deployment with the connector off gives.
+func TestDiscoveryWithNoConfiguredResourceAnswersNotFound(t *testing.T) {
+	for path, document := range discoveryDocuments(Handlers{}) {
+		t.Run(path, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			document(rec, httptest.NewRequest(http.MethodGet, "https://crm.example.com"+path, nil))
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status = %d, want 404", rec.Code)
+			}
+			if got := rec.Header().Get("Content-Type"); strings.HasPrefix(got, "application/json") {
+				t.Errorf("a 404 still carried a JSON document (%s): %s", got, rec.Body.String())
+			}
+		})
 	}
 }

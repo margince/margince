@@ -55,15 +55,17 @@ func TestTheReadingsDoNotShrinkAsAReaderPagesThroughTheQueue(t *testing.T) {
 // decisions pill must not report the buyers waiting as gone.
 func TestAFilterDoesNotEmptyTheOtherReadings(t *testing.T) {
 	day := crmcontracts.Attention{
-		AsOf:     rankInstant,
-		NeedsYou: []crmcontracts.AttentionItem{item("a1", "approval", withKind("capture_counterparty"))},
-		AtRisk:   lane(item("d1", "deal_at_risk", withDeal(500_00))),
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("a1", "approval", withKind("capture_counterparty"), decidable()),
+		},
+		AtRisk: lane(item("d1", "deal_at_risk", withDeal(500_00))),
 	}
 	considered := classifyDay(day, rankInstant, dayMoney{})
 
 	// What a page filtered to decisions would carry, against the snapshot the
 	// readings are actually taken over.
-	narrowed := keepCategory(considered, categoryDecisions)
+	narrowed := keepFiltered(considered, crmcontracts.WorklistFilter(categoryDecisions))
 	overNarrowed := readingsOf(narrowed, nil, nil)
 	overConsidered := readingsOf(considered, nil, nil)
 
@@ -248,7 +250,8 @@ func TestPricedRowsThatDisagreeAboutUnitsNameNoCurrency(t *testing.T) {
 func TestReviewCountsTheFoldedWorkRatherThanTheRowsDrawn(t *testing.T) {
 	needs := make([]crmcontracts.AttentionItem, 0, 12)
 	for i := range 12 {
-		needs = append(needs, item(string(rune('a'+i)), "approval", withKind("capture_counterparty")))
+		needs = append(needs, item(string(rune('a'+i)), "approval",
+			withKind("capture_counterparty"), decidable()))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: needs}
 	considered := classifyDay(day, rankInstant, dayMoney{})
@@ -389,9 +392,11 @@ func TestThePermanentlyWithheldPrivacyLaneDoesNotMarkEveryDayAFloor(t *testing.T
 // a count would pass while the strip put buyer replies under prospecting.
 func TestEachReadingCountsItsOwnCategory(t *testing.T) {
 	day := crmcontracts.Attention{
-		AsOf:     rankInstant,
-		NeedsYou: []crmcontracts.AttentionItem{item("a1", "approval", withKind("capture_counterparty"))},
-		AtRisk:   lane(item("d1", "deal_at_risk", withDeal(100_00))),
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("a1", "approval", withKind("capture_counterparty"), decidable()),
+		},
+		AtRisk: lane(item("d1", "deal_at_risk", withDeal(100_00))),
 	}
 
 	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
@@ -404,5 +409,58 @@ func TestEachReadingCountsItsOwnCategory(t *testing.T) {
 	}
 	if got.Prospecting != 0 {
 		t.Fatalf("counted %d prospecting on a day with none", got.Prospecting)
+	}
+}
+
+// A decision this reader cannot settle is not counted as waiting on them.
+//
+// The headline says how much is waiting on this reader. Counting a duplicate
+// pair whose two records they may not both write tells them a contact is
+// waiting on an answer they are unable to give — the audited page read "10
+// decisions waiting" over two the rep could take and eight only an admin could,
+// each of which said in its own card that a lead or admin had to settle it.
+//
+// The verb is the test rather than a second authority lookup: the producers
+// already resolved it. duplicateItem offers `merge` only to a reader who could
+// write both sides, and an approval carries its verbs only where the inbox
+// admits them, so a row with no action is one somebody else has to settle.
+func TestTheDecisionCountLeavesOutWhatThisReaderCannotSettle(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("mine", "approval", withKind("capture_counterparty"), decidable()),
+			// Pairs the reader can see and cannot merge: duplicateItem offered
+			// no verb because they may not write both records.
+			item("dup1", "dedupe_candidate", withKind("contact")),
+			item("dup2", "dedupe_candidate", withKind("contact")),
+		},
+	}
+
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+
+	if got.Review != 1 {
+		t.Errorf("counted %d decisions, want the one this reader can actually take", got.Review)
+	}
+}
+
+// And a decision whose only verb is the DISMISSAL is still this reader's.
+//
+// The count asks for a verb rather than for a settling one, and this is the
+// case that separates the two: a duplicate pair of companies each carrying live
+// projects can never be merged by anybody, and a reader who may write both can
+// still clear it as a false positive. Counting only the mergeable rows would
+// leave the headline short by exactly the pairs nobody else is going to answer.
+func TestTheDecisionCountKeepsAPairOnlyTheDismissalCanSettle(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("blocked", "dedupe_candidate", withKind("company"), dismissable()),
+		},
+	}
+
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+
+	if got.Review != 1 {
+		t.Errorf("counted %d decisions over a pair this reader is the one to clear", got.Review)
 	}
 }

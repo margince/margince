@@ -4,16 +4,12 @@
 package attention
 
 // The Worklist: the same day the lane feed reads, projected as ONE ranked queue.
+// It reads THROUGH Assemble rather than beside it, so a lane added there reaches
+// the queue by being classified here rather than read a second time.
 //
-// It reads through Assemble rather than beside it. Two readers of one day would
-// be two answers to "what is waiting on me", and they would drift the first time
-// a lane changed — so this is a PROJECTION of the assembled day, and a lane
-// added there reaches the queue by being classified here rather than by being
-// read again.
-//
-// What it adds is the part a lane feed cannot: a level, a reason, and a
-// consequence. Those are what let a reader compare a duplicate merge with an
-// unanswered buyer without reading fourteen panels first.
+// What it adds is a level, a reason and a consequence — what lets a reader
+// compare a duplicate merge with an unanswered buyer without reading fourteen
+// panels first.
 
 import (
 	"context"
@@ -21,6 +17,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,11 +25,9 @@ import (
 const worklistPage = 25
 
 // leadResponseBound is how many leads still owed a reply one read carries.
-//
-// Declared here and passed through the interface, the way plannedCap is, so
-// the number the reach figure reports is the number the read actually asked
-// for. A source read to its bound reports "more may exist" rather than a total
-// it does not know.
+// Passed through the interface so the reach figure reports the number actually
+// asked for: a source read to its bound says "more may exist" rather than a
+// total it does not know.
 const leadResponseBound = 50
 
 // worklistMaxPage is the ceiling the contract publishes. A larger ask is
@@ -46,6 +41,28 @@ const worklistMaxPage = 100
 // classified and then dropped, so the summary's figures describe the same day
 // whichever filter is applied.
 func (s *Service) Worklist(
+	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
+) (crmcontracts.Worklist, error) {
+	// ONE snapshot around the whole page, for the two reasons assemble.go
+	// gives: the lanes cost one transaction between them, and they answer from
+	// one instant so the page cannot disagree with itself.
+	// Admission BEFORE the snapshot, not inside it: a refused caller must not
+	// cost a pooled connection, which is the posture WithWorkspaceTx's own doc
+	// states — refuse before any SQL runs.
+	if err := auth.RequireMember(ctx); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	var out crmcontracts.Worklist
+	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
+		return err
+	})
+	return out, err
+}
+
+// worklistIn is Worklist's body, reading inside the snapshot Worklist opened.
+func (s *Service) worklistIn(
 	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
 ) (crmcontracts.Worklist, error) {
 	// Resolved BEFORE the day is read: a reader asking for a scope they do not
@@ -90,17 +107,9 @@ func (s *Service) Worklist(
 	// that had already happened.
 	// Deeper than the lane feed reads: a batch row counts a pile, and a count
 	// taken from a page of ten would report ten over a hundred and fifty.
-	reader := s.countingDecisions()
-	switch {
-	// A named owner outranks the scope word: "their queue" is a narrower
-	// question than any of mine/team/all, and answering the wider one would
-	// hand back a page that looks like the rep's day and is not.
-	case !namedOwner.IsZero():
-		reader = reader.forOwner(namedOwner)
-	case mineOnly(resolved):
-		reader = reader.forReader()
-	case resolved == scopeUnassigned:
-		reader = reader.forUnowned()
+	reader, err := s.readerFor(ctx, resolved, namedOwner)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
 	}
 	// The day AND what the night knows about each deal — its finding and its
 	// score — from one read of the brief lane. Both travel as values rather than
@@ -135,7 +144,7 @@ func (s *Service) Worklist(
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
 	// left the second half seeing no named owner: it fell through to "mine" and
-	// returned the READER's own day under the named person's heading, which is
+	// returned the READER's own day under the named contact's heading, which is
 	// the one way this page can be wrong that its reader cannot detect.
 	//
 	// The two refusals travel INTO the projection rather than onto the finished
@@ -162,31 +171,19 @@ func (s *Service) Worklist(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(night.scores, night.cutoff)
+	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
-		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
+		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	// The step each deal row suggests, read for the CUT page rather than the
-	// whole ranking: a move is drawn and never ranked, so reading one for a row
-	// this caller will not receive spends a query on nothing. dealmoves.go
-	// states why this reads a cache and never assembles.
-	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
+	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	// And how each deal row's deal is STANDING, over the same cut page and for
-	// the same reason. Read after the step because the two are independent: a
-	// row can carry a move and no verdict, or a verdict and no move, and neither
-	// absence is a reason to withhold the other. dealstanding.go states the
-	// three-source order and why its floor is no verdict at all.
-	if err := reader.nameTheStanding(ctx, out.Queue, night.findings); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	// And the name beside each owner id, over the same cut page and for the same
-	// reason: a label is drawn and never ranked, so resolving one for a row this
-	// caller will not receive spends a read on nothing.
-	if err := reader.nameTheOwners(ctx, out.Queue); err != nil {
-		return crmcontracts.Worklist{}, err
+	if out.Focus != nil {
+		if err := reader.nameWorklistRows(ctx, out.Focus.Items, night.findings); err != nil {
+			return crmcontracts.Worklist{}, err
+		}
 	}
 	return out, nil
 }
@@ -209,6 +206,7 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
+	rows = append(rows, s.planRows...)
 	rows = append(rows, s.rankedWaits(ctx, waiting, day.AsOf, scope)...)
 	rows = append(rows, rankedLeads(leads, day.AsOf)...)
 	// What the night thought of each deal, onto whichever row is about it — the
@@ -222,7 +220,7 @@ func (s *Service) worklistFrom(
 	// One late reply is one row, not three: the escalation's own task about a
 	// lead this queue already shows says nothing the lead row does not.
 	rows = dropEscalationTasksAlreadyOwed(rows)
-	// One PERSON is one row. "Nobody has spoken to them in sixty days" and
+	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
 	// "they wrote last week and are waiting" are both true of the same contact
 	// and read as a contradiction side by side.
 	//
@@ -246,18 +244,10 @@ func (s *Service) worklistFrom(
 	// deal's figures and reasons but not the brief's id. So this runs against
 	// whatever actually survives.
 	rows = foldBriefIntoRisk(rows)
-	// The reader's own override, raised AFTER the dedupe passes and before the
-	// ranking. After, because a pin on a row those passes remove is a pin on a
-	// row that is not on the page — the day decides what it holds, and the pin
-	// only says which of what it holds leads. Before the ranking, because a pin
-	// is a level: the ordering, the band heading and the "why here" line all
-	// read it, so moving rows after the sort would leave those three saying
-	// something the page contradicts.
-	rows = applyPins(rows, s.pinned)
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
-	// person's day, and leaving it in would make a manager's answer to "show me
+	// contact's day, and leaving it in would make a manager's answer to "show me
 	// Lena's queue" quietly include rows that are not hers.
 	//
 	// The waiting rows above already ran through this — they had to, before
@@ -290,12 +280,41 @@ func (s *Service) worklistFrom(
 	// "tasks, not shown", and a filtered-out source that hit its bound took its
 	// more_available signal out with it.
 	considered := rows
+	// Which of these the night had not seen, stamped over EVERY candidate rather
+	// than the cut page, because `changed_since_brief` is one of the narrowings
+	// below and a filter cannot read a flag set after it runs.
+	//
+	// One pass serving both the filter and the drawing is what stops the door and
+	// the count disagreeing — the defect these two filter values exist to fix. It
+	// costs one comparison per row against an instant this call already holds.
+	rows = markChangedSinceBrief(rows, s.briefCutoff)
+	// Focus is independent of queue filters and pins, so it always folds routine work.
+	focusRows := foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
+	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
+	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
+	// eligibility, including when this reader has saved pins on the queue.
+	rows = applyPins(rows, s.pinned)
+	// The fold, skipped for a narrowing that IS opening the group — foldAndRepin's
+	// own rule, and the reason it is conditional at all.
+	//
+	// `opensTheDeck` rather than `narrowed`, because the two link-only values are
+	// narrowings that are not that request. A reader asking what changed overnight
+	// asked about freshness and can be owed decisions; answering with a hundred
+	// alike rows the unfiltered page draws as one would make the door show more
+	// than the count that sent them — the same disagreement in the other
+	// direction.
+	//
+	// BEFORE the narrowing, so the filter judges the rows this page will actually
+	// draw. A fold MINTS a row, so filtering first left the members to be tested
+	// and the group they became untested: an incident group whose members were all
+	// stale reached a page asking only for what changed, because the three rows the
+	// filter had approved were replaced afterwards by one it never saw.
+	if !opensTheDeck(filter) {
+		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
-		rows = keepCategory(rows, crmcontracts.WorklistItemCategory(filter))
-	}
-	if !narrowed {
-		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the
@@ -332,6 +351,10 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
+	for i := range missing {
+		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
+		missing[i].Category = &category
+	}
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
@@ -345,14 +368,16 @@ func (s *Service) worklistFrom(
 	// cut from the ranking above; a frozen walk's sequence is a previous run of
 	// that same comparator, and running it again here would return the reader's
 	// own rows in today's order rather than the one they were shown.
-	// Which of these the night had not seen, against the run's own data cutoff.
-	// Over the CUT page, because it is drawn and never ranked.
-	shown = markChangedSinceBrief(shown, s.briefCutoff)
+	// Already stamped, above the narrowing: `shown` is a slice of those same rows,
+	// so it carries the flags the `changed_since_brief` filter read. Stamping
+	// again here would be a second answer to one question, and the page's copy
+	// would be the one a reader sees while the filter used the other.
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
+		Focus: &focus,
 		// The headings, in draw order, over the rows this page actually holds.
 		Bands: &bands,
 		// The bar is re-derived rather than threaded out of classifyDay: it is a

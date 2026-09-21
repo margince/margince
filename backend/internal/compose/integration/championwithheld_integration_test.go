@@ -9,7 +9,7 @@ package integration
 //
 // The worklist's `no_champion` reason says nobody inside the account is arguing
 // for a drifting deal. It is only safe to say when the committee could be read
-// in full: a seat refused by the person row scope is absent from every read, so
+// in full: a seat refused by the contact row scope is absent from every read, so
 // a lane that treated "I saw no champion" as "there is no champion" would tell
 // a rep to go and recruit one into a committee that already has one.
 //
@@ -21,7 +21,7 @@ package integration
 // The fixtures hide a seat through TWO different endpoints on purpose. An edge
 // is admitted by a conjunction over all six, so a probe reading a single arm
 // answers a narrower question that looks identical until the seat is refused by
-// one of the others. Varying only the person arm cannot tell the two apart.
+// one of the others. Varying only the contact arm cannot tell the two apart.
 
 import (
 	"testing"
@@ -29,14 +29,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// championSeatReader can read deals and people, and is bounded to its OWN rows.
+// championSeatReader can read deals and contacts, and is bounded to its OWN rows.
 //
 // The bound is the whole fixture: a rep who may see every row cannot be refused
 // a seat, so an unbounded reader proves nothing about the withheld arm. The
@@ -47,8 +47,8 @@ func championSeatReader() principal.Permissions {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"deal":         {Read: true},
-			"person":       {Read: true},
-			"organization": {Read: true},
+			"contact":      {Read: true},
+			"company":      {Read: true},
 			"relationship": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
@@ -63,24 +63,24 @@ func championSeatReader() principal.Permissions {
 func TestAChampionTheReaderMayNotSeeIsReportedWithheldRatherThanAbsent(t *testing.T) {
 	e := Setup(t)
 	rep := e.Rep1
-	org := e.SeedOrg(t, "Kessler Systems", &rep)
+	company := e.SeedCompany(t, "Kessler Systems", &rep)
 
-	// CAPTURE-PRIVATE, not merely owned by somebody else. `person` is an
+	// CAPTURE-PRIVATE, not merely owned by somebody else. `contact` is an
 	// identity table (auth/tableclass.go), so customer identity is
 	// workspace-readable and the owner arm of the row predicate is TRUE for
 	// every reader — ownership alone hides nobody. `visibility = 'owner'` is
 	// the arm that actually refuses, and it is the state an unpromoted
 	// captured contact sits in.
-	hidden := e.SeedPerson(t, "Somebody else's contact", &e.AdminUser)
-	hiddenID := ids.From[ids.PersonKind](hidden)
+	hidden := e.SeedContact(t, "Somebody else's contact", &e.AdminUser)
+	hiddenID := ids.From[ids.ContactKind](hidden)
 	makeCapturePrivate(t, e, hidden, e.AdminUser)
 
-	orgID := ids.From[ids.OrganizationKind](org)
-	dealID := seedRepDeal(t, e, orgID, rep, "Fleet retrofit")
+	companyID := ids.From[ids.CompanyKind](company)
+	dealID := seedRepDeal(t, e, companyID, rep, "Fleet retrofit")
 
 	champion := "champion"
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "deal_stakeholder", PersonID: &hiddenID, DealID: &dealID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &hiddenID, DealID: &dealID,
 		Role: &champion, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seating the champion: %v", err)
@@ -110,22 +110,22 @@ func TestAChampionTheReaderMayNotSeeIsReportedWithheldRatherThanAbsent(t *testin
 func TestAVisibleCommitteeIsAnsweredRatherThanWithheld(t *testing.T) {
 	e := Setup(t)
 	rep := e.Rep1
-	org := e.SeedOrg(t, "Turbinenbau", &rep)
-	orgID := ids.From[ids.OrganizationKind](org)
+	company := e.SeedCompany(t, "Turbinenbau", &rep)
+	companyID := ids.From[ids.CompanyKind](company)
 
 	// Seeded by the same admin as the withheld case, and NOT made capture
 	// private. Capture privacy is the single varied factor, deliberately:
-	// `person` is an identity table, so the owner arm is true for every reader
+	// `contact` is an identity table, so the owner arm is true for every reader
 	// and swapping the owner would vary something that changes no answer. This
 	// arm has to differ in the thing that actually refuses, or it does not
 	// control for anything.
-	seen := e.SeedPerson(t, "A contact nobody made private", &e.AdminUser)
-	seenID := ids.From[ids.PersonKind](seen)
-	dealID := seedRepDeal(t, e, orgID, rep, "Quarterly renewal")
+	seen := e.SeedContact(t, "A contact nobody made private", &e.AdminUser)
+	seenID := ids.From[ids.ContactKind](seen)
+	dealID := seedRepDeal(t, e, companyID, rep, "Quarterly renewal")
 
 	champion := "champion"
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "deal_stakeholder", PersonID: &seenID, DealID: &dealID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &seenID, DealID: &dealID,
 		Role: &champion, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seating the champion: %v", err)
@@ -161,9 +161,9 @@ func TestAVisibleCommitteeIsAnsweredRatherThanWithheld(t *testing.T) {
 func TestACommitteeWhollyOutOfSightIsWithheldRatherThanMissing(t *testing.T) {
 	e := Setup(t)
 	rep := e.Rep1
-	org := e.SeedOrg(t, "Nordwerk", &rep)
-	orgID := ids.From[ids.OrganizationKind](org)
-	dealID := seedRepDeal(t, e, orgID, rep, "Renewal nobody can see into")
+	company := e.SeedCompany(t, "Nordwerk", &rep)
+	companyID := ids.From[ids.CompanyKind](company)
+	dealID := seedRepDeal(t, e, companyID, rep, "Renewal nobody can see into")
 
 	// Two seats, both capture-private to the admin: a champion and a plain
 	// stakeholder, so the deal genuinely has a committee and this reader can
@@ -173,11 +173,11 @@ func TestACommitteeWhollyOutOfSightIsWithheldRatherThanMissing(t *testing.T) {
 		name string
 		role *string
 	}{{"Hidden champion", &champion}, {"Hidden stakeholder", nil}} {
-		person := e.SeedPerson(t, seat.name, &e.AdminUser)
-		makeCapturePrivate(t, e, person, e.AdminUser)
-		personID := ids.From[ids.PersonKind](person)
-		if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-			Kind: "deal_stakeholder", PersonID: &personID, DealID: &dealID,
+		contact := e.SeedContact(t, seat.name, &e.AdminUser)
+		makeCapturePrivate(t, e, contact, e.AdminUser)
+		contactID := ids.From[ids.ContactKind](contact)
+		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+			Kind: "deal_stakeholder", ContactID: &contactID, DealID: &dealID,
 			Role: seat.role, Source: "manual",
 		}); err != nil {
 			t.Fatalf("seating %s: %v", seat.name, err)
@@ -196,58 +196,58 @@ func TestACommitteeWhollyOutOfSightIsWithheldRatherThanMissing(t *testing.T) {
 	}
 }
 
-// A champion refused by an endpoint OTHER than the person one is withheld too.
+// A champion refused by an endpoint OTHER than the contact one is withheld too.
 //
 // THE ARM THIS FIXTURE EXISTS FOR. An edge is admitted by a conjunction over
 // every endpoint it carries, and the three tests above all hide the seat behind
-// the same one — the person. This one hides it behind `counterparty_org_id`, so
-// a probe reading only the person arm reports the committee fully readable and
+// the same one — the contact. This one hides it behind `counterparty_company_id`, so
+// a probe reading only the contact arm reports the committee fully readable and
 // the deal says "no champion" over a champion that is sitting in it.
 //
 // It is reachable rather than theoretical. `rel_stakeholder_shape` pins
-// organization_id, project_id and counterparty_person_id to NULL on a
-// deal_stakeholder and says nothing about counterparty_org_id, and
-// CreateRelationshipInput accepts it. `organization` is capture-private on the
-// same terms `person` is, so an unpromoted company is a seat's hidden endpoint.
+// company_id, project_id and counterparty_contact_id to NULL on a
+// deal_stakeholder and says nothing about counterparty_company_id, and
+// CreateRelationshipInput accepts it. `company` is capture-private on the
+// same terms `contact` is, so an unpromoted company is a seat's hidden endpoint.
 //
-// The CHAMPION here is fully readable. That is the point: the person arm admits
+// The CHAMPION here is fully readable. That is the point: the contact arm admits
 // this seat, so only a probe reading the whole conjunction can find it refused.
-func TestAChampionRefusedByANonPersonEndpointIsWithheldRatherThanAbsent(t *testing.T) {
+func TestAChampionRefusedByANonContactEndpointIsWithheldRatherThanAbsent(t *testing.T) {
 	e := Setup(t)
 	rep := e.Rep1
-	org := e.SeedOrg(t, "Halden Werke", &rep)
-	orgID := ids.From[ids.OrganizationKind](org)
-	dealID := seedRepDeal(t, e, orgID, rep, "Line upgrade")
+	company := e.SeedCompany(t, "Halden Werke", &rep)
+	companyID := ids.From[ids.CompanyKind](company)
+	dealID := seedRepDeal(t, e, companyID, rep, "Line upgrade")
 
-	// Readable by this rep: not capture-private, so the person arm of the
+	// Readable by this rep: not capture-private, so the contact arm of the
 	// conjunction admits the seat and cannot be what refuses it.
-	visible := e.SeedPerson(t, "A champion in plain sight", &e.AdminUser)
-	visibleID := ids.From[ids.PersonKind](visible)
+	visible := e.SeedContact(t, "A champion in plain sight", &e.AdminUser)
+	visibleID := ids.From[ids.ContactKind](visible)
 
 	// The endpoint that refuses. A company the admin captured and nobody
-	// promoted, so `organization`'s capture-privacy arm hides it from this rep
+	// promoted, so `company`'s capture-privacy arm hides it from this rep
 	// exactly as it hides an unpromoted contact.
-	partner := e.SeedOrg(t, "A partner nobody promoted", &e.AdminUser)
-	makeOrgCapturePrivate(t, e, partner, e.AdminUser)
-	partnerID := ids.From[ids.OrganizationKind](partner)
+	partner := e.SeedCompany(t, "A partner nobody promoted", &e.AdminUser)
+	makeCompanyCapturePrivate(t, e, partner, e.AdminUser)
+	partnerID := ids.From[ids.CompanyKind](partner)
 
 	champion := "champion"
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "deal_stakeholder", PersonID: &visibleID, DealID: &dealID,
-		CounterpartyOrgID: &partnerID, Role: &champion, Source: "manual",
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &visibleID, DealID: &dealID,
+		CounterpartyCompanyID: &partnerID, Role: &champion, Source: "manual",
 	}); err != nil {
-		t.Fatalf("seating the champion behind a hidden counterparty org: %v", err)
+		t.Fatalf("seating the champion behind a hidden counterparty company: %v", err)
 	}
 
 	cover := championCoverFor(t, e, championSeatReader(), dealID.UUID)
 
 	answer, found := cover[dealID.UUID]
 	if !found {
-		t.Fatal("a deal whose only seat is refused by its counterparty org is absent " +
+		t.Fatal("a deal whose only seat is refused by its counterparty company is absent " +
 			"from the answer, which the caller reads as \"no committee\"")
 	}
 	if !answer.Withheld {
-		t.Error("a seat refused by the counterparty_org_id arm is reported readable; " +
+		t.Error("a seat refused by the counterparty_company_id arm is reported readable; " +
 			"the probe is reading one arm of the conjunction rather than its complement, " +
 			"and this rep will be told nobody is carrying a deal that has a champion")
 	}
@@ -256,18 +256,18 @@ func TestAChampionRefusedByANonPersonEndpointIsWithheldRatherThanAbsent(t *testi
 	}
 }
 
-// makeOrgCapturePrivate is makeCapturePrivate's twin for a company.
+// makeCompanyCapturePrivate is makeCapturePrivate's twin for a company.
 //
-// `organization` sits beside `person` in ownerPrivateTables, so the state and
+// `company` sits beside `contact` in ownerPrivateTables, so the state and
 // the columns are the same and only the table differs. Two named helpers rather
 // than one taking a table, because the call sites read as what they hide — a
 // contact or a company — and that is the fact each fixture is varying.
-func makeOrgCapturePrivate(t *testing.T, e *Env, org ids.UUID, owner ids.UUID) {
+func makeCompanyCapturePrivate(t *testing.T, e *Env, company ids.UUID, owner ids.UUID) {
 	t.Helper()
 	err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(e.Admin(),
-			`UPDATE organization SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
-			org, owner)
+			`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
+			company, owner)
 		return execErr
 	})
 	if err != nil {
@@ -275,43 +275,43 @@ func makeOrgCapturePrivate(t *testing.T, e *Env, org ids.UUID, owner ids.UUID) {
 	}
 }
 
-// An edge left pointing at an ARCHIVED person claims no withheld seat.
+// An edge left pointing at an ARCHIVED contact claims no withheld seat.
 //
 // The two statements must agree about what a live seat is. championSeats joins
-// `person ... archived_at IS NULL`, so an edge whose person is archived is no
+// `contact ... archived_at IS NULL`, so an edge whose contact is archived is no
 // seat to it; if the withheld probe counted that same edge, the deal would be
 // reported withheld forever and `no_champion` would silently stop firing — the
 // always-off mirror of the bug this file exists for.
 //
-// The row is seeded by archiving the person WITHOUT the edge, which is not what
-// the product does: people/personarchive.go cascades archived_at onto the edge
+// The row is seeded by archiving the contact WITHOUT the edge, which is not what
+// the product does: contacts/contactarchive.go cascades archived_at onto the edge
 // in the same transaction. That cascade is a sibling module's invariant, and
 // this test is what keeps the disagreement from mattering if a new archive path
 // or a backfill ever misses it.
-func TestAnEdgeOnAnArchivedPersonIsNoWithheldSeat(t *testing.T) {
+func TestAnEdgeOnAnArchivedContactIsNoWithheldSeat(t *testing.T) {
 	e := Setup(t)
 	rep := e.Rep1
-	org := e.SeedOrg(t, "Stillgelegt AG", &rep)
-	orgID := ids.From[ids.OrganizationKind](org)
-	dealID := seedRepDeal(t, e, orgID, rep, "Deal whose only seat is gone")
+	company := e.SeedCompany(t, "Stillgelegt AG", &rep)
+	companyID := ids.From[ids.CompanyKind](company)
+	dealID := seedRepDeal(t, e, companyID, rep, "Deal whose only seat is gone")
 
-	// Capture-private, so the person arm WOULD refuse this seat and the deal
-	// would read as withheld — were the person still live.
-	gone := e.SeedPerson(t, "A contact who left", &e.AdminUser)
-	goneID := ids.From[ids.PersonKind](gone)
+	// Capture-private, so the contact arm WOULD refuse this seat and the deal
+	// would read as withheld — were the contact still live.
+	gone := e.SeedContact(t, "A contact who left", &e.AdminUser)
+	goneID := ids.From[ids.ContactKind](gone)
 	makeCapturePrivate(t, e, gone, e.AdminUser)
 
 	champion := "champion"
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "deal_stakeholder", PersonID: &goneID, DealID: &dealID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &goneID, DealID: &dealID,
 		Role: &champion, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seating the champion: %v", err)
 	}
-	archivePersonLeavingTheEdge(t, e, gone)
+	archiveContactLeavingTheEdge(t, e, gone)
 
 	// The fixture's central claim, asserted rather than described: the edge is
-	// STILL LIVE and points at an archived person. Without this the test would
+	// STILL LIVE and points at an archived contact. Without this the test would
 	// go vacuously green the day an archive path learns to cascade onto the
 	// edge, and would then prove nothing about the liveness arm it exists for.
 	if live := liveSeatCount(t, e, dealID); live != 1 {
@@ -322,7 +322,7 @@ func TestAnEdgeOnAnArchivedPersonIsNoWithheldSeat(t *testing.T) {
 	cover := championCoverFor(t, e, championSeatReader(), dealID.UUID)
 
 	if answer, found := cover[dealID.UUID]; found && answer.Withheld {
-		t.Error("an edge pointing at an archived person is counted as a withheld seat; " +
+		t.Error("an edge pointing at an archived contact is counted as a withheld seat; " +
 			"the deal reports a committee it no longer has and never says no_champion again")
 	}
 }
@@ -344,30 +344,30 @@ func liveSeatCount(t *testing.T, e *Env, dealID ids.DealID) int {
 	return live
 }
 
-// archivePersonLeavingTheEdge archives the person and DELIBERATELY leaves the
+// archiveContactLeavingTheEdge archives the contact and DELIBERATELY leaves the
 // edge live, which the product's own archive path never does. It is the state a
 // missed cascade would leave behind, and the only way to reach the liveness arm.
-func archivePersonLeavingTheEdge(t *testing.T, e *Env, person ids.UUID) {
+func archiveContactLeavingTheEdge(t *testing.T, e *Env, contact ids.UUID) {
 	t.Helper()
 	err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(e.Admin(),
-			`UPDATE person SET archived_at = now() WHERE id = $1`, person)
+			`UPDATE contact SET archived_at = now() WHERE id = $1`, contact)
 		return execErr
 	})
 	if err != nil {
-		t.Fatalf("archiving the person: %v", err)
+		t.Fatalf("archiving the contact: %v", err)
 	}
 }
 
 func seedRepDeal(
-	t *testing.T, e *Env, orgID ids.OrganizationID, owner ids.UUID, name string,
+	t *testing.T, e *Env, companyID ids.CompanyID, owner ids.UUID, name string,
 ) ids.DealID {
 	t.Helper()
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	holder := ids.From[ids.UserKind](owner)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: name, PipelineID: pipeline, StageID: open,
-		OrganizationID: &orgID, OwnerID: &holder, Source: "manual",
+		CompanyID: &companyID, OwnerID: &holder, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)

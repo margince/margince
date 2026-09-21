@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type RefObject, useEffect, useLayoutEffect, useState } from "react";
+import {
+  type CSSProperties,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
 
 /**
  * Anchoring, dismissal and scroll-into-view for a portalled listbox popup.
@@ -29,6 +35,12 @@ export type PopupFrame = Readonly<{
   left: number;
   width: number;
   maxHeight: number;
+  // The space between the popup's leading edge and the viewport's trailing
+  // margin. A popup sized by its own CONTENT can be wider than the anchor it
+  // hangs off, and by then `left` is already decided — so this is the only
+  // honest ceiling on that width. A stylesheet guessing at a viewport fraction
+  // instead clips the last option of a control near the trailing edge.
+  room: number;
   // Exactly one of these is set. A popup below the trigger is anchored by its
   // top; a flipped one by its bottom, because anchoring it by `top` would need
   // its rendered height, which is not known until after it has painted.
@@ -42,9 +54,11 @@ function frameFor(rect: DOMRect, view: { width: number; height: number }) {
   const roomAbove = rect.top - ANCHOR_GAP - VIEWPORT_MARGIN;
   const flip = roomBelow < MIN_ROOM && roomAbove > roomBelow;
   const rightEdge = view.width - rect.width - VIEWPORT_MARGIN;
+  const left = Math.max(VIEWPORT_MARGIN, Math.min(rect.left, rightEdge));
   const frame = {
-    left: Math.max(VIEWPORT_MARGIN, Math.min(rect.left, rightEdge)),
+    left,
     width: rect.width,
+    room: Math.max(view.width - left - VIEWPORT_MARGIN, 0),
     // The room on the side it opens on is a CEILING, never a floor. On a short
     // viewport — or at browser zoom, which shrinks the viewport in CSS pixels —
     // both sides can be under MIN_ROOM, and a popup allowed 96px in 40px of room
@@ -56,6 +70,32 @@ function frameFor(rect: DOMRect, view: { width: number; height: number }) {
   return flip
     ? { ...frame, bottom: view.height - rect.top + ANCHOR_GAP, above: true }
     : { ...frame, top: rect.bottom + ANCHOR_GAP, above: false };
+}
+
+/**
+ * The inline box for a popup whose OWN CONTENT decides how wide it is.
+ *
+ * The anchor's width is that popup's FLOOR and not its width: a listbox pinned
+ * to a short trigger truncates every option it holds, which is what a reader
+ * choosing between "My own day" and a full name met on the Worklist. The cap
+ * belongs to the stylesheet, so the measurement it needs travels as
+ * `--popupRoom` rather than as a viewport fraction it would have to guess at.
+ *
+ * The other kind of popup keeps the anchor's width deliberately — a suggestion
+ * list under a text box is that box's continuation, not a list of its own
+ * (suggestlist.tsx) — which is why this is not simply "the popup box".
+ */
+export type PopupBox = CSSProperties & Readonly<{ "--popupRoom": string }>;
+
+export function contentSizedPopupBox(frame: PopupFrame): PopupBox {
+  return {
+    left: frame.left,
+    top: frame.top,
+    bottom: frame.bottom,
+    minWidth: frame.width,
+    maxHeight: frame.maxHeight,
+    "--popupRoom": `${frame.room}px`,
+  };
 }
 
 // The trigger has scrolled out of sight, so the popup has nothing left to point

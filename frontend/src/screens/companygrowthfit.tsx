@@ -18,7 +18,7 @@ import { type BriefSentence, SentenceList, WrittenBy } from "./record360";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 
-type GrowthFit = components["schemas"]["OrganizationGrowthFit"];
+type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 type Band = GrowthFit["band"];
 
 type SubScoreDimension = NonNullable<
@@ -43,9 +43,9 @@ const BAND_LABELS: Record<Band, MessageKey> = {
 // low score, and giving it a colour on the same scale as the other three would
 // place it on that scale — which is the single misreading this panel exists to
 // prevent. It renders as prose instead.
-const BAND_TONES: Partial<Record<Band, "success" | "warn">> = {
+const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
   strong: "success",
-  weak: "warn",
+  weak: "warning",
 };
 
 /**
@@ -62,24 +62,24 @@ const BAND_TONES: Partial<Record<Band, "success" | "warn">> = {
  * identically.
  */
 export function GrowthFitPanel({
-  orgId,
-  enabled,
+  companyId,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
-  orgId: string;
-  enabled: boolean;
+  companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const fit = useQuery({
-    queryKey: ["org-growth-fit", orgId],
-    enabled,
+    queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/growth-fit", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.GET("/companies/{id}/growth-fit", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -89,8 +89,8 @@ export function GrowthFitPanel({
   });
   const reassess = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/organizations/{id}/growth-fit", {
-        params: { path: { id: orgId } },
+      const { data, error } = await api.POST("/companies/{id}/growth-fit", {
+        params: { path: { id: companyId } },
       });
       if (error) {
         throwProblem(error);
@@ -98,14 +98,8 @@ export function GrowthFitPanel({
       return data;
     },
     onSuccess: (data) =>
-      queryClient.setQueryData(["org-growth-fit", orgId], data),
+      queryClient.setQueryData(["company-growth-fit", companyId], data),
   });
-
-  // A workspace reading from an incumbent mirror has none of the facts this is
-  // assembled from, so the panel is absent rather than empty.
-  if (!enabled) {
-    return null;
-  }
 
   const written = fit.data;
   // A payload this build cannot read is not a company we know nothing about.
@@ -129,26 +123,35 @@ export function GrowthFitPanel({
     <Panel
       className="co-worth"
       title={t("co.growthFit.title")}
+      // The assessment is a machine's, in every state it can be in — so the
+      // tint rides the panel rather than the readable payload.
+      tone="ai"
       // The same shape the account brief beside it keeps: the "as of" stamp
       // reads as the header's own fact — when this reading was assembled —
       // while who wrote it and the verb to have it written again sit together
       // in the footer band, which is the panel's sourcing rather than part of
-      // what it says.
+      // what it says. The disclosure closes the band, one badge to a head.
       titleAction={
-        readable && (
-          <span className="t-caption">
-            {t("co.brief.generatedAt", {
-              when: formatDateTime(readable.generated_at, locale, recordZone),
-            })}
-          </span>
-        )
+        <>
+          {readable && (
+            <span className="t-caption">
+              {t("co.brief.generatedAt", {
+                when: formatDateTime(readable.generated_at, locale, recordZone),
+              })}
+            </span>
+          )}
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+        </>
       }
       footer={
         readable && (
           <div className="co-brief-foot">
             <WrittenBy by={readable.generated_by} />
             <Button
-              small
+              // The assessor's own verb on the assessor's own ground: tinted
+              // rather than filled, so the panel's one filled control is not
+              // spent on having the reading written a second time.
+              variant="aiQuiet"
               onClick={() => reassess.mutate()}
               pending={reassess.isPending}
               busyLabel={t("co.growthFit.reassessing")}
@@ -175,7 +178,11 @@ export function GrowthFitPanel({
       ) : (
         <>
           <GrowthFitVerdict fit={readable} />
-          <GrowthFitReasons fit={readable} onOpenRecord={onOpenRecord} />
+          <GrowthFitReasons
+            fit={readable}
+            onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
+          />
         </>
       )}
       {reassess.error && (
@@ -207,7 +214,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
           <Badge tone={BAND_TONES[fit.band]}>{t(BAND_LABELS[fit.band])}</Badge>{" "}
           {/* Both counts, always. A proportion without its denominator is not a
               completeness figure. */}
-          <span className="co-growth-fit-completeness">
+          <span>
             {t("co.growthFit.completeness", {
               present: formatNumber(present, locale),
               expected: formatNumber(expected, locale),
@@ -286,9 +293,12 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
 function GrowthFitReasons({
   fit,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   fit: GrowthFit;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens a cited message in the page's email drawer; see `Citations`.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const missing = fit.data_completeness.missing;
@@ -331,6 +341,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences ?? []}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             </div>
           ))}
@@ -344,13 +355,14 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences}
                 onOpenRecord={onOpenRecord}
+                onOpenEmail={onOpenEmail}
               />
             </GrowthFitRow>
           ),
       )}
       {missing && missing.length > 0 && (
         <GrowthFitRow label="co.growthFit.missing">
-          <p className="co-growth-fit-missing">{missing.join(", ")}</p>
+          <p>{missing.join(", ")}</p>
         </GrowthFitRow>
       )}
     </>

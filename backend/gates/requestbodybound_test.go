@@ -188,9 +188,9 @@ func rawBodyDecodesIn(parsed gatekit.ParsedFile) []string {
 		}
 		// A function that has already replaced the body with a bounded reader
 		// has named its cap in view, which is the property this gate is about.
-		// The overlay webhook does exactly that and says why: MaxBytesReader
-		// rather than a bare LimitReader, so an over-cap batch answers 413
-		// instead of being truncated and then rejected as a bad signature.
+		// The bound is MaxBytesReader rather than a bare LimitReader, so an
+		// over-cap body answers 413 instead of being truncated and then
+		// rejected as malformed.
 		if boundsItsOwnBody(fn.Body, requests) {
 			continue
 		}

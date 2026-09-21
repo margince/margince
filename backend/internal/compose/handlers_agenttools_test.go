@@ -48,7 +48,23 @@ func TestAgentToolsMapPreservesRegistryOrderAndFields(t *testing.T) {
 	if !strings.HasPrefix(got[0].Description, "Put a mail on the wire.") {
 		t.Errorf("description = %q, want it to open with the spec's written text", got[0].Description)
 	}
-	if !strings.Contains(got[0].Description, "a person approves") {
+	if !strings.Contains(got[0].Description, "a human approves") {
 		t.Errorf("description = %q, want the governance clause an MCP client also gets", got[0].Description)
+	}
+}
+
+// TestAgentToolsFromSpecsOmitsHumanOnlyTools: a HumanOnly spec requests no
+// agent authority, so there is nothing here for an operator to review —
+// AgentTool.tier is a required wire field and tierWire maps an unset Tier to
+// confirmation_required, so listing it with fabricated governance was never
+// an option; omitting it is the honest answer.
+func TestAgentToolsFromSpecsOmitsHumanOnlyTools(t *testing.T) {
+	specs := []mcp.ToolSpec{
+		{Name: "normal_tool", Title: "t", Description: "d", Version: "1.0.0", Tier: mcp.TierAutoExecute, RequiredScope: "read"},
+		{Name: "human_only_op", Title: "t2", Description: "d2", Version: "1.0.0", HumanOnly: true},
+	}
+	out := agentToolsFromSpecs(specs)
+	if len(out) != 1 || out[0].Name != "normal_tool" {
+		t.Fatalf("expected only normal_tool, got %+v", out)
 	}
 }

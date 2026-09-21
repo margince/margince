@@ -242,7 +242,7 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 		parens := filepath.Join(dir, "parens.go")
 		parenSource := "package p\n\nfunc f(extra string) string {\n" +
 			"\treturn (`UPDATE activity SET body = NULL`) + extra\n}\n\n" +
-			"func g() string {\n\treturn `UPDATE person SET note = NULL` + (` WHERE id = $1`)\n}\n"
+			"func g() string {\n\treturn `UPDATE contact SET note = NULL` + (` WHERE id = $1`)\n}\n"
 		if err := os.WriteFile(parens, []byte(parenSource), 0o600); err != nil {
 			t.Fatalf("write: %v", err)
 		}
@@ -250,7 +250,7 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 		if got[table] == "" {
 			t.Errorf("a parenthesized fragment joined to a runtime value was not reported: %v", got)
 		}
-		if got["person"] != "" {
+		if got["contact"] != "" {
 			t.Errorf("a statement joined to a parenthesized LITERAL was reported as assembled: %v", got)
 		}
 	})
@@ -364,10 +364,10 @@ func TestTheRetainedColumnCheckRefusesWhatItCannotRead(t *testing.T) {
 		for _, readable := range []string{
 			`UPDATE activity SET body = 'a;b', counterparty_email = NULL WHERE id = $1`,
 			`UPDATE activity SET body = NULL WHERE id = $1 AND kind = 'note'`,
-			`UPDATE person SET note = 'she said ''no''' WHERE id = $1`,
+			`UPDATE contact SET note = 'she said ''no''' WHERE id = $1`,
 			"UPDATE activity SET body = $$a;b$$, counterparty_email = NULL WHERE id = $1",
-			`UPDATE person SET note = 'E''s own note' WHERE id = $1`,
-			"UPDATE person SET note = NULL -- not an E'scape\n WHERE id = $1",
+			`UPDATE contact SET note = 'E''s own note' WHERE id = $1`,
+			"UPDATE contact SET note = NULL -- not an E'scape\n WHERE id = $1",
 		} {
 			if form := quotingBeyondTheSplit(readable); form != "" {
 				t.Errorf("ordinary quoting was refused as %q: %s", form, readable)

@@ -51,9 +51,9 @@ func TestABoundResolverNamesEveryCardOnce(t *testing.T) {
 			{ID: ids.NewV7(), DealID: deal, Rank: 2},
 		}}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -81,9 +81,9 @@ func TestARefusedLabelCostsTheNameAndNeverTheReference(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -103,9 +103,9 @@ func TestAnUnboundFeedSendsSubjectsUnnamed(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -117,19 +117,19 @@ func TestAnUnboundFeedSendsSubjectsUnnamed(t *testing.T) {
 // Every lane's subjects reach the pass — enumerated from the same answer the
 // wire carries, so a lane the pass skipped would fail here by existing.
 func TestEveryLanesSubjectsAreNamed(t *testing.T) {
-	person, deal := ids.NewV7(), ids.NewV7()
-	names := &stubNames{labels: map[ids.UUID]string{person: "Dana Weiss", deal: "Fleet retrofit GmbH"}}
+	contact, deal := ids.NewV7(), ids.NewV7()
+	names := &stubNames{labels: map[ids.UUID]string{contact: "Dana Weiss", deal: "Fleet retrofit GmbH"}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{{
-			ID: ids.NewV7(), PersonID: person, Body: "a promise", Quote: "q",
+			ID: ids.NewV7(), ContactID: contact, Body: "a promise", Quote: "q",
 			OccurredAt: readInstant, DueAt: readInstant,
 		}}},
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
-		&stubDecay{rows: []QuietRelationship{{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: readInstant}}},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
+		&stubDecay{rows: []QuietRelationship{{ContactID: contact, Name: "Dana Weiss", QuietDays: 63, LastAt: readInstant}}},
+		nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -162,10 +162,10 @@ func TestTwoRecordsOfOneTypeCostOneRead(t *testing.T) {
 		stubBriefing{rows: []BriefEntry{
 			{ID: ids.NewV7(), DealID: firstDeal, Rank: 1},
 			{ID: ids.NewV7(), DealID: secondDeal, Rank: 2},
-		}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
+		}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, names,
 		fixedClock)
 
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

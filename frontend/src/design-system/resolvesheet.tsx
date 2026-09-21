@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { Button, Modal, TextInput } from "./atoms";
+import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { Heading } from "./heading";
 
 // Answering a finding from the nightly input check.
 //
-// The six outcomes are not interchangeable, and which fields a person must
+// The six outcomes are not interchangeable, and which fields a contact must
 // fill depends on which one they picked. Those rules MIRROR the server's
 // refusals rather than inventing their own: a sheet that let somebody submit
 // what the server will reject spends their attention on a round trip that was
@@ -39,12 +40,6 @@ export function ResolveSheet({
   const [remindAt, setRemindAt] = useState<ISODate | "">("");
   const [expiresAt, setExpiresAt] = useState<ISODate | "">("");
   const titleID = useId();
-  // Explicit id/htmlFor pairs rather than relying on the label wrapping the
-  // control. The controls here are COMPONENTS, and neither a linter nor a
-  // reader of this file can see through one to check the association holds.
-  const reasonID = useId();
-  const remindID = useId();
-  const expiresID = useId();
 
   const needsReason = suppresses(outcome);
   const needsRemind = outcome === "remind_later";
@@ -57,7 +52,9 @@ export function ResolveSheet({
 
   return (
     <Modal open={open} labelledBy={titleID} onClose={onClose} placement="right">
-      <h2 id={titleID}>{labels.title}</h2>
+      <Heading size="large" id={titleID}>
+        {labels.title}
+      </Heading>
       <ChoiceList
         legend={labels.outcomeLegend}
         value={outcome}
@@ -65,62 +62,53 @@ export function ResolveSheet({
         onChange={setOutcome}
       />
 
-      {/* An answer that HIDES a finding says why. The next person to meet the
+      {/* An answer that HIDES a finding says why. The next contact to meet the
           number is owed the reason it is not flagged, and the two suppressing
           outcomes are the only ones that take it away from them. */}
       {needsReason && (
-        <>
-          <label className="field" htmlFor={reasonID}>
-            <span>{labels.reason}</span>
+        <Field label={labels.reason} hint={labels.reasonHelp}>
+          {(control) => (
             <TextInput
-              id={reasonID}
+              {...control}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
-          </label>
-          {/* Outside the label on purpose: inside, it joins the field's
-              accessible name, and a screen reader would read the whole
-              sentence where a sighted reader sees one word. */}
-          <p className="sub">{labels.reasonHelp}</p>
-        </>
+          )}
+        </Field>
       )}
 
       {/* A deferral names when it comes back, or it is a dismissal wearing a
           different word. */}
       {needsRemind && (
-        <label className="field" htmlFor={remindID}>
-          <span>{labels.remindAt}</span>
-          <DateInput
-            id={remindID}
-            value={remindAt}
-            onChange={(event) => setRemindAt(asDate(event.target.value))}
-          />
-        </label>
+        <Field label={labels.remindAt}>
+          {(control) => (
+            <DateInput
+              {...control}
+              value={remindAt}
+              onChange={(event) => setRemindAt(asDate(event.target.value))}
+            />
+          )}
+        </Field>
       )}
 
       {/* Optional, and bounded. Left empty the server applies its own ceiling;
           past the ceiling it refuses rather than shortening, so the help text
           says the limit rather than letting somebody discover it. */}
       {needsReason && (
-        <>
-          <label className="field" htmlFor={expiresID}>
-            <span>{labels.expiresAt}</span>
+        <Field label={labels.expiresAt} hint={labels.expiresHelp}>
+          {(control) => (
             <DateInput
-              id={expiresID}
+              {...control}
               value={expiresAt}
               onChange={(event) => setExpiresAt(asDate(event.target.value))}
             />
-          </label>
-          <p className="sub">{labels.expiresHelp}</p>
-        </>
+          )}
+        </Field>
       )}
 
       <div className="card-actions">
-        <Button small onClick={onClose}>
-          {labels.cancel}
-        </Button>
+        <Button onClick={onClose}>{labels.cancel}</Button>
         <Button
-          small
           variant="primary"
           disabled={!complete || pending}
           onClick={() => {
@@ -160,10 +148,10 @@ function suppresses(outcome: ResolveOutcome | ""): boolean {
   return outcome === "value_correct" || outcome === "not_relevant";
 }
 
-// ResolveOutcome is the six answers a person can give.
+// ResolveOutcome is the six answers a contact can give.
 //
 // `condition_cleared` is deliberately absent: that is the check's own answer,
-// and a person naming it would be saying the condition stopped being true
+// and a contact naming it would be saying the condition stopped being true
 // without anything having looked.
 export type ResolveOutcome =
   | "fixed_record"

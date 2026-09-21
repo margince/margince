@@ -140,7 +140,7 @@ func TestAStoredAppRegistersTheGoogleConnectors(t *testing.T) {
 }
 
 // End to end through the options the api actually applies: an app that exists
-// only in the database has to carry a person all the way to Google's consent
+// only in the database has to carry a contact all the way to Google's consent
 // screen.
 func TestAStoredAppCanRunTheConsentFlow(t *testing.T) {
 	var s Server

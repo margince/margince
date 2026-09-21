@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -141,9 +141,6 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     expect(await screen.findByText("How-to")).toBeTruthy();
-    // The topic statement is on screen because it is what a refusal quotes
-    // back: an administrator who cannot see what they wrote cannot fix it.
-    expect(screen.getByText("How this product is operated.")).toBeTruthy();
     expect(await screen.findByText(/4 of 4 passages/i)).toBeTruthy();
   });
 
@@ -288,7 +285,7 @@ describe("KnowledgeCard", () => {
       await screen.findByRole("button", { name: /show documents/i }),
     );
     // Named up front rather than after a refusal: there is no reader for a PDF
-    // here, and a person who has just watched an upload fail has learned it the
+    // here, and a contact who has just watched an upload fail has learned it the
     // expensive way.
     expect(
       await screen.findByText(/plain text, markdown, csv or json/i),

@@ -86,7 +86,6 @@ export function AssignProjectOwnerAction({
     <>
       <Button
         reasonId={disabledReasonId}
-        small
         data-testid="assign-project-owner"
         onClick={() => setOpen(true)}
       >

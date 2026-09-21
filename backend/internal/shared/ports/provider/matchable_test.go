@@ -31,22 +31,22 @@ func TestMatchableReadsTheDeclaredRules(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name  string
-		given provider.PersonIdentifiers
+		given provider.ContactIdentifiers
 		want  bool
 	}{
 		{
 			name:  "a profile link alone is enough",
-			given: provider.PersonIdentifiers{LinkedInURL: "https://linkedin.com/in/someone"},
+			given: provider.ContactIdentifiers{LinkedInURL: "https://linkedin.com/in/someone"},
 			want:  true,
 		},
 		{
 			name:  "a full name with a company name",
-			given: provider.PersonIdentifiers{FirstName: "Michael", LastName: "Kott", CompanyName: "CM-Equity AG"},
+			given: provider.ContactIdentifiers{FirstName: "Michael", LastName: "Kott", CompanyName: "CM-Equity AG"},
 			want:  true,
 		},
 		{
 			name:  "a full name with a company domain",
-			given: provider.PersonIdentifiers{FirstName: "Michael", LastName: "Kott", CompanyDomain: "cm-equity.de"},
+			given: provider.ContactIdentifiers{FirstName: "Michael", LastName: "Kott", CompanyDomain: "cm-equity.de"},
 			want:  true,
 		},
 		{
@@ -54,31 +54,31 @@ func TestMatchableReadsTheDeclaredRules(t *testing.T) {
 			// surname alone is not enough. Sending it anyway is the guess this
 			// rule refuses to make on the customer's behalf.
 			name:  "a last name and a company, with no first name",
-			given: provider.PersonIdentifiers{LastName: "Kott", CompanyName: "CM-Equity AG"},
+			given: provider.ContactIdentifiers{LastName: "Kott", CompanyName: "CM-Equity AG"},
 			want:  false,
 		},
 		{
 			// The case that broke the connection: a calendar-captured contact
 			// carries a name and an address and nothing else.
 			name:  "a full name with no company",
-			given: provider.PersonIdentifiers{FirstName: "Lars", LastName: "Jankowfsky"},
+			given: provider.ContactIdentifiers{FirstName: "Lars", LastName: "Jankowfsky"},
 			want:  false,
 		},
 		{
 			name:  "a company with no name",
-			given: provider.PersonIdentifiers{CompanyName: "CM-Equity AG"},
+			given: provider.ContactIdentifiers{CompanyName: "CM-Equity AG"},
 			want:  false,
 		},
 		{
 			name:  "nothing at all",
-			given: provider.PersonIdentifiers{},
+			given: provider.ContactIdentifiers{},
 			want:  false,
 		},
 		{
 			// A first name is not part of either rule, so adding one to an
 			// otherwise unmatchable subject must not change the answer.
 			name:  "a first name does not rescue a subject without a company",
-			given: provider.PersonIdentifiers{FirstName: "Michael"},
+			given: provider.ContactIdentifiers{FirstName: "Michael"},
 			want:  false,
 		},
 	}
@@ -98,7 +98,7 @@ func TestMatchableReadsTheDeclaredRules(t *testing.T) {
 // leaves no trace to notice.
 func TestNoRulesMatchesEverySubject(t *testing.T) {
 	t.Parallel()
-	if !(provider.PersonIdentifiers{}).Matchable(nil) {
+	if !(provider.ContactIdentifiers{}).Matchable(nil) {
 		t.Error("an empty subject was refused by a provider declaring no rules, so an adapter that states " +
 			"no matching constraint silently stops looking anybody up")
 	}
@@ -110,7 +110,7 @@ func TestNoRulesMatchesEverySubject(t *testing.T) {
 func TestAnUnknownFieldMatchesNobody(t *testing.T) {
 	t.Parallel()
 	rules := []provider.MatchRule{{AllOf: []provider.IdentifierField{"middle_name"}}}
-	full := provider.PersonIdentifiers{
+	full := provider.ContactIdentifiers{
 		LinkedInURL: "https://linkedin.com/in/someone",
 		FirstName:   "Michael",
 		LastName:    "Kott",

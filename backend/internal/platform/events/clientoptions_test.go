@@ -13,10 +13,14 @@ package events
 // is gone and its projection simply never runs. An address that quietly fell
 // back to db 0 would restore exactly that, while looking configured.
 
-import "testing"
+import (
+	"context"
+	"strings"
+	"testing"
+)
 
 func TestABareAddressKeepsTheDefaultDatabase(t *testing.T) {
-	opts, err := ClientOptions("localhost:16379")
+	opts, err := ClientOptions("localhost:16379", "")
 	if err != nil {
 		t.Fatalf("a bare address was refused: %v", err)
 	}
@@ -31,7 +35,7 @@ func TestABareAddressKeepsTheDefaultDatabase(t *testing.T) {
 }
 
 func TestASuffixSelectsThatLogicalDatabase(t *testing.T) {
-	opts, err := ClientOptions("localhost:16379/7")
+	opts, err := ClientOptions("localhost:16379/7", "")
 	if err != nil {
 		t.Fatalf("a suffixed address was refused: %v", err)
 	}
@@ -54,7 +58,7 @@ func TestAnUnusableDatabaseIsRefusedRatherThanIgnored(t *testing.T) {
 		"localhost:16379/80",  // Redis ships `databases 16`, so 0..15
 		"localhost:16379/1/2", // two suffixes
 	} {
-		if _, err := ClientOptions(addr); err == nil {
+		if _, err := ClientOptions(addr, ""); err == nil {
 			t.Errorf("%q was accepted; a bad index must refuse rather than fall back to db 0, "+
 				"because falling back shares a consumer group with every other stack", addr)
 		}
@@ -65,7 +69,7 @@ func TestAnUnusableDatabaseIsRefusedRatherThanIgnored(t *testing.T) {
 // slash as one, and every path has slashes in it — splitting those would
 // refuse a deployment that worked before this parameter existed.
 func TestAUnixSocketIsAnAddressNotADatabaseSuffix(t *testing.T) {
-	opts, err := ClientOptions("/var/run/redis.sock")
+	opts, err := ClientOptions("/var/run/redis.sock", "")
 	if err != nil {
 		t.Fatalf("a unix socket was refused: %v", err)
 	}
@@ -82,7 +86,7 @@ func TestAUnixSocketIsAnAddressNotADatabaseSuffix(t *testing.T) {
 
 // The top of the range the dev compose actually serves.
 func TestTheHighestServedDatabaseIsAccepted(t *testing.T) {
-	opts, err := ClientOptions("localhost:16379/79")
+	opts, err := ClientOptions("localhost:16379/79", "")
 	if err != nil {
 		t.Fatalf("db 79 was refused, but the instance serves 80: %v", err)
 	}
@@ -94,11 +98,78 @@ func TestTheHighestServedDatabaseIsAccepted(t *testing.T) {
 // db 0 stays reachable by name: bare `make dev` uses it, and an explicit "/0"
 // is how a caller says so rather than a value to reject.
 func TestZeroIsAValidIndex(t *testing.T) {
-	opts, err := ClientOptions("localhost:16379/0")
+	opts, err := ClientOptions("localhost:16379/0", "")
 	if err != nil {
 		t.Fatalf("an explicit db 0 was refused: %v", err)
 	}
 	if opts.DB != 0 {
 		t.Errorf("db = %d, want 0", opts.DB)
+	}
+}
+
+// The credential reaches the options on every address shape.
+//
+// The bus carries job payloads and therefore CRM data, so a client that
+// connected without it would not fail — it would connect unauthenticated
+// wherever the instance allows, and read the stream. That failure is silent by
+// construction: everything works, and a second local account can MONITOR.
+//
+// Every shape, because the parser has three returns and a credential dropped on
+// one of them is the same hole reached by an address nobody tested with.
+func TestTheBusCredentialReachesEveryAddressShape(t *testing.T) {
+	t.Parallel()
+	const secret = "s3cr3t"
+	for _, addr := range []string{
+		"localhost:16379",     // bare host
+		"localhost:16379/7",   // host with a logical database
+		"/var/run/redis.sock", // unix socket
+	} {
+		t.Run(addr, func(t *testing.T) {
+			t.Parallel()
+			opts, err := ClientOptions(addr, secret)
+			if err != nil {
+				t.Fatalf("ClientOptions(%q): %v", addr, err)
+			}
+			if opts.Password != secret {
+				t.Errorf("Password = %q, want the credential — this client would connect "+
+					"unauthenticated and read the stream", opts.Password)
+			}
+		})
+	}
+}
+
+// An instance that requires no credential takes none. Empty is the ordinary
+// case rather than a fallback: go-redis sends no AUTH for it, which is the same
+// connection every deployment already makes.
+func TestNoCredentialLeavesThePasswordEmpty(t *testing.T) {
+	t.Parallel()
+	opts, err := ClientOptions("localhost:16379/7", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Password != "" {
+		t.Errorf("Password = %q, want empty", opts.Password)
+	}
+}
+
+// NewClient reads the address before it reaches for the network, so an address
+// nobody can parse is refused as a configuration error rather than reported as
+// an unreachable bus. The two read the same to an operator and are fixed in
+// different places.
+func TestAnUnparseableAddressIsRefusedBeforeDialling(t *testing.T) {
+	t.Parallel()
+	// A context already cancelled: a dial attempted despite the parse failure
+	// would fail on it rather than on a timeout, so this test cannot hang and
+	// cannot reach a bus that happens to be listening.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := NewClient(ctx, "localhost:16379/notanumber", "secret")
+	if err == nil {
+		t.Fatal("an address naming a logical database that is not a number was accepted")
+	}
+	if !strings.Contains(err.Error(), "not an integer") {
+		t.Errorf("NewClient reported %q, want the parse complaint — an operator told the bus is "+
+			"unreachable looks at the bus, and the address is what is wrong", err)
 	}
 }

@@ -30,7 +30,7 @@ const pausedSubscription = {
   id: "sub-paused",
   owner_id: "u1",
   target_url: "https://hooks.partner.test/inbound",
-  event_types: ["organization.updated"],
+  event_types: ["company.updated"],
   state: "paused",
   version: 5,
   created_at: "2026-05-11T09:00:00Z",
@@ -46,7 +46,7 @@ function meRoute(allow: GrantSpec) {
   return () =>
     jsonResponse({
       ...meFixture({ allow }),
-      user: { ...meFixture().user, email: "person@acme.test" },
+      user: { ...meFixture().user, email: "contact@acme.test" },
     });
 }
 
@@ -119,7 +119,7 @@ export const Active: Story = {
   render: cardStory(baseRoutes()),
 };
 
-// A subscription row is the densest line in the settings tree: a `.t-mono`
+// A subscription row is the densest line in the settings tree: a
 // target URL nobody promised would be short as its label, a state badge and
 // three event-type chips as its value, and three verbs as its control. Below
 // 640px `SettingRow` gives up the two-column alignment and stacks, so what to
@@ -156,8 +156,8 @@ export const ManyEventTypes: Story = {
           "lead.created",
           "offer.accepted",
           "offer.rejected",
-          "person.merged",
-          "organization.updated",
+          "contact.merged",
+          "company.updated",
         ],
       },
     ]),
@@ -237,7 +237,18 @@ export const SecretRevealed: Story = {
       await canvas.findByLabelText(/target url/i),
       "https://hooks.acme.test/inbound",
     );
-    await userEvent.click(canvas.getByLabelText("deal.stage_changed"));
+    // The event set is a `MultiSelect` (create.tsx), not a page of checkboxes:
+    // the options live in a listbox it portals to the body, so choosing one is
+    // open-then-pick. The list STAYS open after a pick — that is what makes
+    // choosing three of a hundred three clicks — so it is dismissed before the
+    // submit, which it would otherwise cover.
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: "Event types" }),
+    );
+    await userEvent.click(
+      await canvas.findByRole("option", { name: "deal.stage_changed" }),
+    );
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
   },
 };
@@ -345,7 +356,7 @@ const deadLetteredDelivery = {
   id: "del-dead",
   subscription_id: "sub-active",
   event_id: "evt-3",
-  event_type: "organization.updated",
+  event_type: "company.updated",
   status: "dead_lettered",
   attempts: 6,
   last_status_code: 500,
@@ -416,7 +427,7 @@ export const DeliveriesPanelOpenPhone: Story = {
 // The delivery statuses in situ rather than as a swatch row: `delivered`,
 // `retrying` and `dead_lettered` are three badge tones whose whole job is to be
 // told apart at a glance, and they sit here on the table's own striping, inside
-// the dead-letter group's tinted block, beside the `.t-mono` event ids. On a dark
+// the dead-letter group's tinted block, beside the event ids. On a dark
 // ground a badge surface token and a table row token can converge, and that is
 // what this watches for — the pure `DeliveryStatusBadges` story below cannot,
 // because it shows the tones with nothing to be confused with.

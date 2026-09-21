@@ -5,7 +5,7 @@
 
 package capture
 
-// One human, one provider, one row — but not necessarily one mailbox. A person
+// One human, one provider, one row — but not necessarily one mailbox. A contact
 // who connects a second account over the first is not resuming the first: the
 // watermark and the import history belong to the account, and the row is only
 // where they happen to live.
@@ -65,7 +65,7 @@ func startImportReconnectingMidPage(t *testing.T, e *integration.SearchEnv, acco
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth(account)); err != nil {
 		t.Fatalf("connecting %s: %v", account, err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 25, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 
 // The signature-enrichment answer belongs to the MAILBOX, not to the row that
 // happens to hold it. A rebind points that row at somebody else's mail, so one
-// person's opt-out must not silently start governing another person's — in
+// contact's opt-out must not silently start governing another contact's — in
 // either direction.
 func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *testing.T) {
 	e := integration.SetupSearch(t)
@@ -205,7 +205,7 @@ func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *te
 	}
 
 	if answer := readSignatureAnswer(t, e, connID); answer != nil {
-		t.Fatalf("signature_enrich_enabled = %v, want cleared — the second mailbox never made that choice, and inheriting it applies one person's answer to another person's mail", *answer)
+		t.Fatalf("signature_enrich_enabled = %v, want cleared — the second mailbox never made that choice, and inheriting it applies one contact's answer to another contact's mail", *answer)
 	}
 }
 
@@ -226,7 +226,7 @@ func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
 		t.Fatalf("re-granting the same account: %v", err)
 	}
 
-	// A routine reauth is the same person and the same mailbox. Clearing their
+	// A routine reauth is the same contact and the same mailbox. Clearing their
 	// answer would quietly re-enable reading mail they asked us not to read.
 	answer := readSignatureAnswer(t, e, connID)
 	if answer == nil || *answer {
@@ -257,7 +257,7 @@ func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 
 	connectAndSync(t, registry, e, "first@example.com")
-	wide, err := registry.StartBackfill(grantCtx, "gmail", rep, 12, 5, enqueueNothing)
+	wide, err := registry.StartBackfill(grantCtx, "gmail", rep, 12, connector.BackfillEstimate{Messages: 5}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("the first account's twelve-month import: %v", err)
 	}
@@ -274,7 +274,7 @@ func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
 	// imported. The second mailbox has imported nothing, so there is nothing to
 	// narrow — refusing here would leave the human with no way to import it at
 	// all short of importing a year of a mailbox they just connected.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, 5, enqueueNothing); err != nil {
+	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, connector.BackfillEstimate{Messages: 5}, enqueueNothing); err != nil {
 		if errors.Is(err, capturemod.ErrWindowNarrowing) {
 			t.Fatal("the new account inherited the previous account's import window")
 		}

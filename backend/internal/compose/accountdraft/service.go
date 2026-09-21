@@ -16,13 +16,15 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Assembler is the caller's own composite read of the account — the same seam
@@ -31,13 +33,13 @@ import (
 // form is what a draft about one project reads: correspondence filed under
 // another project is not in the view to be drawn on.
 type Assembler interface {
-	AssembleScoped(ctx context.Context, orgID ids.OrganizationID, opts org360.AssembleOptions) (crmcontracts.Organization360, error)
+	AssembleScoped(ctx context.Context, companyID ids.CompanyID, opts company360.AssembleOptions) (crmcontracts.Company360, error)
 }
 
 // Request is the transport's body, narrowed to what the writer needs.
 type Request struct {
-	PersonID string
-	DealID   string
+	ContactID string
+	DealID    string
 	// ProjectID names the body of work the message is about. When set, the
 	// draft is grounded in the 360 scoped to that project and the project's
 	// own facts are folded in; empty is the account in general.
@@ -50,7 +52,7 @@ type Request struct {
 	// The sender identity is what tells the model who "I" is. It is NOT a
 	// sign-off: the draft still carries none, because the composer knows who is
 	// signed in and a server that guessed would sometimes sign a message with
-	// the wrong person's name.
+	// the wrong contact's name.
 	Envelope draftfloor.Envelope
 }
 
@@ -62,7 +64,7 @@ type Request struct {
 // the workspace's model budget on something nobody requested. A cold cache
 // answers nothing and the draft is written without these facts.
 type Dossier interface {
-	CachedSections(ctx context.Context, orgID ids.OrganizationID) []string
+	CachedSections(ctx context.Context, companyID ids.CompanyID) []string
 }
 
 // Service writes one draft per call.
@@ -76,6 +78,17 @@ type Service struct {
 	// in whole would carry the learning-signal writes with it.
 	voice draftvoice.Reader
 	log   *slog.Logger
+	// emailRows opens the messages the draft's reasons cite. This service holds
+	// no pool and no transaction of its own, so the reader is injected rather
+	// than built here.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message, so a reason
+// resting on a conversation opens that conversation.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
 }
 
 // WithVoice binds the sender's voice profile read, so a rep who has built one
@@ -98,11 +111,11 @@ func (s *Service) WithDossier(dossier Dossier) *Service {
 }
 
 // facts is what this account is known to be, or nothing.
-func (s *Service) facts(ctx context.Context, orgID ids.OrganizationID) []string {
+func (s *Service) facts(ctx context.Context, companyID ids.CompanyID) []string {
 	if s.dossier == nil {
 		return nil
 	}
-	return s.dossier.CachedSections(ctx, orgID)
+	return s.dossier.CachedSections(ctx, companyID)
 }
 
 // WithEnvelope replaces the resolver that answers what language to write in,
@@ -125,7 +138,7 @@ func (s *Service) WithEnvelope(resolver *draftfloor.Resolver) *Service {
 // account we have corresponded with for a year that we are writing for the
 // first time, which is as false as the "just following up" this program set out
 // to remove, only in the other direction.
-func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Organization360) draftfloor.Envelope {
+func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360) draftfloor.Envelope {
 	// The account's own correspondence, already bounded and scoped by the view.
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
@@ -143,38 +156,43 @@ func NewService(view Assembler, lane Completer) *Service {
 
 // Draft writes one email. It performs no write of any kind.
 func (s *Service) Draft(
-	ctx context.Context, orgID ids.OrganizationID, req Request,
-) (crmcontracts.AccountEmailDraft, error) {
+	ctx context.Context, companyID ids.CompanyID, req Request,
+) (crmcontracts.CompanyEmailDraft, error) {
 	// Human-only: drafting spends the workspace's model budget on prose for a
-	// person to send under their own name.
+	// contact to send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The gates that matter run HERE, in the caller's own composite read: an
 	// account they cannot read refuses before a word is written, a contact
 	// or deal they cannot see is not in the view to be found, and a project
 	// they cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, orgID, org360.AssembleOptions{ProjectID: req.ProjectID})
+	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID})
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	req.Envelope = s.envelopeFor(ctx, view)
 	in, err := FromView(view, req)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	in.Dossier = s.facts(ctx, orgID)
+	in.Dossier = s.facts(ctx, companyID)
 	// Loaded after the 360 read, so a caller who may not read this account is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
 	draft, by, err := Write(ctx, s.lane, in, voice)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	out := wire(draft, by, voice.Degraded)
+	out := wire(draft, by, voice.Degraded, req.Envelope.Language)
 	// The scoped read's own report of what the narrowing kept, so the
 	// composer's scope line counts what the draft was actually written from.
 	out.Scope = view.Scope
+	// Nothing here is stored, so there is no ordering to respect — only the
+	// one read, over the reasons this draft actually cites.
+	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromReasons(out.Reasoning)); err != nil {
+		return crmcontracts.CompanyEmailDraft{}, err
+	}
 	return out, nil
 }
 
@@ -183,9 +201,9 @@ func (s *Service) Draft(
 // draft_ref is deliberately absent. The reply drafter returns one so the voice
 // model can learn from what the rep changed — and recording a served draft is
 // a WRITE, which this operation does not perform.
-func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool) crmcontracts.AccountEmailDraft {
-	aiWritten := by == crmcontracts.Model
-	out := crmcontracts.AccountEmailDraft{
+func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.CompanyEmailDraft {
+	aiWritten := by == crmcontracts.WrittenByModel
+	out := crmcontracts.CompanyEmailDraft{
 		Subject:       draft.Subject,
 		Body:          draft.Body,
 		GeneratedBy:   by,
@@ -200,17 +218,9 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool) crmcontrac
 		}
 		out.To = &to
 	}
-	if aiWritten {
-		disclosure := aiDisclosure
-		out.AiDisclosure = &disclosure
-	}
+	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
 	return out
 }
-
-// The machine-readable Art. 50 line, the same sentence the reply drafter
-// stamps. Written once here rather than assembled per call: a disclosure that
-// varies by call site is one a reader learns to skim.
-const aiDisclosure = "This message was drafted with AI assistance."
 
 func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 	out := make([]crmcontracts.AccountDraftReason, 0, len(reasons))
@@ -224,8 +234,8 @@ func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 				out = append(out, wired)
 				continue
 			}
-			wired.EvidenceRef = &crmcontracts.OrganizationBriefEvidence{
-				EntityType: crmcontracts.OrganizationBriefEvidenceEntityType(reason.EntityType),
+			wired.EvidenceRef = &crmcontracts.CompanyBriefEvidence{
+				EntityType: crmcontracts.CompanyBriefEvidenceEntityType(reason.EntityType),
 				EntityId:   openapi_types.UUID(id),
 			}
 		}
@@ -235,7 +245,7 @@ func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 }
 
 // fieldError is the one refusal shape this package answers with, so a bad
-// person_id and a bad deal_id read the same way to a client.
+// contact_id and a bad deal_id read the same way to a client.
 func fieldError(field, message string) error {
 	return httperr.Validation(field, "not_found", message)
 }

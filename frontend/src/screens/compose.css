@@ -8,38 +8,18 @@
   margin-bottom: 12px;
 }
 
-/* A QUESTION the composer asks, below the message: the name above the field.
-
-   Two label positions in one drawer, deliberately. The mail's own head — how it
-   goes, who it is to, what it is about, what it carries — is a BLOCK a reader
-   sweeps down, so those names sit beside their fields in one column
-   (composehead.css). These are not that: "Why are you writing?" and the project
-   filing are questions about the message, asked in sentences under it, and a
-   sentence squeezed into a fixed label column breaks across two lines while the
-   control beside it runs full width — which is what this rule was written to
-   stop. The head is a table; this is prose. */
-.compose-check {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-1);
+/* The card that says a machine wrote what is below it. The indigo edge, the
+   indigo head band and its ink are `Panel tone="ai"` — the one spelling of
+   machine authorship in the product — so all that is left here is how the card
+   sits in the drawer's own column and how its block stacks inside it. */
+.compose-band {
+  margin-block: var(--space-3);
 }
 
-/* The band that says a machine wrote what is below it. Indigo ground, indigo
-   rule under it: the same colour that marks machine authorship everywhere else
-   on the record, at the one moment it matters most. */
-.compose-band {
+.compose-band-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-inline: calc(-1 * var(--space-4));
-  padding: var(--space-3) var(--space-4);
-  background: var(--aiLight);
-  border-block-end: 1px solid var(--aiMed);
-  color: var(--aiText);
-}
-.compose-band .t-body {
-  color: var(--aiText);
 }
 
 /* Before a draft exists: the steer and the verb that asks for one. */
@@ -95,10 +75,6 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.schedule-preset .t-caption {
-  color: var(--textMeta);
-}
-
 /* The calendar beside the readout it fills in, because the month is the thing
    being read and the date and hour are what it produces. Stacked on a narrow
    screen, where two columns would each be too tight to hold a week. */
@@ -136,7 +112,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -149,8 +124,7 @@
 }
 .schedule-hour[aria-pressed="true"] {
   border-color: var(--borderStrong);
-  background: var(--bgCard);
-  font-weight: var(--fw-semibold);
+  background: var(--bgChip);
 }
 
 /* The sentence the whole dialog produces, above the control that commits it. */
@@ -211,5 +185,4 @@
    for the fields below, not a field of its own. */
 .mw-answering {
   margin: 0 0 var(--space-2);
-  color: var(--textMeta);
 }

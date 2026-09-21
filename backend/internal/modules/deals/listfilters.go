@@ -4,7 +4,7 @@
 package deals
 
 // What an enumeration of this module's records may be narrowed by — the deal
-// and project halves of the same rule people/listfilters.go states: the names
+// and project halves of the same rule contacts/listfilters.go states: the names
 // are the contract's list-operation parameters, and this file says which of
 // them this store answers and what each one narrows.
 
@@ -19,11 +19,11 @@ import (
 // withheld (fieldmask.go). They are wire names, which is why they are not the
 // column constants they happen to match today.
 const (
-	filterOrganizationID     = "organization_id"
+	filterCompanyID          = "company_id"
 	filterTag                = "tag_id"
 	filterTagMode            = "tag_mode"
 	filterOwnerID            = "owner_id"
-	filterPartnerOrgID       = "partner_org_id"
+	filterPartnerCompanyID   = "partner_company_id"
 	filterPartnerAttribution = "partner_attribution"
 	filterPartnerSourced     = "partner_sourced"
 	filterPipelineID         = "pipeline_id"
@@ -34,7 +34,15 @@ const (
 	filterForecastCategory   = "forecast_category"
 	filterKey                = "key"
 	filterPhase              = "phase"
+	filterCommercialMotion   = "commercial_motion"
+	filterPriority           = "priority"
+	filterAcquisitionSource  = "acquisition_source"
 )
+
+// filterUnset is the sentinel the three commercial-context filters take to
+// mean "no value recorded". A filter parameter cannot say that with an enum
+// member, and an empty string already means "not filtering".
+const filterUnset = "unset"
 
 var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListDealsInput, v []ids.UUID) { in.TagIDs = v }),
@@ -47,11 +55,11 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 		}
 		in.TagMode = mode
 	}),
-	filterOrganizationID: storekit.FilterID(
-		func(in *ListDealsInput, id *ids.OrganizationID) { in.OrganizationID = id }),
+	filterCompanyID: storekit.FilterID(
+		func(in *ListDealsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterOwnerID: storekit.FilterID(func(in *ListDealsInput, id *ids.UserID) { in.OwnerID = id }),
-	filterPartnerOrgID: storekit.FilterID(
-		func(in *ListDealsInput, id *ids.OrganizationID) { in.PartnerOrgID = id }),
+	filterPartnerCompanyID: storekit.FilterID(
+		func(in *ListDealsInput, id *ids.CompanyID) { in.PartnerCompanyID = id }),
 	filterPartnerAttribution: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.PartnerAttribution = v }),
 	filterPartnerSourced: storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.PartnerSourced = v }),
@@ -62,6 +70,11 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterStatus:         storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Status = v }),
 	filterForecastCategory: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.ForecastCategory = v }),
+	filterCommercialMotion: storekit.FilterWord(
+		func(in *ListDealsInput, v *string) { in.CommercialMotion = v }),
+	filterPriority: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Priority = v }),
+	filterAcquisitionSource: storekit.FilterWord(
+		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.

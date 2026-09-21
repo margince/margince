@@ -11,7 +11,7 @@
      and at `--borderSubtle` on this ground it was not visible at all, leaving a
      scatter of dots with nothing joining them. */
   --crawl-edge: var(--borderStrong);
-  --crawl-rest: var(--textTertiary);
+  --crawl-rest: var(--borderStrong);
   display: block;
   width: 100%;
   /* A picture, not a panorama: past this the two rings sit so far apart that

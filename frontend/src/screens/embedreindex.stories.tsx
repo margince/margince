@@ -25,7 +25,7 @@ const STATUS_IDLE = {
 
 // utilization_impact is a top-level field of EmbedReindexPreview — the band the
 // INSTALLATION would land in (A107/ADR-0061: one installation, one
-// organization). It sat under a `per_workspace` array the contract has no such
+// company). It sat under a `per_workspace` array the contract has no such
 // property for, so the card read `preview.utilization_impact`, found nothing,
 // and the impact badge this story exists to show never rendered.
 const PREVIEW = {
@@ -75,8 +75,8 @@ const renderNeedsReindex = () => {
 export const NeedsReindex: Story = { render: renderNeedsReindex };
 
 // The same card in dark. The status Badge is the whole state machine in one
-// chip — warn for "needed", accent for "re-embedding", success for idle — and
-// nothing else on the card distinguishes them, so a warn that stops reading as a
+// chip — warning for "needed", accent for "re-embedding", success for idle — and
+// nothing else on the card distinguishes them, so a warning that stops reading as a
 // warning turns a pending reindex into a report that everything is fine.
 export const NeedsReindexDark: Story = {
   globals: { theme: "dark" },
@@ -152,7 +152,7 @@ export const PreviewDialogWithEstimate: Story = {
     // honest to the contract. It sits in the same portalled dialog the
     // estimate does, so it is the same `screen` lookup — reaching for the
     // canvas here rejected while the dialog above it was drawn correctly.
-    await screen.findByText("would enter economy mode");
+    await screen.findByText("Would enter economy mode");
   },
 };
 

@@ -24,8 +24,8 @@ export type SearchHitType = NonNullable<
 // WORD, and somebody who typed a name is usually after the records rather than
 // the label they were filed under.
 export const SEARCH_HIT_ORDER = [
-  "person",
-  "organization",
+  "contact",
+  "company",
   "deal",
   "project",
   "product",
@@ -40,8 +40,8 @@ export const SEARCH_HIT_ORDER = [
 // name to file it under — the failure that dropped project hits.
 export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
   {
-    person: "search.group.person",
-    organization: "search.group.organization",
+    contact: "search.group.contact",
+    company: "search.group.company",
     deal: "search.group.deal",
     project: "search.group.project",
     product: "search.group.product",
@@ -60,14 +60,14 @@ export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
 // hyphenated type to arrive would have rendered as "offer_template".
 //
 // Each singular matches the plural heading above it and takes no side on which
-// noun this product uses for a record type: whether `person` reads as Contacts
-// or People, and `organization` as Company or Organization, is one open
+// noun this product uses for a record type: whether `contact` reads as Contacts
+// or Contacts, and `company` as Company or Company, is one open
 // decision across both surfaces, and a key added here is not the place to
 // settle it by half.
 export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
   {
-    person: "search.kind.person",
-    organization: "search.kind.organization",
+    contact: "search.kind.contact",
+    company: "search.kind.company",
     deal: "search.kind.deal",
     project: "search.kind.project",
     product: "search.kind.product",

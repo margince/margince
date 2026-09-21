@@ -13,7 +13,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 const AUTHENTICATION_POLICY_KEY = ["authentication-policy"] as const;
 
 /**
- * Which ways people may sign in to this installation.
+ * Which ways contacts may sign in to this installation.
  *
  * The list is what the DEPLOYMENT makes possible: an admin turns a provider off
  * or back on, but cannot add one, because a client id and secret cannot be
@@ -107,7 +107,11 @@ export function SignInMethodsCard() {
             return (
               <>
                 {save.error && (
-                  <Callout tone="danger">
+                  <Callout
+                    tone="danger"
+                    kind="outcome"
+                    title={t("signInMethods.saveFailed")}
+                  >
                     {problemMessageOf(save.error, t)}
                   </Callout>
                 )}
@@ -158,9 +162,7 @@ export function SignInMethodsCard() {
                   ))}
                 </SettingList>
                 {providers.length === 0 && (
-                  <p className="t-caption">
-                    {t("signInMethods.noneConfigured")}
-                  </p>
+                  <p>{t("signInMethods.noneConfigured")}</p>
                 )}
               </>
             );

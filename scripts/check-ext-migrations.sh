@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The extension migration gate (ADR-0069): every enabled unit's migrations are
+# The extension migration gate (ADR-0120): every enabled unit's migrations are
 # applied as its restricted ext_<name> role against a throwaway clone, and the
 # resulting catalog is checked against the allowlist. See
 # backend/tools/extmigrategate for what is asserted and why.

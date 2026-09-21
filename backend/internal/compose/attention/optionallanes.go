@@ -46,11 +46,6 @@ type optionalLane struct {
 //
 // A refusal NAMES the lane; any other failure is returned, because a lane that
 // is broken rather than withheld must not read as a quiet one.
-//
-// ErrModeNotOverlay is unbound-at-read: whether an installation runs in
-// overlay mode is a fact only the read can answer, and a workspace that is
-// not simply does not have the lane — absent like an unbound one, never
-// withheld, because nothing was hidden from this reader.
 func (l optionalLane) collect(
 	omitted []crmcontracts.AttentionLanesOmitted,
 ) ([]crmcontracts.AttentionLanesOmitted, error) {
@@ -59,8 +54,6 @@ func (l optionalLane) collect(
 	}
 	items, err := l.read()
 	switch {
-	case errors.Is(err, apperrors.ErrModeNotOverlay):
-		return omitted, nil
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 	case err != nil:
@@ -76,8 +69,6 @@ func (l optionalLane) collect(
 		// lane both present and named as omitted.
 		count, err = l.total()
 		switch {
-		case errors.Is(err, apperrors.ErrModeNotOverlay):
-			return omitted, nil
 		case errors.Is(err, apperrors.ErrPermissionDenied):
 			return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 		case err != nil:
@@ -109,11 +100,17 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings_unreported", bound: s.meetingsAwaitingOutcome != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				// The window is the day SO FAR — [today's start, now) — where
-				// the lane above reads [now, today's end). The two share a day
-				// and split it at the reader's own moment, so a meeting is on
-				// exactly one of them and never on both.
-				began, err := s.startOfDay(ctx, asOf)
+				// The window ENDS at the reader's own moment, which is where the
+				// lane above begins, so a meeting is on exactly one of the two
+				// and never on both. Only the upper bound does that work.
+				//
+				// The lower bound is a fortnight back rather than this morning.
+				// The two lanes ask opposite questions and only one of them is
+				// about today: what is still ahead expires at midnight, and what
+				// nobody has closed off does not. Opening this window at the
+				// day's start made an unanswered meeting disappear overnight
+				// with its status still unset and nothing left to raise it.
+				began, err := s.unansweredSince(ctx, asOf)
 				if err != nil {
 					return nil, err
 				}
@@ -165,13 +162,13 @@ func (s *Service) optionalLanes(
 			into: &out.Dsr, count: &out.Counts.Dsr,
 		},
 		{
-			name: "notice_case", bound: s.noticeCases != nil,
+			name: sourceNoticeCase, bound: s.noticeCases != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// No window, for the DSR lane's reason: the deadline is the
 				// law's and it does not stop running because a case got old.
 				// An Art. 14 duty that aged out of this lane would be one the
 				// installation had quietly decided not to meet.
-				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap)
+				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap, s.taskScope, s.taskOwner, s.noticeOwners)
 				return renderEach(owed, func(duty NoticeCase) crmcontracts.AttentionItem {
 					return noticeCaseItem(duty, asOf)
 				}), err
@@ -191,21 +188,13 @@ func (s *Service) optionalLanes(
 }
 
 // operationalLanes is the second half of the list: what is broken between
-// this reader and the world — the sync, their mailboxes, their delegated AI
-// work, their sends. Split from optionalLanes on the function-length
+// this reader and the world — their mailboxes, their delegated AI work, their
+// sends. Split from optionalLanes on the function-length
 // ceiling; the shared collect loop walks both halves as one list.
 func (s *Service) operationalLanes(
 	ctx context.Context, asOf time.Time, out *crmcontracts.Attention,
 ) []optionalLane {
 	return []optionalLane{
-		{
-			name: "sync_health", bound: s.syncHealth != nil,
-			read: func() ([]crmcontracts.AttentionItem, error) {
-				concerns, err := s.syncHealth.Concerns(ctx)
-				return renderEach(concerns, syncItem), err
-			},
-			into: &out.SyncHealth, count: &out.Counts.SyncHealth,
-		},
 		{
 			name: "capture_health", bound: s.captureHealth != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
@@ -213,6 +202,17 @@ func (s *Service) operationalLanes(
 				return renderEach(concerns, captureItem), err
 			},
 			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
+		},
+		{
+			name: "domain_questions", bound: s.domainQuestions != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window and no page cut: an open question waits until
+				// somebody answers it, and a bound would hide the oldest —
+				// which are exactly the reader's real backlog.
+				questions, err := s.domainQuestions.OpenDomainQuestions(ctx)
+				return renderEach(questions, domainQuestionItem), err
+			},
+			into: &out.DomainQuestions, count: &out.Counts.DomainQuestions,
 		},
 		{
 			name: "ai_work_health", bound: s.aiWork != nil,
@@ -273,7 +273,7 @@ func (s *Service) operationalLanes(
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// The bounce lane's week, for the same reason: a message
 				// nobody sent is not less urgent for being a day older, and
-				// the sender is the only person who can decide to send it
+				// the sender is the only contact who can decide to send it
 				// again.
 				parked, err := s.undelivered.ParkedSends(ctx, asOf.Add(-7*24*time.Hour), doneCap)
 				return renderEach(parked, parkedItem), err

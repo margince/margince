@@ -4,7 +4,7 @@
 package attention
 
 // The dsr lane: the requests whose legal clocks are running reach the one
-// person the case queue admits, and nobody else even learns the lane exists.
+// contact the case queue admits, and nobody else even learns the lane exists.
 
 import (
 	"context"
@@ -29,7 +29,7 @@ func (s *stubDSRs) OpenDueSoonest(context.Context, int) ([]DSRCase, error) {
 func dsrLaneService(dsrs DSRs) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, dsrs, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, nil, nil, dsrs, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 func TestAnOpenRequestReachesTheAdminWithItsDeadline(t *testing.T) {
@@ -38,7 +38,7 @@ func TestAnOpenRequestReachesTheAdminWithItsDeadline(t *testing.T) {
 		{ID: ids.NewV7(), Kind: "erasure", DueAt: overdue},
 		{ID: ids.NewV7(), Kind: "access", DueAt: readInstant.Add(72 * time.Hour)},
 	}})
-	out, err := svc.Assemble(context.Background())
+	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestAnOpenRequestReachesTheAdminWithItsDeadline(t *testing.T) {
 }
 
 func TestTheDSRLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
-	unwired, err := dsrLaneService(nil).Assemble(context.Background())
+	unwired, err := dsrLaneService(nil).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling without the reader: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestTheDSRLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Error("an installation that reads no case queue still sent the lane")
 	}
 
-	refused, err := dsrLaneService(&stubDSRs{err: apperrors.ErrPermissionDenied}).Assemble(context.Background())
+	refused, err := dsrLaneService(&stubDSRs{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling with a refused read: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestTheDSRLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Errorf("a refused lane is not named in lanes_omitted: %v", refused.LanesOmitted)
 	}
 
-	clearDay, err := dsrLaneService(&stubDSRs{}).Assemble(context.Background())
+	clearDay, err := dsrLaneService(&stubDSRs{}).Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling a clear lane: %v", err)
 	}

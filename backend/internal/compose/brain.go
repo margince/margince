@@ -12,14 +12,13 @@ package compose
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -53,13 +52,13 @@ type ModelPath struct {
 	ColdStart       completer    // the website read-back extraction
 	SiteExtract     completer    // the deep read's profile lane (one premium-first call)
 	SiteFactExtract completer    // the deep read's page-parallel fact lane (fast tier)
-	// SiteTriage decides what a mail domain's site IS before any organization
+	// SiteTriage decides what a mail domain's site IS before any company
 	// is created from it. Its own task, not the profile lane's: it asks one
 	// cheap question of one page to stop a crawl early, so it must not bill the
 	// profile lane's premium-only ladder for it.
 	SiteTriage completer
 	// AccountScan reads one account for one reader and says what needs a
-	// person, quoting the exchanges it read (orgscan).
+	// contact, quoting the exchanges it read (companyscan).
 	AccountScan  completer
 	RateExtract  completer // the model-cost refresh pricing-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)
@@ -96,6 +95,13 @@ type ModelPath struct {
 	// population — classify labels captured mail by what it is ABOUT, this reads
 	// only what survives the waiting queue and asks what the message wants.
 	OwedVerdict completer
+	// RequestSettlement asks the SECOND question about a request the owed lane
+	// recognised: once we have written back, did our own words settle it —
+	// settled | still_owed | unsure, floor 0.7, below-floor recorded as unsure
+	// so the request stays owed exactly as it was. A separate task from
+	// OwedVerdict because it reads a CONVERSATION rather than a message, and
+	// only ever runs on threads the workspace has already answered.
+	RequestSettlement completer
 	// CaptureCounterpartyVerdict is the ADR-0072/A118 creation gate for the
 	// ambiguous first-time sender: real | noise, floor 0.7, below-floor
 	// abstains to unsure. A separate task from CaptureClassify on purpose —
@@ -228,7 +234,7 @@ func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool,
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {
 		return ModelPath{}, err
 	}
-	return modelPathForRouter(router, newCompanyContextProvider(people.NewStore(InstallationDB(pool)))), nil
+	return modelPathForRouter(router, newCompanyContextProvider(contacts.NewStore(InstallationDB(pool)))), nil
 }
 
 // seedEmbedBinding plants search's embed_store_binding marker (Task 9's
@@ -318,6 +324,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),
+		RequestSettlement:             brain(ai.TaskRequestSettlement),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),
@@ -360,17 +367,6 @@ func (p ModelPath) Router() *ai.Router {
 		return r.router
 	}
 	return nil
-}
-
-// WriteMetrics renders the model path's underlying router's AI call
-// counters (margince_ai_calls_total et al.) for the /metrics endpoint.
-// Nil-safe for a ModelPath built with a nil AgentLoop (no model path
-// configured), so a role that never wired one writes nothing rather than
-// panicking.
-func (p ModelPath) WriteMetrics(w io.Writer) {
-	if r, ok := p.AgentLoop.(agentBrain); ok {
-		r.router.WriteMetrics(w)
-	}
 }
 
 // routerBrain adapts the tiered router into the 2-return completer seam

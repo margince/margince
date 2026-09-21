@@ -57,11 +57,17 @@ func connectorCtx(e *integration.Env, adapter string, owner ids.UUID) context.Co
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:" + adapter,
 		UserID: owner, OnBehalfOf: owner,
+		// A connector carries the GRANTING HUMAN's live permissions, never a
+		// narrower set of its own — registry.connectorContext builds the
+		// principal from rbac.Permissions. An ordinary member may update an
+		// activity, so this grants it too. Without it the fixture is narrower
+		// than any real mailbox sync, and a take-over would be refused here for
+		// a reason that cannot occur in production.
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"activity":     {Create: true, Read: true},
-				"person":       {Create: true, Read: true, Update: true},
-				"organization": {Create: true, Read: true, Update: true},
+				"activity": {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
+				"company":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

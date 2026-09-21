@@ -1,8 +1,8 @@
 import type { components } from "../api/schema";
 
-type Employment = components["schemas"]["Person360Employment"];
+type Employment = components["schemas"]["Contact360Employment"];
 
-// The client half of people.EmploymentIsCurrentSQL. `is_current_primary` records
+// The client half of contacts.EmploymentIsCurrentSQL. `is_current_primary` records
 // WHICH employer represents somebody and is written once; whether that job is
 // still theirs is a function of today, so every reader derives it — on this side
 // too, or the 360 header names a company the account's own contact count has
@@ -37,13 +37,22 @@ export function today(): string {
 // departure, matching `> current_date` on the server; only a future one is a
 // notice period, and somebody serving one still works there.
 export function stillHeld(employment: Employment): boolean {
+  if (
+    employment.employment_status === "former" ||
+    employment.employment_status === "unknown"
+  )
+    return false;
   if (!employment.ended_at) {
     return true;
   }
-  return employment.ended_at.slice(0, 10) > today();
+  const end = employment.ended_at.slice(0, 10);
+  if (employment.ended_precision === "month") {
+    return end.slice(0, 7) >= today().slice(0, 7);
+  }
+  return end > today();
 }
 
-// currentEmployer is the one employment that represents this person right now —
+// currentEmployer is the one employment that represents this contact right now —
 // flagged AND not yet ended. Undefined is a real answer: somebody between jobs,
 // or whose only employer's last day has passed.
 export function currentEmployer(
@@ -54,12 +63,12 @@ export function currentEmployer(
   );
 }
 
-// formerEmployers is the complement, so the two together are every row exactly
-// once. A job whose last day has passed belongs here even while it still carries
-// the flag — that is precisely the row the server stopped counting.
+// Unknown dates/status and additional current jobs are not former employers.
 export function formerEmployers(
   employments: ReadonlyArray<Employment> | undefined,
 ): ReadonlyArray<Employment> {
-  const current = currentEmployer(employments);
-  return (employments ?? []).filter((employment) => employment !== current);
+  return (employments ?? []).filter(
+    (employment) =>
+      !stillHeld(employment) && employment.employment_status !== "unknown",
+  );
 }

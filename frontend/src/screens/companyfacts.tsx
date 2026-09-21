@@ -25,43 +25,43 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { CompanyOwnerControl } from "./companyheader";
 import "./companyfacts.css";
 
-type Organization = components["schemas"]["Organization"];
-type Organization360 = components["schemas"]["Organization360"];
+type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 type Commercial = NonNullable<
-  NonNullable<Organization360["state_strip"]>["commercial"]
+  NonNullable<Company360["state_strip"]>["commercial"]
 >;
 
 /**
  * CompanyFacts is the account's standing: open pipeline, work in flight, owner.
  */
 export function CompanyFacts({
-  org,
+  company,
   view,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   // The 360 the page already holds. Absent while it loads, and each half of
   // it independently absent when a grant withheld it.
-  view?: Organization360;
+  view?: Company360;
 }>) {
   const t = useT();
   return (
     <dl className="co-facts">
       <div className="co-facts-item">
-        <dt className="t-caption">{t("co.facts.pipeline")}</dt>
+        <dt>{t("co.facts.pipeline")}</dt>
         <dd>
           <Pipeline view={view} />
         </dd>
       </div>
       <div className="co-facts-item">
-        <dt className="t-caption">{t("co.facts.inFlight")}</dt>
+        <dt>{t("co.facts.inFlight")}</dt>
         <dd>
           <InFlight view={view} />
         </dd>
       </div>
       <div className="co-facts-item">
-        <dt className="t-caption">{t("co.pulse.owner")}</dt>
+        <dt>{t("co.pulse.owner")}</dt>
         <dd>
-          <CompanyOwnerControl org={org} hideLabel />
+          <CompanyOwnerControl company={company} hideLabel />
         </dd>
       </div>
     </dl>
@@ -79,18 +79,18 @@ export function CompanyFacts({
  * printing a dash there would read as "we do not know", which is the one
  * reading it is not.
  */
-function Pipeline({ view }: Readonly<{ view?: Organization360 }>) {
+function Pipeline({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   if (!view) {
-    return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
+    return <span>{t("co.facts.reading")}</span>;
   }
   const commercial = view.state_strip?.commercial;
   if (!commercial) {
-    return <span className="co-facts-quiet">{t("state.withheld")}</span>;
+    return <span>{t("state.withheld")}</span>;
   }
   if (commercial.open_count === 0) {
-    return <span className="co-facts-quiet">{t("co.facts.noDeals")}</span>;
+    return <span>{t("co.facts.noDeals")}</span>;
   }
   return <span>{pricedTotal(commercial, locale, t)}</span>;
 }
@@ -112,22 +112,22 @@ function pricedTotal(
  * rule: a withheld half means no count at all, because a number that folds an
  * unreadable half into it is a false statement rather than a partial one.
  */
-function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
+function InFlight({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   if (!view) {
-    return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
+    return <span>{t("co.facts.reading")}</span>;
   }
   if (!view.deals || !view.projects) {
-    return <span className="co-facts-quiet">{t("state.withheld")}</span>;
+    return <span>{t("state.withheld")}</span>;
   }
   const deals = view.deals.data.length;
   const projects = view.projects.filter(
     (project) => project.phase !== "closed",
   ).length;
   if (deals === 0 && projects === 0) {
-    return <span className="co-facts-quiet">{t("co.facts.nothing")}</span>;
+    return <span>{t("co.facts.nothing")}</span>;
   }
   // Each half carries its own plural. One shared "{deals} deals · {projects}
   // projects" printed "1 projects" on any account with a single project, and

@@ -208,6 +208,84 @@ func TestCompleteRecordsFailure(t *testing.T) {
 	}
 }
 
+// A failed attempt has no Response to read the terminal off, so an abnormal
+// finishReason reaches the trace only from the error. MAX_TOKENS, SAFETY and
+// RECITATION share the single `provider_error` sentinel, so a blank
+// finish_reason leaves the stored row unable to say which occurred.
+func TestCompleteRecordsFinishReasonCarriedByTheError(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := newTracingRouter(t, stubClient{err: stoppedError{reason: "MAX_TOKENS"}}, fcs)
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err == nil {
+		t.Fatal("expected error when the only tier fails")
+	}
+	if len(fcs.recorded) != 1 {
+		t.Fatalf("want exactly one traced attempt, got %+v", fcs.recorded)
+	}
+	got := fcs.recorded[0]
+	if got.FinishReason != "MAX_TOKENS" {
+		t.Fatalf("finish_reason lost on the failure path: %+v", got)
+	}
+	// The sentinel stays put: carrying the terminal is additive, and moving
+	// an abnormal finish out of `provider_error` would change what every
+	// error rate over this counter means.
+	if got.ErrorSentinel != "provider_error" {
+		t.Fatalf("classification moved, which would change every error rate: %q", got.ErrorSentinel)
+	}
+}
+
+// A rung the walk FELL BACK from is stored through traceForFailedRung, not
+// through finalizeAttempt, and it is the row most likely to carry a terminal:
+// an abnormal finish is exactly what sends the walk to the next rung. Both
+// writers derive the reason from one helper, so neither can be the blank one.
+func TestAFallenBackRungRecordsItsFinishReason(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := assembleRouter(
+		map[Tier]model.Client{
+			TierCheapCloud: stubClient{err: stoppedError{reason: "MAX_TOKENS"}},
+			TierPremium:    stubClient{resp: model.Response{Text: "served"}},
+		},
+		stubClient{}, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
+		map[Tier]routeMeta{
+			TierCheapCloud: {provider: "gemini", model: "flash-lite"},
+			TierPremium:    {provider: "gemini", model: "flash"},
+		},
+		false, nil,
+	)
+	r.now = func() time.Time { return time.Unix(0, 0) }
+
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); err != nil {
+		t.Fatalf("the ladder should have escalated and served: %v", err)
+	}
+	if len(fcs.recorded) != 2 {
+		t.Fatalf("want the failed rung and the served one, got %d: %+v", len(fcs.recorded), fcs.recorded)
+	}
+	fell := fcs.recorded[0]
+	if fell.Tier != TierCheapCloud || fell.IsTerminal {
+		t.Fatalf("first row is not the fallen-back rung: %+v", fell)
+	}
+	if fell.FinishReason != "MAX_TOKENS" {
+		t.Errorf("the fallen-back rung lost its terminal, which is the row that explains WHY it fell back: %+v", fell)
+	}
+	// The rung that answered reported no terminal of its own, and nothing
+	// should have leaked the failed rung's onto it.
+	if served := fcs.recorded[1]; served.FinishReason != "" {
+		t.Errorf("the served rung carries a terminal it never reported: %+v", served)
+	}
+}
+
+// The Response's own report wins whenever there is one, so a successful call
+// that reports its terminal is never overwritten by a stale error accessor.
+func TestCompleteKeepsTheResponsesOwnFinishReason(t *testing.T) {
+	fcs := &fakeCallStore{}
+	r := newTracingRouter(t, stubClient{resp: model.Response{Text: "ok", FinishReason: "stop"}}, fcs)
+	if _, _, err := r.serveCompletion(wsCtx(), TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err != nil {
+		t.Fatalf("serveCompletion: %v", err)
+	}
+	if len(fcs.recorded) != 1 || fcs.recorded[0].FinishReason != "stop" {
+		t.Fatalf("want the response's own finish reason, got %+v", fcs.recorded)
+	}
+}
+
 // TestCompleteEmitsSlog verifies that the router's observeCall emits an
 // "ai.call" slog line with the expected attributes (task, tier, provider,
 // tokens_in, tokens_out, latency_ms, cache_hit, degraded, error).

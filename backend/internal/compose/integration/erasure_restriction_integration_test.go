@@ -40,22 +40,22 @@ import (
 // (a Handelsbrief) and a same-age note (ordinary), plus the delivery behind
 // the email — the second copy of its addressing and substance.
 type restrictionFixture struct {
-	person, email, note, delivery, deal ids.UUID
+	contact, email, note, delivery, deal ids.UUID
 }
 
 func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 	t.Helper()
-	f := restrictionFixture{person: ids.NewV7(), email: ids.NewV7(), note: ids.NewV7(), delivery: ids.NewV7()}
+	f := restrictionFixture{contact: ids.NewV7(), email: ids.NewV7(), note: ids.NewV7(), delivery: ids.NewV7()}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, first_name, source, captured_by)
-			 VALUES ($1, 'Held Subject', 'Held', 'manual', 'human:x')`, f.person); err != nil {
+			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
+			 VALUES ($1, 'Held Subject', 'Held', 'manual', 'human:x')`, f.contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
-			 VALUES ($1, 'held@example.test', 'manual', 'human:x')`, f.person); err != nil {
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, 'held@example.test', 'manual', 'human:x')`, f.contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -72,8 +72,8 @@ func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 		}
 		for _, a := range []ids.UUID{f.email, f.note} {
 			if _, err := tx.Exec(ctx,
-				`INSERT INTO activity_link (activity_id, entity_type, person_id)
-				 VALUES ($1, 'person', $2)`, a, f.person); err != nil {
+				`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+				 VALUES ($1, 'contact', $2)`, a, f.contact); err != nil {
 				return err
 			}
 		}
@@ -104,7 +104,7 @@ func TestErasureRestrictsAHandelsbriefInsteadOfDestroyingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
@@ -264,7 +264,7 @@ func assertRestrictedListOverTheWire(t *testing.T, e *Env, f restrictionFixture)
 func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -358,7 +358,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -372,7 +372,7 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	// Erasing the subject again is idempotent over the held row: the restrict
 	// step selects only unrestricted rows, so nothing is written twice and
 	// nothing fails on the guard.
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a second erasure over a held record failed: %v", err)
 	}
 }
@@ -392,7 +392,7 @@ func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	admin := e.Admin()
-	if err := privacy.NewEraser(e.DB()).ErasePerson(admin, f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)
@@ -451,7 +451,7 @@ func restrictedRowHolds(t *testing.T, e *Env, id ids.UUID) bool {
 
 // controllerCtx is a named administrator holding the retention authority —
 // the principal both overrides require. It uses a SEEDED user rather than a
-// fresh id because a decision is attributed to a person the installation can
+// fresh id because a decision is attributed to a contact the installation can
 // name, and an id with no app_user row behind it is refused by design.
 func controllerCtx(e *Env, grant principal.ObjectGrant) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -474,7 +474,7 @@ func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
-	if err := eraser.ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := eraser.EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	const stated = "reviewed: a marketing enquiry, no transaction behind it"
@@ -559,7 +559,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
-	if err := eraser.ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := eraser.EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	// Counsel places the hold on the deal the correspondence hangs off, after
@@ -799,7 +799,7 @@ func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
 }
 
 // TestAControllerReleaseDestroysTheProviderOriginalToo — the same gap on the
-// path a person takes rather than the clock.
+// path a contact takes rather than the clock.
 //
 // The file's invariant runs both ways: a release is the controller completing
 // the erasure the restriction suspended, so it must reach everything the sweep
@@ -825,7 +825,7 @@ func TestAControllerReleaseDestroysTheProviderOriginalToo(t *testing.T) {
 // optional, and the refusal is what says so.
 //
 // There is no second path that ages raw_capture out: the Art. 17 cascade's
-// purge is scoped to a PERSON where a retention window is scoped to time. So an
+// purge is scoped to a CONTACT where a retention window is scoped to time. So an
 // unwired purger is not a degraded mode that something else corrects later — it
 // is an erasure that reports success over an intact original, which is the one
 // outcome worse than refusing.
@@ -859,5 +859,87 @@ func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Error(err)
+	}
+}
+
+// The guard covers the byline, not just the four fields it was written with.
+//
+// activity_refuse_restricted_mutation is what makes "a restriction is not left
+// while the content is still readable" true INDEPENDENTLY of any caller. That
+// is its whole job: both application release routes go through the Go helper
+// that erases as it lifts, so what the trigger is for is the statement nobody
+// has written yet.
+//
+// `source_author_name` arrived after the guard and was never added to it, so
+// the statement below — the exact shape a legitimate release takes, minus the
+// byline — passed, and the row came back readable with somebody's name on it.
+//
+// Raw SQL on purpose. Going through the helper would prove the helper clears
+// the column, which was never in doubt; what is in doubt is whether the
+// database refuses a caller that does not.
+func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
+	e := Setup(t)
+	f := seedRestrictionFixture(t, e)
+	admin := e.Admin()
+	// Written BEFORE the erasure, because a restricted row refuses every
+	// ordinary write — the guard's other arm. This is the state a row imported
+	// with a byline is in when the statutory floor holds it back.
+	//
+	// With a source_system, because activity_source_author_needs_a_source
+	// refuses a byline on a row that names no system it came from: a byline is
+	// what the OTHER system said, and a row with no other system has none.
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET source_system = 'import:legacy', source_id = 'legacy-42',
+			        source_author_name = 'Held Subject'
+			  WHERE id = $1`, f.email)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the byline: %v", err)
+	}
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, f.contact, "test"); err != nil {
+		t.Fatalf("erasing the subject → %v", err)
+	}
+	// The floor holds the row back rather than redacting it, so the byline is
+	// still there — which is what makes the release below the case this guards.
+	var byline *string
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT source_author_name FROM activity WHERE id = $1`, f.email).Scan(&byline)
+	}); err != nil {
+		t.Fatalf("reading the held row: %v", err)
+	}
+	if byline == nil {
+		t.Fatal("the restriction cleared the byline, so the release below proves nothing")
+	}
+
+	// The release statement, complete except for the byline. Everything the
+	// guard knew about before is cleared, so a trigger that had not learned
+	// this column takes it.
+	lift := `UPDATE activity
+	            SET restricted_at = NULL, restricted_until = NULL, restricted_reason = NULL,
+	                body = NULL, raw = NULL, counterparty_email = NULL, subject = 'Erased'
+	          WHERE id = $1`
+	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), lift, f.email)
+		return err
+	})
+	var pgErr interface{ SQLState() string }
+	if !errors.As(err, &pgErr) || pgErr.SQLState() != "23514" {
+		t.Fatalf("a release leaving the byline was not refused: %v", err)
+	}
+
+	// And the same statement WITH the byline cleared is admitted, so what the
+	// guard refuses is the omission rather than the release.
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity
+			    SET restricted_at = NULL, restricted_until = NULL, restricted_reason = NULL,
+			        body = NULL, raw = NULL, counterparty_email = NULL, subject = 'Erased',
+			        source_author_name = NULL
+			  WHERE id = $1`, f.email)
+		return err
+	}); err != nil {
+		t.Fatalf("a complete release was refused: %v", err)
 	}
 }

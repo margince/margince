@@ -5,17 +5,17 @@ import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY, type EntityKind } from "../app/entity";
-import { navigate } from "../app/router";
+import { routeHash } from "../app/router";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
-// across the contract (owner, counterparty, partner org, deal); showing the
+// across the contract (owner, counterparty, partner company, deal); showing the
 // raw UUID is honest but unreadable, so this hydrates the name off the record
 // read and links through. A reference that cannot be named renders the id
-// (mono, no link) rather than blank or a dead link — on an audit row or a
+// (as text, no link) rather than blank or a dead link — on an audit row or a
 // history entry that id is the one traceable fact left. A reference whose read
 // has not answered YET, or whose read came back refused, says so instead:
 // a name that is coming, a name that is never coming, and a name nobody could
@@ -55,22 +55,19 @@ function unnamedOrThrow(error: unknown, response: Response): null {
   throwProblem(error);
 }
 
-// One reader per kind: each reads a different endpoint and a differently
-// named field, so the table is the honest shape — a generic lookup would have
-// to guess the field. A missing name coerces to null (never undefined):
-// react-query forbids an undefined resolve, and a record that answers without
-// its name field has answered.
+// Each entity endpoint names its display field differently. Missing names
+// resolve to null because React Query rejects undefined query results.
 const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
   {
-    person: async (id) => {
-      const { data, error, response } = await api.GET("/people/{id}", {
+    contact: async (id) => {
+      const { data, error, response } = await api.GET("/contacts/{id}", {
         params: { path: { id } },
       });
       if (error) return unnamedOrThrow(error, response);
       return data.full_name ?? null;
     },
-    organization: async (id) => {
-      const { data, error, response } = await api.GET("/organizations/{id}", {
+    company: async (id) => {
+      const { data, error, response } = await api.GET("/companies/{id}", {
         params: { path: { id } },
       });
       if (error) return unnamedOrThrow(error, response);
@@ -99,7 +96,10 @@ const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
     },
   };
 
-function fetchEntityName(kind: EntityKind, id: string): Promise<string | null> {
+export function fetchEntityName(
+  kind: EntityKind,
+  id: string,
+): Promise<string | null> {
   return NAME_READERS[kind](id);
 }
 
@@ -203,7 +203,7 @@ function useRosterWalk(kind: RosterKind, enabled: boolean) {
  *
  * A consumer that OFFERS these entries as a list of who exists owes its reader
  * `useRosterPartial` beside it: this result cannot say whether the walk reached
- * the end, and a picker missing people looks exactly like a small workspace.
+ * the end, and a picker missing contacts looks exactly like a small workspace.
  */
 export function useRoster(kind: RosterKind, enabled: boolean) {
   return useQuery({
@@ -407,23 +407,15 @@ function UnnamedRef({
 }: Readonly<{ id: string; reading: NameReading }>) {
   const t = useT();
   if (reading === "pending") {
-    return <span className="t-caption">{t("common.loading")}</span>;
+    return <span>{t("common.loading")}</span>;
   }
   if (reading === "failed") {
     // The id stays reachable through the title rather than printed as the
     // value: on the line it reads as what the read came back with, and the
     // read came back with nothing.
-    return (
-      <span className="t-caption" title={id}>
-        {t("ref.nameLoadFailed")}
-      </span>
-    );
+    return <span title={id}>{t("ref.nameLoadFailed")}</span>;
   }
-  return (
-    <span className="t-mono" title={id}>
-      {id}
-    </span>
-  );
+  return <span title={id}>{id}</span>;
 }
 
 function rosterName(kind: RosterKind, entry: User | Team): string | null {
@@ -433,11 +425,20 @@ function rosterName(kind: RosterKind, entry: User | Team): string | null {
   return (entry as Team).name ?? null;
 }
 
+/**
+ * A cross-record reference, as the target's display name and a way to it.
+ *
+ * Records point at each other by id across the contract, and a raw uuid on a
+ * line is honest and unreadable. This is the one place that turns one into a
+ * name — so a reference that cannot be named degrades the same way wherever it
+ * appears, rather than each surface inventing its own fallback.
+ */
 export function EntityRef({
   kind,
   id,
   name,
   asText = false,
+  newTab = false,
 }: Readonly<{
   kind: EntityRefKind;
   id: string | null | undefined;
@@ -448,6 +449,16 @@ export function EntityRef({
    * already goes.
    */
   asText?: boolean;
+  /**
+   * Open the record in a NEW tab, for a caller the reader must not be
+   * navigated away from: a reference inside a dialog. Following it in place
+   * closes the dialog and loses whatever was open in it — the message being
+   * read, the draft being written — to reach a page the reader could have
+   * opened from behind it anyway.
+   *
+   * A `user`/`team` reference ignores it, having no page to open at all.
+   */
+  newTab?: boolean;
   // The display name, when the CALLER already has it. A composite read that
   // returns its own labels — the company view's connection graph — would
   // otherwise pay one record fetch per reference and show the raw id until each
@@ -456,7 +467,7 @@ export function EntityRef({
   name?: string | null;
 }>) {
   if (!id) {
-    return <span className="t-mono">—</span>;
+    return <span>—</span>;
   }
   // Dispatch on the kind rather than running both resolutions and discarding
   // one. Each branch then owns exactly the read it needs — no query has to be
@@ -466,7 +477,15 @@ export function EntityRef({
   if (kind === "user" || kind === "team") {
     return <RosterRef kind={kind} id={id} name={name} />;
   }
-  return <RecordRef kind={kind} id={id} name={name} asText={asText} />;
+  return (
+    <RecordRef
+      kind={kind}
+      id={id}
+      name={name}
+      asText={asText}
+      newTab={newTab}
+    />
+  );
 }
 
 // A workspace user or team: no 360 exists to send the reader to, so a resolved
@@ -496,17 +515,19 @@ function RosterRef({
   return <span title={id}>{resolved}</span>;
 }
 
-// A record with a 360 behind it: a resolved name is also the backlink.
+/** A record with a 360 behind it: a resolved name is also the backlink. */
 function RecordRef({
   kind,
   id,
   name,
   asText,
+  newTab,
 }: Readonly<{
   kind: EntityKind;
   id: string;
   name?: string | null;
   asText: boolean;
+  newTab: boolean;
 }>) {
   // A caller-supplied name skips the lookup; a blank one does not, because a
   // blank is the caller saying it has nothing rather than saying the record is
@@ -530,15 +551,33 @@ function RecordRef({
   if (asText) {
     return <span title={id}>{resolved}</span>;
   }
+  // A real anchor, so the record can be opened the ways a link can: a new tab,
+  // a new window, a bookmark, the keyboard. A button carried the same route and
+  // offered none of them — a reader who middle-clicked a company in a list got
+  // nothing, and one who wanted it beside the page they were on had to lose
+  // that page to get there.
+  //
+  // Only the default click is stopped from reaching an enclosing row's own
+  // handler. `navigate` is NOT called beside it: the anchor already performs
+  // the navigation, so doing both would dispatch the same route twice, and
+  // preventing the anchor instead would navigate the current page while the
+  // new tab opens too. This is the identity cell's own arrangement
+  // (design-system/listtable.tsx), which is where a row and a link inside it
+  // were first made to agree.
+  //
+  // `newTab` carries `rel` with it, never alone: `target="_blank"` without
+  // `noopener` hands the opened page a live `window.opener` handle back into
+  // this tab. `OffsiteLink` spells the same pair for the same reason.
   return (
-    <button
-      type="button"
+    <a
       className="entity-link"
-      onClick={() => navigate(ENTITY[kind].route(id))}
+      href={routeHash(ENTITY[kind].route(id))}
+      onClick={(event) => event.stopPropagation()}
       title={id}
+      {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}
-    </button>
+    </a>
   );
 }
 
@@ -608,7 +647,7 @@ export function OwnerName({
 }: Readonly<{ ownerId?: string | null; unowned: string }>) {
   const roster = useRosterWalk("user", Boolean(ownerId));
   if (!ownerId) {
-    return <span className="t-caption">{unowned}</span>;
+    return <span>{unowned}</span>;
   }
   const named = roster.data?.entries.find((entry) => entry.id === ownerId);
   if (named && "display_name" in named) {

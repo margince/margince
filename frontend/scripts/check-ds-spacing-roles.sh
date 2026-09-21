@@ -15,15 +15,18 @@
 #               declares on its own (`.panel-head`, `.card-actions`, `.btn`,
 #               `.t-label`), and the rule re-shapes it in the kind the tier owns:
 #               an interval (padding, margin, gap) on a class the tier spaces, or
-#               a type (font-size, line-height, letter-spacing) on a class the
-#               tier sizes. A screen that does either has made a second opinion
-#               about a shape shared with every other screen, and the two then
-#               drift. A spacing variant spelled in the house's own vocabulary is
-#               not a second opinion and passes: `padding: var(--padCard)` on a
-#               rail's panel body says which surface it means, and moves when
-#               that surface is retuned. A type variant has no such vocabulary —
-#               every size is a rung — so any re-size is a finding, and a genuine
-#               one is waived with its reason.
+#               a type (the `font` shorthand, font-size, line-height,
+#               letter-spacing) on a class the tier sizes. A screen that does
+#               either has made a second opinion about a shape shared with every
+#               other screen, and the two then drift. A spacing variant spelled
+#               in the house's own vocabulary is not a second opinion and passes:
+#               `padding: var(--padCard)` on a rail's panel body says which
+#               surface it means, and moves when that surface is retuned. A type
+#               variant has no such vocabulary — every size is a rung — so any
+#               re-size is a finding, and a genuine one is waived with its
+#               reason. The sized half is DORMANT while the tier declares no
+#               type at all — there is then no size for a screen to contradict —
+#               and re-arms the day a role rule sets one.
 #
 #   role      — the subject names a context the design language has an answer
 #               for, and the declaration does not use it:
@@ -49,7 +52,7 @@
 # `--gapCards` rule and this gate cannot see it, because a stylesheet does not
 # know what a container holds. That question is answerable only against the TSX,
 # and a gate that guessed at it from class names would fire on correct code —
-# which teaches people to stop reading its output, and costs more than the
+# which teaches contacts to stop reading its output, and costs more than the
 # misses it prevents.
 #
 # WHOLE-TREE, unlike its diff-scoped sibling: the tree was cleared to zero
@@ -132,7 +135,58 @@ done
 
 SPACED_COUNT="$(grep -c '^spaced ' "$OWNED" || true)"
 SIZED_COUNT="$(grep -c '^sized ' "$OWNED" || true)"
-if [[ "$SPACED_COUNT" -eq 0 || "$SIZED_COUNT" -eq 0 ]]; then
+
+# Does this tier declare any type at all? Asked of the SHEETS, by a reader
+# independent of the scanner above, because the two answers are what make the
+# check below decisive: declarations here and no sized corpus there is a scanner
+# that has stopped reading, and that must fail closed rather than go quiet.
+# Comments are stripped first, or a sheet explaining why a role rule will set a
+# size would arm the arm on prose and fail a correct tree.
+#
+# The value has to MEASURE something, the same test the scanner's `measures()`
+# applies: `font: inherit` is the role hook with no rule on it — it hands the
+# class the root's type and declares no rung a screen could contradict — so a
+# reader that counted it would claim a size the scanner rightly refuses to put
+# in the corpus, and the two readings would disagree on a correct tree. The
+# `font` SHORTHAND counts because `heading.css` states every rung as one.
+TYPE_DECLS="$(
+  find "$DESIGN_SYSTEM" -type f -name '*.css' -print0 \
+    | xargs -0 awk '
+        FNR == 1 { incomment = 0 }
+        {
+          line = $0
+          code = ""
+          while (length(line) > 0) {
+            if (incomment) {
+              p = index(line, "*/")
+              if (p == 0) { line = ""; break }
+              line = substr(line, p + 2)
+              incomment = 0
+            } else {
+              p = index(line, "/*")
+              if (p == 0) { code = code line; break }
+              code = code substr(line, 1, p - 1) " "
+              line = substr(line, p + 2)
+              incomment = 1
+            }
+          }
+          print code
+        }' 2>/dev/null \
+    | grep -cE '(^|[^A-Za-z0-9_-])(font|font-size|line-height|letter-spacing)[[:space:]]*:[^;]*(var\(|[1-9])' \
+  || true
+)"
+
+# The sized half of the primitive arm is DORMANT while that count is zero: the
+# tier carries role hooks with no rules on them, so there is no size a screen
+# could contradict and an empty sized corpus is the truth rather than a broken
+# reader. It re-arms itself the day a role rule declares one, with nothing here
+# to edit — which is why this reads the tier rather than carrying a switch.
+SIZED_REQUIRED=1
+if [[ "$TYPE_DECLS" -eq 0 ]]; then
+  SIZED_REQUIRED=0
+fi
+
+if [[ "$SPACED_COUNT" -eq 0 || ("$SIZED_REQUIRED" -eq 1 && "$SIZED_COUNT" -eq 0) ]]; then
   echo "FAIL: no design-system class is both shaped and declared on its own —" >&2
   echo "      the corpus is empty, so the primitive arm would pass everything." >&2
   echo "      $DESIGN_SYSTEM is either not the design system, or the scanner no" >&2
@@ -158,6 +212,9 @@ if [[ "${#SHEETS[@]}" -eq 0 ]]; then
 fi
 
 echo "==> DS spacing roles (${#SHEETS[@]} stylesheets, ${SPACED_COUNT} spaced + ${SIZED_COUNT} sized primitives)"
+if [[ "$SIZED_REQUIRED" -eq 0 ]]; then
+  echo "note: the design system declares no type; the sized arm is dormant until a role rule does"
+fi
 
 # A stylesheet that does not load the design system's CLASS layer is its own
 # document, and a class in it collides with nothing. `mcp-apps/` is that case:

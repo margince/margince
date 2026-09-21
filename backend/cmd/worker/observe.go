@@ -14,11 +14,16 @@
 //
 // So this listener carries only what is PROCESS-LOCAL and therefore differs
 // per target — the Go runtime, this process's own pool, this process's relay
-// counter. It re-serves no job-table gauge, and passes a nil outbox backlog
-// for the same reason: that read is the api's, and a second copy of a
-// fleet-wide number is a worse operator surface than one copy. It carries no
-// workspace id and no tenant data at all, which is what makes it a NARROWER
-// surface than the api's /metrics rather than a second copy of it.
+// counter, and the AI calls this process made. It re-serves no job-table
+// gauge, and passes a nil outbox backlog for the same reason: that read is the
+// api's, and a second copy of a fleet-wide number is a worse operator surface
+// than one copy. It carries no workspace id and no tenant data at all, which
+// is what makes it a NARROWER surface than the api's /metrics rather than a
+// second copy of it.
+//
+// The AI counters are not an exception to that rule but an instance of it: a
+// call is routed by ONE process, so the counter is a property of the process
+// that made it, and the api cannot report what the lanes here dispatched.
 package main
 
 import (
@@ -35,6 +40,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -120,13 +126,30 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
 	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, rdb, boot)...))
-	// nil backlog: the outbox backlog is a fleet-wide read the api already
-	// serves. nil jobStats and nil overlay for the same reason — both are
-	// projections of shared tables, not of this process. nil `extra` because
-	// this process now keeps no metric of its own: the extension-job dispatcher
-	// enqueues every live workspace unconditionally, so there is no per-tenant
-	// precondition left for it to count.
-	mux.HandleFunc("/metrics", httpserver.Metrics(pool, nil, events.PublishedTotal, nil, nil, nil))
+	// Backlog and JobStats are nil because each is a fleet-wide read
+	// of a shared table the api already serves, and a second copy of one
+	// number is a worse operator surface than one copy.
+	//
+	// Extra carries the AI counters, and they belong here by the same test
+	// everything else on this listener passes: they count what THIS process
+	// routed, so they differ per target and no other role can answer them.
+	// While this was nil every call the enrichment lanes made was missing from
+	// the AI panels entirely — and because the lanes are where the bulk of the
+	// routing happens, a per-tier error rate read from the api alone described
+	// a small minority of the traffic while appearing to describe all of it.
+	// Undercounting a denominator is the failure mode that reports a healthy
+	// tier as broken.
+	//
+	// Wired unconditionally at construction rather than published once the
+	// model path resolves. The collector is process-wide — every Router in the
+	// binary increments the same one — so nothing here needs the path, and the
+	// listener keeps starting before that resolution, which is what lets it
+	// explain a slow boot.
+	mux.HandleFunc("/metrics", httpserver.Metrics(httpserver.MetricsInput{
+		Pool:      pool,
+		Published: events.PublishedTotal,
+		Extra:     ai.WriteProcessMetrics,
+	}))
 
 	srv := &http.Server{
 		Addr: cfg.observeAddr,
@@ -186,6 +209,11 @@ func workerReadyChecks(pool *pgxpool.Pool, rdb *redis.Client, boot *bootGate) []
 		// attributes are cluster state a grant can change under a running
 		// replica without restarting it.
 		{Name: "runtime-role", Check: func(ctx context.Context) error { return compose.AssertRuntimeRole(ctx, pool) }},
+		// The same probe the api mounts. A worker is the half of the ticket
+		// with no request to fail: its dispatcher ticks on a cadence and a
+		// missing table is a recurring job fault nobody is waiting on, so an
+		// unready replica is the only thing that says so.
+		{Name: "schema-migrations", Check: compose.SchemaAtHead(pool)},
 		{Name: "redis", Check: func(ctx context.Context) error { return rdb.Ping(ctx).Err() }},
 	}
 }

@@ -12,6 +12,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -25,6 +26,7 @@ import {
   useT,
 } from "../i18n";
 import { problemMessageOf, useMe } from "./common";
+import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
 import { useImportFlow } from "./importflow";
 import { ImportMappingTable } from "./importmapping";
 import type {
@@ -113,7 +115,7 @@ export function ImportCard() {
             label={t("import.startLabel")}
             description={t("import.sub")}
             control={
-              <Button small variant="ghost" onClick={() => setOpen(true)}>
+              <Button variant="ghost" onClick={() => setOpen(true)}>
                 {t("import.start")}
               </Button>
             }
@@ -128,10 +130,10 @@ export function ImportCard() {
           labelledBy={headingId}
           size="wide"
         >
-          <h2 id={headingId} className="t-h2 modal-title">
+          <Heading size="large" id={headingId} className="t-h2 modal-title">
             {t("import.title")}
-          </h2>
-          <ImportWizard flow={flow} onClose={() => setOpen(false)} />
+          </Heading>
+          <ImportWizard flow={flow} />
         </Modal>
       </PanelBody>
     </Panel>
@@ -147,10 +149,8 @@ export function ImportCard() {
 // would forget an interrupted import the moment the dialog closed.
 function ImportWizard({
   flow,
-  onClose,
 }: Readonly<{
   flow: ReturnType<typeof useImportFlow>;
-  onClose: () => void;
 }>) {
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -186,13 +186,13 @@ function ImportWizard({
       {/* The control carries its own group label, so it needs no Field
           around it — a second label would announce the same words twice. */}
       <SegmentedControl
-        options={["organization", "person", "lead"] as const}
+        options={["company", "contact", "lead"] as const}
         value={flow.object}
         onChange={busy ? () => undefined : flow.chooseObject}
         label={t("import.objectLabel")}
         labels={{
-          organization: t("import.object.organization"),
-          person: t("import.object.person"),
+          company: t("import.object.company"),
+          contact: t("import.object.contact"),
           lead: t("import.object.lead"),
         }}
       />
@@ -228,17 +228,16 @@ function ImportWizard({
         tabIndex={-1}
       />
       <Button
-        small
         variant="ghost"
         disabled={busy}
         onClick={() => fileInput.current?.click()}
       >
-        <Upload size={16} aria-hidden />
+        <Upload aria-hidden />
         <span>{profile ? t("import.chooseAnother") : t("import.choose")}</span>
       </Button>
 
       {upload.error ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.uploadFailed")}>
           {problemMessageOf(upload.error, t)}
         </Callout>
       ) : null}
@@ -283,12 +282,6 @@ function ImportWizard({
           contextTagID={flow.contextTagID}
         />
       ) : null}
-
-      {/* Closing puts the act down; it does not abandon it. The flow outlives
-          the dialog, so a reader who steps away comes back to the same step. */}
-      <Button small onClick={onClose}>
-        {t("common.close")}
-      </Button>
     </div>
   );
 }
@@ -351,9 +344,9 @@ function ImportOutcome({
 
   return (
     <div className="import__outcome">
-      <h3 className="import__outcomeTitle">
+      <Heading size="small" as="h3" className="import__outcomeTitle">
         {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
-      </h3>
+      </Heading>
       {/* What the approver is about to apply. The mapping step is off screen by
           now, so without this the word chosen there is invisible at exactly the
           moment somebody decides whether to commit. */}
@@ -361,7 +354,7 @@ function ImportOutcome({
       {/* A run the reader did not just cause, shown as though they had, reads as
           an import that ran by itself — so the card says when it happened. */}
       {resumed ? (
-        <Callout tone="info">
+        <Callout kind="standing" title={t("import.resumedRunTitle")}>
           {t("import.resumedRun", {
             when: formatDateTime(run.created_at, locale, viewerZone()),
           })}
@@ -381,11 +374,11 @@ function ImportOutcome({
       </p>
       <LinkCount links={report.links} committed={committed} />
 
+      {/* The lead is the notice's heading and the rows are its body. A band
+          standing over a list it introduces is a heading in notice clothing —
+          and the list is what the reader came here to read. */}
       {report.issues.length > 0 ? (
-        <>
-          <Callout tone="warn" live="status">
-            {t("import.issuesLead")}
-          </Callout>
+        <Callout tone="warning" kind="outcome" title={t("import.issuesLead")}>
           <ul className="import__issues t-sub">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
@@ -394,11 +387,11 @@ function ImportOutcome({
               </li>
             ))}
           </ul>
-        </>
+        </Callout>
       ) : null}
 
       {resumable ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.failedTitle")}>
           {t("import.failed", {
             checkpoint: formatNumber(run.checkpoint, locale),
           })}
@@ -406,14 +399,11 @@ function ImportOutcome({
       ) : null}
 
       {committed && !resumable && !undoInterrupted && !undone ? (
-        <Callout tone="success" live="status">
-          {t("import.done")}
-        </Callout>
+        <Callout tone="success" kind="outcome" title={t("import.done")} />
       ) : null}
 
       {!committed ? (
         <Button
-          small
           variant="primary"
           disabled={busy && !commitBusy}
           pending={commitBusy}
@@ -426,7 +416,6 @@ function ImportOutcome({
 
       {resumable ? (
         <Button
-          small
           variant="primary"
           disabled={busy && !commitBusy}
           pending={commitBusy}
@@ -437,7 +426,7 @@ function ImportOutcome({
         </Button>
       ) : null}
       {error ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>
           {problemMessageOf(error, t)}
         </Callout>
       ) : null}
@@ -454,7 +443,7 @@ function ImportOutcome({
       />
 
       {committed && !resumable ? (
-        <Button small variant="ghost" onClick={onRestart}>
+        <Button variant="ghost" onClick={onRestart}>
           {t("import.another")}
         </Button>
       ) : null}
@@ -490,17 +479,12 @@ function UndoSection({
   const { locale } = useLocale();
   return (
     <>
-      {undoInterrupted ? (
-        <Callout tone="warn" live="status">
-          {t("import.undoInterrupted")}
-        </Callout>
-      ) : null}
+      <UndoInterruptedNotice interrupted={undoInterrupted} />
 
       {undone ? <UndoOutcome undo={report.undo} /> : null}
 
       {undoable || undoInterrupted ? (
         <Button
-          small
           variant="ghost"
           disabled={busy && !undoBusy}
           pending={undoBusy}
@@ -513,7 +497,7 @@ function UndoSection({
         </Button>
       ) : null}
       {undoError ? (
-        <Callout tone="danger" live="alert">
+        <Callout tone="danger" kind="outcome" title={t("import.undoFailed")}>
           {problemMessageOf(undoError, t)}
         </Callout>
       ) : null}
@@ -535,10 +519,8 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <div className="import__undoOutcome">
-      <Callout tone="success" live="status">
-        {t("import.undone")}
-      </Callout>
+    <div>
+      <Callout tone="success" kind="outcome" title={t("import.undone")} />
       {undo ? (
         <>
           <p className="import__hint t-sub">
@@ -558,20 +540,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
               </ul>
             </>
           ) : null}
-          {undo.errored.length > 0 ? (
-            <>
-              <Callout tone="warn" live="status">
-                {t("import.undoErroredLead")}
-              </Callout>
-              <ul className="import__issues t-sub">
-                {undo.errored.map((row) => (
-                  <li key={`${row.object}-${row.id}`}>
-                    {t(`import.object.${row.object}`)} — {row.id}: {row.reason}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          <UndoErrors rows={undo.errored} />
         </>
       ) : null}
     </div>
@@ -681,16 +650,17 @@ function ImportMappingStep({
           })}
         </p>
       ) : (
-        <Callout tone="warn">
-          {t("import.needsIdentifier", { field: identifying })}
-        </Callout>
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("import.needsIdentifier", { field: identifying })}
+        />
       )}
       {/* Chosen BEFORE the dry run, because the commit honours what the dry
           run reported on — a word picked afterwards would file records the
           report never said would be filed. */}
       <ImportContextTag value={contextTagID} onChange={onContextTag} />
       <Button
-        small
         variant="primary"
         disabled={!identifiedBy || (busy && !pending)}
         pending={pending}
@@ -700,7 +670,11 @@ function ImportMappingStep({
         {t("import.validate")}
       </Button>
       {error ? (
-        <Callout tone="danger" live="alert">
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("import.validateFailed")}
+        >
           {problemMessageOf(error, t)}
         </Callout>
       ) : null}
@@ -788,7 +762,7 @@ export function ImportContextTag({
 
 // LinkCount reports the connections a run makes, apart from the rows it writes.
 //
-// Its own component because it is its own question: one person can arrive as a
+// Its own component because it is its own question: one contact can arrive as a
 // created row AND an applied link, so putting links among the four counts above
 // would make them stop summing to the rows read. Renders nothing when the file
 // asked for no links, which is every import that mapped no company column.

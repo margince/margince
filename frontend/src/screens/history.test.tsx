@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -96,7 +96,7 @@ const writtenByPassport = {
   summary: "An agent updated the record",
 };
 
-// The other side of a Deal Room: a person with no seat, whose actor_id is the
+// The other side of a Deal Room: a contact with no seat, whose actor_id is the
 // participant uuid. The source IS recorded here — reading it as unattributed
 // said the opposite about a row somebody signed.
 const commentedByBuyer = {
@@ -120,15 +120,15 @@ describe("RecordHistory", () => {
     await waitFor(() =>
       expect(screen.getByText("Demo Admin created the record")).toBeTruthy(),
     );
-    // The person is the subject of the sentence, and named exactly once: the
+    // The contact is the subject of the sentence, and named exactly once: the
     // suffix that used to complete the old machine-first phrasing would now be
     // a second copy of the same name.
     expect(
       screen.getByText("Anna Weber, via an agent, updated the record"),
     ).toBeTruthy();
     expect(screen.getAllByText(/Anna Weber/)).toHaveLength(1);
-    // A human row names the person on the provenance chip too, which without a
-    // resolved name says a person acted without saying which one. Twice here is
+    // A human row names the contact on the provenance chip too, which without a
+    // resolved name says a contact acted without saying which one. Twice here is
     // correct and not the doubling above: once as the sentence's subject, once
     // as the "typed by" chip in the meta row.
     expect(screen.getAllByText(/Demo Admin/)).toHaveLength(2);
@@ -149,7 +149,7 @@ describe("RecordHistory", () => {
     );
     render(<RecordHistory kind="deal" id="d1" />);
     expect(await screen.findByText("System task retention-sweep")).toBeTruthy();
-    expect(screen.getByText("via zalo-oa")).toBeTruthy();
+    expect(screen.getByText("Via zalo-oa")).toBeTruthy();
     // Only the row that IS an agent reads as one.
     expect(screen.getAllByText(/Automated by/)).toHaveLength(1);
     expect(screen.getByText("Automated by an agent")).toBeTruthy();
@@ -208,8 +208,8 @@ describe("RecordHistory", () => {
       ),
     );
     render(<RecordHistory kind="deal" id="d1" />);
-    expect(await screen.findByText("typed by a buyer")).toBeTruthy();
-    expect(screen.queryByText("source not recorded")).toBeNull();
+    expect(await screen.findByText("Typed by a buyer")).toBeTruthy();
+    expect(screen.queryByText("Source not recorded")).toBeNull();
     // A participant uuid resolves to no name on this side, and no tag prints
     // an identifier a reader cannot look up.
     expect(screen.queryByText(new RegExp(OPAQUE))).toBeNull();

@@ -6,7 +6,7 @@ package compose
 // The job runner's assembly: NewJobRunner, the queue set, the uniqueness
 // window every periodic pass shares, and the wiring of each module's workers
 // and ticks. The per-concern job files beside it (jobs_deals.go,
-// jobs_capture.go, jobs_overlay.go, jobs_automation.go, jobs_retention.go)
+// jobs_capture.go, jobs_automation.go, jobs_retention.go)
 // own the args types and worker adapters themselves; those adapters are the
 // only code in the tree that knows about River, which is what keeps every
 // module's own pass River-agnostic.
@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
 )
 
@@ -118,6 +117,16 @@ type JobRunnerConfig struct {
 	// delivery and its dispatch job, and a role that cannot do that would only
 	// wake a message to fail it.
 	SendDelivery DeliveryMachinery
+	// SendOrigin is the installation's public base URL and the posture it is
+	// judged under — the same pair the api's send path carries.
+	//
+	// A fired message that carries a one-click unsubscribe link builds it from
+	// this. Empty refuses that send rather than emitting a forgeable link,
+	// which means an unset origin does not disable a feature: it makes every
+	// scheduled correspondence and marketing message fail at fire time, while
+	// the transactional ones beside them go out. No worker is gated on it,
+	// because a role that can fire a link-less message should still fire it.
+	SendOrigin SendOrigin
 
 	// CloseDateInterval is the deals close-date hygiene sweep's cadence — the
 	// operator-facing --close-date-interval. No worker is gated on it: the
@@ -164,7 +173,7 @@ type JobRunnerConfig struct {
 	// Nil means this role registers no Telegram poller at all: a poll cannot
 	// authenticate without the token, so a dispatcher wired without a vault
 	// could only fail every job it enqueued. Declared by omission, the posture
-	// GmailRegistry and OverlayVault already take.
+	// GmailRegistry already takes.
 	ChannelVault keyvault.Vault
 	// ChannelAPI is the Telegram Bot API seam the poller dials out through. Nil
 	// takes the real client, which is what every process role passes; the
@@ -188,8 +197,14 @@ type JobRunnerConfig struct {
 	// unjudged, and the queue ranks an unjudged row exactly as it did before the
 	// pass existed.
 	OwedBrain completer
+	// SettlementBrain is the request-settlement lane, which judges whether our
+	// own reply settled what an inbound request asked. Nil = no AI configured
+	// for it, and the consequence is exactly today's behaviour: a request stays
+	// owed until somebody ticks its reminder, because a reply alone has never
+	// settled one.
+	SettlementBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
-	// by omission and connector-created people keep their empty fields.
+	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer
 	// VerdictBrain is the ADR-0072 counterparty-verdict lane. Nil = no AI
 	// configured, and the consequence is deliberate: deferred senders stay
@@ -270,28 +285,6 @@ type JobRunnerConfig struct {
 	// a message the rep can see rather than sitting queued behind a worker that
 	// will never pick it up.
 	DocumentExtractBrain documentCompleter
-	// OverlayVault is the custodian of an incumbent connection's sealed token.
-	// Nil is a role with no way to unseal one, so the reconcile poller and the
-	// webhook-as-signal re-fetch worker register nothing rather than queue
-	// sweeps that could only fail at their first credential read.
-	OverlayVault keyvault.Vault
-	// OverlayInterval is the reconcile poller's cadence — the operator-facing
-	// --overlay-reconcile-interval. It paces the due-SCAN and not one tenant's
-	// sweep: the per-workspace pacing lives in overlay_sync_state.next_sweep_at,
-	// which the scan is gated on, so a frequent poll does not mean frequent
-	// incumbent calls.
-	OverlayInterval time.Duration
-	// OverlayMeter is the poller's OVB meter — built by cmd/worker over the
-	// SAME Redis the api's force-fresh meter uses, so both lanes share one
-	// per-workspace-per-incumbent count (keeping the raw-Redis dependency in
-	// the cmd tier, never compose). Nil makes the poller fail-closed (it
-	// still mirrors; its Consume* calls are silent no-ops with no Redis, so a
-	// nil meter means unmetered recording, never a refused sweep).
-	OverlayMeter *overlaybudget.Meter
-	// OverlayBackfillLimit bounds the initial mirror backfill at this many
-	// records per object class (dev/demo — MARGINCE_OVERLAY_BACKFILL_LIMIT);
-	// 0 (the default) is uncapped.
-	OverlayBackfillLimit int
 	// DeepReadBrain is the model lane the site deep-read job extracts with
 	// (the worker's modelPath.SiteExtract — the crawl's own routing
 	// dial). May be nil: the deep-read worker still registers, so a
@@ -410,9 +403,9 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addModelLaneJobs(reg, pool, cfg, log)
 	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
 	addCapturePipelineJobs(reg, pool, cfg, log)
+	addStoredObjectJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
 	addGraphWatchJobs(reg, cfg, log)
-	addOverlayJobs(reg, pool, cfg, log)
 	addAuthzDisagreementWorker(reg, pool, log)
 
 	periodic := slices.Concat(
@@ -424,10 +417,12 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
 		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
+		addCapturePartSlimJobs(reg, pool, cfg, log),
 		addWebhookRetryJobs(reg, pool, cfg),
 		addGeocodeBackfillJobs(reg, pool, cfg),
 		addTechnicalEnrichJobs(reg, pool, cfg),
 		addProviderRunJobs(reg, pool, cfg),
+		addEmploymentImportJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
@@ -446,7 +441,9 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
 		periodicFor(cfg, VoiceBuildRetryArgs{}),
+		periodicFor(cfg, AIBudgetResumeArgs{}),
 		periodicFor(cfg, IdempotencyRetentionArgs{}),
+		periodicFor(cfg, StoredObjectReapArgs{}),
 		periodicFor(cfg, AgentTaskRetentionArgs{}),
 		periodicFor(cfg, AIActivityReconcileArgs{}),
 		periodicFor(cfg, AIActivityRetentionArgs{}),
@@ -460,7 +457,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
 		periodicFor(cfg, ConfidentialityVerdictArgs{}),
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
-		periodicFor(cfg, OrgNamePromotionArgs{}),
+		periodicFor(cfg, CompanyNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
@@ -468,7 +465,6 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, GmailSyncArgs{}),
 		periodicFor(cfg, GmailWatchArgs{}),
 		periodicFor(cfg, GraphWatchArgs{}),
-		periodicFor(cfg, OverlayReconcileArgs{}),
 		periodicFor(cfg, AuthzDisagreementArgs{}),
 	)
 

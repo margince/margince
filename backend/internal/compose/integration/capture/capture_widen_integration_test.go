@@ -137,7 +137,7 @@ func TestSharingHistoryLeavesAMessageCapturedBeforeReasonsWereRecorded(t *testin
 }
 
 func TestSharingHistoryLeavesAnotherSeatsOwnImports(t *testing.T) {
-	// Whose mail a person keeps private is itself private, so this operation
+	// Whose mail a colleague keeps private is itself private, so this operation
 	// has no id and no admin arm. The seat scoping is what enforces that: one
 	// seat sharing their history must not touch a message only a colleague
 	// imported.

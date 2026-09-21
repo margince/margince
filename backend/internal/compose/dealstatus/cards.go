@@ -48,8 +48,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CachedCard is one deal's already-written standing, as much of it as a queue
@@ -80,6 +82,11 @@ func (s *Service) CachedCards(
 	out := make(map[ids.UUID]CachedCard, len(dealIDs))
 	if len(dealIDs) == 0 {
 		return out, nil
+	}
+	// The same admission Get states. This is the cache-only reader — it never
+	// gathers, so nothing else here asks the object question at all.
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
 	}
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -147,13 +154,13 @@ func cardFromPayload(payload []byte) (CachedCard, bool) {
 // activitiesCitedBy reads the messages one sentence was written from.
 //
 // ACTIVITIES ONLY, because they are the records that carry an audience. A
-// sentence citing a deal or a person rests on rows the reader already reached —
+// sentence citing a deal or a contact rests on rows the reader already reached —
 // the deal grant is what put this row on their queue — and asking the audience
 // question about a record that has none would refuse every standing.
-func activitiesCitedBy(sentence crmcontracts.OrganizationBriefSentence) []ids.UUID {
+func activitiesCitedBy(sentence crmcontracts.CompanyBriefSentence) []ids.UUID {
 	cited := make([]ids.UUID, 0, len(sentence.Evidence))
 	for _, evidence := range sentence.Evidence {
-		if evidence.EntityType != crmcontracts.OrganizationBriefEvidenceEntityTypeActivity {
+		if evidence.EntityType != crmcontracts.CompanyBriefEvidenceEntityTypeActivity {
 			continue
 		}
 		cited = append(cited, ids.UUID(evidence.EntityId))
@@ -168,13 +175,13 @@ func activitiesCitedBy(sentence crmcontracts.OrganizationBriefSentence) []ids.UU
 // would compose a sentence nobody wrote, in a length the row cannot draw.
 func firstSentence(
 	section crmcontracts.DealStatusCardSection,
-) (crmcontracts.OrganizationBriefSentence, bool) {
+) (crmcontracts.CompanyBriefSentence, bool) {
 	for _, sentence := range section.Sentences {
 		if sentence.Text != "" {
 			return sentence, true
 		}
 	}
-	return crmcontracts.OrganizationBriefSentence{}, false
+	return crmcontracts.CompanyBriefSentence{}, false
 }
 
 // readCachedCards takes the stored cards for these deals, for this reader.

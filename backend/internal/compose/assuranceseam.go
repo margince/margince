@@ -196,7 +196,7 @@ func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.Sourc
 	case live == 0:
 		// Never configured, or every mailbox deliberately disconnected. Either
 		// way there is nothing to fix, only something to decide, and the two
-		// route to different people than a broken connector does.
+		// route to different contacts than a broken connector does.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
 	case reauth > 0:
 		// Somebody must re-grant access; until then part of the mailbox is

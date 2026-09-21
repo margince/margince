@@ -20,8 +20,14 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
-  // The product name of the buyer surface.
+  // The name of the network, offered as a profile field in the research drawer.
+  // "LinkedIn" is the brand and is written the same in every catalog; the other
+  // six field labels beside it are translated normally.
+  "contact.research.field.linkedin",
+  // The product name of the buyer surface, on the card that names it and on
+  // the tab that opens it.
   "room.card.title",
+  "tab.dealRoom",
   // Two sales nouns Vietnamese borrows rather than translates, on the
   // drill-through's column headers. The vi catalog already carries both
   // untranslated where they appear as words in a sentence — "Thuộc deal" on
@@ -40,6 +46,13 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
+  // The release channel's own name on the rail head's stage marker. "Beta" is
+  // the word all three catalogs use for it — Vietnamese borrows it as a term of
+  // art the way it borrows "deal" and "pipeline" — and a marker four letters
+  // long is also the only spelling that fits the 56px rail it must survive.
+  // Temporary, with the badge that renders it: app/betabadge.tsx names this
+  // entry among the things its deletion takes.
+  "shell.beta",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.
@@ -94,7 +107,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",
-  "persondealrooms.title",
+  "contactdealrooms.title",
   "room.create.defaultTitle",
   "buyer.poweredBy",
   "buyer.poweredByMargince",
@@ -105,15 +118,22 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
   // carries its own.
-  "brief.pct",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
-  // An em dash standing in for a figure nobody can compute yet. A glyph, not a
-  // word — the sentence explaining it is the detail line beside it.
-  "co.strip.financeUnknown",
+  // Two relationship-band names and an arrow, on the contact strip's latest
+  // change. Same shape, same reason as the two above.
+  "contact.intro.change.buckets",
+  // A filename and the server's own refusal, separated by a colon. It is one
+  // line of a list whose heading says what the list is, and both halves arrive
+  // already in the reader's own words.
+  "knowledge.upload.refused",
+  // The sources a day could not read, joined into one line. Every phrase in it
+  // is built from its own translated key (worklist.source.failed /
+  // .withheld), so this value is the placeholder and a full stop.
+  "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
   "connectors.provGmail",
   "connectors.provGcal",
@@ -134,10 +154,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // The same proper noun as connectors.provGmail and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
-  "person.page.linkedin",
-  "overlay.userMap.principal.hubspot",
-  "overlay.regionEu1",
-  "overlay.budgetSources",
+  "contact.page.linkedin",
   "ob.ai.speaker",
   "ob.ai.speakerName",
   "auth.title",
@@ -154,10 +171,16 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deals.pipeline",
   "deal.fcPipeline",
   "cf.obj.deal",
-  "cf.obj.person",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  "co.brief.cite.person",
+  // The singular of the same noun, on the account facts strip, on the
+  // overnight scan's tally and on the forecast tile's deal count. All three
+  // are the borrowed word beside a numeral, so there is nothing left in any
+  // of them for Vietnamese to translate. Only the `_one` arms land here: the
+  // `_other` arms differ because English pluralises and Vietnamese does not.
+  "co.facts.deals_one",
+  "today.scan.readDeals_one",
+  "analytics.forecastDeals_one",
   "deals.unit",
   "contracts.renew.deal",
   "contracts.deal",
@@ -169,16 +192,16 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "locale.name.vi",
 
   // Field labels where the English word is also the Vietnamese usage.
-  "people.email",
+  "contacts.email",
   "create.email",
   "restricted.kind.email",
   "timeline.filters.kind.email",
   "auth.email",
-  "person.identity.email",
-  "person.action.email",
-  "person.memory.email",
-  "person.memory.channelEmail",
-  "person.rail.email",
+  "contact.identity.email",
+  "contact.action.email",
+  "contact.memory.email",
+  "contact.memory.channelEmail",
+  "contact.rail.email",
   "history.field.email",
   "settings.voice.register.email",
   "product.sku",
@@ -204,7 +227,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
-  "person.enriched.field.linkedin",
+  "contact.enriched.field.linkedin",
 
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
@@ -245,6 +268,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The lead rail's own deal card title, the same singular loanword as
+  // search.kind.deal above it.
+  "lead.rail.deal.title",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
@@ -358,8 +384,8 @@ describe("i18n catalogs", () => {
     // it is the kind of type that gets widened back by the next author who
     // meets it as an inconvenience, and nothing else would notice.
     // @ts-expect-error a magnitude must be formatted (format/format.ts) first
-    translate("en", "person.strip.days", { count: 96 });
-    expect(translate("en", "person.strip.days", { count: "96" })).toContain(
+    translate("en", "contact.strip.days", { count: 96 });
+    expect(translate("en", "contact.strip.days", { count: "96" })).toContain(
       "96",
     );
   });
@@ -464,7 +490,7 @@ const QUOTED_LITERAL = /["'`]([A-Za-z0-9_.:+-]+)["'`]/g;
 
 // The stem of a key built at runtime — t(`ob.readStatus.${status}`). Whatever
 // follows the stem is a value this file cannot see, so every key under it
-// counts as rendered: the alternative is a guard that tells the next person to
+// counts as rendered: the alternative is a guard that tells the next contact to
 // delete a string a screen is displaying.
 const TEMPLATE_STEM = /`([A-Za-z0-9_.]*)\$\{/g;
 
@@ -500,7 +526,7 @@ function renderedStems(): string[] {
  * A plural base is a key stem like any other, reached the same way a template
  * stem is — `plural("share.teamMembers", n)` renders `share.teamMembers_one` or
  * `_other` and writes neither in full. Without this, every arm of every plural
- * pair reads as an orphan and this gate tells the next person to delete
+ * pair reads as an orphan and this gate tells the next contact to delete
  * ninety-four strings the product is displaying.
  *
  * DERIVED from the catalog rather than listed, and derived from the PAIR rather
@@ -557,8 +583,8 @@ describe("catalog keys against the surfaces that render them", () => {
 });
 
 /*
- * The tenant is called "organization" to a reader (A107/ADR-0061): one
- * installation serves one organization, and "workspace" is the internal
+ * The tenant is called "company" to a reader (ADR-0061): one
+ * installation serves one company, and "workspace" is the internal
  * boundary the schema and the RBAC code use. A second noun for one thing reads
  * as two concepts the product does not have.
  *
@@ -573,12 +599,12 @@ const TENANT_MISNOMER = /workspace|arbeitsbereich|không gian làm việc/i;
 const PRODUCT_NAME = /Google Workspace/g;
 
 describe("the product's word for the tenant", () => {
-  it("no catalog calls the organization a workspace", () => {
+  it("no catalog calls the company a workspace", () => {
     for (const [locale, catalog] of Object.entries(catalogs)) {
       for (const [key, value] of Object.entries(catalog)) {
         expect(
           TENANT_MISNOMER.test(value.replace(PRODUCT_NAME, "")),
-          `${locale}: ${key} — "${value}" says workspace where the product says organization`,
+          `${locale}: ${key} — "${value}" says workspace where the product says company`,
         ).toBe(false);
       }
     }

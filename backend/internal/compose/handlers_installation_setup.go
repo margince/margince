@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -70,7 +69,7 @@ func (h installationSetupHandlers) GetInstallationSetup(w http.ResponseWriter, r
 	//
 	// installation_settings is the object every seeded role may read, which is
 	// what the onboarding gate needs: the reader being told to finish setup is
-	// not always the person entitled to change the model binding.
+	// not always the contact entitled to change the model binding.
 	if err := auth.Require(ctx, identity.SettingsObject, principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -127,8 +126,8 @@ func (h installationSetupHandlers) steps(ctx context.Context) ([]crmcontracts.In
 		return nil, err
 	}
 	return []crmcontracts.InstallationSetupStep{
-		{Step: crmcontracts.AiModels, Configured: aiReady, Blocking: true},
-		{Step: crmcontracts.OauthApp, Configured: appReady, Blocking: false},
+		{Step: crmcontracts.InstallationSetupStepStepAiModels, Configured: aiReady, Blocking: true},
+		{Step: crmcontracts.InstallationSetupStepStepOauthApp, Configured: appReady, Blocking: false},
 	}, nil
 }
 
@@ -167,7 +166,7 @@ func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bo
 	return func(ctx context.Context) (bool, error) {
 		wsID, err := svc.InstallationWorkspace(ctx)
 		if errors.Is(err, identity.ErrNotBootstrapped) {
-			// No organization has been claimed yet (ADR-0105): the most "first
+			// No company has been claimed yet (ADR-0105): the most "first
 			// run" an installation gets, and every other boot-time reader of
 			// this state treats it as "not yet" rather than as an error.
 			return true, nil
@@ -175,12 +174,8 @@ func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bo
 		if err != nil {
 			return false, fmt.Errorf("resolving the installation for the first-run signal: %w", err)
 		}
-		readCtx := principal.WithCorrelationID(
-			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
-				Type: principal.PrincipalSystem,
-				ID:   installationSetupReadActor,
-			}), ids.NewV7(),
-		)
+		readCtx := principal.SystemActing(
+			principal.WithWorkspaceID(ctx, wsID.UUID), installationSetupReadActor)
 		steps, err := s.steps(readCtx)
 		if err != nil {
 			return false, err

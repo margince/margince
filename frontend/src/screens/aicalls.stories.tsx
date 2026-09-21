@@ -7,12 +7,12 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiCallsCard, CallDetailPanel } from "./aicalls";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The card is gated on automation:update, so /me decides which of its two
+// The card is gated on ai_diagnostics:read, so /me decides which of its two
 // branches renders. Left unrouted, the fetch stub answers with an empty list
 // page, useMe rejects that as malformed, and every grant fails closed — which
 // is how the List and Empty stories below both used to draw the same probe
 // error under two names that promised the trace table.
-const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 const summary = {
   id: "call-1",
@@ -92,7 +92,7 @@ type Story = StoryObj<typeof AiCallsCard>;
 export const List: Story = { render: list([summary]) };
 export const Empty: Story = { render: list([]) };
 
-// No automation grant: the trace keeps its place and says it is withheld. An
+// No ai_diagnostics grant: the trace keeps its place and says it is withheld. An
 // absent card would read as "this installation made no model calls".
 export const Withheld: Story = { render: list([summary], true, {}) };
 
@@ -166,7 +166,7 @@ export const RowExpanded: Story = {
 };
 
 // The same expanded row in dark. Two badge tones are all that separates a call
-// that limped from one that failed — `degraded` (warn) and the error sentinel
+// that limped from one that failed — `degraded` (warning) and the error sentinel
 // (danger) — so a tint that stops carrying that distinction against a dark card
 // takes the task column's meaning with it. The trail is open because the
 // attempt table brings a second danger badge onto a nested surface, where a

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -133,7 +133,7 @@ function grounded(
 const readyRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "ready",
   status_code: null,
@@ -150,7 +150,7 @@ const readyRead = {
   ],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 2,

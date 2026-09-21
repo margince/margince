@@ -8,7 +8,7 @@ package compose
 // agents never reads a record table itself, so these adapters are where the
 // tool surface meets the same row-scoped reads the HTTP surface uses. That is
 // the point of the seam: one enforcement path, so a governed tool cannot see
-// further than the person driving it.
+// further than the contact driving it.
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -31,16 +31,16 @@ import (
 )
 
 // whoKnowsLister answers "which colleagues know this contact" for the tool
-// surface, through EdgesForPerson — which carries the person grant AND the row
+// surface, through EdgesForContact — which carries the contact grant AND the row
 // probe, so an unpromoted captured contact 404s here exactly as it does on the
 // HTTP path rather than leaking through the agent.
 func whoKnowsLister(pool *pgxpool.Pool) agents.WhoKnowsLister {
-	return func(ctx context.Context, personID ids.UUID) ([]agents.KnownColleague, bool, error) {
+	return func(ctx context.Context, contactID ids.UUID) ([]agents.KnownColleague, bool, error) {
 		var out []agents.KnownColleague
 		var truncated bool
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			// Over-fetch, rank by warmth, THEN cap — the same three steps the
-			// HTTP surface takes, for the same reason. EdgesForPerson orders
+			// HTTP surface takes, for the same reason. EdgesForContact orders
 			// by last contact, so capping it directly would hand a model the
 			// most RECENT colleagues under the label "who knows them best".
 			// The HTTP path and this one must rank identically, or the answer
@@ -49,7 +49,7 @@ func whoKnowsLister(pool *pgxpool.Pool) agents.WhoKnowsLister {
 			// a quieter one: the ranking runs over what was read, so a contact
 			// with more colleagues than this reads has some of them ranked
 			// against nothing. Both bounds are reported the same way.
-			edges, err := search.EdgesForPerson(ctx, tx, personID, agentWhoKnowsFetch+1)
+			edges, err := search.EdgesForContact(ctx, tx, contactID, agentWhoKnowsFetch+1)
 			if err != nil {
 				return err
 			}
@@ -109,12 +109,12 @@ const agentWhoKnowsCap = 10
 const agentWhoKnowsFetch = 100
 
 // coverageReader answers "how is this deal covered" for the tool surface.
-func coverageReader(pool *pgxpool.Pool, ppl *people.Store) agents.CoverageReader {
+func coverageReader(pool *pgxpool.Pool, ppl *contacts.Store) agents.CoverageReader {
 	return func(ctx context.Context, dealID ids.UUID) (agents.DealCoverageAnswer, error) {
 		var out agents.DealCoverageAnswer
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			// The deal gate before the payload: a coverage answer names the
-			// deal's people, so a caller who cannot read the deal must not
+			// deal's contacts, so a caller who cannot read the deal must not
 			// learn who sits on it — through a tool any more than a URL.
 			if err := requireVisibleDeal(ctx, tx, dealID); err != nil {
 				return err
@@ -133,9 +133,9 @@ func coverageReader(pool *pgxpool.Pool, ppl *people.Store) agents.CoverageReader
 			// And the same for THEIR side, which the argument above applies to
 			// at least as strongly: the tool's whole question is which named
 			// human is missing from the deal. The HTTP surface has named its
-			// stakeholders since this read existed (`person_name` in the
+			// stakeholders since this read existed (`contact_name` in the
 			// contract); only the tool shape was left with bare ids.
-			seated, err := coveragePersonNames(ctx, tx, ppl, coverage)
+			seated, err := coverageContactNames(ctx, tx, ppl, coverage)
 			if err != nil {
 				return err
 			}
@@ -166,7 +166,7 @@ func toAgentCoverage(c network.DealCoverage, names, seated map[ids.UUID]string) 
 	}
 	for _, s := range c.Stakeholders {
 		out.Stakeholders = append(out.Stakeholders, agents.CoverageSeat{
-			PersonID: s.PersonID, PersonName: seated[s.PersonID],
+			ContactID: s.ContactID, ContactName: seated[s.ContactID],
 			Role: s.Role, Engaged: s.Engaged,
 		})
 	}
@@ -192,8 +192,8 @@ func toAgentRisks(risks []network.Risk, seated map[ids.UUID]string) []agents.Cov
 	out := make([]agents.CoverageRisk, 0, len(risks))
 	for _, r := range risks {
 		risk := agents.CoverageRisk{
-			Kind: r.Kind, Summary: r.Summary, PersonIDs: r.PersonIDs, UserIDs: r.UserIDs,
-			People: namedPeople(r.PersonIDs, seated),
+			Kind: r.Kind, Summary: r.Summary, ContactIDs: r.ContactIDs, UserIDs: r.UserIDs,
+			Contacts: namedContacts(r.ContactIDs, seated),
 		}
 		// Only going-cold carries a day count; a zero on the others would read
 		// as "touched today", which is the opposite of what a departure finding
@@ -227,31 +227,31 @@ func requireVisibleDeal(ctx context.Context, tx pgx.Tx, dealID ids.UUID) error {
 
 // coverageUserNames resolves the display names for a coverage answer's
 // colleagues.
-// coveragePersonNames names the stakeholders on a coverage payload.
+// coverageContactNames names the stakeholders on a coverage payload.
 //
-// It delegates to people.PersonNamesTx rather than reading `person` here, for
-// the reason network.seatNames states about its own copy: PersonNamesTx
-// carries BOTH halves of the gate — the person object check and the row-scope
+// It delegates to contacts.ContactNamesTx rather than reading `contact` here, for
+// the reason network.seatNames states about its own copy: ContactNamesTx
+// carries BOTH halves of the gate — the contact object check and the row-scope
 // clause — and a second copy of that read is a second place for one half to go
 // missing. It went missing on the HTTP side once already, as a local query
 // with the row scope and no object gate, which named a deal's contacts to a
-// caller holding deal:read without person:read.
+// caller holding deal:read without contact:read.
 //
 // The ErrPermissionDenied fallback below is defence in depth rather than a
-// live path: a caller without person:read is already refused upstream, by
+// live path: a caller without contact:read is already refused upstream, by
 // deals.Stakeholders, and never reaches a payload to name. Swallowing it here
 // means a future change that softened that refusal would ship unnamed seats
 // rather than a failed read — the safe direction. Every other error still
 // propagates.
-func coveragePersonNames(ctx context.Context, tx pgx.Tx, ppl *people.Store, c network.DealCoverage) (map[ids.UUID]string, error) {
+func coverageContactNames(ctx context.Context, tx pgx.Tx, ppl *contacts.Store, c network.DealCoverage) (map[ids.UUID]string, error) {
 	if len(c.Stakeholders) == 0 {
 		return map[ids.UUID]string{}, nil
 	}
-	seated := make([]ids.PersonID, 0, len(c.Stakeholders))
+	seated := make([]ids.ContactID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
-		seated = append(seated, ids.From[ids.PersonKind](s.PersonID))
+		seated = append(seated, ids.From[ids.ContactKind](s.ContactID))
 	}
-	names, err := ppl.PersonNamesTx(ctx, tx, seated)
+	names, err := ppl.ContactNamesTx(ctx, tx, seated)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return map[ids.UUID]string{}, nil
@@ -261,30 +261,30 @@ func coveragePersonNames(ctx context.Context, tx pgx.Tx, ppl *people.Store, c ne
 	return names, nil
 }
 
-// namedPeople is the names a finding can put in a sentence, for the people it
+// namedContacts is the names a finding can put in a sentence, for the contacts it
 // names that the caller may read.
 //
-// A person with no name resolved is SKIPPED rather than rendered as an empty
+// A contact with no name resolved is SKIPPED rather than rendered as an empty
 // string: a finding reading "the deal rests on one relationship: ”" is worse
 // than one that names nobody, and the ids are still there to look up. The
-// result is deliberately not positionally paired with PersonIDs — see the
+// result is deliberately not positionally paired with ContactIDs — see the
 // field's own comment.
-// namedPeople is the people a finding can put in a sentence, each id carrying
+// namedContacts is the contacts a finding can put in a sentence, each id carrying
 // its own name.
 //
-// A person with no name resolved is SKIPPED rather than shipped with an empty
+// A contact with no name resolved is SKIPPED rather than shipped with an empty
 // name: "the deal rests on one relationship: ”" is worse than naming nobody,
-// and CoverageRisk.PersonIDs still carries every id to look up. Because each
+// and CoverageRisk.ContactIDs still carries every id to look up. Because each
 // name travels WITH its id, skipping one cannot shift another — which is the
 // whole reason this returns objects rather than a second array.
-func namedPeople(people []ids.UUID, seated map[ids.UUID]string) []agents.FindingPerson {
-	if len(people) == 0 {
+func namedContacts(contacts []ids.UUID, seated map[ids.UUID]string) []agents.FindingContact {
+	if len(contacts) == 0 {
 		return nil
 	}
-	out := make([]agents.FindingPerson, 0, len(people))
-	for _, id := range people {
+	out := make([]agents.FindingContact, 0, len(contacts))
+	for _, id := range contacts {
 		if name := seated[id]; name != "" {
-			out = append(out, agents.FindingPerson{PersonID: id, Name: name})
+			out = append(out, agents.FindingContact{ContactID: id, Name: name})
 		}
 	}
 	if len(out) == 0 {

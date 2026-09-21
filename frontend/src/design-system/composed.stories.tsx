@@ -8,10 +8,10 @@ import {
   type BoardDeal,
   type BoardMoneyColumn,
   PipelineBoard,
-  RecordView,
   type TimelineEntry,
 } from "./composed";
 import { ListSurface } from "./listsurface";
+import { RecordView } from "./recordview";
 import { Select } from "./select";
 
 // RecordView's timeline gained an optional per-row `actions` slot (the Reply /
@@ -102,7 +102,7 @@ export const MailWithSignatureAndQuote: Story = {
 };
 
 // The same shape on a note, which must NOT be folded: "Viele Grüße" opens this
-// one as ordinary prose, and a quoted line is something a person typed.
+// one as ordinary prose, and a quoted line is something a human typed.
 export const NoteThatReadsLikeASignOff: Story = {
   args: {
     name: "Acme GmbH",
@@ -131,19 +131,11 @@ export const WithRowActions: Story = {
     timeline: [
       {
         ...emailEntry,
-        actions: (
-          <Button small onClick={() => {}}>
-            Reply
-          </Button>
-        ),
+        actions: <Button onClick={() => {}}>Reply</Button>,
       },
       {
         ...meetingEntry,
-        actions: (
-          <Button small onClick={() => {}}>
-            Relink
-          </Button>
-        ),
+        actions: <Button onClick={() => {}}>Relink</Button>,
       },
       noteEntry,
     ],
@@ -155,6 +147,8 @@ export const WithRowActions: Story = {
 // row read exactly as a table's would. Four open stages plus one won stage,
 // and Proposal carries no deals — the honest empty-column case a stage sees
 // between a lead qualifying and the next one reaching it.
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function boardDeal(
   id: string,
   name: string,
@@ -165,7 +159,7 @@ function boardDeal(
   return {
     id,
     name,
-    org: "Acme GmbH",
+    company: "Acme GmbH",
     valueMinor,
     currency: "EUR",
     ageMs: ageDays * 24 * 60 * 60 * 1000,
@@ -182,16 +176,21 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 4_500,
     currency: "EUR",
     deals: [
+      // The buyer wrote last: an envelope, and how long ago.
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
         singleThreaded: true,
         closeDate: "2026-10-14",
         owner: "Ada Lindqvist",
+        lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
       }),
-      // A close date the nightly run set and nobody confirmed: marked, not hidden.
+      // A close date the nightly run set and nobody confirmed: marked, not
+      // hidden. We wrote last, ten days ago, and nobody answered — which is the
+      // line a rep reads before the stall badge above it.
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,
+        lastEmail: { agoMs: 10 * DAY_MS, direction: "outbound" },
       }),
     ],
   },
@@ -244,7 +243,7 @@ export const BoardInSurface: StoryObj = {
     <ListSurface
       count="5 deals"
       search={{ value: "", onChange: () => undefined }}
-      action={<Button small>New deal</Button>}
+      action={<Button>New deal</Button>}
       // The board brings its own controls rather than the table's: which
       // pipeline is shown, and whether it is read as stages or as rows.
       tools={
@@ -280,7 +279,7 @@ export const BoardInSurface: StoryObj = {
           ],
         },
         {
-          key: "organization_id",
+          key: "company_id",
           label: "Company",
           allLabel: "All companies",
           options: [{ value: "acme", label: "Acme GmbH" }],
@@ -398,10 +397,10 @@ const withheldCompanyColumns: BoardMoneyColumn[] = [
     deals: [
       boardDeal("w1", "Contoso renewal", 12_000, 3),
       boardDeal("w2", "Fabrikam expansion", 33_000, 9, {
-        org: "",
-        orgWithheld: true,
+        company: "",
+        companyWithheld: true,
       }),
-      boardDeal("w3", "Inbound, unlinked", 54_000, 5, { org: "" }),
+      boardDeal("w3", "Inbound, unlinked", 54_000, 5, { company: "" }),
     ],
   },
 ];
@@ -588,7 +587,7 @@ function StageMidScroll() {
 
   return (
     <div ref={frame} style={{ display: "flex", height: FRAME_H_PX }}>
-      <ListSurface count="7 deals" action={<Button small>New deal</Button>}>
+      <ListSurface count="7 deals" action={<Button>New deal</Button>}>
         <PipelineBoard
           columns={scrollingStageColumns}
           cardHref={(d) => `#/deals/${d.id}`}

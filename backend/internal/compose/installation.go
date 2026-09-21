@@ -40,21 +40,21 @@ import (
 )
 
 // EnsureInstallation applies the boot state machine before the API
-// serves: 0 active workspaces → bootstrap organization + first admin +
-// seeds atomically from cfg (requires organization + bootstrap_admin);
+// serves: 0 active workspaces → bootstrap company + first admin +
+// seeds atomically from cfg (requires company + bootstrap_admin);
 // 1 → bind; >1 → refuse with the operator-facing invariant error.
 // Restarts are idempotent — bootstrap values never reconcile into an
-// existing organization.
+// existing workspace.
 func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Config) error {
 	var create func() (identity.InstallationBootstrap, error)
 	if b := cfg.BootstrapAdmin; b != nil {
-		if cfg.Organization.Name == "" {
-			return errors.New("compose: bootstrap_admin is configured but organization.name is missing — both are required to bootstrap an empty database")
+		if cfg.Workspace.Name == "" {
+			return errors.New("compose: bootstrap_admin is configured but workspace.name is missing — both are required to bootstrap an empty database")
 		}
 		// The password secret is read inside this closure, which bootstrap
-		// calls only when it is actually creating the organization. Reading it
+		// calls only when it is actually creating the workspace. Reading it
 		// here would read it on every boot, and ADR-0061 §2 permits deleting
-		// the secret once the organization exists — so an installation that
+		// the secret once the company exists — so an installation that
 		// followed the ADR would stop booting.
 		create = func() (identity.InstallationBootstrap, error) {
 			pw, err := b.ResolvePassword(config.FromOS)
@@ -62,13 +62,13 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 				return identity.InstallationBootstrap{}, err
 			}
 			return identity.InstallationBootstrap{
-				OrganizationName: cfg.Organization.Name,
-				BaseCurrency:     cfg.Organization.BaseCurrency,
-				BaseLanguage:     cfg.Organization.BaseLanguage,
-				Timezone:         cfg.Organization.Timezone,
-				AdminEmail:       b.Email,
-				AdminName:        b.DisplayName,
-				AdminPassword:    pw,
+				CompanyName:   cfg.Workspace.Name,
+				BaseCurrency:  cfg.Workspace.BaseCurrency,
+				BaseLanguage:  cfg.Workspace.BaseLanguage,
+				Timezone:      cfg.Workspace.Timezone,
+				AdminEmail:    b.Email,
+				AdminName:     b.DisplayName,
+				AdminPassword: pw,
 			}, nil
 		}
 	}
@@ -91,9 +91,26 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		return err
 	}
 	if created {
-		log.Info("installation bootstrapped", "workspace_id", wsID.String(), "organization", cfg.Organization.Name)
+		log.Info("installation bootstrapped", "workspace_id", wsID.String(), "workspace", cfg.Workspace.Name)
 	} else {
-		log.Info("installation bound to existing organization", "workspace_id", wsID.String())
+		log.Info("installation bound to existing company", "workspace_id", wsID.String())
+	}
+	// THE PUBLISHED WORDING, ON EVERY BOOT and not only on the one that creates
+	// the workspace.
+	//
+	// seedConsentText runs inside workspace seeding, which an EXISTING
+	// installation skips entirely — so an upgrade would add the columns that
+	// pin which wording a link asks, start pinning them, and never publish the
+	// rows they point at. Every grant after that upgrade would name a version
+	// nothing had published, which is the fallback path and exactly the silence
+	// this change exists to end.
+	//
+	// Safe to repeat: PublishTextVersionTx is idempotent on key+version+locale
+	// and REFUSES when the same version's words have changed, so a boot that
+	// finds the wording edited without a version bump fails loudly here rather
+	// than quietly serving one thing and having past proofs name another.
+	if err := publishConsentWording(ctx, pool, wsID.UUID); err != nil {
+		return err
 	}
 	// `setting` is not tenant-scoped, so a bootstrap over a database that still
 	// holds a previous installation's rows creates a new workspace beside them
@@ -337,20 +354,6 @@ func seedConsent(ctx context.Context, tx pgx.Tx, configured []deployconfig.Conse
 	return seedConsentText(ctx, tx)
 }
 
-// seedConsentText publishes the installation's own wording beside the purpose
-// catalog and the retention defaults, in the same transaction.
-//
-// Here rather than at a later door because a proof row may name a version from
-// the first grant onwards: wording published after the fact would leave the
-// earliest proofs pointing at nothing, and those are exactly the rows nobody
-// can reconstruct later.
-func seedConsentText(ctx context.Context, tx pgx.Tx) error {
-	if err := consent.PublishControllerTemplatesTx(ctx, tx, time.Now()); err != nil {
-		return err
-	}
-	return consent.SeedDefaultRetentionTx(ctx, tx)
-}
-
 // seedRetentionPosture turns the retain-only posture on when the deployment asked
 // for it (GCS-PARAM-7). It runs INSIDE the bootstrap transaction, beside the
 // policy rows it governs: an installation that declared it destroys nothing must
@@ -379,7 +382,7 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 //
 // It runs INSIDE the bootstrap transaction, beside the rest of the seeds: an
 // installation that declared a binding must not be reachable in a state where
-// the organization exists and the binding does not, even briefly, or the first
+// the company exists and the binding does not, even briefly, or the first
 // request through an AI surface answers as unconfigured.
 //
 // "Bootstrap" is not the only caller — the data reset runs the same seeds over
@@ -451,7 +454,7 @@ func routingSeedFrom(declared yaml.Node) (ai.RoutingConfig, bool, error) {
 
 // seedBookingPage provisions the admin's public booking page.
 //
-// The is_agent predicate says what this lookup wants: a PERSON. A booking page
+// The is_agent predicate says what this lookup wants: a CONTACT. A booking page
 // a stranger reaches must name someone who can answer it, and "first by
 // created_at" is heap order between two rows written in one transaction.
 func seedBookingPage(ctx context.Context, tx pgx.Tx) error {

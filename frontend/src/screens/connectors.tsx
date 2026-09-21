@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Mail, RefreshCw, Send, X } from "lucide-react";
+import { CalendarDays, Mail, RefreshCw, Send } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { connectorsPollInterval } from "../app/capture-progress";
-import { useRoute } from "../app/router";
 import {
   Badge,
   Button,
@@ -14,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -31,8 +31,9 @@ import {
   statusLabel,
   statusTone,
 } from "./connector-status";
-import { isMailbox } from "./connectorproviders";
+import { isMailbox, isMailIcon } from "./connectorproviders";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
+import { OAuthOutcomeNote } from "./connectors.notices";
 import { ImapConnectForm } from "./imap-connect-form";
 import { TelegramConnectForm } from "./telegram-connect-form";
 import "./connectors.css";
@@ -67,6 +68,7 @@ const providerLabel: Record<Provider, MessageKey> = {
   graph: "connectors.provGraph",
   graphcal: "connectors.provGraphCal",
   imap: "connectors.provImap",
+  test_mailbox: "connectors.provTestMailbox",
 };
 
 // The OAuth providers whose reconnect re-mints a consent URL; imap reconnects
@@ -82,7 +84,7 @@ const OAUTH_PROVIDERS = new Set<Provider>([
 // The full connector roster the "Add a connection" affordance offers from —
 // the empty state shows every one, the row shows whichever aren't already
 // present in GET /connectors. Mail and calendar are separate entries on both
-// vendors because they are separate CONNECTIONS: one consent each, so a person
+// vendors because they are separate CONNECTIONS: one consent each, so a contact
 // can bring one without the other and disconnect either.
 const ALL_PROVIDERS: Provider[] = [
   "gmail",
@@ -102,28 +104,6 @@ const OAUTH_DISCONNECT_NOTE: Partial<Record<Provider, MessageKey>> = {
   gcal: "connectors.disconnectBodyGoogleNote",
   graph: "connectors.disconnectBodyMicrosoftNote",
   graphcal: "connectors.disconnectBodyMicrosoftNote",
-};
-
-// The OAuth callback lands back on #/settings/connections/{outcome} — the
-// route parses to id2 = "ok" | "denied" | "rejected" | "misconfigured" |
-// "bad_client" | "error". Only these are server-defined (contract-first); any
-// other value is silently ignored rather than rendering a raw route segment.
-//
-// Three of them exist so a failure nobody can fix by retrying does not tell the
-// reader to retry, and they are three rather than two because the remedies are
-// different screens: the provider refused the grant (reconnect and accept
-// everything), its API was never enabled (the vendor console), or it refused
-// this deployment's client credentials (the app card in Settings).
-const OAUTH_OUTCOME_NOTE: Record<
-  string,
-  { key: MessageKey; tone: "success" | "danger" }
-> = {
-  ok: { key: "connectors.oauthOk", tone: "success" },
-  denied: { key: "connectors.oauthDenied", tone: "danger" },
-  rejected: { key: "connectors.oauthRejected", tone: "danger" },
-  misconfigured: { key: "connectors.oauthMisconfigured", tone: "danger" },
-  bad_client: { key: "connectors.oauthBadClient", tone: "danger" },
-  error: { key: "connectors.oauthError", tone: "danger" },
 };
 
 export type ConnectorsResult = {
@@ -150,59 +130,6 @@ type PublicOriginStatus =
 type ProviderReadiness = NonNullable<
   components["schemas"]["CaptureConnectionListResponse"]["providers"]
 >[number];
-
-// The OAuth return outcome (Task 2): the callback lands back on
-// #/settings/connections/{outcome} — id2 on that route only, never parsed
-// from location.hash directly (the router already owns that). Split out of
-// the panel so its dismissal state and branching stay off that function's
-// complexity budget. Dismissing (or navigating away, which unmounts this
-// card) clears it; the list itself already refetches on mount, so "ok" needs
-// no extra invalidation here.
-//
-// It sits ABOVE the row list rather than in it: it reports on what the reader
-// just did, which is not one of the card's standing decisions.
-function OAuthOutcomeNote() {
-  const t = useT();
-  const route = useRoute();
-  const oauthOutcome =
-    route.screen === "settings" && route.id === "connections"
-      ? route.id2
-      : undefined;
-  const [dismissedOutcome, setDismissedOutcome] = useState<string | null>(null);
-  // Object.hasOwn, not a bare index: a route segment like "constructor" would
-  // otherwise resolve to an inherited member and render an empty note.
-  const note =
-    oauthOutcome &&
-    oauthOutcome !== dismissedOutcome &&
-    Object.hasOwn(OAUTH_OUTCOME_NOTE, oauthOutcome)
-      ? OAUTH_OUTCOME_NOTE[oauthOutcome]
-      : undefined;
-  if (!note) {
-    return null;
-  }
-  // A Callout, not a hand-tinted paragraph: this is the surface reporting on
-  // what the reader just did, which is exactly the closed tone set Callout
-  // owns. `.connector-oauth-note` was a class no stylesheet ever declared, so
-  // every rule its name implied did nothing at all.
-  return (
-    <Callout
-      tone={note.tone}
-      live="status"
-      actions={
-        <Button
-          small
-          variant="ghost"
-          aria-label={t("connectors.dismissOutcome")}
-          onClick={() => setDismissedOutcome(oauthOutcome ?? null)}
-        >
-          <X aria-hidden /> {t("connectors.dismissOutcome")}
-        </Button>
-      }
-    >
-      {t(note.key)}
-    </Callout>
-  );
-}
 
 // A connection's identity, as the left half of its row: the provider this
 // build's own name for it, and the account it reads. One shape for a mailbox
@@ -238,23 +165,22 @@ const PROVIDER_BLURB: Record<Provider, MessageKey> = {
   graph: "connectors.addGraphBrings",
   graphcal: "connectors.addGraphCalBrings",
   imap: "connectors.addImapBrings",
+  test_mailbox: "connectors.addTestMailboxBrings",
 };
 
 // The "Add a connection" affordance (Task 1), as ONE verb and a dialog.
 //
 // It was a row whose control held a strip of four buttons — the shape the
 // spacing contract names outright: three or more verbs in a row's right column
-// collapse behind one. Four picks squeezed against a wrapping description also
-// left no room for the sentence each provider needs, and made Gmail the
-// primary of a card that exists to REPORT the roster rather than to push one
-// mailbox.
+// collapse behind one. Four squeezed picks left no room for each provider's
+// sentence too, and made Gmail the primary of a card that exists to REPORT
+// the roster rather than to push one mailbox.
 //
 // So the picks are rows of their own in here: the provider names itself on the
 // left, its sentence under that, and one verb at the same x as every other
-// answer in the product. The reasons a connect failed — a provider this
-// deployment never wired, or a refusal from the one it did — land in the dialog
-// the press happened in, which is the only place that names the button they
-// answer.
+// answer in the product. The reasons a connect failed — unwired here, or a
+// refusal from the one that is — land in the dialog the press opened, the
+// only place that names the button they answer.
 function AddConnectionDialog({
   open,
   onClose,
@@ -281,9 +207,9 @@ function AddConnectionDialog({
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
       <div className="form-stack">
-        <h2 id={headingId} className="t-h2">
+        <Heading size="large" id={headingId} className="t-h2">
           {t("connectors.addConnection")}
-        </h2>
+        </Heading>
         <SettingList>
           {addable.map((provider) => (
             <SettingRow
@@ -301,7 +227,6 @@ function AddConnectionDialog({
               // hears.
               control={({ id, "aria-describedby": describedBy }) => (
                 <Button
-                  small
                   id={id}
                   aria-describedby={describedBy}
                   variant="ghost"
@@ -319,15 +244,25 @@ function AddConnectionDialog({
             />
           ))}
         </SettingList>
+        {/* The fact is standing — this deployment never wired that provider —
+            but the reader learns it BY pressing Connect and it is set on that
+            press alone, so it is an `outcome` and is spoken. `info` and not
+            `warning`: an unwired provider is a documented configuration, and
+            nothing about it is wrong. */}
         {notConfigured501 && (
-          <Callout tone="danger" live="alert">
-            {t("connectors.providerNotConfigured", {
+          <Callout
+            kind="outcome"
+            title={t("connectors.providerNotConfigured", {
               provider: t(providerLabel[notConfigured501]),
             })}
-          </Callout>
+          />
         )}
         {connectError && (
-          <Callout tone="danger" live="alert">
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("connectors.connectFailed")}
+          >
             {connectError}
           </Callout>
         )}
@@ -396,10 +331,10 @@ function TelegramConnectionRow({
       }
       control={
         <div className="connector-actions">
-          <Button small onClick={onEdit}>
+          <Button onClick={onEdit}>
             <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
           </Button>
-          <Button small variant="ghost" onClick={onDisconnect}>
+          <Button variant="ghost" onClick={onDisconnect}>
             {t("connectors.disconnect")}
           </Button>
         </div>
@@ -415,12 +350,12 @@ function TelegramNotice({
 }: Readonly<{ query: ReturnType<typeof useChannelConnections> }>) {
   const t = useT();
   if (query.isPending) {
-    return <p className="t-caption">{t("connectors.loading")}</p>;
+    return <p>{t("connectors.loading")}</p>;
   }
   if (query.isError) {
     return (
-      <Callout tone="danger" live="alert">
-        {problemMessageOf(query.error, t, t("connectors.loadFailed"))}
+      <Callout tone="danger" kind="outcome" title={t("connectors.loadFailed")}>
+        {problemMessageOf(query.error, t)}
       </Callout>
     );
   }
@@ -491,7 +426,6 @@ function TelegramConnectorsPanel() {
         !query.data.notConfigured &&
         connections.length === 0 && (
           <Button
-            small
             data-testid="telegram-connect"
             onClick={() => setConnectOpen(true)}
           >
@@ -558,7 +492,7 @@ function TelegramConnectorsPanel() {
           }
         }}
       >
-        <p className="t-caption">{t("connectors.telegramDisconnectBody")}</p>
+        <p>{t("connectors.telegramDisconnectBody")}</p>
       </ConfirmModal>
     </Panel>
   );
@@ -671,7 +605,7 @@ function ConnectorRow({
         testId={`connector-${conn.provider}`}
         label={
           <ConnectionIdentity
-            icon={mailbox ? Mail : CalendarDays}
+            icon={isMailIcon(conn.provider) ? Mail : CalendarDays}
             name={t(providerLabel[conn.provider])}
             account={conn.account_label}
           />
@@ -683,39 +617,43 @@ function ConnectorRow({
               {t(statusLabel(conn.status))}
             </Badge>
             {missingSendGrant(conn) && (
-              <Badge tone="warn">{t("connectors.cannotSend")}</Badge>
+              <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
             )}
           </span>
         }
         control={
-          <div className="connector-control">
-            <div className="connector-actions">
-              {needsReconnect &&
-                (OAUTH_PROVIDERS.has(conn.provider) ? (
-                  // `pending`, never `disabled`: a write already on its way is
-                  // a different unavailability from one the reader could fix,
-                  // and disabling the button they just pressed drops their
-                  // focus to <body> at the moment there is something to say.
-                  <Button small pending={connectPending} onClick={onReconnect}>
-                    <RefreshCw aria-hidden /> {t("connectors.reconnect")}
-                  </Button>
-                ) : (
-                  <Button small onClick={onImapReconnect}>
-                    <RefreshCw aria-hidden /> {t("connectors.reconnect")}
-                  </Button>
-                ))}
-              <Button small variant="ghost" onClick={onDisconnect}>
-                {t("connectors.disconnect")}
-              </Button>
-            </div>
-            {connectError && (
-              <Callout tone="danger" live="alert">
-                {connectError}
-              </Callout>
-            )}
+          <div className="connector-actions">
+            {needsReconnect &&
+              (OAUTH_PROVIDERS.has(conn.provider) ? (
+                // `pending`, never `disabled`: a write already on its way is a
+                // different unavailability from one the reader could fix, and
+                // disabling the button they just pressed drops their focus to
+                // <body> at the moment there is something to say.
+                <Button pending={connectPending} onClick={onReconnect}>
+                  <RefreshCw aria-hidden /> {t("connectors.reconnect")}
+                </Button>
+              ) : (
+                <Button onClick={onImapReconnect}>
+                  <RefreshCw aria-hidden /> {t("connectors.reconnect")}
+                </Button>
+              ))}
+            <Button variant="ghost" onClick={onDisconnect}>
+              {t("connectors.disconnect")}
+            </Button>
           </div>
         }
       />
+      {/* Under the row rather than inside its control column: a notice squeezed
+          into the slot the verbs live in reads as a third button. */}
+      {connectError && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("connectors.connectFailed")}
+        >
+          {connectError}
+        </Callout>
+      )}
       {conn.status === "connected" && mailbox && <MailPostureRow conn={conn} />}
       {conn.status === "connected" && mailbox && (
         <SignatureEnrichmentRow conn={conn} />
@@ -739,7 +677,7 @@ function ConnectorRow({
 // nightly pass may mine out of it.
 //
 // A Select rather than a Switch, because the three answers are not one thing
-// turned on and off. `held` and `classified` both hold a message to the people
+// turned on and off. `held` and `classified` both hold a message to the contacts
 // on it; what separates them is whether a classifier is ever allowed to open it
 // later. A two-position control would have to drop one of the three, and the one
 // it would drop is the default.
@@ -885,10 +823,10 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
 //
 // Tri-state on the wire, two states on screen. A Switch has no third position,
 // so what a reader sees is on or off and what they are told beside it is
-// whether that answer is this mailbox's own or the organization's — the
+// whether that answer is this mailbox's own or the company's — the
 // description says which. Turning the switch makes it the mailbox's own; there
 // is no control for handing the question back, because a reader who wants that
-// wants "follow the organization", and no product surface has ever needed to
+// wants "follow the company", and no product surface has ever needed to
 // say it twice.
 function SignatureEnrichmentRow({
   conn,
@@ -1015,7 +953,7 @@ function PublicOriginRow({
       ? undefined
       : status.reachable
         ? "success"
-        : "warn";
+        : "warning";
   const stateLabel =
     status.reachable === null || status.reachable === undefined
       ? t("connectors.originUnchecked")
@@ -1185,7 +1123,7 @@ function MailConnectorsPanel() {
       // in the column a reader travels to find what each mailbox is set to.
       titleAction={
         offerAdd ? (
-          <Button small onClick={() => setAddOpen(true)}>
+          <Button onClick={() => setAddOpen(true)}>
             {t("connectors.addOpen")}
           </Button>
         ) : undefined
@@ -1194,12 +1132,14 @@ function MailConnectorsPanel() {
       <PanelBody>
         <p className="settings-panel-sub">{t("connectors.sub")}</p>
         <OAuthOutcomeNote />
-        {connectors.isPending && (
-          <p className="t-caption">{t("connectors.loading")}</p>
-        )}
+        {connectors.isPending && <p>{t("connectors.loading")}</p>}
         {connectors.isError && (
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(connectors.error, t, t("connectors.loadFailed"))}
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("connectors.loadFailed")}
+          >
+            {problemMessageOf(connectors.error, t)}
           </Callout>
         )}
         {connectors.isSuccess && notConfigured && (
@@ -1254,7 +1194,7 @@ function MailConnectorsPanel() {
           }
         }}
       >
-        <p className="t-caption">{t("connectors.disconnectBody")}</p>
+        <p>{t("connectors.disconnectBody")}</p>
         {disconnectNoteKey && (
           <p className="t-caption">{t(disconnectNoteKey)}</p>
         )}

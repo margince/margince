@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -9,7 +9,7 @@ import { ContactLink } from "./contactlink";
 
 afterEach(cleanup);
 
-const dana = { entityType: "person", entityId: "p-1" } as const;
+const dana = { entityType: "contact", entityId: "p-1" } as const;
 
 describe("ContactLink", () => {
   it("opens the composer on the address's record, and links a number with tel", () => {
@@ -26,7 +26,7 @@ describe("ContactLink", () => {
       screen.getByRole("button", { name: "dana@brandt.example" }),
     );
     expect(writeTo).toHaveBeenCalledWith({
-      entityType: "person",
+      entityType: "contact",
       entityId: "p-1",
       address: "dana@brandt.example",
     });
@@ -90,12 +90,12 @@ describe("ContactLink", () => {
         kind="email"
         value="dana@brandt.example?bcc=x"
         record={dana}
-        className="link-button t-mono"
-        textClassName="t-mono"
+        className="link-button lead-email"
+        textClassName="lead-email"
       />,
     );
     expect(screen.getByText("dana@brandt.example?bcc=x").className).toBe(
-      "t-mono",
+      "lead-email",
     );
   });
 

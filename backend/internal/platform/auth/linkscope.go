@@ -31,15 +31,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// The activity_link columns, one per record kind it can point at. Named
+// because both walks over that table — the visible one here and the writable
+// one beside it — spell the same five, and two lists of literals are two
+// chances to spell one of them wrong.
+const (
+	contactIDColumn = "contact_id"
+	companyIDColumn = "company_id"
+	dealIDColumn    = "deal_id"
+	leadIDColumn    = "lead_id"
+	projectIDColumn = "project_id"
+)
+
 // LinkTargetVisibleClause answers, for ONE activity_link row, whether the
 // record it points at is visible under the caller's row scope. An empty
 // string means a caller for whom every target is visible — which, since
-// person and organization carry capture privacy, is the system principal
+// contact and company carry capture privacy, is the system principal
 // alone.
 //
 // It exists because "may I read this activity" and "may I be told what this
 // activity is about" are different questions. The activity gate above is an
-// ANY-link rule: an activity reachable through one visible person is
+// ANY-link rule: an activity reachable through one visible contact is
 // readable in full. Projecting its link rows back to the client would then
 // hand over the ids of the OTHER records it touches — a colleague's deal,
 // say — which the caller may not read. So the projection carries its own
@@ -62,11 +74,11 @@ func LinkTargetVisibleClause(ctx context.Context, alias string, arg func(any) in
 // half a dozen table-name positions across the package, and a typo in any
 // of them silently renders a predicate that matches nothing.
 const (
-	tablePerson       = "person"
-	tableOrganization = "organization"
-	tableDeal         = "deal"
-	tableLead         = "lead"
-	tableProject      = "project"
+	tableContact = "contact"
+	tableCompany = "company"
+	tableDeal    = "deal"
+	tableLead    = "lead"
+	tableProject = "project"
 )
 
 // linkTargetTables names every record type an activity_link points at, in
@@ -74,18 +86,18 @@ const (
 // activity gate (ActivityDiscoverClause, inheritedscope.go) decide whether they
 // may skip their clause by asking UnboundedFor (rowscope.go) over this set, so
 // a record type that gains capture privacy tightens both at once.
-var linkTargetTables = []string{tablePerson, tableOrganization, tableDeal, tableLead, tableProject}
+var linkTargetTables = []string{tableContact, tableCompany, tableDeal, tableLead, tableProject}
 
 // linkTargetVisible renders the per-arm "this link's target is visible"
 // disjunction over activity_link's polymorphic columns.
 func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) string {
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
-		{"person_id", tablePerson, "sp"},
-		{"organization_id", tableOrganization, "so"},
-		{"deal_id", tableDeal, "sd"},
-		{"lead_id", tableLead, "sl"},
-		{"project_id", tableProject, "spr"},
+		{contactIDColumn, tableContact, "sp"},
+		{companyIDColumn, tableCompany, "so"},
+		{dealIDColumn, tableDeal, "sd"},
+		{leadIDColumn, tableLead, "sl"},
+		{projectIDColumn, tableProject, "spr"},
 	} {
 		arms = append(arms, linkTargetArm(alias, t.column, t.table, t.probe,
 			VisiblePredicate(p, t.table, arg)(t.probe)))
@@ -130,7 +142,7 @@ func linkTargetArm(alias, column, table, probe, predicate string) string {
 //
 // FOR SHARE, and the pairing is the point. It conflicts with the archive, which
 // UPDATEs the row, while two references onto one record do not conflict and have
-// no reason to queue behind each other — a person mid-ingest is referenced by
+// no reason to queue behind each other — a contact mid-ingest is referenced by
 // every message captured for them. The same pairing the activity_link trigger
 // takes on the activity it is about (migration 1788000100).
 //
@@ -142,7 +154,7 @@ func linkTargetArm(alias, column, table, probe, predicate string) string {
 // and the one that forgot would look exactly like the thirty-nine that did not.
 //
 // The few read paths that call this for its existence half — a contract listing
-// under an organization, a relationship read under its anchor — pay for it too:
+// under a company, a relationship read under its anchor — pay for it too:
 // they hold that one anchor for the length of a short read, which delays an
 // archive of it and blocks nothing else. That is the price of the probe having
 // one meaning.
@@ -167,6 +179,61 @@ func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 			return apperrors.ErrNotFound
 		}
 		return err
+	}
+	return nil
+}
+
+// EnsureAttachTarget is EnsureLinkTarget for the ATTACH direction, and the
+// question that picks between them is:
+//
+//	WHOSE RECORD CHANGES?
+//
+// If the shared record only supplies a VALUE to a row the caller owns — a
+// contact named on their new deal, a company on their offer, a parent named on
+// a company they are editing — that is a REFERENCE, and EnsureLinkTarget's
+// visibility answer is the whole of it. If the shared record GAINS something a
+// reader of it will now see — an activity filed onto it, a file hung on it, a
+// membership, a tag — that is a write to their record, and this is the probe.
+//
+// What it narrows is the share arm and nothing else: a record reachable only
+// through a `read` grant is refused, a `write` grant passes, and the own/team
+// arms are untouched. So it is NOT write authority — a rep may still file work
+// against a record another team owns, which is how this product works on
+// purpose and what four integration tests say with their reasons beside them.
+// Applying the write-authority predicate here would have imported the row-scope
+// half and answered a question nobody asked.
+//
+// The two refusals are different on purpose. A record the caller cannot see at
+// all answers NOT FOUND, because existence stays hidden; a record they can see
+// through a read-only share answers PERMISSION DENIED, because they already
+// know it exists — the share told them.
+func EnsureAttachTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	// Visibility first, and it also takes the FOR SHARE lock every caller of
+	// this probe needs before it writes — the same pairing EnsureWritable makes
+	// with its own visibility probe, for the same reason.
+	if err := EnsureLinkTarget(ctx, tx, table, id); err != nil {
+		return err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos := arg(id)
+	clause, err := AttachClauseFor(ctx, table, "", arg)
+	if err != nil {
+		return err
+	}
+	if clause == "" {
+		// No narrowing to apply: the caller reads every row of this table, so
+		// the visibility probe above already answered everything this one could.
+		return nil
+	}
+	var permitted bool
+	if err := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND %s)`, table, idPos, clause),
+		args...).Scan(&permitted); err != nil {
+		return err
+	}
+	if !permitted {
+		return apperrors.ErrPermissionDenied
 	}
 	return nil
 }

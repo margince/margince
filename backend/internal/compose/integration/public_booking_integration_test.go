@@ -150,7 +150,7 @@ func assertAnonymousAvailability(t *testing.T, e *apptest.AppEnv, base, window s
 
 // assertBookingRequiresValidConsent checks consent is validated before
 // any write: no consent and a bogus purpose are both 422s that leave
-// zero person rows behind.
+// zero contact rows behind.
 func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, purposeID string, monday time.Time) {
 	t.Helper()
 	// A booking without consent is refused before any write.
@@ -174,10 +174,10 @@ func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, pu
 		t.Fatalf("booking with unknown purpose → %d, want 422", status)
 	}
 	// A grant that cannot say what was shown is refused the same way, and for
-	// the same reason it is checked at this door: the person is created before
+	// the same reason it is checked at this door: the contact is created before
 	// the consent is recorded, so a refusal further in would leave the row
 	// behind. This endpoint is anonymous, which makes that a way to grow the
-	// person table one rejected request at a time.
+	// contact table one rejected request at a time.
 	// A REAL purpose, so the missing wording is the only thing wrong with this
 	// request. With the bogus id above it would be refused by the purpose check
 	// and pass whether or not the wording rule exists at all.
@@ -189,18 +189,18 @@ func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, pu
 	if status := publicCall(t, e, "POST", base, noWording, nil, nil); status != 422 {
 		t.Fatalf("booking consent without wording → %d, want 422", status)
 	}
-	var persons int
-	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM person`).Scan(&persons); err != nil {
+	var contacts int
+	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM contact`).Scan(&contacts); err != nil {
 		t.Fatal(err)
 	}
-	if persons != 0 {
-		t.Fatalf("refused bookings left %d person rows, want 0", persons)
+	if contacts != 0 {
+		t.Fatalf("refused bookings left %d contact rows, want 0", contacts)
 	}
 }
 
 // bookHappyPathSlot books the first slot (201 with the slot and NOTHING
 // else disclosed) plus a second slot under a case-folded email,
-// asserting the booker lands as ONE person. Returns the first booking
+// asserting the booker lands as ONE contact. Returns the first booking
 // body so the taken slot can be re-posted.
 func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent AnyMap) AnyMap {
 	t.Helper()
@@ -215,11 +215,25 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 	if status := publicCall(t, e, "POST", base, booking, nil, &confirmation); status != http.StatusCreated {
 		t.Fatalf("booking → %d %v", status, confirmation)
 	}
-	if len(confirmation) != 2 || confirmation["start"] == nil || confirmation["end"] == nil {
-		t.Fatalf("confirmation discloses more than the slot: %v", confirmation)
+	// NAMED, not counted. The rule is that this anonymous answer discloses
+	// nothing ABOUT THE RECORD — no contact id, no existing contact, no history
+	// — and a field count enforced that only by accident: it also refused
+	// facts about the caller's own request, which disclose nothing at all. The
+	// booking and marketing outcomes are two such facts, and the booker needs
+	// the second, because a ticked box whose question could not be asked leaves
+	// them waiting for a mail that is not coming.
+	allowed := map[string]bool{"start": true, "end": true, "booking": true, "marketing": true}
+	for key := range confirmation {
+		if !allowed[key] {
+			t.Fatalf("confirmation discloses %q, which is not the slot or the outcome of this "+
+				"request: %v", key, confirmation)
+		}
+	}
+	if confirmation["start"] == nil || confirmation["end"] == nil {
+		t.Fatalf("confirmation does not name the slot it booked: %v", confirmation)
 	}
 
-	// The booker exists once; a second booking re-uses the person.
+	// The booker exists once; a second booking re-uses the contact.
 	second := AnyMap{
 		"start": monday.Add(3 * time.Hour), "end": monday.Add(3*time.Hour + 30*time.Minute),
 		"booker":  AnyMap{"name": "Anna Anonymous", "email": "ANNA@visitor.example"},
@@ -228,12 +242,12 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 	if status := publicCall(t, e, "POST", base, second, nil, nil); status != http.StatusCreated {
 		t.Fatalf("second booking → %d", status)
 	}
-	var persons int
-	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM person`).Scan(&persons); err != nil {
+	var contacts int
+	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM contact`).Scan(&contacts); err != nil {
 		t.Fatal(err)
 	}
-	if persons != 1 {
-		t.Fatalf("idempotent-on-email booker landed as %d persons, want 1", persons)
+	if contacts != 1 {
+		t.Fatalf("idempotent-on-email booker landed as %d contacts, want 1", contacts)
 	}
 	return booking
 }
@@ -275,10 +289,10 @@ func assertBookingProofAndProvenance(t *testing.T, e *apptest.AppEnv) {
 func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, purposeID string, consent AnyMap) {
 	t.Helper()
 	var annaID string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM person`).Scan(&annaID); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM contact`).Scan(&annaID); err != nil {
 		t.Fatal(err)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+annaID+"/consent", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts/"+annaID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
@@ -293,7 +307,7 @@ func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base 
 	}
 	var stateAfter string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT state FROM person_consent WHERE person_id = $1 AND purpose_id = $2`,
+		`SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
 		annaID, purposeID).Scan(&stateAfter); err != nil {
 		t.Fatal(err)
 	}
@@ -377,5 +391,50 @@ func TestPublicBookingRateLimited(t *testing.T) {
 	}
 	if last != http.StatusTooManyRequests {
 		t.Fatalf("21st burst booking → %d, want 429", last)
+	}
+}
+
+// The anonymous page names no purpose, and the door answers with its own.
+//
+// This is the shape the published page actually posts, and the reason it is a
+// scenario of its own rather than a variant above: every other case here reads
+// the installation's real purpose id from `GET /v1/consent-purposes` first,
+// which is an admin read. A page served to a stranger cannot make it, there is
+// no anonymous read of the catalog, and purpose ids are per-installation uuids
+// minted at seed time — so a page that names one is naming a value nobody gave
+// it. Supplying the id on the booker's behalf is a test standing in for
+// production, and it passed while no installation's booking page worked at all.
+//
+// What is asserted is not just the 201: the grant must land on the
+// TRANSACTIONAL purpose. A door that resolved to whichever purpose came first
+// would answer 201 too, having written a stranger a grant under a marketing
+// lane they never saw.
+func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	base := "/v1/public/booking/" + bookingSlug(t, e)
+	monday := nextMonday()
+
+	booking := AnyMap{
+		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
+		"subject": "Intro call",
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"consent": AnyMap{
+			"policy_version": "pp-2026-01",
+			"wording":        "You agree we may contact you about this meeting.",
+		},
+	}
+	if status := publicCall(t, e, "POST", base, booking, nil, nil); status != http.StatusCreated {
+		t.Fatalf("a booking naming no purpose → %d, want 201 — the published page cannot name one", status)
+	}
+
+	var key, state string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT p.key, c.state
+		FROM contact_consent c JOIN consent_purpose p ON p.id = c.purpose_id`).Scan(&key, &state); err != nil {
+		t.Fatalf("reading the grant the booking recorded: %v", err)
+	}
+	if key != "transactional" || state != "granted" {
+		t.Fatalf("the booking granted %q=%q, want transactional=granted", key, state)
 	}
 }

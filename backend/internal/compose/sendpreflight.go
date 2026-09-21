@@ -7,7 +7,7 @@ package compose
 // flows write to (telegram-oa design §8.1). It sits apart from the transmit lane
 // in commsjobs.go because it answers a different question at a different moment:
 // not "which credential carries this delivery", but "is there a credential at
-// all", asked while the person who can do something about the answer is still on
+// all", asked while the contact who can do something about the answer is still on
 // the screen.
 //
 // Which table holds that credential is the whole subtlety, and it is why this is
@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,6 +95,11 @@ func (s *Server) mailAppConfigured(provider string) bool {
 		return s.gmailAppConfigured
 	case providerGraph:
 		return s.graphAppConfigured
+	case testmailbox.Name:
+		// No credential to check — the deployment flag itself IS the whole
+		// configuration question for this connector, already recorded on
+		// s.captureConfig by WithCaptureConfig (compose/capture.go).
+		return s.captureConfig.AllowTestMailbox
 	default:
 		return false
 	}

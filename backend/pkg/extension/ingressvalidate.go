@@ -20,27 +20,31 @@ import (
 // Whether System is one the CALLER declared, and whether the caller may ingest
 // at all, are the core's checks — made at the port against the invocation, for
 // the same reason a Change's entity namespace is.
+// Every refusal carries its CLASS as well as its sentence (see
+// ingressrefusal.go): the sentence quotes the record back and so cannot be
+// stored, while the class is what the core counts so that a connector whose
+// every record is refused stops presenting as a quiet one.
 func (r Record) Validate() error {
-	if err := r.validateKey(); err != nil {
+	if err := refuse(RefusalKey, r.validateKey()); err != nil {
 		return err
 	}
-	if err := r.Activity.validate(); err != nil {
+	if err := refuse(RefusalActivity, r.Activity.validate()); err != nil {
 		return err
 	}
-	if err := r.validateAddresses(); err != nil {
+	if err := refuse(RefusalAddresses, r.validateAddresses()); err != nil {
 		return err
 	}
-	if err := r.Counterparty.validate(); err != nil {
+	if err := refuse(RefusalCounterparty, r.Counterparty.validate()); err != nil {
 		return err
 	}
-	if err := r.validateParticipants(); err != nil {
+	if err := refuse(RefusalParticipants, r.validateParticipants()); err != nil {
 		return err
 	}
 	if len(r.ThreadKey) > MaxThreadKeyLength {
-		return fmt.Errorf("extension: the thread key is %d bytes, over the %d-byte cap", len(r.ThreadKey), MaxThreadKeyLength)
+		return refuse(RefusalSize, fmt.Errorf("extension: the thread key is %d bytes, over the %d-byte cap", len(r.ThreadKey), MaxThreadKeyLength))
 	}
 	if len(r.Raw) > MaxRawBytes {
-		return fmt.Errorf("extension: the raw record is %d bytes, over the %d-byte cap every landed record pays for", len(r.Raw), MaxRawBytes)
+		return refuse(RefusalSize, fmt.Errorf("extension: the raw record is %d bytes, over the %d-byte cap every landed record pays for", len(r.Raw), MaxRawBytes))
 	}
 	return nil
 }
@@ -97,12 +101,12 @@ func (r Record) validateAddresses() error {
 // can absorb — it is a row that would say somebody unnameable was present, and
 // the core drops it silently. A unit reading its own refusal here learns that
 // its mapping lost the field, which is the bug; a silent drop reports a
-// four-person group as a three-person one and nothing fails.
+// four-contact group as a three-contact one and nothing fails.
 //
 // Over the cap is a refusal of the RECORD rather than a truncation, for the
 // reason the cap exists: half a broadcast list reads like a small conversation,
 // and a unit told which bound it crossed can decide what its provider sent,
-// where a silent trim leaves it believing a sixty-person group landed whole.
+// where a silent trim leaves it believing a sixty-contact group landed whole.
 func (r Record) validateParticipants() error {
 	if len(r.Participants) > MaxParticipants {
 		return fmt.Errorf("extension: the record names %d participants, over the cap of %d — past it a roster is a broadcast list rather than a conversation, and the record is refused rather than trimmed to look like a small one",

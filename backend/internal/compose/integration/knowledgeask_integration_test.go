@@ -118,7 +118,7 @@ func TestACorpusWithADocumentStillIngestingIsNotReady(t *testing.T) {
 	ae.upload(t, "second.md", "text/markdown", prose(1))
 
 	state, passages := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotReady)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady)
 	if len(passages) != 0 {
 		t.Fatalf("a not_ready corpus returned %d passages", len(passages))
 	}
@@ -130,7 +130,7 @@ func TestACorpusWithNoDocumentsAtAllIsNotReady(t *testing.T) {
 	if err != nil {
 		t.Fatalf("retrieve: %v", err)
 	}
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotReady)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady)
 	if len(passages) != 0 {
 		t.Fatalf("an empty corpus returned %d passages", len(passages))
 	}
@@ -147,7 +147,7 @@ func TestAFailedDocumentDoesNotHoldTheCorpusNotReady(t *testing.T) {
 
 	ae.embedder.vectors["how is a message filed"] = []float32{1, 0, 0, 0}
 	state, passages := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeAnswered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
 	if len(passages) == 0 {
 		t.Fatal("a failed sibling document made the corpus unanswerable")
 	}
@@ -161,7 +161,7 @@ func TestVectorsUnderASupersededIdentityReadAsNotReady(t *testing.T) {
 	ae.embedder.identity = "fake/other@4"
 
 	state, passages := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotReady)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady)
 	if len(passages) != 0 {
 		t.Fatalf("a superseded-binding corpus returned %d passages", len(passages))
 	}
@@ -175,7 +175,7 @@ func TestNoEmbedLaneBoundIsRetrievalUnavailable(t *testing.T) {
 	callsBefore := ae.embedder.calls
 
 	state, passages := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeRetrievalUnavailable)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeRetrievalUnavailable)
 	if len(passages) != 0 {
 		t.Fatalf("an unbound installation returned %d passages", len(passages))
 	}
@@ -196,7 +196,7 @@ func TestAQuestionBelowTheFloorIsNotCoveredWithoutAModelCall(t *testing.T) {
 	callsBefore := ae.embedder.calls
 
 	state, passages := ae.ask(t, "what is the capital of France")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotCovered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered)
 	if len(passages) != 0 {
 		t.Fatalf("a sub-floor question returned %d passages", len(passages))
 	}
@@ -214,7 +214,7 @@ func TestAQuestionJustAboveTheFloorRetrievesPassages(t *testing.T) {
 	ae.embedder.vectors["how is a message filed"] = []float32{0.6, 0.8, 0, 0}
 
 	state, passages := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeAnswered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
 	if len(passages) != 1 {
 		t.Fatalf("retrieved %d passages, want 1", len(passages))
 	}
@@ -237,14 +237,14 @@ func TestRaisingTheFloorTurnsTheSameQuestionIntoARefusal(t *testing.T) {
 	ae := newAskEnv(t)
 	ae.embedder.vectors["how is a message filed"] = []float32{0.6, 0.8, 0, 0}
 	state, _ := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeAnswered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
 
 	floor := 0.9
 	if _, err := ae.store.EditCorpus(ae.ctx, ae.corpus, knowledge.UpdateCorpus{MinSimilarity: &floor}); err != nil {
 		t.Fatalf("raise the floor: %v", err)
 	}
 	state, passages := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotCovered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered)
 	if len(passages) != 0 {
 		t.Fatalf("a raised floor still returned %d passages", len(passages))
 	}
@@ -267,7 +267,7 @@ func TestAnArchivedDocumentsChunksAreNeverRetrieved(t *testing.T) {
 		t.Fatalf("an archived document's passages were retrieved: %d", len(passages))
 	}
 	// And the corpus says it holds nothing rather than blaming the question.
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotReady)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady)
 }
 
 // A corpus being re-embedded says so. not_ready without the distinction invites
@@ -278,7 +278,7 @@ func TestACorpusBeingReindexedIsNotReady(t *testing.T) {
 	ae.env.WsExec(t, `UPDATE knowledge_corpus SET reindexing = true WHERE id = $1`, ae.corpus)
 
 	state, _ := ae.ask(t, "how is a message filed")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotReady)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady)
 	if state.Corpus.TopicStatement == "" {
 		t.Fatal("the refusal carries no topic statement to quote back")
 	}
@@ -291,7 +291,7 @@ func TestAnEmptyQuestionIsNotCoveredWithoutEmbeddingAnything(t *testing.T) {
 	callsBefore := ae.embedder.calls
 
 	state, passages := ae.ask(t, "   \n  ")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotCovered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered)
 	if len(passages) != 0 {
 		t.Fatalf("an empty question returned %d passages", len(passages))
 	}
@@ -308,7 +308,7 @@ func TestAZeroQuestionVectorIsNotCoveredRatherThanRanked(t *testing.T) {
 	ae.embedder.vectors["???"] = []float32{0, 0, 0, 0}
 
 	state, passages := ae.ask(t, "???")
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeNotCovered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered)
 	if len(passages) != 0 {
 		t.Fatalf("a zero question vector ranked %d passages", len(passages))
 	}
@@ -347,7 +347,7 @@ func TestARepMayAskACorpus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a rep must be able to ask a corpus: %v", err)
 	}
-	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeAnswered)
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
 	if len(passages) == 0 {
 		t.Fatal("a rep's ask retrieved nothing")
 	}

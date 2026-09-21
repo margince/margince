@@ -103,7 +103,7 @@ function byConfidence(a: CompanySiteReadFact, b: CompanySiteReadFact): number {
  * The keys a fresh read arrives with already ticked.
  *
  * A default selection is a JUDGEMENT, not a boast: a fact the shared confidence
- * scale calls low is exactly the one a person has to look at, so it arrives
+ * scale calls low is exactly the one a contact has to look at, so it arrives
  * unticked. What is left is taken most-certain-first, so when the contract
  * ceiling bites it drops the least certain fact rather than whichever ones the
  * read happened to emit last.

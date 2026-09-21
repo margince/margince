@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,7 +34,7 @@ import (
 // duration, so the REST and MCP transports cannot drift.
 //
 // The business-hours envelope is NOT here any more. Which hours a host is
-// bookable in is a fact about that PERSON — see docs/explanation/scheduling.md —
+// bookable in is a fact about that CONTACT — see docs/explanation/scheduling.md —
 // so it arrives through hostHours rather than being a pair of numbers this
 // package holds for everybody.
 const (
@@ -96,6 +95,21 @@ var (
 	errBookingEndNotAfterStart = &SchedulingArgumentError{
 		Field: "end", Code: "invalid_date_range",
 		Message: "`end` must be later than `start`",
+	}
+	// `links` carries minItems: 1 in crm.yaml, and nothing generated enforces
+	// it: the decoder fills the slice and asks no question about its length. So
+	// this is where the contract's bound becomes true, on every door — REST,
+	// the public page, and the tool seam's post-approval execute.
+	//
+	// The bound is not bookkeeping. A meeting linked to nothing lands on no
+	// record's timeline, which means nobody encounters it again by looking at
+	// the account, the contact or the deal it was about; the only way back to
+	// it is to already know it exists. The account send refuses an unlinked
+	// message for the same reason and in the same words.
+	errBookingLinksEmpty = &SchedulingArgumentError{
+		Field: "links", Code: codeRequired,
+		Message: "`links` needs at least one entry: name the contact, company, deal, lead or " +
+			"project the meeting is about — one attached to nothing appears on no timeline",
 	}
 )
 
@@ -270,7 +284,7 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	// — the spec's calendar_delegate grant (features/04 §1) is not yet
 	// adopted in this build. The admin ROLE, not an unbounded row scope:
 	// ops, read_only and management all read every row, and none of them is
-	// thereby a calendar delegate for everyone in the organization.
+	// thereby a calendar delegate for everyone in the company.
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return crmcontracts.Activity{}, apperrors.ErrPermissionDenied
@@ -282,6 +296,9 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	}
 	if !in.End.After(in.Start) {
 		return crmcontracts.Activity{}, errBookingEndNotAfterStart
+	}
+	if len(in.Links) == 0 {
+		return crmcontracts.Activity{}, errBookingLinksEmpty
 	}
 	// The conflict probe reads only the calendar the caller may write
 	// (their own, or any as admin — gated above) and gives the polite
@@ -324,8 +341,11 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 		OccurredAt:    &occurred,
 		HostUserID:    &in.Host,
 		MeetingStatus: &booked,
-		Links:         in.Links,
-		Source:        source,
+		// This door takes the slot, which is what the overlap guard refuses a
+		// second of. Both booking doors arrive here; nothing else sets it.
+		ClaimsHostSlot: true,
+		Links:          in.Links,
+		Source:         source,
 	})
 	if _, excluded := storekit.ExclusionViolation(err); excluded {
 		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}
@@ -415,40 +435,8 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 	// give it. Recording it is mandatory once the field is present; a
 	// process role composed without the consent seam refuses rather than
 	// booking with an unrecorded consent.
-	if req.Consent != nil {
-		if h.publicConsent == nil {
-			httperr.Write(w, r, apperrors.ErrPermissionDenied)
-			return
-		}
-		if req.Consent.PolicyVersion == "" {
-			httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the subject is required"))
-			return
-		}
-		// Both halves of the proof row are settled before anything is written,
-		// for the reason stated above: recording is mandatory once the field is
-		// present, and a grant that cannot say what the subject read is not
-		// demonstrable.
-		if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
-			httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the subject is required"))
-			return
-		}
-		personID, ok := consentSubjectLink(w, r, in.Links)
-		if !ok {
-			return
-		}
-		purposeID := ids.UUID(req.Consent.PurposeId)
-		if err := h.publicConsent.ValidatePurpose(r.Context(), purposeID); err != nil {
-			writeStoreErr(w, r, err)
-			return
-		}
-		if err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
-			PurposeID:     purposeID,
-			PolicyVersion: req.Consent.PolicyVersion,
-			Wording:       req.Consent.Wording,
-		}); err != nil {
-			writeStoreErr(w, r, err)
-			return
-		}
+	if !h.captureBookingConsent(w, r, req.Consent, in.Links) {
+		return
 	}
 
 	booked, err := h.store.BookMeeting(r.Context(), in)
@@ -465,28 +453,28 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 }
 
 // consentSubjectLink resolves which linked record the CaptureConsent
-// passthrough attaches to: exactly one linked person. The ConsentCapturer
-// seam is person-keyed (the compose adapter records against a person), so
+// passthrough attaches to: exactly one linked contact. The ConsentCapturer
+// seam is contact-keyed (the compose adapter records against a contact), so
 // a lead-only booking cannot carry consent through this endpoint yet —
 // that refuses loudly rather than accepting a consent it would not
 // record. Returns false after writing the response.
 func consentSubjectLink(w http.ResponseWriter, r *http.Request, links []ActivityLinkInput) (ids.UUID, bool) {
-	var persons []ids.UUID
+	var contacts []ids.UUID
 	for _, l := range links {
-		if l.EntityType == "person" {
-			persons = append(persons, l.EntityID)
+		if l.EntityType == "contact" {
+			contacts = append(contacts, l.EntityID)
 		}
 	}
-	switch len(persons) {
+	switch len(contacts) {
 	case 1:
-		return persons[0], true
+		return contacts[0], true
 	case 0:
 		httperr.Write(w, r, httperr.Validation("consent", "subject_required",
-			"recording consent with a booking requires a linked person to attach it to"))
+			"recording consent with a booking requires a linked contact to attach it to"))
 		return ids.UUID{}, false
 	default:
 		httperr.Write(w, r, httperr.Validation("consent", "subject_ambiguous",
-			"recording consent with a booking requires exactly one linked person"))
+			"recording consent with a booking requires exactly one linked contact"))
 		return ids.UUID{}, false
 	}
 }

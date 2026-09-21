@@ -29,6 +29,9 @@ type Answers = Readonly<{
   connectorStatus: "connected" | "reauth_required";
   licenseState: "valid" | "absent" | "rejected";
   approvals: number;
+  /** What `/ai/calls` answers. It feeds the runtime row's served model and
+   *  nothing else — the recap is the feed's, below — so one row is the whole
+   *  fixture and an empty list is the installation that has never called. */
   calls: readonly Readonly<{ task: string; minutesAgo: number }>[];
   /** What `/me/ai-activity` answers. The agent's own states come from here and
    *  from nowhere else, so a story for one is a story about this feed. */
@@ -36,6 +39,11 @@ type Answers = Readonly<{
   recent?: readonly unknown[];
   /** A mailbox import in flight, as the connections read reports it. */
   importing?: Readonly<{ scanned: number; estimated: number | null }>;
+  /** What the month cost, in minor units, when anything in it was priced.
+   *  Absent is the ordinary case and a real one: a month where nothing carried
+   *  a price prints no figure at all, which is a different statement from
+   *  "this cost nothing". */
+  pricedMinor?: number;
 }>;
 
 /** One occurrence as the wire spells it. */
@@ -49,6 +57,16 @@ function occurrence(over: Readonly<Record<string, unknown>>) {
   };
 }
 
+/** A settled occurrence, as the recap reads them: finished, and newest first. */
+function settled(minutesAgo: number, over: Readonly<Record<string, unknown>>) {
+  return occurrence({
+    state: "done",
+    started_at: new Date(NOW - (minutesAgo + 1) * 60_000).toISOString(),
+    finished_at: new Date(NOW - minutesAgo * 60_000).toISOString(),
+    ...over,
+  });
+}
+
 // The two objects the section actually asks about: `license` gates the posture
 // the orb reads (`useLicensePosture`) and `automation:update` gates the runtime
 // row's `/ai/calls`. Granting exactly these rather than a blanket allow is what
@@ -60,7 +78,19 @@ const OPERATOR: GrantSpec = {
   automation: ["update"],
 };
 
-const NOW = Date.parse("2026-08-19T10:00:00Z");
+// The month's spend is served on `ai_diagnostics:read` and is the
+// administrator's figure, so the story that shows it holds that grant on top of
+// the two above. Kept apart from OPERATOR because every other story here is
+// about an installation posture rather than about what this seat may read.
+const SPEND_READER: GrantSpec = { ...OPERATOR, ai_diagnostics: ["read"] };
+
+// Every fixture below is an OFFSET from this, in minutes, so it has to be the
+// moment the catalog is opened rather than the moment the file was written. A
+// frozen literal here was already reading as "4 minutes ago" for a call that
+// happened last month, and the resting rotation now ages a settled run out
+// after a few hours (agentrail-resting.ts) — so a fixed date would quietly
+// empty the settled half of every story on this page.
+const NOW = Date.now();
 
 function callRow(task: string, minutesAgo: number, index: number) {
   return {
@@ -156,8 +186,40 @@ function story(
         }),
       "GET /ai/usage": () =>
         jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+          // One priced task and one the server could not price, which is the
+          // shape the month actually arrives in: the total is the priced lines
+          // and the unpriced one adds nothing to it.
+          days:
+            answers.pricedMinor === undefined
+              ? []
+              : [
+                  {
+                    date: "2026-08-01",
+                    tasks: [
+                      {
+                        task: "enrich",
+                        tier: "cheap_cloud",
+                        calls: 2,
+                        tokens_in: 100,
+                        tokens_out: 40,
+                        cost_est_minor: answers.pricedMinor,
+                      },
+                      {
+                        task: "summarize",
+                        tier: "cheap_cloud",
+                        calls: 1,
+                        tokens_in: 30,
+                        tokens_out: 10,
+                      },
+                    ],
+                  },
+                ],
+          budget: {
+            monthly_tokens: 0,
+            spent_tokens: 0,
+            band: "normal",
+            currency: "USD",
+          },
         }),
       "GET /me/ai-activity": () =>
         jsonResponse({
@@ -180,11 +242,41 @@ const HEALTHY: Answers = {
   connectorStatus: "connected",
   licenseState: "valid",
   approvals: 0,
-  calls: [
-    { task: "growth_fit", minutesAgo: 12 },
-    { task: "summarize", minutesAgo: 47 },
-    { task: "brief_ranking", minutesAgo: 190 },
-  ],
+  calls: [{ task: "summarize", minutesAgo: 12 }],
+};
+
+/**
+ * A day of finished work, as the panel's recap reads it.
+ *
+ * Two of the three name the record they were about, which is the half of a
+ * recap row a reader can act on — the name is the way back to the account. The
+ * third names none, because most occurrences are about no single record and the
+ * row has to read well without one.
+ *
+ * It is the PanelOpen story's alone rather than HEALTHY's: `recent` also feeds
+ * the card's resting rotation, so putting it in the shared fixture would put a
+ * finished run into the line of every story in this file.
+ */
+const A_DAYS_WORK = [
+  settled(12, {
+    kind: "site_read",
+    subject_label: "Acme GmbH",
+    subject_type: "company",
+    subject_id: "019f7e65-0000-7000-8000-0000000000b2",
+  }),
+  settled(47, {
+    kind: "summarize",
+    subject_label: "Ana Roth",
+    subject_type: "contact",
+    subject_id: "019f7e65-0000-7000-8000-0000000000b3",
+  }),
+  settled(190, { kind: "morning_brief" }),
+];
+
+/** The one gesture every panel story starts with. */
+const openThePanel: NonNullable<Story["play"]> = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: /open/i }));
 };
 
 const meta: Meta<typeof AgentRail> = {
@@ -194,8 +286,39 @@ const meta: Meta<typeof AgentRail> = {
 export default meta;
 type Story = StoryObj<typeof AgentRail>;
 
-/** Idle: every source reachable, nothing waiting, a model bound, a valid licence. */
+/** Idle: every source reachable, nothing waiting, a model bound, a valid licence.
+ *
+ *  Which makes it the QUIET installation, and that is most installations most of
+ *  the afternoon: one true reading, and it is "Nothing needs you". What the line
+ *  says between turns of it are the tips — standing facts about the product
+ *  rather than invented work, one per pass and a different one next time round
+ *  (agentrail-copy.ts). Watch it for half a minute rather than a moment; the
+ *  first tip names Home and links it, and it is dropped on Home itself, so this
+ *  story is mounted on Companies where the whole catalog applies.
+ *
+ *  It is also the block's last line with no figure on it: this seat holds no
+ *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what
+ *  makes that state legible — the disclosure keeps its place instead of moving
+ *  up into the corner when there is nothing to spend beside it. */
 export const Idle: Story = { render: story(HEALTHY) };
+
+/** The month's spend, on the block's last line with the chevron that opens the
+ *  panel behind it: one figure, the scope it was spent in, and the disclosure,
+ *  all on one baseline. The seat is an administrator holding
+ *  `ai_diagnostics:read`, which is the only seat the server serves it to. */
+export const SpendReported: Story = {
+  render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
+};
+
+/** The same figure in dark, and it is the money that needs looking at rather
+ *  than the block: the figure and the scope beside it are both `--textMeta` at
+ *  eyebrow size, on a rail whose ground is the translucent `--pane` over the
+ *  page's glow — so the smallest type on the surface stands on a composite that
+ *  each theme mixes differently. */
+export const SpendReportedDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
+};
 
 /** Ingest: evidence arriving. Which half of the live vocabulary a run puts the
  *  orb in comes from the KIND of work (ai-activity-orb.ts), and a document being
@@ -268,6 +391,64 @@ export const DevelopmentModel: Story = {
   render: story({ ...HEALTHY, aiState: "development" }),
 };
 
+/**
+ * The line changing, which is the only motion this block has of its own.
+ *
+ * Two true readings and a queue, so the resting rotation has more than one
+ * thing to say and swaps every `IDLE_HOLD_MS`. Watch the slot rather than the
+ * orb: the outgoing sentence fades out under the incoming one over a single
+ * `--dur-enter`, the two-line room holds still, and nothing under it moves.
+ *
+ * Every story on this page plays the same crossfade once at mount — the
+ * section's own reads are named ones, so the ticker says "Checking what needs
+ * you" and hands the slot back when the read settles (`agentrail-ticker.ts`).
+ * This is the one that keeps doing it.
+ */
+export const IdleRotation: Story = {
+  render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
+};
+
+/** The rotation in dark, where the crossfade is the thing to watch: both layers
+ *  are `--textPrimary` and the outgoing one is drawn OVER the incoming one, so
+ *  a fade whose midpoint reads as two sentences on light can read as one
+ *  smeared sentence on a ground with less contrast to spend. */
+export const IdleRotationDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
+};
+
+/**
+ * What the agent got done, rotating.
+ *
+ * Three runs that settled in the last hour, and the line walks them rather than
+ * pinning the newest. Pinning is what this used to do, and the cost only showed
+ * up hours later: one sentence about one contact, in the corner of every screen,
+ * from the moment it landed until midnight. A run ages out of this rotation
+ * after a few hours while staying in the panel's recap all day
+ * (agentrail-resting.ts) — the two answer different questions, and only one of
+ * them is a status light.
+ */
+export const FinishedWorkRotation: Story = {
+  render: story({
+    ...HEALTHY,
+    recent: [
+      settled(3, {
+        kind: "summarize",
+        subject_label: "Sabine Mayer",
+        subject_type: "contact",
+        subject_id: "019f7e65-0000-7000-8000-0000000000b4",
+      }),
+      settled(26, {
+        kind: "site_read",
+        subject_label: "Acme GmbH",
+        subject_type: "company",
+        subject_id: "019f7e65-0000-7000-8000-0000000000b2",
+      }),
+      settled(58, { kind: "morning_brief" }),
+    ],
+  }),
+};
+
 /** A fresh installation: a model is bound and nothing has run through it yet. */
 export const NothingHasRunYet: Story = {
   render: story({ ...HEALTHY, calls: [] }),
@@ -296,13 +477,63 @@ export const LeveledRail: Story = {
  * story in the catalog after it. Its two appearances are `Switch`'s own.
  */
 export const PanelOpen: Story = {
-  render: story({ ...HEALTHY, approvals: 3 }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /expand/i }),
-    );
-  },
+  render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
+  play: openThePanel,
+};
+
+/**
+ * The same panel in dark, which is where its hierarchy is hardest to hold.
+ *
+ * Everything on it that is not body text is a derived value — the head's wash
+ * is a `color-mix` of the state's tone into the elevated ground, the terms are
+ * `--textSecondary`, the recap's marks are the state families — and each of
+ * those is mixed differently in the two themes. A head that separates from the
+ * body on light can read as one flat block here.
+ */
+export const PanelOpenDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
+  play: openThePanel,
+};
+
+/**
+ * Everything the panel can report at once, which is the case its structure is
+ * for: an installation on the development path, a mailbox it cannot reach, no
+ * licence, a month with a figure on it, and a day's work behind it.
+ *
+ * Both faults are badges above the facts, the facts are terms and values, and
+ * the month's figure is said once, in the head.
+ */
+export const PanelStanding: Story = {
+  render: story(
+    {
+      ...HEALTHY,
+      aiState: "development",
+      connectorStatus: "reauth_required",
+      licenseState: "absent",
+      approvals: 3,
+      running: [occurrence({})],
+      recent: A_DAYS_WORK,
+      pricedMinor: 1_240,
+    },
+    "expanded",
+    SPEND_READER,
+  ),
+  play: openThePanel,
+};
+
+/**
+ * The phone arm: the panel rises out of the bar's centre cell with a notch
+ * pointing back at the orb, and the whole report has 390px to stand in.
+ *
+ * `uat-phone` is what makes that true in the catalog — the gate drives the
+ * browser to 390px rather than asking the manager for a viewport it never
+ * applies (shell.stories.tsx says why).
+ */
+export const PanelOpenPhone: Story = {
+  tags: ["uat-phone"],
+  render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
+  play: openThePanel,
 };
 
 /**

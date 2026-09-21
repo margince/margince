@@ -54,11 +54,17 @@ type WinEvidenceArgs struct {
 // ever sets a field. The refusal it names is enforced by the win gate, not by
 // this text.
 //
+// The detail's maxLength is the ONE place a caller can learn the bound before
+// spending a request on it — the tool schema is what an agent plans against,
+// and a server-side refusal it could not have predicted costs a whole turn.
+// Its agreement with the contract and with the server's own constant is held by
+// TestTheWonReasonDetailBoundIsOneNumber.
+//
 // Held by: TestEveryDealMoveCarriesTheWinEvidenceClaim
 // (backend/gates/winevidencedoors_test.go)
 const winEvidenceProperties = `,
 	"won_without_contract_reason":{"type":"string","enum":["imported","purchase_order","verbal","renewal_by_email","other"],"description":"Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused."},
-	"won_without_contract_detail":{"type":"string","description":"What the reason was, required when it is other"}`
+	"won_without_contract_detail":{"type":"string","maxLength":500,"description":"What the reason was, required when it is other"}`
 
 type advanceDeal struct {
 	p      datasource.SystemOfRecordProvider

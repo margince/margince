@@ -1,0 +1,5 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__qualify_lead", "mcp__margince__promote_lead", "mcp__margince__disqualify_lead"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__qualify_lead", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__promote_lead", "input": {"trigger": "inbound_reply"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__disqualify_lead", "input": {}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I promoted Ines to a contact, disqualified Bruno, and kept Piet as a qualified lead.\n\nInes was promoted, Bruno disqualified, Piet qualified and kept — his company_name came off the mail domain as Brandsma Koeltechniek, and his title is still empty."}

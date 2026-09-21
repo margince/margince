@@ -1,8 +1,11 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import type { WorklistFilter } from "./worklist.queries";
 import { WorklistReadings } from "./worklist.readings";
 
 // What the strip above the queue claims, and what it refuses to claim.
@@ -25,6 +28,7 @@ function day(readings: Partial<WorklistReadingsData> = {}): Worklist {
     reach: [],
     counts: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 0,
       prospecting: 0,
@@ -35,10 +39,13 @@ function day(readings: Partial<WorklistReadingsData> = {}): Worklist {
   };
 }
 
-function draw(readings: Partial<WorklistReadingsData> = {}) {
+function draw(
+  readings: Partial<WorklistReadingsData> = {},
+  onLane: (filter: WorklistFilter) => void = () => {},
+) {
   return render(
     <LocaleProvider initial="en">
-      <WorklistReadings day={day(readings)} onLane={() => {}} />
+      <WorklistReadings day={day(readings)} onLane={onLane} />
     </LocaleProvider>,
   );
 }
@@ -66,23 +73,68 @@ describe("the worklist readings strip", () => {
   it("refuses to draw an amount whose currency the server would not name", () => {
     draw({ revenue_at_risk_minor: 384_500_00, revenue_currency: null });
 
-    expect(screen.getByText("No deal at risk could be priced")).toBeTruthy();
+    expect(
+      screen.getByText(en["worklist.readings.revenue.noFigure"]),
+    ).toBeTruthy();
+    // The reading names what it could not price rather than leaving the slot
+    // to state an absence twice.
+    expect(
+      screen.getByText(en["worklist.readings.revenue.unpriced"]),
+    ).toBeTruthy();
     // The raw minor units must not appear in any formatting.
     expect(screen.queryByText(/384/)).toBeNull();
     expect(screen.queryByText(/38.450.000/)).toBeNull();
   });
 
-  // Null is not zero. Zero says the pipeline is safe; absence says nobody can
+  // Null is not zero. Zero says nothing is drifting; absence says nobody can
   // tell, and a reader who cannot tell those apart is worse off than one shown
   // nothing.
   it("tells an unpriced day apart from a day with nothing at risk", () => {
     const absent = draw({ revenue_at_risk_minor: null });
-    expect(screen.getByText("No deal at risk could be priced")).toBeTruthy();
+    expect(
+      screen.getByText(en["worklist.readings.revenue.noFigure"]),
+    ).toBeTruthy();
     absent.unmount();
 
     draw({ revenue_at_risk_minor: 0, revenue_currency: "EUR" });
-    expect(screen.queryByText("No deal at risk could be priced")).toBeNull();
+    expect(
+      screen.queryByText(en["worklist.readings.revenue.noFigure"]),
+    ).toBeNull();
     expect(screen.getByText("€0")).toBeTruthy();
+    expect(
+      screen.getByText(en["worklist.readings.revenue.detail"]),
+    ).toBeTruthy();
+  });
+
+  // The unpriced arm used to be the one reading on this strip with no way out,
+  // and it is the one a reader most needs: the lane holds the drifting deals
+  // whether or not anybody priced them, and pricing them is the work.
+  it("opens the deals-at-risk lane whether or not the money could be priced", async () => {
+    const user = userEvent.setup();
+    const priced = vi.fn();
+    const unpriced = vi.fn();
+
+    const shown = draw(
+      { revenue_at_risk_minor: 384_500_00, revenue_currency: "EUR" },
+      priced,
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open",
+        description: "Revenue at risk",
+      }),
+    );
+    expect(priced).toHaveBeenCalledWith("deals_at_risk");
+    shown.unmount();
+
+    draw({ revenue_at_risk_minor: null }, unpriced);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open",
+        description: "Revenue at risk",
+      }),
+    );
+    expect(unpriced).toHaveBeenCalledWith("deals_at_risk");
   });
 
   // A source read to its bound makes every figure a floor. The caveat is under
@@ -103,9 +155,25 @@ describe("the worklist readings strip", () => {
   it("draws all four readings on a day with no work at all", () => {
     draw();
 
-    expect(screen.getByText("Revenue at risk")).toBeTruthy();
-    expect(screen.getByText("Buyer replies")).toBeTruthy();
-    expect(screen.getByText("Prospecting")).toBeTruthy();
-    expect(screen.getByText("Review")).toBeTruthy();
+    expect(screen.getByText(en["worklist.readings.revenue"])).toBeTruthy();
+    expect(screen.getByText(en["worklist.readings.replies"])).toBeTruthy();
+    expect(screen.getByText(en["worklist.readings.prospecting"])).toBeTruthy();
+    expect(screen.getByText(en["worklist.readings.review"])).toBeTruthy();
+  });
+
+  // ZERO IS A READING. A count of none is what the server counted, so the slot
+  // spells the number rather than reaching for an empty term — and the line
+  // under it still says what the figure was taken over, because a bare "0" with
+  // nothing beside it reads as a slot that failed to fill.
+  it("draws a count of none as the number it is", () => {
+    draw({ buyer_replies: 0 });
+
+    const card = screen
+      .getByText(en["worklist.readings.replies"])
+      .closest(".stat-card");
+    expect(card?.querySelector(".stat-card-value")?.textContent).toBe("0");
+    expect(
+      screen.getByText(en["worklist.readings.replies.detail"]),
+    ).toBeTruthy();
   });
 });

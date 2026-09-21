@@ -6,14 +6,14 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 
 // "My mail with this party is nobody else's."
 //
 // A hold is about the CORRESPONDENT rather than about any one message: holding
 // a lawyer's domain says that whatever passes between you is private, without
 // having to read each message to decide. It belongs on the record page because
-// that is where a person thinks about the correspondent — the Senders page
+// that is where a contact thinks about the correspondent — the Senders page
 // answers "what did the classifier decide", this answers "I have decided, about
 // this one".
 //
@@ -135,14 +135,13 @@ export function CounterpartyHoldRow({
 
   if (held) {
     return (
-      <div className="pe-rail-hold">
-        <p className="t-caption">
+      <div>
+        <p>
           {held.kind === "domain"
             ? t("hold.heldByDomain", { domain: held.value })
             : t("hold.heldByAddress")}
         </p>
         <Button
-          small
           variant="ghost"
           pending={lift.isPending}
           onClick={() => lift.mutate(held.id)}
@@ -152,30 +151,34 @@ export function CounterpartyHoldRow({
         {/* Said on the way OUT, not behind a confirm on the way in: lifting is
             the reversible half, and what surprises a reader is that it does not
             re-open what was already held. */}
-        <p className="t-caption">{t("hold.liftingWidensNothing")}</p>
+        <p>{t("hold.liftingWidensNothing")}</p>
       </div>
     );
   }
 
   return (
-    <div className="pe-rail-hold">
-      <p className="t-caption">{t("hold.notHeld")}</p>
+    <div>
+      <p>{t("hold.notHeld")}</p>
       <div className="card-actions">
-        <Button small variant="ghost" onClick={() => setAsking("address")}>
+        <Button variant="ghost" onClick={() => setAsking("address")}>
           {t("hold.holdAddress")}
         </Button>
         {/* A domain hold is the one worth having for an advisor: a firm answers
             from whichever address picked up the file. Offered as its own verb
             rather than a modifier, because the two reach very different sets. */}
-        <Button small variant="ghost" onClick={() => setAsking("domain")}>
+        {/* The label carries the domain itself, whose length nothing here
+            chooses — a subdomain under a regional TLD is routinely longer than
+            this rail is wide, and a button that will not wrap draws it past
+            both of its own edges. */}
+        <Button
+          variant="ghost"
+          className="btn-valuelabel"
+          onClick={() => setAsking("domain")}
+        >
           {t("hold.holdDomain", { domain })}
         </Button>
       </div>
-      {place.isError && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(place.error, t)}
-        </p>
-      )}
+      {place.isError && <RefusalLine error={place.error} />}
       <ConfirmModal
         open={asking !== null}
         onClose={() => setAsking(null)}

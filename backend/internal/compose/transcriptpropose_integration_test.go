@@ -232,6 +232,31 @@ func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 	if !strings.Contains(body, "Priya") || !strings.Contains(body, "line 3") {
 		t.Errorf("the task must carry provenance back to who promised it and where, got %q", body)
 	}
+	// The prose says where the promise came from; this is what lets a rep GO
+	// there. Without it the only route back was the record's history tab and a
+	// search for the meeting's exact subject.
+	source := e.wsString(t, `SELECT coalesce(source_activity_id::text, '') FROM activity
+		 WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if source != e.activity.String() {
+		t.Errorf("the task names %q as the meeting it came from, want the transcript it was read out of (%s)",
+			source, e.activity)
+	}
+}
+
+// A task the rep types names no meeting, and must not borrow one.
+func TestATaskNobodyReadOutOfAMeetingNamesNone(t *testing.T) {
+	e := setupTranscript(t)
+	subject := "Typed by a contact"
+	if _, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
+		Kind: "task", Subject: &subject, Source: "manual",
+	}); err != nil {
+		t.Fatalf("logging an ordinary task: %v", err)
+	}
+	source := e.wsString(t, `SELECT coalesce(source_activity_id::text, '') FROM activity
+		 WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if source != "" {
+		t.Errorf("a hand-written task names %q as its source; nothing read it out of anything", source)
+	}
 }
 
 func TestRejectingATranscriptProposalCreatesNothing(t *testing.T) {
@@ -571,7 +596,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 	}
 	// The day the REVIEWER approved, spelled the way the approval card spells
 	// it. The card renders the proposal's `due_date` string with no conversion
-	// at all, so this is literally what the person clicking Accept was looking
+	// at all, so this is literally what the contact clicking Accept was looking
 	// at; asserting the task against the same string is what makes "the
 	// approved day survives acceptance" a checkable claim rather than two
 	// separate ones about a stamp and a render. A proposal for the 8th came
@@ -676,7 +701,7 @@ func TestTheNamedColleagueGetsTheTask(t *testing.T) {
 //
 // A promise given to the wrong colleague is worse than one given to nobody: the
 // wrong colleague does not do it, and the right one never learns it was theirs.
-// The body still names who promised, so a person can route it.
+// The body still names who promised, so a contact can route it.
 func TestAnAmbiguousOwnerLeavesTheTaskUnassigned(t *testing.T) {
 	e := setupTranscript(t)
 	// The harness's three humans all display as "Rep".
@@ -699,7 +724,7 @@ func TestAnAmbiguousOwnerLeavesTheTaskUnassigned(t *testing.T) {
 }
 
 // A name nobody answers to assigns to nobody, and does not fall back to the
-// person who approved it. Approving a proposal is answering a question about
+// contact who approved it. Approving a proposal is answering a question about
 // somebody else's commitment, not volunteering for it.
 func TestAnOutsidersPromiseIsNotGivenToTheApprover(t *testing.T) {
 	e := setupTranscript(t)
@@ -754,6 +779,99 @@ func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
 	if assigned != 0 {
 		t.Errorf("%d task(s) were assigned on a first name — the one match a "+
-			"substring search finds is not the one a person meant", assigned)
+			"substring search finds is not the one a contact meant", assigned)
+	}
+}
+
+// The same for a reading that finds NOTHING to propose, which is the close that
+// used to run outside the lock: it answered ErrConflict for a reading the
+// erasure had deleted, and the job read that as a fault to retry — against a
+// reading that will never come back, on a transcript that no longer exists.
+func TestAReadingThatProposesNothingOverAnErasedTranscriptIsNotARetry(t *testing.T) {
+	e := setupTranscript(t)
+
+	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
+	if err != nil {
+		t.Fatalf("starting the reading: %v", err)
+	}
+	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	// A reply with nothing above the floor, and the erasure landing while it is
+	// out — so the run has neither proposals to stage nor a record to close.
+	brain := erasingBrain{
+		reply: groundedReply(t, 3, 0.1),
+		erase: func() {
+			if _, err := e.owner.Exec(t.Context(),
+				`DELETE FROM transcript_read WHERE activity_id = $1`, e.activity); err != nil {
+				t.Errorf("erasing the reading: %v", err)
+			}
+		},
+	}
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	if err := proposer.Read(e.ctx, e.Activities, started.ID, e.activity); err != nil {
+		t.Fatalf("the reading answered %v; a reading that found nothing and whose record is gone is "+
+			"finished, not a fault for the job to retry against the same absence", err)
+	}
+}
+
+// erasingBrain is the erasure landing WHILE the model call is out, which is
+// where it landed in the incident: the reading has loaded the lines and has not
+// staged anything yet, so the citing scrub finds nothing to scrub.
+type erasingBrain struct {
+	reply string
+	erase func()
+}
+
+func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.erase()
+	return model.Response{Text: b.reply}, nil
+}
+
+// The reading comes back to a transcript that no longer exists, and stages
+// nothing.
+//
+// Before the interlock it staged its proposals anyway — each quoting up to 500
+// characters of a body the erasure had just nulled and certified destroyed —
+// and only then discovered its own record was gone. Nothing revisits those
+// rows: the erasure set archived_at so the retention selector can never pick
+// the activity up, the body is NULL so the transcript selector cannot either,
+// and a subject-only activity is redacted by no other contact's erasure. The
+// quotations stayed in the approvals inbox permanently.
+//
+// It is not an error the job should retry, either: asking the same question of
+// a transcript that is gone gets the same answer.
+func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
+	e := setupTranscript(t)
+	before := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+
+	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
+	if err != nil {
+		t.Fatalf("starting the reading: %v", err)
+	}
+	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	brain := erasingBrain{
+		reply: groundedReply(t, 3, 0.9),
+		erase: func() {
+			// What the erasure does to this activity: the reading deleted, the
+			// body nulled, the row archived.
+			if _, err := e.owner.Exec(t.Context(),
+				`DELETE FROM transcript_read WHERE activity_id = $1`, e.activity); err != nil {
+				t.Errorf("erasing the reading: %v", err)
+			}
+			if _, err := e.owner.Exec(t.Context(),
+				`UPDATE activity SET body = NULL, archived_at = now() WHERE id = $1`, e.activity); err != nil {
+				t.Errorf("erasing the body: %v", err)
+			}
+		},
+	}
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	if err := proposer.Read(e.ctx, e.Activities, started.ID, e.activity); err != nil {
+		t.Fatalf("the reading answered %v; a transcript that is gone is a finished run, not a fault "+
+			"for the job to retry against the same absence", err)
+	}
+
+	after := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, TranscriptProposalKind)
+	if after != before {
+		t.Errorf("%d transcript proposals were staged over an erased body; the approvals inbox now "+
+			"quotes words a tombstone says were destroyed", after-before)
 	}
 }

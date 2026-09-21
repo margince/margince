@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { useEffect, useId, useRef, useState } from "react";
-import { Button } from "../../design-system/atoms";
+import { useEffect, useRef, useState } from "react";
+import { Badge, Button, Field } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
@@ -290,16 +290,15 @@ function DeckCardFace({
   onNext: () => void;
 }>) {
   const t = useT();
-  const controlId = useId();
   const guidance = fieldGuidance(card.field);
   const placeholder = guidance === undefined ? undefined : t(guidance.example);
   return (
-    <div className="rdeck-card" data-required={card.required}>
+    <div className="rdeck-card staging-card" data-required={card.required}>
       <div className="rdeck-head">
-        <span className="rdeck-tag t-eyebrow" data-required={card.required}>
+        <Badge tone={card.required ? "danger" : "default"}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
-        </span>
-        <span className="rdeck-count t-caption">
+        </Badge>
+        <span className="t-caption">
           {t("ob.deck.counter", {
             n: formatNumber(index + 1, locale),
             m: formatNumber(total, locale),
@@ -307,42 +306,44 @@ function DeckCardFace({
         </span>
       </div>
       <div className="rdeck-body">
-        <label className="rdeck-question" htmlFor={controlId}>
-          {card.question}
-        </label>
-        {/* What this field is for, so an empty card is still answerable.
-          Shown alongside evidence rather than instead of it: the evidence is
-          a claim the site made, this is what the field is for, and neither
-          sentence says the other. */}
-        {guidance === undefined ? null : (
-          <p className="rdeck-hint t-caption">{t(guidance.hint)}</p>
-        )}
-        {card.evidence === undefined ? null : (
-          <p className="rdeck-evidence">{card.evidence}</p>
-        )}
-        {card.multiline ? (
-          <textarea
-            id={controlId}
-            value={card.value}
-            placeholder={placeholder}
-            onChange={(event) => onField(card.field, event.target.value)}
-          />
-        ) : (
-          <input
-            id={controlId}
-            value={card.value}
-            placeholder={placeholder}
-            onChange={(event) => onField(card.field, event.target.value)}
-          />
-        )}
+        {/* The hint is the field's own help line, so it rides the Field and
+          lands under the control with the description wiring the question's
+          label already carries. The evidence stays ABOVE the box: it is a
+          claim the site made and the reader weighs it before typing over
+          it. */}
+        <Field
+          label={card.question}
+          hint={guidance === undefined ? undefined : t(guidance.hint)}
+        >
+          {(control) => (
+            <>
+              {card.evidence === undefined ? null : (
+                <p className="rdeck-evidence">{card.evidence}</p>
+              )}
+              {card.multiline ? (
+                <textarea
+                  {...control}
+                  value={card.value}
+                  placeholder={placeholder}
+                  onChange={(event) => onField(card.field, event.target.value)}
+                />
+              ) : (
+                <input
+                  {...control}
+                  value={card.value}
+                  placeholder={placeholder}
+                  onChange={(event) => onField(card.field, event.target.value)}
+                />
+              )}
+            </>
+          )}
+        </Field>
         {/* What this answer puts on the record, in the words it will be stored
           in. Blank while nothing is typed, because "nothing is written" is a
           statement about an empty field and this one may still be filled. */}
         {card.value.trim() === "" ? null : (
           <p className="rdeck-writes">
-            <span className="rdeck-writes-lead">
-              {t("ob.conv.scene.writes")}
-            </span>
+            <span>{t("ob.conv.scene.writes")}</span>
             <code>{card.value}</code>
           </p>
         )}
@@ -391,7 +392,7 @@ function DeckFoot({
         {/* The quiet half of the sentence: the reader did not have to do this,
             and saying so is what makes the short list of cards credible rather
             than suspicious. */}
-        <span className="rdeck-settled t-caption">
+        <span className="t-caption">
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>

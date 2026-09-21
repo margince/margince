@@ -5,7 +5,7 @@
 // (architecture/14, ADR-0042): country-specific behavior lives in a
 // self-contained pack composed in at compile time — today a module
 // registering in init(), migrating to the extension tier's Registry
-// (ADR-0069). Core code never imports a pack and never contains a
+// (ADR-0120). Core code never imports a pack and never contains a
 // jurisdiction string. The pack CONTRACT (Pack, Retention,
 // RetentionClass) lives on the published surface
 // backend/pkg/extension/jurisdiction so extensions can implement it;

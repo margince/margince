@@ -3,139 +3,545 @@ import { de } from "./de";
 import { en } from "./en";
 import { vi } from "./vi";
 
-// The person record is called a person — "People" in the nav, "person" in a
-// sentence — and never a contact. The older word survives only where it names
-// the ACT of reaching someone ("never contacted", "last contact yesterday"),
-// the details one reaches them by ("contact data", "contact email"), or a
-// buyer's counterpart in a room ("your contact"). Those keys are waived here by
-// name, so a new value that says "contact" for the record fails, and a waiver
-// whose value stops carrying the word fails too: a stale waiver would let the
-// next author reintroduce the record noun under a key nobody looks at.
+// The contact record is NAMED a contact, and this holds that name across the
+// whole catalog in both directions.
+//
+// One way: every key that offers the record TYPE as a thing to pick, count,
+// file under or navigate to carries the contact noun. That set is written down
+// here and nowhere else, because nothing in a catalog marks which key names a
+// record type — "Contacts" as a tab and "contacts" as a table unit are one
+// string each to a sweep. A label that names this type and is missing from the
+// list is free to drift to a second word, so add it.
+//
+// The other way: no value in any catalog says people / person / Person /
+// người, unless its key is listed below as one where the word means a HUMAN
+// BEING rather than the record. Those keys are grouped by the reason the word stays. The lists
+// are exhaustive per locale and are held from both sides — an entry whose value
+// no longer carries the word is stale and must go, so the exceptions cannot
+// quietly outlive the sentences that earned them.
+//
+// Half a rename is what puts two names for one record on one screen, and each
+// half looks correct on its own.
 type Catalog = Record<string, string>;
+
+const RECORD_TYPE_NAME_KEYS = [
+  "nav.contacts",
+  "search.group.contact",
+  "search.kind.contact",
+  "filters.tab.contacts",
+  "filters.matchContacts",
+  "tab.contacts",
+  "context.relatedContacts",
+  "tagResult.contacts",
+  "import.object.contact",
+  "company.contactCount",
+  "users.access.object.contact",
+  "backfill.statContacts",
+  "ob.digest.contacts",
+  "ob.conv.triage.contactsLabel",
+  "brief.digestContacts",
+  "unit.contacts",
+  "create.contact",
+  "merge.contact",
+  "privacy.contact",
+  "cf.obj.contact",
+  "co.brief.cite.contact",
+  "co.brief.cite.contact.many",
+  "senders.colRecord",
+  "acctCoverage.contact",
+  "lead.qualify.contact",
+  "approval.field.contact_name",
+  "today.source.contacts",
+  "provider.backlogRemaining_one",
+  "provider.backlogRemaining_other",
+  // The one sentence that names the type rather than labelling it: it tells a
+  // reader what a lead turns into, so it drifts the way a label does and costs
+  // more when it does.
+  "lead.segregation",
+];
 
 const RECORD_NOUN: Record<string, RegExp> = {
   en: /\bcontacts?\b/i,
   de: /kontakt/i,
-  vi: /liên hệ|\bcontacts?\b/i,
+  vi: /liên hệ/i,
 };
 
-// A company website's Contact page, as the deep read and the onboarding
-// digest classify what they cited: a kind of page, not a record.
-const WEBSITE_PAGE_KIND_KEYS = [
-  "deepread.kindContact",
-  "ob.digest.pageKind.contact",
-];
+const RETIRED_NOUN: Record<string, RegExp> = {
+  en: /\bpeople\b|\bpersons?\b/i,
+  de: /\bperson(en)?\b/i,
+  vi: /\bngười\b/i,
+};
 
-// Shared across the locales: the act of reaching someone, and the details one
-// reaches them by. A locale adds the keys where only its own wording says the
-// word — German says "Kontaktstand" where English says "Engagement".
-const ACT_OR_DETAIL_KEYS_SHARED = [
-  "co.routeIn.band.strong",
-  "co.routeIn.band.some",
-  "co.routeIn.band.faint",
-  "co.routeIn.band.unknown",
-  "co.factField.contact_email",
-  "deal.strip.momentum.detail",
-  "passport.scope.enrich",
-  "connectors.signatureEnrich.label",
-  "captureSettings.signatureEnrich.label",
-  "network.empty",
-  "network.neverSpoken",
-  "network.bucket.none",
-  "license.holder.contact",
-  "person.intro.evidenceLastContact",
-  "person.intro.stripWhoMix",
-  "person.intro.whenToday",
-  "person.intro.whenYesterday",
-  "person.intro.whenDays",
-  "person.intro.whenNever",
-  "person.band.none",
-  "person.research.notConnected",
-  "provider.title",
-  "provider.sub",
-  "provider.profile.title",
-  ...WEBSITE_PAGE_KIND_KEYS,
-];
-
-// The buyer room: "your contact" is the steward on the seller's side, a
-// counterpart rather than a record.
-const BUYER_COUNTERPART_KEYS = [
-  "buyer.deadAskContact",
-  "buyer.expiredBody",
-  "buyer.contact",
-  "buyer.stewardUnknown",
-  "buyer.docs.downloadFailed",
-];
-
-const ACT_OR_DETAIL_KEYS: Record<string, readonly string[]> = {
+// Keys whose value says the word about a human being. Everything else in the
+// catalog is judged against the retired noun.
+const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
-    ...ACT_OR_DETAIL_KEYS_SHARED,
-    ...BUYER_COUNTERPART_KEYS,
-    // What a phone exports is called contacts by the phone.
-    "vcardImport.whichFile",
-    "coverage.quiet",
-    // "as a sponsor, a contact, or whoever else": a role on the delivery.
-    "personProjects.empty",
+    // Names this rename leaves alone: Settings → People, which heads the SEATS
+    // group beside Company and Sales, not this record type.
+    "settings.group.people",
+    // "a person" here is a HUMAN BEING deciding, not the contact record.
+    "stageAutomation.noRules",
+    "tab.relationships",
+    // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "confirm.done.body",
+    "firstRun.microsoft.note",
+    "firstRun.microsoft.tenantHint",
+    "firstRun.platform.redirectHint",
+    "firstRun.platform.sub",
+    "oauthApp.google.sub",
+    "oauthApp.microsoft.sub",
+    "ob.conv.invite.noBody",
+    "ob.conv.team.body",
+    "ob.digest.referenceNote",
+    "ob.manual.icpHint",
+    "review.reasonHelp",
+    "settings.page.authentication.sub",
+    "settings.scopeAriaMixed",
+    "setup.baseLanguageHint",
+    "share.ceiling.mid",
+    "share.kindPerson",
+    "share.rosterEmpty",
+    "share.rosterErrorBoth",
+    "share.rosterErrorTeams",
+    "share.rosterErrorUsers",
+    "share.rosterLoading",
+    "share.subject",
+    "signInMethods.sub",
+    "users.deactivateAgentConfirmBody",
+    // Somebody on a message, an invitation or a deal room — a sender, a
+    // recipient, an attendee, a guest.
+    "access.issued.oneTime",
+    "captureNotice.whoReads",
+    "captureSettings.signatureEnrich.help",
+    "compose.audienceMembersLoading",
+    "compose.audienceParticipantsHint",
+    "compose.audienceSelected",
+    "compose.audienceSelectedHint",
+    "connectors.mailPosture.help.classified",
+    "connectors.mailPosture.help.held",
+    "email.access.sentence.participants",
+    "email.access.sentence.selected",
+    "hold.confirmAddressBody",
+    "hold.confirmDomainBody",
+    "hold.heldByAddress",
+    "hold.heldByDomain",
+    "mailSharing.danger",
+    "mailSharing.posture.private",
+    "roompage.closeBody",
+    "timeline.group.bulk_one",
+    "timeline.group.bulk_other",
+    // A human being as against a machine: who typed it, who confirmed it,
+    // who decided.
+    "blockedDomains.source.human",
+    "blockedDomains.sub",
+    "captureActivity.reason.role_mailbox",
+    "captureActivity.reason.transactional_prefix",
+    "captureActivity.resolution.real",
+    "cf.refuse.body",
+    "co.evidence.kind.human",
+    "co.evidence.verifiedAt",
+    "evidence.confirmedAt",
+    "evidence.humanSet",
+    "pipeline.reason.judged_real",
+    "pipeline.reason.role_mailbox",
+    "pipeline.reason.transactional_prefix",
+    "senders.kind.contact",
+    "trust.typedByHuman",
+    // A human being in a sentence about contacts rather than about the record.
+    "deals.winReasonVerbal",
+    "privacy.inboxAdminOnly",
+    "provider.automaticLookupJurisdiction",
   ],
   de: [
-    ...ACT_OR_DETAIL_KEYS_SHARED,
-    "partner.stage.contacted",
-    "co.strip.lastTouch",
-    "co.strip.engagement.never_contacted",
-    "co.health.means.relationship",
-    "co.rail.people.inTouch",
-    // LinkedIn calls a connection a Kontakt in German, and these describe
-    // the import of LinkedIn's own file.
-    "linkedinImport.title",
-    "linkedinImport.connectedNote",
-    "linkedinImport.notConnectedNote",
-    "linkedinImport.importLabel",
-    "linkedinImport.noMatchesYet",
-    "linkedinImport.imported",
-    "ob.conv.linkedin.cardBody",
-    "ob.conv.linkedin.importLater",
-    "co.people.engagement",
-    "co.people.filter.status",
-    "co.people.filter.statusAll",
-    "co.people.band.untried",
-    "co.people.band.showUntried",
-    "lead.statusContacted",
-    "lead.status.contacted",
-    "lead.ladder.new",
-    "brief.readings.leads",
-    "vcardImport.whichFile",
-    "acctCoverage.noneButPartial",
-    "compose.why.requestedFollowup",
-    "confirm.marketing.title",
-    "coverage.quiet",
-    "person.thin.logFirst",
-    "person.intro.evidenceOneSided_one",
-    "person.intro.evidenceOneSided_other",
-    "person.network.twoWay",
-    "person.network.oneSided",
-    "person.rail.nobodyYet",
-    "person.rail.exchanges",
-    "person.meeting.what_changed",
-    "person.meeting.arc",
-    "deal.strip.lastTouch",
+    // Names this rename leaves alone: Settings → People, which heads the SEATS
+    // group beside Company and Sales, not this record type.
+    "settings.group.people",
+    // "a person" here is a HUMAN BEING deciding, not the contact record.
+    "stageAutomation.noRules",
+    "tab.relationships",
+    // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "analytics.share.liveHelp",
+    "approval.kind.capture_counterparty",
+    "auth.loginSub",
+    "common.permissionDenied",
+    "confirm.done.body",
+    "coverage.risk.single_threaded_ours",
+    "deal.notYoursToChange",
+    "lead.notYoursToChange",
+    "ob.conv.clarify.entity",
+    "ob.conv.invite.noBody",
+    "ob.conv.team.body",
+    "ob.conv.team.title",
+    "ob.conv.voice.speakerContinue",
+    "ob.manual.icpHint",
+    "contact.intro.answerSuggestHelp",
+    "contact.notYoursToChange",
+    "project.notYoursToChange",
+    "record.notYoursToChange",
+    "release.skewBody",
+    "retention.lawfulBasisHint",
+    "settings.auditAdminOnly",
+    "settings.page.authentication.sub",
+    "settings.scopeAriaMixed",
+    "settings.voice.refusalSpeaker",
+    "setup.baseLanguageHint",
+    "share.ceiling.mid",
+    "share.kindPerson",
+    "share.rosterEmpty",
+    "share.rosterErrorBoth",
+    "share.rosterErrorTeams",
+    "share.rosterLoading",
+    "share.subject",
+    "signInMethods.sub",
+    "users.deactivateConfirmBody",
+    // Somebody on a message, an invitation or a deal room — a sender, a
+    // recipient, an attendee, a guest.
+    "access.capabilityLegend",
+    "access.issued.oneTime",
+    "book.tellThemYourself",
+    "captureSettings.signatureEnrich.help",
+    "compose.audienceParticipantsHint",
+    "compose.audienceSelected",
+    "compose.audienceSelectedHint",
+    "compose.threadStillHeld",
+    "email.access.sentence.selected",
+    "timeline.group.bulk_one",
+    "timeline.group.bulk_other",
+    // A human being as against a machine: who typed it, who confirmed it,
+    // who decided.
+    "captureActivity.reason.role_mailbox",
+    "captureActivity.reason.transactional_prefix",
+    "captureActivity.resolution.real",
+    "captureActivity.resolution.rejected",
+    "co.evidence.kind.human",
+    "co.evidence.verifiedAt",
+    "evidence.confirmedAt",
+    "evidence.humanSet",
+    "pipeline.reason.judged_real",
+    "pipeline.reason.role_mailbox",
+    "pipeline.reason.transactional_prefix",
+    "senders.kind.contact",
+    "trust.typedByHuman",
+    // A human being in a sentence about contacts rather than about the record.
+    "privacy.inboxAdminOnly",
+    "sendPermission.reason.askedUsToStop",
+    "sendPermission.reason.objected",
+    "sendPermission.reason.restricted",
+    "sendPermission.reason.tooMany",
+    "sendPermission.reason.unconfirmed",
+    "sendPermission.reason.withdrawn",
   ],
   vi: [
-    ...ACT_OR_DETAIL_KEYS_SHARED,
-    ...BUYER_COUNTERPART_KEYS,
-    "partner.stage.contacted",
-    "co.strip.noInboundEver",
-    "co.strip.engagement.never_contacted",
-    "signal.kind.reengagement",
-    "co.rail.people.inTouch",
-    "co.people.engagement",
-    "co.people.filter.status",
-    "lead.source.inbound",
-    "lead.statusContacted",
-    "lead.status.contacted",
-    "lead.ladder.new",
-    "compose.why.requestedFollowup",
-    "person.intro.fallbackNameDropHelp",
-    "person.intro.answerNameDropHelp",
+    // Human account holders whose full seats determine the shared allowance.
+    "aiAdmin.fixed",
+    "aiAdmin.formula",
+    "aiAdmin.floor",
+    "aiAdmin.perUser",
+    "aiAdmin.overrideHint",
+    // The human who made a change, not a CRM contact record.
+    "home.change.by",
+    // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
+    // details. The privacy notice is addressed to a human being and says so:
+    // the sentence is about who handed the data over, not about a record type,
+    // and "liên hệ khác" would say another CONTACT gave us your details, which
+    // is a different and usually false claim.
+    "privacynotice.source.referral",
+    // Names this rename leaves alone: Settings → People, which heads the SEATS
+    // group beside Company and Sales, not this record type.
+    "tab.relationships",
+    // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "acctCoverage.columnCap",
+    "aiAdmin.featuresWithheld",
+    "aiProviderKeys.withheld",
+    "aiRouting.withheld",
+    "analytics.share.liveHelp",
+    "approval.kind.capture_counterparty",
+    "audit.noHumanAuthority",
+    "audit.unknownBuyer",
+    "auth.unavailableBody",
+    "blockedDomains.reasonHint",
+    "brief.readings.urgentBasis",
+    "captureExclusions.sub",
+    "cf.col.addedBy",
+    "co.contacts.board.suggestNothing",
+    "co.pulse.owner",
+    "common.permissionDenied",
+    "confirm.done.body",
+    "deal.seats.ours",
+    "deepread.sub",
+    "extUnits.workspace.sub",
+    "firstRun.microsoft.note",
+    "firstRun.microsoft.tenantHint",
+    "firstRun.platform.redirectHint",
+    "firstRun.platform.sub",
+    "jobs.adminOnly",
+    "jobs.deadBody",
+    "knowledge.new.topicHint",
+    "lead.assignNobodyElse",
+    "linkedinImport.connectedNote",
+    "oauthApp.google.sub",
+    "oauthApp.microsoft.sub",
+    "ob.conv.invite.noBody",
+    "ob.conv.team.body",
+    "ob.conv.team.done",
+    "ob.conv.team.title",
+    "ob.conv.voice.artifactBody",
+    "ob.conv.voice.refusalSpeaker",
+    "ob.conv.voice.speakerContinue",
+    "ob.conv.voice.speakerPick",
+    "ob.conv.voice.speakerQuestion",
+    "ob.digest.referenceNote",
+    "ob.manual.icpHint",
+    "contact.intro.lanePeers",
+    "contact.intro.laneTarget",
+    "contact.intro.stepRoutePick",
+    "recordAccess.company.shared",
+    "recordAccess.contact.shared",
+    "release.skewBody",
+    "retention.lawfulBasisHint",
+    "retention.withheld",
+    "review.reasonHelp",
+    "settings.auditAdminOnly",
+    "settings.auditSub",
+    "settings.boundary.deniedBody",
+    "settings.companyPositioning",
+    "settings.companyResolveAll",
+    "settings.page.authentication.sub",
+    "settings.page.members.sub",
+    "settings.resetDataDesc",
+    "settings.scopeAriaMixed",
+    "settings.tab.users",
+    "settings.voice.noticeAskQueueFull",
+    "settings.voice.refusalSpeaker",
+    "settings.voice.speakerQuestion",
+    "settings.voice.speakerWhy",
+    "settings.voice.worksNot",
+    "settings.voice.worksTranscripts",
+    "setup.baseLanguageHint",
+    "share.access.writeNote",
+    "share.ceiling.mid",
+    "share.kindPerson",
+    "share.revokeConfirm",
+    "share.rosterEmpty",
+    "share.rosterErrorBoth",
+    "share.rosterErrorTeams",
+    "share.rosterErrorUsers",
+    "share.rosterLoading",
+    "share.subject",
+    "signInMethods.sub",
+    // "a person" here is a HUMAN BEING deciding, not the contact record.
+    "stageAutomation.noRules",
+    "stageAutomation.reviewedHint",
+    "users.access.title",
+    "users.adminOnly",
+    "users.deactivateConfirmBody",
+    "users.emailLabel",
+    "users.empty",
+    "users.inviteOpen",
+    "users.inviteSub",
+    "users.inviteTitle",
+    "users.memberCount_one",
+    "users.memberCount_other",
+    "users.membersSub",
+    "users.membersTitle",
+    "users.nameLabel",
+    "users.roleLabel",
+    "users.teamNobodyToAdd",
+    "vcardImport.outcome.needsReview",
+    "worklist.because.no_champion",
+    "worklist.disposition.done.not_mine",
+    "worklist.disposition.done.not_sales",
+    // Somebody on a message, an invitation or a deal room — a sender, a
+    // recipient, an attendee, a guest.
+    "access.issued.oneTime",
+    "book.attendee",
+    "book.tellThemYourself",
+    "buyer.contact",
+    "buyer.contactEyebrow",
+    "buyer.deadAskContact",
+    "buyer.docs.downloadFailed",
+    "buyer.previewBanner",
+    "buyer.stewardUnknown",
+    "captureNotice.whoReads",
+    "captureNotice.yourControl",
+    "captureSettings.signatureEnrich.help",
+    "compose.audienceMembersLoading",
+    "compose.audienceParticipants",
+    "compose.audienceParticipantsHint",
+    "compose.audienceSelected",
+    "compose.audienceSelectedHint",
+    "compose.audienceWorkspace",
+    "compose.bccHint",
+    "compose.consentBlocked",
+    "compose.emptyRecipients",
+    "compose.multiRecipientWarning",
+    "compose.sharedUnsubscribeToken",
+    "compose.threadGone",
+    "compose.threadStillHeld",
+    "connectors.mailPosture.help.classified",
+    "connectors.mailPosture.help.held",
+    "email.access.sentence.participants",
+    "email.access.sentence.selected",
+    "email.access.sentence.workspace",
+    "email.access.unnamedMember",
+    "hold.confirmAddressBody",
+    "hold.confirmDomainBody",
+    "hold.heldByAddress",
+    "hold.heldByDomain",
+    "mailSharing.danger",
+    "mailSharing.posture.private",
+    "roompage.banner.closed",
+    "roompage.banner.expired",
+    "roompage.banner.paused",
+    "roompage.closeBody",
+    "roompage.closeHint",
+    "roompage.pauseHint",
+    "roompage.previewNotYours",
+    "roompage.viewAsBuyer",
+    "sched.held.consentWithdrawn",
+    "sched.recipientsMore",
+    "sched.recipientsUnknown",
+    "timeline.group.bulk_one",
+    "timeline.group.bulk_other",
+    // A human being as against a machine: who typed it, who confirmed it,
+    // who decided.
+    "blockedDomains.source.human",
+    "blockedDomains.sub",
+    "captureActivity.contentNone",
+    "captureActivity.outcome.deferred",
+    "captureActivity.payloadsOff",
+    "captureActivity.reason.decided_prior",
+    "captureActivity.reason.no_counterparty",
+    "captureActivity.reason.noise_prior",
+    "captureActivity.reason.role_mailbox",
+    "captureActivity.reason.transactional_infra",
+    "captureActivity.reason.transactional_prefix",
+    "captureActivity.resolution.real",
+    "captureActivity.resolution.rejected",
+    "captureActivity.sub",
+    "cf.refuse.body",
+    "co.evidence.kind.human",
+    "co.evidence.verifiedAt",
+    "consent.actorHuman",
+    "evidence.confirmedAt",
+    "evidence.humanSet",
+    "history.actorHuman",
+    "ob.confirmManual",
+    "pipeline.reason.awaiting_verdict",
+    "pipeline.reason.decided_prior",
+    "pipeline.reason.internal_only",
+    "pipeline.reason.judged_noise",
+    "pipeline.reason.judged_real",
+    "pipeline.reason.judged_rejected",
+    "pipeline.reason.judged_suppressed",
+    "pipeline.reason.no_counterparty",
+    "pipeline.reason.no_open_question",
+    "pipeline.reason.noise_prior",
+    "pipeline.reason.role_mailbox",
+    "pipeline.reason.sender_undecided",
+    "pipeline.reason.transactional_infra",
+    "pipeline.reason.transactional_prefix",
+    "senders.kind.contact",
+    "trust.typedByBuyer",
+    "trust.typedByHuman",
+    "verdictPass.subject.senders",
+    "voice.insights.disclosure",
+    // A human being in a sentence about contacts rather than about the record.
+    "agents.connectorOffDetail",
+    "aiHealth.withheld",
+    "aicalls.withheld",
+    "aiusage.withheld",
+    "approval.kind.assign_owner",
+    "blockedDomains.none",
+    "client.sender",
+    "client.unknownDetail",
+    "co.contacts.band.someHidden",
+    "co.contacts.map.scopePartial",
+    "co.role.blocker",
+    "co.role.champion",
+    "co.role.economic_buyer",
+    "co.role.influencer",
+    "co.role.user",
+    "co.roleLabel.blocker",
+    "co.roleLabel.champion",
+    "co.roleLabel.economic_buyer",
+    "co.roleLabel.influencer",
+    "co.roleLabel.user",
+    "co.spine.andOthers",
+    "common.seatReadOnly",
+    "coverage.risk.champion_left",
+    "coverage.risk.coverage_gap",
+    "deal.committee.legendGap",
+    "deal.committee.threads",
+    "deal.ownerKeep",
+    "deal360.buyer",
+    "deals.bulkOwner",
+    "deals.bulkOwnerPick",
+    "deals.filterOwnerAll",
+    "email.detail.bccWithheld",
+    "extAccess.versionSkew",
+    "files.originUnknown",
+    "forcedPassword.body",
+    "heldThreads.heldByOthers",
+    "history.field.assignee_id",
+    "history.field.owner_id",
+    "history.undo.superseded",
+    "import.objectHint.lead",
+    "lead.bulkOwner",
+    "lead.bulkOwnerPick",
+    "lead.scoreOverridden",
+    "lead.trigger.humanQualify",
+    "list.filterOwnerAll",
+    "log.assignee",
+    "log.transcriptHint",
+    "ob.fieldHint.buying_center",
+    "ob.fieldHint.common_objections",
+    "ob.manual.buying_centerHint",
+    "contact.intro.answerSuggest",
+    "contact.intro.stateSuggestOther",
+    "contact.meeting.attendees",
+    "contact.page.owner",
+    "contactProjects.empty",
+    "contactRole.sponsor",
+    "contactRole.user",
+    "pipeline.payloadsOff",
+    "pipeline.stage.verdict",
+    "pipeline.subject.domain",
+    "pipeline.subject.sender",
+    "privacy.assignee",
+    "privacy.assigneeUnassignable",
+    "privacy.inboxAdminOnly",
+    "privacy.movedOn",
+    "project.owner",
+    "project.ownerKeep",
+    "project.stakeholders.addHint",
+    "project.stakeholders.empty",
+    "provider.automaticLookupJurisdiction",
+    "ref.notInRoster",
+    "review.reassign",
+    "role.rep",
+    "room.card.lastSeen",
+    // "người mua" — the BUYER who walks into the room: a human being from
+    // outside the company, not a contact record.
+    "room.create.sub",
+    "room.create.titleHint",
+    "senders.colSender",
+    "senders.emptyBody",
+    "senders.keepOutBody",
+    "senders.keepOutTitle",
+    "senders.sub",
+    "senders.title",
+    "setup.body",
+    "setup.errorAlready",
+    "setup.rootWarning",
+    "signal.kind.champion_left",
+    "tagAdmin.mergeWarning",
+    "timeline.withheld",
+    "visibility.participants",
+    "worklist.batch.likely_automated",
+    "worklist.pair.alreadySettled",
+    "worklist.pair.stewardOnly",
+    "worklist.scope.unassigned",
   ],
 };
 
@@ -148,27 +554,40 @@ function visibleWords(value: string): string {
 }
 
 describe.each(Object.keys(CATALOGS))(
-  "%s names the record a person",
+  "%s names the record a contact",
   (locale) => {
     const catalog = CATALOGS[locale];
-    const pattern = RECORD_NOUN[locale];
-    const waived = new Set(ACT_OR_DETAIL_KEYS[locale]);
+    const noun = RECORD_NOUN[locale];
+    const retired = RETIRED_NOUN[locale];
+    const humanSense = new Set(HUMAN_SENSE_KEYS[locale]);
 
-    it("says contact only where the key is waived as the act or the details", () => {
-      const offenders = Object.entries(catalog)
-        .filter(
-          ([key, value]) =>
-            !waived.has(key) && pattern.test(visibleWords(value)),
-        )
-        .map(([key, value]) => `${key}: ${value}`);
-      expect(offenders).toEqual([]);
+    it("every key that names the record type carries the noun", () => {
+      const missing = RECORD_TYPE_NAME_KEYS.filter(
+        (key) => !(key in catalog) || !noun.test(visibleWords(catalog[key])),
+      );
+      expect(missing).toEqual([]);
     });
 
-    it("keeps every waiver pointing at a value that still says contact", () => {
-      const stale = [...waived].filter(
-        (key) => !(key in catalog) || !pattern.test(visibleWords(catalog[key])),
+    it("no value outside the human-sense list carries the retired noun", () => {
+      const stale = Object.keys(catalog).filter(
+        (key) =>
+          !humanSense.has(key) && retired.test(visibleWords(catalog[key])),
       );
       expect(stale).toEqual([]);
+    });
+
+    it("every human-sense key still carries the word it is listed for", () => {
+      const spent = [...humanSense].filter(
+        (key) => !(key in catalog) || !retired.test(visibleWords(catalog[key])),
+      );
+      expect(spent).toEqual([]);
+    });
+
+    it("no key that names the record type is on the human-sense list", () => {
+      const exempted = RECORD_TYPE_NAME_KEYS.filter((key) =>
+        humanSense.has(key),
+      );
+      expect(exempted).toEqual([]);
     });
   },
 );

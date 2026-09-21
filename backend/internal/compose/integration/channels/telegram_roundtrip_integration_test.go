@@ -7,7 +7,7 @@ package channels
 
 // The full Telegram round trip (telegram-oa design §1, §8, §12): a stranger's
 // message arrives at the mounted webhook, becomes a conversation against a
-// Person nobody had to create, a rep answers it from that conversation, and the
+// Contact nobody had to create, a rep answers it from that conversation, and the
 // answer reaches Telegram.
 //
 // It is the one test in this suite that crosses every seam at once, and it
@@ -54,10 +54,13 @@ func (c *telegramEnv) sendRegistry() *capture.Registry {
 	return registry
 }
 
-// grantConsent records an active grant for one purpose against the person the
+// grantConsent records an active grant for one purpose against the contact the
 // ingest auto-created. The gate is per PURPOSE and default-deny, so this is
 // exactly what a reply needs and nothing more.
-func (c *telegramEnv) grantConsent(t *testing.T, personID, purposeKey string) {
+// the call site is how a reader sees which grant the send is riding on.
+//
+//nolint:unparam // the purpose is what each case is ABOUT, and naming it at
+func (c *telegramEnv) grantConsent(t *testing.T, contactID, purposeKey string) {
 	t.Helper()
 	var purposes struct {
 		Data []struct {
@@ -77,7 +80,7 @@ func (c *telegramEnv) grantConsent(t *testing.T, personID, purposeKey string) {
 	if purposeID == "" {
 		t.Fatalf("the bootstrap seeded no %q consent purpose", purposeKey)
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+personID+"/consent", integration.AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+contactID+"/consent", integration.AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -104,14 +107,14 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 	c.arrive(t, sub, inbound)
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
 
-	// 2. It became a conversation against a Person nobody created by hand.
-	activityID, personID := c.capturedMessage(t, inbound)
-	if n := c.count(t, `SELECT count(*) FROM person WHERE id = $1 AND owner_id IS NULL`, personID); n != 1 {
+	// 2. It became a conversation against a Contact nobody created by hand.
+	activityID, contactID := c.capturedMessage(t, inbound)
+	if n := c.count(t, `SELECT count(*) FROM contact WHERE id = $1 AND owner_id IS NULL`, contactID); n != 1 {
 		t.Fatalf("the inbound message did not produce one ownerless counterparty")
 	}
 
 	// 3. The workspace records the lawful basis for answering.
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, contactID, "transactional")
 
 	// 4. The rep answers from that conversation. Their own action IS the
 	//    approval, so no token and no idempotency key ride the request.
@@ -140,12 +143,12 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 	// 5. The delivery machinery carried it to Telegram.
 	awaitJobKind(t, sub, compose.SendEmailArgs{}.Kind())
 	c.assertTelegramReceived(t, inbound, reply)
-	c.assertDeliveryRecorded(t, sent.ID, inbound, personID)
+	c.assertDeliveryRecorded(t, sent.ID, inbound, contactID)
 
 	// 6. And the customer can ask what was held about them. This subject has no
 	//    address at all, so their whole correspondence hangs off the channel
 	//    columns — the shape an address-shaped export cannot describe.
-	c.assertSubjectAccessDescribesTheReply(t, personID, inbound, reply)
+	c.assertSubjectAccessDescribesTheReply(t, contactID, inbound, reply)
 }
 
 // TestCustomerReplyNamesTheChannelItArrivedOn continues the round trip one
@@ -179,7 +182,7 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 	// The opening message has no prior outbound above it, so it is not a reply.
 	c.arrive(t, sub, opening)
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
-	activityID, personID := c.capturedMessage(t, opening)
+	activityID, boundContactID := c.capturedMessage(t, opening)
 	if n := c.count(t,
 		`SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'engagement.reply'`); n != 0 {
 		t.Fatalf("%d engagement.reply events after the opening message, want 0 — "+
@@ -188,7 +191,7 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 
 	// The rep answers, which is what puts an outbound activity in this chat's
 	// thread for the customer's next message to match against.
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, boundContactID, "transactional")
 	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
 		"body": repReply, "consent_purpose": "transactional",
 	}, nil, nil); status != http.StatusAccepted {
@@ -220,9 +223,9 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 		t.Errorf("engagement.reply channel = %q, want %q — an automation answering this reply "+
 			"routes on this value, and a Telegram customer has no address to answer at", channel, "telegram")
 	}
-	if contactID != personID {
-		t.Errorf("engagement.reply contact_id = %q, want the bound person %q — this sender resolves "+
-			"through person_channel_identity, so an address-only lookup names nobody", contactID, personID)
+	if contactID != boundContactID {
+		t.Errorf("engagement.reply contact_id = %q, want the bound contact %q — this sender resolves "+
+			"through contact_channel_identity, so an address-only lookup names nobody", contactID, boundContactID)
 	}
 }
 
@@ -252,9 +255,9 @@ func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
 
 	c.arrive(t, sub, opening)
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
-	activityID, personID := c.capturedMessage(t, opening)
+	activityID, contactID := c.capturedMessage(t, opening)
 
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, contactID, "transactional")
 	var sent struct {
 		ID string `json:"id"`
 	}
@@ -325,10 +328,10 @@ func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T)
 
 	c.arrive(t, sub, opening)
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
-	activityID, personID := c.capturedMessage(t, opening)
+	activityID, contactID := c.capturedMessage(t, opening)
 
 	// A real outbound goes into the Telegram conversation.
-	c.grantConsent(t, personID, "transactional")
+	c.grantConsent(t, contactID, "transactional")
 	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
 		"body": "Sending it over today.", "consent_purpose": "transactional",
 	}, nil, nil); status != http.StatusAccepted {
@@ -388,13 +391,13 @@ func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T)
 // addressee, which both withholds the account id the row holds about them and
 // misdescribes the send. Held here because the round trip is the one place a
 // channel-only subject with a completed send actually exists.
-func (c *telegramEnv) assertSubjectAccessDescribesTheReply(t *testing.T, personID string, inbound telegramUpdate, reply string) {
+func (c *telegramEnv) assertSubjectAccessDescribesTheReply(t *testing.T, contactID string, inbound telegramUpdate, reply string) {
 	t.Helper()
-	person, err := ids.ParseAs[ids.PersonKind](personID)
+	contact, err := ids.ParseAs[ids.ContactKind](contactID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkg, err := privacy.AssembleSAR(c.adminStoreCtx(t), c.DB(), person)
+	pkg, err := privacy.AssembleSAR(c.adminStoreCtx(t), c.DB(), contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -444,7 +447,7 @@ func (c *telegramEnv) assertTelegramReceived(t *testing.T, inbound telegramUpdat
 // delivery row closed as sent against the account the conversation was held
 // with, and the outbound activity filed on that same conversation so the reply
 // is still there after a reload.
-func (c *telegramEnv) assertDeliveryRecorded(t *testing.T, sentActivityID string, inbound telegramUpdate, personID string) {
+func (c *telegramEnv) assertDeliveryRecorded(t *testing.T, sentActivityID string, inbound telegramUpdate, contactID string) {
 	t.Helper()
 	var recipient, status, deliveryActivity string
 	var providerMessageID *string
@@ -475,10 +478,10 @@ func (c *telegramEnv) assertDeliveryRecorded(t *testing.T, sentActivityID string
 		t.Fatalf("the delivery carries mail columns (subject=%v message_id=%v)", subject, messageID)
 	}
 
-	// The reply is filed on the SAME conversation and against the SAME person.
+	// The reply is filed on the SAME conversation and against the SAME contact.
 	// Capture joins inbound messages against outbound activities on thread_key,
 	// so a reply filed anywhere else reads as a message out of nowhere.
-	var threadKey, linkedPerson string
+	var threadKey, linkedContact string
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
@@ -486,15 +489,15 @@ func (c *telegramEnv) assertDeliveryRecorded(t *testing.T, sentActivityID string
 			return err
 		}
 		return tx.QueryRow(ctx,
-			`SELECT person_id::text FROM activity_link WHERE activity_id = $1 AND entity_type = 'person'`,
-			sentActivityID).Scan(&linkedPerson)
+			`SELECT contact_id::text FROM activity_link WHERE activity_id = $1 AND entity_type = 'contact'`,
+			sentActivityID).Scan(&linkedContact)
 	}); err != nil {
 		t.Fatalf("reading the reply's filing: %v", err)
 	}
 	if want := fmt.Sprintf("telegram:%d:%s", telegramBotID, inbound.account()); threadKey != want {
 		t.Fatalf("the reply's thread_key = %q, want the conversation's %q", threadKey, want)
 	}
-	if linkedPerson != personID {
-		t.Fatalf("the reply links person %s, want the conversation's %s", linkedPerson, personID)
+	if linkedContact != contactID {
+		t.Fatalf("the reply links contact %s, want the conversation's %s", linkedContact, contactID)
 	}
 }

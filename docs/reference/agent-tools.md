@@ -25,26 +25,29 @@ live surface differ from the table below:
   advertises what the gate will refuse is a surface that lies. It answers the
   **scope axis only** — the seat ceiling and the granting human's object RBAC are
   re-derived per call and can still refuse a tool the listing showed.
-- **Extensions register onto the same registry.** `registerComposedTools` runs
-  last in `internal/compose/registry.go`, after the core registrars, so an
-  extension unit can add verbs (and a name that collides with a core verb fails
-  loudly at boot). A served extension tool declares an inbound cap, and a
-  confirm-first one must also declare `x-mcp-tool.subject` — the argument
-  carrying a row id and the unit-owned table it lives in — because an approval
-  needs a row to park against and to show the approver. Boot refuses a
-  confirm-first declaration without one, and refuses `send`/`enrich` outright,
-  since neither could be staged for the human this surface has no way to ask.
-  That governs what a unit may CLAIM; what its handler does is bounded by the
-  composed set being a trust boundary, not by the gate. The
-  vanilla tree ships two first-party units: `extensions/de` registers no tools,
-  and `extensions/openchannel` adds seven: 🟢 for `openchannel_list_inbound`,
-  `openchannel_list_outbound` and `openchannel_read_endpoint` at `read`, and for
-  `openchannel_open` and `openchannel_set_enabled` at `write`; 🟡
-  confirmation-required for `openchannel_mint_secret` and
-  `openchannel_register_url`, also at `write` — the one hands back a durable
-  signing credential and the other re-points the member's whole outbound
-  channel, so neither runs unattended. So on a vanilla install the catalog
-  below plus those seven verbs is the whole surface.
+- **Extensions register onto the same registry, but not every operation
+  becomes a tool.** `registerComposedTools` runs last in
+  `internal/compose/registry.go`, after the core registrars, so an extension
+  unit can add verbs (and a name that collides with a core verb fails loudly
+  at boot). Every extension operation declares exactly one of `x-mcp-tool` or
+  `x-agent-access: human-only` — the same closed choice core operations make
+  (see "Operations an agent may not reach at all" below). A served
+  `x-mcp-tool` verb declares an inbound cap, and a confirm-first one must also
+  declare `x-mcp-tool.subject` — the argument carrying a row id and the
+  unit-owned table it lives in — because an approval needs a row to park
+  against and to show the approver. Boot refuses a confirm-first declaration
+  without one, and refuses `send`/`enrich` outright, since neither could be
+  staged for the human this surface has no way to ask. A `human-only`
+  operation requests no agent authority at all: it stays REST/UI-reachable,
+  but an Agent (or Buyer) principal calling it is refused outright, and it
+  never appears in `tools/list`. That governs what a unit may CLAIM; what its
+  handler does is bounded by the composed set being a trust boundary, not by
+  the gate. The vanilla tree ships two first-party units: `extensions/de`
+  registers no tools, and `extensions/openchannel` declares seven operations
+  — all `human-only` (it mints and returns a durable signing secret over an
+  anonymous edge, and re-points a member's whole outbound channel; neither is
+  a capability any agent should hold unattended) — so it adds **zero** agent
+  tools. On a vanilla install the catalog below is the whole agent surface.
 
 **Where it is served:** `cmd/api` mounts the tool surface at `/mcp` over
 Streamable HTTP, on the same origin as `/oauth/*` and the discovery documents.
@@ -55,9 +58,10 @@ the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
 
 ## The catalog
 
-Every core verb the surface serves. An enabled extension unit adds its own to
-the same listing — `openchannel`'s seven are not tabled here, because this page
-tracks the core surface.
+Every core verb the surface serves. An enabled extension unit's own SERVED
+verbs (`x-mcp-tool`) would add to this listing — none are tabled here because
+this page tracks the core surface, and on the vanilla tree there are none to
+table: `openchannel`'s seven operations are all `human-only`.
 
 The count is deliberately not written down. It said 35 while the surface served
 69, and a number in prose that nothing checks is one more thing to go quietly
@@ -88,121 +92,107 @@ Columns:
 - Consequential verbs read 🟢 here because ADR-0055 stopped them staging by
   default: a passport carries the granting human's own seat, grants and row
   scope, so a verb it can spend is one its holder could spend unaided, and a
-  second confirmation from that same person made the surface weaker rather than
+  second confirmation from that same contact made the surface weaker rather than
   safer. The tier a tool RESOLVES to is `agentPolicies` in
   `compose/agentpolicy_gen.go`, generated from `crm.yaml`; this table is
   hand-kept and drifted from it once already (#2432).
 - **Scope** — the passport cap `Gate.Admit` demands before `Handle` runs.
 - **Egress** — the spec's `Egress` flag: true when the tool reaches outside the
   workspace. It is what `tools/list` publishes as `openWorldHint`.
-- **In overlay mode** — what the tool does when `workspace.x_sor_mode` puts the
-  records in an incumbent CRM (see
-  [explanation/overlay-augmentation.md](../explanation/overlay-augmentation.md)).
 
-| Tool | Tier | Scope | Egress | In overlay mode |
-|---|---|---|---|---|
-| `account_coverage` | 🟢 | `read` | — | Native relationship read; carries no mode guard |
-| `advance_deal` | dynamic | `write` | — | `unsupported_by_sor` (no incumbent stage map) |
-| `advance_project_phase` | 🟢 | `write` | — | Runs: a project is native-only, so its table is the live one in either mode |
-| `archive_record` | 🟢 | `write` | — | Seam-routed: write-back through the incumbent |
-| `at_risk_relationships` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `annotate_brief` | 🟢 | `write` | — | `unsupported_by_sor` (native-only guard): the brief is Margince's own, and the incumbent holds nothing to annotate |
-| `apply_tag` | 🟢 | `write` | — | Writes the native tag-application table; `tag` is not a mirrored type, so it runs in either mode |
-| `book_meeting` | 🟢 | `send` | yes | Staging refuses a mirror-held link |
-| `catch_me_up_on` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `check_availability` | 🟢 | `read` | — | Calendar seam; not mode-routed |
-| `check_location_support` | 🟢 | `read` | — | Constant metadata about the host's geolocation permission; no store, no mode guard |
-| `commit_import` | 🟢 | `write` | — | Margince's own import tables. Deliberately mode-independent: import is the machinery that flips an overlay installation to native |
-| `create_record` | 🟢 / 🟡 | `write` | — | `unsupported_by_sor`: `overlay.SupportsWrite` serves no CREATE for any type, so a create never reaches the incumbent |
-| `create_tag` | 🟢 | `write` | — | Coins a word in the workspace vocabulary; native, not mode-routed. Needs `tag.create`, which the seeded roles give Admin and Ops alone |
-| `create_task` | 🟢 | `write` | — | `unsupported_by_sor`: the provider serves no CREATE for any type, so a task cannot be written to the incumbent |
-| `decide_approval` | 🟢 | `write` | — | Decides a row in Margince's own approvals queue; the incumbent holds none |
-| `decide_approval_bundle` | 🟢 | `write` | — | As `decide_approval`, for several at once |
-| `describe_query_vocabulary` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): it describes the native query surface, which is not what a mirrored read answers |
-| `describe_report_vocabulary` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): it describes what a `run_report` plan may say, and that verb is refused here |
-| `disqualify_lead` | 🟢 | `write` | — | `unsupported_by_sor`: a lead is mirrored and the provider cannot serve this write, so the native table is empty |
-| `draft_email` | 🟢 | `draft` | — | Activities seam; not mode-routed |
-| `draft_follow_ups_for` | 🟢 | `draft` | — | `unsupported_by_sor` (native-only guard) |
-| `enrich` | 🟡 | `enrich` | yes | Reads the company's own website, not a record store; the write-back is seam-routed |
-| `get_record_tags` | 🟢 | `read` | — | Reads one record's tags with who applied each; native, not mode-routed |
-| `get_tag` | 🟢 | `read` | — | Reads one tag and how much of the workspace carries it; native vocabulary, not mode-routed |
-| `intro_path_to` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `list_pipelines` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `list_approvals` | 🟢 | `read` | — | Reads Margince's own approvals queue; carries no mode guard |
-| `list_channel_providers` | 🟢 | `read` | — | Reads the installation's composed transport directory, not workspace data |
-| `list_colleagues` | 🟢 | `read` | — | Reads the seat roster; a seat is not a record, so no seam is involved |
-| `list_records` | 🟢 | `read` | — | Mirror-backed unfiltered; a FILTERED call is `unsupported_by_sor` (see below) |
-| `log_activity` | 🟢 | `write` | — | `unsupported_by_sor`: it creates an activity, and CREATE is the verb the provider serves for no type |
-| `merge_records` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
-| `list_tags` | 🟢 | `read` | — | Reads the tag vocabulary; `tag` is not a mirrored type |
-| `merge_tags` | 🟡 | `write` | — | Folds one vocabulary word into another; native, not mode-routed. 🟡 where `merge_records` is 🟢 because it releases the source's name and keeps no pointer home. Needs `tag.update`, and a human releases it |
-| `prep_for_meeting` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `progress_deal` | dynamic | `write` | — | `unsupported_by_sor` (shares `advance_deal`'s seam) |
-| `prepare_handoff` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): a project has no incumbent analogue |
-| `preview_import` | 🟢 | `write` | — | Margince's own import tables; mode-independent for the reason `commit_import` gives |
-| `promote_lead` | 🟢 | `write` | — | `unsupported_by_sor` (no atomic incumbent projection) |
-| `qualify_lead` | 🟢 | `write` | — | Seam-routed: read + patch through the provider |
-| `read_brief` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `read_record` | 🟢 | `read` | — | Mirror-backed; result carries `trust_tier: external` |
-| `read_approval` | 🟢 | `read` | — | Reads one row of Margince's own approvals queue |
-| `read_import_report` | 🟢 | `read` | — | Margince's own import tables |
-| `read_import_run` | 🟢 | `read` | — | Margince's own import tables |
-| `read_project_360` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard). The REST twin refuses too, but answers `unsupported_in_overlay_mode` — a different code for the same fact |
-| `query_workspace` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `relink_activity` | dynamic | `write` | — | Runs: a link row is not an SoR record write, so it is available in either mode |
-| `resolve_entities` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `relink_activities` | dynamic | `write` | — | Native activity-link write, carrying no mode guard — see the note below |
-| `relink_thread` | dynamic | `write` | — | Native activity-link write, carrying no mode guard — see the note below |
-| `remove_tag` | 🟢 | `write` | — | Takes a tag off a record; native, for the reason `apply_tag` gives |
-| `review_commitments` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): the mirror holds no task projection |
-| `run_analytics_query` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): the typed engine reads native tables |
-| `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
-| `compose_analytics_report` | 🟢 | `read` | — | Renders a document whose every figure cites a saved analytics run; it writes no number of its own and stores nothing |
-| `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |
-| `forecast_movement` | 🟢 | `read` | — | Diffs two stored snapshots, so it answers only where snapshots exist |
-| `forecast_input_checks` | 🟢 | `read` | — | Reads the nightly run's own record, so it answers only where a run has completed |
-| `list_input_checks` | 🟢 | `read` | — | Scoped to the deals the caller can open, through the deal's own visibility |
-| `data_coverage` | 🟢 | `read` | — | Needs the data_coverage grant: operators hold it, sellers do not, so a refusal is a seat boundary rather than a missing run |
-| `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `search_records` | 🟢 | `read` | — | Mirror-backed; results carry `trust_tier: external` |
-| `send_email` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
-| `send_account_email` | 🟢 | `send` | yes | `unsupported_by_sor`: its required record links are held in the incumbent, and staging refuses a link it cannot govern |
-| `send_message` | 🟢 | `send` | yes | Staging refuses a mirror-held anchor |
-| `update_record` | 🟢 / 🟡 | `write` | — | Seam-routed; see the per-field split below |
-| `update_tag` | 🟢 | `write` | — | Renames, recolours or describes an existing word; native, not mode-routed |
-| `whats_slipping_this_week` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `who_knows` | 🟢 | `read` | — | Native relationship read; carries no mode guard |
-| `whoami` | 🟢 | `read` | — | Identity metadata about the passport itself; no record, no seam, no guard |
+| Tool | Tier | Scope | Egress |
+|---|---|---|---|
+| `company_coverage` | 🟢 | `read` | — |
+| `advance_deal` | dynamic | `write` | — |
+| `advance_project_phase` | 🟢 | `write` | — |
+| `archive_record` | 🟢 | `write` | — |
+| `at_risk_relationships` | 🟢 | `read` | — |
+| `annotate_brief` | 🟢 | `write` | — |
+| `apply_tag` | 🟢 | `write` | — |
+| `book_meeting` | 🟢 | `send` | yes |
+| `catch_me_up_on` | 🟢 | `read` | — |
+| `check_availability` | 🟢 | `read` | — |
+| `check_location_support` | 🟢 | `read` | — |
+| `commit_import` | 🟢 | `write` | — |
+| `create_record` | 🟢 / 🟡 | `write` | — |
+| `create_tag` | 🟢 | `write` | — |
+| `create_task` | 🟢 | `write` | — |
+| `decide_approval` | 🟢 | `write` | — |
+| `decide_approval_bundle` | 🟢 | `write` | — |
+| `describe_query_vocabulary` | 🟢 | `read` | — |
+| `describe_report_vocabulary` | 🟢 | `read` | — |
+| `demote_lead` | 🟢 | `write` | — |
+| `disqualify_lead` | 🟢 | `write` | — |
+| `draft_email` | 🟢 | `draft` | — |
+| `draft_follow_ups_for` | 🟢 | `draft` | — |
+| `enrich` | 🟡 | `enrich` | yes |
+| `get_record_tags` | 🟢 | `read` | — |
+| `get_tag` | 🟢 | `read` | — |
+| `intro_path_to` | 🟢 | `read` | — |
+| `list_pipelines` | 🟢 | `read` | — |
+| `list_approvals` | 🟢 | `read` | — |
+| `list_channel_providers` | 🟢 | `read` | — |
+| `list_colleagues` | 🟢 | `read` | — |
+| `list_records` | 🟢 | `read` | — |
+| `log_activity` | 🟢 | `write` | — |
+| `merge_records` | 🟢 | `write` | — |
+| `list_tags` | 🟢 | `read` | — |
+| `merge_tags` | 🟡 | `write` | — |
+| `prep_for_meeting` | 🟢 | `read` | — |
+| `progress_deal` | dynamic | `write` | — |
+| `prepare_handoff` | 🟢 | `read` | — |
+| `preview_import` | 🟢 | `write` | — |
+| `promote_lead` | 🟢 | `write` | — |
+| `qualify_lead` | 🟢 | `write` | — |
+| `read_brief` | 🟢 | `read` | — |
+| `read_record` | 🟢 | `read` | — |
+| `read_approval` | 🟢 | `read` | — |
+| `read_import_report` | 🟢 | `read` | — |
+| `read_import_run` | 🟢 | `read` | — |
+| `read_project_360` | 🟢 | `read` | — |
+| `query_workspace` | 🟢 | `read` | — |
+| `relink_activity` | dynamic | `write` | — |
+| `resolve_entities` | 🟢 | `read` | — |
+| `relink_activities` | dynamic | `write` | — |
+| `relink_thread` | dynamic | `write` | — |
+| `remove_tag` | 🟢 | `write` | — |
+| `review_commitments` | 🟢 | `read` | — |
+| `run_analytics_query` | 🟢 | `read` | — |
+| `run_report` | 🟢 | `read` | — |
+| `compose_analytics_report` | 🟢 | `read` | — |
+| `forecast_readings` | 🟢 | `read` | — |
+| `forecast_movement` | 🟢 | `read` | — |
+| `forecast_input_checks` | 🟢 | `read` | — |
+| `list_input_checks` | 🟢 | `read` | — |
+| `data_coverage` | 🟢 | `read` | — |
+| `search_context` | 🟢 | `read` | — |
+| `search_records` | 🟢 | `read` | — |
+| `send_email` | 🟢 | `send` | yes |
+| `send_company_email` | 🟢 | `send` | yes |
+| `send_message` | 🟢 | `send` | yes |
+| `update_record` | 🟢 / 🟡 | `write` | — |
+| `update_tag` | 🟢 | `write` | — |
+| `whats_slipping_this_week` | 🟢 | `read` | — |
+| `who_knows` | 🟢 | `read` | — |
+| `whoami` | 🟢 | `read` | — |
 
-Five rows deserve their footnote:
+Four rows deserve their footnote:
 
 - **`update_record` is 🟢 with a 🟡 residue.** The patch splits per field: the
   fields no human last wrote apply immediately, and the fields a human *did*
   last write are staged for approval and named in the result's
   `staged_approval`, together with the exact replay call that redeems them. A
-  machine does not silently undo a person, and a person does not block the
+  machine does not silently undo a contact, and a contact does not block the
   machine's own fields.
 - **The dynamic pair reads the stage's *semantic*, not its label.** A custom
   pipeline's renamed "Won" column still resolves 🟡, because
   `advanceDealTier` trusts the configured semantic; anything not provably `open`
   resolves 🟡, so an unknown or unreadable semantic fails *toward* the approval
   gate.
-- **The "native-only guard" rows are a declared refusal, not a bug.** Those
-  tools ground on the report engine, the retrieval index, the pipeline
-  configuration or the interaction projection — none of which the incumbent
-  mirror holds. Unguarded they would return a well-formed empty answer, and "no
-  deals are slipping" is a worse failure than "this is not available here",
-  because only one of them is visibly wrong. The wrappers live in
-  `internal/compose/nativeonlytools.go`.
-- **`list_records` splits on whether it was asked to narrow.** Unfiltered, it is
-  an enumeration the mirror can serve like any other read. Filtered, it cannot
-  be: the mirror holds the incumbent's rows as opaque fields, so `owner_id` or
-  `stage_id` has nothing to bind to — and answering the unnarrowed page would
-  return a superset of what was asked for wearing the shape of the right answer.
-  So the overlay provider refuses the filtered call outright (AC-OV-2). Which
-  filters exist at all is not written here or in the tool: they are the
-  intersection of each list operation's own `crm.yaml` parameters and what the
-  record's store can bind, resolved at boot and published in the tool's schema.
+- **Which `list_records` filters exist is not written here or in the tool:**
+  they are the intersection of each list operation's own `crm.yaml` parameters
+  and what the record's store can bind, resolved at boot and published in the
+  tool's schema.
 - **`resolve_entities` and `search_context` answer records the CALLER may see,
   from engines that look wider.** The dedupe ladder behind `resolve_entities` is
   workspace-wide on purpose — a duplicate is a duplicate whoever is looking, and
@@ -218,24 +208,6 @@ Five rows deserve their footnote:
   caller's own blindness. The narrowing is reported once per call, without a
   count.
 
-### The relink verbs carry no overlay guard
-
-`relink_activities` and `relink_thread` write the native activity-link tables
-directly: `compose/registry.go` wires the bare relinker, with none of the
-`nativeOnly*` wrappers the other native-only capabilities get, and neither verb
-is named in `overlayRecordWriteTools`.
-
-For a `project` destination that is moot — the tier resolves to confirm-first,
-and staging refuses a destination the seam does not hold. For the auto-execute
-destinations it is not: in overlay mode the activity rows live in the incumbent,
-so the write lands on native tables that are empty and answers successfully
-having moved nothing. That is the well-formed-but-meaningless answer the
-native-only guards exist to prevent, and the two verbs do not have one.
-
-Recorded rather than fixed: whether these should refuse, or should route to the
-seam, is a question about what a link row means in overlay mode, and the answer
-belongs with whoever owns the overlay contract.
-
 ## What each scope buys
 
 The passport vocabulary is closed: `read`, `draft`, `write`, `send`, `enrich`
@@ -243,8 +215,9 @@ The passport vocabulary is closed: `read`, `draft`, `write`, `send`, `enrich`
 passport's scopes and the granting human's live RBAC and seat — never the union,
 and never the passport alone.
 
-Counts are of the core catalog above; an enabled unit's verbs add to them
-(vanilla: `openchannel`'s seven make `read` 20 and `write` 16).
+Counts are of the core catalog above; an enabled unit's SERVED verbs
+(`x-mcp-tool`) would add to them. On the vanilla tree none do —
+`openchannel`'s seven operations are `human-only` and spend no scope at all.
 
 | Scope | Tools it unlocks | What it means |
 |---|---|---|
@@ -254,12 +227,12 @@ Counts are of the core catalog above; an enabled unit's verbs add to them
 | `send` | 3 | The three egress verbs. All three are 🟡, so the scope buys the right to *ask*, never the right to send unattended. |
 | `enrich` | 1 | `enrich` — the one verb that fetches from a third party. 🟡 and `Egress: true`, like the `send` three: the cap buys the right to ask. |
 
-The `enrich` cap governs the two organization read routes — `scrapeCompany`
-(`POST /v1/organizations/{id}/enrich`) and `deepReadCompany`
-(`POST /v1/organizations/{id}/deep-read`) — on REST, and the `enrich` tool that
+The `enrich` cap governs the two company read routes — `scrapeCompany`
+(`POST /v1/companies/{id}/enrich`) and `deepReadCompany`
+(`POST /v1/companies/{id}/deep-read`) — on REST, and the `enrich` tool that
 composes them on `/mcp`, under ADR-0055's rule that a passport is a Bearer
 credential for `/v1` governed exactly like `/mcp`. The cold-start routes spent
-it once; they are human-only now, because they create the organization rather
+it once; they are human-only now, because they create the company rather
 than enrich one. Grant the cap when the agent's job is outward-looking research
 on a record that already exists.
 
@@ -270,20 +243,26 @@ on a record that already exists.
 `internal/compose/agentpolicy_gen.go` — the table the REST admission gate reads.
 An operation that no tool can honestly back does not keep the annotation; it
 carries `x-agent-access: human-only`, and the gate rejects an agent principal
-outright, whatever its scope or seat. Ten operations say so, and the reasons
+outright, whatever its scope or seat. Seven operations say so, and the reasons
 differ enough to be worth reading:
 
 | Operation | Why no agent may call it |
 |---|---|
-| `coldStartReadback`, `coldStartPreview` | They CREATE the organization, so there is no record for a record-shaped verb to target. The `enrich` tool keeps the two organization routes. |
+| `coldStartReadback`, `coldStartPreview` | They CREATE the company, so there is no record for a record-shaped verb to target. The `enrich` tool keeps the two company routes. |
 | `createRecordGrant`, `revokeRecordGrant` | The grant verbs refuse a non-human principal at redemption, so an agent-staged, human-approved share was refused every time it would have applied. |
-| `connectOverlay`, `disconnectOverlay` | Sealing a credential and flipping the system-of-record mode is an installation decision, not an act an agent performs. |
-| `reconcileOverlay`, `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
-| `sendOffer` | Human-only until the contract and the implementation agree on what sending an offer does — the description says it leaves the workspace; the code flips status, freezes `fx_rate_to_base` and snapshots buyer/issuer, with no transport (poc-v1#481). |
+| `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
+| `sendOffer` | It IS the commercial commitment: the revision stops being mutable and its rate to base is fixed from there on. Nothing leaves the installation — sending an offer performs no transport, and delivery to a counterparty is a separate capability that does not exist yet. |
+
+The seven above are core operations; an extension declares the identical
+`x-agent-access: human-only` annotation for the same reason
+(`docs/how-to/add-an-extension.md`). `extensions/openchannel`'s seven
+operations are the worked example — it hands back a durable signing secret
+over an anonymous edge and re-points a member's whole outbound channel, and
+neither is a capability an agent should hold unattended.
 
 The traffic runs the other way too: eleven registered tools name no contract
 verb, because they are *intents* composed over several operations rather than a
-transport for one — `account_coverage`, `at_risk_relationships`,
+transport for one — `company_coverage`, `at_risk_relationships`,
 `catch_me_up_on`, `draft_follow_ups_for`, `intro_path_to`, `list_pipelines`,
 `prep_for_meeting`, `progress_deal`, `qualify_lead`,
 `whats_slipping_this_week`, `who_knows`. Their `OpenAPIOp` field records the

@@ -134,7 +134,7 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 // is the safe direction: an ungrouped row is one row too many on the page,
 // while a wrongly grouped one hides a failure the reader never learns about —
 // which is why a BOUNCE sets none. A bounce is a customer consequence, not a
-// system condition: this named person did not get this message, and folding
+// system condition: this named contact did not get this message, and folding
 // three of them behind one row hides two customers.
 func systemCause(row ranked) (string, bool) {
 	if row.item.Category != categorySystem {
@@ -182,7 +182,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 	if row.item.Category != "decisions" || row.item.Level != levelRoutine {
 		return "", false
 	}
-	if row.item.Source == "dedupe_candidate" {
+	if row.item.Source == sourceDuplicate {
 		return "duplicates", true
 	}
 	if row.item.Kind == nil {
@@ -203,7 +203,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 // The split matters because the three are answered differently: a machine
 // sender is rejected without thought, an address whose company we already know
 // is usually accepted, and the remainder is the part that actually needs a
-// person. One group of a hundred and fifty would still be a pile.
+// contact. One group of a hundred and fifty would still be a pile.
 func contactBatchKey(row ranked) crmcontracts.WorklistBatchKey {
 	switch {
 	case row.machineSender:
@@ -269,10 +269,17 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		// arrive in the lane's own order, which is not urgency, so taking the
 		// first would rank an incident by whichever failure happened to be
 		// read first and could file an urgent one below a routine row.
-		level, consequence = members[0].item.Level, members[0].item.Consequence
+		//
+		// Read through semanticLevelOf, so a PIN cannot mint an urgent group.
+		// A pin writes level 0 into `item.Level`, and this row is synthetic: it
+		// carries no pin of its own for a later reader to see through, so a
+		// member's ordering preference taken literally here became the whole
+		// group's band — and three routine failures reached a lane that counts
+		// only somebody waiting or a promise breaking.
+		level, consequence = semanticLevelOf(members[0]), members[0].item.Consequence
 		for _, member := range members[1:] {
-			if member.item.Level < level {
-				level, consequence = member.item.Level, member.item.Consequence
+			if semanticLevelOf(member) < level {
+				level, consequence = semanticLevelOf(member), member.item.Consequence
 			}
 		}
 		category = categorySystem
@@ -333,6 +340,18 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			occurred = member.occurredAt
 		}
 	}
+	// Whether the night had seen this group, from the members it stands for.
+	//
+	// NOT from `occurred` above, which is the OLDEST member's moment: a group
+	// whose third failure arrived this morning would be judged by its first and
+	// reported as old news. A group is new when any member is, because that is
+	// what a reader means by a group appearing in the overnight notice.
+	//
+	// Carried explicitly because the fold MINTS a row: the members were stamped
+	// before the fold ran, and a synthetic row inherits none of their fields
+	// unless it is told to. Left out, an incident group reached the changed
+	// strip with an absent flag and was silently dropped from it.
+	row.ChangedSinceBrief = groupChangedSinceBrief(members)
 	return ranked{
 		item:       row,
 		foldedFrom: from,
@@ -349,13 +368,42 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 	}
 }
 
+// groupChangedSinceBrief says whether the night had seen a folded group.
+//
+// TRUE IF ANY MEMBER IS NEW. A group stands for its members, and one arriving
+// after the run makes the group something the reader has not read — judging it
+// by the oldest member would report a fresh failure as old news.
+//
+// Absent when NO member carries the flag, which keeps the three states the wire
+// distinguishes: a run that saw everything answers false, and a morning with no
+// run at all answers nothing. A group of unflagged members has no answer to
+// give, and false would claim a night that never happened had seen them.
+func groupChangedSinceBrief(members []ranked) *bool {
+	answer := false
+	answered := false
+	for _, member := range members {
+		if member.item.ChangedSinceBrief == nil {
+			continue
+		}
+		answered = true
+		if *member.item.ChangedSinceBrief {
+			answer = true
+			break
+		}
+	}
+	if !answered {
+		return nil
+	}
+	return &answer
+}
+
 // ownerOfTheGroup is the one answer a folded row may give.
 //
 // A batch is not a record and has no owner of its own; it stands for members
 // that do. Where they agree the group says what they say. Where they disagree
 // it says nothing — not the first member's answer, which would report one
-// person as holding a pile most of which is somebody else's, and not
-// `unassigned`, which would claim nobody holds work several people do.
+// contact as holding a pile most of which is somebody else's, and not
+// `unassigned`, which would claim nobody holds work several contacts do.
 //
 // Silence here is the honest answer AND a visible one: the row reaches the wire
 // with no owner, which the contract already means as "nothing is being said

@@ -34,15 +34,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// countingBlobstore records what was written and what was removed, so a test
+// countingBlobstore records what was written, removed and read, so a test
 // can assert the difference rather than the calls. It wraps the real memory
-// store rather than replacing it: the upload's behaviour must be measured
+// store rather than replacing it: the behaviour under test must be measured
 // against a store that actually stores.
 type countingBlobstore struct {
 	blobstore.Store
 	mu   sync.Mutex
 	put  []string
 	gone map[string]bool
+	gets int
 }
 
 func newCountingBlobstore() *countingBlobstore {
@@ -50,10 +51,44 @@ func newCountingBlobstore() *countingBlobstore {
 }
 
 func (c *countingBlobstore) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
+	err := c.Store.Put(ctx, key, r, size, contentType)
+	if err != nil {
+		return err
+	}
+	// Recorded only once the write has actually landed: a waiter polling
+	// putCount for a background write-back must see the count rise no
+	// sooner than the bytes it counts are readable back out.
 	c.mu.Lock()
 	c.put = append(c.put, key)
 	c.mu.Unlock()
-	return c.Store.Put(ctx, key, r, size, contentType)
+	return nil
+}
+
+func (c *countingBlobstore) Get(ctx context.Context, key string) (io.ReadCloser, blobstore.Object, error) {
+	c.mu.Lock()
+	c.gets++
+	c.mu.Unlock()
+	return c.Store.Get(ctx, key)
+}
+
+// getCount reports how many times Get was called so far.
+func (c *countingBlobstore) getCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gets
+}
+
+// putCount reports how many times Put wrote to key so far.
+func (c *countingBlobstore) putCount(key string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, k := range c.put {
+		if k == key {
+			n++
+		}
+	}
+	return n
 }
 
 func (c *countingBlobstore) Delete(ctx context.Context, key string) error {

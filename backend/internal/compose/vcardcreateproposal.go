@@ -35,7 +35,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,28 +48,28 @@ const vcardCreateKind = "vcard_create"
 // staged identity, and the approvals engine verifies an identity against
 // the payload that carries it.
 type vcardCreateProposal struct {
-	Entry    people.VCardEntry `json:"entry"`
-	FullName string            `json:"full_name"`
+	Entry    contacts.VCardEntry `json:"entry"`
+	FullName string              `json:"full_name"`
 	// Emails is the card's addresses lowered, sorted and joined — ONE string,
 	// because an identity field is a string by the engine's contract.
 	Emails string `json:"emails"`
 	// The rest of what an approval RELEASES, flattened for the card: the
 	// decider is shown every field the create will write, or they are
 	// approving more than they were asked. Empty fields are omitted so the
-	// card carries facts, not blanks — Organization is the one exception:
+	// card carries facts, not blanks — Company is the one exception:
 	// it also joins the identity below, and the engine's containment check
 	// refuses an identity asserting a field the payload omits. A card
 	// naming no company still displays as nothing; omitempty just cannot
 	// be the reason it does, or that card can never be staged at all.
-	Organization string `json:"organization"`
-	Title        string `json:"title,omitempty"`
-	Phones       string `json:"phones,omitempty"`
-	URL          string `json:"url,omitempty"`
-	Address      string `json:"address,omitempty"`
-	// CandidatePersonID names the near-match the import saw, when the
+	Company string `json:"company"`
+	Title   string `json:"title,omitempty"`
+	Phones  string `json:"phones,omitempty"`
+	URL     string `json:"url,omitempty"`
+	Address string `json:"address,omitempty"`
+	// CandidateContactID names the near-match the import saw, when the
 	// importer could see it too. Informational for the decider; the create
 	// itself does not read it.
-	CandidatePersonID *openapi_types.UUID `json:"candidate_person_id,omitempty"`
+	CandidateContactID *openapi_types.UUID `json:"candidate_contact_id,omitempty"`
 	// StagedBy is the importer's own user id. vcard_create is self-only — one
 	// member's own uploaded address book — but neither the identity-keyed
 	// supersession nor the diff-hash join/decline-memory the engine runs for
@@ -87,14 +87,14 @@ type vcardCreateProposal struct {
 	StagedBy string `json:"staged_by"`
 }
 
-// vcardCreateStager builds the people module's review port: one card's
+// vcardCreateStager builds the contacts module's review port: one card's
 // near-match becomes one durable proposal.
-func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry people.VCardEntry, candidate *ids.PersonID) error {
+func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry contacts.VCardEntry, candidate *ids.ContactID) error {
 	svc := approvalsServiceWithEffects(pool)
-	return func(ctx context.Context, entry people.VCardEntry, candidate *ids.PersonID) error {
+	return func(ctx context.Context, entry contacts.VCardEntry, candidate *ids.ContactID) error {
 		// Self-only, like the LinkedIn match one seam over: the card is one
 		// member's own uploaded address book, so the importer is recorded as
-		// the proposal's subject and is the only person who can read or
+		// the proposal's subject and is the only contact who can read or
 		// decide it. Without the stamp a self-only row is decidable by
 		// nobody, so the two halves land together. subject is the exact id
 		// the approval row itself will carry as on_behalf_of.
@@ -111,20 +111,20 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		proposal := vcardCreateProposal{
 			Entry: entry,
 			// The dedupe lane's own folding, not a plain lowercase: a name it
-			// treats as the same person must hit the same decline memory, or
+			// treats as the same contact must hit the same decline memory, or
 			// a re-spelt card walks past a refusal.
-			FullName:     people.NormalizePersonName(entry.FullName),
-			Emails:       loweredCardEmails(entry),
-			Organization: strings.TrimSpace(entry.Organization),
-			Title:        strings.TrimSpace(entry.Title),
-			Phones:       strings.Join(phones, ", "),
-			URL:          strings.TrimSpace(entry.URL),
-			Address:      strings.TrimSpace(entry.Address),
-			StagedBy:     subject.String(),
+			FullName: contacts.NormalizeContactName(entry.FullName),
+			Emails:   loweredCardEmails(entry),
+			Company:  strings.TrimSpace(entry.Company),
+			Title:    strings.TrimSpace(entry.Title),
+			Phones:   strings.Join(phones, ", "),
+			URL:      strings.TrimSpace(entry.URL),
+			Address:  strings.TrimSpace(entry.Address),
+			StagedBy: subject.String(),
 		}
 		if candidate != nil {
 			id := openapi_types.UUID(candidate.UUID)
-			proposal.CandidatePersonID = &id
+			proposal.CandidateContactID = &id
 		}
 		body, marshalErr := json.Marshal(proposal)
 		if marshalErr != nil {
@@ -135,8 +135,8 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// tweaks a title is still the same question, and a decline keyed on
 		// the full payload would be forgotten the first time a field moved.
 		// staged_by joins it for a different reason than the card fields do:
-		// full_name, emails and organization say WHICH card; staged_by says
-		// WHOSE — and without it, two members' cards naming the same person
+		// full_name, emails and company say WHICH card; staged_by says
+		// WHOSE — and without it, two members' cards naming the same contact
 		// (or, for a bare name with no other addressing at all, simply
 		// sharing one) would be one question in the engine's eyes, answerable
 		// and withdrawable by either member's stager.
@@ -146,10 +146,10 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry peopl
 		// JSON omits, and a card whose value is legitimately empty (no email,
 		// no company) is not exempt from being asked about.
 		identity, err := json.Marshal(map[string]any{
-			fieldFullName:                  proposal.FullName,
-			"emails":                       proposal.Emails,
-			string(recordTypeOrganization): proposal.Organization,
-			"staged_by":                    proposal.StagedBy,
+			fieldFullName:             proposal.FullName,
+			"emails":                  proposal.Emails,
+			string(recordTypeCompany): proposal.Company,
+			"staged_by":               proposal.StagedBy,
 		})
 		if err != nil {
 			return fmt.Errorf("compose: encoding the vCard proposal identity: %w", err)
@@ -183,7 +183,7 @@ func vcardCreateSummary(fullName string) string {
 // identity is remembered against — lowered, deduplicated, sorted, and
 // joined on a byte no address can carry — so the same set is one spelling
 // and two different sets can never collide on a delimiter inside a value.
-func loweredCardEmails(entry people.VCardEntry) string {
+func loweredCardEmails(entry contacts.VCardEntry) string {
 	seen := map[string]bool{}
 	emails := make([]string, 0, len(entry.Emails))
 	for _, email := range entry.Emails {
@@ -201,7 +201,7 @@ func loweredCardEmails(entry people.VCardEntry) string {
 // vcardCreatePrecheck refuses, while the proposal is still pending and
 // re-decidable, what the create would refuse after the decision committed —
 // the modify-then-approve arm can rewrite the payload, and an edit that
-// dropped the entry would otherwise create a person with no name.
+// dropped the entry would otherwise create a contact with no name.
 func vcardCreatePrecheck() approvals.ReleasePrecheck {
 	return func(_ context.Context, staged, edited json.RawMessage) error {
 		payload := staged
@@ -213,7 +213,7 @@ func vcardCreatePrecheck() approvals.ReleasePrecheck {
 			return errors.New("this card's proposal could not be read; reject it and re-import the file")
 		}
 		if strings.TrimSpace(proposal.Entry.FullName) == "" {
-			return errors.New("the card names nobody: a person needs a name before they can be created")
+			return errors.New("the card names nobody: a contact needs a name before they can be created")
 		}
 		// The same question the create asks, asked while the row is still
 		// re-decidable. Without it a card carrying a number the writer refuses
@@ -222,12 +222,12 @@ func vcardCreatePrecheck() approvals.ReleasePrecheck {
 		// decision they were making.
 		//
 		// PARSING only, and deliberately. The create also refuses an address
-		// another person already claims, and that refusal cannot be brought
+		// another contact already claims, and that refusal cannot be brought
 		// forward honestly: a claim can be taken between this check and the
 		// approval, so asking here would not prevent the post-commit failure —
 		// it would only make it rarer while reading like a guarantee. A parse
 		// failure is a property of the card itself and cannot change under it.
-		if err := people.ValidateVCardContacts(proposal.Entry); err != nil {
+		if err := contacts.ValidateVCardContacts(proposal.Entry); err != nil {
 			return fmt.Errorf("this card carries a contact detail that cannot be stored: %w", err)
 		}
 		return nil
@@ -235,16 +235,16 @@ func vcardCreatePrecheck() approvals.ReleasePrecheck {
 }
 
 // vcardCreateAcceptEffect executes the approved answer: the human said this
-// is somebody else, so the person is created with the card's employer edge,
+// is somebody else, so the contact is created with the card's employer edge,
 // under the decider's own authority. There is no reject effect — rejecting a
 // create leaves the world exactly as it was.
 //
 // The create rides RedeemAndApply, so the approval's redemption and the
-// person it releases commit in ONE transaction: a redelivered decision finds
+// contact it releases commit in ONE transaction: a redelivered decision finds
 // the approval consumed and creates nobody a second time, and a create that
 // fails rolls the redemption back with it rather than stranding an approved
-// row whose person never appeared.
-func vcardCreateAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+// row whose contact never appeared.
+func vcardCreateAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var proposal vcardCreateProposal
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {

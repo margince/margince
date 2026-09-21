@@ -1,6 +1,5 @@
-import { Check } from "lucide-react";
 import { useId, useState } from "react";
-import { Button } from "../../design-system/atoms";
+import { Button, Radio } from "../../design-system/atoms";
 import { STAGE_TITLE_ID } from "../../design-system/onboarding-stage";
 import { useT } from "../../i18n";
 import type { ConversationQuestion } from "./conversation-machine";
@@ -20,8 +19,8 @@ import type { ConversationQuestion } from "./conversation-machine";
 export type CandidateFacts = Readonly<{
   /** The reading-size line under the name (a registered address). */
   meta?: string;
-  /** The mono detail line (registry / VAT number). */
-  mono?: string;
+  /** The identifier line under the name (registry / VAT number). */
+  identifier?: string;
   /** The verbatim quote and the page it was read from. */
   snippet?: string;
   source?: string;
@@ -107,8 +106,8 @@ export function DecisionScene({
 
 // One candidate: the choice row (disc, name, the read's detail lines) with
 // the evidence toggle on the right, and the quote itself revealed under it.
-// The toggle sits OUTSIDE the label, because a control inside a label also
-// activates the radio the label is for.
+// The evidence toggle sits OUTSIDE the tick's own label, because a control
+// inside a label also activates the radio the label is for.
 function CandidateCard({
   group,
   value,
@@ -136,44 +135,40 @@ function CandidateCard({
   return (
     <div className={`ob-decision-card${picked ? " is-picked" : ""}`}>
       <div className="ob-decision-row">
-        <label>
-          <input
-            type="radio"
-            name={group}
-            value={value}
-            checked={picked}
-            onChange={onPick}
-          />
-          <span className="ob-decision-disc" aria-hidden>
-            {picked && <Check />}
-          </span>
-          <span className="ob-decision-body">
-            <b>{label}</b>
-            {facts?.meta !== undefined && facts.meta !== "" && (
-              <span>{facts.meta}</span>
-            )}
-            {((facts?.mono !== undefined && facts.mono !== "") ||
-              (detail !== undefined && detail !== "")) && (
-              <small className="t-caption">{facts?.mono || detail}</small>
-            )}
-          </span>
-        </label>
+        <Radio
+          name={group}
+          value={value}
+          checked={picked}
+          onChange={onPick}
+          label={
+            <span className="ob-decision-body">
+              <b>{label}</b>
+              {facts?.meta !== undefined && facts.meta !== "" && (
+                <span>{facts.meta}</span>
+              )}
+              {((facts?.identifier !== undefined && facts.identifier !== "") ||
+                (detail !== undefined && detail !== "")) && (
+                <small className="t-caption">
+                  {facts?.identifier || detail}
+                </small>
+              )}
+            </span>
+          }
+        />
         {writes !== undefined && writes !== "" && (
           // The consequence, beside the choice rather than after it. Two
           // candidates can read almost identically and put very different
           // strings on a record every later screen quotes, so the string itself
-          // is shown, verbatim and in mono, before the answer is given.
+          // is shown, verbatim, before the answer is given.
           <span className="ob-decision-writes">
-            <span className="ob-decision-writes-lead">
-              {t("ob.conv.scene.writes")}
-            </span>
+            <span>{t("ob.conv.scene.writes")}</span>
             <code>{writes}</code>
           </span>
         )}
         {hasEvidence && (
           <button
             type="button"
-            className="ob-decision-toggle t-caption"
+            className="ob-decision-toggle"
             aria-expanded={open}
             aria-controls={panel}
             onClick={() => setOpen((prev) => !prev)}

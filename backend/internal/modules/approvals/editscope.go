@@ -37,6 +37,7 @@ package approvals
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -165,14 +166,44 @@ func isRESTStaging(payload map[string]json.RawMessage) bool {
 	return hasOp || hasPath
 }
 
+// errJSONNull names the one non-object that decodes into a map without error.
+var errJSONNull = errors.New("it is the JSON literal null")
+
+// jsonObjectMembers narrows one jsonb payload to its members, refusing every
+// shape that is not an object.
+//
+// The nil check is not belt-and-braces: `null` unmarshals into a NIL map and
+// returns no error, so a decode alone answers "object" for it. A null staging
+// that reached the comparison below produced two empty member sets, matched
+// nothing against nothing, and let an edit through the identity guard
+// untouched — the opposite of what a payload nobody can read should get.
+func jsonObjectMembers(raw json.RawMessage) (map[string]json.RawMessage, error) {
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &members); err != nil {
+		return nil, err
+	}
+	if members == nil {
+		return nil, errJSONNull
+	}
+	return members, nil
+}
+
 // assertSameCallIdentity refuses an edit that changes which call was staged.
 func assertSameCallIdentity(original, edited json.RawMessage) error {
-	var before, after map[string]json.RawMessage
-	if err := json.Unmarshal(original, &before); err != nil {
-		return fmt.Errorf("approvals: decoding a proposed change to compare its call identity: %w", err)
+	before, err := jsonObjectMembers(original)
+	if err != nil {
+		// The STAGED payload is not an object. `proposed_change` is jsonb, which
+		// permits an array or a scalar, and nothing this comparison can say
+		// about such a payload is the caller's to fix — but answering a bare
+		// error made it a 500, and a 500 tells a human their approval hit a
+		// server fault when what happened is that the staging is unusable. No
+		// producer stages one today; the column is what makes it reachable.
+		return &InvalidEditError{Cause: fmt.Errorf(
+			"the staged change is not a JSON object, so an edit cannot be compared against it: %w", err)}
 	}
-	if err := json.Unmarshal(edited, &after); err != nil {
-		return fmt.Errorf("approvals: decoding an edited change to compare its call identity: %w", err)
+	after, err := jsonObjectMembers(edited)
+	if err != nil {
+		return &InvalidEditError{Cause: fmt.Errorf("the edit is not a JSON object: %w", err)}
 	}
 	if !isRESTStaging(before) && !isRESTStaging(after) {
 		return nil
@@ -192,7 +223,11 @@ func assertSameCallIdentity(original, edited json.RawMessage) error {
 	for member := range members {
 		was, had := before[member]
 		now, has := after[member]
-		if had != has || !bytes.Equal(was, now) {
+		same, err := sameJSONValue(was, now)
+		if err != nil {
+			return &InvalidEditError{Cause: err}
+		}
+		if had != has || !same {
 			changed = append(changed, "/"+member)
 		}
 	}
@@ -204,4 +239,48 @@ func assertSameCallIdentity(original, edited json.RawMessage) error {
 	// reviewer cannot diff against the last one.
 	sort.Strings(changed)
 	return &RetargetedEditError{Paths: changed}
+}
+
+// sameJSONValue compares two raw members by what they MEAN rather than by
+// their bytes.
+//
+// The two sides arrive spelled differently by construction. `before` comes back
+// from a jsonb column, which emits `&`, `<` and `>` raw; `after` comes from
+// diffhash.Canonical through json.Marshal, which escapes them as `\u0026` and
+// friends. Compared as bytes, a staged `path` carrying any of those characters
+// made every later body-only edit refuse as a retarget — a legitimate
+// correction the human is entitled to make, refused for a reason nothing in the
+// message could explain.
+//
+// It failed CLOSED, which is why this is a correction rather than a hole: two
+// different decoded values cannot have equal bytes either, so nothing was ever
+// admitted that should not have been.
+//
+// Absent members compare equal here and the caller's own had/has check
+// separates them, so a member present on one side only is reported as changed
+// rather than as a decode failure.
+func sameJSONValue(a, b json.RawMessage) (bool, error) {
+	if len(a) == 0 || len(b) == 0 {
+		return len(a) == len(b), nil
+	}
+	var left, right any
+	if err := json.Unmarshal(a, &left); err != nil {
+		return false, fmt.Errorf("the staged change carries a member that is not JSON: %w", err)
+	}
+	if err := json.Unmarshal(b, &right); err != nil {
+		return false, fmt.Errorf("the edit carries a member that is not JSON: %w", err)
+	}
+	// Re-marshalled rather than reflect.DeepEqual: one encoder decides the
+	// escaping AND the key order for both sides, so two objects that differ
+	// only in how they were written compare equal, and any two that differ in
+	// content do not.
+	leftJSON, err := json.Marshal(left)
+	if err != nil {
+		return false, err
+	}
+	rightJSON, err := json.Marshal(right)
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(leftJSON, rightJSON), nil
 }
