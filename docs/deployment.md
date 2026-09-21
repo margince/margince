@@ -217,6 +217,32 @@ A missing optional pool does not fail readiness, so a 200 alone cannot prove
 field creation works. Configuration and the 501 troubleshooting procedure are
 in [Custom-field schema pool](reference/configuration.md#custom-field-schema-pool-api--runtime-ddl).
 
+## Alert on the agent bound, do not drain on it
+
+The per-Passport read bound (`MCP-SESS-READS`) counts in Redis and **fails
+closed**: with its counter store unreachable, every governed counter reports its
+threshold passed and the whole agent surface refuses. A control that cannot
+count must not answer "allowed". On the default api that is visible by accident
+— the inline relay probes the same Redis, so `/readyz` drains the pod. On a
+**split role** (`--inline-relay=false`, worker separate) nothing probes it: the
+pod reports healthy while every agent read refuses.
+
+It is deliberately not a readiness check. Readiness is per-pod, so the probe
+would drain the pod for HUMAN traffic too, over a fault no human request can
+meet. Two gauges instead: `margince_agent_volume_bound` is 1 where the role
+composed a bound and 0 where it declared it serves no agent surface;
+`margince_agent_volume_answerable` is 0 where the bound could not read its store
+on its last attempt. Alert on `bound == 1 and answerable == 0`, and say this in
+the alert text:
+
+> **Agent reads are refusing on this role. Human traffic is unaffected — do not
+> drain the pod. Restore Redis.**
+
+That second sentence is the point of the alert. Every role renders both gauges,
+including one that composed no meter, so an absent series means nobody is
+scraping. The signal follows the last attempt in both directions and clears on
+its own.
+
 ## Deploy all three roles at ONE release (the guard that enforces it)
 
 Every release image carries the release it was built from, in three places
