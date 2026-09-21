@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -38,12 +37,12 @@ func (s onboardingVoiceReaderStub) ProfilePresentation(context.Context, ids.UUID
 }
 
 type onboardingCompanyReaderStub struct {
-	company contacts.Company
-	err     error
+	exists bool
+	err    error
 }
 
-func (s onboardingCompanyReaderStub) GetAnchorCompany(context.Context) (contacts.Company, error) {
-	return s.company, s.err
+func (s onboardingCompanyReaderStub) AnchorProfileStanding(context.Context) (bool, bool, error) {
+	return s.exists, s.exists, s.err
 }
 
 func TestVerifySelectedOptionBindsTheGrantToTheCurrentClarifications(t *testing.T) {
@@ -348,7 +347,7 @@ func TestResultsActRecognizesAManuallySavedCompany(t *testing.T) {
 		// path, so only the anchor knows it exists.
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
 		brain: brain, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
-		company: onboardingCompanyReaderStub{company: contacts.Company{DisplayName: "Acme"}},
+		company: onboardingCompanyReaderStub{exists: true},
 	}
 	recorder := onboardingCompanyRequest(&assistant, `{"message":"Where do I stand?","locale":"en","act":"results"}`)
 	if recorder.Code != http.StatusOK {
@@ -373,7 +372,7 @@ func TestResultsActWithoutAnyCompanyStaysUnconfirmed(t *testing.T) {
 	assistant := onboardingCompanyAssistant{
 		state: onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
 		brain: brain, runtime: &onboardingRuntimeStub{summary: ai.RunSummary{Currency: "USD"}},
-		company: onboardingCompanyReaderStub{err: apperrors.ErrNotFound},
+		company: onboardingCompanyReaderStub{},
 	}
 	recorder := onboardingCompanyRequest(&assistant, `{"message":"Am I done?","locale":"en","act":"results"}`)
 	if recorder.Code != http.StatusOK {
