@@ -6866,6 +6866,15 @@ export interface paths {
          *     saves the company form: that 404 IS the "this installation has not described itself yet" signal,
          *     and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
          *     customer records.
+         *
+         *
+         *     ADMIN ONLY, and the read as much as the write beside it. The installation's identity is
+         *     administered — the same answer user administration, privacy and the audit log give — rather
+         *     than a record owned by a role in the customer-record vocabulary. It used to ride the
+         *     `company` object, which governs customer accounts, so every role holding that object could
+         *     edit the installation's own name. Whether this installation has described itself YET is a
+         *     different question and is not administered: the growth fit and the onboarding conversation
+         *     both resolve it, for any seat.
          */
         get: operations["getAnchorCompany"];
         /**
@@ -6879,6 +6888,10 @@ export interface paths {
          *     Unlike the cold-start accept path this never resolves a target by domain: the workspace names its
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
          *     a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
+         *
+         *
+         *     ADMIN ONLY — see the read above for why the installation's identity is administered rather
+         *     than gated on the object that governs customer accounts.
          */
         put: operations["putAnchorCompany"];
         post?: never;
@@ -11688,10 +11701,17 @@ export interface paths {
          *     which revokes every session the member holds. Emits `user.password_link_issued`.
          *
          *     Admin-only and human-only — an agent may never mint a credential for a human. Available
-         *     ONLY where it is needed and can work: refused when an outbound-email channel IS configured
-         *     (that installation mails the link), when no public base URL is configured (a
-         *     credential-bearing link is never derived from a request `Host`), and when the target is
-         *     suspended or deactivated (redemption refuses them, so the link would be dead on arrival).
+         *     wherever it can WORK: refused when no public base URL is configured (a credential-bearing
+         *     link is never derived from a request `Host`), and when the target is suspended or
+         *     deactivated (redemption refuses them, so the link would be dead on arrival).
+         *
+         *
+         *     A CONFIGURED OUTBOUND-EMAIL CHANNEL DOES NOT REFUSE IT. It used to, on the reasoning that
+         *     such an installation mails the link — which is true only while the mail arrives. An
+         *     installation whose relay is configured and dead answers `201` to an invite and delivers
+         *     nothing, and this refused the one fallback *because* a mailer was configured: the escape
+         *     disabled by the fault it escapes. Whether a wired relay actually works is a separate
+         *     question with its own answer to give; this is true either way.
          *
          *     An `invited` member IS a valid target, and this is how an expired invitation is recovered:
          *     they have no password, so `requestPasswordReset` refuses them, leaving this the only way
@@ -48239,6 +48259,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description No company saved yet — onboarding has not been completed. */
             404: {
                 headers: {
@@ -54003,7 +54024,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `email_channel_configured` (this installation mails the link — use the invite flow), `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint). */
             409: {
                 headers: {
                     [name: string]: unknown;

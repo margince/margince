@@ -135,6 +135,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["revoked_by_level", "history.field.revoked_by_level"],
   ["revoked_override", "history.field.revoked_override"],
   ["revoked_rows", "history.field.revoked_rows"],
+  ["scope", "history.field.scope"],
   ["stopped", "history.field.stopped"],
   ["stops_carried", "history.field.stops_carried"],
   ["submission_decision", "history.field.submission_decision"],

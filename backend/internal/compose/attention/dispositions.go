@@ -22,15 +22,38 @@ const (
 	disposeNotSales = "not_sales"
 )
 
-// waitingDispositions are the three judgements a rep may make about an
-// unanswered message.
+// waitingDispositions are the judgements a rep may make about an unanswered
+// message — three of them, or one when the message belongs to no conversation.
 //
 // Only this source offers them, and the reason is worth stating: every other
 // row on the queue is answered by the surface that owns it — an approval is
 // decided, a task is completed, a duplicate is merged — and doing that is what
 // makes it leave. An unanswered message has no such verb. Replying is not
 // always the answer, and the three cases where it is not are exactly these.
-func waitingDispositions() []crmcontracts.WorklistItemDispositions {
+//
+// TWO OF THE THREE ARE KEYED ON THE THREAD, and a message can reach this queue
+// without one: a first contact from an address nobody has written to, or a
+// provider that hands over no chain to root on.
+//
+//   - `not_sales` judges the THREAD. SetThreadNotSales resolves it through
+//     threadOf, which refuses a row without one — so the action was offered,
+//     the reader pressed it, and it answered a validation error.
+//   - `snooze` until a reply wakes on a later message with the SAME thread_key,
+//     plain equality, which a NULL never satisfies. A threadless row snoozed
+//     that way was hidden permanently, even when the customer did write back.
+//
+// The equality is correct and stays: matching NULL thread keys would let one
+// unthreaded outbound silence every unthreaded question in the workspace. What
+// was wrong is offering a wake condition that cannot fire.
+//
+// `not_mine` survives because it is per-reader and keyed on the activity, so a
+// threadless row can still be set aside by whoever is looking at it. That
+// leaves the row with something to do rather than nothing, which is why this
+// reduces the set rather than withholding dispositions altogether.
+func waitingDispositions(threaded bool) []crmcontracts.WorklistItemDispositions {
+	if !threaded {
+		return []crmcontracts.WorklistItemDispositions{disposeNotMine}
+	}
 	return []crmcontracts.WorklistItemDispositions{
 		disposeSnooze, disposeNotMine, disposeNotSales,
 	}

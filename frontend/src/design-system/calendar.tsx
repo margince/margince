@@ -141,7 +141,7 @@ function CalendarDay({
 }>) {
   const classes = [
     "calendar-day",
-    inMonth ? "" : "",
+    inMonth ? "" : "calendar-day-outside",
     isToday ? "calendar-day-today" : "",
   ]
     .filter(Boolean)

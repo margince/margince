@@ -70,11 +70,19 @@ func sarCommunicationSections(
 			// refuse every address that record has — so a query keyed on the
 			// subject's ids alone tells them nothing about an address of theirs
 			// this installation has stopped writing to.
-			&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
-		          decided_by_level
-		   FROM communication_suppression
-		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)
-		      OR lower(address) = ANY($3)`,
+			// THE PURPOSE BY ITS NAME, not by its id. Every other column
+			// here is something the subject can read, and the reason this
+			// section names the purpose at all is so somebody holding a stop
+			// on one list can tell it from an objection to everything — which
+			// a bare consent_purpose uuid does not tell them. LEFT JOIN, so a
+			// broad stop (purpose_id NULL) keeps its row and answers NULL for
+			// both columns rather than dropping out of the export.
+			&pkg.CommunicationSuppression, `SELECT s.kind, s.source, s.address, s.recorded_at,
+		          s.revoked_at, s.decided_by_level, p.key AS purpose_key, p.label AS purpose_label
+		   FROM communication_suppression s
+		   LEFT JOIN consent_purpose p ON p.id = s.purpose_id
+		   WHERE s.contact_id = ANY($1) OR s.lead_id = ANY($2)
+		      OR lower(s.address) = ANY($3)`,
 			[]any{identities, leads, lowerAll(emails)},
 		},
 		// A rep vouching that a machine refusal may be overruled for this

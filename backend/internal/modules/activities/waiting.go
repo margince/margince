@@ -70,6 +70,18 @@ type WaitingReply struct {
 	// a rep sees.
 	OwedVerdict  string
 	CaptureLabel string
+	// Threaded reports that this message belongs to a conversation.
+	//
+	// Not every captured message does: a first contact from an address nobody
+	// has written to, or a provider that hands over no chain to root on,
+	// arrives with no thread_key at all and still reaches this queue.
+	//
+	// It travels because two of the three judgements a rep may make about a
+	// waiting row are keyed on the thread, and a row without one can perform
+	// neither. Deciding that here, where the column is read, rather than
+	// letting the caller infer it from a record id that is absent for other
+	// reasons too.
+	Threaded bool
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -202,7 +214,35 @@ func liveRecord(predicate, alias string) string {
 // One row per thread — the newest inbound in it — because a customer who wrote
 // three times is waiting once, and three rows would read as three obligations.
 // Oldest first: the longest wait is the one most likely to have been forgotten.
+//
+// One PAGE of them, bounded by the scan cap. Read the whole backlog with
+// WaitingRepliesBefore, which continues where a page left off; this spelling
+// asks for the newest page and stops.
+//
+// Paged because the scan's own machine-sender rule is a coarse subset of the
+// real one. The full test reads a registrable domain against a transactional
+// baseline — a public-suffix question, not something a LIKE can answer — so it
+// runs in the caller, AFTER this cap. Two hundred newer messages from one
+// transactional relay could therefore fill the scan and push a genuinely
+// waiting customer out of it, and the caller would discard all two hundred and
+// show nothing. Asking for the next page is how the customer comes back.
+//
+// Not by moving the full rule into SQL: that rule is one capability, and a
+// second copy of it here would be the thing that drifts — the domain baseline
+// and the public-suffix walk are both Go, and compose owns the seam that has
+// them.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
+	return s.WaitingRepliesBefore(ctx, asOf, time.Time{})
+}
+
+// WaitingRepliesBefore is WaitingReplies continued: the next page of the same
+// scan, older than the instant given.
+//
+// One implementation, two names. The unpaged spelling is what almost every
+// caller wants — one page is two hundred rows and more than a queue shows —
+// and it says so by taking no cursor at all, rather than every call site
+// carrying a zero somebody has to recognise as "the beginning".
+func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before time.Time) ([]WaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -291,7 +331,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 				fmt.Sprintf("$%d", arg(readerAddresses)),
-				unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant))), args...)
+				unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
+				olderThan(before, arg)), args...)
 		if err != nil {
 			return err
 		}
@@ -302,7 +343,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

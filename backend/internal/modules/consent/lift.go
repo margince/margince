@@ -152,6 +152,13 @@ func (s *Store) liftAdmittedTx(
 		return err
 	}
 
+	// BY ID, NOT BY PURPOSE — deliberately. A row's purpose_id (nil for a
+	// broad stop, a consent_purpose id for a narrow one) is not asked here at
+	// all, because LiftInput already names the one row to take back: whatever
+	// it binds, lifting IT is what was requested. A purpose-aware clause would
+	// only ever narrow which rows this matches, and the id already picks
+	// exactly one — there is nothing left for a purpose filter to do except
+	// occasionally answer not-found for a row that does exist.
 	var decided string
 	err = tx.QueryRow(ctx, `
 		SELECT decided_by_level FROM communication_suppression
@@ -210,6 +217,15 @@ func (s *Store) liftAdmittedTx(
 	// either a contact or a lead. This is not: LiftInput takes a ContactID and
 	// consentSubject resolves it, so a lead arm here would be a clause that can
 	// never match — the appearance of mirroring the engine without the fact.
+	//
+	// PURPOSE-AGNOSTIC on the same reasoning as the row lookup above: this asks
+	// whether ANY live stop remains, and a narrow one bound to a single
+	// newsletter is as much "still suppressed" as a broad one — the subject is
+	// still stopped from something, which is exactly what still_suppressed
+	// exists to tell a reader. Narrowing the count by purpose would answer
+	// "nothing stands" while a narrow objection the lift never touched keeps
+	// refusing that one newsletter, which is under-reporting in the one
+	// direction this field must not fail: the direction that resumes mail.
 	//
 	// Held by TestALiftReportsAnAddressPinnedStopAsStanding.
 	var remaining int

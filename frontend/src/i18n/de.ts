@@ -377,6 +377,7 @@ export const de = {
   "history.field.revoked_by_level": "Widerrufen auf Ebene",
   "history.field.revoked_override": "Widerrufene Freigabe",
   "history.field.revoked_rows": "Zurückgenommene Freigaben",
+  "history.field.scope": "Umfang",
   "history.field.stopped": "Gestoppt",
   "history.field.stops_carried": "Übernommene Sperren",
   "history.field.submission_decision": "Entscheidung zur Einreichung",

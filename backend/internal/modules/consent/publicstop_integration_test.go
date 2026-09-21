@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -292,5 +294,68 @@ func TestAnAllMarketingLinkMayStillObject(t *testing.T) {
 	}
 	if _, standing := standingStops(t, e)[commsauthz.ReasonObjection]; !standing {
 		t.Error("the press recorded no marketing objection")
+	}
+}
+
+// TestPublicStopStandingIsScopedToPurpose is the replay check's own purpose
+// boundary: communication_suppression.purpose_id lets a stop narrow to one
+// marketing purpose, and the writer's own dedup key (withdrawalpress.go's
+// StopForCredentialTx) already keys a narrow row's replay on kind AND
+// purpose_id together. This reader answers the same question about a
+// press at the subject's own level, and a narrow stop must not silently
+// answer for a broader press, or the other way round.
+//
+// PLANTED DIRECTLY, the way TestARepsWeakerStopDoesNotSwallowTheSubjectsOwn
+// beside it plants the rep's row: PublicStop itself never writes a
+// purpose-scoped row today — the wire carries only stop_all_marketing and
+// stop_all_contact, neither of which names one — so this stands in for a
+// future narrow press without inventing a new door for it.
+func TestPublicStopStandingIsScopedToPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+
+	var purposeX ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		INSERT INTO consent_purpose (key, label, class)
+		VALUES ('narrow-list', 'Narrow list', 'marketing')
+		RETURNING id`).Scan(&purposeX); err != nil {
+		t.Fatalf("seeding the narrow purpose: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression
+		    (contact_id, kind, source, captured_by, decided_by_level, purpose_id)
+		VALUES ($1, $2, 'test', 'human:x', $3, $4)`,
+		e.contact, commsauthz.ReasonObjection, string(commsauthz.LevelSubject), purposeX); err != nil {
+		t.Fatalf("planting the narrow stop: %v", err)
+	}
+
+	sub, err := consentSubject(RecordInput{ContactID: e.contact})
+	if err != nil {
+		t.Fatalf("resolving the subject: %v", err)
+	}
+
+	var broadStands bool
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		broadStands, err = publicStopStandingTx(e.ctx, tx, sub, commsauthz.ReasonObjection, nil)
+		return err
+	}); err != nil {
+		t.Fatalf("checking the broad press: %v", err)
+	}
+	if broadStands {
+		t.Error("a narrow stop for one purpose answered standing for a broad press — a later " +
+			"press to stop ALL marketing would be told it already had, and record nothing")
+	}
+
+	var narrowSamePurposeStands bool
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		narrowSamePurposeStands, err = publicStopStandingTx(e.ctx, tx, sub, commsauthz.ReasonObjection, &purposeX)
+		return err
+	}); err != nil {
+		t.Fatalf("checking the repeated narrow press: %v", err)
+	}
+	if !narrowSamePurposeStands {
+		t.Error("a repeated narrow press for the SAME purpose was not recognised as a replay")
 	}
 }

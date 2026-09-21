@@ -372,6 +372,7 @@ export const en = {
   "history.field.revoked_by_level": "Revoked at level",
   "history.field.revoked_override": "Revoked override",
   "history.field.revoked_rows": "Overrides taken back",
+  "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
   "history.field.stops_carried": "Stops carried over",
   "history.field.submission_decision": "Submission decision",

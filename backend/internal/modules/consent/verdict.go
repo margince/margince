@@ -27,6 +27,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
@@ -167,14 +168,22 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 	// guard read asks, not about one message to one address — an address-level
 	// hard bounce on a stale mailbox must not read as "this contact is blocked"
 	// when they have another channel on file.
-	kinds, err := liveSuppression(ctx, tx, contactID, connector.Recipient{})
+	stops, err := liveSuppression(ctx, tx, contactID, connector.Recipient{})
 	if err != nil {
 		return Verdict{}, err
 	}
 	category := categoryForClass(purpose.Class)
-	for _, kind := range kinds {
-		if suppressionBinds(kind, category) {
-			return Verdict{State: VerdictBlocked, Reason: suppressionReason(kind), Code: BlockSuppressed, Suppression: kind}, nil
+	// This verdict is FOR one named purpose (the argument above), never for
+	// "marketing in general" — the same purpose a narrow suppression row
+	// compares itself against, so it is always known here, unlike the evidence
+	// arms on the transmit path that ask about no purpose at all.
+	askedPurpose, err := ids.Parse(purpose.ID)
+	if err != nil {
+		return Verdict{}, fmt.Errorf("consent: the asked purpose is not an id: %w", err)
+	}
+	for _, s := range stops {
+		if suppressionBinds(s.Kind, category, s.PurposeID, &askedPurpose) {
+			return Verdict{State: VerdictBlocked, Reason: suppressionReason(s.Kind), Code: BlockSuppressed, Suppression: s.Kind}, nil
 		}
 	}
 

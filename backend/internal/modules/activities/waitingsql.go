@@ -139,7 +139,15 @@ const waitingRepliesSQL = `
 	          FILTER (WHERE ownerContact.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
 	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
-	         '00000000-0000-0000-0000-000000000000'::uuid)
+	         '00000000-0000-0000-0000-000000000000'::uuid),
+	       -- Whether this message belongs to a conversation at all.
+	       --
+	       -- Two of the three things a rep may do with a waiting row are keyed
+	       -- on the thread: dismissing it workspace-wide judges the THREAD, and
+	       -- snoozing until a reply wakes on a later message with the same
+	       -- thread_key. A row without one can do neither, so the caller must
+	       -- know before it offers them.
+	       a.thread_key IS NOT NULL AND a.thread_key <> ''
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -312,6 +320,14 @@ const waitingRepliesSQL = `
 	 --
 	 -- The caller sorts oldest-first for display, so what a reader sees is
 	 -- unchanged. This decides only WHICH waits survive the bound.
+	 --
+	 -- %[19]s is the keyset continuation, empty on the first page. The machine
+	 -- rule this scan can express is a coarse subset of the real one — the full
+	 -- test reads a registrable domain against a transactional baseline, which
+	 -- is a public-suffix question rather than a LIKE — so the caller filters
+	 -- what survives and asks for another page when too much of it went. The
+	 -- cap bounds ONE page; the caller bounds how many it will ask for.
+	 HAVING TRUE %[19]s
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 

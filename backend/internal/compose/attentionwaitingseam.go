@@ -76,18 +76,10 @@ func (w attentionWaiting) Hidden(
 func (w attentionWaiting) Unanswered(
 	ctx context.Context, asOf time.Time,
 ) ([]attention.WaitingCustomer, bool, error) {
-	rows, err := w.store.WaitingReplies(ctx, asOf)
+	kept, cut, err := w.waitingPages(ctx, asOf)
 	if err != nil {
 		return nil, false, err
 	}
-	// Asked of what the STORE returned, before keepWaitingCustomers runs.
-	//
-	// That filter drops machine senders and folds duplicate threads, so what it
-	// returns is smaller than what was read — and a caller comparing the
-	// SURVIVORS against the scan bound would read a full scan whose survivors
-	// are few as a complete one. This is the only place both numbers exist.
-	cut := len(rows) >= activities.WaitingScanCap
-	kept := keepWaitingCustomers(rows)
 	summaries, err := w.emailRows(ctx, kept)
 	if err != nil {
 		return nil, false, err
@@ -112,6 +104,7 @@ func (w attentionWaiting) Unanswered(
 			DealID:             row.DealID,
 			HasOpenDeal:        row.HasOpenDeal,
 			Engaged:            row.Engaged,
+			Threaded:           row.Threaded,
 			AddressedElsewhere: row.AddressedElsewhere,
 			// Translated here, at the one boundary that already crosses from
 			// the module's vocabulary to the queue's. Only "informs us" changes
@@ -124,6 +117,62 @@ func (w attentionWaiting) Unanswered(
 		})
 	}
 	return out, cut, nil
+}
+
+// waitingRefillRounds bounds how many pages one assembly will read.
+//
+// Three, not "until enough": each page is a full scan of the waiting predicate,
+// and a workspace whose recent mail is ENTIRELY machine would otherwise walk
+// its whole history to fill a queue that has nothing to show. Three pages is
+// six hundred rows, which is past any flood a real installation produces and
+// still one read of bounded cost.
+const waitingRefillRounds = 3
+
+// waitingPages reads waiting rows until enough survive the filter, the scan
+// runs out, or the round ceiling is reached. It answers what survived and
+// whether anything was left unread.
+//
+// The refill exists because the filter runs AFTER the scan cap. The store's own
+// machine rule is a coarse subset — six patterns against an address — while
+// keepWaitingCustomers asks capture.IsMachineAddress, which reads a registrable
+// domain against the transactional baseline. An address like hello@sendgrid.net
+// matches none of the six, fills a slot under the cap, and is discarded here.
+// Two hundred of those and a genuinely waiting customer never appears at all.
+//
+// `cut` still means what it meant: something was left unread. It is now true
+// only when the LAST page was also full, so a refill that reached the end of
+// the matching rows reports a complete scan rather than inheriting the first
+// page's truncation.
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]activities.WaitingReply, bool, error) {
+	var kept []activities.WaitingReply
+	var before time.Time
+	cut := false
+	for round := 0; round < waitingRefillRounds; round++ {
+		rows, err := w.store.WaitingRepliesBefore(ctx, asOf, before)
+		if err != nil {
+			return nil, false, err
+		}
+		// Asked of what the STORE returned, before keepWaitingCustomers runs.
+		//
+		// That filter drops machine senders and folds duplicate threads, so
+		// what it returns is smaller than what was read — and a caller
+		// comparing the SURVIVORS against the scan bound would read a full
+		// scan whose survivors are few as a complete one. This is the only
+		// place both numbers exist.
+		cut = len(rows) >= activities.WaitingScanCap
+		kept = append(kept, keepWaitingCustomers(rows)...)
+		if !cut || len(kept) >= activities.WaitingScanCap {
+			break
+		}
+		// The page is ordered newest first, so the oldest row on it is where
+		// the next page starts.
+		before = rows[len(rows)-1].OccurredAt
+	}
+	// Folded across pages as well as within one: two mails with the same sender
+	// and subject are one conversation whichever page each arrived on, and a
+	// per-page fold would let the refill reintroduce what the first page
+	// already collapsed.
+	return keepWaitingCustomers(kept), cut, nil
 }
 
 // keepWaitingCustomers removes repetitive incidental mail. Confirmed requests

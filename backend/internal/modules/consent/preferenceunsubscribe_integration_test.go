@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // pressUnsubscribe drives the endpoint the way a mailbox provider or the
@@ -29,14 +28,8 @@ import (
 func pressUnsubscribe(t *testing.T, e *channelConsentEnv, token string, purpose *string, body string) []string {
 	t.Helper()
 	h := NewHandlers(database.BindTo(e.store.db.Pool(), ids.From[ids.WorkspaceKind](e.ws)))
-	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   "system:public_preferences",
-	})
 	req := httptest.NewRequest(http.MethodPost,
-		"/v1/public/preferences/"+token+"/unsubscribe", strings.NewReader(body)).WithContext(ctx)
+		"/v1/public/preferences/"+token+"/unsubscribe", strings.NewReader(body)).WithContext(pressCtx(e))
 	if body != "" {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
@@ -204,5 +197,45 @@ func TestAnUnknownPurposeIsAFaultNotARefusal(t *testing.T) {
 	if rec.Code == http.StatusOK {
 		t.Errorf("status = %d — a purpose the catalog does not carry must not read as an ordinary refusal: %s",
 			rec.Code, rec.Body.String())
+	}
+}
+
+// A LEAD'S OWN LINK IS ANSWERED THE WAY A CONTACT'S IS, which is the half of
+// the defect the page could see. The store recorded nothing for a lead's
+// named-purpose press and the handler answered 200 with an empty list — and an
+// empty list is how this endpoint says "nothing moved". So the one press that
+// stopped nothing and the one that stopped everything a link may stop read
+// identically, and the screen told a lead who had just unsubscribed that they
+// already were.
+//
+// The list stays ANONYMOUS: a withdrawal credential may not read a consent
+// state, and the purpose keys are that state. What it carries is the count, so
+// the screen can tell a real withdrawal from a replay.
+func TestALeadsNamedPurposePressIsAnsweredAsAWithdrawalAndItsReplayIsNot(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	purpose := marketingPurposeID(t, e)
+	var leadID ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`INSERT INTO lead (full_name, email, source, captured_by)
+		 VALUES ('Answered Lead', $1, 'test', 'human:x') RETURNING id`,
+		"answered-lead@example.test").Scan(&leadID); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+	token := mintWithdrawal(t, e, WithdrawalMintInput{
+		Address:   "answered-lead@example.test",
+		LeadID:    ids.From[ids.LeadKind](leadID),
+		Scope:     WithdrawalScopeNamedPurpose,
+		PurposeID: purpose.UUID,
+	})
+
+	first := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
+	if len(first) != 1 {
+		t.Fatalf("first press = %v, want one entry — the lead's subscription was stopped "+
+			"and an empty list is this endpoint's word for nothing moved", first)
+	}
+	second := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
+	if len(second) != 0 {
+		t.Errorf("replay = %v, want [] — the mailbox provider's retry moved nothing", second)
 	}
 }

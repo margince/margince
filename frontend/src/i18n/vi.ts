@@ -380,6 +380,7 @@ export const vi = {
   "history.field.revoked_by_level": "Thu hồi ở cấp",
   "history.field.revoked_override": "Ghi đè đã thu hồi",
   "history.field.revoked_rows": "Số ghi đè đã thu hồi",
+  "history.field.scope": "Phạm vi",
   "history.field.stopped": "Đã dừng",
   "history.field.stops_carried": "Lệnh dừng đã chuyển",
   "history.field.submission_decision": "Quyết định về yêu cầu",
