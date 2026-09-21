@@ -49,19 +49,48 @@ export function useAnchoredToTrigger(
       const room = globalThis.innerWidth - width - MENU_EDGE_GAP;
       const wanted = align === "start" ? anchor.left : anchor.right - width;
       setAt({
-        ...verticalPlacement(anchor, panel.current?.offsetHeight ?? 0),
+        ...verticalPlacement(anchor, wantedHeight(panel.current)),
         left: Math.max(MENU_EDGE_GAP, Math.min(wanted, room)),
       });
     };
     place();
     globalThis.addEventListener("resize", place);
     globalThis.addEventListener("scroll", place, true);
+    // The panel's own size is the other thing that moves it, and nothing else
+    // reports it. The first placement runs against a panel that is in the DOM
+    // and not yet sized — this hook's own initial maxHeight is 0 — and a panel
+    // whose content ARRIVES later (a verdict fetched while the popover is
+    // already open) grows under a decision taken before it existed. Both leave
+    // a panel placed for a height it does not have.
+    const sized = new ResizeObserver(place);
+    if (panel.current) {
+      sized.observe(panel.current);
+    }
     return () => {
+      sized.disconnect();
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
     };
   }, [open, trigger, panel, align]);
   return at;
+}
+
+// How tall the panel WANTS to be, which is not how tall it currently is.
+//
+// scrollHeight, never offsetHeight. The panel is capped to the room on the side
+// it opened toward and scrolls inside itself past that, so a panel that opened
+// downward into 100px of space REPORTS an offsetHeight of 100 however much
+// content it holds — and `height <= below` is then trivially true, forever.
+// The decision to open downward became its own justification, and a popover
+// whose button sat below the fold could never flip up to reveal it.
+//
+// scrollHeight answers the question the placement is actually asking: given
+// everything this panel has to show, is there room below for it?
+function wantedHeight(el: HTMLElement | null): number {
+  if (!el) {
+    return 0;
+  }
+  return Math.max(el.scrollHeight, el.offsetHeight);
 }
 
 // Below the trigger while the panel fits there, above it when it does not, and
