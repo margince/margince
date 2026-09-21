@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The profile-field vocabulary — the contract's ColdStartField enum, spelled
@@ -197,12 +196,34 @@ type SaveCompanyInput struct {
 	Fields      map[string]*string
 }
 
+// requireAnchorAdministrator gates the installation's own profile.
+//
+// NOT the `company` object, which governs CUSTOMER records. The two rode the
+// same gate, so every role that may edit an account — admin, ops, manager and
+// rep, by the seeded matrix — could edit the installation's identity through
+// the API. That was never a grant anyone made; it is what a surface inherits
+// when it borrows an object broader than itself.
+//
+// The installation's identity is ADMINISTERED, which is how every other
+// installation-level surface already answers: user administration, privacy and
+// the audit log map to no RBAC object at all and check the role. A dedicated
+// `company_profile` object is the more precise model and the expensive one —
+// policy.coreObjects is a closed, published wire enum, so adding one costs a
+// backfill AND a contract change for a surface whose answer is "an
+// administrator, and nobody else".
+//
+// THE READ TAKES IT TOO. Leaving the read on the object would have one surface
+// answering two different questions about who the profile belongs to.
+func requireAnchorAdministrator(ctx context.Context) error {
+	return auth.RequireAdmin(ctx)
+}
+
 // GetAnchorCompany reads the anchor company. It returns ErrNotFound when the
 // installation has not described itself yet — that 404 IS the onboarding
 // signal, and it is deliberately indistinguishable from "no such record" to a
 // caller who may not see it.
 func (s *Store) GetAnchorCompany(ctx context.Context) (Company, error) {
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+	if err := requireAnchorAdministrator(ctx); err != nil {
 		return Company{}, err
 	}
 	var out Company
@@ -368,7 +389,7 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	// — the second writes on top of the first rather than silently losing it.
 	companyID, err := anchorCompany(ctx, tx, true)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
+		if err := requireAnchorAdministrator(ctx); err != nil {
 			return anchorTarget{}, err
 		}
 		companyID, err = createAnchorCompany(ctx, tx, displayName, by)
@@ -377,7 +398,7 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	if err != nil {
 		return anchorTarget{}, err
 	}
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+	if err := requireAnchorAdministrator(ctx); err != nil {
 		return anchorTarget{}, err
 	}
 	if err := auth.EnsureWritable(ctx, tx, "company", companyID.UUID); err != nil {
