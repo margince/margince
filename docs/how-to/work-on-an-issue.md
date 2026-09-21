@@ -16,16 +16,26 @@ list shows and a search can filter on.
 gh issue view <n> --json assignees,labels,closedByPullRequestsReferences
 ```
 
-The issue is **taken** if any of these is true:
+Every signal below is about somebody **else**, so start by learning who you are
+— `gh api user -q .login`, which is not always who ran the last session on this
+machine. The issue is **taken** if any of these is true:
 
-- an assignee other than you — `gh api user -q .login` is who you are, which is
-  not always who ran the last session on this machine;
-- the label `status: in progress`;
-- a still-open pull request under `closedByPullRequestsReferences`. A branch
-  already exists, and whoever opened it is working from the same issue.
+- an assignee who is not you;
+- the label `status: in progress` while the assignee is not you. With no
+  assignee at all it is still taken and there is nobody to name: say exactly
+  that, because an unattributable claim is the one nobody can ask about;
+- a still-open pull request under `closedByPullRequestsReferences` that you did
+  not write. That list carries the number and no author, and it keeps merged
+  and closed pull requests too, so read the one it names:
 
-Anything else and it is free. An issue that is merely old is still free: there
-is no expiry here, and nothing takes a claim over on its own.
+  ```sh
+  gh pr view <pr> --json state,author -q '.state + " " + .author.login'
+  ```
+
+Anything else and it is free. **An issue where every signal points at you is
+yours to resume** — no re-claim, no comment, just carry on. An issue that is
+merely old is free too: there is no expiry here, and nothing takes a claim over
+on its own.
 
 ## It is taken
 
@@ -58,11 +68,12 @@ Then read it again:
 gh issue view <n> --json assignees -q '[.assignees[].login]'
 ```
 
-**If a second assignee appeared while you were writing, you are the later
-claimant and you back off.** Remove yourself, say who got there first, and pick
-something else. Checking and then claiming is not one atomic step, so the window
-is real — it is the same race the check exists to close, arriving through the
-check.
+**If somebody else appeared as assignee while you were writing, you are the
+later claimant and you back off.** Remove yourself, say who got there first, and
+pick something else. Checking and then claiming is not one atomic step, so the
+window is real — it is the same race the check exists to close, arriving through
+the check. After a takeover it reads one name higher: the original assignee is
+expected to still be there, and only a *third* login means somebody beat you.
 
 ## Taking one over anyway
 

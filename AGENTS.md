@@ -80,19 +80,19 @@ wins and the other session closes its own, pointing at the winner.
 [docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md) has stale
 claims, releasing one, and why two half-fixes both stay red.
 
-**An issue is claimed before it is worked.** A comment saying you started is a
-signal the issue list does not show; an assignee and a label are. Check with
-`gh issue view <n> --json assignees,labels,closedByPullRequestsReferences`:
-another assignee, `status: in progress`, or an open pull request that closes it
-means taken — so do not work it. Tell whoever asked who holds it, suggest they
-take questions or urgency to that colleague, and name a free issue nearby
-instead. Insisting after that is their call; the takeover comment goes on the
-issue before the reassignment, because nothing here expires on its own. Claim
-yours with
-`gh issue edit <n> --add-assignee @me --add-label "status: in progress"`, then
-re-read it and stand down if an assignee appeared meanwhile. Claim the
-sub-issue you work, never its parent tracker; release what you leave unfinished
-— label off, assignment off, a comment saying where you stopped.
+**An issue is claimed before it is worked.** A comment saying so is a signal the
+issue list does not show; an assignee and a label are. Check
+`gh issue view <n> --json assignees,labels,closedByPullRequestsReferences`
+against `gh api user -q .login`: an assignee who is not you, a
+`status: in progress` you do not hold, or an open closing pull request you did
+not write means taken. Nothing pointing elsewhere means it is yours: resume it.
+Taken: refuse, tell whoever asked who holds it, that questions and urgency go to
+that holder, and which free issue nearby to take instead; if they insist, that
+is their call — takeover comment first, then reassign. No claim expires. Claim
+yours: `gh issue edit <n> --add-assignee @me --add-label "status: in progress"`,
+then re-read and stand down if somebody else appeared. Claim the sub-issue,
+never its tracker; releasing is label off, assignee off, and a comment saying
+where you stopped.
 [docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-issue.md) has the rest.
 
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) routes an
