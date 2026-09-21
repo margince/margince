@@ -11,7 +11,8 @@
 # A ratchet, not a ceiling. When the ratio drops, the baseline is re-pinned in
 # the same change — a floor left slack is a floor that stops holding.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+lib="$(cd "$(dirname "$0")" && pwd)"
+cd "$lib/.."
 
 BASELINE_FILE="scripts/comment-density-baseline.txt"
 
@@ -19,28 +20,29 @@ BASELINE_FILE="scripts/comment-density-baseline.txt"
 # the ratio is reported to three decimals and compared as an integer per mille.
 TOLERANCE_PER_MILLE=1
 
-# The files are concatenated into ONE awk rather than passed as arguments:
-# xargs splits a long list across several invocations, each printing its own
-# END total, and a reader taking the first would count part of the tree and
-# report a smaller ratio as a pass. The count is asserted below for the same
-# reason — under-reading is the one direction this gate must not fail in.
+# The comment/code reading comes from the shared scanner
+# (scripts/lib-commentscan.awk), so a `/* … */` block counts as the prose it is.
+# A hand-written `^//` test read every line of one as code, which reported the
+# tree's ratio lower than it is and could trip the lower ratchet spuriously.
+#
+# awk is handed the files rather than their concatenation, because block state is
+# per file: a block left open at the end of one would otherwise blind the next.
+# xargs may split the list across several awk runs, each printing its own totals,
+# so the sums are added up here — taking only the first would count part of the
+# tree and report a smaller ratio as a pass.
 files=$(find backend -name '*.go' ! -name '*_gen.go' ! -name '*.gen.go' | wc -l | tr -d ' ')
 if (( files < 1000 )); then
 	echo "FAIL: comment-density — found only ${files} Go files under backend/; expected thousands" >&2
 	exit 1
 fi
 
-read -r code comments < <(
+totals="$(
 	find backend -name '*.go' ! -name '*_gen.go' ! -name '*.gen.go' -print0 \
-	| xargs -0 cat \
-	| awk '
-		{ line = $0; sub(/^[ \t]+/, "", line) }
-		line == "" { next }
-		line ~ /^\/\/ SPDX-/ { next }
-		line ~ /^\/\// { c++; next }
-		{ k++ }
-		END { printf "%d %d\n", k + 0, c + 0 }'
-)
+	| xargs -0 awk -f "$lib/lib-commentscan.awk" -f "$lib/lib-commentcount.awk" -v MODE=tree \
+	| awk '{ k += $1; c += $2 } END { printf "%d %d\n", k + 0, c + 0 }'
+)"
+code="${totals%% *}"
+comments="${totals##* }"
 
 now_pm=$(( comments * 1000 / code ))
 base_pm="$(grep -vE '^\s*#|^\s*$' "$BASELINE_FILE" | head -1 | tr -d ' ')"

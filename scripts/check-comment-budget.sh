@@ -16,7 +16,8 @@
 # to be shorter counts every rewritten line as added against unchanged code, and
 # the gate blocks the cleanup it exists to ask for.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+lib="$(cd "$(dirname "$0")" && pwd)"
+cd "$lib/.."
 
 # Changes under this many added code lines are not measured: a two-line fix
 # that needs a three-line why is the case the ratio is worst at judging.
@@ -30,38 +31,22 @@ if [[ -z "$base" ]]; then
 	exit 0
 fi
 
-# doc.go is exempt: a package's documentation is not an explanation of the code
-# beside it. The scope is read from the diff's own `+++` header rather than set
-# by pathspec, so it is one rule in one place and does not turn on git's globbing.
-read -r code comments removed < <(
+# The scope and the comment/code reading both come from the shared scanner
+# (scripts/lib-commentscan.awk), which is what a `/* … */` block needs: a
+# hand-written `^//` test counts every line of one as code, so prose written that
+# way would buy budget rather than spend it.
+#
+# A plain variable rather than `read < <(…)`: process substitution needs /dev/fd,
+# and this gate runs inside ROOT_SCRIPT_GATES where a failure to open it would
+# fail `make check-backend` rather than this check.
+counts="$(
 	git diff --unified=0 "$base"...HEAD -- backend extensions fixtures desktop \
-	| awk '
-		/^--- / { next }
-		/^\+\+\+ / {
-			path = substr($0, 7)
-			want = (path ~ /\.go$/) &&
-				(path !~ /_gen\.go$/) &&
-				(path !~ /\.gen\.go$/) &&
-				(path !~ /(^|\/)doc\.go$/)
-			next
-		}
-		!want { next }
-		/^\+\+\+/ { next }
-		/^\+/ {
-			line = substr($0, 2); sub(/^[ \t]+/, "", line)
-			if (line == "") next
-			if (line ~ /^\/\/ SPDX-/) next
-			if (line ~ /^\/\//) { c++; next }
-			k++
-		}
-		/^-/ {
-			line = substr($0, 2); sub(/^[ \t]+/, "", line)
-			if (line == "") next
-			if (line ~ /^\/\/ SPDX-/) next
-			if (line ~ /^\/\//) { gone++ }
-		}
-		END { printf "%d %d %d\n", k + 0, c + 0, gone + 0 }'
-)
+	| awk -f "$lib/lib-commentscan.awk" -f "$lib/lib-commentcount.awk" -v MODE=diff
+)"
+code="${counts%% *}"
+rest="${counts#* }"
+comments="${rest%% *}"
+removed="${rest##* }"
 
 net=$(( comments - removed ))
 

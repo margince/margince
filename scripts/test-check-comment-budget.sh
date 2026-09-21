@@ -12,6 +12,10 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 GATE_SRC="$(pwd)/scripts/check-comment-budget.sh"
+# The gate splices two awk sources; a fixture that copied only the script would
+# fail on their absence and every case would read as the gate refusing.
+SCAN_SRC="$(pwd)/scripts/lib-commentscan.awk"
+COUNT_SRC="$(pwd)/scripts/lib-commentcount.awk"
 fails=0
 ran=0
 
@@ -20,6 +24,7 @@ fixture() {
 	local dir="$1"
 	mkdir -p "$dir/scripts" "$dir/backend"
 	cp "$GATE_SRC" "$dir/scripts/check-comment-budget.sh"
+	cp "$SCAN_SRC" "$COUNT_SRC" "$dir/scripts/"
 	git -C "$dir" init -q --template=
 	git -C "$dir" config user.email t@example.com
 	git -C "$dir" config user.name t
@@ -102,6 +107,21 @@ git -C "$dir" branch -f origin/main HEAD
 } > "$dir/backend/wordy.go"
 git -C "$dir" add -A && git -C "$dir" commit -q -m trimmed
 expect "a change that removes comment lines passes" 0
+
+# A BLOCK comment is prose, not code. Judged by a `^//` test every line of one
+# counts as code, so this change would read as 22 code lines carrying 2 comments
+# and pass — prose written this way buying budget rather than spending it.
+dir="$tmp/blockcomment"
+fixture "$dir"
+{
+	echo "package p"
+	echo "/*"
+	for i in $(seq 1 20); do echo "a long explanation, line ${i}"; done
+	echo "*/"
+	for i in $(seq 1 12); do echo "x${i} := ${i}"; done
+} > "$dir/backend/blocky.go"
+git -C "$dir" add -A && git -C "$dir" commit -q -m blocky
+expect "block-comment prose counts as comment, not code" 1
 
 if (( fails )); then
 	echo "FAIL: test-check-comment-budget — ${fails} of ${ran} case(s) failed"
