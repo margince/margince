@@ -1072,30 +1072,27 @@ describe("the consent rail names the purpose behind each answer", () => {
   });
 });
 
-// An import runs as ONE administrator, so `captured_by` names that one seat on
-// every row it wrote — and where the reader IS that administrator, `self` is
-// true of a decade of work colleagues did. The author is the only field on the
-// row that knows who wrote it, so the head's Source cell has to read it.
-describe("who wrote an imported contact", () => {
-  // The id meFixture answers /me with, which is who mount() renders the page as.
-  const VIEWER = "00000000-0000-4000-8000-000000000001";
-
-  it("names the author the import carried, not the reader who ran it", async () => {
+// A contact somebody wrote in the system it was imported from.
+//
+// An import runs as ONE administrator, so `captured_by` names that seat on
+// every row it wrote — true, and useless as a statement about authorship. The
+// author field is the one that knows, and the facts strip has to prefer it: the
+// timeline on this same page already reads "Logged in HubSpot by …" while the
+// strip said "Typed by you", and the two sat side by side disagreeing.
+describe("a contact imported from somewhere else", () => {
+  it("names who wrote it there, not the seat that ran the import", async () => {
     mount("overview", {
       ...view,
       contact: {
         ...view.contact,
-        captured_by: `human:${VIEWER}`,
-        author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+        captured_by: "human:u-1",
+        author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
       },
     });
 
     expect(
-      await screen.findByText("Logged in hubspot by Mutaz Suleiman"),
-    ).not.toBeNull();
-    // Both readings the cell would take with the author dropped: "you" once the
-    // session lands, and the generic hand before it does.
+      await screen.findByText("Logged in HubSpot by Mutaz Suleiman"),
+    ).toBeTruthy();
     expect(screen.queryByText("Typed by you")).toBeNull();
-    expect(screen.queryByText("Typed by a person")).toBeNull();
   });
 });

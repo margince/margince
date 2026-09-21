@@ -7774,11 +7774,11 @@ paths:
       operationId: previewAutomation
       security: [ { cookieAuth: [] } ]   # human session only — see the deviation note above
       x-agent-access: human-only
-      summary: Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+      summary: Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
       description: |
         Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
         returns how many records match **now** and an estimate of how many times it *would have* fired over a
-        trailing window — **without** performing any action. This is a **🟢 read**, executed under the caller's
+        trailing window — **without** performing any action. This is a pure READ, executed under the caller's
         Passport: it never mutates a record, never sends, and never stages an approval. Accepts either the stored
         automation or, for a not-yet-created draft, an inline recipe in the body (so the editor can preview
         before the first save). `x-mcp-tool` read tier.
@@ -10426,6 +10426,15 @@ paths:
         saves the company form: that 404 IS the "this installation has not described itself yet" signal,
         and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
         customer records.
+
+
+        ADMIN ONLY, and the read as much as the write beside it. The installation's identity is
+        administered — the same answer user administration, privacy and the audit log give — rather
+        than a record owned by a role in the customer-record vocabulary. It used to ride the
+        `company` object, which governs customer accounts, so every role holding that object could
+        edit the installation's own name. Whether this installation has described itself YET is a
+        different question and is not administered: the growth fit and the onboarding conversation
+        both resolve it, for any seat.
       responses:
         '200':
           description: The anchor company's profile.
@@ -10433,6 +10442,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CompanyProfile' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No company saved yet — onboarding has not been completed.
           content:
@@ -10457,6 +10467,10 @@ paths:
         Unlike the cold-start accept path this never resolves a target by domain: the workspace names its
         own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
         a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
+
+
+        ADMIN ONLY — see the read above for why the installation's identity is administered rather
+        than gated on the object that governs customer accounts.
       requestBody:
         required: true
         content:
@@ -15457,7 +15471,7 @@ paths:
       operationId: createConsentPurpose
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Define a consent purpose. 🟢 admin write.
+      summary: Define a consent purpose — a human-only admin write.
       requestBody:
         required: true
         content:
@@ -16719,10 +16733,17 @@ paths:
         which revokes every session the member holds. Emits `user.password_link_issued`.
 
         Admin-only and human-only — an agent may never mint a credential for a human. Available
-        ONLY where it is needed and can work: refused when an outbound-email channel IS configured
-        (that installation mails the link), when no public base URL is configured (a
-        credential-bearing link is never derived from a request `Host`), and when the target is
-        suspended or deactivated (redemption refuses them, so the link would be dead on arrival).
+        wherever it can WORK: refused when no public base URL is configured (a credential-bearing
+        link is never derived from a request `Host`), and when the target is suspended or
+        deactivated (redemption refuses them, so the link would be dead on arrival).
+
+
+        A CONFIGURED OUTBOUND-EMAIL CHANNEL DOES NOT REFUSE IT. It used to, on the reasoning that
+        such an installation mails the link — which is true only while the mail arrives. An
+        installation whose relay is configured and dead answers `201` to an invite and delivers
+        nothing, and this refused the one fallback *because* a mailer was configured: the escape
+        disabled by the fault it escapes. Whether a wired relay actually works is a separate
+        question with its own answer to give; this is true either way.
 
         An `invited` member IS a valid target, and this is how an expired invitation is recovered:
         they have no password, so `requestPasswordReset` refuses them, leaving this the only way
@@ -16761,7 +16782,6 @@ paths:
         '409':
           description: >-
             Refused, with the reason distinguished by the problem `code`:
-            `email_channel_configured` (this installation mails the link — use the invite flow),
             `public_base_url_unset` (no canonical base to build a link against — an operator
             configuration gap), or `member_not_active` (the member is suspended or deactivated, so
             redemption would refuse the link this call would mint).
@@ -18736,13 +18756,16 @@ paths:
     post:
       tags: [Offers]
       operationId: sendOffer
-      summary: Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+      security: [ { cookieAuth: [] } ]   # human session only — the transport half of x-agent-access: human-only
+      summary: Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
       description: |
         draft → sent. Freezes `fx_rate_to_base` as of today (422 `fx_rate_unavailable` when the
         daily rate is missing — never rate=1, RT-PR-C2), captures the buyer/issuer snapshots and
-        emits `offer.sent`. HUMAN-ONLY: an agent principal is refused outright (403
-        `permission_denied`), with no staging path — releasing an offer to a counterparty is a
-        decision a contact makes, not one an agent stages for them.
+        emits `offer.sent`. NO TRANSPORT: nothing leaves the installation here, and nothing is
+        rendered or delivered to a counterparty — delivery is a separate capability that does not
+        exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
+        with no staging path — this IS the commercial commitment, since a sent revision is never
+        mutated in place and its rate to base is fixed from here on.
       x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -18813,6 +18836,7 @@ paths:
     post:
       tags: [Offers]
       operationId: regenerateOffer
+      security: [ { cookieAuth: [] } ]   # human session only — the transport half of x-agent-access: human-only
       x-waits-on-model: always
       summary: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal.
       description: |
@@ -18822,7 +18846,7 @@ paths:
         also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
         `diff_from_previous` line-item summary versus the prior revision; a mechanical
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
-        produced draft still cannot leave without the send gate, which is human-only too.
+        produced draft's terms are not frozen until the send gate, which is human-only too.
         HUMAN-ONLY: an agent principal is refused (403 `permission_denied`); no tool serves this verb.
       x-agent-access: human-only
       parameters:
@@ -18844,14 +18868,16 @@ paths:
     post:
       tags: [Offers]
       operationId: renderOffer
+      security: [ { cookieAuth: [] } ]   # human session only — the transport half of x-agent-access: human-only
       summary: Render the offer's branded PDF (sets pdf_asset_ref).
       description: |
         Produces the branded DE/EN PDF from the offer's current template (`offer.template_id`,
         falling back to the workspace's default template for the offer's locale, de-DE when
         none is set) plus its line items, and stores the result as `pdf_asset_ref` (B-E03.22/
         WP7, data-model §12.6). The rendered totals equal the server-computed totals — the PDF
-        never recomputes money (P11). Not itself an outbound or irreversible act — `send` is
-        the 🟡 gated step that leaves the workspace — so render stays 🟢.
+        never recomputes money (P11). Not itself an irreversible act: a render can be repeated,
+        and `send` — the human-only step this precedes — is where the offer's terms are frozen.
+        Nothing leaves the installation at either step.
       x-agent-access: human-only   # no tool
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -40029,9 +40055,12 @@ components:
           # Pinned for the same reason as CompanyFactSuspectReason above.
           x-enum-varnames: [SearchResultTrustTierAuthoritative, SearchResultTrustTierExternal, SearchResultTrustTierUnverified]
           description: >
-            Provenance tier of the underlying record. Nearly every stored record is
-            `authoritative`; `external`/`unverified` are reserved for connector-sourced
-            rows (not emitted until those adapters land). Never guessed — null when unknown.
+            Provenance tier of the underlying record. EVERY hit this server returns carries
+            `authoritative`, with no exception: search reads the store the record lives in,
+            so a hit is never a copy of somebody else's. `external` and `unverified` are
+            declared for connector-sourced rows and nothing emits either yet, and `null`
+            means UNKNOWN rather than authoritative — this field is never guessed. A client
+            must accept all four and must not expect any but the first.
 
     SearchResponse:
       type: object

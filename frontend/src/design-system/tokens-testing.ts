@@ -36,7 +36,20 @@ export function normalize(value: string): string {
     .toLowerCase()
     .replace(/\s+/g, "")
     .replace(/(^|[^0-9])0\./g, "$1.")
-    .replace(/(\.[0-9]*?)0+([^0-9]|$)/g, "$1$2");
+    .replace(/\.[0-9]+/g, withoutTrailingZeros);
+}
+
+// The zeros come off one at a time rather than through `(\.[0-9]*?)0+`, where
+// the lazy run and the greedy one compete for the same digits — which is what
+// made that pattern cost the square of the decimal's length. The decimal point
+// stays: `1.0` normalizes to `1.`, and it is the two sides agreeing that
+// matters here, not which of them is prettier.
+function withoutTrailingZeros(decimals: string): string {
+  let end = decimals.length;
+  while (end > 1 && decimals.charAt(end - 1) === "0") {
+    end -= 1;
+  }
+  return decimals.slice(0, end);
 }
 
 /** Every custom property one block declares, by name. */
@@ -55,10 +68,30 @@ export function parseBlock(
     throw new Error(`tokens.css has no ${selector} block`);
   }
   const props: Record<string, string> = {};
-  for (const [, name, value] of match[1].matchAll(
-    /(--[\w-]+)\s*:\s*([^;]+);/g,
-  )) {
-    props[name] = value.trim();
+  // Split, rather than scanned with `/(--[\w-]+)\s*:([^;]+);/g`. That pattern
+  // was flagged for super-linear runtime and the width of its value class is
+  // why: `[^;]+` can run to the end of the block from every start position the
+  // engine tries, so the cost grows with the square of the block. The grammar
+  // is the same one stated without backtracking — a declaration ends at `;`
+  // and divides at its FIRST `:`, so a value may hold a colon (`url(https://…)`)
+  // and still arrive whole.
+  //
+  // One deliberate difference from the pattern: a LAST declaration with no `;`
+  // is read rather than dropped, which is what CSS means by it. The sheet ends
+  // every declaration today — both spellings parse its `:root` and dark blocks
+  // to the same 173 and 63 properties — so this only decides what happens to a
+  // token somebody adds without the semicolon, and dropping it silently was
+  // the worse of the two answers.
+  for (const declaration of match[1].split(";")) {
+    const divide = declaration.indexOf(":");
+    if (divide < 0) {
+      continue; // The block's trailing whitespace, and anything not a declaration.
+    }
+    const name = declaration.slice(0, divide).trim();
+    if (!name.startsWith("--")) {
+      continue; // A property this sheet does not own is not a token.
+    }
+    props[name] = declaration.slice(divide + 1).trim();
   }
   return props;
 }

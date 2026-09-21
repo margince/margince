@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 )
 
 // The mega-menu that opens every page of a large B2B site. Long enough to
@@ -188,11 +187,23 @@ func TestAHostileCorpusCannotBurnAWorkerGoroutine(t *testing.T) {
 		})
 	}
 
-	start := time.Now()
-	stripSharedPrefix(pages)
+	// Asked of the WORK, not of a stopwatch: this test sits in the merge gate,
+	// where a clock bound means one thing on an idle laptop and another on a
+	// loaded runner. Past boilerplateMaxCorpusBytes the strip fails OPEN — it
+	// compares nothing and hands the pages back as they came — so every page
+	// arriving unchanged IS the bound holding, and it is the same answer on
+	// any machine. A strip that read this corpus would find the 200 000-word
+	// opening all forty pages share and cut it.
+	out := stripSharedPrefix(pages)
 
-	if elapsed := time.Since(start); elapsed > 5*time.Second {
-		t.Fatalf("a hostile corpus took %v; the comparison is unbounded again", elapsed)
+	if len(out) != len(pages) {
+		t.Fatalf("a corpus past the bound came back as %d pages, want %d", len(out), len(pages))
+	}
+	for i := range out {
+		if out[i].Text != pages[i].Text {
+			t.Fatalf("page %d was compared past the corpus bound: %d bytes in, %d out — "+
+				"the comparison is unbounded again", i, len(pages[i].Text), len(out[i].Text))
+		}
 	}
 }
 

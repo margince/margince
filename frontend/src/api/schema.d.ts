@@ -5188,10 +5188,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+         * Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
          * @description Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
          *     returns how many records match **now** and an estimate of how many times it *would have* fired over a
-         *     trailing window — **without** performing any action. This is a **🟢 read**, executed under the caller's
+         *     trailing window — **without** performing any action. This is a pure READ, executed under the caller's
          *     Passport: it never mutates a record, never sends, and never stages an approval. Accepts either the stored
          *     automation or, for a not-yet-created draft, an inline recipe in the body (so the editor can preview
          *     before the first save). `x-mcp-tool` read tier.
@@ -6866,6 +6866,15 @@ export interface paths {
          *     saves the company form: that 404 IS the "this installation has not described itself yet" signal,
          *     and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
          *     customer records.
+         *
+         *
+         *     ADMIN ONLY, and the read as much as the write beside it. The installation's identity is
+         *     administered — the same answer user administration, privacy and the audit log give — rather
+         *     than a record owned by a role in the customer-record vocabulary. It used to ride the
+         *     `company` object, which governs customer accounts, so every role holding that object could
+         *     edit the installation's own name. Whether this installation has described itself YET is a
+         *     different question and is not administered: the growth fit and the onboarding conversation
+         *     both resolve it, for any seat.
          */
         get: operations["getAnchorCompany"];
         /**
@@ -6879,6 +6888,10 @@ export interface paths {
          *     Unlike the cold-start accept path this never resolves a target by domain: the workspace names its
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
          *     a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
+         *
+         *
+         *     ADMIN ONLY — see the read above for why the installation's identity is administered rather
+         *     than gated on the object that governs customer accounts.
          */
         put: operations["putAnchorCompany"];
         post?: never;
@@ -10705,7 +10718,7 @@ export interface paths {
          */
         get: operations["listConsentPurposes"];
         put?: never;
-        /** Define a consent purpose. 🟢 admin write. */
+        /** Define a consent purpose — a human-only admin write. */
         post: operations["createConsentPurpose"];
         delete?: never;
         options?: never;
@@ -11611,10 +11624,17 @@ export interface paths {
          *     which revokes every session the member holds. Emits `user.password_link_issued`.
          *
          *     Admin-only and human-only — an agent may never mint a credential for a human. Available
-         *     ONLY where it is needed and can work: refused when an outbound-email channel IS configured
-         *     (that installation mails the link), when no public base URL is configured (a
-         *     credential-bearing link is never derived from a request `Host`), and when the target is
-         *     suspended or deactivated (redemption refuses them, so the link would be dead on arrival).
+         *     wherever it can WORK: refused when no public base URL is configured (a credential-bearing
+         *     link is never derived from a request `Host`), and when the target is suspended or
+         *     deactivated (redemption refuses them, so the link would be dead on arrival).
+         *
+         *
+         *     A CONFIGURED OUTBOUND-EMAIL CHANNEL DOES NOT REFUSE IT. It used to, on the reasoning that
+         *     such an installation mails the link — which is true only while the mail arrives. An
+         *     installation whose relay is configured and dead answers `201` to an invite and delivers
+         *     nothing, and this refused the one fallback *because* a mailer was configured: the escape
+         *     disabled by the fault it escapes. Whether a wired relay actually works is a separate
+         *     question with its own answer to give; this is true either way.
          *
          *     An `invited` member IS a valid target, and this is how an expired invitation is recovered:
          *     they have no password, so `requestPasswordReset` refuses them, leaving this the only way
@@ -12959,12 +12979,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+         * Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
          * @description draft → sent. Freezes `fx_rate_to_base` as of today (422 `fx_rate_unavailable` when the
          *     daily rate is missing — never rate=1, RT-PR-C2), captures the buyer/issuer snapshots and
-         *     emits `offer.sent`. HUMAN-ONLY: an agent principal is refused outright (403
-         *     `permission_denied`), with no staging path — releasing an offer to a counterparty is a
-         *     decision a contact makes, not one an agent stages for them.
+         *     emits `offer.sent`. NO TRANSPORT: nothing leaves the installation here, and nothing is
+         *     rendered or delivered to a counterparty — delivery is a separate capability that does not
+         *     exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
+         *     with no staging path — this IS the commercial commitment, since a sent revision is never
+         *     mutated in place and its rate to base is fixed from here on.
          */
         post: operations["sendOffer"];
         delete?: never;
@@ -13039,7 +13061,7 @@ export interface paths {
          *     also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
          *     `diff_from_previous` line-item summary versus the prior revision; a mechanical
          *     regenerate (no AI context available) still works and returns `ai_generated=false`. The
-         *     produced draft still cannot leave without the send gate, which is human-only too.
+         *     produced draft's terms are not frozen until the send gate, which is human-only too.
          *     HUMAN-ONLY: an agent principal is refused (403 `permission_denied`); no tool serves this verb.
          */
         post: operations["regenerateOffer"];
@@ -13067,8 +13089,9 @@ export interface paths {
          *     falling back to the workspace's default template for the offer's locale, de-DE when
          *     none is set) plus its line items, and stores the result as `pdf_asset_ref` (B-E03.22/
          *     WP7, data-model §12.6). The rendered totals equal the server-computed totals — the PDF
-         *     never recomputes money (P11). Not itself an outbound or irreversible act — `send` is
-         *     the 🟡 gated step that leaves the workspace — so render stays 🟢.
+         *     never recomputes money (P11). Not itself an irreversible act: a render can be repeated,
+         *     and `send` — the human-only step this precedes — is where the offer's terms are frozen.
+         *     Nothing leaves the installation at either step.
          */
         post: operations["renderOffer"];
         delete?: never;
@@ -29388,7 +29411,7 @@ export interface components {
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /**
-             * @description Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+             * @description Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
              * @enum {string|null}
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
@@ -48154,6 +48177,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description No company saved yet — onboarding has not been completed. */
             404: {
                 headers: {
@@ -53829,7 +53853,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `email_channel_configured` (this installation mails the link — use the invite flow), `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint). */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -17,6 +17,28 @@ import (
 // SeedDefaultRetentionTx plants the §3.4 default-of-record inside the
 // workspace-bootstrap transaction, same C5 atomicity as the purpose
 // catalog.
+//
+// Every row here is a DEFAULT an admin may edit, not a number this product
+// fixes — embedCallRetention one file over is the fixed kind, and says so.
+// Each lands `enabled`, so the retention engine acts on whatever number
+// stands from the first sweep: what an admin edits is the window, never
+// whether there is one. Changing a number HERE moves it only for
+// installations bootstrapped afterwards, and an operator reading their own
+// retention page is the one who decides for theirs.
+//
+// `ai_call_payload` / `content` is the one worth reading twice. With payload
+// capture on (`ai.capture_payloads`, opt-in) it is how long the model's whole
+// request stays on disk after the work is done, and for a reading of a meeting
+// transcript that request IS the transcript. 365 days is the seeded number and
+// is generous for what the telemetry is for — debugging a call and auditing
+// what was sent are days-to-weeks questions.
+//
+// It is also the only bound on the payloads an erasure cannot reach. The Art.
+// 17 cascade finds them by the record a call cited and by matching the
+// subject's addresses in the text; a call that names no record and whose text
+// spells no address is reached by neither, and for those this window is the
+// guaranteed end. config/margince.example.yaml says the same beside the switch
+// that turns capture on, because that is where an operator is deciding.
 func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO retention_policy (object_type, category, retain_days, action, lawful_basis)

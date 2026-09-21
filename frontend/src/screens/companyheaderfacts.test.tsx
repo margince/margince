@@ -84,8 +84,8 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
-function renderFacts(company: Company = COMPANY) {
-  renderInApp(<CompanyIdentityFacts company={company} />);
+function renderFacts() {
+  renderInApp(<CompanyIdentityFacts company={COMPANY} />);
 }
 
 // The tag is one badge carrying "Typed by" and the name as sibling text
@@ -125,27 +125,6 @@ describe("who wrote this record", () => {
     expect(provenanceText()).toBe("Typed by a person");
     expect(document.body.textContent).not.toContain("u-author");
   });
-
-  // An import runs as ONE administrator, so `captured_by` names that one seat
-  // on every row it wrote — and where the reader IS that administrator, `self`
-  // is true of a decade of work colleagues did. The author is the only field
-  // on the row that knows who wrote it, so the strip has to read it.
-  it("names the author an import carried, not the reader who ran the import", async () => {
-    stub([{ id: "u-reader", display_name: "The Reader" }]);
-    renderFacts({
-      ...COMPANY,
-      captured_by: "human:u-reader",
-      author: { display_name: "Mutaz Suleiman", via: "hubspot" },
-    });
-
-    await waitFor(() =>
-      expect(provenanceText()).toBe("Logged in hubspot by Mutaz Suleiman"),
-    );
-    // Both readings the row would take with the author dropped: "you" once the
-    // session lands, and the generic hand before it does.
-    expect(screen.queryByText("Typed by you")).toBeNull();
-    expect(screen.queryByText("Typed by a person")).toBeNull();
-  });
 });
 
 // The strip re-houses what CompanyIdentityLine drew as one sentence, as named
@@ -175,5 +154,34 @@ describe("CompanySubtitle", () => {
     const line = container.querySelector(".record-sub-inline");
     expect(line?.textContent).toBe("Automotive · brandt.example");
     expect(screen.getByText("brandt.example").tagName).toBe("A");
+  });
+});
+
+// A record somebody wrote in the system it was imported from.
+//
+// An import runs as ONE administrator, so `captured_by` names that seat on
+// every row it wrote — true, and useless as a statement about authorship. The
+// author field is the one that knows, and the tag has to prefer it: the timeline
+// on the same page already reads "Logged in HubSpot by Mutaz Suleiman" while
+// this strip said "Typed by you", and the two sat side by side disagreeing.
+describe("a record imported from somewhere else", () => {
+  it("names who wrote it there, not the seat that ran the import", async () => {
+    stub([{ id: "u-author", display_name: "Sofia Meier" }]);
+    renderInApp(
+      <CompanyIdentityFacts
+        company={{
+          ...COMPANY,
+          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(provenanceText()).toBe("Logged in HubSpot by Mutaz Suleiman"),
+    );
+    // The importing seat must not surface at all. Naming it would credit the
+    // record to whoever happened to run the import, which is the defect.
+    expect(document.body.textContent).not.toContain("Sofia Meier");
+    expect(screen.queryByText(/Typed by/)).toBeNull();
   });
 });

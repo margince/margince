@@ -19,7 +19,7 @@ func (c *fakeClock) Now() time.Time          { return c.t }
 func (c *fakeClock) advance(d time.Duration) { c.t = c.t.Add(d) }
 
 func TestAllowCountsPerKeyWithinTheWindow(t *testing.T) {
-	l := New(3, time.Hour)
+	l := New("test/allow", FailClosed, 3, time.Hour)
 	for i := 1; i <= 3; i++ {
 		if !l.Allow("alice") {
 			t.Fatalf("attempt %d should be within the limit", i)
@@ -35,7 +35,7 @@ func TestAllowCountsPerKeyWithinTheWindow(t *testing.T) {
 
 func TestWindowExpiryResetsTheCount(t *testing.T) {
 	clock := newFakeClock()
-	l := NewWithClock(1, time.Minute, clock.Now)
+	l := NewWithClock("test/expiry", FailClosed, 1, time.Minute, clock.Now)
 	if !l.Allow("k") {
 		t.Fatal("first attempt")
 	}
@@ -50,7 +50,7 @@ func TestWindowExpiryResetsTheCount(t *testing.T) {
 
 func TestBlockedReportsWithoutCounting(t *testing.T) {
 	clock := newFakeClock()
-	l := NewWithClock(2, time.Minute, clock.Now)
+	l := NewWithClock("test/blocked", FailClosed, 2, time.Minute, clock.Now)
 	if l.Blocked("k") {
 		t.Fatal("an unseen key is not blocked")
 	}
@@ -79,7 +79,7 @@ func TestBlockedReportsWithoutCounting(t *testing.T) {
 // disturb the metering of a normal key.
 func TestALimiterRefusesAnOversizedKey(t *testing.T) {
 	clock := newFakeClock()
-	l := NewWithClock(1, time.Minute, clock.Now)
+	l := NewWithClock("test/expiry", FailClosed, 1, time.Minute, clock.Now)
 	oversized := strings.Repeat("x", 100*1024)
 
 	if !l.Allow(oversized) {
@@ -104,36 +104,37 @@ func TestALimiterRefusesAnOversizedKey(t *testing.T) {
 	}
 }
 
-// heldKeys reports what the limiter is holding, read under its own lock so the
-// assertion cannot race the code it asserts on. starts and counts are written
-// as a pair, so the two disagreeing is itself the fault.
+// heldKeys reports what the limiter's own in-process store is holding, read
+// under that store's lock so the assertion cannot race the code it asserts on.
+// It reads that store directly rather than whichever one the limiter is
+// currently answering from, so it says the same thing either side of a
+// RebindFrom.
 func heldKeys(t *testing.T, l *Limiter) int {
 	t.Helper()
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if len(l.starts) != len(l.counts) {
-		t.Fatalf("the limiter holds %d window starts but %d counts", len(l.starts), len(l.counts))
+	s, ok := l.local.(*localStore)
+	if !ok {
+		t.Fatalf("a limiter's own store is %T, not this process's", l.local)
 	}
-	return len(l.counts)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.windows)
 }
 
 func TestSweepDropsAbandonedKeys(t *testing.T) {
 	clock := newFakeClock()
-	l := NewWithClock(1, time.Minute, clock.Now)
+	l := NewWithClock("test/expiry", FailClosed, 1, time.Minute, clock.Now)
 	for i := 0; i < 100; i++ {
 		l.Allow(string(rune('a' + i%26)))
 	}
 	clock.advance(time.Minute + time.Second)
 	l.Allow("fresh") // triggers the amortized sweep
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if len(l.counts) > 2 {
-		t.Errorf("sweep left %d expired keys behind", len(l.counts))
+	if got := heldKeys(t, l); got > 2 {
+		t.Errorf("sweep left %d expired keys behind", got)
 	}
 }
 
 func TestResetClearsEverySpentBucket(t *testing.T) {
-	lim := New(1, time.Minute)
+	lim := New("test/reset", FailClosed, 1, time.Minute)
 	if !lim.Allow("k") {
 		t.Fatal("the first attempt must be admitted")
 	}
@@ -153,7 +154,7 @@ func TestResetClearsEverySpentBucket(t *testing.T) {
 // slate, or a Reset that only satisfies Allow is a half-fix.
 func TestResetClearsWhatBlockedAndRecordRead(t *testing.T) {
 	clock := newFakeClock()
-	lim := NewWithClock(2, time.Minute, clock.Now)
+	lim := NewWithClock("test/reset-split", FailClosed, 2, time.Minute, clock.Now)
 	lim.Record("k")
 	lim.Record("k")
 	if !lim.Blocked("k") {

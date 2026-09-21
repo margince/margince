@@ -1,7 +1,7 @@
 # Make targets
 
-The real Makefile is `backend/Makefile`; the root one delegates its targets and adds the
-frontend lane. `make help` in `backend/` lists them, and `make-target-parity` holds that every one it advertises also runs from the root.
+The real Makefile is `backend/Makefile`; the root one delegates its targets and adds the frontend lane. `make help` in `backend/` lists them, and `make-target-parity` holds that every one it
+advertises also runs from the root.
 
 ## Everyday
 
@@ -24,10 +24,9 @@ frontend lane. `make help` in `backend/` lists them, and `make-target-parity` ho
 
 ## Factory-compatibility golden commands
 
-These are the target names the dark-factory tooling, its UAT runner, and its
-UAT guides call by name (`docs/target-minimum-setup.md §3`). `check-q`,
-`check-go`, and `fe-typecheck` are the quiet/scope-aware gate variants;
-`test-integration` ends with the literal `OK: integration passed with 0 skips`.
+These are the target names the dark-factory tooling, its UAT runner, and its UAT guides call by name
+(`docs/target-minimum-setup.md §3`). `check-q`, `check-go`, and `fe-typecheck` are the quiet/scope-aware
+gate variants; `test-integration` ends with the literal `OK: integration passed with 0 skips`.
 
 | Target | What it does |
 |---|---|
@@ -64,8 +63,7 @@ UAT guides call by name (`docs/target-minimum-setup.md §3`). `check-q`,
 | `test-extensions` | Every enabled extension's own test lane (each unit under `extensions/` is its own Go module — `./...` never reaches them), run on the composed workspace; part of `make check` |
 | `gen-workflow` | `make gen-workflow NAME=<snake_case_handler_name>` — scaffold a new automation `workflow.Handler` + its test stub (write-once; refuses to overwrite an existing scaffold). See [how-to/create-a-workflow.md](../how-to/create-a-workflow.md) |
 
-The root `make check` runs the backend gate above **and** these deterministic
-root script gates (each is a small script; all merge-blocking, and `check-backend` fans them out):
+The root `make check` runs the backend gate above **and** these deterministic root script gates (each is a small script; all merge-blocking, and `check-backend` fans them out):
 
 | Target | What it does |
 |---|---|
@@ -82,6 +80,9 @@ root script gates (each is a small script; all merge-blocking, and `check-backen
 | `lint-modules` | golangci-lint over the Go modules the backend lint lane cannot reach. `make -C backend lint` runs `./...` from `backend/`, which stops at the module boundary — `backend/tools`, `composition` and each unit under `extensions/` are separate modules and were linted by nothing. Same `backend/.golangci.yml` as the product module (one bar, no second copy to drift); the module list derives from tracked `go.mod` files, so a new module is covered the day it is committed. Runs **uncapped** (`--max-same-issues=0`): golangci's default of 3 hides repeats, and a truncating gate reads like a passing one. Two exclusions, both reasoned in the script — `backend` (already linted twice by its own lane) and `fixtures/` (imports the product module while declaring no require, so it type-checks only inside the harness that composes it; still covered by the craftsmanship gate, the license test and `gofmt`) |
 | `test-golangci-guard` | Prove `scripts/run-golangci.sh` still tells a finding in this checkout from one golangci's cache remembers from another. Its analysis cache is machine-wide, shared by every worktree, and keyed by file **content**, so an unchanged file has one entry across all of them — carrying the path of whichever worktree filled it. A run that gets that entry can read neither the `//nolint:` directives in the file nor the path-anchored exclusions in `.golangci.yml`, so waived findings come back against a foreign path, under module names that do exist here (issue #1378). The wrapper both lint lanes run through resolves every reported path and quarantines the run (exit 40) instead; this asserts both directions, since a guard that flagged every run — `extensions/openchannel` legitimately reports as `../extensions/openchannel/…` — reads exactly like a working one from the passing side |
 | `go-file-length` | Hard 500-LOC cap on hand-written **product** Go, ratcheted via `scripts/go-file-length-waivers.txt`. Test and generated files are exempt here — `*_test.go` is bounded at 1000 lines by the craft gate instead |
+| `comment-budget` | A change may not add more comment lines than the code they explain. Diff-scoped against `origin/main`, Go only; `doc.go` and generated files are exempt. The counterweight to the function ceiling, which does not count comment lines |
+| `test-comment-budget` | Prove the budget gate fails an over-budget change — a budget nothing can trip reads exactly like a change within budget |
+| `comment-density` | Backend's comment-to-code ratio may fall and never rise, pinned in `scripts/comment-density-baseline.txt`. A change that brings it down re-pins it in the same commit |
 | `fe-file-length` | The same cap on `frontend/src` — 500 for product code, 1000 for a test, story, testkit or fixture — ratcheted via `scripts/fe-file-length-waivers.txt`. Generated types and the i18n catalogs are exempt: one is the generator's output, the others are data read by lookup rather than top to bottom |
 | — (script) | `scripts/seed-fe-file-length-waivers.sh` re-freezes that list at the tree's current sizes. For ESTABLISHING the baseline, never for absorbing a file that grew — running it on a failing gate would freeze the growth, which is the one thing the ratchet refuses |
 | `rls-store-path` | No `internal/modules` statement addresses the superuser pool directly (RLS bypass); `// rls-exempt: <reason>` is the escape for a genuinely cross-workspace query |
@@ -95,10 +96,9 @@ root script gates (each is a small script; all merge-blocking, and `check-backen
 
 ### Where the gate spends its time
 
-Every green `make check` ends with a table of its own phases, so the next contact
-to optimize it starts from a reading of their machine rather than from a number
-in a comment. Both halves report: the backend's four phases and the gate
-fan-out, and the frontend's composed typecheck, core suite and unit screens.
+Every green `make check` ends with a table of its own phases, so the next contact to optimize it starts from
+a reading of their machine rather than from a number in a comment. Both halves report: the backend's four
+phases and the gate fan-out, and the frontend's composed typecheck, core suite and unit screens.
 
 The distribution is lopsided, and it is worth knowing which end to pull. On a
 quiet laptop the frontend's five core legs measure ds-gates 12s, drift 3s, lint

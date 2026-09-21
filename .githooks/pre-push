@@ -125,6 +125,11 @@ if ! "$("$root/scripts/craft-pin.sh")" static --strict "${args[@]}"; then
 	exit 1
 fi
 
+# The comment budget: this push may not add more comment lines than the code
+# they explain. It sits beside the craft gate because it holds the one thing
+# that gate's ceilings deliberately do not count.
+"$root/scripts/check-comment-budget.sh"
+
 # The whole-tree deterministic gates that are cheap enough to run on every
 # push (sub-second greps): catch an RLS-bypassing store statement or a
 # jurisdiction string in core locally, before CI does. The heavier gates

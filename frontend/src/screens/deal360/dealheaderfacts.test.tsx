@@ -266,6 +266,31 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     expect(await screen.findByText("csv import")).toBeInTheDocument();
   });
 
+  // A deal somebody wrote in the system it was imported from. An import runs as
+  // ONE administrator, so `captured_by` names that seat on every row it wrote —
+  // true, and useless as a statement about authorship. The author field is the
+  // one that knows, and the tag has to prefer it.
+  it("names who wrote an imported deal there, not the seat that ran the import", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          source: "hubspot",
+          captured_by: "human:u-importer",
+          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText("Logged in HubSpot by Mutaz Suleiman"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Typed by/)).not.toBeInTheDocument();
+  });
+
   it("says which partner brought the deal, sourced or influenced", () => {
     show(
       <DealIdentityFacts
@@ -359,47 +384,5 @@ describe("the close date says how much it is worth believing", () => {
   it("keeps the cell and says so when nobody has set a date", () => {
     show(<DealIdentityFacts deal={{}} stages={stages} locale="en" />);
     expect(screen.getByText(en["deal.strip.close.none"])).toBeInTheDocument();
-  });
-});
-
-// An import runs as ONE administrator, so `captured_by` names that one seat on
-// every row it wrote — and where the reader IS that administrator, `self` is
-// true of a decade of work colleagues did. The author is the only field on the
-// row that knows who wrote it, so the Source cell has to read it.
-describe("who wrote an imported deal", () => {
-  const VIEWER = "u-importer";
-
-  it("names the author the import carried, not the reader who ran it", async () => {
-    vi.stubGlobal("fetch", (input: RequestInfo | URL) =>
-      Promise.resolve(
-        jsonResponse(
-          new URL(
-            input instanceof Request ? input.url : String(input),
-            "http://test.local",
-          ).pathname.endsWith("/me")
-            ? { user: { id: VIEWER } }
-            : { data: [] },
-        ),
-      ),
-    );
-    show(
-      <DealIdentityFacts
-        deal={{
-          stage_id: "st-1",
-          captured_by: `human:${VIEWER}`,
-          author: { display_name: "Mutaz Suleiman", via: "hubspot" },
-        }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-
-    expect(
-      await screen.findByText("Logged in hubspot by Mutaz Suleiman"),
-    ).toBeInTheDocument();
-    // Both readings the cell would take with the author dropped: "you" once the
-    // session lands, and the generic hand before it does.
-    expect(screen.queryByText("Typed by you")).not.toBeInTheDocument();
-    expect(screen.queryByText("Typed by a person")).not.toBeInTheDocument();
   });
 });

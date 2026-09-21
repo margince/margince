@@ -39,7 +39,12 @@ func NewMailboxRatePolicy(limit int, window time.Duration, now func() time.Time)
 	if now == nil {
 		now = time.Now
 	}
-	return &MailboxRatePolicy{limiter: ratelimit.NewWithClock(limit, window, now), window: window}
+	// FailClosed although nothing here is a secret: an unmetered window costs
+	// the user their mailbox's standing with the provider, which the next
+	// window cannot give back, while a refused one costs a deferral the send
+	// job retries. The cheap mistake is the one to make.
+	limiter := ratelimit.NewWithClock("comms/mailbox-send", ratelimit.FailClosed, limit, window, now)
+	return &MailboxRatePolicy{limiter: limiter, window: window}
 }
 
 // Name identifies this policy on a deferred delivery.

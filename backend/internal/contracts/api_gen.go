@@ -35514,12 +35514,12 @@ type SearchResult struct {
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
 
-	// TrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
 }
 
-// SearchResultTrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+// SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
@@ -56885,7 +56885,7 @@ type ServerInterface interface {
 	// Update params or flip status (enable / pause).
 	// (PATCH /automations/{id})
 	UpdateAutomation(w http.ResponseWriter, r *http.Request, id Id, params UpdateAutomationParams)
-	// Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+	// Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
 	// (POST /automations/{id}/preview)
 	PreviewAutomation(w http.ResponseWriter, r *http.Request, id Id)
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
@@ -57305,7 +57305,7 @@ type ServerInterface interface {
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
-	// Define a consent purpose. 🟢 admin write.
+	// Define a consent purpose — a human-only admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
 	// List contacts (live by default; cursor-paginated).
@@ -57974,7 +57974,7 @@ type ServerInterface interface {
 	// Render the offer's branded PDF (sets pdf_asset_ref).
 	// (POST /offers/{id}/render)
 	RenderOffer(w http.ResponseWriter, r *http.Request, id Id, params RenderOfferParams)
-	// Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+	// Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
 	// (POST /offers/{id}/send)
 	SendOffer(w http.ResponseWriter, r *http.Request, id Id, params SendOfferParams)
 	// Continue the scoped company-setup conversation with or without a website read.
@@ -59156,7 +59156,7 @@ func (_ Unimplemented) UpdateAutomation(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+// Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
 // (POST /automations/{id}/preview)
 func (_ Unimplemented) PreviewAutomation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -59996,7 +59996,7 @@ func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Define a consent purpose. 🟢 admin write.
+// Define a consent purpose — a human-only admin write.
 // (POST /consent-purposes)
 func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -61334,7 +61334,7 @@ func (_ Unimplemented) RenderOffer(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+// Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
 // (POST /offers/{id}/send)
 func (_ Unimplemented) SendOffer(w http.ResponseWriter, r *http.Request, id Id, params SendOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -81299,8 +81299,6 @@ func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -81413,8 +81411,6 @@ func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -81470,8 +81466,6 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

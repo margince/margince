@@ -258,6 +258,13 @@ pr-tells-story, restraint). When this prose and the rubric disagree, the rubric
 is what blocked your push; `make craft-prose` fails if they stop agreeing.
 
 - Comments say *why*, not *what* (T1). Domain names, not `data`/`tmp`/`helper` (T4).
+- **A comment costs a line and has to earn it.** Two lines is the ordinary size
+  of one; past that it carries a why the code cannot, or it is cut. Never
+  narrate the change — state the invariant in the present tense and let git hold
+  the history. Read T1's "match the surrounding file's density" as the floor to
+  beat, not the bar to meet: at 0.43 against the Go standard library's 0.20,
+  matching this tree keeps its drift. `make comment-budget` holds the diff at
+  1.0; `comment-density` holds the tree, which may fall and never rise.
 - **Never swallow an error** (T2) — no `_ = f()`, no empty `catch`, no ignored
   return. Errors flow through the sentinels; messages say what went wrong and what
   to do, and never leak internals (no stack, SQL or table names to a client).
@@ -285,6 +292,8 @@ this bar was armed, so the rule is simply that touched code is clean.
 - Size ceilings: 80 code lines per function and 500 per file; 160 and 1000 for
   `*_test.go`. A comment-only line is not length for the function ceiling — it
   asks how much a reader must hold at once, and an explanation reduces that.
+  `comment-budget` is the counterweight: free against the ceiling, not free
+  against each other.
 - Waive a genuine false positive in source, with a reason:
   `//craft:ignore <check> <reason>`. A reasonless waiver is itself a finding.
 - Whole-tree sweep: `make craft-static` and `make craft-prose`. Same bar in CI.
