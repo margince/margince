@@ -99,17 +99,29 @@ replaced without being told.
 Finishing is nothing extra: a merged pull request whose body says `Closes #N`
 closes the issue and retires the claim with it.
 
-Stopping **without** finishing is the case that needs you:
+Stopping **without** finishing is the case that needs you. Unassign yourself and
+say where you stopped, always:
 
 ```sh
-gh issue edit <n> --remove-assignee @me --remove-label "status: in progress"
+gh issue edit <n> --remove-assignee @me
 gh issue comment <n> --body "Stopped here: <done, not done, what I learned>."
 ```
 
-All three — label off, assignment off, comment — and the comment is the
-valuable one, because whoever picks it up next starts from your evidence
-instead of rediscovering it. A claim left behind by a dead session is worse
-than no claim: it reads as active work forever, and no timer clears it.
+**The label comes off only once nobody holds the issue.** `--remove-assignee
+@me` drops your login alone, while `--remove-label` drops a signal the whole
+issue shares — so taking both off in one command strips the claim of an original
+assignee who is still working, after a takeover left two names on it, and the
+issue goes back to reading free. Look first, remove on an empty list:
+
+```sh
+gh issue view <n> --json assignees -q '[.assignees[].login]'
+gh issue edit <n> --remove-label "status: in progress"
+```
+
+Of the three, the comment is the valuable one: whoever picks the issue up next
+starts from your evidence instead of rediscovering it. A claim left behind by a
+dead session is worse than no claim — it reads as active work forever, and no
+timer clears it.
 
 ## Claim the sub-issue, not the tracker
 
