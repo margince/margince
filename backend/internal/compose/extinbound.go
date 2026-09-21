@@ -132,7 +132,7 @@ func inboundLimiters(units map[string]inboundUnit, pick func(extension.InboundEn
 	for unit, u := range units {
 		for slug, endpoint := range u.endpoints {
 			rate := pick(endpoint)
-			out[unit+"/"+slug] = ratelimit.New(rate.Limit, rate.Window)
+			out[unit+"/"+slug] = ratelimit.New("extension-inbound/"+unit+"/"+slug, ratelimit.FailClosed, rate.Limit, rate.Window)
 		}
 	}
 	return out

@@ -135,7 +135,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (159)
+## Census (161)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -262,6 +262,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptlanguage_test.go` | H1 | Every prompt this product sends says what language to answer in, or says plainly why it does not need to. |
 | `promptvoice_test.go` | H1 | Every prompt either speaks in Margince's one voice or says why it does not. |
 | `publictokencachecensus_test.go` | H3 | The no-store census covers every route the contract publishes on the two anonymous token prefixes. |
+| `ratelimitnames_test.go` | H2 | A rate limiter's NAME is its bucket. |
 | `ratparsebound_test.go` | H2 | A decimal string is shape-checked before math/big parses it. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
@@ -284,6 +285,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
 | `sonarbinaryexclusions_test.go` | H3 | The scan's file-encoding obligation. |
+| `sonarwaivers_test.go` | H3 | A rule waiver in sonar-project.properties has to keep pointing at something, and there are two ways one stops — NEITHER of which announces itself. |
 | `sourcecensus_test.go` | H2 | The two source censuses that used to be awk, and the corpus that holds both halves of each of them to the same cases. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
@@ -354,7 +356,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (69)
+## Prohibition (70)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -394,6 +396,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |
 | `lanepoolbudget_test.go` | H2 | Every pool the integration lane opens is inside the lane's budget. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
+| `mergegateclockbounds_test.go` | H2 | No test in the merge gate decides anything by reading a stopwatch. |
 | `metriclabelescaping_test.go` | H2 | A label VALUE in the hand-rolled exposition is escaped by httpserver.Label, never by %q. |
 | `migrationvalidatesplit_test.go` | H2 | A constraint is validated in a migration of its OWN, or the two-step buys nothing. |
 | `modulepoolsharing_test.go` | H2 | Pool-sharing discipline for the module suites, as a fitness function. |

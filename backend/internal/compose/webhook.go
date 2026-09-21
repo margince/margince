@@ -121,7 +121,7 @@ type WebhookSpec struct {
 func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
 	// One budget per provider, held by the chassis rather than passed in, so a
 	// provider mounted later cannot be the one that forgot it.
-	refusals := ratelimit.New(webhookRefusalLimit, webhookRefusalWindow)
+	refusals := ratelimit.New("webhook-refusals/"+spec.Provider, ratelimit.FailClosed, webhookRefusalLimit, webhookRefusalWindow)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)

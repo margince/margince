@@ -69,7 +69,7 @@ func (h Handlers) WithOIDCProviders(
 	h.stateSigner = signer
 	h.oidcRoutes = routes
 	if h.oidcPerIP == nil {
-		h.oidcPerIP = ratelimit.New(30, time.Minute)
+		h.oidcPerIP = ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute)
 	}
 	return h
 }

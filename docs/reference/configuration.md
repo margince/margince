@@ -434,7 +434,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required for a marketing send originated by this role's Surface-B agent run — without it that send refuses rather than emit a forgeable link |
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off. Turning capture ON makes the `ai_call_payload` / `content` retention window the whole bound on what is kept — see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before picking one |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
 | `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — (none) | Event-bus credential, where the instance requires one. Empty is the ordinary case: an instance reached over a network the deployment controls needs none. Set it wherever the bus is reachable by anything else — the desktop bundle mints one per installation, because its bus listens on loopback and any local account could otherwise read the stream. Prefer the environment over the flag: argv is readable by every process on the machine |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns** — see the api row. A bound installation runs the Surface-B runner + embeddings from the database, and this role re-reads that stored binding on an interval so it never serves one the api has replaced |
@@ -446,7 +446,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key sealing outbound-webhook signing secrets; unset = the delivery worker stays off (no `cg:webhooks` consumer, no retry sweep) |
 | `--webhook-retry-interval` | — | `30s` | how often the outbound-webhook retry dispatcher fans one due-retry pass out per live workspace (worker role only) |
 | `--reconcile-interval` | — | `24h` | overnight follow-up reconciliation pass interval |
-| `--send-rate-limit` | — | `0` (= built-in 30) | outbound messages ONE mailbox may transmit per `--send-rate-window`. Burst pacing, not a quota: the provider enforces its own daily cap and throttles an account that bursts past it. The limiter is in-process, so a multi-worker deployment paces each replica's view of the mailbox independently |
+| `--send-rate-limit` | — | `0` (= built-in 30) | outbound messages ONE mailbox may transmit per `--send-rate-window`. Burst pacing, not a quota: the provider enforces its own daily cap and throttles an account that bursts past it. The limiter counts in the bus Redis, so every worker replica paces one mailbox against ONE window |
 | `--send-rate-window` | — | `0` (= built-in 1m) | the window the per-mailbox send rate is measured over |
 | `--send-max-age` | — | `0` (= built-in 24h) | how long a staged send may be deferred by the pacing chain before it parks with a reason instead. Without a bound a permanently saturated policy would defer a message forever, silently |
 | — (env-only) | `MARGINCE_AUTO_ENRICH_DAILY_CAP` | `0` (= built-in 500) | installation-wide daily ceiling on AUTOMATIC site deep reads — company auto-enrich and domain triage spend the one atomically-reserved budget (`capture_auto_enrich_budget`). Raise it when backfills routinely meet more than 500 new domains in one UTC day and their companies should not trickle in over following days; it paces only — concurrency stays bounded by the two deep-read workers and model spend by the AI budget. Read by **both roles** (an approval accept on the api can queue a triage read); an invalid value is a boot error on both, never a silent default |
@@ -560,6 +560,27 @@ embedding lane simply do not start; the relay, retention, the event-triggered
 workflow dispatch (`cg:workflows`), and the clock time-scan always run.
 Shutdown is graceful: in-flight subscriber handlers finish their ack before
 the process exits.
+
+## AI payload capture and its window (api, worker)
+
+`ai.capture_payloads` is off by default. Turning it on stores the model's whole request and response
+in `ai_call_payload`, and for a reading of a meeting transcript that request **is** the transcript —
+the largest copy of somebody's words this product holds.
+
+The `ai_call_payload` / `content` row in `retention_policy` is what bounds that. Bootstrap seeds it
+at 365 days and `enabled`, so the retention engine erases past it from the first sweep; the number is
+an **admin-editable default**, and each installation decides its own. Three things settle it:
+
+- **What it bounds.** How long a captured transcript, contract or draft stays on disk after the work
+  is done.
+- **What it is for.** Debugging a call and auditing what was sent are days-to-weeks questions. A year
+  of them is a year of somebody's words kept for a lane nobody is reading.
+- **What it does NOT bound.** An Art. 17 erasure reaches these payloads by the record a call cited and
+  by matching the subject's addresses in the text. A call that names no record and whose text spells
+  no address is reached by neither, and for those this window is the guaranteed end — which is exactly
+  the case a shorter one is for. The two lanes, and why the citation is an optimisation rather than the
+  boundary, are in
+  [privacy-and-consent.md](../explanation/privacy-and-consent.md).
 
 ## The bus address and its logical database (api, worker)
 

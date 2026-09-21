@@ -320,6 +320,14 @@ const waitingRepliesSQL = `
 	 --
 	 -- The caller sorts oldest-first for display, so what a reader sees is
 	 -- unchanged. This decides only WHICH waits survive the bound.
+	 --
+	 -- %[19]s is the keyset continuation, empty on the first page. The machine
+	 -- rule this scan can express is a coarse subset of the real one — the full
+	 -- test reads a registrable domain against a transactional baseline, which
+	 -- is a public-suffix question rather than a LIKE — so the caller filters
+	 -- what survives and asks for another page when too much of it went. The
+	 -- cap bounds ONE page; the caller bounds how many it will ask for.
+	 HAVING TRUE %[19]s
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
 
