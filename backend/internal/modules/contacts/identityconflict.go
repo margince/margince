@@ -17,8 +17,11 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // fieldMatchedLane is the evidence field name for an exact-lane conflict
@@ -79,6 +82,23 @@ func laneConflictEvidence(conflict LaneConflict) []map[string]any {
 			evidenceRightKey:  conflict.RivalLane,
 			evidenceSignalKey: signal,
 		},
+	}
+}
+
+// raiseCardSplit files the review for a card that named two contacts.
+//
+// Never returns: see its caller. The pair is in the log line because that is
+// what makes it actionable — an operator can open both records — and because a
+// message that named only the card index would be unusable by the time anybody
+// read it.
+func (s *Store) raiseCardSplit(ctx context.Context, split LaneConflict) {
+	by, err := storekit.CapturedBy(ctx)
+	if err == nil {
+		_, err = s.EnqueueIdentityConflict(ctx, split, vcardSource, by)
+	}
+	if err != nil {
+		slog.ErrorContext(ctx, "contacts: a card named two contacts and the review could not be raised",
+			"routed_to", split.RoutedTo.String(), "rival", split.Rival.String(), "err", err)
 	}
 }
 

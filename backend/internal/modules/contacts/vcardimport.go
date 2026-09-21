@@ -218,17 +218,13 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	if err != nil {
 		return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
 	}
-	// Raised in its own transaction, and its failure FAILS the card: an import
-	// keeps no promise a captured message does, so a review nobody can write
-	// is a card nobody should think landed cleanly.
+	// After the card's transaction, and a failure does not undo the card or
+	// stop the file: the card is committed by here, and this function's caller
+	// aborts the whole run on an error — a file of forty cards with one
+	// unraisable review would import nothing, against the per-card design
+	// ImportVCards states. raiseCardSplit carries the rest of the reasoning.
 	if split != nil {
-		by, byErr := storekit.CapturedBy(ctx)
-		if byErr != nil {
-			return VCardResult{}, byErr
-		}
-		if _, err := s.EnqueueIdentityConflict(ctx, *split, vcardSource, by); err != nil {
-			return VCardResult{}, fmt.Errorf("contacts: card %d named two contacts and the review could not be raised: %w", index+1, err)
-		}
+		s.raiseCardSplit(ctx, *split)
 	}
 	return result, nil
 }
