@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (115)
+## Parity (116)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -128,6 +128,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `shippingloopreachesthelane_test.go` | H2 | The routine the rulebook tells a contributor to run reaches the integration lane. |
 | `sitereadstops_test.go` | H3 | A website read that stopped is classified TWICE, and both answers reach the same reader. |
+| `summarytiermarks_test.go` | H2 | A 🟢 or 🟡 in an operation's SUMMARY is a claim about that operation's autonomy tier, and it has to be the tier the operation actually declares. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they are the same SHAPE or one of them is lying. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
 | `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is ONE number, in three places that each need it. |

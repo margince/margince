@@ -56885,7 +56885,7 @@ type ServerInterface interface {
 	// Update params or flip status (enable / pause).
 	// (PATCH /automations/{id})
 	UpdateAutomation(w http.ResponseWriter, r *http.Request, id Id, params UpdateAutomationParams)
-	// Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+	// Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
 	// (POST /automations/{id}/preview)
 	PreviewAutomation(w http.ResponseWriter, r *http.Request, id Id)
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
@@ -57305,7 +57305,7 @@ type ServerInterface interface {
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
-	// Define a consent purpose. 🟢 admin write.
+	// Define a consent purpose — a human-only admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
 	// List contacts (live by default; cursor-paginated).
@@ -57974,7 +57974,7 @@ type ServerInterface interface {
 	// Render the offer's branded PDF (sets pdf_asset_ref).
 	// (POST /offers/{id}/render)
 	RenderOffer(w http.ResponseWriter, r *http.Request, id Id, params RenderOfferParams)
-	// Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+	// Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
 	// (POST /offers/{id}/send)
 	SendOffer(w http.ResponseWriter, r *http.Request, id Id, params SendOfferParams)
 	// Continue the scoped company-setup conversation with or without a website read.
@@ -59156,7 +59156,7 @@ func (_ Unimplemented) UpdateAutomation(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+// Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
 // (POST /automations/{id}/preview)
 func (_ Unimplemented) PreviewAutomation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -59996,7 +59996,7 @@ func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Define a consent purpose. 🟢 admin write.
+// Define a consent purpose — a human-only admin write.
 // (POST /consent-purposes)
 func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -61334,7 +61334,7 @@ func (_ Unimplemented) RenderOffer(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+// Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
 // (POST /offers/{id}/send)
 func (_ Unimplemented) SendOffer(w http.ResponseWriter, r *http.Request, id Id, params SendOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)

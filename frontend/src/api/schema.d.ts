@@ -5188,10 +5188,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Dry-run an automation's blast radius (🟢 read; no writes, no sends).
+         * Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
          * @description Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
          *     returns how many records match **now** and an estimate of how many times it *would have* fired over a
-         *     trailing window — **without** performing any action. This is a **🟢 read**, executed under the caller's
+         *     trailing window — **without** performing any action. This is a pure READ, executed under the caller's
          *     Passport: it never mutates a record, never sends, and never stages an approval. Accepts either the stored
          *     automation or, for a not-yet-created draft, an inline recipe in the body (so the editor can preview
          *     before the first save). `x-mcp-tool` read tier.
@@ -10718,7 +10718,7 @@ export interface paths {
          */
         get: operations["listConsentPurposes"];
         put?: never;
-        /** Define a consent purpose. 🟢 admin write. */
+        /** Define a consent purpose — a human-only admin write. */
         post: operations["createConsentPurpose"];
         delete?: never;
         options?: never;
@@ -12979,12 +12979,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send a draft offer (🟡 — leaves the workspace; freezes FX + buyer/issuer snapshot).
+         * Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
          * @description draft → sent. Freezes `fx_rate_to_base` as of today (422 `fx_rate_unavailable` when the
          *     daily rate is missing — never rate=1, RT-PR-C2), captures the buyer/issuer snapshots and
-         *     emits `offer.sent`. HUMAN-ONLY: an agent principal is refused outright (403
-         *     `permission_denied`), with no staging path — releasing an offer to a counterparty is a
-         *     decision a contact makes, not one an agent stages for them.
+         *     emits `offer.sent`. NO TRANSPORT: nothing leaves the installation here, and nothing is
+         *     rendered or delivered to a counterparty — delivery is a separate capability that does not
+         *     exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
+         *     with no staging path — this IS the commercial commitment, since a sent revision is never
+         *     mutated in place and its rate to base is fixed from here on.
          */
         post: operations["sendOffer"];
         delete?: never;
@@ -13059,7 +13061,7 @@ export interface paths {
          *     also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
          *     `diff_from_previous` line-item summary versus the prior revision; a mechanical
          *     regenerate (no AI context available) still works and returns `ai_generated=false`. The
-         *     produced draft still cannot leave without the send gate, which is human-only too.
+         *     produced draft's terms are not frozen until the send gate, which is human-only too.
          *     HUMAN-ONLY: an agent principal is refused (403 `permission_denied`); no tool serves this verb.
          */
         post: operations["regenerateOffer"];
@@ -13087,8 +13089,9 @@ export interface paths {
          *     falling back to the workspace's default template for the offer's locale, de-DE when
          *     none is set) plus its line items, and stores the result as `pdf_asset_ref` (B-E03.22/
          *     WP7, data-model §12.6). The rendered totals equal the server-computed totals — the PDF
-         *     never recomputes money (P11). Not itself an outbound or irreversible act — `send` is
-         *     the 🟡 gated step that leaves the workspace — so render stays 🟢.
+         *     never recomputes money (P11). Not itself an irreversible act: a render can be repeated,
+         *     and `send` — the human-only step this precedes — is where the offer's terms are frozen.
+         *     Nothing leaves the installation at either step.
          */
         post: operations["renderOffer"];
         delete?: never;
