@@ -81299,8 +81299,6 @@ func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -81413,8 +81411,6 @@ func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -81470,8 +81466,6 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

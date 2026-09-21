@@ -18756,6 +18756,7 @@ paths:
     post:
       tags: [Offers]
       operationId: sendOffer
+      security: [ { cookieAuth: [] } ]   # human session only — the transport half of x-agent-access: human-only
       summary: Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot).
       description: |
         draft → sent. Freezes `fx_rate_to_base` as of today (422 `fx_rate_unavailable` when the
@@ -18835,6 +18836,7 @@ paths:
     post:
       tags: [Offers]
       operationId: regenerateOffer
+      security: [ { cookieAuth: [] } ]   # human session only — the transport half of x-agent-access: human-only
       x-waits-on-model: always
       summary: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal.
       description: |
@@ -18866,6 +18868,7 @@ paths:
     post:
       tags: [Offers]
       operationId: renderOffer
+      security: [ { cookieAuth: [] } ]   # human session only — the transport half of x-agent-access: human-only
       summary: Render the offer's branded PDF (sets pdf_asset_ref).
       description: |
         Produces the branded DE/EN PDF from the offer's current template (`offer.template_id`,
