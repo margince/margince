@@ -32,7 +32,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -70,7 +69,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	cfg, deployCfg, logger := boot.cfg, boot.deploy, boot.log
 	config.WarnUndeclared(logger, cfg.unknownVars)
 
-	pool, err := database.NewPool(ctx, cfg.dsn)
+	pool, err := boundWorkerPool(ctx, cfg.dsn, cfg.posture)
 	if err != nil {
 		return err
 	}
