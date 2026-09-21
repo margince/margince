@@ -156,3 +156,32 @@ describe("CompanySubtitle", () => {
     expect(screen.getByText("brandt.example").tagName).toBe("A");
   });
 });
+
+// A record somebody wrote in the system it was imported from.
+//
+// An import runs as ONE administrator, so `captured_by` names that seat on
+// every row it wrote — true, and useless as a statement about authorship. The
+// author field is the one that knows, and the tag has to prefer it: the timeline
+// on the same page already reads "Logged in HubSpot by Mutaz Suleiman" while
+// this strip said "Typed by you", and the two sat side by side disagreeing.
+describe("a record imported from somewhere else", () => {
+  it("names who wrote it there, not the seat that ran the import", async () => {
+    stub([{ id: "u-author", display_name: "Sofia Meier" }]);
+    renderInApp(
+      <CompanyIdentityFacts
+        company={{
+          ...COMPANY,
+          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(provenanceText()).toBe("Logged in HubSpot by Mutaz Suleiman"),
+    );
+    // The importing seat must not surface at all. Naming it would credit the
+    // record to whoever happened to run the import, which is the defect.
+    expect(document.body.textContent).not.toContain("Sofia Meier");
+    expect(screen.queryByText(/Typed by/)).toBeNull();
+  });
+});
