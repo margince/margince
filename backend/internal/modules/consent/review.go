@@ -78,6 +78,9 @@ type RefusedRecipient struct {
 	SubjectID   string `json:"subject_id,omitempty"`
 	ReasonCode  string `json:"reason_code"`
 	Category    string `json:"category,omitempty"`
+	// PurposeID is the purpose the SEND resolved to, nil for a broad send —
+	// and nil, additively, for a snapshot written before this field existed.
+	PurposeID *ids.UUID `json:"purpose_id,omitempty"`
 }
 
 // Review is a refused send somebody can look at.
@@ -254,6 +257,7 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 			SubjectKind: d.SubjectKind,
 			ReasonCode:  d.ReasonCode,
 			Category:    string(d.Resolved),
+			PurposeID:   d.PurposeID,
 		}
 		if !d.SubjectID.IsZero() {
 			refusal.SubjectID = d.SubjectID.String()

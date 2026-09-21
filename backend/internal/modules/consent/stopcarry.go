@@ -55,10 +55,13 @@ func (s *Store) LockStopsTx(ctx context.Context, tx pgx.Tx, subjects ...commsaut
 
 // CarryStopsTx implements contacts.StopCarrier.
 //
-// IDEMPOTENT ON KIND. A survivor who already holds a live stop of the same
-// kind keeps their own — theirs is at least as recent and may carry a
-// different authority, and two live rows of one kind would mean the second
-// lift silently re-enables mail the first was still refusing.
+// IDEMPOTENT ON (KIND, PURPOSE_ID), not kind alone. A survivor who already
+// holds a live stop of the same kind AND the same purpose (both narrowed to
+// one subscription, or both broad) keeps their own — theirs is at least as
+// recent and may carry a different authority, and two live rows of one
+// (kind, purpose_id) would mean the second lift silently re-enables mail the
+// first was still refusing. A narrow stop and a broad stop of one kind are
+// two different refusals, not a duplicate of each other, so both travel.
 //
 // THE AUTHORITY TRAVELS. A subject-level objection stays subject-level on the
 // survivor, so no seat can lift what the subject asked for merely by merging
@@ -104,17 +107,30 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		return err
 	}
 
-	// DISTINCT ON collapses several live source rows of one kind to the
-	// strongest, because a subquery in an INSERT ... SELECT does NOT see the
-	// rows that statement is inserting — Postgres evaluates it against the
-	// statement's snapshot. Without this, a subject holding two live
+	// DISTINCT ON collapses several live source rows of one (kind, purpose_id)
+	// to the strongest, because a subquery in an INSERT ... SELECT does NOT
+	// see the rows that statement is inserting — Postgres evaluates it against
+	// the statement's snapshot. Without this, a subject holding two live
 	// subject_requests carried two copies onto the survivor.
 	//
-	// The NOT EXISTS compares AUTHORITY, not merely kind. A survivor holding a
-	// weaker row of the same kind must not block a stronger one: a legacy
-	// user-level subject_request would otherwise keep a subject-level objection
-	// out, and an admin could then lift the weaker row — the laundering path
-	// carrying the authority was meant to close.
+	// KEYED ON PURPOSE TOO, not kind alone. purpose_id narrows a stop to one
+	// subscription; NULL means all marketing. A subject can hold a narrow
+	// objection to one newsletter AND a broad one covering everything else —
+	// two different refusals of the same kind — and collapsing on kind alone
+	// kept only whichever the ORDER BY put first, dropping the other onto the
+	// floor. That is the same lost-stop defect this file exists to close, one
+	// column narrower: the survivor kept receiving the one list its
+	// predecessor asked to leave.
+	//
+	// The NOT EXISTS compares AUTHORITY, not merely kind and purpose. A
+	// survivor holding a weaker row of the same (kind, purpose_id) must not
+	// block a stronger one: a legacy user-level subject_request would
+	// otherwise keep a subject-level objection out, and an admin could then
+	// lift the weaker row — the laundering path carrying the authority was
+	// meant to close. IS NOT DISTINCT FROM, so two NULL purposes compare
+	// equal — the idiom the writer dedup in withdrawalpress.go and the replay
+	// check in publicstop.go already use — rather than two broad stops
+	// comparing as different rows because SQL NULL is never equal to NULL.
 	// RETURNING, so each carried stop can ship its own event. A consumer that
 	// learned about the original suppression must learn that it now also
 	// applies to the survivor, or it keeps mailing the record the merge just
@@ -122,10 +138,10 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
-		   captured_by, carried_from)
-		SELECT DISTINCT ON (live.kind)
+		   captured_by, carried_from, purpose_id)
+		SELECT DISTINCT ON (live.kind, live.purpose_id)
 		       $3, $4, live.address, live.kind, live.source, live.decided_by_level,
-		       $5, live.id
+		       $5, live.id, live.purpose_id
 		  FROM communication_suppression live
 		 WHERE (($1::uuid IS NOT NULL AND live.contact_id = $1)
 		     OR ($2::uuid IS NOT NULL AND live.lead_id = $2))
@@ -135,10 +151,11 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		          WHERE (($3::uuid IS NOT NULL AND held.contact_id = $3)
 		              OR ($4::uuid IS NOT NULL AND held.lead_id = $4))
 		            AND held.kind = live.kind
+		            AND held.purpose_id IS NOT DISTINCT FROM live.purpose_id
 		            AND held.revoked_at IS NULL
 		            AND coalesce(array_position($6::text[], held.decided_by_level), array_length($6::text[], 1) + 1)
 		                >= coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1))
-		 ORDER BY live.kind, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
+		 ORDER BY live.kind, live.purpose_id, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
 		RETURNING kind, decided_by_level`,
 		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
 		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())

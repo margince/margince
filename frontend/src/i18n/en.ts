@@ -366,6 +366,7 @@ export const en = {
   "history.field.reply_verdict": "Reply verdict",
   "history.field.reply_verdict_by": "Reply verdict by",
   "history.field.research_claims_accepted": "Research claims accepted",
+  "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
   "history.field.stops_carried": "Stops carried over",
   "history.field.submission_decision": "Submission decision",
