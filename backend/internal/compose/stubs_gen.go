@@ -2219,6 +2219,18 @@ func (stubs) UpdateRetentionPolicy(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UpdateRetentionPolicy")
 }
 
+func (stubs) ListLegalHolds(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLegalHoldsParams) {
+	httperr.NotImplemented(w, r, "ListLegalHolds")
+}
+
+func (stubs) LiftLegalHold(w nethttp.ResponseWriter, r *nethttp.Request, entityType crmcontracts.HeldEntityType, recordId openapi_types.UUID, params crmcontracts.LiftLegalHoldParams) {
+	httperr.NotImplemented(w, r, "LiftLegalHold")
+}
+
+func (stubs) PlaceLegalHold(w nethttp.ResponseWriter, r *nethttp.Request, entityType crmcontracts.HeldEntityType, recordId openapi_types.UUID, params crmcontracts.PlaceLegalHoldParams) {
+	httperr.NotImplemented(w, r, "PlaceLegalHold")
+}
+
 func (stubs) ListRestrictedActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRestrictedActivitiesParams) {
 	httperr.NotImplemented(w, r, "ListRestrictedActivities")
 }

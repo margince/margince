@@ -13,9 +13,10 @@ package integration
 // survival is attributable to the hold and not to a selector that misses the
 // class.
 //
-// The hold itself is set by SQL through the harness: legal_hold has no API on
-// any record — an operator sets it in the database — so SQL is the real
-// writer here, not a stand-in for one.
+// The hold is placed through the projects store's own writer, which is what a
+// controller's request reaches. It used to be set by SQL here because nothing
+// could write the column at all; a fixture that keeps its own spelling of a
+// write proves nothing about the write the product performs.
 
 import (
 	"context"
@@ -52,7 +53,9 @@ func seedProjectHoldFixture(t *testing.T, e *Env) projectHoldFixture {
 		return ids.UUID(p.Id)
 	}
 	f := projectHoldFixture{held: create("Disputed rollout"), free: create("Routine rollout")}
-	e.WsExec(t, `UPDATE project SET legal_hold = true WHERE id = $1`, f.held)
+	if err := e.Projects.SetLegalHold(e.Admin(), f.held, true, "Anwaltsschreiben 2026-14"); err != nil {
+		t.Fatalf("placing the legal hold: %v", err)
+	}
 	return f
 }
 

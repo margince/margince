@@ -298,7 +298,14 @@ var auditActionGrant = map[string]principal.Action{
 	// a participant carries no object grant of its own, so update is the rule
 	// that actually admitted the call.
 	"invite": principal.ActionUpdate,
-	"revoke": principal.ActionUpdate,
+	// The litigation hold, both directions. DELETE and not update, because a
+	// hold decides whether a record can be ERASED at all: it is the erasure
+	// authority exercised in reverse, and that is the grant the three store
+	// writers actually take. An editor who may rename a company has no
+	// business suspending the storage-limitation ladder over it.
+	"place_legal_hold": principal.ActionDelete,
+	"lift_legal_hold":  principal.ActionDelete,
+	"revoke":           principal.ActionUpdate,
 	// The Deal Room lifecycle. All four move an existing room's state and all
 	// four take deal_room.update at the store, so update is the grant that
 	// actually admitted the call — not delete for close, which ends no row, and

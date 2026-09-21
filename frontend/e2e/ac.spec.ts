@@ -1629,6 +1629,7 @@ test.describe("§3.8: 390px mobile", () => {
         return {
           readings: census([".brief-readings", ".worklist-readings"]),
           queue: census([".worklist-list"]),
+          main: census([".main"]),
         };
       });
 
@@ -1636,6 +1637,8 @@ test.describe("§3.8: 390px mobile", () => {
       expect(targets.readings.small).toEqual([]);
       expect(targets.queue.counted).toBeGreaterThan(0);
       expect(targets.queue.small).toEqual([]);
+      expect(targets.main.counted).toBeGreaterThan(0);
+      expect(targets.main.small).toEqual([]);
     });
   });
 
