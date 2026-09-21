@@ -54,6 +54,15 @@
   outline-offset: 2px;
 }
 
+/* A day belonging to the month either side of the one on show. The grid is
+   six full weeks, so up to eleven of its forty-two cells are not the month the
+   reader is reading — and at one ink they are indistinguishable from it, which
+   is how a reader picks the 1st of the wrong month. Secondary ink, not hidden:
+   the days are still selectable. */
+.calendar-day-outside {
+  color: var(--textSecondary);
+}
+
 /* Today, unchosen: a quiet disc. It answers "where am I" without competing
    with the day the reader has actually picked. */
 .calendar-day-today {
