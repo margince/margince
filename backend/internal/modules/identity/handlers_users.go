@@ -304,16 +304,19 @@ func tooManyPasswordLinksBy(detail string) error {
 }
 
 // passwordLinkRefusal reports why this installation cannot issue set-password
-// links, or nil when it can. Both refusals are operator configuration states
-// rather than anything about the request, which is why they are decided before
+// links, or nil when it can. The refusal is an operator configuration state
+// rather than anything about the request, which is why it is decided before
 // the target is even resolved.
+//
+// A CONFIGURED MAILER IS NO LONGER ONE OF THEM. It used to answer
+// `email_channel_configured` — "invite the user instead" — which is sound
+// advice only while the mail actually arrives. On an installation whose relay
+// is configured and dead, the invite answers 201 and delivers nothing and this
+// refused the one fallback, so the escape was disabled by the fault it existed
+// to escape. It must stay in step with canIssuePasswordLink, which decides what
+// /me advertises: advertising an action this refuses is the same misleading
+// affordance from the other side.
 func (h Handlers) passwordLinkRefusal() error {
-	if h.resetMailer != nil {
-		return &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "email_channel_configured",
-			Detail: "this installation delivers set-password links by email; invite the user instead",
-		}
-	}
 	if h.passwordLinkBaseURL == "" {
 		return &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "public_base_url_unset",

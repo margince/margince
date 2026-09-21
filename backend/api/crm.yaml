@@ -16719,10 +16719,17 @@ paths:
         which revokes every session the member holds. Emits `user.password_link_issued`.
 
         Admin-only and human-only — an agent may never mint a credential for a human. Available
-        ONLY where it is needed and can work: refused when an outbound-email channel IS configured
-        (that installation mails the link), when no public base URL is configured (a
-        credential-bearing link is never derived from a request `Host`), and when the target is
-        suspended or deactivated (redemption refuses them, so the link would be dead on arrival).
+        wherever it can WORK: refused when no public base URL is configured (a credential-bearing
+        link is never derived from a request `Host`), and when the target is suspended or
+        deactivated (redemption refuses them, so the link would be dead on arrival).
+
+
+        A CONFIGURED OUTBOUND-EMAIL CHANNEL DOES NOT REFUSE IT. It used to, on the reasoning that
+        such an installation mails the link — which is true only while the mail arrives. An
+        installation whose relay is configured and dead answers `201` to an invite and delivers
+        nothing, and this refused the one fallback *because* a mailer was configured: the escape
+        disabled by the fault it escapes. Whether a wired relay actually works is a separate
+        question with its own answer to give; this is true either way.
 
         An `invited` member IS a valid target, and this is how an expired invitation is recovered:
         they have no password, so `requestPasswordReset` refuses them, leaving this the only way
@@ -16761,7 +16768,6 @@ paths:
         '409':
           description: >-
             Refused, with the reason distinguished by the problem `code`:
-            `email_channel_configured` (this installation mails the link — use the invite flow),
             `public_base_url_unset` (no canonical base to build a link against — an operator
             configuration gap), or `member_not_active` (the member is suspended or deactivated, so
             redemption would refuse the link this call would mint).
