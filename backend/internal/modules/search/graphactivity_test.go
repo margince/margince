@@ -298,6 +298,47 @@ func TestEveryLinkableRecordIsWalkableAsAnAnchor(t *testing.T) {
 	}
 }
 
+// Every record type an activity can be linked to gets a related_* section at
+// hop 2, and every section names a type an activity can be linked to.
+//
+// The hop-2 list used to be shorter than the arm list, and nobody decided that
+// about the arm it omitted — it simply predated it. What the omission cost was
+// not a missing section: the dereference borrowed the shorter list as its own
+// and dropped the lead arm entirely, so a lead's whole timeline went
+// unwalkable. Two lists of what this walk reaches is one list too many, and
+// this is the assertion that keeps them from drifting apart again.
+//
+// READ OFF THE DDL, like its neighbours above, so the expected side is not the
+// thing under test: a census that compared the Go list to the Go list would go
+// on passing while both fell behind the table.
+func TestEveryLinkArmHasARelatedSection(t *testing.T) {
+	declared := activityLinkEntityTypes(t)
+	if len(declared) == 0 {
+		t.Fatal("the migrations declared no activity_link entity type, so this census read nothing")
+	}
+	sectioned := make(map[string]bool, len(relatedSectionOrder))
+	for _, entity := range relatedSectionOrder {
+		sectioned[entity] = true
+	}
+	for _, entity := range declared {
+		if !sectioned[entity] {
+			t.Errorf("activity_link admits entity_type %q and the hop-2 walk renders no related_%s "+
+				"section, so a %s sharing an activity with the anchor is absent from the picture "+
+				"rather than reported as being in it", entity, pluralRelationName(entity), entity)
+		}
+	}
+	admits := make(map[string]bool, len(declared))
+	for _, entity := range declared {
+		admits[entity] = true
+	}
+	for _, entity := range relatedSectionOrder {
+		if !admits[entity] {
+			t.Errorf("relatedSectionOrder names %q, which activity_link does not admit — the walk "+
+				"orders a section no hop can fill", entity)
+		}
+	}
+}
+
 // activityLinkEntityTypes reads the live vocabulary off the migrations: the
 // LAST activity_link_entity_type_check to be declared wins, which is the one a
 // fresh database ends up with. Core migrations are zero-padded, so filename

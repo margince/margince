@@ -14986,9 +14986,18 @@ paths:
       x-agent-access: human-only
       summary: Assembled context (related evidence) for one record.
       description: |
-        The fixed-depth context walk (anchor → neighborhood): recent touches, related contacts,
+        The fixed-depth context walk (anchor → neighborhood): recent touches, related records,
         open questions — each item provenance-stamped. Row-scoped; a record outside the caller's
         scope yields an empty picture, never another workspace's neighborhood.
+
+        A `related_*` section is rendered for every record type an activity can be filed
+        against — `related_contacts`, `related_companies`, `related_deals`, `related_projects`,
+        `related_leads` — so a record sharing an activity with the anchor is named rather than
+        left out. (`related_companys` was the name this server sent until the walk started
+        taking the module's own pluralizer; no client ever looked for it.) A LEAD is named for that reason and not in spite of being unqualified: it is
+        the record the caller was not prepared against, and an unqualified lead on a discovery
+        call is part of what happened on it. Each section is bounded by `max_items` and each
+        member is object-RBAC checked and visibility-probed on its own.
 
         An `activity` anchor — a captured meeting or message — is DEREFERENCED rather than
         walked: the event names the records it is about, one of them becomes the subject, and
