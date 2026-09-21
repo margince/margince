@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -50,6 +51,10 @@ type Meter struct {
 	// records nothing, because this composition declared no bound rather than
 	// failed to reach one.
 	unbounded bool
+	// reachable is whether the last read of the counter store succeeded —
+	// the one fact an operator needs about a control that fails closed. See
+	// answerable.go.
+	reachable *atomic.Bool
 }
 
 // New constructs a Meter over rdb using the real wall clock. A nil rdb is
@@ -67,7 +72,7 @@ func NewWithClock(rdb *redis.Client, limits Limits, window time.Duration, now fu
 	if window <= 0 {
 		window = DefaultWindow
 	}
-	return &Meter{rdb: rdb, limits: limits.withDefaults(), window: window, now: now}
+	return &Meter{rdb: rdb, limits: limits.withDefaults(), window: window, now: now, reachable: reachableAtBoot(rdb != nil)}
 }
 
 // Unmetered is a meter that counts nothing and bounds nothing — for a
@@ -83,7 +88,7 @@ func NewWithClock(rdb *redis.Client, limits Limits, window time.Duration, now fu
 // Nothing in a production api path may use it. cmd/api wires the Redis-backed
 // meter, and a deployment that misconfigures Redis gets the loud refusal.
 func Unmetered() *Meter {
-	return &Meter{limits: Limits{}.withDefaults(), window: DefaultWindow, now: time.Now, unbounded: true}
+	return &Meter{limits: Limits{}.withDefaults(), window: DefaultWindow, now: time.Now, unbounded: true, reachable: reachableAtBoot(false)}
 }
 
 // WithCostCeiling installs the share one Passport may spend of the workspace AI
@@ -109,6 +114,7 @@ func (m *Meter) RebindFrom(src *Meter) {
 	// only as a warning that fires at the wrong volume.
 	m.rdb, m.limits, m.window = src.rdb, src.limits, src.window
 	m.now, m.unbounded, m.cost = src.now, src.unbounded, src.cost
+	m.reachable = src.reachable
 }
 
 // Limit is the configured threshold for one counter, for a refusal envelope to
@@ -281,6 +287,13 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 		// Governed, and unidentifiable or uncountable. Both are the fail-closed
 		// branch: this caller is inside the control and the meter cannot answer
 		// for them.
+		//
+		// WHERE AN OPERATOR SEES THIS. Not /readyz — that is per-pod and would
+		// drain the pod for human traffic over a fault no human request meets.
+		// Answerable() feeds margince_agent_volume_answerable on /metrics, and
+		// the alert on it carries the sentence that matters: agent reads are
+		// refusing, human traffic is unaffected. docs/deployment.md says so
+		// under "Alert on the agent bound, do not drain on it".
 		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Exceeded: true, Bucket: bucket}
 	}
 	observed, released, err := m.observe(ctx, ws, agent, c, bucket)
@@ -324,6 +337,11 @@ func (m *Meter) readCost(ctx context.Context, bucket int64) Reading {
 // refuses a caller a human has just released.
 func (m *Meter) observe(ctx context.Context, ws ids.UUID, agent string, c Counter, bucket int64) (observed, released int, err error) {
 	values, err := m.rdb.MGet(ctx, m.countKey(ws, agent, c, bucket), m.releaseKey(ws, agent, c, bucket)).Result()
+	// Recorded on the way past, on BOTH edges: this is the read that decides
+	// whether the agent surface answers, so its outcome is what /metrics
+	// reports about the control. redis.Nil is a reached store with nothing in
+	// it, not a failure to reach one.
+	m.noteReach(ignoreMissingKeys(err))
 	if err != nil && !errors.Is(err, redis.Nil) {
 		return 0, 0, err
 	}
@@ -339,6 +357,17 @@ func (m *Meter) observe(ctx context.Context, ws ids.UUID, agent string, c Counte
 		return 0, 0, err
 	}
 	return observed, released, nil
+}
+
+// ignoreMissingKeys folds redis.Nil back to success for the reachability
+// signal: a key that has not been written this window is the ordinary case on
+// every first read, and reporting it as an unreachable store would alert an
+// operator about a control that is working.
+func ignoreMissingKeys(err error) error {
+	if errors.Is(err, redis.Nil) {
+		return nil
+	}
+	return err
 }
 
 // asCount reads one MGET slot. A missing key is zero — nothing charged this
