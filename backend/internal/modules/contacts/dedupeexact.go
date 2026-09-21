@@ -180,21 +180,32 @@ func exactContactByEmail(ctx context.Context, tx pgx.Tx, emails []string) ([]ids
 // the cap is what keeps a payload carrying a hundred addresses from deciding
 // how much this query returns.
 func exactContactIDs(ctx context.Context, tx pgx.Tx, statement string, args ...any) ([]ids.ContactID, error) {
+	return exactOwners[ids.ContactID](ctx, tx, "contact", statement, args...)
+}
+
+// exactOwners is the read both ladders' exact tiers make: the distinct records
+// one lane's keys reach, in the order the statement asked for.
+//
+// One spelling for both because it is one question — a contact ladder and a
+// company ladder differ in which table they read and in nothing else here, and
+// two copies of "query, scan an id, collect" would be two places for the
+// bounding and the error wrapping to drift apart.
+func exactOwners[T any](ctx context.Context, tx pgx.Tx, record, statement string, args ...any) ([]T, error) {
 	rows, err := tx.Query(ctx, statement, args...)
 	if err != nil {
-		return nil, fmt.Errorf("dedupe contact exact tier: %w", err)
+		return nil, fmt.Errorf("dedupe %s exact tier: %w", record, err)
 	}
 	defer rows.Close()
-	var out []ids.ContactID
+	var out []T
 	for rows.Next() {
-		var id ids.ContactID
+		var id T
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("dedupe contact exact tier: %w", err)
+			return nil, fmt.Errorf("dedupe %s exact tier: %w", record, err)
 		}
 		out = append(out, id)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("dedupe contact exact tier: %w", err)
+		return nil, fmt.Errorf("dedupe %s exact tier: %w", record, err)
 	}
 	return out, nil
 }

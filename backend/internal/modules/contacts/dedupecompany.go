@@ -150,29 +150,13 @@ func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, excl
 	for _, d := range domains {
 		lowered = append(lowered, normalizeDomain(d))
 	}
-	rows, err := tx.Query(ctx, `
+	return exactOwners[ids.CompanyID](ctx, tx, entityCompany, `
 		SELECT DISTINCT company_id FROM company_domain
 		WHERE domain = ANY($1) AND archived_at IS NULL
 		  
 		  AND ($2::uuid IS NULL OR company_id <> $2)
 		ORDER BY company_id
 		LIMIT 2`, lowered, exclude)
-	if err != nil {
-		return nil, fmt.Errorf("dedupe company exact tier: %w", err)
-	}
-	defer rows.Close()
-	var out []ids.CompanyID
-	for rows.Next() {
-		var id ids.CompanyID
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("dedupe company exact tier: %w", err)
-		}
-		out = append(out, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("dedupe company exact tier: %w", err)
-	}
-	return out, nil
 }
 
 // fuzzyCompany scores name similarity over the trigram-restricted
