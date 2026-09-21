@@ -1071,3 +1071,31 @@ describe("the consent rail names the purpose behind each answer", () => {
     ).not.toBeNull();
   });
 });
+
+// An import runs as ONE administrator, so `captured_by` names that one seat on
+// every row it wrote — and where the reader IS that administrator, `self` is
+// true of a decade of other people's work. The author is the only field on the
+// row that knows who wrote it, so the head's Source cell has to read it.
+describe("who wrote an imported contact", () => {
+  // The id meFixture answers /me with, which is who mount() renders the page as.
+  const VIEWER = "00000000-0000-4000-8000-000000000001";
+
+  it("names the author the import carried, not the reader who ran it", async () => {
+    mount("overview", {
+      ...view,
+      contact: {
+        ...view.contact,
+        captured_by: `human:${VIEWER}`,
+        author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+      },
+    });
+
+    expect(
+      await screen.findByText("Logged in hubspot by Mutaz Suleiman"),
+    ).not.toBeNull();
+    // Both readings the cell would take with the author dropped: "you" once the
+    // session lands, and the generic hand before it does.
+    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(screen.queryByText("Typed by a person")).toBeNull();
+  });
+});

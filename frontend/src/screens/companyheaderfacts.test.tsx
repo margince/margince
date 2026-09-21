@@ -84,8 +84,8 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
-function renderFacts() {
-  renderInApp(<CompanyIdentityFacts company={COMPANY} />);
+function renderFacts(company: Company = COMPANY) {
+  renderInApp(<CompanyIdentityFacts company={company} />);
 }
 
 // The tag is one badge carrying "Typed by" and the name as sibling text
@@ -124,6 +124,27 @@ describe("who wrote this record", () => {
     // truncated, which is what the generic record reference would render.
     expect(provenanceText()).toBe("Typed by a person");
     expect(document.body.textContent).not.toContain("u-author");
+  });
+
+  // An import runs as ONE administrator, so `captured_by` names that one seat
+  // on every row it wrote — and where the reader IS that administrator, `self`
+  // is true of a decade of other people's work. The author is the only field
+  // on the row that knows who wrote it, so the strip has to read it.
+  it("names the author an import carried, not the reader who ran the import", async () => {
+    stub([{ id: "u-reader", display_name: "The Reader" }]);
+    renderFacts({
+      ...COMPANY,
+      captured_by: "human:u-reader",
+      author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+    });
+
+    await waitFor(() =>
+      expect(provenanceText()).toBe("Logged in hubspot by Mutaz Suleiman"),
+    );
+    // Both readings the row would take with the author dropped: "you" once the
+    // session lands, and the generic hand before it does.
+    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(screen.queryByText("Typed by a person")).toBeNull();
   });
 });
 
