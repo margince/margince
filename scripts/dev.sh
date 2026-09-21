@@ -65,6 +65,30 @@ repo_root="$PWD"
 COMPOSE_OWNER_DSN="postgres://margince_owner:dev@localhost:15432/margince"
 COMPOSE_APP_DSN="postgres://margince_app:margince_app_dev@localhost:15432/margince"
 
+# .env.local FIRST, before anything below resolves a default out of the
+# environment.
+#
+# It used to be sourced deep inside the `dev` command, beside the AI block that
+# needed the cloud keys — which is after every `${VAR:-default}` in this file
+# has already run. So the file lost every question it was asked: the DSN
+# resolution below explained in a comment that it consults MARGINCE_DSN, and did
+# so against an environment that had not yet been read. A value set in
+# .env.local looked meaningful and did nothing, which is the failure this whole
+# file has now made twice.
+#
+# Seeded here too, and on every invocation rather than only on `dev`: the seed
+# and the read are one step, and splitting them is what let the read move.
+seed_and_source_env_local() {
+    if [[ ! -f .env.local && -f .env.example ]]; then
+        cp .env.example .env.local
+        echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
+    fi
+    if [[ -f .env.local ]]; then
+        set -a; . ./.env.local; set +a
+    fi
+}
+seed_and_source_env_local
+
 # This stack's connection surface, resolved the way the product resolves it:
 # an explicit argument, else the environment the binaries themselves read, else
 # the compose default. OWNER_DSN runs migrations; APP_DSN is the non-superuser
@@ -82,6 +106,39 @@ REDIS_PORT="${REDIS_PORT:-16379}"
 # well-known throwaway dev credential the compose stack already ships, never a
 # production secret.
 MINIO_PORT="${MINIO_PORT:-29000}"
+
+# WHAT THIS STACK OWNS, AND WHAT IT MERELY DEFAULTS.
+#
+# `make dev` owns what makes this a per-worktree dev stack: MARGINCE_ENV, the
+# database name, the Redis logical database and the port pair. Override those
+# and you do not have this stack any more — you have a stack that looks like it
+# and answers somebody else's rows.
+#
+# Everything else it sets is a DEFAULT. The blobstore four point at the MinIO
+# the compose stack starts, and pointing them at a real object store instead is
+# a thing an engineer legitimately wants; they were passed as command-prefix
+# assignments, which outrank an exported variable, so a value set in .env.local
+# was read, exported and then discarded with nothing said.
+# Its own function so a test can call it rather than read it: the failure this
+# replaces was a resolution that looked right in the file and lost at runtime.
+resolve_stack_environment() { # minio_port
+    MARGINCE_BLOBSTORE_ENDPOINT="${MARGINCE_BLOBSTORE_ENDPOINT:-localhost:${1}}"
+    MARGINCE_BLOBSTORE_ACCESS_KEY="${MARGINCE_BLOBSTORE_ACCESS_KEY:-minioadmin}"
+    MARGINCE_BLOBSTORE_SECRET_KEY="${MARGINCE_BLOBSTORE_SECRET_KEY:-minioadmin}"
+    MARGINCE_BLOBSTORE_REGION="${MARGINCE_BLOBSTORE_REGION:-us-east-1}"
+    export MARGINCE_BLOBSTORE_ENDPOINT MARGINCE_BLOBSTORE_ACCESS_KEY \
+        MARGINCE_BLOBSTORE_SECRET_KEY MARGINCE_BLOBSTORE_REGION
+
+    # MARGINCE_ENV is this script's, and says so rather than winning silently.
+    # A `make dev` that booted a production posture would refuse an unlicensed
+    # install and hide the data reset, for a reason nobody would connect to a
+    # line in their own .env.local.
+    if [[ -n "${MARGINCE_ENV:-}" && "${MARGINCE_ENV}" != "dev" ]]; then
+        echo "dev: MARGINCE_ENV=${MARGINCE_ENV} is set, and this stack runs as dev regardless — the dev postures are what \`make dev\` is. Run the binary yourself to serve another posture."
+    fi
+    export MARGINCE_ENV=dev
+}
+resolve_stack_environment "$MINIO_PORT"
 
 # Slug, state root and bucket come from the shared helper — three scripts need
 # the same answers and dev.sh knowing them alone is how `make dev-logs` came to
@@ -368,7 +425,11 @@ else
   label="dev '$slug'"
   db="margince_dev_${slug}"
 fi
-blob_bucket="$(dev_bucket_for_slug "$slug")"
+# The bucket is a DEFAULT like the other three: the per-worktree name keeps two
+# stacks off each other's objects, and an engineer pointing the endpoint at a
+# real store names the bucket there too. Nothing here has to create it —
+# blobstore.New makes a missing bucket — so an override costs no setup step.
+blob_bucket="${MARGINCE_BLOBSTORE_BUCKET:-$(dev_bucket_for_slug "$slug")}"
 # :8080 is THE port — the app, the thing a human opens, always and only. The api
 # sits behind it at fe+10000 and the app's dev server proxies /v1 and the probes
 # through, so `curl localhost:8080/v1/...` still answers and nobody has to
@@ -1080,14 +1141,9 @@ up)
   # .env.local exports those vars, and the api/worker started below inherit them —
   # no key ever lands in a config file. Seed .env.local from the tracked template
   # on first run so a fresh clone has a documented place for these keys.
-  if [[ ! -f .env.local && -f .env.example ]]; then
-    cp .env.example .env.local
-    echo "dev: seeded .env.local from .env.example — edit it to set keys (GEMINI_API_KEY, MARGINCE_GMAIL_*, …)"
-  fi
+  # Already sourced, at the top of this file — see seed_and_source_env_local.
+  # The keys the scan below looks for are in the environment by now.
   ai_flag=(--ai-fake)
-  if [[ -f .env.local ]]; then
-    set -a; . ./.env.local; set +a
-  fi
   # Real routing needs the key for EVERY cloud provider the routing file
   # actually binds — SelectBrain fails closed at boot on the first bound
   # provider whose env key is missing, so "any key present" is not enough
@@ -1284,13 +1340,8 @@ up)
   # relay: it coexists with the worker's standalone relay (started below) —
   # outbox rows are claimed FOR UPDATE SKIP LOCKED, so two relays never
   # double-ship.
-  MARGINCE_ENV=dev \
-    MARGINCE_SCHEMA_DSN="$dev_owner_url" \
-    MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
-    MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
+  MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    MARGINCE_BLOBSTORE_REGION=us-east-1 \
     ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
     --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
@@ -1338,12 +1389,7 @@ up)
     # A short poll makes the demo mailbox responsive; the default is 2m.
     worker_gmail_flags=(--gmail-sync-interval 30s)
   fi
-  MARGINCE_ENV=dev \
-    MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
-    MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-    MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    MARGINCE_BLOBSTORE_REGION=us-east-1 \
+  MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" \
     "${public_base_url_flag[@]}" \
