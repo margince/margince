@@ -289,7 +289,8 @@ func (s *Store) countWaiting(
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		fmt.Sprintf("$%d", arg(readerAddresses)),
-		unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)))
+		unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
+		noKeyset)
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

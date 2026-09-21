@@ -214,7 +214,35 @@ func liveRecord(predicate, alias string) string {
 // One row per thread — the newest inbound in it — because a customer who wrote
 // three times is waiting once, and three rows would read as three obligations.
 // Oldest first: the longest wait is the one most likely to have been forgotten.
+//
+// One PAGE of them, bounded by the scan cap. Read the whole backlog with
+// WaitingRepliesBefore, which continues where a page left off; this spelling
+// asks for the newest page and stops.
+//
+// Paged because the scan's own machine-sender rule is a coarse subset of the
+// real one. The full test reads a registrable domain against a transactional
+// baseline — a public-suffix question, not something a LIKE can answer — so it
+// runs in the caller, AFTER this cap. Two hundred newer messages from one
+// transactional relay could therefore fill the scan and push a genuinely
+// waiting customer out of it, and the caller would discard all two hundred and
+// show nothing. Asking for the next page is how the customer comes back.
+//
+// Not by moving the full rule into SQL: that rule is one capability, and a
+// second copy of it here would be the thing that drifts — the domain baseline
+// and the public-suffix walk are both Go, and compose owns the seam that has
+// them.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
+	return s.WaitingRepliesBefore(ctx, asOf, time.Time{})
+}
+
+// WaitingRepliesBefore is WaitingReplies continued: the next page of the same
+// scan, older than the instant given.
+//
+// One implementation, two names. The unpaged spelling is what almost every
+// caller wants — one page is two hundred rows and more than a queue shows —
+// and it says so by taking no cursor at all, rather than every call site
+// carrying a zero somebody has to recognise as "the beginning".
+func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before time.Time) ([]WaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -303,7 +331,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 				fmt.Sprintf("$%d", arg(readerAddresses)),
-				unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant))), args...)
+				unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
+				olderThan(before, arg)), args...)
 		if err != nil {
 			return err
 		}
