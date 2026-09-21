@@ -114,3 +114,65 @@ describe("the score's breakdown", () => {
     expect(machine?.querySelector(".factlist-note")).toBeNull();
   });
 });
+
+// Every reading states its own absence and its own ending in words. The four
+// slots were borrowing them: a create form's label over the company, a badge's
+// lower-case word under the score, and the ladder word overwritten by the
+// filing that followed it.
+describe("what each reading says when the lead is not simply open", () => {
+  it("keeps the ladder word as the reading and the ending under it", async () => {
+    withReadings(<LeadReadings lead={{ ...lead, status: "promoted" }} />);
+
+    const status = (await screen.findByText("Qualified")).closest(".stat-card");
+    expect(status?.textContent).toContain("Archived");
+  });
+
+  // A merge leaves `status` where it stood, so the ending is the only thing
+  // that says the lead is not still being worked.
+  it("says a merged lead went somewhere, without claiming where", async () => {
+    withReadings(<LeadReadings lead={{ ...lead, merged_into_id: "l-2" }} />);
+
+    const status = (await screen.findByText("Merged")).closest(".stat-card");
+    expect(status?.textContent).toContain("Into another lead");
+  });
+
+  it("says a lead has no company, in a reading's words and not a form's", async () => {
+    withReadings(<LeadReadings lead={lead} />);
+
+    const company = (await screen.findByText("Company")).closest(".stat-card");
+    expect(company?.textContent).toContain("None");
+    expect(company?.textContent).not.toContain("Not set");
+  });
+
+  it("writes the override as a line of its own, not as the header's badge", async () => {
+    withReadings(
+      <LeadReadings
+        lead={{ ...lead, score_override_reason: "Strong buying signal" }}
+      />,
+    );
+
+    expect(await screen.findByText("Set by hand")).toBeTruthy();
+    expect(screen.queryByText("overridden")).toBeNull();
+  });
+
+  // "On time" is a verdict on a response nobody has sent. What is true is
+  // that it is owed, and the deadline under it says the rest.
+  it("calls an unanswered lead inside its target owed, not on time", async () => {
+    withReadings(
+      <LeadReadings
+        lead={{
+          ...lead,
+          sla_state: "within_target",
+          sla_deadline_at: "2026-06-05T08:00:00Z",
+        }}
+      />,
+    );
+
+    const response = (await screen.findByText("First response")).closest(
+      ".stat-card",
+    );
+    expect(response?.textContent).toContain("Owed");
+    expect(response?.textContent).toMatch(/Due /);
+    expect(screen.queryByText("On time")).toBeNull();
+  });
+});

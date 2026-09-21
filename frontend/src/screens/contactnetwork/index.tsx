@@ -31,7 +31,7 @@ import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
 import { completenessText, mapModelFromContactGraph } from "./mapmodel";
-import { MomentsPanel, momentWhyNow } from "./moments";
+import { latestChange, MomentsPanel } from "./moments";
 import { RelayPanel } from "./relay";
 import "../contactnetwork.css";
 
@@ -112,6 +112,10 @@ export function ContactNetworkTab({
   }
 
   const read = readGraph(data, asks.data ?? [], focus);
+  // The newest change and whether the section was refused. Both travel to the
+  // strip: a refused section reading as "nothing new" is a claim about the
+  // relationship made out of a permission.
+  const moved = latestChange(view);
 
   const model = mapModelFromContactGraph(data, copy);
   const complete = completenessText(data, copy, (n) =>
@@ -138,7 +142,8 @@ export function ContactNetworkTab({
       <DecisionStrip
         routes={read.routes}
         legacyVia={read.legacy?.via_display_name}
-        whyNow={momentWhyNow(view, t)}
+        change={moved.change}
+        changeWithheld={moved.withheld}
         open={read.open}
       />
 

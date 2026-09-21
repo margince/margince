@@ -156,21 +156,35 @@ function useCallTrace(task: string, enabled: boolean) {
 }
 
 /**
- * When the runtime last reached a model, as epoch ms — or null while nobody
- * knows yet.
+ * When the runtime last reached a model — and, where there is no instant to
+ * give, WHICH silence this is.
  *
- * Null covers three different silences on purpose, because the caller draws
- * nothing for any of them: the read is not this reader's, the page has not
- * arrived, and the installation has never called. A zero here would be an
- * instant in 1970, and a "never" would be a claim this hook cannot make for the
- * first two.
+ * `never` is a claim about the installation: nothing has ever called a model.
+ * `withheld` and `unread` are claims about the read — one reader may not make
+ * it, the other has not answered yet — and neither is evidence about the
+ * installation at all. One `null` over all three let a caller say "Never
+ * called" over a trace that was still arriving, which is the defect this type
+ * exists to make unspellable.
+ *
+ * `unread` covers a read in flight AND one that failed, because nothing is
+ * known in either case and no surface tells them apart; the card that OWNS the
+ * trace draws the failure and its retry.
+ */
+export type LastCall =
+  | { state: "withheld" }
+  | { state: "unread" }
+  | { state: "never" }
+  | { state: "at"; epochMs: number };
+
+/**
+ * The newest call, as a state a caller can switch on.
  *
  * Its OWN query rather than the card's. The card pages through a filtered trace
  * on demand; this wants the newest row and wants it to keep up, and the two
  * cannot share a key without one imposing its refetch on the other — a poll
  * over every page the reader had loaded.
  */
-export function useLastCallAt(): number | null {
+export function useLastCallAt(): LastCall {
   const canSee = useCan("ai_diagnostics", "read");
   const query = useQuery({
     enabled: canSee,
@@ -185,13 +199,18 @@ export function useLastCallAt(): number | null {
     },
   });
   // Read through the grant, not only around it. A revoked grant disables the
-  // query but leaves its last answer in the cache, and returning that would go
-  // on showing a seat the runtime activity it may no longer see.
+  // query but leaves its last answer in the cache, and answering from it would
+  // go on showing a seat the runtime activity it may no longer see.
   if (!canSee) {
-    return null;
+    return { state: "withheld" };
   }
-  const newest = query.data?.data[0];
-  return newest ? Date.parse(newest.occurred_at) : null;
+  if (query.data === undefined) {
+    return { state: "unread" };
+  }
+  const newest = query.data.data[0];
+  return newest
+    ? { state: "at", epochMs: Date.parse(newest.occurred_at) }
+    : { state: "never" };
 }
 
 export function AiCallsCard() {

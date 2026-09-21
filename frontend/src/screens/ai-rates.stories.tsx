@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { ModelRatePlate } from "./ai-rates";
 
 // The three states worth looking at are the three answers the price sheet can
@@ -65,7 +66,8 @@ export const ChatModelNotOnSheet: Story = {
 };
 
 // Nothing priced, which is what an installation whose sheet failed to load
-// looks like. Two warned slots, no figure invented for either.
+// looks like. Two warned slots, no figure invented for either, and each saying
+// on its second line what an unpriced call costs a reader later.
 export const NothingPriced: Story = {
   args: {
     catalogue: [],
@@ -128,5 +130,24 @@ export const RecordedOutranksProposed: Story = {
     chatModel: "gemini-2.5-flash",
     embedModel: "text-embedding-004",
     locale: "en",
+  },
+};
+
+// The repair, which is not on the card. A caption holds two lines and the
+// consequence takes both, so where a rate is actually entered folds into the
+// reading's own receipt — this story opens it, because a panel that only exists
+// on hover is a state a still render never shows.
+export const UnpricedReceipt: Story = {
+  args: {
+    catalogue: [],
+    provider: "openrouter",
+    chatModel: "anthropic/claude-sonnet-4.5",
+    embedModel: "openai/text-embedding-3-small",
+    locale: "en",
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const receipts = await canvas.findAllByRole("button", { name: "Evidence" });
+    await userEvent.click(receipts[0]);
   },
 };

@@ -7,10 +7,10 @@ import { project360 } from "./projects.fixtures";
 import { StoryProviders } from "./story-utils";
 
 // The band under a project's header: what its deals are worth, what is still
-// owed, and when anything last happened. A STRIP rather than five cards,
-// because the five are read across as one comparison — which is also why the
-// server withholds the whole plate rather than half of it, and why the states
-// below are states of the PLATE.
+// owed, and how much has been filed. A STRIP rather than four cards, because
+// the four are read across as one comparison — which is also why the server
+// withholds the whole plate rather than half of it, and why the states below
+// are states of the PLATE.
 //
 // The fixture is `projects.fixtures.ts`, the one the project-page tests build
 // from. A story that hand-rolled a second 360 would be a second answer to what
@@ -77,8 +77,8 @@ export const LargeFiguresGerman: Story = {
 /**
  * A project nothing has been filed under yet. Zero is a READING here, not an
  * absence — "no work has landed on this project" is a true thing to report —
- * so the plate keeps its place and `last_activity_at` says never rather than
- * the slot going blank.
+ * so the plate keeps its place and the activity slot says "None" rather than
+ * standing a bare zero there.
  */
 export const NothingFiledYet: Story = {
   render: strip(
@@ -118,5 +118,31 @@ export const Unavailable: Story = {
  *  count that does not divide the columns leaves no orphan beside empty cells. */
 export const Phone: Story = {
   tags: ["uat-phone"],
+  render: strip(project360()),
+};
+
+/**
+ * A count with no date behind it. The two move on different rules, so this is
+ * a shape the payload really takes — the count still stands as the reading and
+ * the qualifier simply has nothing to add, rather than the slot inventing a
+ * date or going blank.
+ */
+export const FiledWithNoDate: Story = {
+  render: strip(
+    project360({
+      rollups: {
+        open_deal_value: { amount_minor: 1_200_000, currency: "EUR" },
+        won_deal_value: { amount_minor: 450_000, currency: "EUR" },
+        open_commitments: 4,
+        last_activity_at: null,
+        activity_count: 7,
+      },
+    }),
+  ),
+};
+
+/** The plate in the dark theme: four slots, one of them carrying a detail. */
+export const DeliveringDark: Story = {
+  globals: { theme: "dark" },
   render: strip(project360()),
 };

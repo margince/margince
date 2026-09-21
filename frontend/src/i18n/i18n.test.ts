@@ -123,6 +123,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
+  // Two relationship-band names and an arrow, on the contact strip's latest
+  // change. Same shape, same reason as the two above.
+  "contact.intro.change.buckets",
   // A filename and the server's own refusal, separated by a colon. It is one
   // line of a list whose heading says what the list is, and both halves arrive
   // already in the reader's own words.

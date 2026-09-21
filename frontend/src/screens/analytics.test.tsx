@@ -3,7 +3,11 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { formatMoney, MONEY_ABSENT } from "../format/format";
+import {
+  formatMoney,
+  formatMoneyCompact,
+  MONEY_ABSENT,
+} from "../format/format";
 import { en } from "../i18n/en";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
@@ -216,9 +220,7 @@ describe("the my-outcomes section", () => {
 
     // The meetings card states current standing, not a funnel.
     expect(
-      await screen.findByText(
-        "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
-      ),
+      await screen.findByText(en["analytics.meetingsAsTheyStand"]),
     ).toBeTruthy();
     expect(screen.getByText("Held")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
@@ -253,9 +255,7 @@ describe("the my-outcomes section", () => {
     try {
       render(<AnalyticsScreen />);
       expect(
-        await screen.findByText(
-          "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
-        ),
+        await screen.findByText(en["analytics.outcomesOwnLensOnly"]),
       ).toBeTruthy();
       // And it fetched nothing: numbers under this heading would have
       // measured the default population, not the contact.
@@ -292,10 +292,10 @@ describe("the my-outcomes section", () => {
       const doors = screen.getAllByRole("button", { name: "Open" });
       expect(doors).toHaveLength(2);
       expect([
-        screen.getByRole("button", { name: "Open", description: "Deals" }),
+        screen.getByRole("button", { name: "Open", description: "Open deals" }),
         screen.getByRole("button", {
           name: "Open",
-          description: "Value (EUR)",
+          description: "Deal value · EUR",
         }),
       ]).toEqual(doors);
 
@@ -1006,12 +1006,12 @@ describe("reports never sum money across currencies", () => {
     await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
-      await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
+      await screen.findByText(formatMoneyCompact(202_720_000, "EUR", "en")),
     ).toBeTruthy();
     // And never folded into a named category: the two totals added together
     // is the number that must NOT appear anywhere.
     expect(
-      screen.queryByText(formatMoney(261_580_000, "EUR", "en")),
+      screen.queryByText(formatMoneyCompact(261_580_000, "EUR", "en")),
     ).toBeNull();
   });
 
@@ -1048,11 +1048,10 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await userEvent.setup().click(await screen.findByText("Deals"));
 
-    // Both categories, both figures, all in the one base currency.
-    expect(
-      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
-    ).toBeTruthy();
-    expect(screen.getByText(formatMoney(920_000, "EUR", "en"))).toBeTruthy();
+    // Both categories, both figures, in the one base currency and compact.
+    const compact = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+    expect(await screen.findByText(compact(2_500_000))).toBeTruthy();
+    expect(screen.getByText(compact(920_000))).toBeTruthy();
 
     // The plan asks for converted money and does NOT group by currency: those
     // two go together, and a request that changed one without the other would
@@ -1094,15 +1093,19 @@ describe("reports never sum money across currencies", () => {
     await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
-      await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
+      await screen.findByText(formatMoneyCompact(2_500_000, "EUR", "en")),
     ).toBeTruthy();
-    // The count rides on the tile's second line beside the weighted figure.
-    expect(screen.getByText((text) => text.includes("Deals: 2"))).toBeTruthy();
-    // The priced count reaches the screen too (margince#4201) — without it
-    // the €2,500,000 total reads as covering both deals when it covers one.
-    expect(
-      screen.getByText((text) => text.includes("1 of 2 priced")),
-    ).toBeTruthy();
+    // FRAGMENTS on the tile's second line, never "Label: value" pairs — a
+    // caption is read as one sentence about the figure above it. Where the
+    // money covers every deal the count says so plainly; here it does not, so
+    // the count states the GAP, without which the total reads as covering both
+    // deals when it covers one.
+    const [detail] = screen.getAllByText((text) =>
+      text.includes("weighted · "),
+    );
+    expect(detail.textContent).toBe(
+      `${formatMoneyCompact(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
+    );
   });
 
   // An installation whose deals are all categorised should not be shown an empty
@@ -1125,7 +1128,9 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
-      expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
+      expect(
+        screen.getByText(formatMoneyCompact(1000, "EUR", "en")),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText("No category yet")).toBeNull();
   });

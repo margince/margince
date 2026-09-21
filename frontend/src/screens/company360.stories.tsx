@@ -578,6 +578,69 @@ export const StateStripUnanswered: Story = {
   ),
 };
 
+// Silence with nothing sent, and silence after we wrote. The reading carries
+// only the inbound side, so the two used to collapse into one sentence — and
+// the second of them, the account that is being ignored, is the one a rep acts
+// on. The outbound date is what tells them apart and what dates the reading.
+export const StateStripNoExchange: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        last_inbound_at: undefined,
+        last_outbound_at: undefined,
+        health: { days_since_last_inbound: null },
+      }}
+    />
+  ),
+};
+
+export const StateStripUnansweredExchange: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        last_inbound_at: undefined,
+        last_outbound_at: "2026-08-08T09:00:00Z",
+        health: { days_since_last_inbound: null },
+      }}
+    />
+  ),
+};
+
+// A quiet account. The slot says how long nothing has come back, in the same
+// words the unanswered slot uses — a share of the exchange would describe a
+// conversation that has stopped, so the reading carries one and does not say
+// it. The live rows below are where the share belongs.
+export const StateStripQuiet: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: { days_since_last_inbound: 62, reply_balance: 0.18 },
+      }}
+    />
+  ),
+};
+
+// The same balance on a relationship that is still running, which is the row
+// the share is a reading of: below a third coming from them is us talking to
+// ourselves, whatever the dates say.
+export const StateStripOneSided: Story = {
+  render: () => (
+    <Strip
+      view={{
+        ...company360,
+        ...populated,
+        health: { days_since_last_inbound: 3, reply_balance: 0.18 },
+      }}
+    />
+  ),
+};
+
 export const StateStripWithheld: Story = {
   render: () => (
     <Strip

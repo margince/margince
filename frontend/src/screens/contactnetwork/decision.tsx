@@ -11,32 +11,32 @@ import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatNumber } from "../../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { useMe } from "../common";
 import { useOwnRoute } from "../contactroutes";
 import type { IntroRequest } from "../introrequests";
 import { ownerOf } from "./relay";
 
 type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 type Translate = ReturnType<typeof useT>;
-type Pluralize = ReturnType<typeof usePlural>;
 
 /**
- * DecisionStrip states who reaches them, the reason to act, and the handoff.
+ * DecisionStrip states who reaches them, what moved lately, and the handoff.
  *
- * The first slot counts the ways in rather than naming the best one: the
+ * The first slot COUNTS the ways in rather than naming the best one: the
  * verdict panel above it already names the lead, and a strip repeating the
- * same name in a smaller type read as two findings rather than one. The
- * reader is among the routes the server ranks, so the count names them
- * instead of counting them as a colleague to ask.
- *
- * "Why now" comes from the contact's own moment ladder rather than from a
- * relationship change: a relationship getting warmer is not by itself a reason
- * to spend a colleague's goodwill today.
+ * same name in a smaller type read as two findings rather than one. The reader
+ * is one of the routes the server ranks, so they are counted like anybody else
+ * and named on a line of their own — a stat card states a reading and does not
+ * address the person reading it.
  */
 export function DecisionStrip({
   routes,
   legacyVia,
-  whyNow,
+  change,
+  changeWithheld,
   open,
 }: Readonly<{
   routes: readonly RouteCandidate[];
@@ -44,17 +44,22 @@ export function DecisionStrip({
   // it this strip would read "nobody reaches them" beside a card naming the
   // contact who does — the page contradicting itself on its own headline.
   legacyVia: string | undefined;
-  whyNow: string | undefined;
+  // The newest change on this relationship, if there is one to read.
+  change: RelationshipChange | undefined;
+  // Whether the changes section was refused rather than empty. Two opposite
+  // facts, and a card that folds them tells a reader nothing has moved on a
+  // relationship it was simply not allowed to look at.
+  changeWithheld: boolean;
   // The ask in flight, if there is one. Its absence is a reading too: nobody
   // owes anybody anything yet.
   open: IntroRequest | undefined;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   const own = useOwnRoute();
+  const reader = useMe().data?.user.display_name;
   const lead = routes[0];
-  const mine = routes.filter(own).length;
+  const mine = routes.some(own);
   const indirect = routes.filter((r) => r.through_display_name).length;
   return (
     <StatStrip>
@@ -62,34 +67,31 @@ export function DecisionStrip({
         label={t("contact.intro.stripWho")}
         value={
           lead
-            ? whoReaches(
-                { lead, total: routes.length, others: routes.length - mine },
-                t,
-                plural,
-                locale,
-              )
-            : (legacyVia ?? t("contact.graph.noRoute"))
+            ? formatNumber(routes.length, locale)
+            : (legacyVia ?? t("contact.intro.stripNoRoutes"))
         }
         detail={
-          lead
-            ? t("contact.intro.stripWhoMix", {
-                direct: formatNumber(routes.length - indirect, locale),
-                indirect: formatNumber(indirect, locale),
-              })
-            : legacyVia
-              ? t("contact.intro.stripDirect")
-              : t("contact.intro.stripNoPath")
+          lead ? (
+            <>
+              <span>
+                {t("contact.intro.stripWhoMix", {
+                  direct: formatNumber(routes.length - indirect, locale),
+                  indirect: formatNumber(indirect, locale),
+                })}
+              </span>
+              {/* The reader's own relationship is the strongest way in this
+                  page can report, so it is named rather than dropped — on its
+                  own line, because the count above already includes it. */}
+              {mine ? <span>{t("contact.intro.stripWhoOwn")}</span> : null}
+            </>
+          ) : legacyVia ? (
+            t("contact.intro.stripDirect")
+          ) : (
+            t("contact.intro.stripNoPath")
+          )
         }
       />
-      <StatCard
-        label={t("contact.intro.stripWhyNow")}
-        value={whyNow ?? t("contact.intro.stripNoMoment")}
-        detail={
-          whyNow
-            ? t("contact.intro.stripWhyNowSub")
-            : t("contact.intro.stripNoMomentSub")
-        }
-      />
+      <ChangeCard change={change} withheld={changeWithheld} locale={locale} />
       <StatCard
         label={t("contact.intro.stripHandoff")}
         value={
@@ -97,57 +99,95 @@ export function DecisionStrip({
             ? t(HANDOFF_VALUE[open.status])
             : t("contact.intro.handoffNotStarted")
         }
-        detail={
-          open
-            ? t("contact.intro.handoffOwner", { name: ownerOf(open, t) })
-            : t("contact.intro.handoffNotStartedSub")
-        }
+        detail={open ? handoffDetail(open, reader, t) : undefined}
       />
     </StatStrip>
   );
 }
 
 /**
- * whoReaches counts the ways in, in the contact the reader is one of.
+ * ChangeCard is the strip's own two-line vocabulary for one derived change.
  *
- * The reader is ranked among the colleagues like anybody else, so "2
- * colleagues" was counting the reader reading it as somebody to go and ask.
- * Their own relationship still belongs in the total — it is the strongest way
- * in this page can report — so it is named rather than dropped.
- *
- * `others` is derived from a COUNT of the reader's routes and not from a flag:
- * nothing in the contract stops the reader appearing on both a direct route and
- * one through a contact, and subtracting a boolean would leave the remainder
- * claiming a colleague who is not there.
+ * `changeSentence` (relationshipchange.ts) keeps writing sentences for the
+ * rail and the moments panel, which have room for them. A slot has one line
+ * for the verdict and one for what it rests on, and a sentence in a value is
+ * the shape this whole reading exists to avoid.
  */
-function whoReaches(
-  reach: Readonly<{ lead: RouteCandidate; total: number; others: number }>,
-  t: Translate,
-  plural: Pluralize,
+function ChangeCard({
+  change,
+  withheld,
+  locale,
+}: Readonly<{
+  change: RelationshipChange | undefined;
+  withheld: boolean;
+  locale: Locale;
+}>) {
+  const t = useT();
+  return (
+    <StatCard
+      label={t("contact.intro.stripWhyNow")}
+      value={t(
+        withheld
+          ? "reading.restricted"
+          : change
+            ? CHANGE_VALUE[change.kind]
+            : "contact.intro.stripNoMoment",
+      )}
+      detail={change && !withheld ? changeDetail(change, locale, t) : undefined}
+    />
+  );
+}
+
+// What the change rests on: the span for a reply or a silence, the two bands
+// for a move. A band move carries no span and a span move carries no bands,
+// so neither branch can print the other's placeholder empty.
+function changeDetail(
+  change: RelationshipChange,
   locale: Locale,
+  t: Translate,
 ): string {
-  if (reach.others === reach.total) {
-    return plural("contact.intro.stripWhoCount", reach.total, {
-      count: formatNumber(reach.total, locale),
-      name: reach.lead.via_display_name,
-    });
+  const days = formatNumber(change.days ?? 0, locale);
+  if (change.kind === "replied_after_gap") {
+    return t("contact.intro.change.repliedSub", { days });
   }
-  // Not a plural choice: whether anybody else reaches them AT ALL is a state,
-  // and how many do is pluralised on its own below.
-  if (reach.others === 0) {
-    return t("contact.intro.stripWhoOnlyYou");
+  if (change.kind === "went_quiet") {
+    return t("contact.intro.change.quietSub", { days });
   }
-  return plural("contact.intro.stripWhoWithYou", reach.others, {
-    count: formatNumber(reach.others, locale),
+  return t("contact.intro.change.buckets", {
+    from: t(`contact.band.${change.from_bucket ?? "none"}`),
+    to: t(`contact.band.${change.to_bucket ?? "none"}`),
   });
 }
 
+// Who owes the next move, or what the answer was. A settled ask owes nobody
+// anything, so naming an owner there would point at a colleague who has
+// already done their part — the two that carry their own word say it instead.
+function handoffDetail(
+  open: IntroRequest,
+  reader: string | undefined,
+  t: Translate,
+): string | undefined {
+  if (open.status === "suggest_other") {
+    return t("contact.intro.handoffOtherSub");
+  }
+  if (open.status === "expired") {
+    return t("contact.intro.handoffExpiredSub");
+  }
+  return OWED.has(open.status)
+    ? t("contact.intro.handoffOwner", { name: ownerOf(open, t, reader) })
+    : undefined;
+}
+
+// The statuses somebody still owes a move on.
+const OWED: ReadonlySet<IntroRequest["status"]> = new Set([
+  "requested",
+  "accepted",
+  "name_drop_approved",
+]);
+
 // Every status the contract admits reads as words. A state the server can send
 // must never reach a reader as a raw enum.
-const HANDOFF_VALUE: Record<
-  IntroRequest["status"],
-  Parameters<ReturnType<typeof useT>>[0]
-> = {
+const HANDOFF_VALUE: Record<IntroRequest["status"], MessageKey> = {
   requested: "contact.intro.stateRequested",
   accepted: "contact.intro.stateAccepted",
   name_drop_approved: "contact.intro.stateNameDropApproved",
@@ -158,4 +198,13 @@ const HANDOFF_VALUE: Record<
   replied: "contact.intro.stateReplied",
   expired: "contact.intro.stateExpired",
   cancelled: "contact.intro.stateCancelled",
+};
+
+// Total over the four kinds the contract admits, so a change the server can
+// derive cannot reach a reader as a raw enum.
+const CHANGE_VALUE: Record<RelationshipChange["kind"], MessageKey> = {
+  replied_after_gap: "contact.intro.change.replied",
+  went_quiet: "contact.intro.change.quiet",
+  warmed: "contact.intro.change.warmed",
+  cooled: "contact.intro.change.cooled",
 };

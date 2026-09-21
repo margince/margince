@@ -412,7 +412,12 @@ function CaptureFunnel({
           onClick={() => onSelect(selected === outcome ? null : outcome)}
         >
           <StatCard
-            label={t(`captureActivity.outcome.${outcome}`)}
+            // The tile's own short name. The full outcome sentences still feed
+            // the filter line and the row chip, where each is read one at a
+            // time; a slot compared across a row of five carries a NAME, and
+            // "Waiting on a sender verdict" over a figure is a sentence where a
+            // label belongs.
+            label={t(`captureActivity.funnel.${outcome}`)}
             // Zero is a reading, not an absence: "no message was dropped as
             // internal today" is exactly what somebody comes here to confirm.
             value={formatNumber(funnel[outcome] ?? 0, locale)}

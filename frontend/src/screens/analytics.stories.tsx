@@ -358,6 +358,25 @@ export const MyOutcomes: Story = {
   play: clickButton("My outcomes"),
 };
 
+// The seat's readings with NOTHING behind them. The lens answered and the seat
+// holds no open deal, which is a reading — and a different one from a read that
+// failed or one still in flight, all three of which used to say "Nothing to
+// read yet".
+export const MyOutcomesEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      ...ownLensRoutes,
+      "POST /reports/pipeline-current": () => run("pipeline-current", []),
+    });
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("My outcomes"),
+};
+
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and
@@ -365,10 +384,12 @@ export const Explain: Story = {
   play: clickButton("Deals", "Explain this number"),
 };
 
-// The three absences a slot has to tell apart, side by side, because they are
-// three different facts and one of them used to be drawn as €0.00. A category
+// The four absences a slot has to tell apart, side by side, because they are
+// four different facts and one of them used to be drawn as €0.00. A category
 // the report returned no row for was measured in no currency at all; a band of
-// deals nobody priced has a currency but no figure; a stored zero IS a figure.
+// deals nobody priced has a currency but no figure; a band whose deals ARE
+// counted answers with the count and says the amount is what is missing; a
+// stored zero IS a figure.
 export const ForecastAbsences: Story = {
   render: () => (
     <StoryProviders>
@@ -385,6 +406,14 @@ export const ForecastAbsences: Story = {
           amountMinor={null}
           weightedMinor={null}
           currency={null}
+          locale="en"
+        />
+        <ForecastTile
+          label="Counted, unpriced"
+          amountMinor={null}
+          weightedMinor={null}
+          dealCount={7}
+          currency="EUR"
           locale="en"
         />
         <ForecastTile
@@ -440,6 +469,17 @@ export const ForecastSlots: Story = {
         <ForecastTile
           label="Omitted"
           amountMinor={0}
+          currency="EUR"
+          locale="en"
+        />
+        {/* The money covers only part of what the category holds, so the
+            second fragment states the GAP instead of the plain count. */}
+        <ForecastTile
+          label="Pipeline"
+          amountMinor={4100000}
+          weightedMinor={1600000}
+          dealCount={9}
+          pricedDeals={6}
           currency="EUR"
           locale="en"
         />

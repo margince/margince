@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { StatStrip } from "../design-system/statstrip";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
@@ -18,6 +19,11 @@ import { StoryProviders } from "./story-utils";
 // stands as an empty state where a card would be, because it replaces the card
 // rather than remarking on it; and the read pair is here to be compared with
 // both.
+//
+// ONE label over both measures — which measure produced the figure leads the
+// detail instead, because a label that changed with it made one reading look
+// like two between two periods. The money is compact: a slot is about a
+// hundred points wide and a full amount clips there.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control.
 
@@ -114,4 +120,36 @@ export const SufficiencyAbsent: Story = {
       </StatStrip>
     </StoryProviders>
   ),
+};
+
+// The other measure under the SAME label. A call is a single authored total, so
+// the detail says the call replaces the projection rather than naming a
+// remainder added to what is won — which is the misreading this shape exists to
+// prevent.
+export const LandingFromTheCall: Story = {
+  render: () => (
+    <StoryProviders>
+      <StatStrip>
+        <LandingCard
+          landing={landing({ measure: "manager_call", remaining_minor: 0 })}
+          currency={CURRENCY}
+          locale="en"
+        />
+      </StatStrip>
+    </StoryProviders>
+  ),
+};
+
+// The receipt behind the coverage figure, opened. The detail line carries the
+// measure as a FRAGMENT because both its lines are spoken for; the sentence a
+// reader can actually disagree with lives here, and a still render never shows
+// a panel that only exists once it is asked for.
+export const SufficiencyReceipt: Story = {
+  ...SufficiencyRead,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Evidence" }),
+    );
+  },
 };

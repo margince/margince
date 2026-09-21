@@ -155,19 +155,42 @@ describe("the company readings row is the shared strip, not a copy of it", () =>
     stubFinance(NO_CONNECTION);
     renderStrip(view({ state_strip: prospect }));
     const asProspect = await readings();
-    expect(
-      within(asProspect.plate).getByText("Not a customer yet"),
-    ).toBeTruthy();
+    // The stage itself under the word, so "Not invoiced" on a prospect and
+    // "Not invoiced" on a customer we have never billed stay apart.
+    expect(within(asProspect.plate).getByText("Prospect")).toBeTruthy();
+    expect(within(asProspect.plate).getByText("Not invoiced")).toBeTruthy();
 
     cleanup();
     renderStrip(view({ state_strip: customer }));
     const asCustomer = await readings();
     expect(
-      await within(asCustomer.plate).findByText("Connect your accounting"),
+      await within(asCustomer.plate).findByText("Accounting not connected"),
     ).toBeTruthy();
+    expect(within(asCustomer.plate).queryByText("Prospect")).toBeNull();
+  });
+
+  // The twelve-month window is a fact about invoices, not about the stage the
+  // account stands in today. A former customer billed for three years reading
+  // "Not invoiced" was the lifecycle answering a question about money.
+  it("reads a former customer's money the way a current one's is read", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: {
+          ...prospect,
+          account: {
+            lifecycle: "former_customer",
+            relationship_types: ["customer"],
+          },
+        },
+      }),
+    );
+    const { plate } = await readings();
+
     expect(
-      within(asCustomer.plate).queryByText("Not a customer yet"),
-    ).toBeNull();
+      await within(plate).findByText("Accounting not connected"),
+    ).toBeTruthy();
+    expect(within(plate).queryByText("Former customer")).toBeNull();
   });
 });
 
@@ -204,11 +227,10 @@ describe("a slot with no reading says which absence it is", () => {
     const { plate } = await readings();
 
     // Four different absences and four different words: no open deal, no
-    // conversation rated, no word exchanged, nothing on the calendar.
-    expect(within(plate).getByText("No open deals")).toBeTruthy();
+    // relationship rated, no word exchanged, nothing on the calendar.
+    expect(within(plate).getAllByText("None").length).toBe(2);
     expect(within(plate).getByText("Not assessed")).toBeTruthy();
-    expect(within(plate).getByText("No exchange yet")).toBeTruthy();
-    expect(within(plate).getByText("Nothing scheduled")).toBeTruthy();
+    expect(within(plate).getByText("None scheduled")).toBeTruthy();
     // And no verdict borrowed from nowhere: the account's standing is the
     // 360's word under this row, never a sixth door here.
     expect(plate.textContent).not.toMatch(/At risk|Good|Strong|Health/);
@@ -237,13 +259,94 @@ describe("a slot with no reading says which absence it is", () => {
     // correspondence. The last touch and the calendar do not read from those
     // grants at all and give their own ordinary answers, as does the money on
     // a non-customer.
-    expect(within(plate).getAllByText("Not shown").length).toBe(2);
-    expect(within(plate).getByText("Not a customer yet")).toBeTruthy();
-    expect(within(plate).getByText("No exchange yet")).toBeTruthy();
-    expect(within(plate).getByText("Nothing scheduled")).toBeTruthy();
-    expect(within(plate).queryByText("No open deals")).toBeNull();
-    expect(plate.textContent).not.toMatch(/never written/i);
+    expect(within(plate).getAllByText("Restricted").length).toBe(2);
+    expect(within(plate).getByText("Prospect")).toBeTruthy();
+    expect(within(plate).getByText("None")).toBeTruthy();
+    expect(within(plate).getByText("None scheduled")).toBeTruthy();
+    expect(plate.textContent).not.toMatch(/No exchange|Unanswered/i);
     expect(within(plate).queryByText("Not assessed")).toBeNull();
+  });
+});
+
+// The relationship slot with no inbound word to read. "They have never
+// written" is one sentence over two opposite accounts: one nobody has ever
+// spoken to, and one being ignored. The second is the one a rep acts on, and
+// for a year it was hidden behind the first.
+describe("silence on the relationship slot names which silence it is", () => {
+  const spoken: StateStripSection = {
+    account: { lifecycle: "prospect", relationship_types: [] },
+    commercial: null,
+  };
+
+  function relationship(plate: HTMLElement): HTMLElement {
+    const card = within(plate).getByText("Relationship").closest(".stat-card");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the relationship reading has no card");
+    }
+    return card;
+  }
+
+  it("says there is no exchange when nothing was ever sent either", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({ state_strip: spoken, health: { days_since_last_inbound: null } }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText("No exchange")).toBeTruthy();
+    expect(card.querySelector(".stat-card-detail")).toBeNull();
+  });
+
+  // The days run from the last outbound to the view's own `as_of`, never from
+  // the reader's clock: the card must not age a day while the page sits open.
+  it("says unanswered, and for how long, when we wrote and they did not", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: { days_since_last_inbound: null },
+        last_outbound_at: "2026-08-08T09:00:00Z",
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText("Unanswered")).toBeTruthy();
+    expect(within(card).getByText("No reply · 10 d")).toBeTruthy();
+  });
+
+  // A quiet relationship says how long nothing has come back, in the same
+  // words the unanswered slot uses — one claim about one relationship. A share
+  // of the exchange here would describe a conversation that has stopped, so it
+  // is not stated even when the reading carries one.
+  it("says how long a quiet relationship has gone unanswered", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: { days_since_last_inbound: 45, reply_balance: 0.2 },
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText("Quiet")).toBeTruthy();
+    expect(within(card).getByText("No reply · 45 d")).toBeTruthy();
+    expect(card.textContent).not.toMatch(/inbound/i);
+  });
+
+  // The share belongs to the relationships that are still running: there the
+  // dates say nothing a reader can act on and the balance does.
+  it("keeps the share of the exchange for a live relationship", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: { days_since_last_inbound: 3, reply_balance: 0.2 },
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText("One-sided")).toBeTruthy();
+    expect(within(card).getByText("20% inbound")).toBeTruthy();
   });
 });
 
@@ -262,7 +365,7 @@ describe("a reading offers the tab it is a reading of", () => {
     renderStrip(view({ state_strip: customer }), (tab) => opened.push(tab));
     await readings();
 
-    for (const label of ["Open deals", "Finance"]) {
+    for (const label of ["Open deals", "Revenue · 12 mo"]) {
       await userEvent.click(door(label));
     }
     // THREE readings open the same page, and each is read off it: the
@@ -271,7 +374,7 @@ describe("a reading offers the tab it is a reading of", () => {
     // which made it the strip's only route to tasks — and made it a card
     // that said one thing and did another. Tasks is reached from the tab
     // strip; a meeting card is not the place to hide the door to it.
-    for (const label of ["Conversation", "Last touch", "Next meeting"]) {
+    for (const label of ["Relationship", "Last contact", "Next meeting"]) {
       await userEvent.click(door(label));
     }
 

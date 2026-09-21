@@ -14,10 +14,19 @@ import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyOrAbsent,
+  formatNumber,
+  formatSignedMoney,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
-import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
+import {
+  LandingCard,
+  SufficiencyCard,
+  slotMoney,
+} from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
 import {
@@ -117,8 +126,21 @@ function ForecastAnswer({
 }: Readonly<{ readings: Readings; locale: Locale }>) {
   const t = useT();
   const currency = readings.base_currency;
+  // The sentence carries the amount in FULL — it is read once, at prose width,
+  // and a call somebody authored to the cent is a number they should meet as
+  // they wrote it. The slots below carry the same figures compactly, because a
+  // slot is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
     formatMoneyOrAbsent(minor ?? null, currency, locale);
+  const slot = (minor: number | null | undefined) =>
+    slotMoney(minor, currency, locale, t);
+  // A DIFFERENCE, so it carries its sign, and the same absent-currency answer
+  // the slots give: an unrenderable figure is a word here too.
+  const gap = (minor: number) =>
+    currency
+      ? formatSignedMoney(minor, currency, locale)
+      : t("format.notForecast");
+  const call = readings.current_call;
 
   return (
     <>
@@ -131,9 +153,9 @@ function ForecastAnswer({
               reader shown only one of the two has no way to tell whether the
               call is ahead of the evidence or behind it. */}
           <p>
-            {readings.current_call
+            {call
               ? t("forecast.answerWithCall", {
-                  call: money(readings.current_call.amount_minor),
+                  call: money(call.amount_minor),
                   evidence: money(readings.evidence_minor),
                 })
               : t("forecast.answerNoCall", {
@@ -143,7 +165,7 @@ function ForecastAnswer({
         </PanelBody>
       </Panel>
 
-      {/* An unpriced deal is real pipeline contributing zero money, so the gap
+      {/* An unpriced deal is a real deal contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
@@ -165,19 +187,36 @@ function ForecastAnswer({
           // No call is a reading, not a missing figure: the sentence above
           // already says the book is running on evidence alone, and a slot in a
           // row compared across must not answer that with a glyph.
-          value={
-            readings.current_call
-              ? money(readings.current_call.amount_minor)
-              : t("forecast.currentCallNone")
+          value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
+          detail={
+            call
+              ? t("forecast.currentCallDetail", {
+                  // The day the call was authored, cut in the zone the period
+                  // itself was cut in: a reporting figure and the date beside
+                  // it must not be bucketed on two different calendars.
+                  date: formatDateAbbrev(
+                    call.created_at,
+                    locale,
+                    readings.timezone,
+                  ),
+                  // SIGNED, because a call can sit under the evidence as
+                  // easily as over it and there is one sentence for both. An
+                  // unsigned difference here would print a call €20k short of
+                  // its evidence as €20k over it.
+                  gap: gap(call.amount_minor - readings.evidence_minor),
+                })
+              : undefined
           }
         />
         <StatCard
           label={t("forecast.evidence")}
-          value={money(readings.evidence_minor)}
+          value={slot(readings.evidence_minor)}
+          detail={t("forecast.evidenceDetail")}
         />
         <StatCard
           label={t("forecast.alreadyWon")}
-          value={money(readings.won_minor)}
+          value={slot(readings.won_minor)}
+          detail={t("forecast.alreadyWonDetail")}
         />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called

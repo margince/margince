@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
@@ -39,9 +40,13 @@ describe("the projected landing", () => {
   it("says the sum it made, so a reader can check the arithmetic", () => {
     draw(<LandingCard landing={landing()} currency="EUR" locale="en" />);
 
+    // ONE label over both measures, with the measure leading the detail: a
+    // label that changed with the measure made one figure read as two
+    // different readings between two periods.
+    expect(screen.getByText("Landing")).toBeTruthy();
     // The two halves, both named. A figure alone leaves a reader to guess
     // which readings were added, and the wrong guess is Won plus Best case.
-    const detail = screen.getByText(/already won plus/i);
+    const detail = screen.getByText(/^Projected ·/);
     expect(detail.textContent).toContain("400");
     expect(detail.textContent).toContain("500");
   });
@@ -61,10 +66,11 @@ describe("the projected landing", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/replaces the projection rather than adding/i),
-    ).toBeTruthy();
-    expect(screen.queryByText(/already won plus/i)).toBeNull();
+    // The same label, and a detail that says the call IS the answer rather
+    // than a remainder added to what is won.
+    expect(screen.getByText("Landing")).toBeTruthy();
+    expect(screen.getByText(/^From the call ·/)).toBeTruthy();
+    expect(screen.queryByText(/^Projected ·/)).toBeNull();
   });
 
   it("names the fallback when nobody has called the period", () => {
@@ -100,8 +106,9 @@ describe("the projected landing", () => {
   });
 });
 
-describe("whether the pipeline supports the reference", () => {
-  it("names the basis, so a reader can disagree with it rather than the sum", () => {
+describe("whether the open deals support the reference", () => {
+  it("names the basis as a fragment and keeps the sentence in the receipt", async () => {
+    const user = userEvent.setup();
     draw(
       <SufficiencyCard
         sufficiency={sufficiency()}
@@ -110,9 +117,37 @@ describe("whether the pipeline supports the reference", () => {
       />,
     );
 
+    // The detail holds two lines and both are already spoken for, so the
+    // measure rides the second one as a fragment and the sentence a reader can
+    // DISAGREE with folds into the card's own receipt.
+    expect(screen.getByText(/per the 4-period median$/)).toBeTruthy();
     expect(
-      screen.getByText(/median of the last four comparable periods/i),
+      screen.queryByText(/median of the last four comparable periods/i),
+    ).toBeNull();
+
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+
+    expect(
+      await screen.findByText(/median of the last four comparable periods/i),
     ).toBeTruthy();
+  });
+
+  // The need is the VALUE, so a detail that repeated it said one number twice.
+  it("says what is open and what it is reaching for, never the need again", () => {
+    draw(
+      <SufficiencyCard
+        sufficiency={sufficiency()}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    // Compact, because a slot is not as wide as an amount.
+    expect(screen.getByText("€2,400")).toBeTruthy();
+    const detail = screen.getByText(/open ·/);
+    expect(detail.textContent).toContain("€1,200");
+    expect(detail.textContent).toContain("€1,000");
+    expect(detail.textContent).not.toContain("€2,400");
   });
 
   it("renders coverage as a whole percent", () => {

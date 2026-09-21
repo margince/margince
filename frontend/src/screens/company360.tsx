@@ -43,7 +43,11 @@ import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
-import { HEALTH_DIMENSION_LABEL, HEALTH_RATING_LABEL } from "./companylookups";
+import {
+  HEALTH_DIMENSION_LABEL,
+  HEALTH_RATING_LABEL,
+  LIFECYCLE_LABELS,
+} from "./companylookups";
 import { EntityRef } from "./entityref";
 import {
   EvidenceSources,
@@ -133,7 +137,7 @@ export function useAcknowledgeCompanyView(id: string, visited: boolean) {
   }, [id, visited, fire]);
 }
 
-/** DealsCard lists the open pipeline plus the two lifetime figures. */
+/** DealsCard lists the open deals plus the two lifetime figures. */
 export function DealsCard({
   view,
   actions,
@@ -255,13 +259,13 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
 }
 
 /**
- * CommercialPanel is the overview's own reading of the pipeline: the two
+ * CommercialPanel is the overview's own reading of the deals: the two
  * lifetime figures the deals section actually carries, then the open deals
  * themselves. It is deliberately not DealsCard reused wholesale — the Deals
  * tab keeps that card in full, and this is the shorter reading a rep gets
  * without leaving Overview.
  *
- * No open-pipeline total is drawn: nothing in Company360 sums the open
+ * No open-deal total is drawn: nothing in Company360 sums the open
  * deals' amounts, and inventing one here would be exactly the fabricated
  * figure the deals section's own honesty rule forbids.
  */
@@ -313,7 +317,7 @@ export function CommercialPanel({
   );
   const present = state === "ready" || state === "empty";
   // The section is a page of `deals.data` with `has_more` beside it — past
-  // the cap this reads as the whole open pipeline unless it says otherwise.
+  // the cap this reads as every open deal unless it says otherwise.
   const truncated = deals?.page.has_more === true;
   const figures = state === "ready" && deals && (
     <PanelBody className="co-figures">
@@ -389,7 +393,7 @@ export function CommercialPanel({
         ) : undefined
       }
     >
-      {/* Before the pipeline, and before the panel's own deals footer: what
+      {/* Before the open deals, and before the panel's own deals footer: what
           the account is already signed for frames the deals that are still
           moving, and the Deals tab reads in that order too. */}
       {extra}
@@ -797,41 +801,37 @@ export const ENGAGEMENT_TONE: Partial<
   dormant: "warning",
 };
 
-// A reading the caller's grants withheld. Shared with the contact record's
-// readings row and rail rather than spelled per surface: all three state the
-// same fact about the same reader, and a second spelling is exactly the drift
-// that had these rows drawn by two different components in the first place.
-const WITHHELD_READING: MessageKey = "record.notShown";
+// A reading the caller's grants withheld, in the word every stat card in the
+// product uses. `record.notShown` stays on the contact record's readings row
+// and rail: retargeting it would restyle two surfaces nobody looked at here.
+const WITHHELD_READING: MessageKey = "reading.restricted";
 
 // A reading nobody has judged. It is NOT the withheld word — "you may not see
 // this" and "there is no verdict yet" are opposite facts about who is missing
-// what, and a slot that confuses them sends the reader to ask for an access
-// grant that would show them nothing. Its own key rather than the lifecycle
-// label it happens to match today: a rename of one must not silently move the
-// other.
+// what, and a slot that confuses them sends the reader to ask for a grant that
+// would show them nothing. Its own key rather than the lifecycle label it
+// matches today: a rename of one must not silently move the other.
 const UNASSESSED_READING: MessageKey = "co.strip.notAssessed";
 
 /**
  * StateStrip is the readings row under the tab strip: FIVE doors, always
- * five — open pipeline, invoiced, the conversation, the last touch, and what
+ * five — open deals, invoiced, the relationship, the last contact, and what
  * is next — each a reading of the tab it opens. The account's standing is not
  * here: the verdict word and the three dimensions it is read from are the
  * 360's, directly under this row, so a reading is said once.
  *
  * EVERY SLOT ALWAYS DRAWS, and says honestly that it has no reading when it has
  * none. A slot that vanishes leaves the reader unable to tell WHICH reading is
- * missing — the row simply looks shorter — and only an empty state is allowed to
- * claim there is none (SurfaceState's rule). So the three absences are three
- * different words and never one: withheld is a fact about the READER, unassessed
- * is a fact about how much has been judged, and "no date" is a fact about the
- * ACCOUNT. Inventing "never contacted" out of a withheld engagement would state
- * the business conclusion a rep acts on, from a permission boundary.
+ * missing, and only an empty state may claim there is none (SurfaceState's
+ * rule). So the three absences are three different words and never one:
+ * withheld is a fact about the READER, unassessed about how much has been
+ * judged, "no date" about the ACCOUNT. Inventing "never contacted" out of a
+ * withheld engagement states the conclusion a rep acts on from a permission.
+ *
+ * What it must never render is the harder half: no €0 when the figure is
+ * unavailable, no cross-currency sum without its conversion source, nothing
+ * called "revenue" that is only a count of open deals.
  */
-//
-// What it must never render is the harder half of the rule, and every omission
-// below is one of its bullets: no €0 when the figure is unavailable, no
-// cross-currency sum without its conversion source, and nothing called
-// "revenue" that is only a count of open deals.
 export function StateStrip({
   companyId,
   view,
@@ -868,11 +868,9 @@ export function StateStrip({
     }
     return null;
   }
-  // A CURRENT customer only. A former one has invoices in its past, but "do
-  // they pay us, and on time?" is not the question their page is opened with,
-  // and leading with a money reading on an account that has stopped buying
-  // reads as though the relationship were still running.
-  const customer = strip.account.lifecycle === "customer";
+  // The stage the money slot reads to know whether there is a window to read
+  // at all, and to name itself under the word when there is not.
+  const lifecycle = strip.account.lifecycle;
   // The contract pairs an absent optional section with its name in
   // `sections_omitted` (Company360), so the reason `health` did not arrive
   // is readable rather than guessable — and guessing is how a grant boundary
@@ -898,16 +896,20 @@ export function StateStrip({
       <MoneyStat
         companyId={companyId}
         locale={locale}
-        customer={customer}
+        lifecycle={lifecycle}
         dimension={view?.health?.payment}
         onOpen={door("finance")}
         t={t}
       />
-      {/* The conversation and the last touch both read off the account's
-          exchanges: one says whose move it is and how balanced the talk has
-          been, the other how long ago the last word fell. */}
+      {/* The relationship and the last contact both read off the account's
+          exchanges: one says how balanced the talk has been, the other how
+          long ago the last word fell. The outbound date rides along because
+          silence with nothing sent and silence after we wrote are opposite
+          problems, and the reading itself carries only the inbound side. */}
       <HealthStat
         health={view?.health}
+        lastOutboundAt={view?.last_outbound_at ?? undefined}
+        asOf={view?.as_of}
         locale={locale}
         withheld={healthWithheld}
         onOpen={door("timeline")}
@@ -1068,13 +1070,17 @@ export function medianDaysLabel(
 }
 
 // The caveat on a figure that IS shown but is not current. Undefined when the
-// figure is current and needs none.
+// figure needs none. Stale, error and syncing say DIFFERENT things about
+// whether anything is broken, so they never fold into one.
 function staleDetailKey(
   state?: components["schemas"]["FinanceSummaryState"],
 ): MessageKey | undefined {
   switch (state) {
     case "stale":
-      return "co.strip.fin.staleFigure";
+      // Beside a figure the caveat qualifies the FIGURE — the last good one,
+      // which may have moved since. The empty slot says the same fact about
+      // the connection instead.
+      return "co.strip.fin.notCurrent";
     case "error":
       return "co.strip.fin.errorFigure";
     case "syncing":
@@ -1085,10 +1091,11 @@ function staleDetailKey(
   }
 }
 
-// Why there is no figure, in the reader's terms. Each state has its own fix,
-// and naming the wrong one costs the reader a trip to a settings page they did
-// not need.
-function financeDetailKey({
+// The slot when there is no figure: the word it stands on and the reason
+// under it, decided TOGETHER because each reason puts itself in a different
+// one of the two. A refusal and a read in flight are facts about the REQUEST
+// and stand as the reading; a broken source explains itself underneath.
+function financeAbsence({
   pending,
   withheld,
   failed,
@@ -1098,18 +1105,35 @@ function financeDetailKey({
   withheld: boolean;
   failed: boolean;
   state?: components["schemas"]["FinanceSummaryState"];
-}>): MessageKey {
+}>): Readonly<{ value: MessageKey; detail?: MessageKey }> {
   if (pending) {
-    return "co.strip.fin.loading";
+    return { value: "co.strip.fin.loading" };
   }
-  // Both before the state switch: with no answer there is no state to read,
-  // and guessing one from its absence is how a denial became setup advice.
+  // Before any state is read: with no answer there is no state, and guessing
+  // one from its absence is how a denial became setup advice.
   if (withheld) {
-    return "co.strip.fin.withheld";
+    return { value: WITHHELD_READING };
   }
   if (failed) {
-    return "co.strip.fin.error";
+    return { value: "co.strip.fin.error", detail: "co.strip.fin.errorWhy" };
   }
+  if (state === "connected") {
+    // A live, mapped source that produced no figure: nothing is broken and
+    // nothing to set up — we have simply never billed them. The lifecycle
+    // under the word keeps it apart from the account that never bought.
+    return {
+      value: "co.strip.fin.neverInvoiced",
+      detail: "company.lifecycle.customer",
+    };
+  }
+  return { value: "co.strip.fin.noFigure", detail: noFigureReason(state) };
+}
+
+// Why the source produced no figure. Each state has its own fix, and naming
+// the wrong one sends the reader to set up a connection they already have.
+function noFigureReason(
+  state?: components["schemas"]["FinanceSummaryState"],
+): MessageKey {
   switch (state) {
     case "unmapped":
       return "co.strip.fin.unmapped";
@@ -1118,13 +1142,7 @@ function financeDetailKey({
     case "stale":
       return "co.strip.fin.staleFigure";
     case "error":
-      return "co.strip.fin.error";
-    case "connected":
-      // A live, mapped source that produced no figure. Nothing is broken and
-      // there is nothing to set up — we have simply never billed them, or no
-      // invoice could be converted. Setup advice here sends the reader to fix
-      // a connection that is already working.
-      return "co.strip.fin.nothingBilled";
+      return "co.strip.fin.errorFigure";
     default:
       // no_connection, and the read that never answered. Both mean there is
       // no source to read, which is the one case the setup advice fits.
@@ -1132,43 +1150,53 @@ function financeDetailKey({
   }
 }
 
+type StripLifecycle = NonNullable<
+  Company360["state_strip"]
+>["account"]["lifecycle"];
+
+// The stages whose page leads with a money figure. A former customer's does:
+// the trailing year is a fact about invoices, not about where the account
+// stands today, and three years of billing reading "Not invoiced" was the
+// lifecycle answering a question about money.
+//
+// NARROWER than `hasFinance` (companyfinance.tsx), and not one invariant with
+// it: that asks whether an account could EVER have been billed and says yes
+// for an unknown or disqualified stage, so the Finance tab can hide no money.
+const INVOICEABLE: ReadonlySet<StripLifecycle> = new Set<StripLifecycle>([
+  "customer",
+  "former_customer",
+]);
+
 /**
  * The customer row's ONE money slot: what this account has been invoiced over
  * the trailing year.
  *
- * One slot, not three. The strip is a GLANCE, and the Finance tab
- * (companyfinance.tsx) is where the detail lives — which is already why open
- * balance and the payment-habit median are not here. Spending three of five
- * slots on windows of the same figure buried the account's own standing behind
- * the money, and the standing is the frame the money is read in.
+ * One slot, not three. The strip is a GLANCE and the Finance tab
+ * (companyfinance.tsx) is where the detail lives — which is why open balance
+ * and the payment-habit median are not here. Three of five slots on windows of
+ * one figure buried the account's own standing behind the money.
  *
- * The label follows the STATE, because the two states answer different
- * questions. With a figure it names the window the figure covers; with none it
- * says "Finance", because the reason there is none is usually a fact about the
- * connection rather than about that window — labelling a "connect your
- * accounting" slot "net invoiced, 12 months" claims we looked at those twelve
- * months and found nothing there.
+ * ONE label on every branch, whatever the reading turns out to be. A slot whose
+ * label moves is read twice — and "Not invoiced" under a twelve-month label is
+ * still true, because nothing was invoiced in any window.
  */
 function MoneyStat({
   companyId,
   locale,
-  customer,
+  lifecycle,
   dimension,
   onOpen,
   t,
 }: Readonly<{
   companyId: string;
   locale: Locale;
-  // A CURRENT customer. Everyone else has never been invoiced, and the card
-  // says exactly that rather than reporting a finance connection that has
-  // nothing to do with them.
-  customer: boolean;
+  // Whether there is a window to read at all, and the word for it when not.
+  lifecycle: StripLifecycle;
   // The payment health reading, shown as this card's basis so the verdict a
   // reader meets on the health card can be checked against the money it was
   // read from, on the card that holds the money.
   dimension?: HealthDimension;
-  // Handed to every shape this reading takes: a withheld reading and a priced
-  // one are the same reading, and only one of them offering the tab would make
+  // Handed to every shape this reading takes: a door on only one would make
   // the way out look like a property of the figure.
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
@@ -1194,13 +1222,16 @@ function MoneyStat({
   // accounting connected must not be told to go and connect one, and a
   // prospect on an installation that HAS one must not read as though we had
   // billed them and got nothing.
-  if (!customer) {
+  if (!INVOICEABLE.has(lifecycle)) {
     return (
       <StatCard
         onOpen={onOpen}
-        label={t("co.strip.finance")}
+        label={t("co.strip.netInvoiced")}
         value={t("co.strip.fin.neverInvoiced")}
-        detail={t("co.strip.fin.notACustomer")}
+        // Which stage, rather than "not a customer yet": every stage that
+        // reaches here answers why there is nothing to invoice, and the record
+        // page reads them all out of the one catalog.
+        detail={t(LIFECYCLE_LABELS[lifecycle])}
       />
     );
   }
@@ -1210,24 +1241,20 @@ function MoneyStat({
   const withheld = isError && problemCodeOf(error) === "permission_denied";
   const amount = data?.net_invoiced;
   const caveat = staleDetailKey(data?.state);
-  // No figure is not €0, and the six reasons there is none are not one reason.
-  // "Connect your accounting" is wrong advice for a connection that exists and
-  // is syncing, stale, errored or unmatched — it sends the reader to set up
-  // something they already have.
+  // No figure is not €0, and the reasons there is none are not one reason.
   if (!amount || amount.amount_minor == null || !amount.currency) {
+    const absence = financeAbsence({
+      pending: isPending,
+      withheld,
+      failed: isError && !withheld,
+      state: data?.state,
+    });
     return (
       <StatCard
         onOpen={onOpen}
-        label={t("co.strip.finance")}
-        value={t("co.strip.fin.noFigure")}
-        detail={t(
-          financeDetailKey({
-            pending: isPending,
-            withheld,
-            failed: isError && !withheld,
-            state: data?.state,
-          }),
-        )}
+        label={t("co.strip.netInvoiced")}
+        value={t(absence.value)}
+        detail={absence.detail ? t(absence.detail) : undefined}
         basis={basis}
       />
     );
@@ -1237,33 +1264,16 @@ function MoneyStat({
       onOpen={onOpen}
       label={t("co.strip.netInvoiced")}
       value={formatMoneyCompact(amount.amount_minor, amount.currency, locale)}
-      // The provider name goes in the detail line rather than beside the label:
-      // a strip slot is narrower than a free-standing stat card, and a badge
-      // beside the label wraps onto its own row underneath it, standing the one
-      // slot that names its source taller than every sibling in the row.
-      //
-      // A figure that is not current is shown WITH its caveat rather than
-      // withheld: the last known number is usually the right one, and hiding it
-      // tells the reader less than showing it qualified would. The caveat takes
-      // the line ahead of the provider name, because which accounting system a
-      // figure came from matters less than whether the figure is current — and
-      // the Finance tab names the connection anyway.
-      //
-      // Stale and error say DIFFERENT things, which is why `staleDetailKey` does
-      // not fold them: `stale` is a sync that SUCCEEDED, just long enough ago
-      // that the date matters; `error` is the last good answer after an attempt
-      // that failed. Calling either one the other is a wrong claim about whether
-      // anything is broken.
-      // Lifetime rides in the detail line rather than taking a slot of its own:
-      // beside the trailing year it is the one comparison nothing else on this
-      // page carries — what the account has ever been worth against what it has
-      // been worth lately — and two money slots on a five-slot row would make
-      // this row a finance report rather than a glance.
+      // One line, in the order a reader needs it. The caveat first: a figure
+      // that is not current is shown WITH it rather than withheld, and which
+      // accounting system it came from matters less than whether it is
+      // current. Then lifetime, the one comparison this page carries that a
+      // second money slot would otherwise cost a row. The provider name last,
+      // IN the line: beside the label a badge stands this slot taller.
       //
       // Overdue and the open balance stay OUT, and not for want of room. The
-      // Finance tab renders both as headline figures one tab away, so a copy
-      // here is a second answer to the same question, read at a glance and
-      // drifting from the first the moment either changes.
+      // Finance tab renders both one tab away, so a copy here is a second
+      // answer to one question, drifting from the first the moment one changes.
       detail={
         caveat
           ? t(caveat)
@@ -1308,10 +1318,10 @@ type StripCommercial = NonNullable<
   NonNullable<Company360["state_strip"]>["commercial"]
 >;
 
-// Open pipeline, labelled as exactly what it is: the sum of open deals, never
+// The open deals, labelled as exactly what they are: their summed value, never
 // "potential" and never "revenue" (§4.2). Unpriced when nothing on the account
-// carries a convertible figure — a €0 there would claim a priced pipeline
-// worth nothing, where the truth is the page cannot price it.
+// carries a convertible figure — a €0 there would claim open deals worth
+// nothing, where the truth is the page cannot price them.
 function PipelineCard({
   commercial,
   dimension,
@@ -1327,8 +1337,7 @@ function PipelineCard({
   dimension?: HealthDimension;
   locale: Locale;
   recordZone: string;
-  // Handed to every shape this reading takes: a withheld reading and a priced
-  // one are the same reading, and only one of them offering the tab would make
+  // Handed to every shape this reading takes: a door on only one would make
   // the way out look like a property of the figure.
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
@@ -1362,9 +1371,9 @@ function PipelineCard({
       />
     );
   }
-  // No open deals is not an unpriced pipeline. Saying "no convertible amount"
-  // about an account that has nothing open reports a data problem where the
-  // truth is simply that nothing is running.
+  // No open deals is not an unpriced one. Saying "no convertible amount" about
+  // an account that has nothing open reports a data problem where the truth is
+  // simply that nothing is running.
   if (commercial.open_count === 0) {
     return (
       <StatCard
@@ -1385,16 +1394,14 @@ function PipelineCard({
       : undefined;
   if (value == null || !currency) {
     // Open deals with no priceable figure still say how many there are: the
-    // count is a fact, the money is not. The unpriced note is never dropped
-    // for the stalled one — a reader who is told only "1 stalled" has no way
-    // to know the pipeline was never priced at all.
+    // count is a fact, the money is not, so the COUNT takes the money's place
+    // as the reading. The unpriced note is never dropped for the stalled one —
+    // a reader told only "1 stalled" has no way to know nothing was priced.
     return (
       <StatCard
         onOpen={onOpen}
         label={t("co.strip.pipeline")}
-        value={t("co.strip.openDeals", {
-          count: formatNumber(commercial.open_count, locale),
-        })}
+        value={formatNumber(commercial.open_count, locale)}
         detail={join(t("co.strip.unpriced"), stalled)}
         tone={stalled ? "warning" : undefined}
         {...basisProps}
@@ -1403,8 +1410,8 @@ function PipelineCard({
   }
   // Everything qualifying this figure travels WITH it. §4.2 forbids a
   // cross-currency sum without an explicit conversion source and as-of date,
-  // and forbids a total that silently covers only part of the pipeline — so a
-  // partial total names its share, and a converted one names the oldest rate
+  // and forbids a total that silently covers only part of the open deals — so
+  // a partial total names its share, and a converted one names the oldest rate
   // date standing behind it.
   const partial = commercial.priced_count < commercial.open_count;
   const converted =
@@ -1444,27 +1451,64 @@ function join(...parts: (string | undefined)[]): string {
   return parts.filter(Boolean).join(" · ");
 }
 
+// How long nothing has come back, in the ONE spelling this row has for it: the
+// slot that was never answered and the slot that has gone quiet make the same
+// claim, and two wordings would let one row say it two ways.
+function noReply(
+  days: number,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string {
+  return t("co.strip.unansweredDetail", { days: formatNumber(days, locale) });
+}
+
+// They have never written, which is two different accounts: with nothing sent
+// either nobody is being ignored, and with something sent we are talking into
+// silence — and how long for is the reading.
+function silenceReading(
+  lastOutboundAt: string | undefined,
+  asOf: string | undefined,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): Readonly<{ value: string; detail?: string }> {
+  if (!lastOutboundAt || !asOf) {
+    return { value: t("co.strip.noInboundEver") };
+  }
+  return {
+    value: t("co.strip.unanswered"),
+    detail: noReply(
+      calendarDaysBetween(new Date(lastOutboundAt), new Date(asOf)),
+      locale,
+      t,
+    ),
+  };
+}
+
 // Health as a STATUS with its reason, never a 0-100 verdict (§4.2). The card
 // below the fold decomposes it; this says which way it points and why.
 //
-// It reports the BALANCE of the exchange rather than its recency, because the
-// daily brief already answers "whose move is it" — two readings saying "in
-// conversation" in different words is one reading's worth of information taking
-// two slots of five. A relationship where they write and we do not answer, and
-// one where we write into silence, are both "in conversation" by recency and are
-// opposite problems.
+// A LIVE relationship is reported by the balance of the exchange rather than
+// by its recency: one where they write and we do not answer, and one where we
+// write into silence, are equally recent and are opposite problems. A silent
+// one has no balance worth stating — that nothing came back, and for how long.
 function HealthStat({
   health,
+  lastOutboundAt,
+  asOf,
   locale,
   withheld,
   onOpen,
   t,
 }: Readonly<{
   health?: Health;
+  // The last word WE sent, which the reading itself does not carry.
+  lastOutboundAt?: string;
+  // The instant the 360 was read at: ages come from it and never from the
+  // reader's clock, so a card cannot age a day while the page sits open.
+  asOf?: string;
   locale: Locale;
   withheld: boolean;
-  // Handed to every shape this reading takes: a withheld reading and a priced
-  // one are the same reading, and only one of them offering the tab would make
+  // Handed to every shape this reading takes: a door on only one would make
   // the way out look like a property of the figure.
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
@@ -1497,27 +1541,30 @@ function HealthStat({
     );
   }
   const days = health.days_since_last_inbound;
+  const share = health.reply_balance;
   if (days == null) {
+    const silence = silenceReading(lastOutboundAt, asOf, locale, t);
     return (
       <StatCard
         onOpen={onOpen}
         label={t("co.strip.health")}
-        value={t("co.strip.noInboundEver")}
+        value={silence.value}
         tone="warning"
+        detail={silence.detail}
         {...basisProps}
       />
     );
   }
   if (days > HEALTH_QUIET_DAYS) {
+    // A share of the exchange here would describe a conversation that has
+    // stopped; what a reader acts on is that nothing has come back.
     return (
       <StatCard
         onOpen={onOpen}
         label={t("co.strip.health")}
         value={t("co.strip.healthQuiet")}
         tone="warning"
-        detail={t("co.health.sinceInbound", {
-          days: formatNumber(days, locale),
-        })}
+        detail={noReply(days, locale, t)}
         {...basisProps}
       />
     );
@@ -1525,7 +1572,6 @@ function HealthStat({
   // A live relationship: say who is carrying it. Below a third of the
   // exchange coming from them is us talking to ourselves, whatever the dates
   // say; above two thirds they are asking more than we are answering.
-  const share = health.reply_balance;
   if (share == null) {
     return (
       <StatCard
@@ -1536,7 +1582,6 @@ function HealthStat({
       />
     );
   }
-  const percent = Math.round(share * 100);
   const oneSided = share < 0.34 || share > 0.66;
   return (
     <StatCard
@@ -1547,7 +1592,7 @@ function HealthStat({
       }
       tone={oneSided ? "warning" : undefined}
       detail={t("co.strip.replyShare", {
-        percent: formatNumber(percent, locale),
+        percent: formatNumber(Math.round(share * 100), locale),
       })}
       {...basisProps}
     />

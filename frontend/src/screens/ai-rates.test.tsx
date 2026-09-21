@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ModelRatePlate } from "./ai-rates";
@@ -61,17 +62,33 @@ describe("ModelRatePlate", () => {
 
   it("says a model has no price rather than showing it as free", () => {
     plate({ chatModel: "gemini-3.0-preview" });
-    expect(screen.getByText("No price on file")).toBeTruthy();
+    expect(screen.getByText("Not priced")).toBeTruthy();
     // The one number that must never appear for an unknown model: `Number("")`
     // is 0, so an absent price rendered naively reads as free.
     expect(screen.queryByText(/US\$0\.00/)).toBeNull();
-    // And the id is still shown, because the binding itself is legitimate.
-    expect(screen.getByText("gemini-3.0-preview")).toBeTruthy();
+    // And the id is still shown, because the binding itself is legitimate. It
+    // shares its line with what an unpriced binding costs a reader.
+    expect(screen.getByText(/gemini-3\.0-preview/)).toBeTruthy();
+    expect(screen.getByText(/calls still run/)).toBeTruthy();
+    expect(screen.getByText("Missing from usage and spend")).toBeTruthy();
+  });
+
+  it("folds the repair for an unpriced lane into the reading's receipt", async () => {
+    const user = userEvent.setup();
+    plate({ chatModel: "gemini-3.0-preview" });
+
+    // A caption holds two lines and the consequence takes both, so where the
+    // rate is actually entered is one fold away rather than dropped.
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+
+    expect(
+      await screen.findByText(/Add a rate under Settings . AI/),
+    ).toBeTruthy();
   });
 
   it("says a model has no price when the sheet's own row is unreadable", () => {
     plate({ catalogue: [row("gemini-2.5-flash", "chat", "", ""), SHEET[1]] });
-    expect(screen.getByText("No price on file")).toBeTruthy();
+    expect(screen.getByText("Not priced")).toBeTruthy();
     // The lane whose row IS readable is unaffected: one unstateable price does
     // not blank the plate.
     expect(screen.getByText("US$0.15")).toBeTruthy();
@@ -84,7 +101,35 @@ describe("ModelRatePlate", () => {
 
   it("draws one slot when only one lane has been named", () => {
     plate({ embedModel: "" });
-    expect(screen.queryByText("What it remembers with")).toBeNull();
-    expect(screen.getByText("What it thinks with")).toBeTruthy();
+    expect(screen.queryByText("Embedding model")).toBeNull();
+    expect(screen.getByText("Chat model")).toBeTruthy();
+  });
+
+  it("names a vendor's asking price as the vendor's, and says what binding it would do", async () => {
+    const user = userEvent.setup();
+    plate({
+      chatModel: "gemini-3.0-preview",
+      vendor: {
+        models: [
+          {
+            id: "gemini-3.0-preview",
+            input_per_mtok: "0.40",
+            output_per_mtok: "3.00",
+          },
+        ],
+        rankedBy: "",
+        unavailable: false,
+      },
+    });
+
+    expect(screen.getByText("US$0.40 → US$3.00")).toBeTruthy();
+    // Two lines and no more: the model with what its figure is per, then the
+    // caveat that nobody has agreed to this number.
+    expect(screen.getByText(/gemini-3\.0-preview · per M tokens/)).toBeTruthy();
+    expect(screen.getByText("Vendor price · not yet approved")).toBeTruthy();
+
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+
+    expect(await screen.findByText(/approvals inbox/)).toBeTruthy();
   });
 });

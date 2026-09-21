@@ -14,6 +14,7 @@ import { Avatar } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useMe } from "../common";
 import type { IntroRequest } from "../introrequests";
 
 type StepState = "done" | "current" | "waiting";
@@ -31,8 +32,10 @@ export function RelayPanel({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const reader = useMe().data?.user.display_name;
   const steps = stepsFor(ask, t);
-  const owner = ask && !SETTLED.has(ask.status) ? ownerOf(ask, t) : undefined;
+  const owner =
+    ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
   return (
     <Panel title={t("contact.intro.relayTitle")}>
       <PanelBody>
@@ -88,14 +91,29 @@ export function RelayPanel({
  * Shared with the strip's handoff slot, so the two never disagree about
  * whose turn it is. A status that nobody owes says so rather than naming a
  * contact who has already done their part.
+ *
+ * It NAMES people, including the reader. Once the colleague has agreed, the
+ * move is the requester's — usually the reader's own — and "you" made the one
+ * line on this panel that addresses somebody, on a surface whose whole job is
+ * to state facts about a relationship.
  */
-export function ownerOf(ask: IntroRequest, t: ReturnType<typeof useT>): string {
+export function ownerOf(
+  ask: IntroRequest,
+  t: ReturnType<typeof useT>,
+  // The reader's own display name, for the ask whose requester the payload
+  // leaves unnamed. Absent while the session is still being read.
+  reader?: string,
+): string {
   switch (ask.status) {
     case "requested":
       return ask.introducer_display_name ?? t("contact.intro.ownerColleague");
     case "accepted":
     case "name_drop_approved":
-      return ask.requester_display_name ?? t("contact.intro.ownerYou");
+      return (
+        ask.requester_display_name ??
+        reader ??
+        t("contact.intro.ownerColleague")
+      );
     default:
       return t("contact.intro.ownerNobody");
   }

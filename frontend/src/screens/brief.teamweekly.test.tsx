@@ -226,6 +226,48 @@ describe("the scorecard says what the wins were worth", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/€|EUR/)).toBeNull();
   });
+
+  // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
+  // and the basis line beside it explains a measurement that was never taken.
+  // One arm for the three, because the strip is read across and three
+  // spellings of one absence would read as three different weeks.
+  it("states an empty population rather than scoring a share of none", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(
+          review({
+            leads_routed: 0,
+            leads_answered_in_target: 0,
+            leads_breached: 0,
+            meetings_held: 0,
+            meetings_with_next_step: 0,
+            commitments_due: 0,
+            commitments_kept: 0,
+          }),
+        ),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+
+    expect(await screen.findByText(en["teamweekly.card.noLeads"])).toBeTruthy();
+    expect(screen.getByText(en["teamweekly.card.noMeetings"])).toBeTruthy();
+    expect(screen.getByText(en["teamweekly.card.noCommitments"])).toBeTruthy();
+    expect(
+      screen.queryByText(
+        en["teamweekly.ofTotal"].replace("{part}", "0").replace("{whole}", "0"),
+      ),
+    ).toBeNull();
+    // The basis lines go with the figures they explained: "task linked before
+    // week end" over a week with no meeting describes a rule nobody applied.
+    expect(screen.queryByText(en["teamweekly.card.meetingsBasis"])).toBeNull();
+    expect(
+      screen.queryByText(en["teamweekly.card.commitmentsBasis"]),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        en["teamweekly.card.firstResponseBasis"].replace("{breached}", "0"),
+      ),
+    ).toBeNull();
+  });
 });
 
 describe("the team's frozen week", () => {

@@ -25,6 +25,13 @@ import {
 // which is the one notice this section draws and the only thing between the
 // answer and the tiles.
 //
+// Each of the three readings says what it RESTS ON under its figure — when the
+// call was made and how far it sits over the evidence, what the evidence is,
+// what "already won" counts — because a figure with nothing under it is a
+// number a reader has to trust. The money is compact: a slot is about a hundred
+// points wide and a full amount clips there, while the sentence above keeps the
+// amount as it was authored.
+//
 // Read both frames in BOTH themes with the toolbar's Theme control.
 
 type Readings = components["schemas"]["ForecastReadings"];
@@ -131,6 +138,20 @@ export const RecordingACall: Story = {
       await within(canvasElement).findByRole("button", {
         name: "Update the current call",
       }),
+    );
+  },
+};
+
+// Nobody has called the period. The call slot answers in WORDS rather than with
+// a glyph — a slot in a row compared across must not answer with a dash — and
+// carries no detail, because there is no call to say anything about.
+export const NobodyHasCalled: Story = {
+  render: () => {
+    installFetchStub(routes(readings({ current_call: undefined })));
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit={false} />
+      </StoryProviders>
     );
   },
 };

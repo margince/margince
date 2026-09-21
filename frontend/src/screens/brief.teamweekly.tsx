@@ -20,6 +20,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
 import { BriefTeamSelect } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
@@ -247,31 +248,59 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const { locale } = useLocale();
   const counts = review.counts;
   const n = (value: number) => formatNumber(value, locale);
-  const ofTotal = (part: number, whole: number) =>
-    t("teamweekly.ofTotal", { part: n(part), whole: n(whole) });
   const won = wonValue(review, locale);
+  // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
+  // and the basis line beside it explains a measurement that was never taken —
+  // so a week that routed no lead, held no meeting or carried no commitment
+  // says the population was empty and says nothing else. One arm for the three,
+  // because the strip is read across and three spellings of one absence would
+  // read as three different weeks.
+  const share = (
+    part: number,
+    whole: number,
+    none: MessageKey,
+    basis: string,
+  ) =>
+    whole === 0
+      ? { value: t(none), detail: undefined }
+      : {
+          value: t("teamweekly.ofTotal", { part: n(part), whole: n(whole) }),
+          detail: basis,
+        };
 
   return (
     <StatStrip testId="teamweekly-strip">
       <StatCard
         narrow="row"
         label={t("teamweekly.card.firstResponse")}
-        value={ofTotal(counts.leads_answered_in_target, counts.leads_routed)}
-        detail={t("teamweekly.card.firstResponseBasis", {
-          breached: n(counts.leads_breached),
-        })}
+        {...share(
+          counts.leads_answered_in_target,
+          counts.leads_routed,
+          "teamweekly.card.noLeads",
+          t("teamweekly.card.firstResponseBasis", {
+            breached: n(counts.leads_breached),
+          }),
+        )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.meetings")}
-        value={ofTotal(counts.meetings_with_next_step, counts.meetings_held)}
-        detail={t("teamweekly.card.meetingsBasis")}
+        {...share(
+          counts.meetings_with_next_step,
+          counts.meetings_held,
+          "teamweekly.card.noMeetings",
+          t("teamweekly.card.meetingsBasis"),
+        )}
       />
       <StatCard
         narrow="row"
         label={t("teamweekly.card.commitments")}
-        value={ofTotal(counts.commitments_kept, counts.commitments_due)}
-        detail={t("teamweekly.card.commitmentsBasis")}
+        {...share(
+          counts.commitments_kept,
+          counts.commitments_due,
+          "teamweekly.card.noCommitments",
+          t("teamweekly.card.commitmentsBasis"),
+        )}
       />
       <StatCard
         narrow="row"

@@ -34,8 +34,12 @@ const CONTACT = "018f3a1b-0000-7000-8000-000000000010";
 // rewording is a copy change and not a test failure. What these tests are about
 // is how MANY times the page says a thing and whether a card is drawn at all —
 // neither of which should depend on the words chosen.
-const NO_ROUTE = en["contact.graph.noRoute"];
+const NO_ROUTE = en["contact.intro.stripNoPath"];
+// The routes panel's own heading. By ROLE, because the strip's first slot is
+// named with the same words — the count and the list are one noun on two
+// surfaces — and a bare text query cannot tell a heading from a card label.
 const WAYS_IN = en["contact.intro.routesTitle"];
+const routesPanel = () => screen.queryByRole("heading", { name: WAYS_IN });
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -130,12 +134,14 @@ describe("a contact nobody here reaches", () => {
       groups_omitted: [],
     });
 
-    // The strip is this page's answer-first surface, so the sentence belongs
+    // The strip is this page's answer-first surface, so the reading belongs
     // there. A paragraph under it repeating the same words made one finding
     // read as two.
     await waitFor(() => {
       expect(screen.getAllByText(NO_ROUTE).length).toBe(1);
     });
+    // "None" is the reading; the sentence under it is why there is none.
+    expect(screen.getByText(en["contact.intro.stripNoRoutes"])).toBeTruthy();
   });
 
   it("draws no card offering a choice of nothing", async () => {
@@ -151,7 +157,7 @@ describe("a contact nobody here reaches", () => {
     // "Ways in — best first, pick the one you can actually use" over an empty
     // list. The card's own comment says a heading with nothing under it is
     // worse than no card, and the condition that drew it disagreed.
-    expect(screen.queryByText(WAYS_IN)).toBeNull();
+    expect(routesPanel()).toBeNull();
   });
 });
 
@@ -190,8 +196,7 @@ describe("a legacy payload with one route", () => {
       groups_omitted: [],
     });
 
-    // findByText throws when absent, which IS the assertion.
-    await screen.findByText(WAYS_IN);
+    await screen.findByRole("heading", { name: WAYS_IN });
     // And it does NOT claim nobody reaches them, which is the contradiction
     // the old condition was written to avoid.
     expect(screen.queryByText(NO_ROUTE)).toBeNull();
@@ -296,9 +301,10 @@ describe("several ways in", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(
-      en["contact.intro.stripWhoCount_other"].replace("{count}", "3"),
-    );
+    // The COUNT is the reading: the verdict panel above already names the
+    // lead, and a strip repeating that name read as two findings. By the
+    // slot's own value element — a route rank on the list below is a "3" too.
+    await screen.findByText("3", { selector: ".stat-card-value" });
     expect(
       screen.getByText(
         en["contact.intro.stripWhoMix"]
@@ -309,7 +315,7 @@ describe("several ways in", () => {
     // The lead is the verdict panel's; the card under it lists the OTHER two,
     // ranked as the second and third way in rather than as a new list of one.
     expect(screen.getByText(en["contact.intro.otherRoutesTitle"])).toBeTruthy();
-    expect(screen.queryByText(WAYS_IN)).toBeNull();
+    expect(routesPanel()).toBeNull();
     const ranks = Array.from(document.querySelectorAll(".pn-route-rank")).map(
       (rank) => rank.textContent,
     );
@@ -603,10 +609,17 @@ describe("what changed lately", () => {
     );
 
     const head = en["contact.change.repliedAfterGap"].replace("{days}", "41");
-    // The strip's slot and the list's head: one change, two places.
+    // One change, two surfaces, two shapes: the panel writes the sentence,
+    // the strip writes the same change as a word over what it rests on.
     await waitFor(() => {
-      expect(screen.getAllByText(head).length).toBe(2);
+      expect(screen.getAllByText(head).length).toBe(1);
     });
+    expect(screen.getByText(en["contact.intro.change.replied"])).toBeTruthy();
+    expect(
+      screen.getByText(
+        en["contact.intro.change.repliedSub"].replace("{days}", "41"),
+      ),
+    ).toBeTruthy();
     // The label over the slot and the badge on the head say the same words.
     expect(screen.getAllByText(en["contact.intro.stripWhyNow"]).length).toBe(2);
     expect(
@@ -646,7 +659,10 @@ describe("what changed lately", () => {
 
     expect(await screen.findByText(en["state.withheld"])).toBeTruthy();
     expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
-    expect(screen.getByText(en["contact.intro.stripNoMoment"])).toBeTruthy();
+    // A refused section is not an empty one, and the slot must not report
+    // the relationship as unmoved out of a permission boundary.
+    expect(screen.getByText(en["reading.restricted"])).toBeTruthy();
+    expect(screen.queryByText(en["contact.intro.stripNoMoment"])).toBeNull();
   });
 });
 
@@ -801,19 +817,21 @@ describe("the reader's own route", () => {
   it("is the only way in, and the strip says so as one contact", async () => {
     renderTab(reachedByReader([mine]));
 
+    // Counted like anybody else, and named on a line of its own: a reading
+    // states a fact and does not address the person reading it.
     expect(
-      await screen.findByText(en["contact.intro.stripWhoOnlyYou"]),
+      await screen.findByText("1", { selector: ".stat-card-value" }),
     ).toBeTruthy();
+    expect(screen.getByText(en["contact.intro.stripWhoOwn"])).toBeTruthy();
   });
 
   it("is counted apart from the colleagues who can be asked", async () => {
     renderTab(reachedByReader([mine, colleague]));
 
     expect(
-      await screen.findByText(
-        en["contact.intro.stripWhoWithYou_one"].replace("{count}", "1"),
-      ),
+      await screen.findByText("2", { selector: ".stat-card-value" }),
     ).toBeTruthy();
+    expect(screen.getByText(en["contact.intro.stripWhoOwn"])).toBeTruthy();
     // And the colleague beside them keeps their own ask.
     expect(
       screen.getByRole("button", {

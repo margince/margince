@@ -17,8 +17,8 @@ import { LicenseCard } from "./license";
 // The three readings this screen must keep apart, because collapsing any two of
 // them tells an admin something untrue:
 //
-//   a seat cap        the meter reads used against granted
-//   no seat cap       a license that limits nothing — no meter, and no "0"
+//   a seat cap        one reading: used against granted, with the bar under it
+//   no seat cap       a license that limits nothing — no bar, and no "0"
 //   over the cap      reported, with the workspace still working
 //
 // The second is the one a naive client gets wrong: `seats_granted` is absent
@@ -111,14 +111,37 @@ describe("LicenseCard", () => {
     );
     render(<LicenseCard />);
 
-    const meter = await waitFor(() => screen.getByRole("meter"));
-    expect(meter.getAttribute("aria-valuenow")).toBe("9");
-    expect(meter.getAttribute("aria-valuemax")).toBe("10");
-    // A role="meter" takes no accessible name from the terms beside it, so the
-    // reading has to be IN the name or a screen reader gets a bare number.
-    expect(meter.getAttribute("aria-label")).toContain("9");
-    expect(meter.getAttribute("aria-label")).toContain("10");
+    // ONE reading, and the words carry it: the bar is hidden from a screen
+    // reader precisely because the value and its detail already say the share
+    // in full, so a reader who hears the card hears both figures.
+    const card = await waitFor(() => screen.getByText("9 of 10"));
+    expect(screen.getByText("1 left")).toBeTruthy();
+    expect(
+      card.closest(".stat-card")?.querySelector(".stat-card-meter"),
+    ).not.toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says how many seats are left rather than repeating the grant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({
+        state: "valid",
+        seats_used: 4,
+        seats_granted: 10,
+        over_limit: false,
+        checked_at: checkedAt,
+      }),
+    );
+    render(<LicenseCard />);
+
+    await waitFor(() => screen.getByText("4 of 10"));
+    // The two figures and the bar under them were three spellings of one fact.
+    // What a reader cannot get from the value is what is still FREE, so that is
+    // what the line under it says.
+    expect(screen.getByText("6 left")).toBeTruthy();
+    expect(screen.queryByText("Seats granted")).toBeNull();
+    expect(screen.queryByText("Seats in use")).toBeNull();
   });
 
   // The seat reading is ONE row, and what counts as a seat is that row's
@@ -143,13 +166,13 @@ describe("LicenseCard", () => {
     if (!row) {
       throw new Error("the seat rule is not a settings row's description");
     }
-    // One row holds the label, the rule, both figures and the bar: the whole
+    // One row holds the label, the rule and the reading — the whole
     // comparison, which is what makes it one reading.
     expect(row.textContent).toContain("Seats");
-    expect(row.querySelector('[role="meter"]')).not.toBeNull();
+    const reading = screen.getByText("9 of 10");
+    expect(row.contains(reading)).toBe(true);
     expect(
-      rule.compareDocumentPosition(screen.getByRole("meter")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      rule.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -271,11 +294,10 @@ describe("LicenseCard", () => {
     // the thing that will not go through.
     expect(alert.textContent).toMatch(/nobody loses access/i);
     expect(alert.textContent).toMatch(/no new member can be invited/i);
-    // The meter still reads, clamped by the component rather than misreporting:
-    // the value is the truth and the maximum is the entitlement.
-    const meter = screen.getByRole("meter");
-    expect(meter.getAttribute("aria-valuenow")).toBe("11");
-    expect(meter.getAttribute("aria-valuemax")).toBe("10");
+    // The reading still states both figures, and its detail says which side of
+    // the grant the count is on rather than leaving a reader to subtract.
+    expect(screen.getByText("11 of 10")).toBeTruthy();
+    expect(screen.getByText("1 over the grant")).toBeTruthy();
   });
 });
 

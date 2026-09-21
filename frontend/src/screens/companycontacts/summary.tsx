@@ -140,15 +140,22 @@ export function CoverageBand({
           label={t("co.contacts.band.coverage")}
           // Everyone who has written to us in the window, whichever side wrote
           // last: the band answers "is anybody here talking to us", and a
-          // contact whose mail we still owe a reply is talking to us.
+          // contact whose mail we still owe a reply is talking to us. Against
+          // the ROSTER, because a bare "6" says nothing until the reader knows
+          // whether the account holds seven contacts or seventy.
           value={t("co.contacts.band.reachable", {
             count: formatNumber(
               coverage.summary.answered + coverage.summary.waiting,
               locale,
             ),
+            total: formatNumber(coverage.summary.contacts_total, locale),
           })}
+          // Two gaps, and they are different work: nobody has approached the
+          // first group at all, and the second wrote to us and is still owed
+          // an answer.
           detail={t("co.contacts.band.untried", {
             count: formatNumber(coverage.summary.untried, locale),
+            waiting: formatNumber(coverage.summary.waiting, locale),
           })}
           onOpen={() => onNarrow("untried")}
         />

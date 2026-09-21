@@ -68,7 +68,10 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
       <SurfaceState
         state={state}
         emptyLabel={t("project.rollups.empty")}
-        loadingLabel={t("project.rollups.openValue")}
+        // What the plate is waiting for, not what its first slot is called: a
+        // reading's LABEL standing in for a loading line said "Open deals" at
+        // a reader who was waiting for all four.
+        loadingLabel={t("reading.loading")}
       >
         {null}
       </SurfaceState>
@@ -101,18 +104,30 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
         value={formatNumber(rollups.open_commitments, locale)}
         onOpen={reveal(PROJECT_COMMITMENTS_ANCHOR)}
       />
-      <StatCard
-        label={t("project.rollups.lastActivity")}
-        value={
-          rollups.last_activity_at
-            ? formatDateAbbrev(rollups.last_activity_at, locale, recordZone)
-            : t("project.rollups.never")
-        }
-        onOpen={reveal(PROJECT_ACTIVITY_ANCHOR)}
-      />
+      {/* ONE reading of the activity feed, not two. How much is filed and
+          when the last of it landed are the same feed answered twice, they
+          opened the same anchor, and neither said what the other could not —
+          so the count is the reading and the date qualifies it. */}
       <StatCard
         label={t("project.rollups.activityCount")}
-        value={formatNumber(rollups.activity_count, locale)}
+        value={
+          rollups.activity_count > 0
+            ? t("project.rollups.activityFiled", {
+                count: formatNumber(rollups.activity_count, locale),
+              })
+            : t("project.rollups.never")
+        }
+        detail={
+          rollups.last_activity_at
+            ? t("project.rollups.activityLast", {
+                date: formatDateAbbrev(
+                  rollups.last_activity_at,
+                  locale,
+                  recordZone,
+                ),
+              })
+            : undefined
+        }
         onOpen={reveal(PROJECT_ACTIVITY_ANCHOR)}
       />
     </StatStrip>

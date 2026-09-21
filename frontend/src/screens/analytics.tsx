@@ -20,6 +20,7 @@ import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
+  formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
   MONEY_ABSENT,
@@ -182,7 +183,9 @@ function rowCount(row: ReportRow, key: string): number {
 
 // The footnote for a money figure a currency the rate sheet cannot price left
 // short. Null when every counted deal was priced, which is the common case and
-// not worth a caption nobody needs to read.
+// not worth a caption nobody needs to read. The TABLE's spelling; a stat card
+// states the same gap through `analytics.forecastPriced`, in the fragment shape
+// its detail line is written in.
 function pricedFootnote(
   pricedDeals: number,
   total: number,
@@ -196,6 +199,18 @@ function pricedFootnote(
     priced: formatNumber(pricedDeals, locale),
     total: formatNumber(total, locale),
   });
+}
+
+// What a reading says when the row it needs is not there. THREE facts, not one:
+// a read in flight resolves by waiting, a failed one never will, and a lens
+// that answered with nothing has already told the truth — one word over all
+// three said "nothing to read yet" over a request that had failed.
+function absentReading(
+  query: Readonly<{ isLoading: boolean; isError: boolean }>,
+): MessageKey {
+  if (query.isLoading) return "analytics.readingLoading";
+  if (query.isError) return "analytics.readingUnavailable";
+  return "analytics.readingNone";
 }
 
 // A report's own name, spelled once: the segment picker and the heading of the
@@ -336,56 +351,55 @@ export function ForecastTile({
   locale: Locale;
 }>) {
   const t = useT();
-  const amount = formatMoneyOrAbsent(amountMinor, currency, locale);
-  return (
-    <StatCard
-      label={label}
-      // A word, never a glyph: "nothing measured" is a reading a manager acts
-      // on, where a dash reads as a slot that failed to draw.
-      value={amount === MONEY_ABSENT ? t("analytics.forecastNoFigure") : amount}
-      detail={forecastTileDetail(
-        { weightedMinor, dealCount, pricedDeals, currency, locale },
-        t,
-      )}
-    />
-  );
-}
-
-// The second line of a tile: the weighted total, and how many deals the
-// category holds. Both are optional and each stands without the other, so a
-// caller with one figure to give is not made to invent the other.
-function forecastTileDetail(
-  {
-    weightedMinor,
-    dealCount,
-    pricedDeals,
-    currency,
-    locale,
-  }: Readonly<{
-    weightedMinor?: number | null;
-    dealCount?: number | null;
-    pricedDeals?: number | null;
-    currency: string | null;
-    locale: Locale;
-  }>,
-  t: ReturnType<typeof useT>,
-): string | undefined {
+  const counted = dealCount == null ? null : formatNumber(dealCount, locale);
+  if (amountMinor == null || !currency) {
+    // A word, never a glyph: with no money the deals the category HOLDS are the
+    // reading and the missing amount is its caption, and with no count either
+    // nothing was measured at all.
+    return (
+      <StatCard
+        label={label}
+        value={
+          counted === null
+            ? t("analytics.forecastNoFigure")
+            : t("analytics.forecastDeals", { count: counted })
+        }
+        detail={counted === null ? undefined : t("analytics.forecastNoAmount")}
+      />
+    );
+  }
+  // The line under the figure: what it was weighted to, and how many deals it
+  // covers. Each fragment stands without the other, so a caller with one figure
+  // to give is not made to invent the other — and they are FRAGMENTS rather
+  // than "Label: value" pairs, because a caption is read as one sentence about
+  // the figure above it and a colon turns it into a smaller table of its own.
   const parts: string[] = [];
   if (weightedMinor != null) {
     parts.push(
-      `${t("analytics.weighted")}: ${formatMoneyOrAbsent(weightedMinor, currency, locale)}`,
+      t("analytics.forecastWeighted", {
+        amount: formatMoneyCompact(weightedMinor, currency, locale),
+      }),
     );
   }
-  if (dealCount != null) {
-    parts.push(`${t("analytics.count")}: ${formatNumber(dealCount, locale)}`);
+  if (counted !== null && dealCount != null) {
+    // The gap is stated only where there IS one: "8 of 8 priced" invites a
+    // reader to look for a shortfall the category does not have.
+    parts.push(
+      pricedDeals != null && pricedDeals < dealCount
+        ? t("analytics.forecastPriced", {
+            priced: formatNumber(pricedDeals, locale),
+            count: counted,
+          })
+        : t("analytics.forecastDeals", { count: counted }),
+    );
   }
-  if (dealCount != null && pricedDeals != null) {
-    const footnote = pricedFootnote(pricedDeals, dealCount, locale, t);
-    if (footnote) {
-      parts.push(footnote);
-    }
-  }
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+  return (
+    <StatCard
+      label={label}
+      value={formatMoneyCompact(amountMinor, currency, locale)}
+      detail={parts.join(" · ") || undefined}
+    />
+  );
 }
 
 // The wire allows a deal to carry no forecast category, and the five named ones
@@ -1301,23 +1315,21 @@ function MyOutcomesView({
 
   const pipelineRow = pipelineQuery.data?.rows[0];
   const baseCurrency = pipelineQuery.data?.base_currency ?? null;
-  // "…" said a read was in flight on a lens that had come back empty instead.
-  const noRow = t("analytics.myPipelineNoRow");
+  const noRow = t(absentReading(pipelineQuery));
   const pipelineCount = pipelineRow
     ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
     : noRow;
-  const pipelineValue = pipelineRow
-    ? formatMoneyOrAbsent(
-        rowMoney(pipelineRow, "raw_minor"),
-        baseCurrency,
-        locale,
-      )
-    : noRow;
-  // The currency names what the figure is IN, so a read with none to name
-  // drops the parenthetical rather than drawing an empty one.
+  const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
+  // The currency names what the figure is IN, so a read with none to name drops
+  // the parenthetical rather than drawing an empty one — and then has no figure
+  // to draw either, because money without a currency is not money.
   const valueLabel = baseCurrency
     ? t("analytics.baseValue", { currency: baseCurrency })
     : t("analytics.baseValueUnnamed");
+  const openMoney =
+    baseCurrency && rawMinor != null
+      ? formatMoneyCompact(rawMinor, baseCurrency, locale)
+      : t("analytics.noBaseCurrency");
   const meetingRows = meetingsQuery.data?.rows ?? [];
   const meetingsByStatus = new Map(
     meetingRows
@@ -1341,7 +1353,16 @@ function MyOutcomesView({
             />
             <StatCard
               label={valueLabel}
-              value={pipelineValue}
+              value={pipelineRow ? openMoney : noRow}
+              // WHY there is no figure, where a row came back and no currency
+              // names it: an installation that never set one is a setting away
+              // from a number, and "No amount" alone reads as a book worth
+              // nothing.
+              detail={
+                pipelineRow && !baseCurrency
+                  ? t("analytics.noBaseCurrencyWhy")
+                  : undefined
+              }
               onOpen={() => openAnalyticsSection("pipeline")}
             />
           </StatStrip>

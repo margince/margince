@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
-import { formatMoney, formatNumber } from "../format/format";
+import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { useProviderKeys } from "./ai-provider-keys";
 import { useRouting } from "./ai-routing";
-import { useLastCallAt } from "./aicalls";
+import { type LastCall, useLastCallAt } from "./aicalls";
 import { bandTone, currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";
 
@@ -40,6 +40,27 @@ import "./ai-settings.css";
 //
 // Exported rather than moved so the queries, the locale formatting and the
 // withheld-reading behaviour stay in one file with the cards that share them.
+
+// A token count for a SLOT: "1.2M" rather than "1,204,553".
+//
+// A month's tokens run to seven figures, and two of them in one value — spent
+// against budget — do not fit the one line a stat card holds: the figure clips,
+// and a clipped number is a different number rather than a shorter rendering of
+// the right one. The Usage tab below carries the exact count, which is where a
+// reader who needs the digits is going anyway.
+//
+// Here rather than in `format/` because this is the only reading in the product
+// denominated in tokens; through `INTL_LOCALE` because a locale reaches a
+// formatter that way or not at all (format/one-locale.test.ts).
+function compactTokens(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    // Below ten thousand the long form is no wider and carries every digit, the
+    // same threshold `formatMoneyCompact` abbreviates at, so the two readings
+    // on this page step at the same place.
+    notation: Math.abs(value) >= 10_000 ? "compact" : "standard",
+    maximumFractionDigits: Math.abs(value) >= 10_000 ? 1 : 0,
+  }).format(value);
+}
 
 // What this month has cost, in the denomination the runtime actually meters:
 // tokens against the monthly ceiling, with the priced estimate under it.
@@ -97,17 +118,25 @@ export function SpendStat() {
     <StatCard
       label={t("aiSettings.spend.label")}
       value={t("aiSettings.spend.value", {
-        spent: formatNumber(budget.spent_tokens, locale),
-        budget: formatNumber(budget.monthly_tokens, locale),
+        spent: compactTokens(budget.spent_tokens, locale),
+        budget: compactTokens(budget.monthly_tokens, locale),
       })}
       tone={bandTone(budget.band)}
       meter={{ filled: budget.spent_tokens, total: budget.monthly_tokens }}
+      // The money is the ESTIMATE under the budget, and a month nothing priced
+      // says so in words: an absent line there reads as a month that cost
+      // nothing.
       detail={
         anyPriced
           ? t("aiSettings.spend.estimated", {
+              // In FULL, unlike the token figures above it. A month's estimate
+              // is a handful of dollars as often as it is thousands, and the
+              // compact formatter carries no fraction below ten thousand — it
+              // would print forty cents of real spend as "US$0", which is the
+              // one claim this product must never make by accident.
               amount: formatMoney(priced, budget.currency ?? "USD", locale),
             })
-          : undefined
+          : t("aiSettings.spend.notPriced")
       }
     />
   );
@@ -125,9 +154,13 @@ export function ProvidersStat() {
   const t = useT();
   const { locale } = useLocale();
   const canSeeKeys = useCan("ai_routing", "read");
+  // The trace rides a DIFFERENT grant from the keys and answers in states
+  // rather than in an instant, so this card never has to guess which silence
+  // it is looking at. The grant is the hook's to ask; asking it a second time
+  // here would be a second answer to one question.
+  const lastCall = useLastCallAt();
   const keys = useProviderKeys(canSeeKeys);
   const routing = useRouting(canSeeKeys);
-  const lastCall = useLastCallAt();
   // A minute is the resolution the line reads at, so that is how often it is
   // worth re-rendering for.
   const now = useNow(60_000);
@@ -160,27 +193,73 @@ export function ProvidersStat() {
       label={t("aiSettings.providers.label")}
       value={t("aiSettings.providers.value", {
         count: formatNumber(keyed, locale),
+        // Out of the vendors this installation knows about, which is what makes
+        // the figure a reading rather than a number a reader has to go and find
+        // the denominator for.
+        total: formatNumber(providers.length, locale),
       })}
       tone={missing ? "danger" : undefined}
-      detail={
-        <>
-          {missing ? (
-            <span className="ai-settings-missing">
-              {t("aiSettings.providers.missing", {
-                count: formatNumber(missing, locale),
-              })}
-            </span>
-          ) : null}
-          {lastCall !== null && (
-            <span>
-              {t("aiSettings.providers.lastCall", {
-                elapsed: formatElapsed(now - lastCall, t, locale),
-              })}
-            </span>
-          )}
-        </>
-      }
+      detail={providersDetail({ missing, lastCall, now, locale }, t)}
     />
+  );
+}
+
+// What qualifies the key count: the bindings that would fail closed, and when a
+// vendor was last reached.
+//
+// ONE line where both are known — the two qualify the same reading, and two grey
+// lines read as two readings — so the lead fragment decides the second one's
+// case. Nothing to say at all is NO detail rather than an empty one: an empty
+// caption draws air under the figure and reads as a line that failed to render.
+function providersDetail(
+  {
+    missing,
+    lastCall,
+    now,
+    locale,
+  }: Readonly<{
+    missing: number | null;
+    lastCall: LastCall;
+    now: number;
+    locale: Locale;
+  }>,
+  t: ReturnType<typeof useT>,
+): ReactNode {
+  const broken = missing
+    ? t("aiSettings.providers.missing", {
+        count: formatNumber(missing, locale),
+      })
+    : null;
+  if (lastCall.state !== "at") {
+    // ONLY the answered "never" says so. A trace still arriving, or one this
+    // reader may not see, is a fact about the READ and no evidence at all that
+    // nothing was ever called — and it used to fall through to a detail line
+    // with nothing in it. Its own line rather than a tail, because it is a
+    // sentence and not a timestamp.
+    const never =
+      lastCall.state === "never" ? t("aiSettings.providers.neverCalled") : null;
+    if (!broken && !never) {
+      return undefined;
+    }
+    return (
+      <>
+        {broken && <span className="ai-settings-missing">{broken}</span>}
+        {never && <span>{never}</span>}
+      </>
+    );
+  }
+  const called = t(
+    broken
+      ? "aiSettings.providers.lastCall"
+      : "aiSettings.providers.lastCallOnly",
+    { elapsed: formatElapsed(now - lastCall.epochMs, t, locale) },
+  );
+  return (
+    <span>
+      {broken && <span className="ai-settings-missing">{broken}</span>}
+      {broken ? " · " : null}
+      {called}
+    </span>
   );
 }
 

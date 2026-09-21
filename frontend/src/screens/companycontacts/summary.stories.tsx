@@ -98,6 +98,36 @@ export const AWayInAndAGap: Story = {
 };
 
 /**
+ * Coverage read against the ROSTER, with both gaps under it. A bare "6" says
+ * nothing about an account until the reader knows whether it holds seven
+ * contacts or seventy, and the two gaps are different work: nobody has
+ * approached one group at all, and the other wrote to us and is still owed
+ * an answer.
+ */
+export const CoverageAgainstTheRoster: Story = {
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  render: story(
+    coverage({
+      summary: {
+        contacts_total: 26,
+        waiting: 4,
+        answered: 6,
+        no_reply: 5,
+        untried: 11,
+        lapsed: 0,
+      },
+      best_way_in: {
+        contact_id: "p-1",
+        full_name: "Dietmar Rietsch",
+        title: "Managing Director",
+        engagement: "answered",
+        last_inbound_at: "2026-08-28T09:00:00Z",
+      },
+    }),
+  ),
+};
+
+/**
  * Everyone was written to and nobody replied. There is no way IN to name, and
  * the card says so rather than dressing a fourth follow-up up as an opening.
  */

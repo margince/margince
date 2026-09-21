@@ -65,13 +65,23 @@ function Panel({ entries }: Readonly<{ entries: CommissionEntry[] }>) {
   );
 }
 
-// Money still owed in two currencies: two cards, never one sum. The accrued
-// row offers its decisions; the paid one is settled and offers nothing.
+// Money still owed in two currencies: two cards, never one sum. Each card's
+// detail counts the entries behind its own figure, and where paying actually
+// happens is said once over the whole panel instead of on every card. The
+// unsettled rows offer their decisions; the paid one is settled and offers
+// nothing.
 export const OwedInTwoCurrencies: Story = {
   render: () => (
     <Panel
       entries={[
         entry({}),
+        entry({
+          id: "c-4",
+          deal_id: "d-2",
+          status: "approved",
+          basis_amount_minor: 2_000_000,
+          amount_minor: 400_000,
+        }),
         entry({
           id: "c-2",
           deal_id: "d-2",
