@@ -433,7 +433,7 @@ export interface components {
             /** @description The principal that created this revision. */
             captured_by: string;
         };
-        /** @description Payload for offer.sent — a draft offer left the workspace. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion. */
+        /** @description Payload for offer.sent — a draft offer moved to `sent` and its commercial terms were frozen. Nothing was delivered to a counterparty: delivery is a separate capability that does not exist yet, so a subscriber must not read this as an offer having reached anybody. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion. */
         PublicEventOfferSent: {
             /**
              * Format: uuid
