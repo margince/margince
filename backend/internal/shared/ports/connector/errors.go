@@ -29,18 +29,15 @@ var ErrUnreachable = errors.New("connector: provider unreachable")
 // reset connection, a response that could not be read. The message may be on
 // its way and may not, and nothing on hand can tell.
 //
-// It is separate from ErrUnreachable because retrying is only safe where a
-// retry can DISCOVER that an earlier attempt already transmitted. A mail seam
-// can: the RFC822 identity the message was staged under is searchable at the
-// provider, so mail reports an unanswered send as ErrUnreachable and lets the
-// ladder run. Telegram's sendMessage offers neither an idempotency key nor a
-// prior-send lookup, so no later attempt could ever find out, and a retry would
-// message a customer twice with nothing able to detect it.
+// Separate from ErrUnreachable because retrying is only safe where a retry can
+// DISCOVER that an earlier attempt transmitted. Mail can: the staged RFC822
+// identity is searchable at the provider. Telegram's sendMessage offers neither
+// an idempotency key nor a prior-send lookup, so a retry would message a
+// customer twice with nothing able to detect it.
 //
 // A caller therefore NEVER retries this class — the delivery stops with the
 // uncertainty on the record. Only a seam that cannot detect a prior send may
-// report it; a seam that can must go and find out rather than declare the
-// outcome unknowable.
+// report it.
 var ErrSendOutcomeUnknown = errors.New("connector: the provider never reported the outcome of this transmission")
 
 // ErrRecipientUnreachable marks a recipient the provider will not deliver to,
@@ -49,14 +46,12 @@ var ErrSendOutcomeUnknown = errors.New("connector: the provider never reported t
 // was transmitted and the message may be re-addressed elsewhere — but no retry
 // and no reconnection changes the verdict.
 //
-// It is separate from ErrAuthRejected because the two send an operator after
-// opposite problems. A credential fault is repaired by reconnecting; a blocked
-// recipient is not repaired at all, and telling an operator to rotate a working
-// credential wastes the one action they were given.
+// Separate from ErrAuthRejected because the two send an operator after opposite
+// problems: a credential fault is repaired by reconnecting, a blocked recipient
+// is not repaired at all, and telling an operator to rotate a working credential
+// wastes the one action they were given.
 //
-// Only a seam that can TELL the two apart may report it. A provider that answers
-// the same status for a refused recipient and a refused credential has not
-// earned this class, and must keep reporting what it can actually distinguish.
+// Only a seam that can TELL the two apart may report it.
 var ErrRecipientUnreachable = errors.New("connector: the provider will not deliver to this recipient")
 
 // ErrCursorGone marks a stored sync watermark the provider no longer honors
@@ -84,22 +79,17 @@ func (e *RateLimitedError) Error() string {
 // callers classify on the sentinel and read Retry-After via errors.As.
 func (e *RateLimitedError) Is(target error) bool { return target == ErrRateLimited }
 
-// ProviderError carries the provider's OWN diagnosis alongside the shared
-// class. The class alone answers "park or retry?", which is all the scheduler
-// needs — but it cannot tell an operator WHY, and two failures that schedule
-// identically can need opposite human responses: a refused credential wants
-// its human to reconnect, while a provider API that was never enabled for the
-// deployment wants an administrator, and no amount of reconnecting will fix
-// it. Op names the call that failed, Status the provider's HTTP status, and
-// Reason the provider's machine reason code — the three facts that turn "the
-// authorization was rejected" into an actionable log line.
+// ProviderError carries the provider's OWN diagnosis alongside the shared class.
+// The class answers "park or retry?", which is all the scheduler needs, but not
+// WHY — and two failures that schedule identically can need opposite human
+// responses: a refused credential wants its human to reconnect, an API never
+// enabled for the deployment wants an administrator. Op, Status and Reason are
+// what turn "the authorization was rejected" into an actionable log line.
 //
-// Reason is the provider's fixed machine code (Google's "accessNotConfigured",
-// OAuth2's "invalid_grant"), never its prose message and never a fragment of
-// its body: the raw body still stops at the transport boundary.
+// Reason is the provider's fixed machine code, never its prose message and never
+// a fragment of its body: the raw body stops at the transport boundary.
 //
-// It classifies exactly as the sentinel it wraps — Unwrap keeps errors.Is
-// answering the same way the bare sentinel did — so scheduling can never come
+// It classifies exactly as the sentinel it wraps, so scheduling can never come
 // to depend on the detail.
 type ProviderError struct {
 	// Op is the failing call, in the provider's own terms: an API path
