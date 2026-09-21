@@ -63858,8 +63858,6 @@ func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWri
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -63990,8 +63988,6 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -64699,8 +64695,6 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64742,8 +64736,6 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -64821,8 +64813,6 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64855,8 +64845,6 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -64876,8 +64864,6 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -65224,8 +65210,6 @@ func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -65257,8 +65241,6 @@ func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -65639,8 +65621,6 @@ func (siw *ServerInterfaceWrapper) RequestAttachmentAccess(w http.ResponseWriter
 func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -66548,8 +66528,6 @@ func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -66604,8 +66582,6 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemActed(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -66637,8 +66613,6 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemDismissed(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -66672,8 +66646,6 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -66705,8 +66677,6 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -67769,8 +67739,6 @@ func (siw *ServerInterfaceWrapper) ColdStartReadback(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -67790,8 +67758,6 @@ func (siw *ServerInterfaceWrapper) ColdStartReadback(w http.ResponseWriter, r *h
 func (siw *ServerInterfaceWrapper) ColdStartPreview(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -70955,8 +70921,6 @@ func (siw *ServerInterfaceWrapper) RequestCompanyVatCheck(w http.ResponseWriter,
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -70988,8 +70952,6 @@ func (siw *ServerInterfaceWrapper) AcknowledgeCompanyView(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -72166,8 +72128,6 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -72211,8 +72171,6 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -72949,8 +72907,6 @@ func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseW
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -74722,8 +74678,6 @@ func (siw *ServerInterfaceWrapper) ArchiveDealRoom(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -74814,8 +74768,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -74871,8 +74823,6 @@ func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -74940,8 +74890,6 @@ func (siw *ServerInterfaceWrapper) AddDealRoomDocument(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -74982,8 +74930,6 @@ func (siw *ServerInterfaceWrapper) RemoveDealRoomDocument(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75050,8 +74996,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomDocument(w http.ResponseWriter,
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75107,8 +75051,6 @@ func (siw *ServerInterfaceWrapper) SetDealRoomExpiry(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75216,8 +75158,6 @@ func (siw *ServerInterfaceWrapper) InviteDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75258,8 +75198,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomParticipant(w http.ResponseWrit
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75302,8 +75240,6 @@ func (siw *ServerInterfaceWrapper) ResendDealRoomInvitation(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75345,8 +75281,6 @@ func (siw *ServerInterfaceWrapper) RevokeDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -75378,8 +75312,6 @@ func (siw *ServerInterfaceWrapper) PauseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75444,8 +75376,6 @@ func (siw *ServerInterfaceWrapper) ResumeDealRoom(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -75614,8 +75544,6 @@ func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -76260,8 +76188,6 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -76693,8 +76619,6 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -76801,8 +76725,6 @@ func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -77306,8 +77228,6 @@ func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -77689,8 +77609,6 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -77791,8 +77709,6 @@ func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -77892,8 +77808,6 @@ func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -77926,8 +77840,6 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -77947,8 +77859,6 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -77981,8 +77891,6 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -79791,8 +79699,6 @@ func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -79824,8 +79730,6 @@ func (siw *ServerInterfaceWrapper) SetLeadManualSignal(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -79867,8 +79771,6 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -79979,8 +79881,6 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -80012,8 +79912,6 @@ func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80070,8 +79968,6 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80137,8 +80033,6 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -80561,8 +80455,6 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -80594,8 +80486,6 @@ func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -82788,8 +82678,6 @@ func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -83371,8 +83259,6 @@ func (siw *ServerInterfaceWrapper) CreateProjectHealthAssessment(w http.Response
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -83437,8 +83323,6 @@ func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.Respons
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -84482,8 +84366,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordGrant(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -84539,8 +84421,6 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -85140,8 +85020,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -85937,8 +85815,6 @@ func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -85987,8 +85863,6 @@ func (siw *ServerInterfaceWrapper) GetScheduledSend(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -86020,8 +85894,6 @@ func (siw *ServerInterfaceWrapper) RescheduleScheduledSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86078,8 +85950,6 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86303,8 +86173,6 @@ func (siw *ServerInterfaceWrapper) CreateSignal(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -86360,8 +86228,6 @@ func (siw *ServerInterfaceWrapper) ArchiveSignal(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86428,8 +86294,6 @@ func (siw *ServerInterfaceWrapper) UpdateSignal(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86539,8 +86403,6 @@ func (siw *ServerInterfaceWrapper) ResolveSignal(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -86666,8 +86528,6 @@ func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -86723,8 +86583,6 @@ func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -87586,8 +87444,6 @@ func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -87938,8 +87794,6 @@ func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88012,8 +87866,6 @@ func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88078,8 +87930,6 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88111,8 +87961,6 @@ func (siw *ServerInterfaceWrapper) IssueUserPasswordLink(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -88146,8 +87994,6 @@ func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -88179,8 +88025,6 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -89843,8 +89687,6 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -89876,8 +89718,6 @@ func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -89911,8 +89751,6 @@ func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -89944,8 +89782,6 @@ func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWri
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -89979,8 +89815,6 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90000,8 +89834,6 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90023,8 +89855,6 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90044,8 +89874,6 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90079,8 +89907,6 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90100,8 +89926,6 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90125,8 +89949,6 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90166,8 +89988,6 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90220,8 +90040,6 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90311,8 +90129,6 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90333,8 +90149,6 @@ func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90354,8 +90168,6 @@ func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -90452,8 +90264,6 @@ func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -90492,8 +90302,6 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 	_ = err
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
