@@ -119,3 +119,24 @@ it("places the panel again when its own content changes size", () => {
 
   expect(result.current.top).toBeLessThan(662);
 });
+
+// The panel ref before React has attached it. The hook runs on open and the
+// portal may not have committed, so this is a real first frame rather than a
+// defensive branch — and a placement computed from a null panel must not throw
+// the popover away before it ever renders.
+it("places nothing on a panel that is not in the DOM yet", () => {
+  vi.stubGlobal("innerHeight", 800);
+  vi.stubGlobal("innerWidth", 1200);
+  // Both refs hoisted: a fresh object per render is a new dependency every
+  // time, and the effect would re-run forever placing a panel that never is.
+  const trigger = triggerNear(100);
+  const panel: { current: HTMLElement | null } = { current: null };
+  const { result } = renderHook(() =>
+    useAnchoredToTrigger(true, trigger, panel, "start"),
+  );
+
+  // Below the trigger, which is where an unmeasured panel belongs: it is the
+  // answer a panel of no height deserves, and the ResizeObserver corrects it
+  // the moment there is something to measure.
+  expect(result.current.top).toBeGreaterThan(130);
+});
