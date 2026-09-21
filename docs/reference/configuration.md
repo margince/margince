@@ -434,7 +434,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required for a marketing send originated by this role's Surface-B agent run — without it that send refuses rather than emit a forgeable link |
-| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off |
+| `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file; the worker reads it for the `ai.capture_payloads` posture the Surface-B runner honors (capture applies to **both** the api and worker roles — the worker runs the richest content source, the agent runs). A missing file boots with capture off. Turning capture ON makes the `ai_call_payload` / `content` retention window the whole bound on what is kept — see [AI payload capture and its window](#ai-payload-capture-and-its-window-api-worker) before picking one |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–15) — see below |
 | `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — (none) | Event-bus credential, where the instance requires one. Empty is the ordinary case: an instance reached over a network the deployment controls needs none. Set it wherever the bus is reachable by anything else — the desktop bundle mints one per installation, because its bus listens on loopback and any local account could otherwise read the stream. Prefer the environment over the flag: argv is readable by every process on the machine |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns** — see the api row. A bound installation runs the Surface-B runner + embeddings from the database, and this role re-reads that stored binding on an interval so it never serves one the api has replaced |
@@ -560,6 +560,27 @@ embedding lane simply do not start; the relay, retention, the event-triggered
 workflow dispatch (`cg:workflows`), and the clock time-scan always run.
 Shutdown is graceful: in-flight subscriber handlers finish their ack before
 the process exits.
+
+## AI payload capture and its window (api, worker)
+
+`ai.capture_payloads` is off by default. Turning it on stores the model's whole request and response
+in `ai_call_payload`, and for a reading of a meeting transcript that request **is** the transcript —
+the largest copy of somebody's words this product holds.
+
+The `ai_call_payload` / `content` row in `retention_policy` is what bounds that, and it is an
+**admin-editable default**, not a cap this product enforces. Bootstrap seeds it at 365 days; each
+installation decides its own. Three things settle the number:
+
+- **What it bounds.** How long a captured transcript, contract or draft stays on disk after the work
+  is done.
+- **What it is for.** Debugging a call and auditing what was sent are days-to-weeks questions. A year
+  of them is a year of somebody's words kept for a lane nobody is reading.
+- **What it does NOT bound.** An Art. 17 erasure reaches these payloads by the record a call cited and
+  by matching the subject's addresses in the text. A call that names no record and whose text spells
+  no address is reached by neither, and for those this window is the guaranteed end — which is exactly
+  the case a shorter one is for. The two lanes, and why the citation is an optimisation rather than the
+  boundary, are in
+  [privacy-and-consent.md](../explanation/privacy-and-consent.md).
 
 ## The bus address and its logical database (api, worker)
 

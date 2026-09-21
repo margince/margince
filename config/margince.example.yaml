@@ -163,6 +163,28 @@ bootstrap_admin:
 # (ai_call_payload) — OFF by default because it stores special-category-adjacent
 # content that then ages under the retention engine and the Art. 17 erasure
 # cascade. Honored by both the api and worker roles (both take --config).
+#
+# IF YOU TURN THIS ON, SET THE WINDOW DELIBERATELY. The `ai_call_payload` /
+# `content` retention policy is an admin-editable row, seeded at bootstrap at
+# 365 days, and it is the whole of the bound on this exposure. Three things
+# decide what the number should be:
+#
+#   WHAT IT BOUNDS. How long a captured transcript, contract or draft — the
+#   model's whole request — stays on disk after the work is done. For a reading
+#   of a meeting transcript, that request IS the transcript: the largest copy of
+#   somebody's words this product holds.
+#
+#   WHAT IT IS FOR. Debugging a call and auditing what was sent are
+#   days-to-weeks questions. A year of them is a year of somebody's words kept
+#   for a lane nobody is reading.
+#
+#   WHAT IT DOES NOT BOUND. An Art. 17 erasure reaches these payloads two ways:
+#   by the record a call cited, and by matching the subject's addresses in the
+#   text. A call that names no record and whose text spells no address is
+#   reached by neither, and for those this window is the guaranteed end — which
+#   is exactly the case a shorter one is for.
+#   docs/explanation/privacy-and-consent.md, "What an erasure reaches in the AI
+#   telemetry, and what it does not".
 # ai:
 #   capture_payloads: true
 
