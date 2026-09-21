@@ -27547,7 +27547,6 @@ components:
         legal_hold:
           type: boolean
           readOnly: true
-          default: false
           description: >-
             True while a litigation or investigation hold is preserving this record. A held
             record is never acted on by a retention sweep and an Art. 17 erasure against it is
@@ -27971,7 +27970,6 @@ components:
         legal_hold:
           type: boolean
           readOnly: true
-          default: false
           description: >-
             True while a litigation or investigation hold is preserving this record. A held
             record is never acted on by a retention sweep and an Art. 17 erasure against it is
@@ -32707,7 +32705,6 @@ components:
         legal_hold:
           type: boolean
           readOnly: true
-          default: false
           description: >-
             True while a litigation or investigation hold is preserving this record. A held
             record is never acted on by a retention sweep and an Art. 17 erasure against it is
@@ -33360,7 +33357,6 @@ components:
         legal_hold:
           type: boolean
           readOnly: true
-          default: false
           description: >-
             True while a litigation or investigation hold is preserving this record. A held
             record is never acted on by a retention sweep and an Art. 17 erasure against it is
@@ -36194,7 +36190,6 @@ components:
         legal_hold:
           type: boolean
           readOnly: true
-          default: false
           description: >-
             True while a litigation or investigation hold is preserving this record. A held
             record is never acted on by a retention sweep and an Art. 17 erasure against it is
