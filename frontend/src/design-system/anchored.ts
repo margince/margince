@@ -62,12 +62,26 @@ export function useAnchoredToTrigger(
     // whose content ARRIVES later (a verdict fetched while the popover is
     // already open) grows under a decision taken before it existed. Both leave
     // a panel placed for a height it does not have.
+    //
+    // TWO observers, because one of them is blind exactly where this matters.
+    // A ResizeObserver watches the BOX, and a panel already at its maxHeight
+    // has a box that does not move: content added past the cap grows
+    // scrollHeight and nothing else, so the observer never fires and the
+    // placement that capped it stands. That is the same trap offsetHeight
+    // sets, reached the other way round.
     const sized = new ResizeObserver(place);
+    const changed = new MutationObserver(place);
     if (panel.current) {
       sized.observe(panel.current);
+      changed.observe(panel.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
     }
     return () => {
       sized.disconnect();
+      changed.disconnect();
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
     };

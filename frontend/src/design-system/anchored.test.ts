@@ -140,3 +140,57 @@ it("places nothing on a panel that is not in the DOM yet", () => {
   // the moment there is something to measure.
   expect(result.current.top).toBeGreaterThan(130);
 });
+
+// Content added to a panel that is ALREADY at its cap.
+//
+// The box does not move — that is what a cap means — so a ResizeObserver
+// watching it never fires, and the placement that capped the panel stands
+// however much arrives afterwards. This is the same trap offsetHeight sets,
+// reached from the other side: the panel's own measurement stops reporting
+// growth at exactly the point where growth is the thing that should flip it.
+it("places the panel again when capped content grows without moving its box", () => {
+  vi.stubGlobal("innerHeight", 800);
+  vi.stubGlobal("innerWidth", 1200);
+  let contentChanged: (() => void) | undefined;
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  // The callback is exposed by observe(), not by the constructor: a stub that
+  // hands it over on construction passes whether or not the hook ever asks to
+  // be told, which is the wiring this test exists to hold.
+  vi.stubGlobal(
+    "MutationObserver",
+    class {
+      private fire: () => void;
+      constructor(fire: () => void) {
+        this.fire = fire;
+      }
+      observe() {
+        contentChanged = this.fire;
+      }
+      disconnect() {}
+    },
+  );
+
+  const trigger = triggerNear(662);
+  // Already capped to the 100px below it, and holding exactly that much.
+  const panel = panelOf(100, 100);
+  const { result, rerender } = renderHook(() =>
+    useAnchoredToTrigger(true, trigger, panel, "start"),
+  );
+  expect(result.current.top).toBeGreaterThan(692);
+
+  // More arrives. offsetHeight does NOT move, because the cap holds the box.
+  Object.defineProperty(panel.current, "scrollHeight", {
+    value: 300,
+    configurable: true,
+  });
+  contentChanged?.();
+  rerender();
+
+  expect(result.current.top).toBeLessThan(662);
+});
