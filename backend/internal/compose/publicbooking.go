@@ -42,8 +42,8 @@ type publicBookingLimiters struct {
 
 func newPublicBookingLimiters() publicBookingLimiters {
 	return publicBookingLimiters{
-		perIP:   ratelimit.New(60, time.Minute),
-		perSlug: ratelimit.New(20, time.Minute),
+		perIP:   ratelimit.New("public-booking/per-ip", ratelimit.FailClosed, 60, time.Minute),
+		perSlug: ratelimit.New("public-booking/per-slug", ratelimit.FailClosed, 20, time.Minute),
 	}
 }
 

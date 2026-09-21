@@ -165,19 +165,26 @@ type Handlers struct {
 	firstRunFn func(context.Context) (bool, error)
 }
 
+// oidcPerIPLimiter names the OIDC edge's per-IP ceiling. It is a constant
+// because two constructors build that ceiling — NewHandlers, and
+// WithOIDCProviders for a handler set assembled without it — and in a store
+// the replicas share, the name is the bucket: two spellings would be two
+// ceilings for one edge, each the configured size.
+const oidcPerIPLimiter = "identity/oidc-per-ip"
+
 // NewHandlers builds the identity transport surface over its service.
 func NewHandlers(svc *Service) Handlers {
 	return Handlers{
 		svc:                   svc,
-		loginFailures:         ratelimit.New(10, time.Minute),
-		loginPerIP:            ratelimit.New(30, time.Minute),
-		resetPerEmail:         ratelimit.New(3, time.Hour),
-		resetPerIP:            ratelimit.New(30, time.Hour),
-		changeFailures:        ratelimit.New(10, time.Minute),
-		passwordLinkPerActor:  ratelimit.New(20, time.Hour),
-		passwordLinkPerTarget: ratelimit.New(5, time.Hour),
-		oidcPerIP:             ratelimit.New(30, time.Minute),
-		capabilitiesPerIP:     ratelimit.New(60, time.Minute),
+		loginFailures:         ratelimit.New("identity/login-failures", ratelimit.FailClosed, 10, time.Minute),
+		loginPerIP:            ratelimit.New("identity/login-per-ip", ratelimit.FailClosed, 30, time.Minute),
+		resetPerEmail:         ratelimit.New("identity/reset-per-address", ratelimit.FailClosed, 3, time.Hour),
+		resetPerIP:            ratelimit.New("identity/reset-per-ip", ratelimit.FailClosed, 30, time.Hour),
+		changeFailures:        ratelimit.New("identity/password-change-failures", ratelimit.FailClosed, 10, time.Minute),
+		passwordLinkPerActor:  ratelimit.New("identity/password-link-per-actor", ratelimit.FailClosed, 20, time.Hour),
+		passwordLinkPerTarget: ratelimit.New("identity/password-link-per-target", ratelimit.FailClosed, 5, time.Hour),
+		oidcPerIP:             ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
+		capabilitiesPerIP:     ratelimit.New("identity/capabilities-per-ip", ratelimit.FailClosed, 60, time.Minute),
 	}
 }
 
