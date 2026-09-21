@@ -52,6 +52,7 @@ DECLARE
     'event_outbox',
     'lead_disqualify_reason',
     'lead_source',
+    'maskable_field',
     'passport',
     'project_health_assessment',
     'record_role',

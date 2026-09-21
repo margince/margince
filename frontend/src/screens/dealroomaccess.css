@@ -12,11 +12,6 @@
   gap: var(--space-1);
 }
 
-.access-row-email,
-.access-row-facts {
-  color: var(--textMeta);
-}
-
 .access-row-request {
   display: flex;
   align-items: center;

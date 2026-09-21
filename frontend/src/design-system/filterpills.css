@@ -24,10 +24,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textContent);
+  font-family: var(--fontFamilyBody);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -48,19 +45,35 @@
 .filterpill[aria-pressed="true"] {
   border-color: var(--borderStrong);
   background: var(--bgChip);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 
-/* The figure in tabular digits (`.t-num`), each one width — a row of counts
-   keeps its rhythm instead of shifting pill to pill. Quieter than the word it
-   follows: the reader is looking for the cut and checks the number after. */
-.filterpill-count {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-regular);
-  color: var(--textMeta);
+/* THE LIST LAYOUT: the same cuts as a column of rows. Each pill takes the
+   column's width with its count pushed to the far end, so a reader runs down
+   the lanes the way they run down the rows beside them. The pills lose the
+   lozenge for the row's own corner — a column of eight lozenges reads as eight
+   buttons, and a column of rows reads as a list — and the outline goes with it
+   until the pill is pressed or pointed at, which is what a list's rows do. */
+.filterpills-list {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
 }
 
-.filterpill[aria-pressed="true"] .filterpill-count {
-  color: var(--textContent);
+.filterpills-list > .filterpill {
+  justify-content: space-between;
+  border-radius: var(--r-sm);
+  border-color: transparent;
+  background: none;
+  block-size: var(--controlHeight);
+}
+
+.filterpills-list > .filterpill:hover {
+  background: var(--bgHover);
+}
+
+/* The pressed row keeps the chip ground the pill's own pressed rule paints;
+   only the outline goes, because a list's rows have none. */
+.filterpills-list > .filterpill[aria-pressed="true"] {
+  border-color: transparent;
 }

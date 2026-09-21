@@ -23,17 +23,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
-import { Popover } from "./popover";
+import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import "./atoms.css";
 import "./evidencemark.css";
 
-// The Margince atom library (B-EP09.2, re-scoped to our own
-// system, no gw-ui port; atoms are added as screens need them). Copy always
-// arrives through props — callers translate with t(); atoms never hard-code
-// user-facing words.
+// The Margince atom library (B-EP09.2, re-scoped to our own system, no gw-ui
+// port; atoms are added as screens need them). Copy always arrives through
+// props — callers translate with t(); atoms never hard-code user-facing words.
 
 // `federated` is the door into another company's sign-in: full-width,
 // unfilled, and carrying that company's own mark. It is a variant rather than a
@@ -55,9 +54,9 @@ import "./evidencemark.css";
  * for an `<a>` or a hand-rolled `<button>`, reached through this component by a
  * verb that also needs what only this component gives — the refusal contract
  * and the `pending` one. It wears that same class rather than a look of its
- * own, so the two spellings of a link affordance cannot drift apart. `small`
- * and `iconOnly` say nothing here: the class has no fill, no width floor and no
- * control height for either to shrink.
+ * own, so the two spellings of a link affordance cannot drift apart. `iconOnly`
+ * says nothing here: the class has no fill, no width floor and no control
+ * height for it to shrink.
  */
 export type ButtonVariant =
   | "primary"
@@ -72,7 +71,7 @@ export type ButtonVariant =
  * The turning mark a control shows while a write it started is in flight.
  *
  * Exported because `Switch` carries the same state and must draw it the same
- * way; sized by whatever control hosts it (`.btn svg` is 16px, 14px small), so
+ * way; sized by whatever control hosts it (`.btn svg` draws --controlIcon), so
  * it takes no size prop. Decorative — `aria-busy` on the control is the fact,
  * and a glyph that announced itself would say it twice.
  */
@@ -101,7 +100,6 @@ function swallowWhileBusy(event: ReactMouseEvent<HTMLButtonElement>) {
 
 export function Button({
   variant = "ghost",
-  small,
   iconOnly,
   className,
   reason,
@@ -118,7 +116,6 @@ export function Button({
   // component, so this costs nothing but the type.
 }: ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
-  small?: boolean;
   /**
    * This button's whole label IS its icon, so it drops the width floor that
    * keeps a short word readable and becomes square. The caller still owes it an
@@ -217,7 +214,6 @@ export function Button({
   const classes = [
     "btn",
     `btn-${variant}`,
-    small ? "btn-sm" : "",
     iconOnly ? "btn-icon" : "",
     unavailable ? "btn-unavailable" : "",
     className ?? "",
@@ -351,6 +347,8 @@ function ButtonSentences({
   return (
     <span className={reason === undefined ? "btn-shell" : "btn-with-reason"}>
       {children}
+      {/* `t-caption` is the supporting line's role: one size and one ink for
+          every refusal, and the class atoms.css's dialog rule selects. */}
       {reason !== undefined && (
         <span id={reasonId} className="t-caption">
           {reason}
@@ -369,7 +367,34 @@ function ButtonSentences({
   );
 }
 
-type BadgeTone = "default" | "accent" | "success" | "warn" | "danger" | "ai";
+/**
+ * The closed tone vocabulary, as a VALUE that the type is read from — so the
+ * story that draws every tone and the gate that checks every tone is painted
+ * walk the same list the compiler enforces. Spelled twice, they drift, and the
+ * copy that goes stale is always the one nobody renders.
+ *
+ * `discovery` says a thing is NEW — newly arrived, newly offered, not yet how
+ * things have always been. It is the one tone that reports no verdict: a status
+ * says how something is GOING and this says how long it has been here, which is
+ * why it is a word of its own rather than a borrowed `accent`.
+ *
+ * `info` is the QUIET verdict, and it is what a row reaches for while a job is
+ * still writing it — queued, syncing, in progress — and for a status that only
+ * reports. It is not `accent`: accent is the brand asking for a press, and a
+ * status wearing it told a reader the row was the page's next move.
+ */
+export const BADGE_TONES = [
+  "default",
+  "accent",
+  "info",
+  "success",
+  "warning",
+  "danger",
+  "ai",
+  "discovery",
+] as const;
+
+type BadgeTone = (typeof BADGE_TONES)[number];
 // The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
 // mark is always Sparkles, so that tone is given neither to choose.
 type BadgeMark =
@@ -455,12 +480,12 @@ export function Avatar({
   // is never a broken image or an empty slot.
   src?: string | null;
   /**
-   * The four sizes this chip is drawn at, which used to be four numbers in
-   * four different stylesheets for a prop that admitted two: `xs` in a dense
-   * table, `sm` in every list row and beside every name, `md` on a record
-   * header, `lg` on a wide one.
+   * The four sizes — `sm` every list row, `md` a record header, `lg` a wide
+   * one, `xl` a record page's own mark — after four numbers in four
+   * stylesheets for a prop that admitted two. `sm` is the FLOOR: a dense table
+   * brings its chips down from its own sheet, density being its decision.
    */
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl";
   /**
    * What KIND of thing this chip stands for, which decides its shape.
    *
@@ -545,12 +570,13 @@ export function TextInput(props: ComponentPropsWithRef<"input">) {
  * column the results below it stand on. It is a variant rather than a caller
  * overriding `.input` from outside, because a call site that reaches in to
  * cancel a primitive's chrome is how the next surface grows a second search
- * field nobody can find.
- */
+ * field nobody can find. It takes a `ref` for the reason `TextInput` does: a
+ * caller moving focus here needs the node, and a field labelled by `Field`
+ * carries no id the caller minted to find it by. */
 export function SearchField({
   flush,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & Readonly<{ flush?: boolean }>) {
+}: ComponentPropsWithRef<"input"> & Readonly<{ flush?: boolean }>) {
   return (
     <span className={flush ? "input-icon input-icon-flush" : "input-icon"}>
       <Search aria-hidden />
@@ -805,242 +831,11 @@ export function Field({
   );
 }
 
-/**
- * StatCard is one reading at the top of a record: a label, the reading itself,
- * and one line of detail saying what it is drawn from.
- *
- * Every reading has a label and a value, and the value is never EMPTY: an
- * empty reading spells its emptiness — "0", "None yet" — because a blank where
- * a figure belongs reads as a page that failed. So there is no fallback here.
- *
- * The detail line is not decoration. A reading with no basis stated is a number
- * a reader has to trust, and this surface exists because a number nobody could
- * scale — "Relationship 2/100" — was doing exactly that.
- *
- * `tone` colours the value, never the whole tile: a strip of coloured boxes
- * reads as a dashboard, and the reader is meant to see three facts, not a
- * traffic light.
- *
- * `alert` is the one exception, for the one slot whose reading is bad news
- * simply by being present (an overdue balance, a lapsed renewal) rather than
- * by its number — those tint the whole tile, because there is no value to
- * colour that says the same thing on its own. Wire it only there; a reading
- * that could be read either way stays plain and lets its own words carry the
- * judgement.
- *
- * `basis` is the reading's receipt: the rows it was computed from, folded away
- * until a reader asks for them. It is a `Popover` that opens to a settled
- * pointer AND to a click or Enter — a row of readings is compared by moving
- * across it, and asking for a click at every stop makes the comparison cost
- * five presses, while a receipt only a pointer could open would be a reading
- * half the readers do not have. It sits OVER the card rather than expanding
- * it, so opening one does not move the readings beside it.
- *
- * The receipt is marked on the reading's NAME line rather than in the card's
- * foot. What it says is "this figure has a source", which qualifies the
- * reading the way its label does; in the foot it sat beside the door to the
- * tab, and two controls a card's width apart both reading as quiet grey text
- * are two things a reader has to tell apart before either is useful.
- *
- * Its word is the component's, not the caller's. Every one of the six callers
- * passed the same string through a `basisLabel` prop, which made a shared
- * spelling look like a per-reading decision and gave a seventh caller a place
- * to invent a different word for the same control.
- *
- * `detail` still carries the one-line basis either way: a reader who never
- * opens this must not meet a number with nothing behind it.
- */
-
-// The bar under a reading: segments a reader would count, or one track they
-// would not.
-//
-// Six is the line, and it is about counting rather than width: "one of three
-// signals" is a set a reader checks off, and "two of ten contacts" is a share
-// they read as a length. Drawn the other way round, three segments of a hundred
-// are invisible and a tenth of one track says nothing about which signal is out.
-const COUNTABLE = 6;
-
-// The segments' own names. A position in a bar has no identity of its own —
-// nothing distinguishes the second segment from the third except where it
-// sits — so they are named here rather than keyed on the loop index, which is
-// the same claim in the spelling a linter cannot tell apart from a keyed list
-// of records.
-const SEGMENTS = ["first", "second", "third", "fourth", "fifth", "sixth"];
-
-function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
-  const held = Math.min(Math.max(filled, 0), total);
-  if (total <= COUNTABLE) {
-    return (
-      <span
-        className="stat-card-meter stat-card-meter-segments"
-        aria-hidden="true"
-      >
-        {SEGMENTS.slice(0, total).map((segment, index) => (
-          <span
-            key={segment}
-            className={
-              index < held
-                ? "stat-card-meter-fill"
-                : "stat-card-meter-fill stat-card-meter-empty"
-            }
-          />
-        ))}
-      </span>
-    );
-  }
-  return (
-    <span className="stat-card-meter" aria-hidden="true">
-      <span
-        className="stat-card-meter-fill"
-        style={{ inlineSize: `${Math.round((held / total) * 100)}%` }}
-      />
-    </span>
-  );
-}
-
-export function StatCard({
-  label,
-  value,
-  detail,
-  basis,
-  tone,
-  source,
-  alert,
-  onOpen,
-  openLabel,
-  meter,
-  narrow,
-}: Readonly<{
-  label: string;
-  value: string;
-  // The line under the figure: what it rests on, in the reader's words. A node
-  // rather than a string, because a reading whose detail is two facts — how much
-  // is failing, and why — says them on two lines, not in one parsed sentence.
-  detail?: ReactNode;
-  // The way OUT of the reading: the tab that holds what it was read from. The
-  // whole CARD is this button's target (atoms.css stretches it over the tile).
-  // ONE control and not two — the basis trigger layers above it and keeps its
-  // own press, so asking what a figure rests on never also leaves the page.
-  onOpen?: () => void;
-  // What the door SAYS, where "Open" is not enough. The default stays "Open"
-  // and 90-odd callers keep it, because doors each inventing a destination were
-  // several spellings of one control. Five readings on ONE plate are the case
-  // that does not cover: five buttons reading "Open" name none of them. This
-  // REPLACES the word rather than appending — appending produced "Open Open
-  // pipeline", which is why the name was generic.
-  openLabel?: string;
-  // How far along this reading is, as the two numbers it is made of. Drawn as
-  // separate segments when there are few enough to count (a verdict made of
-  // three signals) and as one filled track when there are not (two of ten
-  // contacts replying) — the difference is whether a reader would count them.
-  //
-  // Only for a reading that HAS a denominator. A figure with nothing to be out
-  // of gets no bar rather than a bar with an invented one.
-  meter?: { filled: number; total: number };
-  // What the reading rests on, and the words that name it. The copy belongs to
-  // the caller, because no copy lives in a primitive.
-  basis?: ReactNode;
-  // `good` is not "no tone": a slot whose reading is a VERDICT says so in both
-  // directions, and a verdict that is fine reads as fine rather than as one
-  // nobody has judged yet.
-  tone?: "good" | "warn" | "danger";
-  // Where the figure came from, named on the card that shows it. A money
-  // reading a reader cannot trace is one they must verify elsewhere.
-  source?: ReactNode;
-  // Tints the whole tile. See the docblock above — this is not `tone` at
-  // stronger volume, it is a different judgement (the slot itself is bad
-  // news, not just its figure).
-  alert?: boolean;
-  // What the reading becomes where its strip can no longer hold two tiles
-  // abreast: `row` folds it into one full-width line, label and basis leading,
-  // figure trailing (statstrip.css). Nothing about the tile's air or type at
-  // any wider width — this reading is the reading beside it on a record page,
-  // and a tighter tile here once made the same figure read as a different
-  // card. A closed word, not a boolean: `narrow={true}` is a place for a
-  // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
-  narrow?: "row";
-}>) {
-  const t = useT();
-  const labelId = useId();
-  // No `t-h3`: the card owns the figure's face and size (atoms.css), because
-  // a reading is compared across a row and the row is the thing that has to
-  // agree. Sharing the page's heading class made the figure change size with a
-  // scale that answers a different question.
-  const valueClass = tone
-    ? `stat-card-value stat-card-${tone}`
-    : "stat-card-value";
-  const cardClass = [
-    "stat-card",
-    alert && "stat-card-alert",
-    narrow && `stat-card-narrow-${narrow}`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <section className={cardClass}>
-      <span className="stat-card-label">
-        {/* Its own box, so a clamp on the name spares the badge and trigger. */}
-        <span className="stat-card-label-text" id={labelId}>
-          {label}
-        </span>
-        {source && <span className="stat-card-source">{source}</span>}
-        {basis && (
-          // The panel is READ, never operated: it holds the working and
-          // nothing to press. That is what lets it open on hover — a panel
-          // carrying a control could not, because `onHover` closes it as the
-          // pointer leaves and keyboard focus never enters it, which is how
-          // the door repeated inside here became a control no keyboard reader
-          // could reach. The door lives once, in the card's foot, where a
-          // reader who has just read the working finds it directly below.
-          <Popover
-            className="stat-card-basis evmark-trigger"
-            onHover
-            label={t("stat.evidence")}
-          >
-            {/* The receipt names the QUESTION it answers, not itself: the
-                trigger is gone from under the reader's eye the moment the
-                panel is over it, and an unnamed list of facts beside a figure
-                is a reader guessing what they are looking at. */}
-            <span className="stat-card-basis-head t-eyebrow">
-              {t("stat.evidence.rests")}
-            </span>
-            {basis}
-          </Popover>
-        )}
-      </span>
-      <span className={valueClass}>{value}</span>
-      {detail && <span className="stat-card-detail t-caption">{detail}</span>}
-      {/* The proportion under the words that state it. A bar rather than a
-          second figure: the reader has the number above it, and what a bar
-          adds is the SHARE at a glance, which is what a row of readings is
-          compared on. Hidden from a screen reader — the figure and its detail
-          line already say it in words, and a bar announced as well is the
-          same fact twice. */}
-      {meter && meter.total > 0 && <Meter {...meter} />}
-      {/* THE CARD'S FOOT: the way out, at the end of the card a reader
-          finishes on rather than up beside the reading's name, where it
-          competed with the label for the first glance. */}
-      {onOpen && (
-        <span className="stat-card-foot">
-          {/* The card's label reaches a screen reader as this button's
-              DESCRIPTION whatever the word is — folded into the NAME it read
-              "Open Open pipeline". A named door names the ACTION. */}
-          <button
-            type="button"
-            className="stat-card-open"
-            onClick={onOpen}
-            aria-describedby={labelId}
-          >
-            {openLabel ?? t("stat.open")}
-            <span className="stat-card-arrow" aria-hidden="true">
-              {"\u2192"}
-            </span>
-          </button>
-        </span>
-      )}
-    </section>
-  );
-}
+// StatCard lives in statcard.tsx — a reading, its meter and its evidence
+// popover are one concept, and beside its own story they are findable. It is
+// re-exported here because thirty callers import it from `atoms`, and moving a
+// component is not a reason to move its address.
+export { StatCard } from "./statcard";
 
 // The element a card wraps its content in. A card is a section of the page by
 // default; the other four exist because a card sometimes IS the form you submit,
@@ -1053,15 +848,14 @@ type CardElement = "section" | "div" | "article" | "form" | "li";
  * padding. Every surface that reads as a card comes from here — a hand-rolled
  * `<div className="card">` drifts the moment one of those five values changes.
  *
- * `title`/`sub`/`actions` render the card's SectionHeader, so the header sits at
- * the top of the card's own padding without the caller re-deriving that; a card
+ * `title`/`actions` render the card's SectionHeader, so the header sits at the
+ * top of the card's own padding without the caller re-deriving that; a card
  * whose head is genuinely bespoke passes children only.
  */
 export function Card({
   as = "section",
   inset,
   title,
-  sub,
   actions,
   level,
   children,
@@ -1075,8 +869,9 @@ export function Card({
 }: Readonly<{
   as?: CardElement;
   inset?: boolean;
+  // The card's head, drawn as its SectionHeader: a title and, optionally, the
+  // verbs that act on it. A description belongs in the body — see SectionHeader.
   title?: string;
-  sub?: string;
   actions?: ReactNode;
   // Passed straight to the card's SectionHeader. A card nested inside a
   // section that already has an h2 passes 3, so the outline says "inside"
@@ -1112,12 +907,7 @@ export function Card({
       onSubmit={onSubmit}
     >
       {title !== undefined && (
-        <SectionHeader
-          title={title}
-          sub={sub}
-          actions={actions}
-          level={level}
-        />
+        <SectionHeader title={title} actions={actions} level={level} />
       )}
       {children}
     </Tag>
@@ -1152,15 +942,6 @@ const PENDING_LINES = [
 
 /**
  * The pending state of a surface — the ONE spelling of it in this product.
- *
- * Four grew before this: `QueryStates`' three inline-styled bars, `SurfaceState`'s
- * single silent 32px bar, `ListTable`'s five unanimated bone rows, and a page's
- * worth of hand-rolled bars and "Loading…" lines. They disagreed about the shape,
- * about the height, about whether the pulse ran at all, and — the part that
- * mattered — about whether a reader who cannot see the bars is told anything.
- * Three call sites had already bolted their own `sr-only` line beside one of
- * these, which is the tell that the primitive was missing something rather than
- * that those screens were special.
  *
  * `label` is REQUIRED and not defaulted. A placeholder carries no text, so the
  * spoken line is the only thing a screen reader has; making it a required prop
@@ -1230,7 +1011,7 @@ export function PendingBody({
           never both: this is a live region, and the same sentence twice inside
           it is announced twice. */}
       {visible ? (
-        <p className="t-caption pending-note">{label}</p>
+        <p className="pending-note">{label}</p>
       ) : (
         <span className="sr-only">{label}</span>
       )}
@@ -1297,23 +1078,41 @@ export function EmptyState({
   }
   return (
     <Card as="div" inset className="empty empty-instructional">
-      <h2 className="t-h2 empty-title">{title}</h2>
+      <Heading size="large" className="t-h2 empty-title">
+        {title}
+      </Heading>
       <div className="empty-body">{children}</div>
       {action && <div className="empty-action">{action}</div>}
     </Card>
   );
 }
 
+// Level picks the ELEMENT; between 2 and 3 the type stays put, because a card
+// head is a card head wherever it sits and the outline already says where the
+// group belongs. `1` is not a step in that scale but a different job: that
+// header IS the page's name, the only thing naming a surface the shell has
+// yielded to, so it reads at the page-title size. A table rather than a tag
+// built from the number, which would render a raw magnitude.
+const LEVEL_HEADING: Readonly<
+  Record<1 | 2 | 3, { size: HeadingSize; as: HeadingElement }>
+> = {
+  1: { size: "large", as: "h1" },
+  2: { size: "medium", as: "h2" },
+  3: { size: "medium", as: "h3" },
+};
+
 export function SectionHeader({
   title,
-  sub,
   actions,
   level = 2,
 }: Readonly<{
+  // A head is a title and, optionally, the verbs that act on it. Never a
+  // description: the title and the body below it are what give the section its
+  // meaning, and a sentence between them is a third voice saying what one of
+  // the two already said. Copy that genuinely adds something is body content.
   title: string;
-  sub?: string;
-  // Controls that act on this section, placed beside the title stack rather
-  // than under it. A caller that needs them anywhere else lays them out itself.
+  // Controls that act on this section, placed beside the title rather than
+  // under it. A caller that needs them anywhere else lays them out itself.
   actions?: ReactNode;
   // A section heading by default. `1` is for the one header on a page that IS
   // the page's name — a record surface the app shell deliberately yields to,
@@ -1325,19 +1124,17 @@ export function SectionHeader({
   // Without it those headers were h2s nested in an h2, which tells a screen
   // reader the inner block is a sibling of the page's own section — the
   // outline says the group is as important as the page it sits in, and a
-  // reader navigating by heading cannot tell where they are. The type follows
-  // the level down with it: an inner heading that is the same size as its
-  // parent is the same defect drawn instead of announced.
+  // reader navigating by heading cannot tell where they are. Between 2 and 3
+  // it moves the ELEMENT and nothing else — a card head reads at one size
+  // however deeply it sits. `1` is the exception, because it is not a deeper
+  // head but the page's own name, and it reads at the page-title size.
   level?: 1 | 2 | 3;
 }>) {
   return (
     <div className="section-header">
-      <div className="section-header-text">
-        {level === 1 && <h1>{title}</h1>}
-        {level === 2 && <h2>{title}</h2>}
-        {level === 3 && <h3>{title}</h3>}
-        {sub && <span className="sub">{sub}</span>}
-      </div>
+      <Heading {...LEVEL_HEADING[level]} className="section-header-title">
+        {title}
+      </Heading>
       {actions && <div className="section-header-actions">{actions}</div>}
     </div>
   );
@@ -1348,27 +1145,28 @@ export function SectionHeader({
  * each one.
  *
  * One component because the count is four decisions, not a number: tabular
- * figures so a column of them lines up, the reader's own number format, the host's
- * class, and the SEPARATOR — which is the one that was missing. Both strips
- * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
- * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
+ * figures so a column of them lines up, the reader's own number format, the
+ * CHIP it is drawn as, and the SEPARATOR — which is the one that was missing.
+ * Both strips rendered `{label}{count}` as adjacent nodes, so the accessible
+ * name a screen reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
  * visually hidden because the gap between them is already drawn in CSS; what it
  * fixes is the spoken name, where there was nothing between the two at all.
+ *
+ * The chip is the component's own (`.optioncount`, atoms.css) and takes no
+ * class from its caller: every host was styling the same figure itself, which
+ * is how one count came to be drawn two ways on two strips of one record. It
+ * carries no ink of its own either — it inherits the host's, so the figure goes
+ * quiet beside a quiet label and dark beside a pressed one.
  *
  * It renders INSIDE the option's button, which is what puts the figure in that
  * option's accessible name rather than leaving it to a sighted reader alone.
  */
-export function OptionCount({
-  count,
-  className,
-}: Readonly<{ count: number; className: string }>) {
+export function OptionCount({ count }: Readonly<{ count: number }>) {
   const { locale } = useLocale();
   return (
     <>
       <span className="sr-only">, </span>
-      <span className={`${className} t-num`}>
-        {formatNumber(count, locale)}
-      </span>
+      <span className="optioncount t-num">{formatNumber(count, locale)}</span>
     </>
   );
 }
@@ -1420,9 +1218,7 @@ export function SegmentedControl<Option extends string>({
             onClick={() => onChange(option)}
           >
             {labels[option]}
-            {count !== undefined && (
-              <OptionCount count={count} className="segmented-count" />
-            )}
+            {count !== undefined && <OptionCount count={count} />}
             {marks?.[option] && <span className="segmented-mark" aria-hidden />}
           </button>
         );
@@ -1776,12 +1572,11 @@ export function OverflowMenu({
           keyboard will really do. Announcing a menu we do not implement is
           worse than announcing the expandable region we do. */}
       {/* `iconOnly`, and not a class of this component's own: the ellipsis is
-          the whole label, so the control is the --control-h-sm square the
+          the whole label, so the control is the --controlHeight square the
           catalog defines and drops the width floor a WORD needs. Geometry
           belongs to the button — a padding rule beside it is a second author
           of one box, and which of the two wins is a fact about sheet order. */}
       <Button
-        small
         iconOnly
         ref={trigger}
         aria-expanded={open}
@@ -1861,7 +1656,7 @@ export function Disclosure({
     >
       <summary className="disclosure-summary">
         <ChevronRight className="disclosure-chevron" aria-hidden="true" />
-        <span className="t-label">{summary}</span>
+        <span className="disclosure-label">{summary}</span>
       </summary>
       <div className="disclosure-body">{children}</div>
     </details>

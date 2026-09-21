@@ -1,11 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import {
   Badge,
   Button,
   Card,
+  Field,
   SectionHeader,
   TextInput,
 } from "../design-system/atoms";
@@ -21,7 +22,6 @@ import { problemMessageOf, throwProblem } from "./common";
 export function ClientSurfaceScreen() {
   const t = useT();
   const [email, setEmail] = useState("");
-  const emailId = useId();
 
   const lookup = useMutation({
     mutationFn: async (query: string) => {
@@ -44,20 +44,19 @@ export function ClientSurfaceScreen() {
         </a>
       </header>
       <div className="wrap narrow">
-        <SectionHeader title={t("client.title")} sub={t("client.sub")} />
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span className="t-label" id={emailId}>
-            {t("client.sender")}
-          </span>
-          <TextInput
-            aria-labelledby={emailId}
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            style={{ flex: 1 }}
-          />
+        <SectionHeader title={t("client.title")} />
+        <div className="client-lookup">
+          <Field label={t("client.sender")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            )}
+          </Field>
           <Button
             variant="primary"
-            small
             disabled={email.trim() === "" || lookup.isPending}
             onClick={() => lookup.mutate(email.trim())}
           >
@@ -70,15 +69,17 @@ export function ClientSurfaceScreen() {
             {lookup.data.map((hit) => (
               <div
                 key={hit.id}
-                style={{ display: "flex", gap: 8, alignItems: "center" }}
+                style={{
+                  display: "flex",
+                  gap: "var(--space-2)",
+                  alignItems: "center",
+                }}
               >
                 <strong>{hit.title}</strong>
                 {hit.snippet && (
                   <span className="t-caption">{hit.snippet}</span>
                 )}
-                <a className="t-caption" href={`#/contacts/${hit.id}`}>
-                  {t("client.open360")}
-                </a>
+                <a href={`#/contacts/${hit.id}`}>{t("client.open360")}</a>
               </div>
             ))}
           </Card>
@@ -86,12 +87,12 @@ export function ClientSurfaceScreen() {
 
         {lookup.isSuccess && lookup.data.length === 0 && (
           <Card inset style={{ marginTop: "var(--space-3)" }}>
-            <p className="t-label">{t("client.unknown")}</p>
-            <p className="t-caption" style={{ marginTop: 4 }}>
+            <p>{t("client.unknown")}</p>
+            <p style={{ marginTop: "var(--space-1)" }}>
               {t("client.unknownDetail")}
             </p>
             <div className="card-actions">
-              <a className="btn btn-ghost btn-sm" href="#/leads">
+              <a className="btn btn-ghost" href="#/leads">
                 {t("client.createLead")}
               </a>
             </div>
@@ -100,7 +101,6 @@ export function ClientSurfaceScreen() {
 
         {lookup.isError && (
           <p
-            className="t-caption"
             style={{ color: "var(--dangerText)", marginTop: "var(--space-3)" }}
           >
             {problemMessageOf(lookup.error, t)}

@@ -118,6 +118,16 @@ export function MoveButton({
       // useTaskUpdate's own key list; this arm has its own onSuccess and so
       // needs it spelled.
       queryClient.invalidateQueries({ queryKey: ["worklist"] });
+      // And every contact page, because this button can now file work AGAINST a
+      // contact: the meeting move links the task to the stakeholder it names.
+      // That contact's page opens on a moment derived from exactly this task,
+      // so leaving its cache alone means a reader who files the meeting here
+      // and clicks through still reads "no next step with them" for the next
+      // half-minute. The key is per contact and this button does not know
+      // which, so the prefix is invalidated whole — one page's worth of refetch
+      // against telling a reader something that stopped being true when they
+      // pressed the button.
+      queryClient.invalidateQueries({ queryKey: ["contact360"] });
     },
   });
 
@@ -127,7 +137,7 @@ export function MoveButton({
       if (!activityId) return null;
       return (
         <>
-          <Button small onClick={() => setTaskOpen(true)}>
+          <Button onClick={() => setTaskOpen(true)}>
             {t("deal360.openTask")}
           </Button>
           {taskOpen && (
@@ -147,9 +157,10 @@ export function MoveButton({
       }
       return (
         <>
+          {/* The agent's own step, in the agent's own colour: a rule wrote
+              the task and pressing this accepts it. */}
           <Button
-            variant="primary"
-            small
+            variant="ai"
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
           >
@@ -157,9 +168,7 @@ export function MoveButton({
             {t("deal360.createTask")}
           </Button>
           {createTask.isError ? (
-            <p className="t-caption t-danger">
-              {problemMessageOf(createTask.error, t)}
-            </p>
+            <p className="t-danger">{problemMessageOf(createTask.error, t)}</p>
           ) : null}
         </>
       );
@@ -176,7 +185,7 @@ export function MoveButton({
       }
       return (
         <>
-          <Button variant="primary" small onClick={() => setBriefOpen(true)}>
+          <Button variant="ai" onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>

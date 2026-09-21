@@ -231,7 +231,7 @@ func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T)
 	}
 	// Whatever the ladder chose, it must not be a verdict about the sections
 	// this reader was refused.
-	for _, claim := range []string{"nobody is waiting on a reply", "nothing is owed"} {
+	for _, claim := range []string{"nobody waiting on a reply", "nothing owed"} {
 		if strings.Contains(page.Moment.WhyNow, claim) {
 			t.Errorf("the moment says %q to a reader shown %d withheld section(s): %q",
 				claim, len(page.SectionsOmitted), page.Moment.WhyNow)

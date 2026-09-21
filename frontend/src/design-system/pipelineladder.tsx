@@ -28,13 +28,21 @@ type Rung = components["schemas"]["PipelineStageRung"];
 // tone on purpose: neither is a claim about the MESSAGE, they are statements
 // about what this surface can tell the reader, and a verdict colour would read
 // as one.
-const STATUS_TONE: Record<
+//
+// Exported for the reason `reasonText` beside it is: a rung's status is one
+// vocabulary, and the company's capture-triage section draws the same rungs.
+// A copy of this map there had already drifted — pending came out amber, which
+// is the one reading the comment below rules out.
+export const STATUS_TONE: Record<
   Rung["status"],
-  "success" | "warn" | "danger" | undefined
+  "info" | "success" | "danger" | undefined
 > = {
   done: "success",
   skipped: undefined,
-  pending: "warn",
+  // `info` and not `warning`: a rung the message has not reached yet is work
+  // still in flight, and amber told a reader to act on a delivery that is
+  // simply not finished.
+  pending: "info",
   failed: "danger",
   not_applicable: undefined,
   unknown: undefined,
@@ -75,7 +83,7 @@ function PipelineRung({ rung }: Readonly<{ rung: Rung }>) {
       <span className="pipeline-ladder__mark" aria-hidden="true" />
       <div className="pipeline-ladder__body">
         <p className="pipeline-ladder__head">
-          <span className="pipeline-ladder__stage">{stageName(rung, t)}</span>
+          <span>{stageName(rung, t)}</span>
           <Badge tone={STATUS_TONE[rung.status]}>
             {t(`pipeline.status.${rung.status}`)}
           </Badge>
@@ -99,11 +107,7 @@ function SubjectNote({ rung }: Readonly<{ rung: Rung }>) {
   if (rung.subject_kind === "message") {
     return null;
   }
-  return (
-    <span className="pipeline-ladder__subject">
-      {t(`pipeline.subject.${rung.subject_kind}`)}
-    </span>
-  );
+  return <span>{t(`pipeline.subject.${rung.subject_kind}`)}</span>;
 }
 
 function RungReason({ rung }: Readonly<{ rung: Rung }>) {
@@ -199,8 +203,29 @@ const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "ingress_gate.connector_side_defect": "pipeline.reason.connector_side_defect",
   "erasure_check.would_restore_erased": "pipeline.reason.would_restore_erased",
   "claim_extraction.no_writer_yet": "pipeline.reason.no_writer_yet",
-  "company_triage.not_reported_yet": "pipeline.reason.not_reported_yet",
-  "material_events.not_reported_yet": "pipeline.reason.not_reported_yet",
+  "company_triage.answered_on_the_company":
+    "pipeline.reason.answered_on_the_company",
+  "company_triage.company_warranted": "pipeline.reason.company_warranted",
+  "company_triage.no_site_identified": "pipeline.reason.no_site_identified",
+  "company_triage.triage_queued": "pipeline.reason.triage_queued",
+  "company_triage.triage_unevidenced": "pipeline.reason.triage_unevidenced",
+  "company_triage.triage_stale_evidence":
+    "pipeline.reason.triage_stale_evidence",
+  "company_triage.triage_near_duplicate":
+    "pipeline.reason.triage_near_duplicate",
+  "material_events.transport_not_read": "pipeline.reason.transport_not_read",
+  "material_events.archived": "pipeline.reason.thread_not_captured",
+  "material_events.record_not_available":
+    "pipeline.reason.record_not_available",
+  "material_events.events_raised": "pipeline.reason.events_raised",
+  "material_events.nothing_material": "pipeline.reason.nothing_material",
+  "material_events.thread_still_moving": "pipeline.reason.thread_still_moving",
+  "material_events.awaiting_scan": "pipeline.reason.awaiting_scan",
+  "material_events.reading_parked": "pipeline.reason.reading_parked",
+  "material_events.no_single_account": "pipeline.reason.no_single_account",
+  "material_events.two_bodies_of_work": "pipeline.reason.two_bodies_of_work",
+  "material_events.thread_not_all_open": "pipeline.reason.thread_not_all_open",
+  "material_events.no_named_reader": "pipeline.reason.no_named_reader",
 };
 
 // stageName prefers this build's own catalog and falls back to the server's.
@@ -209,7 +234,11 @@ function stageName(rung: Rung, t: ReturnType<typeof useT>): string {
   return key ? t(key) : (rung.label ?? rung.stage);
 }
 
-function reasonText(rung: Rung, t: ReturnType<typeof useT>): string {
+// EXPORTED, because a second surface reports a rung: the company-keyed door
+// onto company_triage (screens/companytriage.tsx). Its rungs are the same
+// vocabulary, and a second copy of this resolution there would be a second
+// catalog — the one that goes stale when a reason is added here.
+export function reasonText(rung: Rung, t: ReturnType<typeof useT>): string {
   if (!rung.reason) {
     return "";
   }

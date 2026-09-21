@@ -3,8 +3,9 @@
 
 import type { ReactNode } from "react";
 import { useRecordZone } from "../app/recordzone";
+import { Heading } from "../design-system/heading";
 import { middayInstant } from "../format/calendarday";
-import { formatDate, hourInZone } from "../format/format";
+import { formatDate, formatDayLong, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -176,15 +177,21 @@ export function BriefGlance({
   const date = view === "morning" ? now.toISOString() : week?.local_week_start;
   return (
     <header className="glance arrive" data-testid="brief-glance">
-      <h1 className="glance-greeting t-display">{greeting}</h1>
+      <Heading size="xlarge" className="glance-greeting t-display">
+        {greeting}
+      </Heading>
       {date && (
-        <p className="t-caption">
+        <p className="t-eyebrow glance-date">
           <time dateTime={date}>
-            {formatDate(
-              view === "weekly" ? middayInstant(date, recordZone) : date,
-              locale,
-              view === "weekly" ? recordZone : viewerZone(),
-            )}
+            {/* The morning names its day the way a page over a greeting does
+                — the weekday and the month written out — because a reader
+                arriving at their desk asks "what day is it" before "what is
+                the date". The weekly keeps the numeric form: it names a
+                week's start, which is a date a reader compares, not a day
+                they are in. */}
+            {view === "weekly"
+              ? formatDate(middayInstant(date, recordZone), locale, recordZone)
+              : formatDayLong(date, locale, viewerZone())}
           </time>
         </p>
       )}

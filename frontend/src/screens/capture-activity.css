@@ -72,14 +72,9 @@
   white-space: nowrap;
 }
 
-.capture-activity__subject {
-  color: var(--textMeta);
-}
-
 /* "content not stored" is a statement about the installation's posture, not a
  * missing value, so it reads as prose rather than as an empty field. */
 .capture-activity__content--absent {
-  color: var(--textTertiary);
   font-style: italic;
 }
 /* The funnel slots are filters. A pressed button rather than a Switch: a

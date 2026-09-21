@@ -21,8 +21,8 @@
     "proof",
     "market"
   ],
-  "score_p50": 85,
-  "score_min": 0,
+  "judge_score_p50": 85,
+  "judge_score_min": 0,
   "latency_p50": 10016,
   "latency_p95": 26168,
   "mean_tokens": 4683,

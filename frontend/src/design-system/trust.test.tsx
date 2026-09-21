@@ -191,6 +191,70 @@ describe("ProvenanceTag", () => {
     expect(claimsAModel("Automated by an agent")).toBe(true);
     expect(claimsAModel("System task")).toBe(false);
   });
+
+  // An import runs as ONE administrator, so captured_by names that seat on
+  // every row it wrote and `self` is true for them across all of it. That is
+  // how a migration comes to tell one colleague they typed a decade of
+  // everybody else's correspondence. The author is the only field that knows
+  // better, so it is read before `self` is.
+  it("names the author of an imported row instead of the reader who imported it", () => {
+    render(
+      <ProvenanceTag
+        provenance={{
+          kind: "human",
+          self: true,
+          userId: "u-lars",
+          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+        }}
+      />,
+    );
+    expect(badgeReading("Logged in HubSpot by Mutaz Suleiman")).toBeTruthy();
+    expect(screen.queryByText("Typed by you")).toBeNull();
+  });
+
+  // An author who never held a seat here has a name and nothing else — 36 of
+  // the 76 colleagues a HubSpot import carries are that. The row still says
+  // who wrote it; only the system it came from goes unnamed.
+  it("names an author whose source system was not recorded", () => {
+    render(
+      <ProvenanceTag
+        provenance={{
+          kind: "human",
+          self: true,
+          author: { display_name: "Shayne Doherty" },
+        }}
+      />,
+    );
+    expect(badgeReading("Logged by Shayne Doherty")).toBeTruthy();
+    expect(screen.queryByText("Typed by you")).toBeNull();
+  });
+
+  // The author outranks `renderUser` too. A colleague who still holds a seat
+  // resolves through the member directory on every other row, but on an
+  // imported one the directory would name whoever captured_by points at —
+  // the administrator again, not the author.
+  it("prefers the author over the seat the row was captured under", () => {
+    render(
+      <ProvenanceTag
+        provenance={{
+          kind: "human",
+          self: false,
+          userId: "u-lars",
+          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+        }}
+        renderUser={(id) => <span>Lars ({id})</span>}
+      />,
+    );
+    expect(badgeReading("Logged in HubSpot by Mutaz Suleiman")).toBeTruthy();
+    expect(screen.queryByText(/^Typed by Lars/)).toBeNull();
+  });
+
+  // No author is every other row in the product, which must read exactly as it
+  // did before this branch existed.
+  it("leaves a row with no author reading as it always did", () => {
+    render(<ProvenanceTag provenance={{ kind: "human", self: true }} />);
+    expect(claimsAModel("Typed by you")).toBe(false);
+  });
 });
 
 // WHERE in the source a claim came from. A quoted sentence with no address is

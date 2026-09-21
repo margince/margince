@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -86,10 +87,16 @@ type ContactEnsurer interface {
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
 // exact wording/version the anonymous booker was shown.
+//
+// Wording is a value and not a pointer because by the time a BookingConsent
+// exists there is no such thing as a grant that cannot say what the subject
+// read: both doors refuse one before a contact row exists. The wire field
+// stays optional because tightening a shipped request field is a breaking
+// change; this type is downstream of the refusal, and says so in its shape.
 type BookingConsent struct {
 	PurposeID     ids.UUID
 	PolicyVersion string
-	Wording       *string
+	Wording       string
 	// Marketing is the affirmative tick, absent when the form carried none or
 	// the box was left unchecked. It names a question to ASK, never a grant to
 	// write — see BookingMarketing.
@@ -131,10 +138,27 @@ type BookingMarketing struct {
 	TickedFrom string
 }
 
+// requestedPurpose is the purpose id a form NAMED, or nothing. The contract's
+// uuid type and the kernel's are different spellings of the same sixteen bytes,
+// and the seam speaks the kernel's.
+func requestedPurpose(c crmcontracts.CaptureConsent) *ids.UUID {
+	if c.PurposeId == nil {
+		return nil
+	}
+	named := ids.UUID(*c.PurposeId)
+	return &named
+}
+
 // ConsentCapturer records the booker's consent grant (the consent
-// module behind a seam). ValidatePurpose runs BEFORE any write so a
+// module behind a seam). ScopedPurpose runs BEFORE any write so a
 // bogus purpose refuses the whole capture — no contact row without a
 // recordable consent.
+//
+// It ANSWERS the purpose rather than admitting one the caller named, because a
+// caller may name none: the booking doors are confined to a single purpose
+// whose id is minted per installation and never published, so naming it is
+// something only a caller that read the catalog can do. What comes back is what
+// the grant is written against.
 //
 // ValidateMarketingPurpose is the same before-any-write probe for the marketing
 // tick, and it is a SECOND method rather than an argument to the first because
@@ -142,7 +166,7 @@ type BookingMarketing struct {
 // operational purpose, and the marketing question admits only a purpose that
 // requires double opt-in. Folding them would give one call site two meanings.
 type ConsentCapturer interface {
-	ValidatePurpose(ctx context.Context, purposeID ids.UUID) error
+	ScopedPurpose(ctx context.Context, requested *ids.UUID) (ids.UUID, error)
 	ValidateMarketingPurpose(ctx context.Context, purposeID ids.UUID) error
 	// CaptureBookingConsent records the operational grant and, when the form
 	// carried a tick, asks the newsletter question.
@@ -155,6 +179,14 @@ type ConsentCapturer interface {
 	// asked again, and refusing the booking for it takes away the thing they
 	// actually came for.
 	CaptureBookingConsent(ctx context.Context, contactID ids.UUID, consent BookingConsent) (MarketingOutcome, error)
+	// RecordBookingInquiry records that this contact ASKED for the meeting —
+	// the lawful basis for answering them about it.
+	//
+	// It takes the booked activity because the row cites its evidence: a basis
+	// nobody can look up is an assertion, and the meeting they booked is the
+	// thing that happened. Called only from the PUBLIC door, since a rep
+	// booking on somebody's behalf is not that somebody initiating contact.
+	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
 }
 
 // MarketingOutcome says what became of a booking form's newsletter tick.
@@ -263,8 +295,8 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	if !h.bookingRequestIsWritable(w, r, req) {
 		return
 	}
-	purposeID := ids.UUID(req.Consent.PurposeId)
-	if err := h.publicConsent.ValidatePurpose(r.Context(), purposeID); err != nil {
+	purposeID, err := h.publicConsent.ScopedPurpose(r.Context(), requestedPurpose(req.Consent))
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
@@ -284,7 +316,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: req.Consent.PolicyVersion,
-		Wording:       req.Consent.Wording,
+		Wording:       *req.Consent.Wording,
 		Marketing:     marketing,
 	})
 	if err != nil {
@@ -296,7 +328,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	if req.Subject != nil && *req.Subject != "" {
 		subject = *req.Subject
 	}
-	_, err = h.store.BookMeeting(r.Context(), BookMeetingInput{
+	booked, err := h.store.BookMeeting(r.Context(), BookMeetingInput{
 		Host:    page.HostUserID,
 		Start:   req.Start,
 		End:     req.End,
@@ -312,6 +344,21 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		}
 		writeStoreErr(w, r, err)
 		return
+	}
+	// They asked for this meeting, and that is what makes answering them about
+	// it lawful. Recorded here, where it happened: an inquiry leaves no inbound
+	// message for a later send to derive from, so an event this door does not
+	// write is a basis nobody has.
+	//
+	// AFTER the booking and not instead of it. The meeting is what the subject
+	// came for and it is committed; a basis that could not be stamped costs a
+	// rep a manual send later, which is the under-allowing side this whole
+	// model is deliberately on. So it is reported rather than fatal — and
+	// reported, not swallowed: an installation whose bookings stop producing a
+	// basis needs to see that in its log rather than in a rep's surprise.
+	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contactID, ids.UUID(booked.Id)); err != nil {
+		slog.WarnContext(r.Context(), "booking: the inquiry that authorises answering this booker was not recorded",
+			"contact_id", contactID, "activity_id", booked.Id, "err", err)
 	}
 	// BOTH outcomes, named separately. The booking is confirmed or it is not,
 	// and the newsletter question was asked or it was not — a response saying
@@ -400,8 +447,8 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return false
 	}
-	purposeID := ids.UUID(c.PurposeId)
-	if err := h.publicConsent.ValidatePurpose(r.Context(), purposeID); err != nil {
+	purposeID, err := h.publicConsent.ScopedPurpose(r.Context(), requestedPurpose(*c))
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return false
 	}
@@ -421,7 +468,7 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 	if _, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: c.PolicyVersion,
-		Wording:       c.Wording,
+		Wording:       *c.Wording,
 		Marketing:     marketing,
 	}); err != nil {
 		writeStoreErr(w, r, err)

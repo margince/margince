@@ -1,0 +1,14 @@
+# What this build can actually withhold: one "<object> <field>" per line, sorted.
+#
+# Rendered from the enforcing code by deals/maskablefields_test.go and compared
+# against a migrated database's maskable_field table by
+# compose/integration/maskablefieldparity_integration_test.go. Neither side may
+# move without the other: a pair the code withholds and the table does not offer
+# cannot be configured at all, and a pair the table offers and no code withholds
+# is a mask an administrator sets and nothing applies.
+deal amount_minor
+deal company_id
+deal currency
+deal expected_arr_minor
+deal partner_company_id
+deal project_id

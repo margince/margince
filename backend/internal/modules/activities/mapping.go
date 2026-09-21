@@ -201,23 +201,50 @@ func meetingStatusArg(status *crmcontracts.UpdateActivityRequestMeetingStatus) *
 // a second mapping written beside this one would be a second set of rules
 // about the reserved import namespace, and the two would drift.
 func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, false)
+}
+
+// logActivityInputAllowingReminderIdentity is LogActivityInputFrom for the
+// automation engine's own reminder write, which must stamp an identity no
+// client may spell. provider.go's logInputForPrincipal decides who reaches it,
+// on the principal rather than on anything in the request.
+//
+// One body behind both, because the guard is the only difference: a second
+// mapping beside this one would be a second set of rules about the reserved
+// namespace, and the two would drift.
+func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, true)
+}
+
+// refuseReservedProvenance guards the two provenance fields on a create wire.
+//
+// The importer's namespace is not a client's to write: this store keys its
+// idempotent replay on (source_system, source_id), so a caller who could spell
+// the reserved prefix could pre-plant a row under an incumbent record id and
+// have a later import hand it back as already existing
+// (provenance.ReservedSourceSystemPrefix).
+//
+// engineReminder admits the automation engine's own reminder identity and
+// nothing else — the importer's namespace stays refused even for it.
+func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, engineReminder bool) error {
+	if req.SourceSystem != nil {
+		if !engineReminder || !provenance.EngineReminderSource(*req.SourceSystem) {
+			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
+				return err
+			}
+		}
+		if *req.SourceSystem == connector.EmailSourceSystem {
+			return &ReservedMailIdentityError{}
+		}
+	}
+	return provenance.Refuse("source", req.Source)
+}
+
+func logActivityInput(req crmcontracts.CreateActivityRequest, engineReminder bool) (LogActivityInput, error) {
 	if req.Kind == "" {
 		return LogActivityInput{}, &RequiredFieldError{Field: "kind"}
 	}
-	// The importer's namespace is not a client's to write: this store
-	// keys its idempotent replay on (source_system, source_id), so a
-	// caller who could spell the reserved prefix could pre-plant a row
-	// under an incumbent record id and have a later import hand it back
-	// as already existing (provenance.ReservedSourceSystemPrefix).
-	if req.SourceSystem != nil {
-		if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
-			return LogActivityInput{}, err
-		}
-		if *req.SourceSystem == connector.EmailSourceSystem {
-			return LogActivityInput{}, &ReservedMailIdentityError{}
-		}
-	}
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := refuseReservedProvenance(req, engineReminder); err != nil {
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{
@@ -232,38 +259,8 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 		Source:       req.Source,
 		AssigneeID:   idArg[ids.UserKind](req.AssigneeId),
 	}
-	if req.RequestActivityId != nil {
-		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
-			return LogActivityInput{}, &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
-		}
-		id := ids.UUID(*req.RequestActivityId)
-		in.RequestActivityID = &id
-	}
-	// The caller states the transport; nothing infers it. The predecessor of this
-	// read the provider back out of the kind, which was only ever a translation of
-	// an input shape that could not say what it meant — and since ADR-0107/A158 the
-	// kind does not name a transport at all.
-	if req.ChannelProvider != nil {
-		in.ChannelProvider = *req.ChannelProvider
-	}
-	if req.Direction != nil {
-		d := string(*req.Direction)
-		in.Direction = &d
-	}
-	if req.MeetingStatus != nil {
-		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
-			return LogActivityInput{}, &MeetingStatusKindError{Kind: in.Kind}
-		}
-		m := string(*req.MeetingStatus)
-		in.MeetingStatus = &m
-	}
-	if req.Links != nil {
-		for _, link := range *req.Links {
-			in.Links = append(in.Links, ActivityLinkInput{
-				EntityType: string(link.EntityType),
-				EntityID:   ids.UUID(link.EntityId),
-			})
-		}
+	if err := optionalFieldsFrom(req, &in); err != nil {
+		return LogActivityInput{}, err
 	}
 	if err := refuseKindProviderMismatch(in.Kind, in.ChannelProvider); err != nil {
 		return LogActivityInput{}, err
@@ -282,5 +279,88 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 		}
 		in.Body = &normalized
 	}
+	if err := importedProvenanceFrom(req, &in); err != nil {
+		return LogActivityInput{}, err
+	}
 	return in, nil
+}
+
+// optionalFieldsFrom carries the create wire's optional fields onto the input,
+// with the two kind rules that only apply when their field is present: a
+// request acceptance belongs to a task, a meeting status to a meeting.
+//
+// Apart from logActivityInput because they are one group — every branch here is
+// "the caller said nothing, so leave it alone" — and holding them beside the
+// required fields put more of one function in a reader's head than the mapping
+// itself needed.
+func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	if req.RequestActivityId != nil {
+		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
+			return &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
+		}
+		id := ids.UUID(*req.RequestActivityId)
+		in.RequestActivityID = &id
+	}
+	// The caller states the transport; nothing infers it. The predecessor of this
+	// read the provider back out of the kind, which was only ever a translation of
+	// an input shape that could not say what it meant — and since ADR-0107/A158 the
+	// kind does not name a transport at all.
+	if req.ChannelProvider != nil {
+		in.ChannelProvider = *req.ChannelProvider
+	}
+	if req.Direction != nil {
+		d := string(*req.Direction)
+		in.Direction = &d
+	}
+	if req.MeetingStatus != nil {
+		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
+			return &MeetingStatusKindError{Kind: in.Kind}
+		}
+		m := string(*req.MeetingStatus)
+		in.MeetingStatus = &m
+	}
+	// Only a meeting has a host to name. A caller who sends one on a mail or a
+	// task is refused rather than having it dropped: the field they meant to set
+	// is the wrong one for what they are logging, and silently ignoring it leaves
+	// them believing an attribution that was never written.
+	//
+	// Saying nothing means "I held it": the store fills in the acting human for
+	// a meeting with no host named. There is deliberately no way to say "a
+	// meeting nobody here hosted" on the create wire — that state exists on the
+	// row for imports whose calendar named no owner, and a human logging a
+	// meeting they were at is the case this path serves.
+	if req.HostUserId != nil {
+		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
+			return &KindFieldError{Field: "host_user_id", Only: "a meeting"}
+		}
+		in.HostUserID = idArg[ids.UserKind](req.HostUserId)
+	}
+	if req.Links != nil {
+		for _, link := range *req.Links {
+			in.Links = append(in.Links, ActivityLinkInput{
+				EntityType: string(link.EntityType),
+				EntityID:   ids.UUID(link.EntityId),
+			})
+		}
+	}
+	return nil
+}
+
+// importedProvenanceFrom takes what an importer keeps with a record it carried
+// across: the source system's own copy, how long it took, and the message's own
+// identity and addresses.
+//
+// All of it was accepted on the wire and dropped before the store, which is the
+// defect this path closes.
+func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	in.Raw = req.Raw
+	if req.DurationSeconds != nil {
+		// The contract promises field_not_valid_for_kind for this, and only the
+		// two kinds that occupy a span of time have a duration to state.
+		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
+			return &KindFieldError{Field: "duration_seconds", Only: "a meeting or call"}
+		}
+		in.DurationSeconds = req.DurationSeconds
+	}
+	return mailIdentityFrom(req, in)
 }

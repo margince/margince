@@ -218,11 +218,11 @@ func TestConfirmTOTPEndsEveryOtherSessionOfTheMember(t *testing.T) {
 	e.withVault()
 
 	// Two devices signed in before any factor existed.
-	_, keep, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	_, keep, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("first login: %v", err)
 	}
-	_, other, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	_, other, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("second login: %v", err)
 	}
@@ -233,17 +233,17 @@ func TestConfirmTOTPEndsEveryOtherSessionOfTheMember(t *testing.T) {
 		t.Fatalf("start: %v", err)
 	}
 	code, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(keep)); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(keep.Token)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 
 	// The confirming session survives; every session that predates the factor
 	// is dead — it was opened when a password alone sufficed, and confirming
 	// must not launder it into a factor-backed one.
-	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), keep); err != nil {
+	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), keep.Token); err != nil {
 		t.Fatalf("the confirming session did not survive enrolment: %v", err)
 	}
-	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), other); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), other.Token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the pre-factor session still authenticates: err=%v, want ErrNotFound", err)
 	}
 }

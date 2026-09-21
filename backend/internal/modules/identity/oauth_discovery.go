@@ -13,12 +13,15 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
-// OAuthServerMetadata is the RFC 8414 discovery document. The issuer is
-// the serving host — one issuer per workspace subdomain in production. A
-// method on Handlers (not a package func) because the sibling protected-
-// resource document needs the handlers' injected config.
+// OAuthServerMetadata is the RFC 8414 discovery document. The issuer is the
+// installation's configured origin (see configuredIssuer), so every endpoint
+// named here is one this installation's operator chose rather than one a
+// request's Host header supplied.
 func (h Handlers) OAuthServerMetadata(w http.ResponseWriter, r *http.Request) {
-	issuer := requestIssuer(r)
+	issuer, ok := h.configuredIssuer(w, r)
+	if !ok {
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{
 		"issuer":                 issuer,
 		"authorization_endpoint": issuer + authorizePath,
@@ -54,11 +57,17 @@ func (h Handlers) OAuthServerMetadata(w http.ResponseWriter, r *http.Request) {
 // resource field is the canonical MCP URL itself (h.mcpResource),
 // injected at boot from --public-base-url — Anthropic's clients require
 // it to match the MCP server URL exactly as the user enters it,
-// including the path, so it can never be the bare request origin.
+// including the path, so it can never be the bare request origin. The
+// authorization server it names is that same URL's origin, for the same
+// reason and from the same value.
 func (h Handlers) ProtectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
+	issuer, ok := h.configuredIssuer(w, r)
+	if !ok {
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{
 		oauthParamResource:         h.mcpResource,
-		"authorization_servers":    []string{requestIssuer(r)},
+		"authorization_servers":    []string{issuer},
 		"bearer_methods_supported": []string{"header"},
 		// The vocabulary belongs HERE, not only in the authorization server's
 		// document: this is the RFC 9728 §2 field a client reads to learn what
@@ -74,8 +83,28 @@ func (h Handlers) ProtectedResourceMetadata(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// requestIssuer reconstructs the externally visible origin, delegating to
-// the one implementation in platform/httpserver so identity and compose
-// share it rather than each carrying its own copy of the
-// X-Forwarded-Proto handling.
-func requestIssuer(r *http.Request) string { return httpserver.RequestOrigin(r) }
+// configuredIssuer is the issuer both discovery documents name: the origin of
+// the MCP resource the composition root injected from --public-base-url, read
+// through the one reduction the connector's Origin guard and 401 challenge use.
+//
+// A request never contributes to it. These documents tell a client where to
+// send its authorization code, PKCE verifier and registration, so an origin
+// rebuilt from Host or X-Forwarded-Host would let whoever shaped the request —
+// or a proxy passing their header on — choose that destination.
+//
+// Both documents are also marked no-store. Their content no longer varies by
+// request, but a shared cache holding a discovery document is a copy nobody
+// here can retract when the configured origin changes.
+//
+// With no resource configured there is no origin to advertise, and the answer is
+// the mux's own 404: the same response a deployment with the connector off
+// gives, rather than a document whose endpoints are relative to nowhere.
+func (h Handlers) configuredIssuer(w http.ResponseWriter, r *http.Request) (string, bool) {
+	issuer := httpserver.ConfiguredOrigin(h.mcpResource)
+	if issuer == "" {
+		http.NotFound(w, r)
+		return "", false
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	return issuer, true
+}

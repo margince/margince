@@ -354,7 +354,7 @@ function PartnerForm({
         )}
       </Field>
       {mutation.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(mutation.error, t)}
         </p>
       )}
@@ -366,12 +366,11 @@ function PartnerForm({
         }}
       >
         {onCancel && (
-          <Button small type="button" onClick={onCancel}>
+          <Button type="button" onClick={onCancel}>
             {t("create.cancel")}
           </Button>
         )}
         <Button
-          small
           variant="primary"
           type="submit"
           pending={mutation.isPending}
@@ -418,11 +417,7 @@ function PartnerDetail({
     <Panel
       title={t("tab.partner")}
       titleAction={
-        <Button
-          small
-          onClick={() => setEditing(true)}
-          data-testid="edit-partner"
-        >
+        <Button onClick={() => setEditing(true)} data-testid="edit-partner">
           {t("record.edit")}
         </Button>
       }

@@ -11,7 +11,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, RefusalLine, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
@@ -143,6 +143,16 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const primaryCompany = allEmployments.find(
     (e) => e.is_current_primary && stillHeld(e),
   )?.company_id;
+  // A contact who still works somewhere and has no primary employer is a
+  // DELIBERATE gap, not a missing value: a human cleared the flag, or their
+  // primary was retired while two others remained and the store refuses to
+  // choose between them on somebody's behalf. Left unsaid it reaches the page
+  // as a list with no "current" marker on it, which reads as a bug.
+  //
+  // Not the empty state — the list is not empty — and not a warning, because
+  // nothing is wrong. A prompt, and the hook the row's own edit offers.
+  const noPrimaryEmployer =
+    primaryCompany === undefined && allEmployments.some(stillHeld);
   const employments = [...allEmployments].sort(
     (a, b) =>
       Number(b.company_id === primaryCompany) -
@@ -178,7 +188,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       title={t("contact.rail.employmentTitle")}
       titleAction={
         canEdit ? (
-          <Button small variant="ghost" onClick={() => setAdding(true)}>
+          <Button variant="ghost" onClick={() => setAdding(true)}>
             {t("contact.rail.addEmployment")}
           </Button>
         ) : undefined
@@ -229,10 +239,12 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             />
           ))}
         </SurfaceState>
-        {more.isError && <p role="alert">{problemMessageOf(more.error, t)}</p>}
+        {noPrimaryEmployer && (
+          <p className="t-caption">{t("contact.rail.noPrimaryEmployer")}</p>
+        )}
+        {more.isError && <RefusalLine error={more.error} />}
         {more.hasNextPage && (
           <Button
-            small
             pending={more.isFetchingNextPage}
             onClick={() => more.fetchNextPage()}
           >

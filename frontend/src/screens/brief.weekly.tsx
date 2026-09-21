@@ -68,17 +68,6 @@ export function WeeklySection() {
     <section id="brief-weekly">
       <Panel
         title={t("brief.panel.weekly")}
-        sub={
-          review.data
-            ? t("brief.weekly.weekOf", {
-                day: formatDate(
-                  middayInstant(review.data.local_week_start, recordZone),
-                  locale,
-                  recordZone,
-                ),
-              })
-            : undefined
-        }
         // The mark and the way out of the week, in that order.
         //
         // FROZEN is the claim that separates this panel from every other on
@@ -106,7 +95,7 @@ export function WeeklySection() {
                 {/* When it was written, which is what makes the badge a fact
                     rather than a decoration — a reader can tell a week closed
                     an hour ago from one closed on Monday. */}
-                <span className="t-caption brief-weekly-written">
+                <span className="t-caption">
                   {t("brief.weekly.written", {
                     at: formatDateTime(
                       review.data.generated_at,
@@ -441,7 +430,7 @@ function WeeklyBody({
                 >
                   {deal.label}
                 </a>
-                <span className="brief-weekly-deal-outcome t-caption">
+                <span className="t-caption">
                   {outcomeWord(t, deal.outcome)}
                   {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
                 </span>

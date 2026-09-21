@@ -116,7 +116,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -170,7 +169,6 @@
   border: none;
   padding: 0;
   text-align: left;
-  font: inherit;
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -231,21 +229,13 @@
    claim rather than as the first item of a list. The hairline under it is the
    card-to-content seam this block owns — it divides the read from the working,
    which is two pieces of CONTENT, so it stops at the body's own padding.
-   Its size stays UNDER the panel's title rung (--fs-panel-title, 16px): the
-   lead is the first line of the panel's content, and at --fs-h2 it outranked
-   the heading of the panel it sits in. */
+   It takes no rung of its own: the lead is the first line of the panel's
+   CONTENT, and drawn at a heading size it outranked the title of the panel it
+   sits in. */
 .co-brief-lead {
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
-  /* The body face, as the lead card's ask above it: in the display face at
-     medium weight this sentence read as bold while the ask beside it did not,
-     and the two are the same kind of line: the one sentence to take away. */
-  font-family: var(--f-body);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-medium);
-  line-height: 1.35;
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 
@@ -255,15 +245,11 @@
   flex-direction: column;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: var(--textContent);
 }
 /* What kind of claim a line is, as the line's first word in a firmer weight:
-   a suggestion in the accent's text ink, an assessment in the quiet one. */
+   a suggestion in the accent's text ink, an assessment in the page's own. */
 .co-brief-nature {
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
+  font-weight: var(--fontWeightMedium);
 }
 /* Indigo, not green: "Suggested" names a sentence the agent proposed, and
    the ink that says a machine wrote something is the product's one indigo. */
@@ -286,9 +272,6 @@
   background: none;
   border: 0;
   padding: 0;
-  font: inherit;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   cursor: pointer;
   /* Indigo, because the sentence above it was written by the agent and this
      is where its working is. Green here would say a contact cited it. */
@@ -315,8 +298,6 @@
    what the border was there for. Neutral rather than indigo: the ink says
    whether a reader can follow it. */
 .co-brief-cite-flat {
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   text-decoration: underline dotted var(--borderStrong);
   text-underline-offset: 3px;
 }
@@ -328,28 +309,26 @@
 
 /* One move: the ask at the row's loudest weight, the reason under it — the
    reason is the part a rep judges, and everything else is chrome around it.
-   Its hairline matches the accent bands above and below it. */
+   It is a `PanelRow` and draws as one. Every interval and every edge is the
+   row's own: the padding, the hairline over it and the inset that hairline
+   keeps are `.panel-row`'s (panel.css), and this rule only lays the content
+   out and tints the ground under it. A margin, a radius or a padding of its
+   own here is a second card inside the list — the move's words then start at
+   an x no other row in the panel uses, and a reader scanning the column has
+   two left edges to follow. No hover fill either: the row is not one press
+   target, its verbs are, and a fill behind them claims a hit area the row does
+   not have. */
 .co-move {
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
   /* Indigo, because the agent wrote this row — and a GROUND rather than a
      rule, because the list mixes what Margince proposed with the account's own
-     open tasks and the two were told apart only by a hairline of a different
-     hue. The tint is the same claim the card's band above it makes: this part
-     was written for you, the rest was already yours.
-
-     Inset to the panel's own padding and given the pane's corner, so the tint
-     reads as a card inside the list rather than as a full-bleed band. */
-  margin: var(--space-2) var(--space-4);
-  padding: var(--space-4);
-  border-radius: var(--r-md);
-  border-top-color: transparent;
+     open tasks, and a hairline of a different hue is the whole difference
+     between them. The tint is the same claim the band above it makes: this
+     part was written for you, the rest was already yours. Edge to edge, so
+     what it claims is the ROW. */
   background: linear-gradient(160deg, var(--aiLight), transparent 80%);
-  /* .panel-row already sets the padding and the hairline border (none on
-     the first row); this only lays the row's own content out. No hover fill:
-     the row is not one press target, its verbs are, and a fill behind them
-     would claim a hit area the row does not have. */
 }
 
 /* Who wrote the row, over what it says. An eyebrow rather than a badge beside
@@ -359,17 +338,24 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  /* The badge's rung: the byline is the same kind of claim as the AI badge
-     in the head above it, and at the eyebrow rung it read a size smaller
-     than the pill it echoes. */
-  font-size: var(--fs-meta);
-  /* A caption, not an eyebrow: sentence case at the meta size. Set as a
-     tracked uppercase kicker it was the loudest thing on a row whose ask it
-     only qualifies, and two of them inside one small card read as chrome. */
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
   color: var(--aiText);
+}
+
+/* What the record was read AGAINST, as a second clause of the same byline. The
+   dot belongs to this clause rather than sitting loose between the two, so the
+   separator cannot end a line with the rule's name on the next one; the spaces
+   either side of it are the byline's own gap. It takes no ink of its own — the
+   whole line is the authorship claim and is lettered in one colour. */
+.co-move-kicker {
+  /* A rule's name wraps as a unit or not at all — the same thing the record
+     head's findings say about a figure and the rule it counts for. "Gone quiet"
+     broken over two lines reads as two words of the byline rather than as the
+     name of the thing that fired. */
+  white-space: nowrap;
+}
+.co-move-kicker::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
 }
 
 .co-move-spark {
@@ -377,16 +363,6 @@
   height: 0.75rem;
 }
 
-/* When the reading behind the row is dated — the day the thread went quiet,
-   the day the deal last moved. Never a deadline the system chose, and never
-   in the eyebrow's own voice, which is why it drops the tracking and the
-   case. */
-.co-move-when {
-  font-weight: var(--fw-regular);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  color: var(--textMeta);
-}
 .co-move-body {
   display: flex;
   flex-direction: column;
@@ -394,18 +370,23 @@
   min-width: 0;
   flex: 1 1 auto;
 }
+/* The ask, and the row's lead line. Weight is the only thing that says so: the
+   reason under it wears `.t-sub`, which is still a role HOOK carrying
+   `font: inherit`, so at one weight the two stand at one size in one ink and
+   the row offers a reader's eye nowhere to land — a column of moves then reads
+   as a paragraph per row.
+   Medium and not a size or an ink of its own: a rung up restates the panel's
+   own title, and this is text leading inside a component, which is what
+   `--fontWeightMedium` is for. */
 .co-move-ask {
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-medium);
-  line-height: 1.35;
   max-width: 62ch;
   color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
   text-wrap: pretty;
 }
 /* The reason: the part a rep judges, in a quieter voice than the ask. */
 .co-move-reason {
   display: inline;
-  line-height: 1.55;
   max-width: 78ch;
   text-wrap: pretty;
 }
@@ -419,7 +400,21 @@
      caption sat on the glyph's baseline hung under the words beside it. */
   align-items: center;
   gap: var(--space-1) var(--space-2);
-  margin-top: var(--space-1);
+  /* NO top margin, and the absence is the decision: the move lays this block
+     out as one row of its own grid (`.co-lead .co-move-body`), whose row gap is
+     the whole step between the reason and the records it rests on. A margin
+     here is a second opinion about that step, and the two together stand the
+     evidence further from its reason than the reason stands from the ask it
+     argues for.
+
+     The records named here are records of OURS, so a name is an email subject
+     or a deal title: arbitrary length, and one unbreakable word as far as a
+     layout is concerned. A grid or flex item's automatic minimum is its
+     min-content, so every box between that name and the panel has to be allowed
+     to shrink below it or the widest one leaves the panel and takes the page's
+     scroll width with it. This is the first of them; `.today-evidence` and its
+     `li` (record360.css) are the rest. */
+  min-width: 0;
 }
 .co-move-basis-head {
   display: block;
@@ -481,9 +476,6 @@
   margin: 0;
   border-left: 2px solid var(--aiMed);
   padding-left: var(--space-2);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textContent);
   max-width: 48ch;
 }
 .co-cite-origin {
@@ -562,8 +554,6 @@
    the prose: it names what was asked without competing with the reply. */
 .co-ask-asked {
   margin: 0;
-  font-size: var(--fs-meta);
-  font-weight: 600;
   color: var(--aiText);
 }
 .co-ask-answer > .surfacestate-empty {
@@ -576,7 +566,6 @@
   margin: 0;
   padding-top: var(--space-2);
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textMeta);
 }
 
 /* The proposals count is a way into the queue it counts, so it is a button —
@@ -586,7 +575,6 @@
   background: none;
   border: 0;
   padding: 0;
-  font: inherit;
   cursor: pointer;
 }
 .co-since-open:focus-visible {
@@ -628,7 +616,6 @@
 }
 
 .co-vat dt {
-  color: var(--textMeta);
   margin-bottom: var(--space-1);
 }
 
@@ -767,20 +754,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-/* The counts sit beside the band at the band's own weight, not beneath it in
-   fine print: they qualify the verdict rather than annotate it. */
-.co-growth-fit-completeness {
-  color: var(--textMeta);
-}
-/* What is missing sits in its own labelled row and needs no top margin; the
-   cap and the next step follow the band inside the verdict block. */
-.co-growth-fit-missing {
-  color: var(--textMeta);
-}
+/* The cap and the next step follow the band inside the verdict block. */
 .co-growth-fit-capped,
 .co-growth-fit-next {
   margin-top: var(--space-2);
-  color: var(--textMeta);
 }
 .co-part-foot {
   display: flex;
@@ -796,13 +773,9 @@
 
 /* The receipt behind one cited value. Read as a short record, not as prose:
    the reader is comparing what we stored against where we got it. */
-.co-evidence-value {
-  font-weight: 600;
-}
 .co-evidence-origin,
 .co-evidence-line {
   margin-top: var(--space-2);
-  color: var(--textMeta);
 }
 /* Quoted verbatim and set apart, because the reader is checking it word for
    word against the source. Any restyling that invited paraphrase would defeat
@@ -815,9 +788,6 @@
 .co-evidence-identity {
   margin-top: var(--space-3);
 }
-.co-evidence-identity dt {
-  color: var(--textMeta);
-}
 .co-evidence-identity dd {
   margin-bottom: var(--space-2);
   overflow-wrap: anywhere;
@@ -826,7 +796,6 @@
    worth knowing about, and a blank field would pass for having nothing to add. */
 .co-evidence-gaps {
   margin-top: var(--space-3);
-  color: var(--textMeta);
 }
 
 /* The modal's own vertical rhythm: search, the colleague choice, then the
@@ -851,11 +820,8 @@
    screen reader ties each band to its contact: it reads at the body's own
    size and case, not as the column eyebrow `.table` sets every th in. */
 .coverage-table tbody th {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
-  text-transform: none;
-  letter-spacing: var(--tracking-normal);
 }
 
 /* ---- The coverage grid on a narrow screen (plan §10.3) ----------------------
@@ -910,7 +876,6 @@
   }
   /* The contact's name heads its own card. */
   .coverage-table tbody th[scope="row"] {
-    font-weight: 600;
     padding: 0 0 var(--space-2);
     border-bottom: 1px solid var(--borderSubtle);
     margin-bottom: var(--space-2);
@@ -924,16 +889,13 @@
   }
   .coverage-table td::before {
     content: attr(data-label);
-    color: var(--textMeta);
-    /* ds:ignore generated content: no element exists to carry .t-caption */
-    font-size: var(--fs-meta);
   }
 }
 
-/* The shared figure-block anatomy: a small-caps eyebrow, then the figure
-   itself set large and tabular, then a one-line note where the caller has
-   one. Both the Commercial panel and the Finance panel draw their headline
-   numbers through this one shape, so a reader learns it once. */
+/* The shared figure-block anatomy: an eyebrow, then the figure itself set
+   tabular, then a one-line note where the caller has one. Both the Commercial
+   panel and the Finance panel draw their headline numbers through this one
+   shape, so a reader learns it once. */
 .co-figures {
   display: flex;
   flex-wrap: wrap;
@@ -946,10 +908,6 @@
   gap: var(--space-1);
 }
 .co-figure-value {
-  /* The record page's own card-value rung: a headline figure inside a card,
-     the same size every card value on the page carries. */
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 /* The finance panel: one decision figure with its reasons, a quieter column
@@ -991,26 +949,24 @@
   gap: var(--space-1);
 }
 .fin-amount {
-  /* The record page's own card-value rung: a headline figure inside a card,
-     the same size every card value on the page carries. */
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
-/* The one figure on the panel that asks for a decision. Overdue money is
-   drawn in the danger tone whatever its value: unlike a badge, the figure is
-   the reading itself, and a reader who has to check whether it is coloured
-   has already read it — so the emphasis is the colour, not a size the record
-   page's own card-value rung does not otherwise carry. */
+/* The one figure on the panel that asks for a decision. Overdue money is drawn
+   in the danger tone whatever its value: unlike a badge, the figure is the
+   reading itself, and a reader who has to check whether it is coloured has
+   already read it. */
 .fin-amount-hero {
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   color: var(--danger);
-  line-height: 1.1;
 }
 .fin-lede {
   margin: 0;
-  color: var(--textContent);
+}
+/* What period the figures describe, under them. It qualifies the whole panel
+   rather than any one reading, which is why it sits below the split instead of
+   beside a figure. The type is `.t-caption` on the element — the line under the
+   thing it qualifies — so only the margin is left to say here. */
+.fin-coverage {
+  margin: 0;
 }
 /* The bar's two halves, named. Laid out as a row that wraps, so a long
    currency string moves the second half onto its own line instead of
@@ -1029,9 +985,6 @@
 /* The invoice table. Its first and last cells align with the panel body's own
    padding, so the table reads as part of the panel rather than as a block
    inset inside it. */
-.fin-table {
-  font-size: var(--fs-sm);
-}
 .fin-table th:first-child,
 .fin-table td:first-child {
   padding-left: var(--space-5);
@@ -1057,12 +1010,8 @@
    day and month columns aligned down the table without a second typeface
    doing the work. */
 .fin-cell-dates {
-  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-.fin-cell-paid {
-  color: var(--textMeta);
 }
 /* Still owed, still past due: the rows that need chasing, findable without
    reading every status. */
@@ -1112,9 +1061,6 @@
   text-align: left;
   min-width: 0;
 }
-.co-commercial-title {
-  font-weight: var(--fw-semibold);
-}
 /* The overview's chronology: a day heading above the run of entries that
    happened on it, so several messages read as how one day went rather than
    as an undifferentiated list. */
@@ -1153,7 +1099,6 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
 }
 
 /* The bar carries the same weight as the health meters in the rail — one
@@ -1177,7 +1122,6 @@
 }
 
 .co-growth-fit-score-value {
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1192,13 +1136,10 @@
    reads as two designs that met by accident.
    ========================================================================= */
 
-/* A card title NAMES its card; it is not competing with the record's name.
-   Demoted by SIZE and WEIGHT, not by ink — the shared .section-header h2 is
-   15px/600 — because a heading that gives up the heading ink stops reading as
+/* A card title NAMES its card; it is not competing with the record's name. It
+   keeps the heading ink, because a heading that gives that up stops reading as
    a heading at all. */
 .co-card .section-header h2 {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 
@@ -1223,22 +1164,10 @@
      it: at the row's tighter interval the label sat against the rule and the
      five slices read as one crowded list rather than five sections. */
   padding: var(--space-4) var(--space-5) var(--space-3);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
   transition: background 0.15s;
 }
 .co-rail .co-sect > summary:hover {
   background: var(--bgHover);
-}
-/* `t-label` (design-system/atoms.tsx) is a plain span wrapping the whole
-   `summary` prop, so it has to grow to fill the row before .co-sect-summary's
-   own flex has anywhere to push the trailing badge into. */
-.co-rail .co-sect > summary .t-label {
-  flex: 1;
-  min-width: 0;
 }
 /* The SECTION's own body, by child combinator rather than by descent: a
    disclosure nested inside a slice — the Details grid's postal address is one —
@@ -1261,7 +1190,6 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font: inherit;
 }
 .co-sect-summary {
   display: flex;
@@ -1297,10 +1225,10 @@
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
-.co-dot-warn {
-  background: var(--warn);
+.co-dot-warning {
+  background: var(--warning);
 }
 .co-dot-danger {
   background: var(--danger);
@@ -1313,7 +1241,6 @@
 }
 .co-signal-title {
   display: block;
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 .co-signal-summary {
@@ -1321,7 +1248,6 @@
 }
 .co-signal-link {
   display: inline-block;
-  font-size: var(--fs-meta);
 }
 /* The brief's context is a STANDFIRST: one line under the panel's title that
    says why the moves below it are being asked, and then gets out of the way.
@@ -1343,9 +1269,6 @@
   align-items: baseline;
   gap: var(--space-1) var(--space-2);
   margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
-  color: var(--textContent);
 }
 /* The mark carries the state's colour so the block reads before it is read.
    It is 6px of ink rather than a token step: a dot sized off the spacing
@@ -1358,17 +1281,11 @@
   background: currentColor;
   flex: none;
 }
-.today-lead-warn {
-  color: var(--warn);
+.today-lead-warning {
+  color: var(--warning);
 }
 .today-lead-danger {
   color: var(--danger);
-}
-/* The state stays at the block's own colour even when the mark is coloured:
-   a whole line set in warning colour reads as an alarm, and the state is a
-   fact about the account rather than a fault in it. */
-.today-lead-state {
-  color: var(--textContent);
 }
 /* How long it has stood that way — quieter than the state, and never so long
    that it becomes the sentence.
@@ -1380,18 +1297,17 @@
 .today-lead-note {
   display: block;
   margin-block-start: var(--space-2);
-  font-family: var(--f-body);
-  font-weight: var(--fw-regular);
-  line-height: 1.45;
-  letter-spacing: var(--tracking-normal);
+  font-family: var(--fontFamilyBody);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
-   Inset to the panel's own padding and set at meta size: it qualifies the
-   answer above it rather than being one more row of it. */
+   On the panel's own inset and at meta size: it qualifies the answer above it
+   rather than being one more row of it. The inset is `--padPanel` BY NAME and
+   not the rung that token happens to hold — spelled as a rung it agrees with
+   the rows above by coincidence, and stops agreeing the day the panel is
+   retuned. */
 .today-withheld {
   margin: 0;
-  padding: var(--space-3) var(--space-5);
-  line-height: 1.45;
+  padding: var(--space-3) var(--padPanel);
 }
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
@@ -1405,13 +1321,6 @@
    names the move, and the two lines below it are the case FOR that move, so
    they belong closer to each other than to the thing they argue for. */
 .co-lead .co-move-ask {
-  /* The lead rung, the same as the brief's first sentence beside it: the ask
-     and the lead are the same kind of line, the one sentence to take away
-     from each card, and at the body rung the ask read as a caption to its own
-     verbs. */
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-snug);
   margin-bottom: var(--space-1);
 }
 /* Two columns for the whole row: the left is what the move CLAIMS — ask,
@@ -1477,17 +1386,58 @@
   grid-column: 2;
   grid-row: 1 / -1;
 }
+/* Under the fold the two columns become one, and the verbs move from opposite
+   the claim to under it. That is the whole collapse: the verb column is a
+   column at every width (`.today-actions`, record360.css) and nothing here
+   turns it, so a verb is full width above the fold and below it, and a refusal
+   that cannot state its own width — `Button` wraps one in `.btn-with-reason`,
+   which is `contain: inline-size` so a sentence cannot widen the column, and a
+   contained box contributes nothing to a flex line — never meets a line that
+   has to measure it.
+
+   `grid-row: auto` and not the span: with one column the span would lay the
+   verbs over the very lines they are meant to follow. */
+@media (max-width: 900px) {
+  .co-lead .co-move-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .co-lead .today-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
 /* Putting a move off is not a second verb. Stripped of its border it reads as
    the aside it is, and the row keeps exactly one control that looks pressable
    for the thing it wants done. */
 .co-move-defer {
   border-color: transparent;
   background: none;
-  color: var(--textMeta);
 }
 .co-move-defer:hover:not(:disabled) {
   background: none;
-  color: var(--textContent);
+}
+/* A finger is not a cursor. `--controlHeight` is the rung a pointer hits, and
+   under a thumb it is the row a reader misses — a miss among these verbs
+   undoes a promise or sends a draft.
+   THE VERBS AND THE WAY OUT, and nothing else. A move's verbs, a to-do's verb
+   and the head's link are the three things in this pane a reader aims at; the
+   sources under a reason are an inline run inside a sentence, and a 44px floor
+   there spaces a citation row like a list of buttons. Naming the three rather
+   than the pane is what keeps that distinction — `.co-lead .btn` reaches every
+   chip in the basis as well.
+   Each selector is three classes deep, which also settles the head: the link
+   variant declares `min-block-size: 0` at two, so these outrank it on
+   specificity rather than on whichever sheet the bundler emits first, and a
+   contract that rests on load order is not a contract.
+   The floor is the pane's, not the rung's: what height a button stands at
+   everywhere is the design system's to say, and a screen sheet answering it a
+   second time is how two heights of one control ship. */
+@media (pointer: coarse) {
+  .co-lead .today-verb .btn,
+  .co-lead .co-todo .btn,
+  .co-lead .panel-head .btn {
+    min-block-size: 44px;
+  }
 }
 /* The panel's own name, at body weight and laid out as a row, moved into
    Panel's tone="accent" (design-system/panel.css): the record's tabs and its
@@ -1529,7 +1479,6 @@
   margin-left: auto;
 }
 .rec-title {
-  font-weight: var(--fw-medium);
   overflow-wrap: anywhere;
   text-align: left;
 }
@@ -1546,7 +1495,6 @@
 .rec-meta > * + *::before {
   content: "·";
   margin-right: var(--space-2);
-  color: var(--textMeta);
 }
 .rec-term-dates {
   font-variant-numeric: tabular-nums;
@@ -1563,7 +1511,6 @@
 }
 .rec-amount {
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fw-medium);
 }
 /* The paper sits under the agreement's own line, as its own row of cards: a
    label that stays put, and the cards wrapping in their own column beside it so
@@ -1592,24 +1539,6 @@
   display: block;
 }
 
-/* The needs pane's head actions: the disclosure that a machine read the
-   record, and the way to the record's own list, as ONE item at the far end of
-   `Panel`'s head band. They are grouped rather than handed in loose because
-   they are one strip of controls and read as one — what keeps each of them
-   whole beside a title long enough to fill the band is panel.css, which holds
-   everything after the title block at its natural width, so the TITLE is what
-   gives way and the ellipsis is on it. Same on every record: the pane is the
-   record-360 kit's, not the company's, and its rules sit with `.co-reading`'s
-   here for the reason record360/README.md gives. */
-.co-reading-today-actions {
-  display: flex;
-  align-items: center;
-  /* A control row's own rung, by role rather than by rung: the disclosure and
-     the verb read as one strip of controls, and the head band beside them is
-     spaced by the panel. */
-  gap: var(--gapActions);
-  flex: none;
-}
 /* The three rated dimensions under the verdict, as a row of readings the
    card's own body separates from the word above it. */
 .co-360-dims {
@@ -1635,9 +1564,6 @@
    to out-weigh the reset wherever the two sheets land in the bundle. */
 .co-360-dims .popover-trigger.co-dim {
   gap: var(--space-2);
-  /* ds:ignore .t-sub loses to .popover-trigger:not(.btn)'s font/color reset */
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   border-radius: var(--r-sm);
 }
 /* Pressable, and said so before it is pressed: a chip that answers a resting
@@ -1651,7 +1577,7 @@
 .co-360-dims .popover-trigger.co-dim:hover,
 .co-360-dims .popover-trigger.co-dim[aria-expanded="true"] {
   color: var(--textPrimary);
-  text-decoration-color: var(--textMeta);
+  text-decoration-color: currentColor;
 }
 
 /* The aside behind a chip: what the dimension weighs, then the reading its
@@ -1677,13 +1603,13 @@
   block-size: 7px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 .co-dim-calm::before {
   background: var(--success);
 }
-.co-dim-warn::before {
-  background: var(--warn);
+.co-dim-warning::before {
+  background: var(--warning);
 }
 .co-dim-danger::before {
   background: var(--danger);
@@ -1708,8 +1634,7 @@
 }
 .co-360-reading dd {
   margin: 0;
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
 }
 /* The same dotted-underline mark the contact brief's own readings wear for
@@ -1717,13 +1642,13 @@
    against is the popover's own and not `.co-dim`'s chip face. */
 .co-360-reading .popover-trigger {
   text-decoration: underline dotted;
-  text-decoration-color: var(--textMeta);
+  text-decoration-color: var(--borderStrong);
   text-underline-offset: 0.2em;
   font: inherit;
   color: inherit;
 }
-.co-360-reading dd.co-360-reading-warn {
-  color: var(--warnText);
+.co-360-reading dd.co-360-reading-warning {
+  color: var(--warningText);
 }
 .co-360-reading dd.co-360-reading-danger {
   color: var(--dangerText);
@@ -1786,9 +1711,7 @@
    here. A size of its own would be a second answer to the question every panel
    head answers once. */
 .co-360-title .co-360-subject {
-  font-family: var(--f-display);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 
@@ -1820,10 +1743,9 @@
 }
 
 /* The stage under way is the one a reader is watching, so it is the one drawn
-   at full weight. The rest are context for it. */
+   in the reading ink. The rest are context for it. */
 .deepread-step.is-running {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 
 .deepread-step-mark {
@@ -1835,19 +1757,18 @@
   flex: none;
 }
 
+/* The ladder says how the RUN is going, which is an outcome and not a claim
+   about who wrote it: a finished stage is success, a stage under way is work in
+   flight. Indigo said "a machine did this" about every rung equally, so the one
+   thing the ladder exists to report — where the read has got to — was the one
+   thing its colour did not say. */
 .deepread-step.is-done .deepread-step-mark {
-  background: var(--ai);
-  border-color: var(--ai);
+  background: var(--success);
+  border-color: var(--success);
 }
 
 .deepread-step.is-running .deepread-step-mark {
-  border-color: var(--ai);
-}
-
-/* The state in words beside the mark, because three tinted circles are three
-   tinted circles to a reader who cannot tell the tints apart. */
-.deepread-step-state {
-  font-weight: var(--fw-regular);
+  border-color: var(--info);
 }
 
 /* A to-do already on somebody's list, under the move Margince found.
@@ -1870,8 +1791,14 @@
 }
 
 .co-todo-title {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
+}
+/* What is owed and the verb that settles it: ONE item at reading width, where
+   they are simply the row's last two children and the wrapper draws no box, so
+   the layout above is untouched. Under the fold they move together, and being
+   one item is what lets them move as one line. */
+.co-todo-owed {
+  display: contents;
 }
 /* When the to-do is owed, at the row's far end. Quiet unless it is late: a
    list where every date is coloured has no colour left for the one that
@@ -1880,8 +1807,8 @@
   flex: none;
   white-space: nowrap;
 }
-.co-todo-due-warn {
-  color: var(--warnText);
+.co-todo-due-warning {
+  color: var(--warningText);
 }
 .co-todo-due-danger {
   color: var(--dangerText);
@@ -1890,9 +1817,52 @@
 /* The row's verb keeps its own width. The row is a flex line, and a flex line
    shrinks a button before it wraps the title beside it — a verb squeezed to
    half a word is one a reader can no longer read. Whose work it is says itself
-   in `Button`'s own aiQuiet variant, not here. */
-.co-todo > .btn {
+   in `Button`'s own aiQuiet variant, not here.
+   A descendant selector and not a child one: `.co-todo-owed` is
+   `display: contents`, which keeps the button a flex ITEM of this row while
+   making it no longer a child of it, and only the DOM tree answers a `>`. */
+.co-todo .btn {
   flex: none;
+}
+
+/* At the fold the row's three parts stop sharing a line. The title is what a
+   reader scans by, and a date and a button each holding their own width beside
+   it left it one word wide with the date over the words. The mark keeps the
+   title company; what is owed drops to a line of its own at the row's end,
+   where a reader's eye already goes for it.
+   720px is the tree's own fold (`FOLD_MAX_WIDTH`, src/app/viewport.ts), which
+   a stylesheet cannot read — the two are changed together. */
+@media (max-width: 720px) {
+  .co-todo {
+    flex-wrap: wrap;
+  }
+  /* The mark keeps the title company, and a zero BASIS is what holds it there.
+     A wrapping flex line breaks on base sizes before anything grows, so a
+     title measured at its own content width did not fit beside the mark and
+     took the next line — leaving a lone monogram over a full-width title,
+     which reads as a heading for the rows under it rather than as the anchor
+     this column of initials is. */
+  .co-todo-body {
+    flex-basis: 0;
+  }
+  .co-todo-owed {
+    display: flex;
+    /* Its own line, because it is the only item wide enough to take one. */
+    flex: 1 1 100%;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+  /* Two lines and then an ellipsis: the title may wrap, but a task named in a
+     sentence would otherwise push the whole row past a phone's height and
+     bury the rows under it. */
+  .co-todo-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
 }
 
 /* What happened lately, as a list to scan. One row per exchange: the mark, the
@@ -1936,8 +1906,6 @@
   flex-wrap: wrap;
 }
 .co-recent-title {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
@@ -1959,7 +1927,6 @@
 
 .co-recent-empty {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* The read's own line under the needs list: who wrote the findings, what was
@@ -2000,9 +1967,6 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
-}
-.billing-name {
-  font-weight: var(--fw-medium);
 }
 /* The row's own verbs, pushed to the end and never shrunk: a long name wraps,
    and Change/Remove keep their hit targets whatever the name does. Its own

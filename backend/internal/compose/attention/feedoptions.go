@@ -71,6 +71,17 @@ func (s *Service) WithDealFacts(f DealFacts) *Service {
 	return s
 }
 
+// WithContactTouch binds the reader that puts, on every row naming a contact,
+// when they last wrote to us and when we last wrote to them. An option for the
+// reason WithDealFacts is one.
+//
+// Unbound, a row names its contact and says nothing about the silence — what
+// every row did before this seam, and never a wrong date.
+func (s *Service) WithContactTouch(r ContactTouch) *Service {
+	s.contactTouch = r
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //
@@ -157,5 +168,16 @@ func (s *Service) WithPins(p Pins) *Service {
 // leaves every existing walk behaving as it did before this shipped.
 func (s *Service) WithWalks(w Walks) *Service {
 	s.walks = w
+	return s
+}
+
+// WithSnapshots binds the seam that composes this feed's lane reads into one
+// transaction and one instant.
+//
+// UNBOUND MEANS WHAT THIS FEED DID BEFORE: a transaction per lane reader, and a
+// day assembled from as many instants as it has lanes. Bound, the assembled day
+// costs one transaction and every lane answers from the same moment.
+func (s *Service) WithSnapshots(snap Snapshots) *Service {
+	s.snapshots = snap
 	return s
 }

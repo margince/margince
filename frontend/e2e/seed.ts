@@ -2267,7 +2267,11 @@ export async function mockApi(
     }
     if (path === "/public/booking/host-1" && method === "POST") {
       const body = route.request().postDataJSON();
-      if (!body?.consent?.purpose_id || !body?.consent?.policy_version) {
+      // What the real door demands, and only that: the wording shown and its
+      // version. NOT a purpose id — the anonymous page has no way to learn one
+      // and the server resolves its own lane. A stub that asked for more than
+      // production does is a stub that says the page works when it does not.
+      if (!body?.consent?.policy_version || !body?.consent?.wording) {
         return json(
           {
             title: "Unprocessable",

@@ -272,14 +272,35 @@ func estimateTokens(system string, msgs []model.Message) int {
 
 // systemPrompt is the §2.0 shared frame plus the tool surface: JSON-only
 // output, the evidence rule, and untrusted-content handling.
+//
+// STOPPING IS DESCRIBED AS A MOVE, in the same block and at the same weight as
+// taking one. It used to read `{"final": …} when the goal is done`, which names
+// completion and nothing else — and the corpus measured what that costs:
+// `a_goal_no_tool_can_serve_ends_the_turn` and `ambiguity_ends_the_turn` scored
+// 0 across 84 runs, on three bindings, with no movement between a 31-tool
+// window and an 8-tool one. The failure shape said why: the turn took
+// `query_workspace` or `search_records` where the scenario expected `final`.
+// The models were not choosing badly among tools; they were not treating "stop"
+// as an available move at all.
+//
+// It matters beyond the score. An unattended agent that cannot end a turn with
+// "nothing here serves this" will always report something, and a morning brief
+// that always has content is one whose silence carries no information — which is
+// most of what a well-behaved agent should produce on a quiet day.
 func systemPrompt(specs []mcp.ToolSpec, fence promptfence.Fence, languageRule string) string {
 	var b strings.Builder
 	b.WriteString(`You are the Margince agent runner, a CRM reasoning component, not a chatbot.
 You work toward the stated goal by calling tools, one per turn.
 
 Respond with ONE JSON object and nothing else:
-  {"tool": "<name>", "args": {…}}   to call a tool, or
-  {"final": {…}}                     when the goal is done (include a "summary" string grounded in your observations).
+  {"tool": "<name>", "args": {…}}   to take a step, or
+  {"final": {…}}                    to end the turn (include a "summary" string grounded in your observations).
+
+Ending the turn is a step, not the absence of one. Three things end it:
+- the goal is done;
+- no tool here can serve the goal — say so, and what a human would do instead;
+- the goal is ambiguous and your observations already show why — name the alternatives rather than pick one.
+"Nothing here serves this" is a complete answer; calling a tool because one was available is a guess.
 
 Rules:
 - Every claim in your final output must be grounded in an observation; omit what you cannot ground.

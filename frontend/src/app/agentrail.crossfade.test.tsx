@@ -14,7 +14,7 @@ const WRITING = "Saving the deal";
 
 /** The sentence that names a record, which is the one that carries a link. */
 const NAMED: SpokenLine = {
-  before: "I'm pulling together what I know about ",
+  before: "I'm summarising ",
   subject: { name: "Acme", route: { screen: "companies" } },
   after: ".",
 };

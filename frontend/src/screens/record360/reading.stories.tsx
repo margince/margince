@@ -39,7 +39,7 @@ export const WithAMove: Story = {
         <RecordReading>
           <CallCard
             name="Frédéric de Gombert"
-            standing={{ label: "Your move", tone: "warn" }}
+            standing={{ label: "Your move", tone: "warning" }}
             because="You owe Frédéric the line-item 3 breakdown. Promised on 5 August, 19 days ago."
             restsOn={[
               {

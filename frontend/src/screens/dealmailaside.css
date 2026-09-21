@@ -31,7 +31,6 @@
   margin: 0;
   padding-block: var(--space-2);
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textMeta);
 }
 /* The door to the whole timeline, on its own line under a hairline: the one
    thing in the panel that leads somewhere, drawn as the text affordance every

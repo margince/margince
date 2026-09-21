@@ -1178,7 +1178,7 @@
   ],
   "tools": [
     {
-      "name": "send_account_email",
+      "name": "send_company_email",
       "tokens": 823,
       "agents": [],
       "required_by_cases": [],
@@ -1529,7 +1529,7 @@
       "measured_by_model": {}
     },
     {
-      "name": "account_coverage",
+      "name": "company_coverage",
       "tokens": 246,
       "agents": [],
       "required_by_cases": [],

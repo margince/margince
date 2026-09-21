@@ -17,7 +17,6 @@
 
 .tagspanel-open {
   text-decoration: none;
-  color: inherit;
   border-radius: var(--r-md);
 }
 
@@ -33,15 +32,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-inline-size: var(--control-h-sm);
-  min-block-size: var(--control-h-sm);
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   margin-inline-start: var(--space-1);
   padding: 0;
   border: 0;
   border-radius: var(--r-full);
   corner-shape: round;
   background: none;
-  color: var(--textMeta);
   opacity: 0;
   cursor: pointer;
 }
@@ -64,7 +62,6 @@
 }
 
 .tagspanel-note {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -78,7 +75,6 @@
 
 .tagspanel-empty-title {
   margin: 0;
-  font-weight: 500;
 }
 
 /* The verb under the words it adds to, spaced off them so it reads as an

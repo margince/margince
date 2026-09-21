@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -257,6 +258,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// still paging and a row crossing the page boundary is served twice or
 		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
+		// The whole page as ONE unit of work. Every lane reader below opens its
+		// own transaction by default, which cost this surface ~40 of them and
+		// as many instants per assembled day; bound, they join one read-only
+		// snapshot. margince#4912 has the measurements.
+		WithSnapshots(attentionSnapshots{pool: pool}).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
 		// contact's Network tab, so an ask nobody went looking for expired
@@ -278,6 +284,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// When the contact a row names last wrote to us and when we last wrote
+		// to them, from the same reader the contact's own page uses.
+		WithContactTouch(attentionContactTouch{pool: pool}).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page
@@ -398,4 +407,19 @@ func (a attentionDealStandings) CachedStandings(
 		}
 	}
 	return out, nil
+}
+
+// attentionSnapshots binds the feed's composed reads to the database seam.
+//
+// The adapter exists because attention takes readers and never a driver: this
+// is the one place the pool and that package meet, which is the same shape
+// every other seam in this file has.
+type attentionSnapshots struct{ pool *pgxpool.Pool }
+
+func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
+	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
+}
+
+func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
+	return database.Detached(ctx)
 }

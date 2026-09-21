@@ -1,0 +1,21 @@
+/* A fact nobody has filled: the words say so in the tone the record's other
+   empty fields take, rather than the cell vanishing and the question with
+   it. */
+.deal-fact-unset {
+  color: var(--textSecondary);
+}
+
+/* The close date over what qualifies it: how long until it lands, whether a
+   machine guessed it, which forecast it sits in. One cell, two lines, so the
+   date keeps the strip's own rung and its caveats stay under it. */
+.deal-fact-close {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* A date nobody confirmed, or one already past, is a warning about the DATE
+   rather than about the deal: the tone marks the figure alone. */
+.deal-fact-close-warn {
+  color: var(--warningText);
+}

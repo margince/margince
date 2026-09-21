@@ -67,6 +67,17 @@ type CompanyCandidateScore struct {
 	// CandidateValue and IncumbentValue are the two names compared.
 	CandidateValue string
 	IncumbentValue string
+	// ExactName says the two sides are the SAME name rather than merely a
+	// close one: equal once case, accents and spacing are folded away. It is
+	// computed across EVERY eligible pairing rather than read off the winning
+	// one, because the winner is chosen on score alone and a suffix-stripped
+	// pairing can tie a strictly equal one and hide it.
+	//
+	// Legal form is deliberately not stripped for this. "Baqend GmbH" and
+	// "Baqend Inc" fold to one name under a suffix-stripping key and are two
+	// different legal entities in the world; telling those apart is a human's
+	// call, which is the fuzzy tier's own rule.
+	ExactName bool
 }
 
 // DedupeCompany is PO-F-2 — the company half of the one dedupe
@@ -316,6 +327,7 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 	}{{rowDisplay, fieldDisplayName}, {rowLegal, fieldLegalName}}
 
 	var best CompanyCandidateScore
+	var exact bool
 	for _, left := range []string{candidateDisplay, candidateLegal} {
 		for _, right := range sides {
 			normalizedLeft, normalizedRight := companyNameForMatching(left), companyNameForMatching(right.value)
@@ -328,6 +340,13 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 			if !sharesADistinctiveWord(left, right.value) {
 				continue
 			}
+			// Asked of every eligible pairing and carried out separately: the
+			// winner below is chosen on score alone, so a pairing that ties
+			// the best score would otherwise take exactness away from the one
+			// that actually had it.
+			if companyNamesAreTheSame(left, right.value) {
+				exact = true
+			}
 			score := nameSimilarity(normalizedLeft, normalizedRight)
 			if score > best.Confidence {
 				best = CompanyCandidateScore{
@@ -339,5 +358,21 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 			}
 		}
 	}
+	best.ExactName = exact
 	return best
 }
+
+// companyNamesAreTheSame answers whether two names are one name.
+//
+// Strict on purpose: case, accents and spacing are noise in a name, and
+// everything else is signal. A legal suffix is NOT folded away — see
+// CompanyCandidateScore.ExactName for why that distinction is the whole point.
+func companyNamesAreTheSame(left, right string) bool {
+	l, r := collapseSpaces(normalizeName(left)), collapseSpaces(normalizeName(right))
+	return l != "" && l == r
+}
+
+// collapseSpaces reduces every run of whitespace to one space. A name read off
+// a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
+// different company from "Baqend GmbH".
+func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " ") }

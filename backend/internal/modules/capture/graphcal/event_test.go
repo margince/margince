@@ -243,3 +243,42 @@ func classifyRaw(raw []byte, owner string) (meetingmap.Meeting, error) {
 	}
 	return meetingmap.Classify(ev, owner), nil
 }
+
+// Microsoft's iCal UID reaches the neutral event, carrying the SAME series a
+// Google payload states for the same meeting.
+//
+// That agreement is the point: one meeting on two calendars has two provider
+// event ids and one iCal UID, which is what makes the UID a cross-provider
+// identity and the event id useless as one.
+//
+// This does NOT pin the JSON spelling. encoding/json matches field names case
+// insensitively, so `iCalUId` and `iCalUID` both decode either vendor's
+// payload — verified by mutation.
+func TestMicrosoftICalUIDReachesTheNeutralEvent(t *testing.T) {
+	raw, err := json.Marshal(map[string]any{
+		"id":          "graph-evt-1",
+		"iCalUId":     "series-42@google.com",
+		"subject":     "Quarterly review",
+		"isCancelled": false,
+		"start":       map[string]string{"dateTime": "2026-09-23T08:00:00.0000000", "timeZone": "UTC"},
+		"organizer":   map[string]any{"emailAddress": map[string]string{"address": "pat@counterparty.example"}},
+		"attendees": []map[string]any{
+			{"emailAddress": map[string]string{"address": "rep@ws.example"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("building the event: %v", err)
+	}
+	ev, err := decodeEvent(raw, "rep@ws.example")
+	if err != nil {
+		t.Fatalf("decoding the event: %v", err)
+	}
+	if ev.ICalUID != "series-42@google.com" {
+		t.Fatalf("ICalUID is %q, want the series Microsoft stated", ev.ICalUID)
+	}
+	// The two providers state the SAME uid for one meeting — that is what makes
+	// it a cross-provider identity — while their own event ids differ.
+	if ev.ID != "graph-evt-1" {
+		t.Fatalf("ID is %q, want Graph's own event id", ev.ID)
+	}
+}

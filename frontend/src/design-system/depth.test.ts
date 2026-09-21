@@ -136,10 +136,17 @@ describe("depth", () => {
         "above the plane; these spell their own geometry and colour, which " +
         "is how one depth becomes twenty that no longer agree",
     ).toEqual([
-      // The agent's state mark and its recap marks are LIGHTS, not boxes: a 5px
-      // dot with its own halo in the tone the orb is running, so the panel and
-      // the ball read as one object. A halo is the mark's own colour spreading.
-      "src/app/agentrail.css: box-shadow: 0 0 6px -1px var(--arTone)",
+      // The agent panel's state pip is a LIGHT, not a box: a 6px dot with its
+      // own halo in the tone the orb is running, so the panel and the ball it
+      // opened from read as one object. A halo is the mark's own colour
+      // spreading, which is a thing being lit rather than a thing at a height,
+      // and no elevation token can carry it.
+      //
+      // ONE of them, and there used to be two. The recap's marks glowed in the
+      // same tone, which is what made this list carry the same line twice: they
+      // now say how each occurrence WENT, in the state families, and a run that
+      // failed this morning is a verdict rather than something that is still on.
+      // A flat dot is what says so.
       "src/app/agentrail.css: box-shadow: 0 0 6px -1px var(--arTone)",
       // The ring separating two overlapping faces, in the colour of the surface
       // behind them. A shadow rather than a border so a stacked face stays the

@@ -142,7 +142,7 @@ export function ChoiceList<Value extends string>({
               )}
               <span className="choicelist-label">{choice.label}</span>
               {choice.description !== undefined && (
-                <span className="choicelist-note">{choice.description}</span>
+                <span>{choice.description}</span>
               )}
             </span>
           }

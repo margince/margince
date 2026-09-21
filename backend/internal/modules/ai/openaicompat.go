@@ -305,10 +305,26 @@ func attachmentUnsupported(provider string, atts []model.Attachment, declared []
 		if !model.CarriesMIME(declared, a.MIME) {
 			return fmt.Errorf("ai: %s: %s: %w", provider, a.MIME, model.ErrAttachmentUnsupported)
 		}
+		// A wildcard declaration does not get to admit what no decoder reads.
+		// This is the carriage sentinel because it IS a carriage answer: no
+		// binding carries it, so a caller that falls back on one is right to.
+		if containsFold(neverCarried, mediaKind(a.MIME)) {
+			return fmt.Errorf("ai: %s: %s is not an image to any model this build talks to: %w",
+				provider, a.MIME, model.ErrAttachmentUnsupported)
+		}
 		// Bytes XOR URI (model.Attachment): both-set would silently drop the
 		// inline bytes, neither-set would emit an empty content part — reject both.
 		if (len(a.Bytes) == 0) == (a.URI == "") {
 			return fmt.Errorf("ai: %s: attachment %q needs exactly one of inline bytes or a uri", provider, a.MIME)
+		}
+		// The label got the attachment this far; the bytes decide whether it
+		// goes further. Here rather than in each adapter's part builder because
+		// this is already the one place every adapter asks whether it may be
+		// handed an attachment at all — a fifth adapter inherits the reading by
+		// existing rather than by remembering to.
+		if finding := mislabelledAttachment(a); finding != "" {
+			return fmt.Errorf("ai: %s: attachment claims %s but %s: %w",
+				provider, a.MIME, finding, model.ErrAttachmentMislabelled)
 		}
 	}
 	return nil

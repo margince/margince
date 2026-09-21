@@ -158,7 +158,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 | path | service |
 | --- | --- |
 | `/v1`, `/healthz`, `/readyz`, `/metrics` | api |
-| `/webhooks/gmail`, `/webhooks/graph`, `/webhooks/hubspot` | api (present only where that receiver's own token is set — which is a separate switch from whether the connector itself is configured) |
+| `/webhooks/gmail`, `/webhooks/graph` | api (present only where that receiver's own token is set — which is a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
 
@@ -192,6 +192,17 @@ One host, not two, because three things cross the split:
   configured object store / vault / AI) is up, else 503 naming the unready one.
 
 Point liveness at `/healthz` and readiness at `/readyz`.
+
+`/readyz` also answers 503 while the **database is behind the binary** — the
+versions this build ships that the ledger does not record, for the core and
+custom namespaces and for every composed unit. That is the ordinary rolling
+window: the new binary is up, the migration has not run, and its routes and
+jobs would fail on tables that do not exist yet. The process keeps running and
+recovers on its own once `migrate up` lands, so no restart is needed; the
+server log names the namespace and the versions, while the probe body names
+only the check (`unready: schema-migrations`). The worker probes the same
+thing, and for a sharper reason — its dispatcher ticks on a cadence, so there
+is no request to carry the failure back to anybody.
 
 Custom-field creation also needs the API's owner-role schema pool. The image
 entrypoint supplies it automatically from `MARGINCE_OWNER_DSN`; `make dev`
@@ -260,6 +271,13 @@ deployed `1970.43` worker then refuses to start. Finish the api rollout rather
 than pausing it half-done, and the same for a rollback
 ([#1735](https://github.com/margince/margince/issues/1735)).
 
+A role that refuses **says this itself**, so an operator does not have to arrive
+at this page to learn it: the refusal names both releases, the redeploy, and the
+rollout shape — an api still on the previous release restarting after the new one
+recorded — with restarting the api at the intended release as what restores the
+record. The two causes look identical from a crash-looping worker, and only one
+of them is the deployment's fault.
+
 **An unstamped image disables the guard entirely.** An absent or `dev` release is
 skipped by all three roles — the api records nothing, the worker compares nothing
 and starts, and the SPA reports no release and never blocks. An unstamped api also
@@ -309,6 +327,11 @@ it rather than relying on the bake file staying correct.
 
 - **Outbound mail needs the worker** — the api only stages sends; `cmd/worker`
   transmits them.
+- **Failed-login lock:** five wrong passwords in 15 minutes lock an account
+  for 15 minutes. A browser that has signed in to that account within the last
+  90 days (under its current password) is still let in with the right password,
+  so a lock tripped by somebody else does not keep the owner out; a new browser
+  waits out the lock or resets the password.
 - **Admin lockout break-glass:** `margince-migrate reset-password --dsn <owner>
   --email <admin-email>` (reads the new password from stdin). It will also set
   a password on a member who has none, so it *can* onboard — but it needs the
@@ -322,3 +345,27 @@ it rather than relying on the bake file staying correct.
   link is never derived from a request `Host`.
 - **AI keys fail closed:** a missing/invalid provider key disables the bound AI
   lanes but leaves core CRUD + auth working.
+- **An MCP App view that misses the api's boot stays missing until the api
+  restarts.** The api reads those documents from the web tier once at startup,
+  and there is no channel for announcing a later arrival — so a web tier that was
+  down at that moment leaves a running api advertising a short set for the life
+  of the process. It says so at boot, naming the views it is without and the
+  restart, and `margince_mcp_app_view_held{uri=…}` reports the same per view.
+
+  The lever, when the api cannot reliably reach the web tier at boot, is
+  `--mcp-apps-base-url` / `MARGINCE_MCP_APPS_BASE_URL` — a CDN origin is a
+  supported value. Two things about it are worth knowing before you reach for it,
+  because both are easy to get wrong:
+
+  - **It replaces a dependency; it does not remove one.** The web tier becomes the
+    CDN, its DNS and this installation's egress. That is better for some
+    deployments and worse for others, and absent for none.
+  - **The value must be API-reachable, not publicly reachable.** A container with
+    no egress cannot use a public CDN, and that asymmetry is the whole reason this
+    setting exists: the default is the web tier precisely because an air-gapped
+    or egress-restricted installation has to work out of the box.
+
+  The scheme must be `https` unless the host is a loopback or private address,
+  and a cleartext hostname is refused at boot naming the setting rather than
+  accepted and then refused by every fetch. Full flag reference:
+  [configuration.md](reference/configuration.md).

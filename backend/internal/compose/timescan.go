@@ -33,8 +33,8 @@ type activityScanAdapter struct {
 
 var _ automation.ActivityScan = activityScanAdapter{}
 
-func (a activityScanAdapter) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int) ([]automation.EntityAnchor, error) {
-	candidates, err := a.store.LastTouchBefore(ctx, cutoff, limit)
+func (a activityScanAdapter) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]automation.EntityAnchor, error) {
+	candidates, err := a.store.LastTouchBefore(ctx, cutoff, limit, reminder)
 	if err != nil {
 		return nil, err
 	}

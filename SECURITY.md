@@ -27,6 +27,29 @@ the changelog unless you prefer otherwise. This is a pre-release proof of
 concept maintained by a small team, so we do not commit to a fix
 deadline; we do commit to telling you where the report stands.
 
+### If it is being exploited right now
+
+That cadence is a reasonable one for an ordinary advisory and useless
+against a live exploit. So there are **two routes**, and you choose which
+one you are on.
+
+**Put `ACTIVELY EXPLOITED` in the title of the advisory** (or in the
+subject line, if you are mailing us) when you have seen the weakness used
+against a real installation — not when you believe it could be. That
+report is acknowledged within **4 business hours**, and we come back with
+what we need from you rather than with a triage verdict.
+
+Two things then happen that you should know about. Our own 24-hour
+reporting clock starts at the moment we read your report, not when we
+confirm it, so we may come back with questions that look impatient. And
+the advisory is likely to be published earlier than it would otherwise
+be: once a weakness is in use, keeping it quiet protects the attacker
+rather than the operators who need to patch. We tell you before that
+happens.
+
+What we do with it on our side, including the clocks we are on:
+[docs/compliance/cra/README.md](docs/compliance/cra/README.md).
+
 ## Scope
 
 In scope — anything that breaks a documented security invariant of this

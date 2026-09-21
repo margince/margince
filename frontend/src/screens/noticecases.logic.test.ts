@@ -111,9 +111,9 @@ describe("what a reader may do to a duty", () => {
 
 describe("how a state reads", () => {
   it("asks the reader to look at an obstacle or a closure somebody chose", () => {
-    expect(noticeStateTone("blocked")).toBe("warn");
-    expect(noticeStateTone("exempt_with_reason")).toBe("warn");
-    expect(noticeStateTone("provided_elsewhere")).toBe("warn");
+    expect(noticeStateTone("blocked")).toBe("warning");
+    expect(noticeStateTone("exempt_with_reason")).toBe("warning");
+    expect(noticeStateTone("provided_elsewhere")).toBe("warning");
   });
 
   it("stays quiet on the ordinary outcome", () => {

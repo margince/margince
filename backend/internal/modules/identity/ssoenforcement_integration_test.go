@@ -41,11 +41,11 @@ func TestEnforcedSSORefusesANonAdminPasswordLogin(t *testing.T) {
 	// The password is CORRECT — and the refusal must still be the neutral
 	// ErrBadCredentials, indistinguishable from a wrong guess, or enforcement
 	// verifies passwords for whoever probes the login.
-	_, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if !errors.Is(err, ErrBadCredentials) {
 		t.Fatalf("correct password under enforced SSO: err=%v, want the neutral ErrBadCredentials", err)
 	}
-	if token != "" {
+	if login.Token != "" {
 		t.Error("a refused SSO-required login must mint no session token")
 	}
 	if n := sessionCount(t, e, e.member.UserID); n != 0 {
@@ -57,12 +57,12 @@ func TestEnforcedSSOKeepsAdminPasswordLoginAsBreakGlass(t *testing.T) {
 	e := setupRevocationEnv(t, "sso-breakglass")
 	enforceSSO(e)
 
-	id, token, err := e.svc.Login(e.wsOnlyCtx(), e.admin.Email, bootstrapPassword)
+	id, login, err := e.svc.Login(e.wsOnlyCtx(), e.admin.Email, bootstrapPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin break-glass login refused under enforced SSO: %v", err)
 	}
-	if token == "" || !id.hasRole(roleAdmin) {
-		t.Fatalf("break-glass admin login did not land as an admin session: token=%q roles=%v", token, id.Roles)
+	if login.Token == "" || !id.hasRole(roleAdmin) {
+		t.Fatalf("break-glass admin login did not land as an admin session: token=%q roles=%v", login.Token, id.Roles)
 	}
 }
 
@@ -72,7 +72,7 @@ func TestEnforcedSSOStillRefusesAWrongPasswordNeutrally(t *testing.T) {
 
 	// A wrong password is refused by the credential check FIRST, so enforcement
 	// never reveals that a password was right by answering differently.
-	_, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, "not the password")
+	_, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, "not the password", noDevice)
 	if !errors.Is(err, ErrBadCredentials) {
 		t.Fatalf("wrong password under enforced SSO: err=%v, want ErrBadCredentials", err)
 	}
@@ -82,8 +82,8 @@ func TestSSONotEnforcedLetsAMemberLogInWithPassword(t *testing.T) {
 	e := setupRevocationEnv(t, "sso-off")
 	// requireSSO left nil: an installation that never set the policy behaves
 	// exactly as before.
-	_, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
-	if err != nil || token == "" {
-		t.Fatalf("member password login with SSO not enforced: err=%v token=%q", err, token)
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil || login.Token == "" {
+		t.Fatalf("member password login with SSO not enforced: err=%v token=%q", err, login.Token)
 	}
 }

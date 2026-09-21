@@ -37,6 +37,7 @@ function show(
     loading?: boolean;
     failed?: boolean;
     onDraftTo?: (contactId: string) => void;
+    onOpenRecord?: (entityType: string, entityId: string) => void;
     onPrepareMeeting?: (activityId: string) => void;
     scan?: AccountScan;
   } = {},
@@ -53,6 +54,7 @@ function show(
           loading={opts.loading ?? false}
           failed={opts.failed ?? false}
           onDraftTo={opts.onDraftTo}
+          onOpenRecord={opts.onOpenRecord}
           onPrepareMeeting={opts.onPrepareMeeting}
           scan={opts.scan}
         />
@@ -61,6 +63,17 @@ function show(
   );
 }
 
+// The withheld line, found by the words the catalog puts BEFORE the list of
+// sections. Which sections it names is what these cases are about, and a copy
+// of the whole sentence here would fail on a rewrite that changed nothing
+// about the reading.
+const withheldPrefix = en["today.withheld"].slice(
+  0,
+  en["today.withheld"].indexOf("{sections}"),
+);
+const withheldLine = () =>
+  screen.getByText((content) => content.startsWith(withheldPrefix));
+
 describe("what needs a contact on this account today", () => {
   it("says nothing about a meeting when none is booked", () => {
     // Absent AND not named in sections_omitted means "none scheduled". Writing
@@ -68,10 +81,10 @@ describe("what needs a contact on this account today", () => {
     // the suggestion engine can name WHOM to contact, so only it may advise
     // booking one.
     show(BASE);
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
     expect(
-      screen.getByText("No outstanding work found in this view."),
-    ).toBeTruthy();
-    expect(screen.queryByText(/Hidden from you/)).toBeNull();
+      screen.queryByText((content) => content.startsWith(withheldPrefix)),
+    ).toBeNull();
   });
 
   it("says the calendar is hidden when the reader has no activity grant", () => {
@@ -82,8 +95,8 @@ describe("what needs a contact on this account today", () => {
       ...BASE,
       sections_omitted: ["next_meeting"],
     });
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "the calendar",
+    expect(withheldLine().textContent).toContain(
+      en["today.source.nextMeeting"],
     );
   });
 
@@ -93,12 +106,12 @@ describe("what needs a contact on this account today", () => {
       sections_omitted: ["next_meeting", "next_steps"],
     });
 
-    // "Hidden from you", never "None": a list assembled from three of five
+    // "Not included", never "None": a list assembled from three of five
     // sources is not the same list, and only the reader can judge whether the
     // missing one mattered.
-    const withheld = screen.getByText(/Hidden from you/);
-    expect(withheld.textContent).toContain("the calendar");
-    expect(withheld.textContent).toContain("open tasks");
+    const withheld = withheldLine();
+    expect(withheld.textContent).toContain(en["today.source.nextMeeting"]);
+    expect(withheld.textContent).toContain(en["today.source.nextSteps"]);
   });
 
   // The interaction tile reads the activities section, so a caller with no
@@ -108,9 +121,7 @@ describe("what needs a contact on this account today", () => {
   it("names the activities section when the reader may not see what was said", () => {
     show({ ...BASE, sections_omitted: ["activities"] });
 
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "what was said",
-    );
+    expect(withheldLine().textContent).toContain(en["today.source.activities"]);
     expect(screen.queryByText("Last exchange")).toBeNull();
   });
 
@@ -122,9 +133,7 @@ describe("what needs a contact on this account today", () => {
   it("names both readings when the reader may not see whose move it is or what is at risk", () => {
     show({ ...BASE, sections_omitted: ["state_strip"] });
 
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "whose move it is and the signals",
-    );
+    expect(withheldLine().textContent).toContain(en["today.source.standing"]);
   });
 
   // The best-route tile reads `contacts`. A caller scoped away from the
@@ -133,19 +142,15 @@ describe("what needs a contact on this account today", () => {
   it("names the contacts when the reader may not see who is here", () => {
     show({ ...BASE, sections_omitted: ["contacts"] });
 
-    expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      en["today.source.contacts"],
-    );
+    expect(withheldLine().textContent).toContain(en["today.source.contacts"]);
   });
 
   it("distinguishes a failed read from a quiet account", () => {
     show(undefined, { failed: true });
-    // "We could not assemble this" and "nothing needs you" are different
+    // "This section couldn't load" and "nothing needs you" are different
     // sentences, and only one of them is about the account.
-    expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(
-      screen.queryByText("No outstanding work found in this view."),
-    ).toBeNull();
+    expect(screen.getByText(en["today.failed"])).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
   });
 
   // The account brief's own footer reports this with the baseline it counted
@@ -159,9 +164,7 @@ describe("what needs a contact on this account today", () => {
         baseline_at: "2026-08-01T09:00:00Z",
       },
     });
-    expect(
-      screen.getByText("No outstanding work found in this view."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
   });
 
   it("reports the failure even when a view is in hand", () => {
@@ -170,10 +173,8 @@ describe("what needs a contact on this account today", () => {
     // view is present and quiet, and the failure still has to win.
     show(BASE, { failed: true });
 
-    expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(
-      screen.queryByText("No outstanding work found in this view."),
-    ).toBeNull();
+    expect(screen.getByText(en["today.failed"])).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
   });
 });
 
@@ -369,8 +370,8 @@ describe("the day's call, and which record it is read from", () => {
       },
     });
     // The evidence chip and its verbatim words sit under the reason,
-    // captioned "What this is based on" rather than behind a disclosure.
-    expect(screen.getByText("What this is based on")).toBeTruthy();
+    // captioned rather than hidden behind a disclosure.
+    expect(screen.getByText(en["co.suggest.basedOn"])).toBeTruthy();
     expect(
       screen.getByText("We'll get the contract over to you by Friday."),
     ).toBeTruthy();
@@ -402,9 +403,47 @@ describe("the day's call, and which record it is read from", () => {
     expect(
       screen.getByText("You owe them: Send the signed contract"),
     ).toBeTruthy();
+    expect(screen.queryByText(en["co.suggest.basedOn"])).toBeNull();
+  });
+
+  // One row shape for the moment on every record page. What the account was
+  // read against is the byline's second clause, and the verb is the server's
+  // own wherever it named somewhere for the press to land.
+  it("draws the moment as a find of the agent's, read against a named rule", () => {
+    const opened = vi.fn();
+    show(
+      {
+        ...BASE,
+        moment: {
+          claim_key: "moment:gone_quiet",
+          evidence_fingerprint: "fp-3",
+          rule: "gone_quiet",
+          headline: "Acme has not written back for 18 days",
+          why_now: "Two messages went out and nothing came back.",
+          confidence: "observed_fact",
+          evidence: [],
+          recommended_action: {
+            kind: "open_record",
+            label: "Open the account",
+            state: "available",
+            destination: {
+              surface: "record",
+              entity_type: "company",
+              entity_id: "o-1",
+            },
+          },
+        },
+      },
+      { onOpenRecord: opened },
+    );
+
+    expect(screen.getByText(en["co.suggest.byline"])).toBeTruthy();
+    expect(screen.getByText(en["contact.moment.rule.gone_quiet"])).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /What this rests on/ }),
-    ).toBeNull();
+      screen.getByText("Acme has not written back for 18 days"),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open the account" }));
+    expect(opened).toHaveBeenCalledWith("company", "o-1");
   });
 
   it("carries the account's suggestions as moves alongside the context band", () => {
@@ -442,9 +481,7 @@ describe("the day's call, and which record it is read from", () => {
     });
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.queryByText("Nothing is owed to this account")).toBeNull();
-    expect(
-      screen.queryByText("No outstanding work found in this view."),
-    ).toBeNull();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
   });
 
   // Dropped only where it would contradict. On an account with nothing else in
@@ -456,6 +493,12 @@ describe("the day's call, and which record it is read from", () => {
     expect(
       screen.getByText("No promise to this account is open or coming due."),
     ).toBeTruthy();
+    // Nobody SUGGESTED that nothing is owed. The byline and the rule beside
+    // it are an authorship claim over a find, and an all-clear is a reading.
+    expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
+    expect(
+      screen.queryByText(en["contact.moment.rule.nothing_needed"]),
+    ).toBeNull();
   });
 });
 
@@ -589,7 +632,7 @@ describe("the account scan on the needs list", () => {
       },
     );
     expect(
-      screen.getByText(/Reading resumes .*the AI budget deferred it/),
+      screen.getByText(/Reading resumes .*Paused by the AI budget/),
     ).toBeTruthy();
   });
 
@@ -621,13 +664,13 @@ describe("the account scan on the needs list", () => {
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "deterministic",
           degrade_reason:
-            "No model lane is configured, so the rules' own advice stands alone.",
+            "No model is configured here, so only the rule-based advice is shown.",
           findings: [ruleRow],
           findings_dropped: 0,
         },
       },
     );
-    expect(screen.getByText(/No model lane is configured/)).toBeTruthy();
+    expect(screen.getByText(/No model is configured here/)).toBeTruthy();
     expect(screen.queryByText("Written by Margince")).toBeNull();
   });
 });

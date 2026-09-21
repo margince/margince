@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -99,10 +104,11 @@ describe("OfferTemplatesAdmin", () => {
     render(<OfferTemplatesAdmin />);
     expect(await screen.findByText("Standard DE")).toBeTruthy();
     expect(screen.getByText("de-DE")).toBeTruthy();
+    // Scoped to the row: the column picker offers a tick with the same header
+    // text, and the badge is what this is about.
     expect(
-      screen.getByText(
-        (content, element) =>
-          element?.tagName === "SPAN" && content === "Default for locale",
+      within(screen.getByRole("row", { name: /Standard DE/ })).getByText(
+        "Default for locale",
       ),
     ).toBeTruthy();
   });

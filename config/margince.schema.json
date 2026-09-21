@@ -141,7 +141,7 @@
       }
     },
     "auth": {
-      "description": "Auth selects the enabled authentication methods. Password login defaults to enabled; OIDC arrives with its complete flow (ADR-0061 §6) and has no configuration surface until then — strict decoding makes a premature `oidc:` block a boot error rather than a silent no-op.",
+      "description": "Auth selects the enabled authentication methods. Password login defaults to enabled, and an installation that puts an identity provider in front of Margince turns it off here.",
       "type": "object",
       "additionalProperties": false,
       "properties": {

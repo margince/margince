@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -94,11 +95,11 @@ func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service
 // Draft writes one email. It performs no write of any kind.
 func (s *Service) Draft(
 	ctx context.Context, leadID ids.LeadID, req Request,
-) (crmcontracts.AccountEmailDraft, error) {
+) (crmcontracts.CompanyEmailDraft, error) {
 	// Human-only: drafting spends the workspace's model budget on prose for a
 	// contact to send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The gate that matters runs HERE, in the caller's own read: a lead they
 	// cannot see refuses before a word is written.
@@ -109,17 +110,17 @@ func (s *Service) Draft(
 	// correspondence belongs to the contact it became.
 	lead, err := s.leads.GetLead(ctx, leadID, storekit.LiveOnly)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// A draft addressed to nobody is not a message. Refused before the model
 	// call rather than after it, so a lead with no address costs nothing.
 	if lead.Email == nil || string(*lead.Email) == "" {
-		return crmcontracts.AccountEmailDraft{}, httperr.Validation("email", "missing",
+		return crmcontracts.CompanyEmailDraft{}, httperr.Validation("email", "missing",
 			"this lead has no email address on record, so there is nobody to write to")
 	}
 	activities, err := s.acts.ForLead(ctx, leadID)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	envelope := s.envelope.Resolve(ctx,
 		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities)},
@@ -128,9 +129,12 @@ func (s *Service) Draft(
 	// Loaded after the lead read, so a caller who may not see this lead is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
-	draft, by, err := contactdraft.Write(ctx, s.lane, in, voice)
+	// The draft is written FOR this lead, out of their correspondence — the
+	// request carries what they wrote. Naming them is what lets an erasure that
+	// wipes the lead destroy the captured payload holding those words.
+	draft, by, err := contactdraft.Write(ai.WithSubject(ctx, leadID.Ref(), ""), s.lane, in, voice)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	return contactdraft.Wire(draft, by, voice.Degraded, envelope.Language), nil
 }

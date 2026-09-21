@@ -51,7 +51,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
   color: var(--accentText);
   cursor: pointer;
 }
@@ -66,7 +65,7 @@
    It leads the stack rather than sharing a row: the moment is the page's
    answer, and an answer beside two other cards is one of three things to read
    rather than the thing to do. Its shape and its tint are both the design
-   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warn"` for
+   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warning"` for
    State B, where the finding itself is the bad news — so only the lead's
    two-column interior lives here.
    --------------------------------------------------------------------------- */
@@ -81,9 +80,6 @@
 
 .pe-today-headline {
   margin: 0 0 var(--space-4);
-  font-size: var(--fs-h2);
-  font-weight: 650;
-  line-height: 1.3;
   color: var(--textPrimary);
 }
 
@@ -117,11 +113,6 @@
   grid-template-columns: 120px minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
-  font-size: var(--fs-body);
-}
-
-.pe-row-label {
-  color: var(--textMeta);
 }
 
 .pe-row-value {
@@ -143,7 +134,6 @@
 /* The prose card (the relationship brief): sentences, not rows. */
 .pe-prose {
   margin: 0 0 var(--space-3);
-  line-height: 1.55;
 }
 
 /* The sources under the brief (where its sentences were read from) as one
@@ -169,8 +159,7 @@
 }
 .pe-brief-reading dd {
   margin: 0;
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
 }
 /* A reading that opens on hover says so: the dotted rule under the value is
@@ -179,7 +168,7 @@
    keeps the value's own ink. */
 .pe-brief-reading .popover-trigger {
   text-decoration: underline dotted;
-  text-decoration-color: var(--textMeta);
+  text-decoration-color: var(--borderStrong);
   text-underline-offset: 0.2em;
   font: inherit;
   color: inherit;
@@ -197,19 +186,17 @@
   color: var(--successText);
 }
 .pe-brief-trend-cooling {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .pe-brief-trend-none {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 /* The verdict leads the row and wears its tone at the heading rung: it is
    the one word a reader glances for, and the four readings after it are
    what it was read from. The selectors carry the `dd` so they outweigh the
    value rule above, which names the element too. */
 .pe-brief-reading dd.pe-brief-reading-verdict {
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  line-height: 1.2;
+  font: var(--fontHeadingSmall);
 }
 .pe-brief-reading dd.pe-brief-reading-success {
   color: var(--successText);
@@ -252,18 +239,10 @@
 .pe-brief-label {
   margin-top: 0;
   margin-bottom: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
 }
 
 .pe-brief-line {
   margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: var(--textContent);
 }
 
 @media (max-width: 900px) {
@@ -283,15 +262,11 @@
 }
 
 .pe-deal-title {
-  font-size: var(--fs-h3);
-  font-weight: 650;
   color: var(--textPrimary);
 }
 
 .pe-deal-figures {
   margin: var(--space-1) 0 var(--space-4);
-  font-size: var(--fs-body);
-  color: var(--textMeta);
 }
 
 .pe-committee-label {
@@ -324,7 +299,6 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
-  font-size: var(--fs-body);
 }
 
 .pe-loop-body {
@@ -333,14 +307,12 @@
 }
 
 .pe-loop-due {
-  font-size: var(--fs-sm);
-  color: var(--warnText);
+  color: var(--warningText);
   white-space: nowrap;
 }
 
 .pe-loop-overdue {
   color: var(--dangerText);
-  font-weight: 600;
 }
 
 /* ---------------------------------------------------------------------------
@@ -367,17 +339,12 @@
 
 .pe-memory-title {
   display: block;
-  font-size: var(--fs-body);
-  font-weight: 600;
   color: var(--textPrimary);
 }
 
 .pe-memory-summary {
   display: block;
   margin-top: 2px; /* ds:ignore optical, below the 4px scale's floor */
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textMeta);
 }
 
 /* ---------------------------------------------------------------------------
@@ -411,24 +378,10 @@
 }
 .pe-rail .pe-sect > summary {
   padding: var(--space-3) var(--space-5);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
   transition: background 0.15s;
 }
 .pe-rail .pe-sect > summary:hover {
   background: var(--bgHover);
-}
-/* `t-label` (design-system/atoms.tsx) wraps the whole `summary` prop, and it
-   fills the row so the section name and the summary's own hover target are the
-   width of the line rather than the width of the words. The section verb is no
-   longer in here to be pushed anywhere: it is a sibling of the `<details>`, for
-   the reason `Disclosure.action` states. */
-.pe-rail .pe-sect > summary .t-label {
-  flex: 1;
-  min-width: 0;
 }
 /* The rail's own sections carry the padding their summaries do, so a section
    verb lines up with the name beside it rather than with the panel's edge. */
@@ -452,7 +405,6 @@
   gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-2) 0;
-  font-size: var(--fs-body);
 }
 
 .pe-rail-row + .pe-rail-row {
@@ -463,7 +415,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textContent);
   min-width: 0;
 }
 
@@ -475,16 +426,10 @@
 
 .pe-rail-value-good {
   color: var(--successText);
-  font-weight: 600;
 }
 
-.pe-rail-value-warn {
-  color: var(--warnText);
-  font-weight: 600;
-}
-
-.pe-rail-value-muted {
-  color: var(--textMeta);
+.pe-rail-value-warning {
+  color: var(--warningText);
 }
 
 /* The pulse card's overall reading sits under a rule: it summarizes the rows
@@ -509,7 +454,6 @@
    so the name needs to be a block or the two run together. */
 .pe-colleague-name {
   display: block;
-  font-size: var(--fs-body);
   color: var(--textPrimary);
 }
 
@@ -587,7 +531,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
 }
 
 /* Contacts and open deals, under the company name: a fact about the
@@ -602,8 +545,6 @@
    rather than fighting the company name and its badge for space. */
 .pe-employment-role {
   display: block;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
   margin-top: var(--space-1);
 }
 
@@ -640,8 +581,6 @@
   gap: var(--space-3);
   align-items: start;
   padding: var(--space-2) 0;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
 }
 
 .pe-dot {
@@ -650,15 +589,15 @@
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: 50%;
   corner-shape: round;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 
 .pe-dot-good {
   background: var(--success);
 }
 
-.pe-dot-warn {
-  background: var(--warn);
+.pe-dot-warning {
+  background: var(--warning);
 }
 
 .pe-dot-bad {
@@ -671,7 +610,6 @@
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  font-size: var(--fs-sm);
   color: var(--accentText);
 }
 
@@ -687,8 +625,6 @@
    which draws an h2 — the level the dialog title already occupies. */
 .pe-section-title {
   margin: 0 0 var(--space-3);
-  font-size: var(--fs-lead);
-  font-weight: 650;
   color: var(--textPrimary);
 }
 
@@ -701,13 +637,11 @@
      corner. Without it the title runs under the glyph. The rule in atoms.css
      that reserves this cannot reach here: it names a dialog's first HEADING,
      and the heading in this row is a level down inside it. */
-  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
 }
 
 .pe-drawer-title h2 {
   margin: 0;
-  font-size: var(--fs-h3);
-  font-weight: 650;
   color: var(--textPrimary);
 }
 
@@ -718,12 +652,11 @@
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  font-size: var(--fs-sm);
   color: var(--successText);
 }
 
 .pe-consent-line-blocked {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* The way out of a refused send. It sits under the verdict rather than beside
@@ -761,7 +694,6 @@
    sits beside the control that produced it rather than replacing the drawer. */
 .pe-send-error {
   margin: var(--space-2) 0 0;
-  font-size: var(--fs-sm);
   color: var(--dangerText);
 }
 
@@ -777,9 +709,6 @@
 .pe-why-list {
   margin: 0;
   padding-left: var(--space-5);
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-  color: var(--textContent);
 }
 
 .pe-disclosure {
@@ -793,9 +722,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  line-height: 1.4;
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .pe-drawer-actions {
@@ -811,9 +738,6 @@
   padding: var(--space-3) var(--space-4);
   background: var(--accentLight);
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textContent);
 }
 
 /* A numbered claim: the ordinal is what a conversation angle cites back. */
@@ -835,15 +759,11 @@
   border-radius: 50%;
   corner-shape: round;
   background: var(--accentLight);
-  font-size: var(--fs-meta);
-  font-weight: 600;
   color: var(--accentText);
 }
 
 .pe-claim-body {
   margin: 0 0 var(--space-2);
-  font-size: var(--fs-body);
-  line-height: 1.5;
   color: var(--textPrimary);
 }
 
@@ -855,10 +775,6 @@
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-
-.pe-claim-incomplete {
-  color: var(--textMuted);
 }
 
 .pe-brief-section {
@@ -933,17 +849,11 @@
   flex-direction: column;
   align-items: center;
   min-width: 3.25rem;
-  line-height: 1.1;
   text-align: center;
 }
 
-.pe-meeting-weekday {
-  text-transform: uppercase;
-}
-
 .pe-meeting-day {
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
+  font: var(--fontHeadingMedium);
 }
 
 .pe-meeting-body {
@@ -973,7 +883,7 @@
 
 .pe-meeting-note-by {
   color: var(--aiText);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fontWeightMedium);
 }
 
 .pe-meeting-actions {
@@ -1005,7 +915,7 @@
 
 .pe-deal-card-title {
   min-width: 0;
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* The stretched-link pattern `.pe-employment` already uses: the title's own

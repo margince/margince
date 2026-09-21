@@ -373,7 +373,7 @@ describe("the other fact-picking surfaces", () => {
   it("refuses a fact past the ceiling on the review card, and says why", async () => {
     const user = userEvent.setup();
     render(<ConfirmHarness initial={AT_CAP} />);
-    const refused = screen.getByRole("button", { name: /Office 100(?!\d)/ });
+    const refused = screen.getByRole("checkbox", { name: /Office 100(?!\d)/ });
 
     expect(refused).toBeDisabled();
     expect(screen.getByText(CAP_SENTENCE)).toBeInTheDocument();
@@ -388,20 +388,20 @@ describe("the other fact-picking surfaces", () => {
     const user = userEvent.setup();
     render(<ConfirmHarness initial={AT_CAP} />);
 
-    await user.click(screen.getByRole("button", { name: /Office 0(?!\d)/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Office 0(?!\d)/ }));
 
     expect(keysOf()).toHaveLength(MAX_SELECTED_FACTS - 1);
     expect(keysOf()).not.toContain(MANY[0].value_key);
     expect(screen.queryByText(CAP_SENTENCE)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Office 100(?!\d)/ }),
+      screen.getByRole("checkbox", { name: /Office 100(?!\d)/ }),
     ).toBeEnabled();
   });
 
   it("refuses a fact past the ceiling on the edit form, and says why", async () => {
     const user = userEvent.setup();
     render(<FormHarness initial={AT_CAP} />);
-    const refused = screen.getByRole("button", { name: /Office 100(?!\d)/ });
+    const refused = screen.getByRole("checkbox", { name: /Office 100(?!\d)/ });
 
     expect(refused).toBeDisabled();
     expect(screen.getByText(CAP_SENTENCE)).toBeInTheDocument();
@@ -416,7 +416,7 @@ describe("the other fact-picking surfaces", () => {
     const user = userEvent.setup();
     render(<FormHarness initial={[]} />);
 
-    await user.click(screen.getByRole("button", { name: /Office 3(?!\d)/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Office 3(?!\d)/ }));
 
     expect(keysOf()).toEqual([MANY[3].value_key]);
   });
@@ -1692,7 +1692,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Save the fact: Founded 2011" }),
+      screen.getByRole("checkbox", { name: "Save the fact: Founded 2011" }),
     );
 
     expect(setSelectedFactKeys).toHaveBeenCalledWith([

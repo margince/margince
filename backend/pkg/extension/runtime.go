@@ -293,6 +293,11 @@ type Tx interface {
 	// Exec runs a statement that returns no rows (INSERT, UPDATE, DELETE)
 	// and reports how many rows it affected — which is how a delete says
 	// whether it deleted anything.
+	//
+	// An argument that is the wrong SHAPE for the column it binds to fails in
+	// the driver, and a driver's parse error is not something the seam can tell
+	// apart from a database that is actually broken. Check such arguments here
+	// and answer ErrInvalid, which says why.
 	Exec(ctx context.Context, sql string, args ...any) (rowsAffected int64, err error)
 
 	// Query runs a statement that returns rows. The caller must Close the

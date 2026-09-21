@@ -37,11 +37,24 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
+
+// insertsIntoRelationship matches an insert into the relationship TABLE, and
+// not into a table merely named after it.
+//
+// A prefix test read `INSERT INTO relationship_nudge_dismissal` as a
+// relationship write and demanded the attach lock for it. That table is a
+// reader's own "not now" on a nudge — one row per (contact, reader), carrying
+// no edge and no employment — so the lock would have been taken to protect an
+// invariant it has nothing to do with, and the next reader would have had to
+// work out why. `\\b` does not match before `_`, so the boundary is what tells
+// the two apart.
+var insertsIntoRelationship = regexp.MustCompile(`INSERT\s+INTO\s+relationship\b`)
 
 // The two ways a writer takes the lock, one per shape.
 const (
@@ -131,7 +144,7 @@ func insertsContactRelationship(body *ast.BlockStmt) bool {
 			return true
 		}
 		sql := gatekit.TextOf(lit)
-		if strings.Contains(sql, "INSERT INTO relationship") && strings.Contains(sql, "contact_id") {
+		if insertsIntoRelationship.MatchString(sql) && strings.Contains(sql, "contact_id") {
 			inserts = true
 		}
 		return true

@@ -26,13 +26,16 @@
   white-space: pre-wrap;
 }
 
+/* The byline over a comment: it qualifies the words below it, so it steps
+   back from them — and the author's own name steps forward again inside it,
+   because who wrote this is what a reader scans the column for. */
 .thread-author {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 
 .thread-author-name {
-  font-weight: var(--fw-semibold);
-  color: var(--textContent);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
 }
 
 .thread-reply,
@@ -106,7 +109,7 @@
 .board-doc-page-head {
   width: 55%;
   height: 7px;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 
 .board-doc-page-short {
@@ -136,7 +139,6 @@
 
 .board-doc-title {
   margin: 0;
-  font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
 }
 
@@ -148,9 +150,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
-  font-weight: var(--fw-semibold);
-  color: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -245,7 +244,6 @@
 
 .board-doc-threads-head svg {
   flex: none;
-  color: var(--textTertiary);
 }
 
 .board-threads {

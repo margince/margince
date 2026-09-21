@@ -58,7 +58,8 @@ func (s *Store) SummaryFor(
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
-		if err := companyExists(ctx, tx, companyID); err != nil {
+		lifecycle, err := companyLifecycle(ctx, tx, companyID)
+		if err != nil {
 			return err
 		}
 		// BEFORE the connection is read, and deliberately above every early
@@ -99,7 +100,7 @@ func (s *Store) SummaryFor(
 			// label of the whole one. The state is the answer until it does.
 			return nil
 		}
-		return s.fillFigures(ctx, tx, companyID, conn, &out)
+		return s.fillFigures(ctx, tx, companyID, conn, lifecycle, &out)
 	})
 	if err != nil {
 		return crmcontracts.CompanyFinanceSummary{}, err
@@ -162,22 +163,32 @@ func companyIsLinked(
 	return exists, nil
 }
 
-// companyExists answers the id that names nobody with the same 404 a
-// hidden account gets. Existence-hiding cuts both ways: a caller must not be
-// able to tell "no such account" from "not yours".
-func companyExists(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-	var exists bool
+// lifecycleFormerCustomer is the one lifecycle value this card reads: the
+// relationship has ENDED, which is what makes a collection figure a call to
+// action about a customer who is not one.
+const lifecycleFormerCustomer = "former_customer"
+
+// companyLifecycle answers where the account stands, and answers the id that
+// names nobody with the same 404 a hidden account gets. Existence-hiding cuts
+// both ways: a caller must not be able to tell "no such account" from "not
+// yours".
+//
+// One read rather than two. The existence probe was already here; the
+// lifecycle rides it because the figures below need to know whether the
+// relationship is live, and a second statement asking the same row the same
+// question is a second chance for the two to disagree.
+func companyLifecycle(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
+	var lifecycle string
 	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM company WHERE id = $1 AND archived_at IS NULL)`,
-		companyID).Scan(&exists)
+		SELECT lifecycle FROM company WHERE id = $1 AND archived_at IS NULL`,
+		companyID).Scan(&lifecycle)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", apperrors.ErrNotFound
+	}
 	if err != nil {
-		return fmt.Errorf("read the account: %w", err)
+		return "", fmt.Errorf("read the account: %w", err)
 	}
-	if !exists {
-		return apperrors.ErrNotFound
-	}
-	return nil
+	return lifecycle, nil
 }
 
 // connectionState reads the connection's own health into the card's
@@ -208,7 +219,7 @@ func connectionState(conn connection, now time.Time) crmcontracts.FinanceSummary
 // conversion rate withholds the whole total rather than reporting the sum of
 // the rows that happened to convert.
 func (s *Store) fillFigures(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, conn connection,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, conn connection, lifecycle string,
 	out *crmcontracts.CompanyFinanceSummary,
 ) error {
 	invoices, err := readInvoices(ctx, tx, companyID, conn.id)
@@ -218,9 +229,19 @@ func (s *Store) fillFigures(
 	if len(invoices) == 0 {
 		// A mapped customer with no invoices is a real answer, and it is not
 		// "€0 open" — we have simply never billed them. The figures stay
-		// absent and the card says the state.
+		// absent and the card says the state. No coverage either: a period
+		// bound minted from no invoices would name a window nothing is in.
 		return nil
 	}
+	// WHAT PERIOD THESE FIGURES DESCRIBE, from the rows themselves rather than
+	// from the sync clock. readInvoices orders by issue date ascending, so the
+	// ends of the slice are the ends of the coverage.
+	//
+	// last_synced_at answers when we last looked; this answers what we are
+	// looking at, and a card with only the first can say its figures are fresh
+	// without saying that its 365-day window ended two years ago.
+	out.CoverageStart = issueDate(invoices[0])
+	out.CoverageEnd = issueDate(invoices[len(invoices)-1])
 	// The figures below are base-currency BY CONTRACT — every one of them is an
 	// `*MinorBase`, converted per invoice at the rate frozen on that invoice's
 	// own issue date. So the label they wear is the installation's base
@@ -246,7 +267,17 @@ func (s *Store) fillFigures(
 	}
 	if open := OpenBalanceAt(invoices, now); !open.RateUnavailable {
 		out.OpenBalance = money(open.OpenMinorBase, currency)
-		out.Overdue = money(open.OverdueMinorBase, currency)
+		// Overdue is withheld once the relationship has ended, and open balance
+		// is not. What is still open is a fact about the ledger whatever the
+		// account is now; an OVERDUE figure is a call to action, and on a
+		// finished relationship the most natural reading of it sends a rep to
+		// make a collection call about a customer who is not one. It is also a
+		// figure nobody can state a window for, which is the same "cannot be
+		// honestly computed" this card already answers with absence rather than
+		// a zero.
+		if lifecycle != lifecycleFormerCustomer {
+			out.Overdue = money(open.OverdueMinorBase, currency)
+		}
 	}
 	// Below the sample floor the answer is "not enough settled invoices to
 	// say" — which is why it is a flag on the formula rather than a zero, and
@@ -262,6 +293,11 @@ func (s *Store) fillFigures(
 		out.PaymentBehaviour = paymentBehaviour(invoices, now)
 	}
 	return s.fillRecent(ctx, tx, companyID, conn.id, out)
+}
+
+// issueDate renders one invoice's issue date as the contract's date type.
+func issueDate(inv Invoice) *openapi_types.Date {
+	return &openapi_types.Date{Time: inv.IssuedOn}
 }
 
 // paymentBehaviour is the sparkline's series: days late per settled invoice,

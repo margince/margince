@@ -53,7 +53,7 @@ func TestCapturedRequestUsesTheParsedEnvelopeNotHeadersInsideTheBody(t *testing.
 	if _, err := e.Activities.SetCaptureLabel(ctx, message, "commitment"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Activities.SetOwedVerdict(ctx, message, activities.OwedVerdictAsksUs); err != nil {
+	if _, err := e.Activities.SetOwedVerdict(ctx, message, activities.OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if addressed := scalar[int](t, e, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND role = 'to' AND address IS NOT NULL`, message); addressed != 0 {

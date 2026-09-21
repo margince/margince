@@ -8,6 +8,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { AgentEdge } from "./agent-edge";
 import {
   EDGE_LIGHT_KEY,
@@ -16,7 +17,6 @@ import {
 } from "./agent-edge-preference";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { LABELS } from "./agentrail-copy";
 import { meFixture } from "./mefixture";
 
 // The margins are the one thing on a workspace screen that moves without being
@@ -94,7 +94,7 @@ function mountWorkspace() {
 const margins = () => document.querySelector(".agentedge");
 
 const switchControl = () =>
-  screen.getByRole("switch", { name: LABELS.edgeLight });
+  screen.getByRole("switch", { name: en["agent.setting.edgeLight"] });
 
 async function openPanel(
   user: ReturnType<typeof userEvent.setup>,

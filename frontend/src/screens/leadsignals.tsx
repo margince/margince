@@ -193,12 +193,8 @@ export function LeadManualSignals({
       {/* An absent factor list is not an empty one: while the explanation is
           loading, failed, or not yet retained (ADR-0105 §1), nothing here can
           say what is set, so nothing here claims "not entered". */}
-      {signals.isPending && (
-        <span className="t-caption">{t("lead.scoreLoading")}</span>
-      )}
-      {signals.isError && (
-        <span className="t-caption">{problemMessageOf(signals.error, t)}</span>
-      )}
+      {signals.isPending && <span>{t("lead.scoreLoading")}</span>}
+      {signals.isError && <span>{problemMessageOf(signals.error, t)}</span>}
       {signals.isSuccess && (
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
           {SIGNAL_FACTORS.map((name) => {
@@ -247,7 +243,6 @@ export function LeadManualSignals({
                     </span>
                     {!readOnlyReason && (
                       <Button
-                        small
                         disabled={busy}
                         onClick={() => clear.mutate(name)}
                       >
@@ -256,7 +251,7 @@ export function LeadManualSignals({
                     )}
                   </>
                 ) : (
-                  <span className="t-caption">{t("lead.signalUnset")}</span>
+                  <span>{t("lead.signalUnset")}</span>
                 )}
                 {superseded.map((entry) => (
                   <span
@@ -276,7 +271,7 @@ export function LeadManualSignals({
         </ul>
       )}
       {readOnlyReason ? (
-        <span className="t-caption">{readOnlyReason}</span>
+        <span>{readOnlyReason}</span>
       ) : (
         <div className="form-stack">
           {SIGNAL_FACTORS.map((name) => (
@@ -367,13 +362,12 @@ export function LeadManualSignals({
             </div>
           </Disclosure>
           {(set.isError || clear.isError) && (
-            <span className="t-caption form-error">
+            <span className="form-error">
               {problemMessageOf(set.isError ? set.error : clear.error, t)}
             </span>
           )}
           <div className="form-actions">
             <Button
-              small
               variant="primary"
               disabled={!canEdit || answered.length === 0}
               onClick={() => set.mutate(writes())}

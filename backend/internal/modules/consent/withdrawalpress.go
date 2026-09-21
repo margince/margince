@@ -43,6 +43,19 @@ const sourcePublicLink = "public_link"
 // exactly this case. The send engine reads that table for every message, so a
 // stop written here binds the same way a contact's withdrawal does.
 //
+// THE SCOPE THE LINK CARRIES IS THE SCOPE THE ROW GETS. A named-purpose link
+// writes a row narrowed to that purpose (purpose_id set to the purpose the
+// link was minted for); an all-marketing link writes the broad row
+// (purpose_id NULL) it always did. This used to decline the named-purpose
+// case rather than narrow it, on the reasoning that the table had no purpose
+// column and a broad row would exceed the authority the recipient was
+// handed — true as far as it went, but it meant the link was issued and then
+// silently did nothing, which is worse than never issuing it: a lead who
+// pressed "stop this list" found every list still arriving. Now that the
+// column exists (communication_suppression.purpose_id) and the engine reads
+// it (applySuppression in authorizesuppression.go), the press can honour the
+// scope it was actually asked for instead of refusing between two wrongs.
+//
 // MACHINE LEVEL, not subject level. The press is genuine and unauthenticated
 // both: possession of a mailed link is good evidence and not proof of who
 // pressed it, and a subject-level row is one no seat may ever lift. An
@@ -53,20 +66,6 @@ const sourcePublicLink = "public_link"
 // already standing. The public handler turns that into the same "nothing
 // changed" answer a contact's replayed press gets, so the two subjects stay
 // indistinguishable to whoever holds the link.
-//
-// NO OBJECT GRANT ON THE BROAD ARM, deliberately, and the reason belongs here
-// rather than in a gate's register: the named-purpose arm below delegates to
-// the consent writer and so takes auth.Require, which makes this function read
-// as gated to a call-graph gate that cannot tell the two arms apart. Three
-// things bound the arm that takes no grant. The SUBJECT IS NOT CALLER-CHOSEN:
-// it takes a WithdrawalRef, which only ResolveWithdrawalToken produces, from a
-// credential whose hash the caller had to present, so the rows it can touch are
-// the ones whose link the caller holds. The EFFECT IS ONE ROW OF ONE KIND: a
-// marketing objection at machine authority, as above. And it is IDEMPOTENT: a
-// replay writes nothing. A grant check here would refuse the anonymous
-// one-click POST, which RFC 8058 requires to work from a mail client with no
-// session, and protect nobody: the worst a holder achieves is stopping mail to
-// the address their own link names.
 func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref WithdrawalRef) (bool, error) {
 	if !ref.ContactID.IsZero() {
 		return false, fmt.Errorf("consent: a contact's link withdraws their purposes rather than " +
@@ -75,24 +74,14 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if ref.LeadID.IsZero() && ref.Address == "" {
 		return false, apperrors.ErrNotFound
 	}
-	// A NAMED-PURPOSE LINK STOPS THAT ONE SUBSCRIPTION, and not through this
-	// table.
-	//
-	// communication_suppression has no purpose column: a row binds by KIND,
-	// and the objection kind binds every marketing message. Writing one for a
-	// link minted to stop a single subscription would exceed the authority the
-	// recipient was handed — they asked to leave one list and would find every
-	// marketing message stopped.
-	//
-	// The per-purpose shape is contact_consent, which carries a `lead_id`
-	// beside its contact_id and always has: the send gate already reads a
-	// LEAD's recorded state per purpose through recordedStateFor
-	// (authorizelead.go), so a withdrawal written there binds the next send the
-	// same way a contact's does. Nothing about this needed a new schema; it
-	// needed the writer the contact's own press already uses, called with the
-	// lead.
+	// THE NAMED-PURPOSE ROW NARROWS TO THE LINK'S OWN PURPOSE, and nothing
+	// narrower is possible: the link carries one purpose id, so that is the
+	// only subscription this press can name. zeroAsNull turns the all-marketing
+	// scope's zero-value PurposeID into SQL NULL — the broad row every prior
+	// press wrote, unchanged.
+	var purposeID *ids.UUID
 	if ref.Scope == WithdrawalScopeNamedPurpose {
-		return s.stopOnePurposeTx(ctx, tx, ref)
+		purposeID = zeroAsNull(ref.PurposeID)
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -107,18 +96,43 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if err := lockStopKey(ctx, tx, stopSubjectKey(ref)); err != nil {
 		return false, err
 	}
+	// THE DEDUP IS ASYMMETRIC, because "already stopped" is.
+	//
+	// A BROAD live row ABSORBS a narrow press. Somebody who has already left
+	// all marketing and then presses one list's link has asked for nothing
+	// they do not have: inserting would write a second live objection, audit
+	// it, and answer "you are now unsubscribed" to somebody who already was —
+	// and leave their Art. 15 export showing two objections for one standing
+	// refusal.
+	//
+	// A NARROW live row does NOT absorb a broad press, nor a press for another
+	// purpose. Those ask for strictly more than what stands, so each records.
+	//
+	// WHAT THIS COSTS, stated because it is a real trade and not a free win:
+	// the narrow preference is not written down while the broad row covers it,
+	// so lifting the broad stop later would not leave the narrow one behind.
+	// That is unreachable today — this door refuses contacts outright, and a
+	// lead's stop has no lift path at all (lift.go admits a ContactID only) —
+	// so nothing can currently observe the difference. A lift path for leads
+	// is the slice that has to decide it, and it should read this comment.
+	//
+	// `live.purpose_id IS NULL` is the absorbing arm; `= $7` is the exact
+	// match. A broad press sends NULL for $7, where `= $7` is never true, so
+	// the two arms together leave a broad press matching broad rows only —
+	// exactly the behaviour this dedup had before the column existed.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (lead_id, address, kind, source, captured_by, decided_by_level)
-		SELECT $1, $2, $3, $6, $4, $5
+		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
+		SELECT $1, $2, $3, $6, $4, $5, $7
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
 		          AND live.kind = $3
+		          AND (live.purpose_id IS NULL OR live.purpose_id = $7)
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
-		by, string(commsauthz.LevelMachine), sourcePublicLink)
+		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID)
 	if err != nil {
 		return false, fmt.Errorf("consent: recording the stop this link pressed: %w", err)
 	}
@@ -139,12 +153,39 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// that was told it could trust the type. stopcarry.go refuses the same
 	// event for the same reason. Widening the contract to leads is a question
 	// for the slice that asks it.
-	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID,
-		map[string]any{"stopped": commsauthz.ReasonObjection, "source": sourcePublicLink}); err != nil {
+	//
+	// HOW WIDE, alongside what and where from. The kind is the same word for a
+	// link that left one list and a link that left all marketing, so an
+	// auditor reading this payload alone could not tell the two presses apart
+	// — the distinction this press exists to make. Both cases state it rather
+	// than the narrow one adding a key, because an absent field reads as one
+	// nobody thought to write.
+	//
+	// THE SCOPE, NOT THE PURPOSE ID. This payload is projected into the
+	// History tab a human reads, where a consent_purpose uuid would be the
+	// same unreadable thing the subject-access export was just corrected for.
+	// Which purpose is on the suppression row itself, for a reader who needs
+	// it; what History owes is how far the press reached.
+	scope := auditScopeAllMarketing
+	if purposeID != nil {
+		scope = auditScopeOnePurpose
+	}
+	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID, map[string]any{
+		"stopped": commsauthz.ReasonObjection,
+		"source":  sourcePublicLink,
+		"scope":   scope,
+	}); err != nil {
 		return false, err
 	}
 	return true, nil
 }
+
+// The two widths a press's audit row can describe, so the payload and any
+// later reader of it agree on the words.
+const (
+	auditScopeAllMarketing = "all_marketing"
+	auditScopeOnePurpose   = "one_purpose"
+)
 
 // StopForCredential is the press in its own transaction, for the public
 // handler that has none of its own.
@@ -215,43 +256,4 @@ func stopSubjectKey(ref WithdrawalRef) string {
 		return ref.LeadID.String()
 	}
 	return ref.Address
-}
-
-// stopOnePurposeTx records the withdrawal a single-subscription link asks for,
-// against the subject that can hold one.
-//
-// THE SAME WRITER the preference centre uses (withdrawPurposesTx), so a lead's
-// press produces the same state row, the same consent_event and the same audit
-// trail a contact's does. A second writer here would be a second answer to
-// "what does a withdrawal look like", and the one that stopped matching would
-// be the one nobody reads.
-//
-// AN ADDRESS WITH NO SUBJECT still cannot be stopped narrowly, and says so
-// rather than pretending. Per-purpose state hangs off a record; a bare address
-// is not one, so there is nowhere to write it and nothing for the gate to read
-// on the next send. A refusal reaches the presser as an honest answer, where
-// the 200 this used to return told them a stop had been recorded that never
-// was.
-func (s *Store) stopOnePurposeTx(ctx context.Context, tx pgx.Tx, ref WithdrawalRef) (bool, error) {
-	if ref.LeadID.IsZero() {
-		return false, fmt.Errorf(
-			"consent: a single-subscription link needs a record to hold the withdrawal, "+
-				"and this one names only an address: %w", apperrors.ErrNotFound)
-	}
-	source := sourcePublicLink
-	in := RecordInput{
-		LeadID:    ref.LeadID,
-		PurposeID: ids.From[ids.PurposeKind](ref.PurposeID),
-		NewState:  string(StateWithdrawn),
-		Source:    &source,
-	}
-	subject, state, err := admitRecord(ctx, in)
-	if err != nil {
-		return false, err
-	}
-	recorded, err := s.recordAdmittedTx(ctx, tx, in, subject, state)
-	if err != nil {
-		return false, err
-	}
-	return recorded.Changed, nil
 }

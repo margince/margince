@@ -91,10 +91,14 @@ export function SchedulePanel({
               <span className="t-caption rail-schedule-when">
                 {whenOf(item, locale, zone)}
               </span>
+              {/* The stop on the day's line. Decorative: the time beside it is
+                  the fact, and the line the dots hang on is the panel's way of
+                  reading as a schedule rather than as a list of sentences. */}
+              <span className="rail-schedule-dot" aria-hidden="true" />
               <span className="rail-schedule-what">
                 <Title item={item} />
                 {isUnprepared(item) && (
-                  <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+                  <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
                 )}
               </span>
             </PanelRow>

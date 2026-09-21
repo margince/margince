@@ -488,7 +488,7 @@ func TestAnObjectionLeavesTheInvoiceAlone(t *testing.T) {
 		{commsauthz.CategoryReplyToInbound, false},
 		{commsauthz.CategoryContractNotice, false},
 	} {
-		if got := suppressionBinds(commsauthz.ReasonObjection, c.category); got != c.stopped {
+		if got := suppressionBinds(commsauthz.ReasonObjection, c.category, nil, nil); got != c.stopped {
 			t.Errorf("an objection against %s: binds = %v, want %v", c.category, got, c.stopped)
 		}
 	}
@@ -521,7 +521,7 @@ func TestAStopEverythingStillConfirmsItself(t *testing.T) {
 		{commsauthz.CategoryPrivacyNotice, false},
 		{commsauthz.CategorySecurityNotice, false},
 	} {
-		if got := suppressionBinds(commsauthz.ReasonSubjectRequest, c.category); got != c.stopped {
+		if got := suppressionBinds(commsauthz.ReasonSubjectRequest, c.category, nil, nil); got != c.stopped {
 			t.Errorf("a subject request against %s: binds = %v, want %v", c.category, got, c.stopped)
 		}
 	}

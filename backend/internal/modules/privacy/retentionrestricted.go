@@ -133,6 +133,7 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		UPDATE activity a
 		   SET restricted_at = NULL, restricted_reason = NULL, restricted_until = NULL,
 		       subject = NULL, body = NULL, raw = NULL, counterparty_email = NULL,
+		       source_author_name = NULL,
 		       redacted_fields = a.redacted_fields || ARRAY(SELECT c FROM unnest(ARRAY[
 		           CASE WHEN a.subject IS NOT NULL THEN 'subject' END,
 		           CASE WHEN a.body IS NOT NULL THEN 'body' END]) AS c
@@ -140,5 +141,8 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		       archived_at = coalesce(a.archived_at, now())
 		 WHERE a.id = $1 AND a.restricted_at IS NOT NULL `+due+`
 		 RETURNING a.retention_class`, id).Scan(&class)
-	return class, err
+	if err != nil {
+		return class, err
+	}
+	return class, nil
 }

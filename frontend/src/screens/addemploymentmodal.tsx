@@ -6,6 +6,7 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -16,6 +17,7 @@ import {
   type EmploymentActions,
   searchCompanyCandidates,
 } from "./contactemployers";
+import { datePatch, validDateEntry } from "./employmentpatch";
 
 // The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the
@@ -48,6 +50,15 @@ export function AddEmploymentModal({
   const headingId = useId();
   const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const [role, setRole] = useState("");
+  // A FIRST-CLASS field rather than something to correct afterwards. An
+  // employment with no start date has no window, and the account walk that
+  // resolves old mail then reads a message from three jobs ago as belonging to
+  // the company this contact joined last month. This form is where a human can
+  // say when it began, and it is the only place that ever asks.
+  //
+  // Optional, and empty stays empty: "I do not know when" is a real answer, and
+  // a form that defaulted to today would write a fact nobody has.
+  const [start, setStart] = useState("");
   // Ticked by default for somebody with no current job, because that is what
   // the save will do either way: the server marks a contact's only current
   // employment as their primary one. A box that started unticked and then
@@ -96,6 +107,11 @@ export function AddEmploymentModal({
   function close() {
     setCompany(null);
     setRole("");
+    // The modal is never unmounted — the list only flips `open` — so every
+    // field it holds has to be put back by hand. A start date left standing
+    // from a cancelled flow is the worst of them to forget: it would be sent
+    // for the NEXT employer, dated from the last one.
+    setStart("");
     setAllConnected(false);
     create.reset();
     onClose();
@@ -103,13 +119,14 @@ export function AddEmploymentModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("contact.rail.addEmployment")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <div className="field">
           <span className="t-label">{t("contact.rail.employer")}</span>
@@ -121,9 +138,7 @@ export function AddEmploymentModal({
             disabled={create.isPending}
           />
           {!company && allConnected && (
-            <p className="t-caption">
-              {t("contact.rail.allCompaniesConnected")}
-            </p>
+            <p>{t("contact.rail.allCompaniesConnected")}</p>
           )}
         </div>
         <Field label={t("rel.role")}>
@@ -136,6 +151,16 @@ export function AddEmploymentModal({
             />
           )}
         </Field>
+        <Field label={t("employment.start")} hint={t("employment.dateHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={start}
+              disabled={create.isPending}
+              onChange={(event) => setStart(event.target.value)}
+            />
+          )}
+        </Field>
         <Checkbox
           label={t("contact.rail.isCurrentEmployer")}
           checked={isCurrent}
@@ -144,11 +169,7 @@ export function AddEmploymentModal({
         />
       </div>
       {create.isError && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(create.error, t)}
         </p>
       )}
@@ -158,17 +179,20 @@ export function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!company || create.isPending}
+          disabled={!company || !validDateEntry(start) || create.isPending}
           onClick={() => {
             if (!company) {
               return;
             }
+            const started = datePatch(start);
             create.mutate(
               {
                 kind: "employment",
                 contact_id: contactId,
                 company_id: company.id,
                 role: role.trim() || undefined,
+                started_at: started.date,
+                started_precision: started.precision,
                 is_current_primary: isCurrent,
                 // `manual` is the one word for a first-party write by a
                 // contact — through this form or through an assistant. It used

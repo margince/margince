@@ -204,7 +204,7 @@ function GroupRoleGrants({
       <p className="t-label">{t("groupRoles.title")}</p>
       <p className="t-caption">{t("groupRoles.sub")}</p>
       <Callout
-        tone="warn"
+        tone="warning"
         kind="standing"
         title={t("groupRoles.grantOnlyTitle")}
       >
@@ -244,7 +244,6 @@ function GroupRoleGrants({
                 onChange={(role) => editRow(row.id, { role })}
               />
               <Button
-                small
                 iconOnly
                 aria-label={
                   row.group.trim() === ""
@@ -266,7 +265,6 @@ function GroupRoleGrants({
       )}
       <div className="form-actions">
         <Button
-          small
           disabled={!canManage || save.isPending}
           reason={
             rows.length >= MAX_GROUP_GRANTS
@@ -286,7 +284,6 @@ function GroupRoleGrants({
         </Button>
         <Button
           variant="primary"
-          small
           pending={save.isPending}
           disabled={!canManage}
           reason={refusal ?? undefined}
@@ -388,9 +385,7 @@ export function SignInMethodsCard() {
                   ))}
                 </SettingList>
                 {providers.length === 0 && (
-                  <p className="t-caption">
-                    {t("signInMethods.noneConfigured")}
-                  </p>
+                  <p>{t("signInMethods.noneConfigured")}</p>
                 )}
                 <GroupRoleGrants
                   // Defaulted for the same reason `sign_in_providers` is: the

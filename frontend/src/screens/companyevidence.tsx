@@ -9,6 +9,7 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -99,14 +100,16 @@ export function EvidenceModal({
       labelledBy="co-evidence-title"
       placement="right"
     >
-      <h2 id="co-evidence-title">{t("co.evidence.title")}</h2>
+      <Heading size="large" id="co-evidence-title">
+        {t("co.evidence.title")}
+      </Heading>
       {receipt.isPending ? (
         <Skeleton width="100%" height={120} />
       ) : !shown?.source_kind ? (
         <EmptyState>{t("co.evidence.unavailable")}</EmptyState>
       ) : (
         <div>
-          <p className="co-evidence-value">
+          <p>
             {shown.label ? `${shown.label}: ` : ""}
             {shown.value}
           </p>
@@ -182,12 +185,8 @@ function EvidenceSteps({
   }
   return (
     <div className="co-evidence-steps">
-      <Button small onClick={() => onStep(-1)}>
-        {t("co.evidence.previous")}
-      </Button>
-      <Button small onClick={() => onStep(1)}>
-        {t("co.evidence.next")}
-      </Button>
+      <Button onClick={() => onStep(-1)}>{t("co.evidence.previous")}</Button>
+      <Button onClick={() => onStep(1)}>{t("co.evidence.next")}</Button>
     </div>
   );
 }

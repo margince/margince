@@ -115,23 +115,70 @@ const (
 // event happened — and the guarantee is the database's unique index, not a
 // check this function performs and a concurrent caller races past.
 func RecordDerivedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, event QualifyingEvent, capturedBy string) error {
-	// ON CONFLICT, not NOT EXISTS: two concurrent sends to the same contact both
-	// pass a read-then-write check and both insert. The unique index on the
-	// source record is what actually makes this idempotent.
+	if err := stampQualifyingEvent(ctx, tx, contactID, event, sourceKindDerived, capturedBy); err != nil {
+		return fmt.Errorf("consent: stamp the qualifying event that allowed this send: %w", err)
+	}
+	return nil
+}
+
+// RecordSubjectInquiry stamps the event a subject writes by ASKING: they filled
+// in a public booking form, which is them initiating correspondence as surely as
+// writing a message is (ADR-0098 D2 lists form, booking and call together).
+//
+// Written when it HAPPENS rather than derived when somebody sends, and that is
+// the difference from the row above. An inquiry leaves no inbound message on the
+// timeline — nobody wrote to us, they filled in a form — so there is nothing for
+// a later derivation to read, and an event nobody records is a basis nobody has.
+//
+// The booked meeting is the evidence: the row cites it, which is what makes this
+// answerable to somebody asking WHY this contact could be mailed. The source is
+// `captured` rather than `derived` because no reading produced it — the door
+// that took the booking knew.
+//
+// It shares stampQualifyingEvent with the derived writer deliberately. The two
+// arrive by different routes and mean different things, and the row they write
+// is one row with one idempotency rule; spelling that twice is how the two come
+// to disagree about what a duplicate is.
+func RecordSubjectInquiry(
+	ctx context.Context, tx pgx.Tx, contactID string, event QualifyingEvent, capturedBy string,
+) error {
+	if err := stampQualifyingEvent(ctx, tx, contactID, event, sourceKindCaptured, capturedBy); err != nil {
+		return fmt.Errorf("consent: stamp the inquiry this contact made: %w", err)
+	}
+	return nil
+}
+
+// The `source` column's two machine values. A human's own claim writes 'human'
+// (qualifyingevent.go) and neither of these.
+const (
+	// sourceKindDerived: read off the timeline at send time.
+	sourceKindDerived = "derived"
+	// sourceKindCaptured: the door that took the event wrote it as it happened.
+	sourceKindCaptured = "captured"
+)
+
+// stampQualifyingEvent is the one insert every machine-written qualifying event
+// goes through.
+//
+// ON CONFLICT, not NOT EXISTS: two concurrent writers naming the same source
+// record both pass a read-then-write check and both insert. The unique index on
+// the source record is what actually makes this idempotent — which also means a
+// booking already stamped as an inquiry is not stamped again when the send path
+// later derives something from the same activity.
+func stampQualifyingEvent(
+	ctx context.Context, tx pgx.Tx, contactID string, event QualifyingEvent, source, capturedBy string,
+) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO consent_qualifying_event
 			(contact_id, kind, source_entity_type, source_entity_id,
 			 occurred_at, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, 'derived', $6)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (contact_id, source_entity_type, source_entity_id)
 		  WHERE source_entity_id IS NOT NULL
 		  DO NOTHING`,
 		contactID, event.Kind, event.SourceEntityType, event.SourceEntityID,
-		event.OccurredAt, capturedBy)
-	if err != nil {
-		return fmt.Errorf("consent: stamp the qualifying event that allowed this send: %w", err)
-	}
-	return nil
+		event.OccurredAt, source, capturedBy)
+	return err
 }
 
 // recordedQualifyingEvent reads a row a human or an integration wrote.

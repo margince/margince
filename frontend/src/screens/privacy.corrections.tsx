@@ -225,9 +225,7 @@ function CorrectionRow({
       </div>
       <span>{formatDate(row.submitted_at, locale, tz)}</span>
       {canDecide && !deciding ? (
-        <Button small onClick={onOpen}>
-          {t("privacy.correctionDecide")}
-        </Button>
+        <Button onClick={onOpen}>{t("privacy.correctionDecide")}</Button>
       ) : null}
       {deciding ? (
         <div>
@@ -241,11 +239,7 @@ function CorrectionRow({
               it: two verbs a hand apart should sit a hand apart on
               both. */}
           <div className="dsr-actions">
-            <Button
-              small
-              disabled={pending}
-              onClick={() => onDecide("accepted")}
-            >
+            <Button disabled={pending} onClick={() => onDecide("accepted")}>
               {/* A REMOVAL IS ACKNOWLEDGED, not performed here. Accepting one
                   records that somebody read it; what the contact asked for is
                   a rights case, opened when the proposal arrived, and
@@ -256,7 +250,6 @@ function CorrectionRow({
                 : t("privacy.correctionAcknowledge")}
             </Button>
             <Button
-              small
               variant="ghost"
               disabled={pending}
               onClick={() => onDecide("rejected")}

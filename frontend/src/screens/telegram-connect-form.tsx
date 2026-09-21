@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { statusLabel, statusTone } from "./connector-status";
@@ -105,7 +106,8 @@ export function TelegramConnectForm({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
@@ -113,7 +115,7 @@ export function TelegramConnectForm({
         {connection
           ? t("connectors.telegramEditTitle")
           : t("connectors.telegramModalTitle")}
-      </h2>
+      </Heading>
       {resolved ? (
         <div className="form-stack">
           <p className="t-body">
@@ -128,7 +130,6 @@ export function TelegramConnectForm({
           </div>
           <div className="actions">
             <Button
-              small
               variant="primary"
               onClick={() => {
                 onConnected?.();
@@ -187,7 +188,6 @@ export function TelegramConnectForm({
           )}
           <div className="actions">
             <Button
-              small
               type="button"
               onClick={onClose}
               disabled={connect.isPending}
@@ -195,7 +195,6 @@ export function TelegramConnectForm({
               {t("create.cancel")}
             </Button>
             <Button
-              small
               variant="primary"
               type="submit"
               disabled={!connect.isPending && !ready}

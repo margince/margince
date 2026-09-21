@@ -99,6 +99,14 @@ var preservedResetTables = map[string]bool{
 	// holds SELECT alone on this table by design, so the DELETE is refused
 	// outright and aborts the whole reset transaction.
 	"currency_minor_digits": true,
+	// What a field mask may NAME, against what the code can actually withhold
+	// (migration 1789617400). Build-level reference data rather than a
+	// workspace's configuration: field_mask is the configuration and the sweep
+	// clears it, while this is the catalog that configuration is checked
+	// against, and emptying it would refuse every mask an installation set
+	// afterwards. The application role holds SELECT alone on it for that
+	// reason, so a DELETE here is refused outright and aborts the reset.
+	"maskable_field": true,
 	// in-flight delivery: drained by the outbox pass, not deleted under it
 	"event_outbox": true,
 	// The retention floor's evidence (A165, migration 0289). Preserved from the

@@ -55,7 +55,7 @@ function Head({
         <Panel tone="ai" title="Brandt Automotive GmbH · 360">
           <VerdictHead
             label="Your move"
-            tone="warn"
+            tone="warning"
             because={because}
             restsOn={restsOn}
           />
@@ -65,7 +65,7 @@ function Head({
                 key: "cold",
                 label: "Going cold",
                 figure: "84 days",
-                tone: "warn",
+                tone: "warning",
               },
               {
                 key: "promise",

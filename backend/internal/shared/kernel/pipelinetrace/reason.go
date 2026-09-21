@@ -84,9 +84,31 @@ const (
 	ReasonAwaitingBatch        Reason = "awaiting_batch"
 	ReasonLabelled             Reason = "labelled"
 
-	// StageCompanyTriage and StageMaterialEvents contribute no reasons yet: both
-	// are `planned`, so nothing produces one. Their vocabulary arrives with the
-	// derivation that emits it (#1434), rather than sitting here unproducible.
+	// StageMaterialEvents. The extractor reads a CONVERSATION, so every reason
+	// here is about the thread rather than about this message — and each one is
+	// an arm of the offer the extractor itself applies, named where that rule is
+	// spelled so the two cannot come to mean different things.
+	ReasonEventsRaised      Reason = "events_raised"
+	ReasonNothingMaterial   Reason = "nothing_material"
+	ReasonThreadStillMoving Reason = "thread_still_moving"
+	ReasonAwaitingScan      Reason = "awaiting_scan"
+	ReasonReadingParked     Reason = "reading_parked"
+	ReasonNoSingleAccount   Reason = "no_single_account"
+	ReasonTwoBodiesOfWork   Reason = "two_bodies_of_work"
+	ReasonThreadNotAllOpen  Reason = "thread_not_all_open"
+	ReasonNoNamedReader     Reason = "no_named_reader"
+
+	// StageCompanyTriage, whose subject is a DOMAIN. These are the per-domain
+	// answers the company surface reports; the message ladder carries no rung
+	// for this stage at all, because a per-message ladder cannot honestly say
+	// "the domain was triaged" about one message out of the hundred that shared
+	// the answer.
+	ReasonCompanyWarranted  Reason = "company_warranted"
+	ReasonNoSiteIdentified  Reason = "no_site_identified"
+	ReasonTriageQueued      Reason = "triage_queued"
+	ReasonTriageUnevidenced Reason = "triage_unevidenced"
+	ReasonTriageStale       Reason = "triage_stale_evidence"
+	ReasonTriageNearDupe    Reason = "triage_near_duplicate"
 )
 
 // Absence reasons. Why a whole STAGE reports nothing, as against why one message
@@ -102,9 +124,10 @@ const (
 	AbsentWouldRestoreErased Reason = "would_restore_erased"
 	// StageClaimExtraction.
 	AbsentNoWriterYet Reason = "no_writer_yet"
-	// A stage that RUNS but whose state this surface does not read yet. The
-	// distinction from AbsentNoWriterYet matters to a member: one says the
-	// pipeline step does not exist, the other says it does and we are not
-	// showing you. Rendering either as the other is a false statement.
-	AbsentNotReportedYet Reason = "not_reported_yet"
+	// StageCompanyTriage on the MESSAGE ladder. It runs, and it is reported —
+	// just not here: its subject is a domain, and a domain is triaged once for
+	// every message that ever arrives from it. A per-message rung would answer
+	// "done" for a message that prompted nothing and for the one that prompted
+	// everything alike, which reads as this message having been the cause.
+	AbsentAnsweredOnTheCompany Reason = "answered_on_the_company"
 )

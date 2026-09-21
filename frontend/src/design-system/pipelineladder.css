@@ -55,14 +55,16 @@
 }
 
 /* The mark carries the verdict at a glance, so the same three tones the badge
- * uses appear here too. Every other status keeps the resting tone: none of them
- * is a statement about the MESSAGE, and colouring them would read as one. */
+ * uses appear here too — read off STATUS_TONE in pipelineladder.tsx, which is
+ * where the mapping is decided. Every other status keeps the resting tone: none
+ * of them is a statement about the MESSAGE, and colouring them would read as
+ * one. */
 .pipeline-ladder__rung[data-status="done"] .pipeline-ladder__mark {
-  background: var(--online);
+  background: var(--success);
 }
 
 .pipeline-ladder__rung[data-status="pending"] .pipeline-ladder__mark {
-  background: var(--away);
+  background: var(--info);
 }
 
 .pipeline-ladder__rung[data-status="failed"] .pipeline-ladder__mark {
@@ -84,28 +86,13 @@
   margin: 0;
 }
 
-.pipeline-ladder__stage {
-  font-weight: var(--fw-semibold);
-}
-
-/* WHOSE answer this rung is, when it is not the message's own. Quiet, because
- * it qualifies the rung rather than competing with it — but never hidden: a
- * sender-scoped verdict read as a per-message fact is simply the wrong fact. */
-.pipeline-ladder__subject {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-}
-
 .pipeline-ladder__reason {
-  color: var(--textMeta);
   margin: 0;
 }
 
 .pipeline-ladder__payload {
-  color: var(--textMeta);
   display: flex;
   flex-direction: column;
-  font-size: var(--fs-sm);
   gap: var(--space-1);
   margin: 0;
   min-width: 0;
@@ -122,8 +109,6 @@
  * so it sits outside the rail rather than reading as a step of its own. */
 .pipeline-ladder__posture {
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textTertiary);
-  font-size: var(--fs-sm);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
 }

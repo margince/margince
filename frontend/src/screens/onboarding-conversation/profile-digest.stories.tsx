@@ -303,7 +303,7 @@ export const OpenItemsPresent: Story = {
 };
 
 // Every line filled: the header's second figure reads zero and drops the
-// warn colour, and no dashed row remains in the article.
+// warning colour, and no dashed row remains in the article.
 export const NoneOpen: Story = {
   render: () => {
     const filled = OPEN_ROWS.map((line) =>

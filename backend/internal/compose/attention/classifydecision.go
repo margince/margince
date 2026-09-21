@@ -88,9 +88,12 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 		return false
 	}
 	switch *item.Kind {
-	case "send_email", "send_account_email", "send_message",
+	// site_lead is deliberately absent: a contact scraped off the company's own
+	// site has nobody outside waiting on the decision, so it is hygiene however
+	// fresh the page is.
+	case "send_email", "send_company_email", "send_message",
 		"book_meeting",
-		"deal_follow_up", "transcript_proposal", "site_lead":
+		"deal_follow_up", "transcript_proposal":
 		return true
 	case kindScheduledSend:
 		// A message the rep already MEANT to send, stopped at send time. The

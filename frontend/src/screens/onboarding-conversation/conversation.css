@@ -58,8 +58,6 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
   background: var(--bgCard);
-  color: var(--textContent);
-  font: var(--fw-regular) var(--fs-body) / var(--lh-relaxed) var(--f-body);
 }
 
 .ob-conv-speaker {
@@ -109,7 +107,6 @@
   align-self: flex-end;
   max-width: 80%;
   width: fit-content;
-  color: var(--textMeta);
 }
 
 .ob-conv-user p {
@@ -118,7 +115,6 @@
   border-radius: var(--r-md) var(--r-lg) var(--r-xs) var(--r-lg);
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font: var(--fw-medium) var(--fs-body) / var(--lh-relaxed) var(--f-body);
 }
 
 /* The reader's own chip, on the same rung as the speaker's. `.avatar` carries
@@ -143,7 +139,6 @@
 
 .ob-conv-outcome p {
   margin: 0;
-  font: var(--fw-medium) var(--fs-lead) / var(--lh-normal) var(--f-body);
 }
 
 .ob-conv-outcome svg {
@@ -165,7 +160,6 @@
 .ob-conv-question legend {
   padding-inline: var(--space-1);
   color: var(--textPrimary);
-  font: var(--fw-medium) var(--fs-lead) / var(--lh-normal) var(--f-body);
 }
 
 /* A stacked choice list, not a wrapped chip row: each answer reads its full
@@ -200,12 +194,10 @@
 
 .ob-conv-option span {
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
 }
 
 .ob-conv-option small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   overflow-wrap: anywhere;
 }
 
@@ -223,7 +215,6 @@
 /* The subordinate escape under the options: present, never competing. */
 .ob-conv-question .ob-conv-question-dismiss {
   margin-block-start: var(--space-2);
-  color: var(--textMeta);
 }
 
 .ob-conv-confirm-skipped {
@@ -235,16 +226,14 @@
 
 .ob-conv-confirm-skipped p {
   margin: 0;
-  color: var(--textMeta);
-  font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
 .ob-conv-outcome[data-tone="deferred"] {
-  border-inline-start-color: var(--warnBorder);
+  border-inline-start-color: var(--warningBorder);
 }
 
 .ob-conv-outcome[data-tone="deferred"] svg {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .ob-conv-outcome[data-tone="failure"] {
@@ -281,7 +270,7 @@
 .ob-conv-confirm h2 {
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-h3) / var(--lh-snug) var(--f-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-conv-confirm-fields {
@@ -302,7 +291,6 @@
 
 .ob-conv-confirm-fields strong {
   color: var(--textPrimary);
-  font: var(--fw-medium) var(--fs-lead) / var(--lh-normal) var(--f-body);
   overflow-wrap: anywhere;
 }
 
@@ -313,7 +301,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--textPrimary);
-  font: var(--fw-medium) var(--fs-lead) / var(--lh-normal) var(--f-body);
 }
 
 /* The width that decides whether a label/value row can keep its columns is
@@ -336,8 +323,6 @@
   padding: 0;
   border: none;
   background: none;
-  color: var(--textMeta);
-  font: var(--fw-medium) var(--fs-meta) / var(--lh-snug) var(--f-body);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -362,8 +347,6 @@
   border-radius: var(--r-sm);
   outline: 0;
   background: var(--bgHover);
-  font: inherit;
-  font-size: var(--fs-body);
 }
 
 .ob-conv-confirm-missing-row textarea {
@@ -441,8 +424,6 @@
   padding-inline-start: var(--space-5);
   display: grid;
   gap: var(--space-1);
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 /*
@@ -491,8 +472,6 @@
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-lg);
   background: var(--bgElevated);
-  color: var(--textMeta);
-  font: var(--fw-regular) var(--fs-lead) / var(--lh-normal) var(--f-body);
   text-align: center;
 }
 
@@ -531,8 +510,7 @@
 .ob-decision h2 {
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-h1) / var(--lh-tight) var(--f-display);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-decision-options {
@@ -573,12 +551,13 @@
   gap: var(--space-4);
 }
 
-.ob-decision-card > .ob-decision-row > label {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+/* The tick and the read's lines, with the words free to take what is left and
+   the box against the FIRST of them. Both classes are named so this wins
+   whichever order the route split loads the two stylesheets in. */
+.ob-decision-row > .checkfield {
+  grid-template-columns: auto 1fr;
+  align-items: start;
   min-width: 0;
-  cursor: pointer;
 }
 
 /* What this answer puts on the record, next to the answer itself.
@@ -590,10 +569,6 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-}
-.ob-decision-writes-lead {
-  color: var(--textMeta);
 }
 .ob-decision-writes code {
   color: var(--textPrimary);
@@ -606,7 +581,7 @@
   border: 0;
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
   text-underline-offset: 3px;
@@ -626,7 +601,6 @@
 .ob-conv-notice {
   margin: 0;
   color: var(--dangerText);
-  font-size: var(--fs-meta);
 }
 
 .ob-decision-head {
@@ -651,44 +625,6 @@
   margin-block-end: var(--space-4);
 }
 
-/* The native radio stays for keyboard and AT; the disc is what shows. */
-.ob-decision-card input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-.ob-decision-disc {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  flex: none;
-  margin-top: 1px;
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
-  color: var(--textOnAccentControl);
-}
-
-.ob-decision-card.is-picked .ob-decision-disc {
-  border-color: transparent;
-  background: var(--accent);
-}
-
-.ob-decision-card input:focus-visible ~ .ob-decision-disc {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.ob-decision-disc svg {
-  width: 12px;
-  height: 12px;
-}
-
 .ob-decision-body {
   display: flex;
   flex-direction: column;
@@ -698,12 +634,10 @@
 
 .ob-decision-body b {
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
 }
 
 .ob-decision-body small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   overflow-wrap: anywhere;
 }
 
@@ -721,15 +655,12 @@
 
 .ob-decision-proof-head {
   margin: 0;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-decision-proof blockquote {
   margin: 0 0 var(--space-2);
   overflow-wrap: anywhere;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 .ob-decision-path {
@@ -749,14 +680,12 @@
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-md);
   background: none;
-  color: var(--textMeta);
   cursor: pointer;
-  font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
   text-align: start;
 }
 
 .ob-decision-skip:hover {
-  border-color: var(--textTertiary);
+  border-color: var(--borderStrong);
   color: var(--textPrimary);
 }
 
@@ -768,7 +697,7 @@
   flex: none;
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-decision-acts {
@@ -937,10 +866,7 @@
 
 .ob-distill-evidence {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
   font-style: italic;
-  line-height: var(--lh-relaxed);
 }
 
 /* The eye's anchors in a line, not findings: the accent pair rather than the
@@ -956,14 +882,11 @@
 .ob-distill-hears {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 /* What the agent has heard so far — its reading, so its colour. */
 .ob-distill-hears b {
   color: var(--aiText);
-  font-weight: var(--fw-semibold);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -981,8 +904,7 @@
 .ob-voice-building h2 {
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-h1) / var(--lh-tight) var(--f-display);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 /* Why the step is worth doing, inside the fold that offers it — the band that
@@ -990,9 +912,6 @@
    the disclosure draws the row. */
 .ob-voice-hero-body {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 /* The drop target: the whole window accepts a file, this says where. */
@@ -1011,14 +930,11 @@
 .ob-voice-drop-title {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
 }
 
 .ob-voice-drop-sub {
   margin: 0;
   max-width: 32rem;
-  line-height: var(--lh-normal);
 }
 
 .ob-voice-drop-acts {
@@ -1045,8 +961,7 @@
   border-radius: var(--r-md);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
+  font-family: var(--fontFamilyBody);
   resize: vertical;
 }
 /* Keyboard focus has to be visible on this field as on every other one. The
@@ -1068,10 +983,11 @@
   margin-top: var(--space-3);
 }
 
+/* A corpus still building: the bar reports work in flight, not a brand ask. */
 .ob-voice-meter-bar {
   inline-size: 100%;
   block-size: 6px;
-  accent-color: var(--accent);
+  accent-color: var(--info);
 }
 
 .ob-voice-meter-line {
@@ -1085,7 +1001,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin: var(--space-4) 0 var(--space-2);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-sources ul {
@@ -1117,13 +1033,11 @@
 
 .ob-voice-source-body b {
   color: var(--textPrimary);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
 }
 
 .ob-voice-source-body small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-source-check {
@@ -1149,8 +1063,6 @@
 
 .ob-scene-foot p {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 /* The speaker decision: one radio card per voice the transcript separated,
@@ -1165,59 +1077,21 @@
 }
 
 .ob-voice-speaker {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  cursor: pointer;
 }
 
 .ob-voice-speaker.is-picked {
   border-color: var(--accent);
 }
 
-/* The native input carries the semantics (checked, tab order, the
-   accessible name from its label); it is visually hidden, not display:none,
-   so it keeps focus and keyboard activation. */
-.ob-voice-speaker input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-}
-
-.ob-voice-speaker-disc {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  color: var(--textOnAccentControl);
-}
-
-.ob-voice-speaker.is-picked .ob-voice-speaker-disc {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
-/* The input carries focus but is invisibly small, so the ring has to land on
-   the disc it sits beside — the same sibling-selector shape the decision
-   card's own radio uses. */
-.ob-voice-speaker input:focus-visible ~ .ob-voice-speaker-disc {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.ob-voice-speaker-disc svg {
-  width: 13px;
-  height: 13px;
+/* The plate's own columns, over `.checkfield`'s: the tick keeps its column and
+   the voice's name takes the rest of the plate. Both classes are named so this
+   wins whichever order the route split loads the two stylesheets in. */
+.ob-voice-speaker.checkfield {
+  grid-template-columns: auto 1fr;
 }
 
 .ob-voice-speaker-body {
@@ -1229,13 +1103,11 @@
 
 .ob-voice-speaker-body b {
   color: var(--textPrimary);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
 }
 
 .ob-voice-speaker-body small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The result scene: the sample on the left, the reading on the right — two
@@ -1285,7 +1157,7 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-result-label svg {
@@ -1316,18 +1188,15 @@
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
 }
 
 .ob-voice-sample-field {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-sample-body {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
   white-space: pre-wrap;
 }
 
@@ -1341,7 +1210,7 @@
 
 .ob-voice-sample-why-tag {
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The measured dimensions: a readout per axis the build actually scored —
@@ -1356,7 +1225,7 @@
 }
 
 .ob-voice-dims-count {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-dims-meta {
@@ -1379,8 +1248,6 @@
 
 .ob-voice-dim-name {
   color: var(--textPrimary);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
 }
 
 .ob-voice-dim-track {
@@ -1417,8 +1284,6 @@
 .ob-voice-result-identity {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
-  line-height: var(--lh-normal);
 }
 
 .ob-voice-moves {
@@ -1432,16 +1297,12 @@
 
 .ob-voice-moves b {
   color: var(--textPrimary);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
 }
 
 .ob-voice-moves blockquote {
   margin: var(--space-1) 0 0;
   padding-left: var(--space-3);
   border-left: 2px solid var(--borderStrong);
-  color: var(--textContent);
-  font-size: var(--fs-sm);
   font-style: italic;
 }
 
@@ -1452,8 +1313,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 .ob-voice-result-next {
@@ -1461,8 +1320,6 @@
   padding: var(--space-4);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 .ob-voice-result-next b {
@@ -1528,23 +1385,16 @@
   align-items: baseline;
   justify-content: center;
   color: var(--textOnAccent);
-  font-family: var(--f-display);
-  font-size: var(--fs-display);
+  font-family: var(--fontFamilyHeading);
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
 }
 
 .ob-voice-orb-pct small {
   color: var(--textOnAccent);
-  opacity: 0.7;
-  font-size: var(--fs-sm);
 }
 
 .ob-voice-building-meta {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-body);
 }
 
 /* ---- the connect scene ---- */
@@ -1556,8 +1406,7 @@
 .ob-connect h2 {
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-h1) / var(--lh-tight) var(--f-display);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 /* The four step-level promises: a real two-column grid on this wide surface,
@@ -1578,8 +1427,6 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  color: var(--textContent);
-  font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
 .ob-connect-guarantee-check {
@@ -1601,7 +1448,7 @@
   gap: var(--space-2);
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-lead) / var(--lh-snug) var(--f-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-connect-section-head p {
@@ -1657,7 +1504,7 @@
 
 .ob-connect-card[data-state="connected"] {
   border-color: var(--success);
-  background: var(--accentLight);
+  background: var(--successBg);
 }
 
 /* The one state where the dashed treatment above is the honest one: this
@@ -1678,9 +1525,7 @@
    can fix this is one link away from where it is fixed. */
 .ob-connect-card-setup {
   color: var(--accentText);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-connect-card-head {
@@ -1726,12 +1571,6 @@
 
 .ob-connect-card b {
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-}
-
-.ob-connect-card small {
-  line-height: var(--lh-normal);
 }
 
 .ob-connect-card-foot {
@@ -1744,14 +1583,12 @@
 }
 
 .ob-connect-card-auth {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-connect-card-cta {
   color: var(--accentText);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
+  font-family: var(--fontFamilyBody);
 }
 
 /* ---- the connect dialog: one provider's ask, its own surface ---- */
@@ -1792,15 +1629,12 @@
 .ob-connect-dialog-title {
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-h2) / var(--lh-snug) var(--f-display);
+  font-family: var(--fontFamilyHeading);
   text-align: center;
 }
 
 .ob-connect-dialog-intro {
   margin: var(--space-2) 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-body);
-  line-height: var(--lh-relaxed);
   text-align: center;
 }
 
@@ -1836,14 +1670,11 @@
   border-radius: var(--r-sm);
   border: 0;
   background: none;
-  color: var(--textMeta);
   cursor: pointer;
-  font: var(--fw-regular) var(--fs-sm) / var(--lh-normal) var(--f-body);
 }
 
 .ob-connect-dialog-notnow:hover {
   background: var(--bgHover);
-  color: var(--textMeta);
 }
 
 /* The authorization form itself keeps left-aligned labels — a form reads
@@ -1874,9 +1705,7 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--textMeta);
   cursor: pointer;
-  font: var(--fw-regular) var(--fs-meta) / var(--lh-normal) var(--f-body);
   text-align: start;
 }
 
@@ -1903,8 +1732,7 @@
 .ob-conv-activity > button > b {
   flex: none;
   margin-left: auto;
-  font-family: var(--f-body);
-  font-weight: var(--fw-medium);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1912,7 +1740,6 @@
   width: 12px;
   height: 12px;
   flex: none;
-  color: var(--textMeta);
   transition: transform 0.16s ease;
 }
 
@@ -1929,17 +1756,11 @@
   list-style: none;
 }
 
-.ob-conv-activity > ul > li {
-  line-height: var(--lh-normal);
-}
-
 .ob-conv-activity > ul > li > button {
   padding: 0;
   border: 0;
   background: none;
-  color: inherit;
   cursor: pointer;
-  font: inherit;
   text-align: start;
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
@@ -1959,7 +1780,6 @@
   background: none;
   color: var(--accentText);
   cursor: pointer;
-  font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1972,7 +1792,7 @@
   margin: 0;
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-triage-readmore {
@@ -2019,15 +1839,6 @@
   background: none;
 }
 
-/* The card's own headline carries the surface: display face, editorial
-   scale, tight tracking — the pane's eyebrow above it stays the whisper. */
-.ob-conv-confirm.ob-triage h2 {
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-  line-height: var(--lh-tight);
-}
-
 /* The identity summary that leads the review: a brand mark and the name,
    plus the handful of fields that say who this company is. A summary, not
    a form — its values are jump links into the rows below, not inputs. */
@@ -2051,7 +1862,6 @@
 
 .ob-company-card-body h3 {
   margin: 0 0 var(--space-2);
-  letter-spacing: var(--tracking-display);
 }
 
 /* Each fact is its own tile: label over value, one to a card, the row sized in
@@ -2078,26 +1888,21 @@
 }
 
 .ob-company-card-facts dt {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-company-card-facts dd {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-snug);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-company-card-facts dd button {
   padding: 0;
   border: 0;
   background: none;
-  color: inherit;
   cursor: pointer;
-  font: inherit;
   text-align: start;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
@@ -2150,7 +1955,7 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-1);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 /* The one action left on the surface, pinned to its foot: a real <progress>
@@ -2325,12 +2130,8 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--textContent);
   cursor: pointer;
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-normal);
+  font-family: var(--fontFamilyBody);
   text-align: start;
   transition:
     background 0.12s ease,
@@ -2358,7 +2159,6 @@
 .ob-triage-nav-link[aria-current="true"] {
   background: var(--accentLight);
   color: var(--accentText);
-  font-weight: var(--fw-semibold);
 }
 
 .ob-triage-nav-link[aria-current="true"]::before {
@@ -2386,7 +2186,7 @@
   display: inline-flex;
   align-items: center;
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2408,7 +2208,7 @@
    no pill, no background: borrowing the blocking/advisory badge's shape
    would say a find is an obstacle, which it never is. */
 .ob-triage-nav-quantity {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2445,8 +2245,7 @@
   border-radius: var(--r-sm);
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
-  font-weight: var(--fw-regular);
+  font-family: var(--fontFamilyBody);
   text-align: start;
   transition:
     background 0.12s ease,
@@ -2482,7 +2281,7 @@
      up with the fields it is counting rather than with the section above. */
   padding: var(--space-1) var(--space-3) var(--space-1)
     calc(var(--space-3) + var(--space-5));
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The rows keep the short/prose tiers of the in-thread card; a row's own
@@ -2508,14 +2307,11 @@
 .ob-triage-group-head h3 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-triage-group-head span {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2560,7 +2356,6 @@
   background: none;
   cursor: pointer;
   text-align: start;
-  font: inherit;
 }
 
 /* Four tracks need roughly 30rem of column before the value track — the only
@@ -2594,7 +2389,6 @@
 /* The disclosure caret: purely the "there's more" affordance, since the
    button's own aria-expanded already carries the state for assistive tech. */
 .ob-triage-row-caret {
-  color: var(--textMeta);
   inline-size: 14px;
   block-size: 14px;
 }
@@ -2613,7 +2407,6 @@
 .ob-triage-row-outstanding {
   display: inline-flex;
   align-items: center;
-  color: var(--textMeta);
 }
 
 .ob-triage-row-outstanding svg {
@@ -2637,11 +2430,11 @@
   padding: var(--space-4);
 }
 
-.ob-triage-row-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+/* The field fills the open row. The row is a column flex with
+   `align-items: flex-start`, which sizes an unconstrained child to its CONTENT
+   rather than to the row — so a shrink-wrapped field would stand its box at the
+   width of the label above it. */
+.ob-conv-confirm-missing-row > .field {
   width: 100%;
 }
 
@@ -2679,7 +2472,6 @@
   block-size: 15px;
   flex: none;
   margin-block-start: 2px; /* ds:ignore optical centring of a 15px glyph on a 13px line; the scale starts at 4px, which drops it off the baseline */
-  color: var(--textTertiary);
 }
 
 .ob-triage-omitted-body {
@@ -2690,30 +2482,21 @@
 
 .ob-triage-omitted p {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 .ob-triage-omitted .ob-triage-omitted-label {
-  color: var(--textMeta);
-  font-family: var(--f-body);
-  /* ds:ignore .t-eyebrow loses to `.ob-triage-omitted p` on the same element */
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
+  font-family: var(--fontFamilyBody);
 }
 
 /* Danger red is reserved for the ONE tier that actually stops confirm — the
    same rule the attention list above states — and this board is the single
    surface that renders both tiers at once: a required-and-empty row marked
    in --danger sits inches from a weak-confidence row whose shared
-   ConfidenceMeter paints its dot --dnd, one red beside the other. A weak
+   ConfidenceMeter paints its dot --danger, one red beside the other. A weak
    value blocks nothing; the attention list files it as advisory. So the
    DOT goes, not the grade: the open row still names the band in words and
    its collapsed summary prints the score in figures, so low is still shown
-   as low. Retinting the dot to the advisory --warn instead would collide
+   as low. Retinting the dot to the advisory --warning instead would collide
    with the medium band's own dot, which resolves to the same amber in dark
    mode. */
 .ob-triage-row .confidence-low .dot {
@@ -2739,7 +2522,7 @@
 
 .ob-triage-solid-divider span {
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-triage-solid-divider::after {
@@ -2804,9 +2587,7 @@
 
 .ob-triage-contact-name {
   color: var(--textPrimary);
-  font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The facts section: grouped by type, each group a quiet sub-heading over
@@ -2861,20 +2642,13 @@
   transform: rotate(90deg);
 }
 
-/* The summary's label carries the row, so it stretches rather than shrink-
-   wrapping the type's name: the count below rides to the far end on its own
-   auto margin, and a shrink-wrapped label would strand it mid-row. */
-.ob-triage-fact-type > .disclosure-summary > .t-label {
+/* The accordion's name holds the type and its count on one line; the stretch
+   that keeps the count at the far end is `.disclosure-label`'s own. */
+.ob-triage-fact-type > .disclosure-summary > .disclosure-label {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex: 1;
-  min-width: 0;
   color: var(--textPrimary);
-  /* ds:ignore Disclosure renders its summary as a label; this row's summary is
-     the fact type's own name, read at the row's size */
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2921,36 +2695,14 @@
   background: var(--bgElevated);
 }
 
-/* The one control that decides whether a found fact is kept, so it is the last
-   thing in this card that may be hard to hit: the box takes the 24px floor WCAG
-   2.2 AA 2.5.8 sets while the tick stays 15px, because the mark's size is what
-   keeps a column of them reading as ticks beside values rather than as buttons. */
+/* The one control that decides whether a found fact is kept: the product's tick,
+   given the 24px floor WCAG 2.2 AA 2.5.8 sets for a target in a dense column of
+   rows. Everything the box itself looks like is `.checkfield`'s. */
 .ob-triage-fact-toggle {
-  display: inline-flex;
   flex: none;
-  align-items: center;
   justify-content: center;
   min-inline-size: var(--space-6);
   min-block-size: var(--space-6);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--textMeta);
-  cursor: pointer;
-}
-
-.ob-triage-fact-toggle[aria-pressed="true"] {
-  color: var(--accentText);
-}
-
-.ob-triage-fact-toggle:disabled {
-  color: var(--borderStrong);
-  cursor: not-allowed;
-}
-
-.ob-triage-fact-toggle svg {
-  inline-size: 15px;
-  block-size: 15px;
 }
 
 .ob-triage-fact-value {
@@ -2958,7 +2710,6 @@
   min-width: 0;
   overflow: hidden;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3048,12 +2799,7 @@
 
 .ob-conv-manifest strong {
   color: var(--textPrimary);
-  font: var(--fw-medium) var(--fs-body) / var(--lh-normal) var(--f-body);
   overflow-wrap: anywhere;
-}
-
-.ob-conv-manifest small {
-  color: var(--textMeta);
 }
 
 .ob-conv-meter {
@@ -3068,7 +2814,6 @@
   justify-content: space-between;
   gap: var(--space-2);
   color: var(--textPrimary);
-  font: var(--fw-medium) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
 .ob-conv-meter-bar {
@@ -3079,16 +2824,15 @@
   overflow: hidden;
 }
 
+/* The fill says HOW FAR the job has got, which is a fact about the run rather
+   than about who authored it — indigo is provenance, and a progress bar wearing
+   it claimed a model had decided the figure. */
 .ob-conv-meter-bar span {
   display: block;
   block-size: 100%;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--aiMed);
-}
-
-.ob-conv-meter small {
-  color: var(--textMeta);
+  background: var(--info);
 }
 
 .ob-conv-stages {
@@ -3104,8 +2848,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textMeta);
-  font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
 .ob-conv-stages li svg {
@@ -3120,7 +2862,6 @@
 
 .ob-conv-stages li[data-state="current"] {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -3169,7 +2910,7 @@
 
 /* A finding the narration or a jump just landed on lights up unmistakably —
  * a solid ring that holds for a beat before it fades, calm rather than
- * alarming (no colour borrowed from the danger/warn palette, no motion
+ * alarming (no colour borrowed from the danger/warning palette, no motion
  * beyond a fade), and never a bare outline: this is a box-shadow
  * specifically so it layers beside the browser's own focus ring rather
  * than fighting it for the same CSS property. */
@@ -3201,32 +2942,15 @@
 /* The LinkedIn act's one input: the profile the imported network is
    attributed to. Matches the scope list beside it rather than the form
    modules, because it sits in the artifact panel and not in a form. */
-/* No margin of its own: every column this label sits in already sets a gap,
-   and the two used to add up — 12px of gap plus 12px of margin above one field
-   in a stack where everything else was 12px apart. Two of its siblings were
-   inset 16px from each side while the rest were not, so the panel showed four
-   different left edges in one column. */
-.ob-conv-field {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  /* Secondary, not Muted: this is the name of the field under it, and at 13px
-     Muted was quieter than the placeholder it labels. */
-  color: var(--textMeta);
-  font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
-}
-
-.ob-conv-field input {
+.ob-connect-linkedin-panel input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
-  color: var(--textContent);
-  font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
 }
 
-.ob-conv-field input:focus-visible {
+.ob-connect-linkedin-panel input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
@@ -3251,5 +2975,5 @@
 .ob-basis-section h3 {
   margin: 0;
   color: var(--textPrimary);
-  font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
+  font-family: var(--fontFamilyHeading);
 }

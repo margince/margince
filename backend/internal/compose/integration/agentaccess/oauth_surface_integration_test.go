@@ -162,7 +162,7 @@ func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
 		return principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7()), nil
 	}
 	hosted := httptest.NewServer(agents.NewHTTPHandler(registry, authenticate,
-		agents.ResourceMetadataChallenge, "margince-crm", "test",
+		agents.ResourceMetadataChallenge("https://crm.example.test"), "margince-crm", "test",
 		slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(hosted.Close)
 

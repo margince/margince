@@ -9,6 +9,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button, EmptyState, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -121,7 +122,7 @@ export function OwnDomainsCard() {
       // button says the same thing twice a hand apart. Refused, never hidden:
       // `reasonId` names the one sentence under the rows.
       titleAction={
-        <Button small reasonId={refusal} onClick={() => setAdding(true)}>
+        <Button reasonId={refusal} onClick={() => setAdding(true)}>
           {t("ownDomains.addOpen")}
         </Button>
       }
@@ -188,11 +189,7 @@ export function OwnDomainsCard() {
             }
           />
         </SettingList>
-        {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {!canManage && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {remove.isError && (
           <Callout
             kind="outcome"
@@ -253,14 +250,13 @@ function CuratedDomains({
           }
           control={
             <Button
-              small
               variant="ghost"
               aria-label={t("ownDomains.remove", { domain: domain.domain })}
               disabled={pending}
               reasonId={refusal}
               onClick={() => onRemove(domain.domain)}
             >
-              <Trash2 aria-hidden size={16} />
+              <Trash2 aria-hidden />
             </Button>
           }
         />
@@ -279,9 +275,9 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const domain = draft.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("ownDomains.addLabel")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -308,11 +304,10 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || domain === ""}

@@ -26,11 +26,11 @@ func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
 
 	// The member has no factor, so the password alone still opens a session —
 	// but admission flags it must-enrol.
-	_, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
-	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
 	if err != nil {
 		t.Fatalf("authenticate: %v", err)
 	}
@@ -49,10 +49,10 @@ func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(token)); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(login.Token)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
-	cleared, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	cleared, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
 	if err != nil {
 		t.Fatalf("re-authenticate: %v", err)
 	}
@@ -76,16 +76,16 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 
 	// Password login never answers the 202 challenge state: a challenge this
 	// service could not verify would be a lockout, not a factor.
-	_, token, err := bare.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	_, login, err := bare.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("login on a vaultless service: %v", err)
 	}
-	if token == "" {
+	if login.Token == "" {
 		t.Fatal("no session from the password although no challenge can complete")
 	}
 
 	// The require-MFA policy cannot confine while enrolment is impossible.
-	id, err := bare.Authenticate(e.wsOnlyCtx(), token)
+	id, err := bare.Authenticate(e.wsOnlyCtx(), login.Token)
 	if err != nil {
 		t.Fatalf("authenticate: %v", err)
 	}
@@ -103,11 +103,11 @@ func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 	e := setupRevocationEnv(t, "require-mfa-off")
 	e.withVault()
 	// requireMFA left nil: no enforcement, and no per-request enrolment check.
-	_, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
-	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
 	if err != nil {
 		t.Fatalf("authenticate: %v", err)
 	}

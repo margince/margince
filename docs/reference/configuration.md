@@ -41,7 +41,8 @@ configurable logger.
 | `--vat-check-requester` | `MARGINCE_VAT_CHECK_REQUESTER` | — | This installation's OWN VAT ID (e.g. `DE123456789`), on the worker role. VIES issues a consultation number — the receipt a business shows to say it verified a counterpart before treating a supply as intra-community — only for a check made under a requester's number. Unset still checks and still answers; the answer just carries no proof. |
 | `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate-transparency base URL, on the worker role. It enables the whole technical lookup — what a company publicly runs, read from its DNS records, its certificate history and one polite fetch of its own homepage. Unset = the lane is off: the company record keeps no technical profile and the button on it answers 501, which is honest for an installation that should make no outbound lookups. `public` uses crt.sh, which is free and needs no key but is one small service run on goodwill — the reader paces itself to one query every five seconds and caches every answer for that reason. |
 | `--technical-backfill-interval` | — | `6h` | how often the worker looks for companies whose technical profile is missing or stale. Unlike geocoding there is no write to trigger on — a company's mail provider changes at the COMPANY — so this pass is the only thing that ever observes a move. Runs on start; `0` turns the sweep off and leaves the button working. |
-| `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential, and the **only** knob over that endpoint's access — there is no second variable declaring a mode. Unset (the default) `/metrics` is served to whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. That matches `cmd/worker`, whose `/metrics` has always been unauthenticated behind `--observe-addr`. Set it when the port is **not** already contained by a private listener, a NetworkPolicy or an ingress allow-list — the exposition is fleet-wide and carries workspace ids plus a declared-catalogue info metric, so an unguarded port discloses tenant shape. The api logs a warning at boot whenever it is unset, so the open posture is visible without reading the config. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
+| `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential. Unset (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. The api logs one line at boot saying which posture it took. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
+| `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` requires `--metrics-token`. `open` serves whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. Choose `open` only where the port is already contained — a private listener, a NetworkPolicy, an ingress that does not route `/metrics` — because this listener is the one `/v1` is served on and the exposition names every route and carries workspace ids plus a declared-catalogue info metric. The api warns at boot whenever it is open, and refuses to boot with `open` and a token together (the token would authenticate nothing). `cmd/worker`'s own `/metrics` is served on `--observe-addr`, a separate listener that is off unless set |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
 | `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback. **Held to an address a RECIPIENT can open** whenever a real sender is configured (SMTP `email.enabled`, or a Gmail/Graph app): https only, and not localhost, a private address or an interface-scoped one. `MARGINCE_ENV=dev` or `test` admits the dev stack's `http://localhost`. Both the api and the worker refuse to boot on an unusable value, and a tokenized send refuses at send time; the configured value and whether it last answered are shown on Settings → Connections |
@@ -64,10 +65,10 @@ Operational endpoints (served next to `/v1`):
 - `/metrics` — Prometheus text format: the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`,
   the **connection-pool section** below, the AI router's counters, and the
-  **job-runtime section** below. Served openly by
-  default, so an annotation-discovered scraper works with no configuration; set
-  `--metrics-token` to require a Bearer credential where the port itself is not
-  already contained.
+  **job-runtime section** below. Closed by default:
+  set `--metrics-token` to require a Bearer credential, or
+  `--metrics-access=open` for an annotation-discovered scraper where the port
+  itself is already contained.
 
   The HTTP section covers the `/v1` contract surface:
 
@@ -612,6 +613,30 @@ runs the background sync.
 | `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft posts Graph change notifications to, operator token and all (`https://<api>/webhooks/graph?token=…`); enables the subscription register+renew job (empty = poll only) |
 | `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
 | `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
+
+### Turning the password method off
+
+An installation that signs its members in through an identity provider closes
+the password door in `margince.yaml`:
+
+```yaml
+auth:
+  password:
+    enabled: false   # default true
+```
+
+With it off, `POST /v1/auth/login` and `POST /v1/auth/forgot-password` answer
+**501** naming the method, `/v1/auth/capabilities` reports `password: false`
+and `password_reset: false`, and the login screen draws the provider buttons
+alone. The **admin-issued** set-password link is deliberately unaffected: it
+provisions a seat rather than offering a way in, and an installation that turns
+the method back on must not have to re-provision everybody first.
+
+**The api refuses to boot with the method off and no federated provider
+mounted** — that deployment has no door at all. Mounted is the bar the check
+uses, which is weaker than "somebody can sign in today": a provider whose OAuth
+app an admin has not stored yet is mounted and offers no button, and the login
+screen says so rather than rendering an empty card.
 
 ## Object storage (api, worker) — attachments and company logos
 
@@ -1327,15 +1352,26 @@ takes inline bytes or an `http(s)` URL it fetches itself.
 knowing before you enable an attachment lane, because both run the other way
 from what a reader tends to assume:
 
-- **Which lane a file takes was decided at ingress, and carriage is not a content
-  check.** The AI lane reads the content type the file is stored with and adds no
-  second authority of its own. What that type means depends on how the file
-  arrived: a **captured** attachment carries the type *sniffed from its bytes*,
-  with a disagreeing sender claim recorded rather than obeyed — so an external
-  counterparty influences the lane only through the bytes they actually sent — while
-  a file **uploaded through the API** carries its uploader's declared type,
-  unsniffed. Either way `image/*` matches by prefix, and `input: [image]` says
-  what Margince will *carry*; it never says what the bytes *are*.
+- **Which lane a file takes was decided at ingress; carriage checks the KIND and
+  not the content.** The AI lane reads the content type the file is stored with
+  and adds no second authority for anything else. What that type means depends on
+  how the file arrived: a **captured** attachment carries the type *sniffed from
+  its bytes*, with a disagreeing sender claim recorded rather than obeyed — so an
+  external counterparty influences the lane only through the bytes they actually
+  sent — while a file **uploaded through the API** carries its uploader's declared
+  type, unsniffed.
+
+  Before the bytes become a wire part, that type has to hold up: a file claiming
+  a kind whose signature is unambiguous — PNG, JPEG, GIF, WebP, BMP, PDF, HEIC,
+  HEIF — must carry it, and a file claiming any other image type is refused when
+  its bytes are **text**. `image/svg+xml` is refused outright on every wire,
+  however its bytes look: it matches `image/*` by prefix on a binding that
+  declares one, and no vision model decodes it as an image. A refusal here is its own fault, not a
+  carriage limit: retrying on another binding would read the same bytes the same
+  way. What it does **not** do is decide anything else — the stored type stays the
+  authority for every other reader, a kind whose bytes carry no signature this
+  build can name goes through unchecked, and `input: [image]` still says what
+  Margince will *carry* rather than what a picture contains.
 - **The secret stripper does not reach inside an attachment.** It runs over the
   outbound payload — the right place, and unbypassable — but an attachment rides
   that payload **base64-encoded**, and the rules match a secret's literal text. A

@@ -509,10 +509,10 @@ describe("ComposeModal", () => {
     expect(screen.getByText("buyer@acme.test")).toBeTruthy();
   });
 
-  // Art. 50 is a hard gate: a model-produced draft that reaches a human
-  // without a disclosure is a compliance failure, so these three cases fix the
-  // banner's presence, its verbatim text, and its absence on human-written
-  // text. Removing the banner from the composer fails all three.
+  // A model-produced draft reaching the rep without the provenance notice
+  // presents as one a colleague wrote, so these three cases fix the banner's
+  // presence, its verbatim text, and its absence on human-written text.
+  // Removing the banner from the composer fails all three.
   it("discloses a model-produced draft, rendering the server's line verbatim", async () => {
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
@@ -1384,7 +1384,7 @@ describe("ComposeModal draft binding", () => {
   });
 });
 
-// The Art. 50 banner describes the words on screen, so it rides on exactly the
+// The provenance banner describes the words on screen, so it rides on exactly the
 // condition that puts a served draft there and leaves when they do. A banner
 // that outlived its text would attribute a human's writing to a model, or
 // credit it to a voice version that never touched it.

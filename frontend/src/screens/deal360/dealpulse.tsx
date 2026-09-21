@@ -15,6 +15,11 @@
 // compose/dealstatus). A second reading of "is somebody waiting on us" spelled
 // in the frontend would disagree with the button beside it the first time
 // either changed.
+//
+// AND IT DECIDES ONE DIRECTION ONLY. `reply_to` says whether an inbound message
+// is waiting on US. Nothing on this card says whether the buyer owes us
+// anything, so no sentence here may claim it — the empty case reports what is
+// true, which is that nothing is flagged for this reader.
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
@@ -59,26 +64,33 @@ export function DealPulse({
     // date is true; inventing the date would not be.
     return (
       <p className="d360-pulse">
-        <span className="d360-pulse-lead">{t("deal.pulse.yourMove")}</span>{" "}
-        <span className="d360-pulse-rest">{t("deal.pulse.wroteUnknown")}</span>
+        <span>{t("deal.pulse.yourMove")}</span>{" "}
+        <span>{t("deal.pulse.wroteUnknown")}</span>
       </p>
     );
   }
   if (!waiting) {
-    // Nobody is owed an answer. That is worth saying — a deal where the ball
-    // is with the buyer is a different deal from one nobody has read.
+    // Nothing inbound is flagged for this reader, and that is ALL this says.
+    //
+    // It used to say "Their move. Nobody here is owed an answer." — a claim
+    // about the buyer that the data behind it cannot support. `reply_to` names
+    // the most recent INBOUND message nobody has answered, so its absence means
+    // the buyer is not waiting on us. It says nothing about whether we are
+    // waiting on them, and the read behind it also drops requests this reader
+    // snoozed or marked not-mine. A deal where the buyer genuinely owes us a
+    // reply rendered identically to one where nothing at all is outstanding.
     return (
       <p className="d360-pulse">
-        <span className="d360-pulse-lead">{t("deal.pulse.theirMove")}</span>{" "}
-        <span className="d360-pulse-rest">{t("deal.pulse.theirMoveWhy")}</span>
+        <span>{t("deal.pulse.nothingFlagged")}</span>{" "}
+        <span>{t("deal.pulse.nothingFlaggedWhy")}</span>
       </p>
     );
   }
   const days = calendarDaysBetween(new Date(waiting.at), new Date());
   return (
     <p className="d360-pulse">
-      <span className="d360-pulse-lead">{t("deal.pulse.yourMove")}</span>{" "}
-      <span className="d360-pulse-rest">
+      <span>{t("deal.pulse.yourMove")}</span>{" "}
+      <span>
         {t("deal.pulse.wroteOn", {
           date: formatDayMonth(waiting.at, locale, zone),
           days: formatNumber(days, locale),

@@ -95,14 +95,9 @@ export function StageAutomationCard() {
   // different span cannot be judged from these rows.
   const windowDays = report.data?.window_days ?? DEFAULT_WINDOW_DAYS;
   return (
-    <Panel
-      title={t("stageAutomation.title")}
-      sub={t("stageAutomation.window", {
-        days: formatNumber(windowDays, locale),
-      })}
-    >
+    <Panel title={t("stageAutomation.title")}>
       <PanelBody>
-        <p className="t-caption">{t("stageAutomation.intro")}</p>
+        <p>{t("stageAutomation.intro")}</p>
         {(pipelines.data?.length ?? 0) > 1 && (
           <Select
             aria-label={t("stageAutomation.pipeline")}
@@ -129,7 +124,7 @@ export function StageAutomationCard() {
                 has to know which. Below the table rather than in tooltips: a
                 number you must hover to understand is one contacts read wrong
                 once and then stop reading. */}
-            <dl className="t-caption">
+            <dl>
               <dt>{t("stageAutomation.reviewed")}</dt>
               <dd>{t("stageAutomation.reviewedHint")}</dd>
               <dt>{t("stageAutomation.expired")}</dt>
@@ -146,7 +141,7 @@ export function StageAutomationCard() {
             <StageRulesCard
               pipelineId={chosen}
               transitions={rows}
-              reportWindowDays={report.data?.window_days ?? DEFAULT_WINDOW_DAYS}
+              reportWindowDays={windowDays}
             />
           </>
         )}

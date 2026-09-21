@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -121,16 +122,23 @@ func (s *Store) PublicPreferenceView(ctx context.Context, ref PreferenceRef) (Pr
 // different shapes: the preference centre reads the address alone, while
 // the confirm card reads it as one column of the card's single
 // round-trip, and splitting that into a second query to share a helper
-// would cost a round-trip to buy nothing. Sharing the TEXT is what keeps
-// the ordering — is_primary first, then oldest — spelled once. Drop the
-// tiebreak in one copy and two surfaces show the same contact two
-// different addresses, each looking right on its own screen.
+// would cost a round-trip to buy nothing.
 //
-// Held by: TestThePreferenceCentreResolvesOnePrimaryAddress (backend/gates/preferencecentrewriters_test.go)
+// THE ORDER IS NOT THIS MODULE'S TO CHOOSE, and it used to be. This spelled
+// `is_primary DESC, created_at` and left out `position` — the record's own
+// arrangement — so a contact who had moved an address up was shown a different
+// one here than on their record, on a reply, and in the contacts list. Which
+// address a contact is known by is one question, and contactaddress.ReachableOrder
+// is now the one answer.
+//
+// Held by: TestOneAnswerToWhichAddressAContactIsKnownBy (backend/gates/reachableaddress_test.go),
+// which replaced the consent-only count that used to hold this — that one held
+// these two callers to each other while leaving both free to disagree with the
+// rest of the tree, which is how the `position` gap survived.
 func primaryEmailSQL(ref string) string {
 	return `coalesce((SELECT pe.email FROM contact_email pe
-	                    WHERE pe.contact_id = ` + ref + ` AND pe.archived_at IS NULL
-	                    ORDER BY pe.is_primary DESC, pe.created_at LIMIT 1), '')`
+	                    WHERE pe.contact_id = ` + ref + ` AND pe.archived_at IS NULL` +
+		contactaddress.ReachableOrder + ` LIMIT 1), '')`
 }
 
 // deliveredEmailTx reads the address the link was sent to, falling back to the

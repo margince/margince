@@ -51,12 +51,6 @@
   margin-top: var(--space-3);
 }
 
-/* The meeting's own line, above the panels. It carries no panel chrome
-   because it is the answer to "which meeting is this", read once. */
-.mb-glance {
-  font-size: var(--fs-sm);
-}
-
 .mb-background {
   display: flex;
   flex-direction: column;
@@ -66,8 +60,6 @@
 
 .mb-failed-detail {
   margin: var(--space-2) 0 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 /* The outcome to earn, with its icon in a column of its own so a two-line
@@ -96,8 +88,6 @@
 
 .mb-caveat {
   margin: var(--space-2) 0 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 /* The suggested opener, set apart as the quotation it is.
@@ -151,11 +141,6 @@
   }
 }
 
-.mb-unknown {
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-}
-
 .mb-ask {
   display: flex;
   flex-direction: column;
@@ -176,8 +161,6 @@
 
 .mb-ask-prepare {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 /* The branch and what to do about it. A grid rather than a flex row so the
@@ -190,11 +173,6 @@
   width: 100%;
 }
 
-.mb-path-row > span {
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-}
-
 @container (max-width: 26rem) {
   .mb-path-row {
     grid-template-columns: 1fr;
@@ -204,12 +182,8 @@
 .mb-coach-lead {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
 }
 
 .mb-coach-mode {
   margin: var(--space-2) 0 var(--space-4);
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }

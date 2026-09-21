@@ -79,6 +79,9 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 		"the refusal is the subject and a bounded seat would not change it",
 	"jobfanout": "fan-out from the scheduler, whose actor is a system principal by construction; " +
 		"Unbounded short-circuits on the TYPE here, so a row scope on the fixture would decide nothing",
+	"schemaready": "the readiness probe over migration state, which runs before any principal is " +
+		"resolved and reads the migration ledger rather than a tenant row — /readyz is unauthenticated " +
+		"and a row scope would decide nothing about whether the schema is there",
 	"webhooks": "connector ingress, where the caller is the provider and the principal is the " +
 		"installation's own",
 })

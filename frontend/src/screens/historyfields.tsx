@@ -141,9 +141,7 @@ function FieldGroupSection({
   const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
   return (
     <div className="fgroup">
-      <div className="fgroup-head t-caption">
-        {historyFieldLabel(group.field, t)}
-      </div>
+      <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
       <ul>
         {group.changes.map((change) => (
           <li key={change.id} className="change">
@@ -245,11 +243,7 @@ export function FieldHistoryTimeline({
     body = (
       <EmptyState>
         <p>{t("history.filterEmpty")}</p>
-        <Button
-          small
-          onClick={clearFilters}
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <Button onClick={clearFilters} style={{ marginTop: "var(--space-3)" }}>
           {t("history.clearFilter")}
         </Button>
       </EmptyState>
@@ -301,7 +295,6 @@ export function FieldHistoryTimeline({
             style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}
           >
             <Button
-              small
               variant={fieldFilter === undefined ? "primary" : "ghost"}
               onClick={() => setFieldFilter(undefined)}
             >
@@ -310,7 +303,6 @@ export function FieldHistoryTimeline({
             {fieldOptions.map((field) => (
               <Button
                 key={field}
-                small
                 variant={fieldFilter === field ? "primary" : "ghost"}
                 onClick={() => setFieldFilter(field)}
               >

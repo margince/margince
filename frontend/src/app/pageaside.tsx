@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "../design-system/atoms";
+import { Button, OptionCount } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { useHasUnsavedChanges } from "./unsaved";
 
@@ -183,6 +183,7 @@ export function usePageAside(): { open: boolean } {
 export function PageAsideToggle({
   labels,
   quiet = false,
+  prominent = false,
   controlled,
 }: Readonly<{
   // What the switch says in each state, naming what the pane holds. The
@@ -192,7 +193,18 @@ export function PageAsideToggle({
   // Drawn as a link in the row rather than as a boxed control: for a strip
   // whose other end is a row of tabs, a box there reads as one more verb.
   quiet?: boolean;
-  controlled?: { open: boolean; labels: PaneWords; onToggle: () => void };
+  // Drawn as the page's PRIMARY control: for the one page whose pane is the
+  // whole queue behind the day, where the switch is the main way on and not a
+  // detail fold beside a row of tabs.
+  prominent?: boolean;
+  controlled?: {
+    open: boolean;
+    labels: PaneWords;
+    onToggle: () => void;
+    // How much is behind the pane, beside the verb — the queue's own total,
+    // so a reader knows what the switch opens before pressing it.
+    count?: number;
+  };
 }> = {}) {
   const t = useT();
   const dirty = useHasUnsavedChanges("details");
@@ -215,13 +227,16 @@ export function PageAsideToggle({
   return (
     <Button
       className="record-details-toggle"
-      variant={quiet ? "link" : undefined}
+      variant={quiet ? "link" : prominent ? "primary" : undefined}
       reason={open && dirty ? t("record.finishFieldEdit") : undefined}
       aria-pressed={open}
       onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
       {open ? words.hide : words.show}
+      {controlled?.count !== undefined && (
+        <OptionCount count={controlled.count} />
+      )}
     </Button>
   );
 }

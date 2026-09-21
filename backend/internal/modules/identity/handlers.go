@@ -66,6 +66,13 @@ type Handlers struct {
 	loginPerIP    *ratelimit.Limiter // 30/min per client IP
 	resetPerEmail *ratelimit.Limiter // 3/hour per (email, IP)
 	resetPerIP    *ratelimit.Limiter // 30/hour per client IP
+	// passwordLoginDisabled is the deployment's `auth.password.enabled=false`
+	// — an installation that signs its members in through an identity provider
+	// and wants the password door shut. Negative so the zero value offers the
+	// method: passwordmethod.go carries why, and both surfaces that must agree
+	// about it read passwordLoginOffered rather than this field.
+	passwordLoginDisabled bool
+
 	// changeFailures caps wrong-current-password attempts per account.
 	// /auth/change-password verifies the SAME secret the login path does, so
 	// leaving it uncapped would put an unthrottled guessing oracle behind any
@@ -265,6 +272,15 @@ func (h Handlers) accessTokenTTL() *time.Duration {
 // Login implements (POST /auth/login). The route is public; the singleton
 // company is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
+	// Before the body is read, and before any budget is spent: a deployment
+	// that closed the password door owes every caller the same answer whatever
+	// they posted, and a refusal that ran the throttle first would let an
+	// installation with no password method still be pushed into rate-limiting
+	// the address it is not authenticating.
+	if !h.passwordLoginOffered() {
+		httperr.NotImplementedBecause(w, r, passwordMethodOff)
+		return
+	}
 	var req crmcontracts.LoginRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -281,7 +297,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, token, err := h.svc.Login(withUserAgent(r.Context(), r.UserAgent()), string(req.Email), req.Password)
+	id, session, err := h.svc.Login(withUserAgent(r.Context(), r.UserAgent()), string(req.Email), req.Password, presentedDeviceProof(r))
 	if err != nil {
 		if errors.Is(err, ErrBadCredentials) {
 			h.loginFailures.Record(accountKey)
@@ -300,7 +316,8 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setSessionCookie(w, token)
+	setSessionCookie(w, session.Token)
+	setDeviceCookie(w, session.DeviceProof)
 	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }
 
@@ -341,6 +358,26 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 		Name: SessionCookieName, Value: token,
 		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
+}
+
+// setDeviceCookie keeps the device proof across browser restarts and logouts —
+// outliving the session is its purpose. It carries the session cookie's
+// attributes, so no script reads it and no cross-site request sends it.
+func setDeviceCookie(w http.ResponseWriter, proof string) {
+	http.SetCookie(w, &http.Cookie{
+		Name: DeviceCookieName, Value: proof, MaxAge: int(deviceProofTTL / time.Second),
+		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
+	})
+}
+
+// presentedDeviceProof is the proof the browser sent, or empty when it sent
+// none — which the lock judges exactly like a proof that does not vouch.
+func presentedDeviceProof(r *http.Request) string {
+	cookie, err := r.Cookie(DeviceCookieName)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
 }
 
 func clearSessionCookie(w http.ResponseWriter) {

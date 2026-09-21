@@ -147,7 +147,6 @@ function HistoryRow({
         {assessment.note}
         {onCorrect && (
           <Button
-            small
             variant="ghost"
             onClick={onCorrect}
             aria-label={t("projectHealth.correctOne", {
@@ -175,7 +174,7 @@ function StateBadge({ state }: Readonly<{ state: ProjectHealthState }>) {
     return <Badge tone="success">{t("projectHealth.state.onTrack")}</Badge>;
   }
   if (state === "at_risk") {
-    return <Badge tone="warn">{t("projectHealth.state.atRisk")}</Badge>;
+    return <Badge tone="warning">{t("projectHealth.state.atRisk")}</Badge>;
   }
   return <Badge tone="danger">{t("projectHealth.state.offTrack")}</Badge>;
 }

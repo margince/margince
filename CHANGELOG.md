@@ -34,8 +34,39 @@ when it has content.
   that counter, so it was served as a constant zero to every client polling an
   import. The column stays; the wire field is gone.
 
+### Changed
+
+- **`/metrics` on the api is closed by default.** It requires `--metrics-token`
+  as a Bearer credential. A deployment whose scraper discovers its targets by
+  annotation and cannot carry one sets `--metrics-access=open`, where the port is
+  already contained. An installation that scraped the api's `/metrics` without a
+  token must set one of the two on upgrade, or its scrapes answer 401.
+
 ### Fixed
 
+- **A failed-login lock no longer keeps out a browser that has signed in
+  before.** Signing in sets a `crm_device` cookie; while an account is locked, a
+  browser presenting it for that account is let in with the correct password.
+  Every other sign-in attempt is refused exactly as before.
+- **The MCP connector's OAuth discovery documents name the configured public
+  origin.** Their issuer and endpoint URLs, and the pointer the transport's 401
+  carries, are built from `--public-base-url` rather than from the request, and
+  are sent `Cache-Control: no-store`. With no public base URL configured they
+  answer 404, as they do with the connector off.
+- The exchange-rate refresh accepts a rate from the page it reads only as a plain
+  decimal — digits and one decimal point, within bounded widths — and drops any
+  other form before parsing it, the shape the currency sheet itself accepts.
+- **A colleague connecting an MCP client no longer disconnects everyone else.**
+  A connection was superseded by `client_id` alone, which assumed that id names
+  one install. That holds for a client registered by DCR and fails for one
+  identified by a Client ID Metadata Document, where every human running the
+  software presents the same id — so an installation had one live connection in
+  total. Each new consent revoked the previous human's grant through the cascade
+  that answers token theft, killing their access token and spending their
+  refresh chain, so they were asked to reconnect mid-conversation and in turn
+  evicted whoever had connected before them. A connection is now superseded per
+  client registration **per human**: reconnecting from the same client still
+  replaces your own earlier connection, and never anyone else's.
 - Customer meeting requests remain actionable on won or lost deals and outside
   recent email history. Source-linked reminders reconcile without duplicates;
   accepting or completing one updates request state across the deal and email

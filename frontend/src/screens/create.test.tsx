@@ -53,6 +53,18 @@ function render(ui: ReactNode) {
   );
 }
 
+/**
+ * The create form, scoped to the dialog it is in.
+ *
+ * The list behind it carries a column picker, and a column's tick is now a real
+ * labelled control — so "Value" and "via Partner" name a field in the form AND
+ * a column in that menu. The dialog is the boundary between the record being
+ * made and the list it will join.
+ */
+function inForm() {
+  return within(screen.getByRole("dialog"));
+}
+
 const emptyPage = { data: [], page: { next_cursor: null } };
 
 type Captured = { key: string; body: unknown };
@@ -524,7 +536,7 @@ describe("deal create flow", () => {
     ).toEqual(["Qualify"]);
     await userEvent.keyboard("{Escape}");
     await userEvent.type(screen.getByLabelText("Deal name *"), "Neuer Deal");
-    await userEvent.type(screen.getByLabelText("Value"), "480");
+    await userEvent.type(inForm().getByLabelText("Value"), "480");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/deals/d-new"));
     const post = captured.find((entry) => entry.key === "POST /deals");
@@ -647,8 +659,8 @@ describe("the deal form's partner fields", () => {
     render(<DealsScreen startCreating />);
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
-    expect(screen.queryByLabelText("via Partner")).toBeNull();
-    expect(screen.queryByLabelText("What the partner did")).toBeNull();
+    expect(inForm().queryByLabelText("via Partner")).toBeNull();
+    expect(inForm().queryByLabelText("What the partner did")).toBeNull();
   });
 
   it("offers the partner once one exists, and asks what they did only after one is picked", async () => {
@@ -657,14 +669,14 @@ describe("the deal form's partner fields", () => {
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
     const user = userEvent.setup();
-    const partner = await screen.findByLabelText("via Partner");
+    const partner = await inForm().findByLabelText("via Partner");
     // The claim is a question about a partner, so it is not asked before one
     // is named.
-    expect(screen.queryByLabelText("What the partner did")).toBeNull();
+    expect(inForm().queryByLabelText("What the partner did")).toBeNull();
 
     await pickOption(user, partner, "VietnamPartner JSC");
 
-    expect(await screen.findByLabelText("What the partner did")).toBeTruthy();
+    expect(await inForm().findByLabelText("What the partner did")).toBeTruthy();
   });
 
   // Only actual partners: the picker once listed every company, which let
@@ -683,7 +695,8 @@ describe("the deal form's partner fields", () => {
     });
     const user = userEvent.setup();
     render(<DealsScreen startCreating />);
-    const partner = await screen.findByLabelText("via Partner");
+    const form = within(await screen.findByRole("dialog"));
+    const partner = await form.findByLabelText("via Partner");
     await user.click(partner);
 
     const offered = within(screen.getByRole("listbox"))

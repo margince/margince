@@ -68,27 +68,19 @@
  * .t-eyebrow class the element carries. All this adds is what that class
  * cannot say inside an SVG, where text takes `fill` and not `color`. */
 .rmap-lane {
-  fill: var(--textTertiary);
+  fill: currentColor;
 }
 
 .rmap-name {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
   fill: var(--textPrimary);
 }
 
 .rmap-sub {
-  font-size: var(--fs-meta);
-  fill: var(--textMeta);
-}
-
-.rmap-pill {
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
+  fill: currentColor;
 }
 
 .rmap-pill-waiting {
-  fill: var(--warn);
+  fill: var(--warning);
 }
 
 .rmap-pill-answered {
@@ -96,11 +88,11 @@
 }
 
 .rmap-pill-no_reply {
-  fill: var(--warn);
+  fill: var(--warning);
 }
 
 .rmap-pill-untried {
-  fill: var(--textMeta);
+  fill: var(--borderStrong);
 }
 
 .rmap-box {
@@ -126,14 +118,14 @@
 /* A gap is a hole, and it looks like one: dashed, in the warning family, with
  * the words inside it. */
 .rmap-gap .rmap-box {
-  fill: var(--warnBg);
-  stroke: var(--warnBorder);
+  fill: var(--warningBg);
+  stroke: var(--warningBorder);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
 
 .rmap-gap .rmap-name {
-  fill: var(--warn);
+  fill: var(--warning);
 }
 
 .rmap-node {
@@ -174,7 +166,6 @@
 }
 
 .rmap-more text {
-  font-size: var(--fs-meta);
   fill: var(--accentText);
 }
 
@@ -187,7 +178,7 @@
 }
 
 .rmap-band-strong {
-  stroke: var(--accent);
+  stroke: var(--success);
   stroke-width: 2.5;
 }
 
@@ -218,8 +209,6 @@
 
 .rmap-completeness {
   margin: 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 .rmap-panel {
@@ -231,14 +220,11 @@
 
 .rmap-panel-title {
   margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
+  font-family: var(--fontFamilyHeading);
 }
 
 .rmap-panel-sub {
   margin: 2px 0 var(--space-3);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 /* Likewise an eyebrow: the class carries the type, this carries the spacing
@@ -249,15 +235,10 @@
 
 .rmap-panel-line {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
-  line-height: 1.55;
 }
 
 .rmap-panel-alt {
   margin: var(--space-1) 0 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 .rmap-panel-actions {
@@ -269,8 +250,6 @@
 
 .rmap-hint {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 .rmap-empty {
@@ -283,13 +262,10 @@
 
 .rmap-empty-title {
   margin: 0 0 var(--space-2);
-  font-weight: var(--fw-semibold);
 }
 
 .rmap-empty-body {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* The transition is declared ONLY where motion is welcome, so there is no

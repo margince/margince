@@ -197,6 +197,15 @@ pipeline against it.
 The machinery above stays and is not dead — an operator may author a mask on a custom role, and every
 path that applies one is tested. What went is the row the product shipped.
 
+**What a mask may name is a catalog, not a free field.** Withholding is written per field: a column
+with no withhold rule is dropped rather than applied, so a mask naming one would be accepted, stored,
+read back unchanged, and hide nothing. `maskable_field` holds the pairs this build can actually
+withhold — today the deal's money and its three references, which is the whole of `deals/fieldmask.go`
+— and `field_mask` references it, so an operator naming anything else is refused by the database where
+they write it instead of finding out from a screen that still shows the number. Extending a mask to a
+new column is therefore two halves in one change: the withhold rule, and the migration that offers the
+pair. `migrations/testdata/maskable_fields.txt` is what fails when only one of them moves.
+
 ## Teams
 
 A **team** (`team` table) is a named group; **`team_membership`** joins users to teams (many-to-many

@@ -78,11 +78,11 @@ func TestLoginWithAConfirmedFactorRequiresTheSecondStep(t *testing.T) {
 
 	// The password alone no longer completes: errMFARequired, no token, but the
 	// identity carries the user the challenge must bind to.
-	id, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
+	id, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if !errors.Is(err, errMFARequired) {
 		t.Fatalf("login of an MFA member: err=%v, want errMFARequired", err)
 	}
-	if token != "" {
+	if login.Token != "" {
 		t.Error("a session was minted before the second factor")
 	}
 	if id.UserID != e.member.UserID {
@@ -146,9 +146,9 @@ func TestLoginWithoutAFactorStillSignsInOnThePassword(t *testing.T) {
 	e := setupRevocationEnv(t, "mfa-none")
 	e.withVault()
 	// No enrolment: the member signs in on the password alone.
-	_, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
-	if err != nil || token == "" {
-		t.Fatalf("password login for a member with no factor: err=%v token=%q", err, token)
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil || login.Token == "" {
+		t.Fatalf("password login for a member with no factor: err=%v token=%q", err, login.Token)
 	}
 }
 

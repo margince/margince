@@ -171,7 +171,6 @@ export function RepeatableRowsField({
             />
           )}
           <Button
-            small
             type="button"
             variant="ghost"
             data-move="up"
@@ -180,10 +179,9 @@ export function RepeatableRowsField({
             aria-label={t("field.moveRowUp", { n: ordinalNumber(index + 1) })}
             onClick={() => moveRow(index, "up")}
           >
-            <ChevronUp aria-hidden size={16} />
+            <ChevronUp aria-hidden />
           </Button>
           <Button
-            small
             type="button"
             variant="ghost"
             data-move="down"
@@ -192,13 +190,12 @@ export function RepeatableRowsField({
             aria-label={t("field.moveRowDown", { n: ordinalNumber(index + 1) })}
             onClick={() => moveRow(index, "down")}
           >
-            <ChevronDown aria-hidden size={16} />
+            <ChevronDown aria-hidden />
           </Button>
           {/* field.removeRow and field.removeRowLabel are one control's two
               names — the short visible text and the row-numbered accessible
               name — and an edit to either wording has to carry the other. */}
           <Button
-            small
             type="button"
             data-remove={index}
             aria-label={t("field.removeRowLabel", {
@@ -210,7 +207,7 @@ export function RepeatableRowsField({
           </Button>
         </Card>
       ))}
-      <Button small type="button" data-add-row onClick={addRow}>
+      <Button type="button" data-add-row onClick={addRow}>
         {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
       </Button>
       <p className="sr-only" role="status" aria-live="polite">

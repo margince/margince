@@ -288,6 +288,43 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// provider stops listing an event once it is off, so the pull that
 		// carries the cancellation is the only one that will ever mention it.
 		WithMeetingCloser(activities.CancelCapturedMeetingTx).
+		// Writing a connector's own reading of a message over a row an importer
+		// ASSERTED. From the module that owns `activity`, for the reason every
+		// seam above travels this way.
+		//
+		// Without it an imported row wins on content, which is the wrong way
+		// round twice over: an exporting CRM keeps its own stripped rendering,
+		// and a row planted under a guessed Message-ID would make the real
+		// message unreachable.
+		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
+		// The identity both ingestion doors agree on. Without it each door
+		// files under its own natural key, those keys never meet, and a
+		// customer who imports their history and THEN connects the mailbox
+		// that held it gets two rows for every message.
+		// ResolveBindableIdentity rather than ResolveIdentity: the resolve is what
+		// decides whether this mailbox joins a row somebody else's door filed, so
+		// the seat rule and the liveness rule belong inside it. Capture never
+		// learns the predicate, and nothing a request body can set crosses the
+		// seam.
+		WithMessageIdentity(
+			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence, because a
+			// provider's own event id differs per calendar: two colleagues on one
+			// meeting sync two ids for it, and without this it lands twice.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
+			// The cross-seat arm, injected HERE and only here: an import filed by
+			// one seat binds to the mailbox of the seat whose PROVEN address it
+			// names. The addresses come from the import and are forgeable, so they
+			// are only the lookup key; the answer comes from capture's own
+			// connection and delivery evidence, which an importer cannot write.
+			//
+			// capture answers it because capture owns those tables, activities
+			// asks it because activities owns the binding decision, and neither
+			// module may import the other — so the edge is this injection.
+			activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx),
+			activities.ClaimIdentity,
+		).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

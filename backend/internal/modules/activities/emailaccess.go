@@ -49,7 +49,11 @@ func readEmailAccess(
 	if activity.Audience != nil {
 		aud := crmcontracts.ActivityAudience(*activity.Audience)
 		out.Audience = &aud
-		out.DisplayStatus = statusForAudience(aud)
+		status, err := statusForAudience(ctx, tx, id, aud)
+		if err != nil {
+			return crmcontracts.EmailAccess{}, err
+		}
+		out.DisplayStatus = status
 	}
 	// The reason is content: it describes what the message is about. It travels
 	// only with a message the caller may read, which is the branch this is in.
@@ -110,9 +114,41 @@ func readEmailAccess(
 }
 
 // statusForAudience is the word the badge prints for a message the caller can
-// read. "team" never means the whole workspace: the linked record's own scope
-// still decides who may discover the row at all.
-func statusForAudience(aud crmcontracts.ActivityAudience) crmcontracts.EmailAccessStatus {
+// read.
+//
+// A workspace audience is not by itself the whole workspace: the linked
+// record's own scope still decides who may discover the row. So the two words
+// are told apart by ASKING — a stranger with no team, no ownership and nothing
+// shared with them either reaches this row or does not, and that is exactly the
+// difference between "everyone here" and "whoever this record admits".
+//
+// Answered rather than assumed because the badge is a privacy label, and the
+// label used to say `team` beside a sentence reading "everyone in the company
+// can read this". A reader who takes workspace-wide correspondence for
+// team-restricted correspondence has been told something false about who is
+// reading, on the one surface where the read boundary is real.
+func statusForAudience(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, aud crmcontracts.ActivityAudience,
+) (crmcontracts.EmailAccessStatus, error) {
+	narrow := narrowStatusForAudience(aud)
+	if narrow != crmcontracts.EmailAccessStatusTeam {
+		return narrow, nil
+	}
+	reach, err := auth.ActivitiesReachingEverySeat(ctx, tx, []ids.UUID{id.UUID})
+	if err != nil {
+		return "", err
+	}
+	if reach[id.UUID] {
+		return crmcontracts.EmailAccessStatusWorkspace, nil
+	}
+	return crmcontracts.EmailAccessStatusTeam, nil
+}
+
+// narrowStatusForAudience is the word the audience column alone can justify.
+// It is the FLOOR of the two-step above and of the page pass in
+// emailrowfacts.go, so the editor and every list row start from one reading of
+// the column and are widened by one reading of the gate.
+func narrowStatusForAudience(aud crmcontracts.ActivityAudience) crmcontracts.EmailAccessStatus {
 	switch aud {
 	case crmcontracts.ActivityAudienceParticipants:
 		return crmcontracts.EmailAccessStatusParticipants

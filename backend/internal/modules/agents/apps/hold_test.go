@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -122,7 +123,7 @@ func TestAViewThatFailsToFetchIsSimplyNotHeld(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(AccountBriefURI) {
+	if !p.Holds(CompanyBriefURI) {
 		t.Error("the view that WAS served is not held")
 	}
 	if p.Holds(RelationshipMapURI) {
@@ -132,11 +133,11 @@ func TestAViewThatFailsToFetchIsSimplyNotHeld(t *testing.T) {
 
 func TestARefusedDocumentIsNeverHeld(t *testing.T) {
 	tier, p := newWebTier(t)
-	tier.answer(AccountBriefURI, ok(documentFor(AccountBriefURI)+`<link rel="stylesheet" href="/a.css">`))
+	tier.answer(CompanyBriefURI, ok(documentFor(CompanyBriefURI)+`<link rel="stylesheet" href="/a.css">`))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if p.Holds(AccountBriefURI) {
+	if p.Holds(CompanyBriefURI) {
 		t.Fatal("a document the admission check refused is being served")
 	}
 	if p.admissionFailures.Load() == 0 {
@@ -151,10 +152,10 @@ func TestAFailedRefreshKeepsTheLastKnownGoodDocument(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	before, _ := p.served(AccountBriefURI)
-	tier.answer(AccountBriefURI, broken(http.StatusBadGateway))
+	before, _ := p.served(CompanyBriefURI)
+	tier.answer(CompanyBriefURI, broken(http.StatusBadGateway))
 	p.Refresh(t.Context())
-	after, holding := p.served(AccountBriefURI)
+	after, holding := p.served(CompanyBriefURI)
 	if !holding {
 		t.Fatal("one bad response during a refresh took a working view down")
 	}
@@ -168,10 +169,10 @@ func TestARefusedDocumentNeverReplacesAGoodOne(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	before, _ := p.served(AccountBriefURI)
-	tier.answer(AccountBriefURI, ok(documentFor(AccountBriefURI)+`<script>fetch("/v1/contacts")</script>`))
+	before, _ := p.served(CompanyBriefURI)
+	tier.answer(CompanyBriefURI, ok(documentFor(CompanyBriefURI)+`<script>fetch("/v1/contacts")</script>`))
 	p.Refresh(t.Context())
-	after, holding := p.served(AccountBriefURI)
+	after, holding := p.served(CompanyBriefURI)
 	if !holding || after != before {
 		t.Fatal("a document that would be refused replaced the last known-good copy")
 	}
@@ -184,10 +185,10 @@ func TestARefreshPublishesADocumentThatChanged(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	updated := strings.Replace(documentFor(AccountBriefURI), "border:1px", "border:2px", 1)
-	tier.answer(AccountBriefURI, ok(updated))
+	updated := strings.Replace(documentFor(CompanyBriefURI), "border:1px", "border:2px", 1)
+	tier.answer(CompanyBriefURI, ok(updated))
 	p.Refresh(t.Context())
-	if got, _ := p.served(AccountBriefURI); got != updated {
+	if got, _ := p.served(CompanyBriefURI); got != updated {
 		t.Fatal("a refresh did not publish the new document the origin served")
 	}
 }
@@ -231,13 +232,13 @@ func TestTheHeldSnapshotIsReplacedAtomically(t *testing.T) {
 						t.Errorf("a concurrent read saw %d views, want %d", len(got), len(catalog))
 						return
 					}
-					_, _ = p.served(AccountBriefURI)
+					_, _ = p.served(CompanyBriefURI)
 				}
 			}
 		}()
 	}
 	for i := range 20 {
-		tier.answer(AccountBriefURI, ok(strings.Replace(documentFor(AccountBriefURI),
+		tier.answer(CompanyBriefURI, ok(strings.Replace(documentFor(CompanyBriefURI),
 			"border:1px", "border:"+string(rune('1'+i%8))+"px", 1)))
 		p.Refresh(t.Context())
 	}
@@ -262,7 +263,7 @@ func TestAViewIsNotAdvertisedBeforeItIsPrimed(t *testing.T) {
 	if got := p.Resources(context.Background()); len(got) != 0 {
 		t.Fatalf("an unprimed provider advertised %d views", len(got))
 	}
-	if _, err := p.ReadResource(context.Background(), AccountBriefURI); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := p.ReadResource(context.Background(), CompanyBriefURI); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an unprimed provider answered %v for a view, want the not-found sentinel", err)
 	}
 }
@@ -294,7 +295,7 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	contents, err := p.ReadResource(context.Background(), AccountBriefURI)
+	contents, err := p.ReadResource(context.Background(), CompanyBriefURI)
 	if err != nil {
 		t.Fatalf("reading a held view: %v", err)
 	}
@@ -316,7 +317,7 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	// two providers share a URI.
 	var listed *mcp.ResourceUI
 	for _, r := range p.Resources(context.Background()) {
-		if r.URI == AccountBriefURI {
+		if r.URI == CompanyBriefURI {
 			listed = r.UI
 		}
 	}
@@ -400,12 +401,12 @@ func TestEveryHeldViewIsAWellFormedAppDocument(t *testing.T) {
 
 func TestATitleMismatchIsReportedAndTheViewStillServes(t *testing.T) {
 	tier, p := newWebTier(t)
-	tier.answer(AccountBriefURI, ok(strings.Replace(documentFor(AccountBriefURI),
+	tier.answer(CompanyBriefURI, ok(strings.Replace(documentFor(CompanyBriefURI),
 		"<title>Morning brief</title>", "<title>Mornning brief</title>", 1)))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(AccountBriefURI) {
+	if !p.Holds(CompanyBriefURI) {
 		t.Fatal("a title mismatch took the view down; it is diagnostic, not an integrity check")
 	}
 	if p.titleMismatches.Load() != 1 {
@@ -428,7 +429,7 @@ func TestTheFailureLineIsRateLimitedButTheCounterIsNot(t *testing.T) {
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	tier.answer(AccountBriefURI, broken(http.StatusBadGateway))
+	tier.answer(CompanyBriefURI, broken(http.StatusBadGateway))
 	for range 5 {
 		p.Refresh(t.Context())
 	}
@@ -463,7 +464,7 @@ func TestTheMetricsSectionNamesEachViewSeparately(t *testing.T) {
 	p.WriteMetrics(&out)
 	body := out.String()
 	for want, why := range map[string]string{
-		`margince_mcp_app_view_held{uri="` + AccountBriefURI + `"} 1`:    "the held view reads as held",
+		`margince_mcp_app_view_held{uri="` + CompanyBriefURI + `"} 1`:    "the held view reads as held",
 		`margince_mcp_app_view_held{uri="` + RelationshipMapURI + `"} 0`: "the missing view reads as missing",
 	} {
 		if !strings.Contains(body, want) {
@@ -482,7 +483,7 @@ func TestTheMetricsSectionNamesEachViewSeparately(t *testing.T) {
 // stampedBrief is the account brief's document carrying a build revision, the
 // way the inliner writes one.
 func stampedBrief(revision string) string {
-	return strings.Replace(documentFor(AccountBriefURI), "-->",
+	return strings.Replace(documentFor(CompanyBriefURI), "-->",
 		"-->\n<!-- margince-build-revision: "+revision+" -->", 1)
 }
 
@@ -495,11 +496,11 @@ func TestAStampMismatchIsReportedAndTheViewStillServes(t *testing.T) {
 	buildinfo.Revision = "aaaaaaaa"
 
 	tier, p := newWebTier(t)
-	tier.answer(AccountBriefURI, ok(stampedBrief("bbbbbbbb")))
+	tier.answer(CompanyBriefURI, ok(stampedBrief("bbbbbbbb")))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(AccountBriefURI) {
+	if !p.Holds(CompanyBriefURI) {
 		t.Fatal("a build-revision mismatch took the view down")
 	}
 	var out strings.Builder
@@ -507,7 +508,7 @@ func TestAStampMismatchIsReportedAndTheViewStillServes(t *testing.T) {
 	body := out.String()
 	// Per URI, because a rollout replaces one document before the other: a
 	// single process-wide reading would be whichever view was read last.
-	if !strings.Contains(body, `margince_mcp_app_build_skew{uri="`+AccountBriefURI+`"} 1`) {
+	if !strings.Contains(body, `margince_mcp_app_build_skew{uri="`+CompanyBriefURI+`"} 1`) {
 		t.Errorf("the metrics section does not report the skewed view:\n%s", body)
 	}
 	if !strings.Contains(body, `margince_mcp_app_build_skew{uri="`+RelationshipMapURI+`"} 0`) {
@@ -523,15 +524,15 @@ func TestAMatchingStampClearsTheSkewGauge(t *testing.T) {
 	buildinfo.Revision = "aaaaaaaa"
 
 	tier, p := newWebTier(t)
-	tier.answer(AccountBriefURI, ok(stampedBrief("bbbbbbbb")))
+	tier.answer(CompanyBriefURI, ok(stampedBrief("bbbbbbbb")))
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	tier.answer(AccountBriefURI, ok(stampedBrief("aaaaaaaa")))
+	tier.answer(CompanyBriefURI, ok(stampedBrief("aaaaaaaa")))
 	p.Refresh(t.Context())
 	var out strings.Builder
 	p.WriteMetrics(&out)
-	if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+AccountBriefURI+`"} 0`) {
+	if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+CompanyBriefURI+`"} 0`) {
 		t.Fatalf("the skew gauge stayed raised after the rollout finished:\n%s", out.String())
 	}
 }
@@ -553,20 +554,20 @@ func TestAnUnknownStampOnEitherSideSkipsTheComparison(t *testing.T) {
 			buildinfo.Revision = tc.api
 
 			tier, p := newWebTier(t)
-			body := documentFor(AccountBriefURI)
+			body := documentFor(CompanyBriefURI)
 			if tc.document != "" {
 				body = stampedBrief(tc.document)
 			}
-			tier.answer(AccountBriefURI, ok(body))
+			tier.answer(CompanyBriefURI, ok(body))
 			if err := p.Prime(t.Context()); err != nil {
 				t.Fatalf("priming: %v", err)
 			}
-			if !p.Holds(AccountBriefURI) {
+			if !p.Holds(CompanyBriefURI) {
 				t.Fatal("an unknown revision took the view down")
 			}
 			var out strings.Builder
 			p.WriteMetrics(&out)
-			if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+AccountBriefURI+`"} 0`) {
+			if !strings.Contains(out.String(), `margince_mcp_app_build_skew{uri="`+CompanyBriefURI+`"} 0`) {
 				t.Errorf("an unknown revision on one side raised the skew gauge:\n%s", out.String())
 			}
 		})
@@ -585,17 +586,17 @@ func TestPrimeWaitsForAnOriginThatIsStillStarting(t *testing.T) {
 	// yet" — without a sleep anywhere.
 	tier, p := newWebTier(t)
 	var attempts atomic.Int64
-	tier.answer(AccountBriefURI, func(w http.ResponseWriter) {
+	tier.answer(CompanyBriefURI, func(w http.ResponseWriter) {
 		if attempts.Add(1) <= 2 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		ok(documentFor(AccountBriefURI))(w)
+		ok(documentFor(CompanyBriefURI))(w)
 	})
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if !p.Holds(AccountBriefURI) {
+	if !p.Holds(CompanyBriefURI) {
 		t.Fatal("a view whose origin was merely still starting was left permanently unadvertised")
 	}
 	if attempts.Load() < 3 {
@@ -614,7 +615,7 @@ func TestPrimeGivesUpAtItsDeadlineRatherThanBlockingBoot(t *testing.T) {
 	// here would make the healthy view's fetch race a stopwatch on a loaded
 	// machine.
 	var attempts atomic.Int64
-	tier.answer(AccountBriefURI, func(w http.ResponseWriter) {
+	tier.answer(CompanyBriefURI, func(w http.ResponseWriter) {
 		if attempts.Add(1) >= 2 {
 			cancel()
 		}
@@ -623,7 +624,7 @@ func TestPrimeGivesUpAtItsDeadlineRatherThanBlockingBoot(t *testing.T) {
 	if err := p.Prime(deadline); err != nil {
 		t.Fatalf("priming against a down origin answered an error; only an operator-fixable condition should: %v", err)
 	}
-	if p.Holds(AccountBriefURI) {
+	if p.Holds(CompanyBriefURI) {
 		t.Error("a view the origin never served is being served")
 	}
 	if !p.Holds(RelationshipMapURI) {
@@ -639,14 +640,14 @@ func TestPrimeDoesNotReAskARefusalThatCannotChange(t *testing.T) {
 	// the app shell at the view's path, 200 and text/html, refused by admission.
 	tier, p := newWebTier(t)
 	var attempts atomic.Int64
-	tier.answer(AccountBriefURI, func(w http.ResponseWriter) {
+	tier.answer(CompanyBriefURI, func(w http.ResponseWriter) {
 		attempts.Add(1)
-		ok(documentFor(AccountBriefURI) + `<script src="/assets/app.js"></script>`)(w)
+		ok(documentFor(CompanyBriefURI) + `<script src="/assets/app.js"></script>`)(w)
 	})
 	if err := p.Prime(t.Context()); err != nil {
 		t.Fatalf("priming: %v", err)
 	}
-	if p.Holds(AccountBriefURI) {
+	if p.Holds(CompanyBriefURI) {
 		t.Fatal("a refused document is being served")
 	}
 	if attempts.Load() != 1 {
@@ -663,7 +664,7 @@ func TestAFailedRefreshSaysTheViewIsStillBeingServed(t *testing.T) {
 	}
 	var logged strings.Builder
 	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	tier.answer(AccountBriefURI, broken(http.StatusBadGateway))
+	tier.answer(CompanyBriefURI, broken(http.StatusBadGateway))
 	p.Refresh(t.Context())
 	if strings.Contains(logged.String(), "is not being served") {
 		t.Errorf("a refresh failure was reported as an outage:\n%s", logged.String())
@@ -682,11 +683,107 @@ func TestAShutdownIsNotReportedAsAFailure(t *testing.T) {
 	}
 	var logged strings.Builder
 	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	tier.answer(AccountBriefURI, broken(http.StatusBadGateway))
+	tier.answer(CompanyBriefURI, broken(http.StatusBadGateway))
 	stopping, cancel := context.WithCancel(t.Context())
 	cancel()
 	p.Refresh(stopping)
 	if logged.Len() != 0 {
 		t.Errorf("a cancelled refresh logged on the way down:\n%s", logged.String())
+	}
+}
+
+// The boot signal an operator acts on.
+//
+// A view that missed the boot stays missing for the life of the process: there
+// is no stream to announce a later arrival on, so the advertised set is frozen
+// however healthy the web tier becomes. That makes this line the whole of what
+// an operator gets, and it has to carry both halves — WHICH views are missing,
+// and that the fix is a restart rather than waiting.
+//
+// Counts alone were what it carried, and "held 1, catalog 2" leaves a reader to
+// work out which host will fail from per-view lines a log search has to find.
+func TestTheBootWarningNamesTheMissingViewsAndTheRestart(t *testing.T) {
+	// EVERY view refused, and the whole rendered list asserted. One refusal
+	// would pass a line that named the first view it happened to see and
+	// dropped the rest, and it would pass an unsorted one — so two boots of the
+	// same broken deployment could log different lines and read as different
+	// faults.
+	tier, p := newWebTier(t)
+	for _, v := range catalog {
+		tier.answer(v.uri, broken(http.StatusNotFound))
+	}
+	var logged strings.Builder
+	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	if err := p.Prime(t.Context()); err != nil {
+		t.Fatalf("priming: %v", err)
+	}
+
+	// The SUMMARY line alone. The per-view error lines beside it already carry
+	// a uri each, so reading the whole buffer would let this test pass on a
+	// summary that named nothing — which is the state it exists to refuse.
+	line := summaryLine(t, logged.String())
+	// The expectation is built from the CATALOG rather than written out: a view
+	// added tomorrow belongs in this line, and a test naming today's set would
+	// go on passing while the newest view went missing unannounced.
+	want := make([]string, 0, len(catalog))
+	for _, v := range catalog {
+		want = append(want, v.uri)
+	}
+	sort.Strings(want)
+	if rendered := "[" + strings.Join(want, " ") + "]"; !strings.Contains(line, rendered) {
+		t.Errorf("the warning's missing list is not %s:\n%s", rendered, line)
+	}
+	if !strings.Contains(line, "restart") {
+		t.Errorf("the warning does not say what to do about it:\n%s", line)
+	}
+}
+
+// And it names only what is missing. A line that listed every view whatever
+// happened would be a shorter way of saying nothing.
+func TestTheBootWarningDoesNotNameAViewItIsServing(t *testing.T) {
+	tier, p := newWebTier(t)
+	tier.answer(RelationshipMapURI, broken(http.StatusNotFound))
+	var logged strings.Builder
+	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	if err := p.Prime(t.Context()); err != nil {
+		t.Fatalf("priming: %v", err)
+	}
+
+	line := summaryLine(t, logged.String())
+	if !strings.Contains(line, RelationshipMapURI) {
+		t.Errorf("the warning does not name the view that is missing:\n%s", line)
+	}
+	if strings.Contains(line, CompanyBriefURI) {
+		t.Errorf("the warning names a view that IS served, so a reader cannot tell which to chase:\n%s", line)
+	}
+}
+
+// summaryLine is the one boot line about the set as a whole, or a failure
+// saying the boot did not log one.
+func summaryLine(t *testing.T, logged string) string {
+	t.Helper()
+	for _, line := range strings.Split(logged, "\n") {
+		if strings.Contains(line, "some views are not served") {
+			return line
+		}
+	}
+	t.Fatalf("the boot logged no line about the set as a whole:\n%s", logged)
+	return ""
+}
+
+// A boot that held everything says nothing: a warning on a healthy start is how
+// the one that matters stops being read.
+func TestACompleteBootLogsNoWarning(t *testing.T) {
+	_, p := newWebTier(t)
+	var logged strings.Builder
+	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	if err := p.Prime(t.Context()); err != nil {
+		t.Fatalf("priming: %v", err)
+	}
+	if logged.Len() != 0 {
+		t.Errorf("a complete boot warned anyway:\n%s", logged.String())
 	}
 }

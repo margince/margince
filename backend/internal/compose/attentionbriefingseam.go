@@ -57,6 +57,10 @@ type attentionBriefing struct {
 // aside and dismiss over a deal that has been deleted, and counting toward the
 // day's total. A row that can name nothing is not a suggestion.
 func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, time.Time, error) {
+	// This read WRITES — it resurfaces expired snoozes and records the open —
+	// and under a composed read those now ride the page's own transaction. That
+	// is the right fate for both: a brief whose page never rendered was not
+	// opened. Its errors already fail the page, so it needs no detachment.
 	run, err := a.engine.LatestRun(ctx, a.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, time.Time{}, nil

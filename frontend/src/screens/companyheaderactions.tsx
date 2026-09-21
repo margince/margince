@@ -82,9 +82,7 @@ export function CompanyHeaderActions({
         </p>
       )}
       {!archived && logGrantKnown && !canLog && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
+        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
       )}
       <CompanyWriteEmail
         company={company}
@@ -98,14 +96,14 @@ export function CompanyHeaderActions({
         reasonId={logRefused}
         onClick={() => onDrawer("log")}
       >
-        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" /> {t("log.title")}
       </Button>
       <Button
         disabled={logPending}
         reasonId={logRefused}
         onClick={() => onDrawer("task")}
       >
-        <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
+        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
       </Button>
       {drawer && (
         <LogActivityAction

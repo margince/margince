@@ -10,7 +10,7 @@ import { useT } from "../i18n";
  * Two readings of one press, so one band with two headings rather than two
  * notices: the link went out to the buyer, or it did not and is the rep's to
  * send. `success` against `info` is the difference, because "not mailed" is not
- * a failure — the link in the field below is valid either way, and a `warn`
+ * a failure — the link in the field below is valid either way, and a `warning`
  * here would send a rep looking for a fault.
  *
  * Its own file, and it takes `queued` and `email` rather than the whole issued

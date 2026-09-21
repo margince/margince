@@ -8,13 +8,14 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
 import {
-  AccountArc,
   AdvancePanel,
+  CompanyArc,
   LikelyAsks,
   ObjectivePanel,
   Scenarios,
@@ -91,7 +92,9 @@ export function MeetingBriefView({
     <>
       <div className="drawer-head">
         <div className="pe-drawer-title">
-          <h2 id={titleId}>{t("contact.meeting.title")}</h2>
+          <Heading size="large" id={titleId}>
+            {t("contact.meeting.title")}
+          </Heading>
         </div>
         <BriefHeader
           brief={brief}
@@ -154,7 +157,7 @@ export function MeetingBriefView({
                       onOpenEmail={onOpenEmail}
                     />
                     <Scenarios plan={brief.plan} />
-                    <AccountArc
+                    <CompanyArc
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
                       onOpenEmail={onOpenEmail}
@@ -168,7 +171,7 @@ export function MeetingBriefView({
                   onOpenEmail={onOpenEmail}
                 />
                 {/* The sections' risk list, unless the plan carried the one
-                    risk that matters with what to do about it — two warn
+                    risk that matters with what to do about it — two warning
                     panels on one surface is no warning at all, and the plan's
                     is the one a reader can act on. */}
                 {!brief.plan?.top_risk && (

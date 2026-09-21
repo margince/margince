@@ -135,7 +135,7 @@ export function VoiceDnaCard() {
                   />
                 </SettingList>
               ) : (
-                <p className="t-caption">{t("settings.voice.readOnly")}</p>
+                <p>{t("settings.voice.readOnly")}</p>
               )}
             </PanelBody>
           </Panel>
@@ -197,9 +197,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
               the split design-system/README.md draws between a withheld surface
               and a withheld write. */}
           {!canEdit && (
-            <p className="t-caption vdna-readonly">
-              {t("settings.voice.readOnly")}
-            </p>
+            <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
           )}
           <div className="vdna-status">
             <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
@@ -326,7 +324,7 @@ function DerivedVoice({ profile }: Readonly<{ profile: VoiceProfile }>) {
   return profile.voice_profile_md ? (
     <p className="vdna-derived">{profile.voice_profile_md}</p>
   ) : (
-    <p className="t-caption">{t("settings.voice.derivedEmpty")}</p>
+    <p>{t("settings.voice.derivedEmpty")}</p>
   );
 }
 
@@ -397,17 +395,12 @@ function PersonalityEditor({
       {canEdit && (
         <div className="vdna-composer-actions">
           <Button
-            small
             disabled={!dirty || save.isPending}
             onClick={() => save.mutate()}
           >
             {t("settings.voice.savePreferences")}
           </Button>
-          {error && (
-            <span className="t-caption" role="alert">
-              {error}
-            </span>
-          )}
+          {error && <span role="alert">{error}</span>}
         </div>
       )}
     </div>
@@ -468,7 +461,7 @@ function CorpusManifest({
             )}
             <RegisterMix summary={manifest.summary} />
             {manifest.sources.length === 0 ? (
-              <p className="t-caption">{t("settings.voice.corpusEmpty")}</p>
+              <p>{t("settings.voice.corpusEmpty")}</p>
             ) : (
               <ul className="vdna-list">
                 {manifest.sources.map((s) => (
@@ -486,11 +479,7 @@ function CorpusManifest({
           </div>
         )}
       </QueryGate>
-      {error && (
-        <p className="t-caption" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p role="alert">{error}</p>}
     </div>
   );
 }
@@ -600,7 +589,7 @@ function SourceRow({
         {!source.included && ` · ${t("settings.voice.excluded")}`}
       </span>
       {armed && drops && (
-        <span className="t-caption vdna-banddrop" role="alert">
+        <span role="alert">
           {t("settings.voice.bandDrop", {
             from: bandLabel(t, summary.quality_band),
             to: bandLabel(t, bandAfter),
@@ -775,7 +764,6 @@ function BuildControls({
           <div className="vdna-buildcell">
             <Button
               variant="primary"
-              small
               // A refusal the reader can act on, attached to the control rather
               // than left in a `title` no screen reader announces on a disabled
               // button. It points at the description this row already draws.
@@ -814,11 +802,7 @@ function BuildControls({
             <p className="t-caption" role="status">
               {buildStatusLine(t, build.isPending, outcome)}
             </p>
-            {error && (
-              <p className="t-caption" role="alert">
-                {error}
-              </p>
-            )}
+            {error && <p role="alert">{error}</p>}
           </div>
         ) : null
       }

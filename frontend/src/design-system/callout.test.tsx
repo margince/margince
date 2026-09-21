@@ -7,7 +7,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MailX } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Callout, type CalloutKind, type CalloutTone } from "./callout";
+import {
+  CALLOUT_TONES,
+  Callout,
+  type CalloutKind,
+  type CalloutTone,
+} from "./callout";
 import { FactList } from "./factlist";
 
 afterEach(cleanup);
@@ -20,9 +25,10 @@ afterEach(cleanup);
 const TONE_GLYPHS: ReadonlyArray<readonly [CalloutTone, string]> = [
   ["info", "lucide-info"],
   ["accent", "lucide-info"],
-  ["warn", "lucide-triangle-alert"],
+  ["warning", "lucide-triangle-alert"],
   ["danger", "lucide-circle-x"],
   ["success", "lucide-circle-check"],
+  ["discovery", "lucide-lightbulb"],
   ["ai", "lucide-sparkles"],
 ];
 
@@ -36,6 +42,15 @@ const KINDS: ReadonlyArray<CalloutKind | undefined> = [
 
 /** The tones, read off the glyph table rather than listed a second time. */
 const TONES: ReadonlyArray<CalloutTone> = TONE_GLYPHS.map(([tone]) => tone);
+
+// The glyph table is a decision per tone, so it is written out; WHICH tones it
+// has to cover is not — the component's own vocabulary decides that, and a tone
+// added there with no glyph fails here rather than shipping with the default.
+describe("the tone vocabulary", () => {
+  it("names a glyph for every tone the component offers", () => {
+    expect([...TONES].sort()).toEqual([...CALLOUT_TONES].sort());
+  });
+});
 
 /**
  * The whole derivation as a table: what the notice IS, how bad the news is, and
@@ -51,27 +66,31 @@ const DERIVATIONS: ReadonlyArray<
 > = [
   ["outcome", "info", "status"],
   ["outcome", "accent", "status"],
-  ["outcome", "warn", "status"],
+  ["outcome", "warning", "status"],
   ["outcome", "danger", "alert"],
   ["outcome", "success", "status"],
+  ["outcome", "discovery", "status"],
   ["outcome", "ai", "status"],
   ["event", "info", "status"],
   ["event", "accent", "status"],
-  ["event", "warn", "status"],
+  ["event", "warning", "status"],
   ["event", "danger", "status"],
   ["event", "success", "status"],
+  ["event", "discovery", "status"],
   ["event", "ai", "status"],
   ["standing", "info", null],
   ["standing", "accent", null],
-  ["standing", "warn", null],
+  ["standing", "warning", null],
   ["standing", "danger", null],
   ["standing", "success", null],
+  ["standing", "discovery", null],
   ["standing", "ai", null],
   [undefined, "info", null],
   [undefined, "accent", null],
-  [undefined, "warn", null],
+  [undefined, "warning", null],
   [undefined, "danger", null],
   [undefined, "success", null],
+  [undefined, "discovery", null],
   [undefined, "ai", null],
 ];
 
@@ -169,7 +188,7 @@ describe("Callout", () => {
 
   it("takes the caller's glyph instead where the notice names a thing", () => {
     const { container } = render(
-      <Callout tone="warn" icon={MailX} title="Nobody has written back" />,
+      <Callout tone="warning" icon={MailX} title="Nobody has written back" />,
     );
     expect(
       container.querySelector(".callout-icon .lucide-mail-x"),

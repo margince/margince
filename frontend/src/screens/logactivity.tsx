@@ -12,6 +12,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
@@ -362,11 +363,10 @@ export function LogActivityForm({
         </Field>
       )}
       {log.isError && (
-        <p className="t-caption form-error">{problemMessageOf(log.error, t)}</p>
+        <p className="form-error">{problemMessageOf(log.error, t)}</p>
       )}
       <div className="form-actions">
         <Button
-          small
           variant="primary"
           type="submit"
           // An unnamed attendee is refused by the server with a 422 the reader
@@ -421,15 +421,15 @@ export function LogActivity({
   const logRefused = me.data?.authorization !== undefined && !canLog;
   if (logRefused) {
     return (
-      <Panel title={t("log.title")} sub={t("log.sub")}>
+      <Panel title={t("log.title")}>
         <PanelBody>
-          <p className="t-caption">{t("record.logActivityRefused")}</p>
+          <p>{t("record.logActivityRefused")}</p>
         </PanelBody>
       </Panel>
     );
   }
   return (
-    <Panel title={t("log.title")} sub={t("log.sub")}>
+    <Panel title={t("log.title")}>
       <PanelBody>
         <LogActivityForm
           entityType={entityType}
@@ -456,6 +456,7 @@ export function LogActivityAction({
   disabled,
   disabledReasonId,
   onClose,
+  onLogged,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
@@ -489,6 +490,11 @@ export function LogActivityAction({
   // such button" learns nothing from the absence.
   disabledReasonId?: string;
   onClose?: () => void;
+  // Fires once the form actually LOGGED, ahead of the close every dismissal
+  // triggers, for a caller with its own re-read to schedule off a write
+  // rather than off the drawer merely shutting (a cancel or an Escape closes
+  // it too, and has nothing to re-read).
+  onLogged?: () => void;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -501,7 +507,6 @@ export function LogActivityAction({
     <>
       {!openOnMount && (
         <Button
-          small
           disabled={disabled}
           reasonId={disabledReasonId}
           onClick={() => setOpen(true)}
@@ -511,17 +516,20 @@ export function LogActivityAction({
         </Button>
       )}
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId} className="t-h2 modal-title">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {/* The heading answers the verb that opened it. Titled "log an
               activity" regardless, a reader who pressed "Add task" was shown
               a different form's name and read it as the wrong dialog. */}
           {t(triggerLabel ?? "log.title")}
-        </h2>
+        </Heading>
         <LogActivityForm
           entityType={entityType}
           entityId={entityId}
           askedKind={askedKind}
-          onLogged={close}
+          onLogged={() => {
+            onLogged?.();
+            close();
+          }}
         />
       </Modal>
     </>

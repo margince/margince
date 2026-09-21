@@ -19,29 +19,20 @@
  * compete with the subject the reader opened. */
 .sourceemail__label {
   margin: 0;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
-  text-transform: none;
+  font-weight: var(--fontWeightMedium);
 }
 
 .sourceemail__subject {
   margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  color: var(--textContent);
+  font-weight: var(--fontWeightMedium);
   overflow-wrap: anywhere;
 }
 
 .sourceemail__when {
   margin: 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 /* The air between the envelope facts and the words themselves. */
 .sourceemail__body {
   margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textContent);
 }

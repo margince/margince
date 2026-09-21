@@ -57,7 +57,6 @@ gates/manifestdigest_test.go#var manifestDigestEncoding
 gates/modulepoolsharing_test.go#var poolConstructors
 gates/netguardparity_test.go#func TestPublishedReservedNetsMatchTheGuard
 gates/outboundanonymity_test.go#func isDefaultClient
-gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePrimaryAddress
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
 gates/tableownerregistry_test.go#var tableOwners
@@ -248,7 +247,7 @@ internal/modules/activities/email.go#const sourceManual
 internal/modules/activities/handlers_email.go#func DeterministicEmailDraft
 internal/modules/activities/handlers_email.go#func IsMailThread
 internal/modules/activities/handlers_email.go#func writeSendOutcome
-internal/modules/activities/handlers_email.go#method Handlers.SendAccountEmail
+internal/modules/activities/handlers_email.go#method Handlers.SendCompanyEmail
 internal/modules/activities/lasttouch.go#method Store.LastTouchBefore
 internal/modules/activities/linktarget.go#var linkIDCoalesce
 internal/modules/activities/mapping.go#const fieldBody
@@ -271,7 +270,7 @@ internal/modules/activities/transcriptnorm.go#func transcriptLines
 internal/modules/activities/unsubscribe.go#func listUnsubscribeHeader
 internal/modules/activities/unsubscribe.go#method Store.deliverability
 internal/modules/agents/approvals.go#func pinForWrite
-internal/modules/agents/apps/apps.go#const block at const AccountBriefURI
+internal/modules/agents/apps/apps.go#const block at const CompanyBriefURI
 internal/modules/agents/apps/apps.go#func DeclaredViews
 internal/modules/agents/apps/fetch.go#method Fetcher.documentURL
 internal/modules/agents/apps/hold.go#type Provider.quietMu
@@ -415,8 +414,8 @@ internal/modules/contacts/resolvecreate.go#type CompanySpec
 internal/modules/contacts/resolvecreate.go#type ContactSpec
 internal/modules/contacts/store.go#type Store.consumerMail
 internal/modules/contacts/strength.go#func contactScopePredicate
+internal/modules/contracts/contract_links.go#func ensureLinksVisible
 internal/modules/contracts/contract_write.go#func contractPatch
-internal/modules/contracts/contract_write.go#func ensureLinksVisible
 internal/modules/contracts/store.go#const contractColumns
 internal/modules/contracts/visibility.go#func VisibleClause
 internal/modules/customfields/create.go#func marshalOptions
@@ -448,7 +447,6 @@ internal/modules/identity/nonproduction.go#method Handlers.WithDataResetAvailabl
 internal/modules/identity/oauth_audience.go#func audienceMatches
 internal/modules/identity/oauth_consentnonce.go#func setConsentCookie
 internal/modules/identity/oauth_consentscreen.go#func redirectToConsentScreen
-internal/modules/identity/oauth_discovery.go#func requestIssuer
 internal/modules/identity/oauth_grant.go#func oauthPassportLabel
 internal/modules/identity/oauth_redirect.go#var responseParams
 internal/modules/identity/oauth_refresh.go#var errRefreshRejected

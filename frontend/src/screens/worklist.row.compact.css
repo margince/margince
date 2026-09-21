@@ -125,15 +125,9 @@
    shape (`.rowtags-rest`, the tags strip) — words in the line with no chrome of
    their own, because it is the way to the rest of the row and decides nothing.
    `Popover` draws that shape for a trigger with no `variant`, and the size
-   arrives as `.t-caption` on the element.
-
-   The ink is spelled here for the reason `.rowtags-rest` spells it: a chromeless
-   button's colour is `inherit`, and `.popover-trigger:not(.btn)` says so at a
-   specificity `.t-caption` cannot reach — so the pairing needs a selector of
-   equal weight rather than a later one, which cascade order would decide. */
+   arrives as `.t-caption` on the element. */
 .popover-trigger.worklist-row-why {
   flex: none;
-  color: var(--textMeta);
   white-space: nowrap;
 }
 

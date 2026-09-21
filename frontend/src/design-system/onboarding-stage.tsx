@@ -9,6 +9,7 @@ import { Eyebrow } from "./eyebrow";
 import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./onboarding-stage.css";
+import { Heading } from "./heading";
 
 /**
  * The room every onboarding question is asked in, before the workbench.
@@ -360,9 +361,13 @@ export function OnboardingStage({
                 group there labels itself by pointing at it. One stage is
                 mounted at a time (see the mounting note), so the id is unique
                 by construction. */}
-            <h1 className="ob-stage-title" id={STAGE_TITLE_ID}>
+            <Heading
+              size="xlarge"
+              className="ob-stage-title"
+              id={STAGE_TITLE_ID}
+            >
               {title}
-            </h1>
+            </Heading>
             {sub === undefined ? null : <p className="ob-stage-sub">{sub}</p>}
             <StageActionsSlot.Provider value={actsSlot}>
               {children}

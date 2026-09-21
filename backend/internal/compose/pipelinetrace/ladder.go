@@ -65,6 +65,8 @@ type Ladder struct {
 type Assembler struct {
 	traces     *capture.TraceStore
 	activities *activities.Store
+	threads    ThreadReader
+	domains    DomainTriageReader
 	payloads   bool
 }
 
@@ -73,6 +75,18 @@ type Assembler struct {
 // composition root decides it for every surface.
 func NewAssembler(traces *capture.TraceStore, acts *activities.Store, payloads bool) *Assembler {
 	return &Assembler{traces: traces, activities: acts, payloads: payloads}
+}
+
+// WithThreadReader supplies the signal extractor's rule, which compose owns.
+//
+// Optional because the extractor is: a deployment composed without it has no
+// conversation reading to report, and the rung says that rather than reporting
+// a state from a pass that never runs. The reader is set here rather than taken
+// by NewAssembler so the two callers that compose no extractor do not have to
+// pass a nil they would then have to explain.
+func (a *Assembler) WithThreadReader(r ThreadReader) *Assembler {
+	a.threads = r
+	return a
 }
 
 // ByTraceID answers for one row of the member's own capture-activity window.
@@ -196,13 +210,21 @@ func (a *Assembler) assemble(ctx context.Context, v view) (Ladder, error) {
 	if known {
 		derived = &facts
 	}
+	conversation, conversationKnown, err := a.threadReading(ctx, derived, stored.ActivityID)
+	if err != nil {
+		return Ladder{}, err
+	}
+	var reading *ThreadReading
+	if conversationKnown {
+		reading = &conversation
+	}
 	out := Ladder{
 		ActivityID:      stored.ActivityID,
 		Connector:       stored.Connector,
 		PayloadsEnabled: stored.PayloadsEnabled,
 	}
 	for _, reg := range trace.Registrations() {
-		out.Rungs = append(out.Rungs, a.rung(reg, v, derived))
+		out.Rungs = append(out.Rungs, a.rung(reg, v, derived, reading))
 	}
 	return out, nil
 }
@@ -225,6 +247,28 @@ func (a *Assembler) factsFor(ctx context.Context, activityID *ids.UUID) (facts a
 		return activities.PipelineFacts{}, false, fmt.Errorf("pipelinetrace: reading the derived rungs: %w", err)
 	}
 	return facts, true, nil
+}
+
+// threadReading asks the extractor's rule about this message's conversation,
+// and only when there is a conversation to ask about: no activity, no thread
+// key, or no composed extractor each mean the question has no subject, which
+// the rung reports as its own answer rather than as an absent state.
+// `known` rather than a nil-with-nil-error return, for the reason factsFor
+// gives: "there is no conversation to ask about" is an ordinary state on this
+// surface, and a caller distinguishing it by a nil pointer beside a nil error
+// has to know that convention to read the signature correctly.
+func (a *Assembler) threadReading(
+	ctx context.Context, facts *activities.PipelineFacts, activityID *ids.UUID,
+) (reading ThreadReading, known bool, err error) {
+	if a.threads == nil || facts == nil || facts.ThreadKey == "" || activityID == nil {
+		return ThreadReading{}, false, nil
+	}
+	reading, err = a.threads.ReadThread(ctx, facts.ThreadKey, activityID.String())
+	if err != nil {
+		return ThreadReading{}, false,
+			fmt.Errorf("pipelinetrace: reading the conversation's extraction state: %w", err)
+	}
+	return reading, true, nil
 }
 
 func ptr[T any](v T) *T { return &v }

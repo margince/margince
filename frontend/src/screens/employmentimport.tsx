@@ -4,13 +4,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -89,15 +90,10 @@ export function ImportedEmploymentHistory({
           {warning}
         </p>
       ))}
-      {reading.isPending && (
-        <p className="t-caption">{t("employment.importLoading")}</p>
-      )}
-      {reading.isError && (
-        <p role="alert">{problemMessageOf(reading.error, t)}</p>
-      )}
+      {reading.isPending && <p>{t("employment.importLoading")}</p>}
+      {reading.isError && <RefusalLine error={reading.error} />}
       {canEdit && outstanding.some((item) => item.state === "pending") && (
         <Button
-          small
           disabled={apply.isPending}
           onClick={() =>
             apply.mutate({
@@ -113,7 +109,6 @@ export function ImportedEmploymentHistory({
         <div key={group} className="form-stack">
           {items[0]?.company_id ? (
             <Button
-              small
               variant="ghost"
               onClick={() => {
                 const company = items[0]?.company_id;
@@ -134,7 +129,7 @@ export function ImportedEmploymentHistory({
                 {item.provider}
               </span>
               {item.state !== "linked" && (
-                <span className="t-caption">
+                <span>
                   {t(
                     item.state === "needs_review"
                       ? "employment.review"
@@ -145,7 +140,6 @@ export function ImportedEmploymentHistory({
               {canEdit && item.state !== "linked" && (
                 <div className="card-actions">
                   <Button
-                    small
                     disabled={apply.isPending}
                     onClick={() => {
                       apply.reset();
@@ -155,7 +149,6 @@ export function ImportedEmploymentHistory({
                     {t("employment.resolve")}
                   </Button>
                   <Button
-                    small
                     disabled={apply.isPending}
                     onClick={() =>
                       apply.mutate({
@@ -182,9 +175,8 @@ export function ImportedEmploymentHistory({
           (item, index, items) =>
             items.findIndex((peer) => peer.company_id === item.company_id) ===
               index && (
-              <p className="t-caption" key={item.key}>
+              <p key={item.key}>
                 <Button
-                  small
                   variant="ghost"
                   onClick={() => {
                     if (item.company_id)
@@ -202,9 +194,7 @@ export function ImportedEmploymentHistory({
               </p>
             ),
         )}
-      {apply.isError && !resolving && (
-        <p role="alert">{problemMessageOf(apply.error, t)}</p>
-      )}
+      {apply.isError && !resolving && <RefusalLine error={apply.error} />}
       {resolving && (
         <EmploymentMatchModal
           key={resolving.key}
@@ -243,13 +233,14 @@ function EmploymentMatchModal({
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading}>
-      <h2
+      <Heading
+        size="large"
         id={heading}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("employment.resolve")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <p>
           {item.company_name} · {item.role}
@@ -313,7 +304,7 @@ function EmploymentMatchModal({
           }))}
           disabled={pending}
         />
-        {error != null && <p role="alert">{problemMessageOf(error, t)}</p>}
+        {error != null && <RefusalLine error={error} />}
         <Button
           disabled={
             pending ||

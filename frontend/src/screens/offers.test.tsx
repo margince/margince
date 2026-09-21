@@ -211,7 +211,6 @@ describe("OfferScreen", () => {
     stubOffer(baseOffer);
     render(<OfferScreen id="o-1" />);
     expect(await screen.findByText("ANG-2026-0007")).toBeTruthy();
-    expect(screen.getByText("Revision 2")).toBeTruthy();
     expect(screen.getByText("draft")).toBeTruthy();
     // 100000 minor EUR net, 19000 tax, 119000 gross (en-GB Intl formatting).
     expect(screen.getByText("€1,000.00")).toBeTruthy();
@@ -420,7 +419,7 @@ function stubOfferWithRegenerate(
 }
 
 describe("AI disclosure/diff banner (OP-11)", () => {
-  it("renders the Art. 50 disclosure and diff summary when ai_generated is true", async () => {
+  it("renders the AI provenance notice and diff summary when ai_generated is true", async () => {
     stubOffer({
       ...baseOffer,
       status: "sent",

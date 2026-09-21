@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Why a domain's question was left open. These are the two values
+// Why a domain's question was left open. These are the values
 // company_domain_disposition.pending_reason may carry, and they reach an
 // operator as the SOURCE of an undecided entry: what stopped the machine
 // deciding is the same question as what decided it, asked of a row nothing
@@ -39,6 +39,11 @@ const (
 	// staleEvidenceYears, so today's site is not evidence about the contacts
 	// who wrote then.
 	PendingStaleEvidence = "stale_evidence"
+	// PendingNearDuplicate — the name this domain resolved to is close to a
+	// company already here, without being the same name. Creating would put
+	// one company in the workspace twice, and merging on a near-match is a
+	// human's call rather than the machine's.
+	PendingNearDuplicate = "near_duplicate"
 )
 
 // DomainUndecided is the admission value an open question carries on the wire.

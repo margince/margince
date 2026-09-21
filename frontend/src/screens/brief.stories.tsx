@@ -22,6 +22,7 @@ import {
   WEEK_START,
   type WeeklyReview,
   type Worklist,
+  waitingEmailRow,
   wholeDecisions,
   wholeMeetings,
 } from "./brief.fixtures";
@@ -198,7 +199,14 @@ export const DecisionApproved: Story = {
         within(canvasElement).queryByRole("button", { name: "Decide" }),
       ).toBeNull(),
     );
-    await within(canvasElement).findByText("2 focus cards");
+    // The refreshed agenda still stands, counted rather than named: the panel
+    // head lost its sub slot, so the sentence that said how many rows it holds
+    // is gone from every catalog and asserting it would test nothing.
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
+      ).toHaveLength(2),
+    );
   },
 };
 
@@ -298,16 +306,32 @@ const otherPromise = {
   ),
   due_at: "2026-09-11T21:59:59Z",
 };
+// The row in hand is a customer's MESSAGE: the canonical email row names it —
+// who wrote, when, the subject at the headline rung, their own words under
+// it — and the verbs that answer it stand under the words. The queue beside
+// it holds the rest of the day; pressing a row puts it in hand instead.
+const SixPrioritiesDay = readingsDay({}, [
+  waitingEmailRow(),
+  promise,
+  otherPromise,
+  ...[1, 2, 3, 4].map((n) =>
+    taskRow(`followup-${n}`, `Follow up on customer commitment ${n}`),
+  ),
+]);
 export const SixPriorities: Story = {
+  render: brief({ approvals: [], day: SixPrioritiesDay }),
+};
+// The same morning read by a seat whose row scope REACHES A TEAM. The
+// Mine/Team dial is drawn from the worklist's own `scope_options`, so a seat
+// that reaches nobody else never sees it — which is why the frame above cannot
+// show it, and why this one exists.
+export const TeamSeat: Story = {
   render: brief({
     approvals: [],
-    day: readingsDay({}, [
-      promise,
-      otherPromise,
-      ...[1, 2, 3, 4].map((n) =>
-        taskRow(`followup-${n}`, `Follow up on customer commitment ${n}`),
-      ),
-    ]),
+    day: {
+      ...SixPrioritiesDay,
+      scope_options: ["mine", "team"],
+    },
   }),
 };
 export const TaskEvidence: Story = {

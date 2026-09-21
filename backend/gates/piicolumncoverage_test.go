@@ -128,6 +128,11 @@ var erasureColumnBaseline = map[string][]string{
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
 		"owed_verdict",
+		// A digest of the product's own classifier prompt, naming which rules
+		// reached the verdict beside it. Nothing the subject wrote and nothing
+		// derived from what they wrote — the same string on every row one build
+		// judged.
+		"owed_verdict_ruleset",
 		"captured_by",
 		"channel_provider",
 		"direction",
@@ -199,6 +204,12 @@ var erasureColumnBaseline = map[string][]string{
 	"contact": {
 		"captured_by",
 		"source",
+		// Which system the record was imported FROM — a system's name, not the
+		// subject's, drawn from the closed set an importer writes. What the
+		// Art. 17 redaction DOES clear on this table is the free text beside
+		// it, source_author_name, which is a human's name. `lead` carries the
+		// same column and the same reading, a few entries up.
+		"source_system",
 		"visibility",
 	},
 	"provider_run": {
@@ -208,6 +219,23 @@ var erasureColumnBaseline = map[string][]string{
 		"skip_reason",
 		"state",
 		"trigger",
+	},
+	// The author repair's bookkeeping. THREE of its columns can carry what a
+	// human typed, and all three are cleared by the Art. 17 redaction rather
+	// than declared here: source_author_name; payload_hash, a digest of that
+	// same name and re-identifiable against a staff list; and batch_ref, a
+	// label an operator types freely.
+	//
+	// batch_ref was on this list twice, exempted on two different arguments,
+	// and both were false. First that a batch name "cannot vary with the
+	// subject" — nothing enforced it. Then that a wire pattern stopped it
+	// describing somebody — `alice-smith` satisfies that pattern. The column is
+	// free text, no syntax makes free text safe, and nothing reads it back, so
+	// the erasure clears it and this entry keeps only what is genuinely closed.
+	"source_attribution_repair": {
+		// Which kind of record the row is about: one of six values this
+		// repository defines, checked by the table's own CHECK constraint.
+		"object_type",
 	},
 }
 

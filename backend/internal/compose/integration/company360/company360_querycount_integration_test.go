@@ -223,7 +223,19 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// size of the account like every section above — an account naming three
 	// billing contacts costs the same one statement as one naming none, which
 	// is what the shape half of this test above has just confirmed.
-	const budget = 47
+	// 48 since the under-contract strip judges "active today" on the
+	// installation's calendar day rather than UTC's (#3266): one read of the
+	// installation timezone, flat in the size of the account — the same one
+	// statement whether the account holds two contracts or two hundred.
+	// 49 since the mail badge tells "everyone here" apart from "whoever this
+	// record admits" (#5749): one read asking which of the page's emails a seat
+	// with no standing could still find. Keyed by activity id over the whole
+	// page, beside the attachment count and the delivery read above and for the
+	// same reason — a page of twenty emails costs the same one statement as a
+	// page of two, which is the property this budget protects rather than the
+	// absolute number. It cannot be asked per row: the word would then grow with
+	// the page, which is the shape this test exists to refuse.
+	const budget = 49
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

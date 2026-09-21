@@ -122,6 +122,15 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		  -- being emptied here, so it is a fact about erased text rather than
 		  -- about the row.
 		  language = NULL,
+		  -- The byline an import carried in from the system this row came from:
+		  -- a human's name in free text, written by neither party to the
+		  -- exchange. It is content about somebody rather than the record of
+		  -- who the exchange was with, so it goes with the words.
+		  --
+		  -- The repair's own ledger holds a second copy, cleared by the UPDATE
+		  -- that follows this statement. A name erased from the activity and
+		  -- left standing in the bookkeeping is still readable.
+		  source_author_name = NULL,
 		  source_id = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
 		                   THEN NULL ELSE a.source_id END,
 		  thread_key = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
@@ -137,6 +146,9 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	}
 	redacted, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
+		return nil, err
+	}
+	if err := clearAttributionLedgerNames(ctx, tx, "activity", redacted); err != nil {
 		return nil, err
 	}
 	// The redacted rows' field-level provenance goes with the fields it
@@ -180,6 +192,74 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 // timeline rows. A held activity keeps its embedding along with its text: the
 // vector is derived from evidence the hold freezes, and destroying it while
 // the text stands would be a partial spoliation with nothing to show for it.
+// clearAttributionLedgerNames removes the byline the author repair wrote into
+// its own bookkeeping for these activities.
+//
+// The repair's ledger holds a SECOND copy of the name the caller has just
+// cleared off the message. It is the same free text about the same human, so an
+// erasure that stopped at the activity would leave the erased name sitting in
+// the ledger beside it, readable by anything that reads that table.
+//
+// THE DIGEST GOES WITH THE NAME. `payload_hash` is an unkeyed SHA-256 over the
+// author id and that same name, and a hash of a human name is not anonymous: the
+// candidate set is a staff list, so anyone holding the ledger can hash a few
+// hundred names and match one. Leaving it would keep a re-identifiable copy of
+// the very string the statement above just cleared. Emptied rather than nulled —
+// the column is NOT NULL, and ” is what this package's other erasures write to
+// a NOT NULL text column.
+//
+// THE BATCH LABEL GOES TOO, and this is the second answer to that question.
+// The first was a wire pattern meant to stop a label naming anybody, and it
+// does not: `alice-smith` and `A.Smith` both satisfy it. The label is free text
+// an operator types, so no cheap syntax makes it safe, and a PII declaration
+// resting on one would be false however carefully it were worded. Nothing reads
+// this column — it is written with the row and never queried — so clearing it
+// on an erased record costs an operator one label on a row whose content is
+// already destroyed, and buys a declaration that is simply true.
+//
+// The ROW stays and the REVISION with it: the ledger's job is to say this
+// record has already been reached, and at which revision, so a resumed run
+// neither redoes it nor loses its place.
+//
+// Stated exactly, because a looser version of this sentence stood here and
+// overclaimed: keeping the revision refuses an offer at an EQUAL OR LOWER one.
+// It does not by itself refuse a higher one. What stops a later batch writing a
+// name back onto an erased message is the erasure ARCHIVING the activity — the
+// repair's store refuses an archived row outright, before any comparison.
+//
+// `source_author_id` stays, and the honest statement of why is narrower than
+// any version of this comment has yet managed. It is NOT "what a re-run
+// compares against" — that was wrong, and review caught it: the repair compares
+// the activity's own two author columns, under that row's lock, and never reads
+// this one. What it actually is: a seat id, ordinarily a colleague's account
+// rather than the erased subject's, kept because an erasure of somebody's
+// correspondence is not obviously an instruction to forget which colleague
+// wrote it.
+//
+// Nothing here PROVES the two are different. An author who is also a contact
+// being erased would leave their own seat id standing. Whether that satisfies
+// Art. 17 is a controller's ruling, not this function's, and it is open.
+//
+// ONE spelling for all three paths that clear it: the Art. 17 erasure, the
+// retention sweep's activity/erase, and the restriction lift. The neighbours
+// here already carry the scar of the alternative — purgeContentDerivedFrom is
+// shared for exactly this reason, after two copies of a content list went out of
+// step and the shorter one missed the provider original.
+// `objectType` names which kind of record these ids are, because the ledger is
+// keyed on (object_type, object_id) and two tables may hold the same uuid. It
+// was the literal 'activity' while the repair wrote nothing else; the record
+// repair reaches five more types, and a clear that still named only activities
+// would leave a contact's byline standing under its own key.
+func clearAttributionLedgerNames(ctx context.Context, tx pgx.Tx, objectType string, objectIDs []ids.UUID) error {
+	if len(objectIDs) == 0 {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `
+		UPDATE source_attribution_repair SET source_author_name = NULL, payload_hash = '', batch_ref = ''
+		 WHERE object_type = $1 AND object_id = ANY($2)`, objectType, objectIDs)
+	return err
+}
+
 var subjectActivityEmbeddingsDelete = `
 		DELETE FROM embedding e USING activity_link l
 		WHERE e.entity_type = 'activity' AND l.contact_id = $1 AND e.entity_id = l.activity_id` +
@@ -192,7 +272,7 @@ var subjectActivityEmbeddingsDelete = `
 // (erasure_channels.go, kept apart for file length). Embeddings of
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
-func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
+func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx,
 			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
@@ -243,20 +323,44 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	if _, err := tx.Exec(ctx, subjectActivityEmbeddingsDelete, contactID); err != nil {
 		return 0, 0, err
 	}
-	// Captured AI payloads (Layer 3) are purged by the same identifier
-	// match as raw_capture's email lane: any opt-in request/response body
-	// whose content names one of the subject's addresses goes, and its
-	// ai_call metadata row survives (the FK is ON DELETE CASCADE from
-	// ai_call, never the reverse). This reaches ONLY payloads whose text
-	// mentions the subject — a call that never named them keeps no PII and
-	// ages out anyway via the 365d ai_call_payload retention erase; there is
-	// no subject FK to scope by, so a content match is the reachable
-	// boundary, crude on purpose (over-deleting captured content is
-	// recoverable, under-deleting PII is a violation).
+	// Captured AI payloads (Layer 3) go two ways, and the first is the one
+	// that reaches a transcript.
+	//
+	// BY CITATION: a call that said what record it was about names it on
+	// ai_call, so every payload of a call made about this contact — or about an
+	// activity or lead this erasure just wiped with them — is deleted whatever
+	// its text says.
+	// That is the difference between destroying what mentioned their address
+	// and destroying what was about them, and it is the only lane that reaches
+	// a meeting transcript, which names its speakers rather than addressing
+	// them and may never spell an address at all.
+	//
+	// BY CONTENT, unchanged: any opt-in body naming one of the subject's
+	// addresses. The citation does NOT replace it and is not the boundary — a
+	// call whose input spans several records names none, by design, and is
+	// reached by this match or not at all. The residual is exactly what it was
+	// for every task that names no record.
+	//
+	// Either way the ai_call metadata row survives (the FK is ON DELETE CASCADE
+	// from ai_call, never the reverse), and both are crude on purpose:
+	// over-deleting captured telemetry is recoverable, under-deleting personal
+	// data is a violation.
 	//
 	// No channel-identity lane here, unlike raw_capture above — see
 	// purgeChannelRawCapture's comment (erasure_channels.go) for why
 	// ai_call_payload cannot safely take the same match.
+	citedTag, err := tx.Exec(ctx, `
+		DELETE FROM ai_call_payload p
+		 USING ai_call c
+		 WHERE p.ai_call_id = c.id
+		   AND ((c.subject_type = 'contact' AND c.subject_id = $1)
+		     OR (c.subject_type = 'activity' AND c.subject_id = ANY($2))
+		     OR (c.subject_type = 'lead' AND c.subject_id = ANY($3)))`,
+		contactID, erased.activities, erased.leads)
+	if err != nil {
+		return 0, 0, err
+	}
+	aiPayloadsPurged += citedTag.RowsAffected()
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx, `
 			DELETE FROM ai_call_payload
@@ -277,6 +381,15 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 	}
 	return rawPurged, aiPayloadsPurged, nil
+}
+
+// erasedCitations are the OTHER records this erasure destroyed alongside the
+// contact, named so a model call that cited one of them is purged with it. A
+// draft written for a lead and a reading of a meeting hold the subject's words
+// as surely as a call that named the contact.
+type erasedCitations struct {
+	activities []ids.UUID
+	leads      []ids.UUID
 }
 
 // deleteSubjectHandoffs drops every SDR handoff naming the subject, and with it

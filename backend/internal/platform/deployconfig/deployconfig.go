@@ -251,10 +251,14 @@ type ConsentPurpose struct {
 	DoubleOptIn bool   `yaml:"double_opt_in"`
 }
 
-// Auth selects the enabled authentication methods. Password login
-// defaults to enabled; OIDC arrives with its complete flow (ADR-0061 §6)
-// and has no configuration surface until then — strict decoding makes a
-// premature `oidc:` block a boot error rather than a silent no-op.
+// Auth selects the enabled authentication methods. Password login defaults to
+// enabled, and an installation that puts an identity provider in front of
+// Margince turns it off here.
+//
+// Federated sign-in has no block of its own: which providers a deployment
+// mounts is decided by the credentials and URLs it composes, not by this file,
+// and strict decoding makes a premature `oidc:` block a boot error rather than
+// a silent no-op.
 type Auth struct {
 	Password PasswordAuth `yaml:"password"`
 }
@@ -364,12 +368,6 @@ func (c Config) validate() error {
 		if err := c.BootstrapAdmin.validate(); err != nil {
 			return err
 		}
-	}
-	if !c.Auth.PasswordEnabled() {
-		// Fail closed (A107 §14): password login is the only implemented
-		// method — disabling it would brick every human sign-in. The
-		// switch becomes meaningful when OIDC ships its complete flow.
-		return errors.New("deployconfig: auth.password.enabled=false would disable the only implemented login method — refused until another method (OIDC) exists")
 	}
 	if err := c.Seeds.validate(); err != nil {
 		return err

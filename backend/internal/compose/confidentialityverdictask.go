@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -96,7 +97,10 @@ func confidentialitySchema() json.RawMessage {
 func (e *ConfidentialityVerdictEngine) ask(ctx context.Context, row capture.PendingThread) ([]confidentialityResult, error) {
 	req := confidentialityRequest(row)
 	validate := confidentialityShapeValid(row)
-	resp, err := ai.Ask(ctx, e.brain, req, validate)
+	// The request carries the message's subject and body, so the call is about
+	// that message — the row this verdict will be written onto.
+	resp, err := ai.Ask(ai.WithSubject(ctx, ids.From[ids.ActivityKind](row.ActivityID).Ref(), row.Subject),
+		e.brain, req, validate)
 	if err != nil {
 		return nil, err
 	}

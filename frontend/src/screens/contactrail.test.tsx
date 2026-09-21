@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider, type Translator, translate } from "../i18n";
+import { en } from "../i18n/en";
 import { ContactRail, contactStanding } from "./contactrail";
 
 // The rail's words are short verdicts — "One-sided", "Never", "No inbound",
@@ -515,6 +516,71 @@ describe("adding a company", () => {
     expect(currentEmployerTicked()).toBe(true);
   });
 
+  // The start date is the field #415 is about: an employment with no window
+  // lets the account walk resolve three-year-old mail to the company this
+  // contact joined last month. This form is the only place a human is ever
+  // asked for it, so what it SENDS is the assertion — and the month case is
+  // the one that matters, because a reader who knows the month and not the day
+  // must not have a day invented for them.
+  it("sends the start date it was given, at the precision it was given", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.type(screen.getByLabelText("Start date"), "2024-05");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect(body.started_at).toBe("2024-05-01");
+    expect(body.started_precision).toBe("month");
+  });
+
+  it("says nothing about a start nobody gave", async () => {
+    // Absent, not today. An unknown start is a real answer, and a form that
+    // filled it in would write a fact nobody holds — onto the very column the
+    // account walk trusts to bound a window.
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect("started_at" in body).toBe(false);
+    expect("started_precision" in body).toBe(false);
+  });
+
+  // The modal is never unmounted, so every field it holds survives a cancel
+  // unless something puts it back. A start date is the worst one to leave
+  // standing: it would be sent for the NEXT employer, dated from the last.
+  it("does not carry a cancelled start date into the next employer", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await user.click(screen.getByRole("button", { name: "Add company" }));
+    await user.type(screen.getByLabelText("Start date"), "2019-03-04");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Add company" }));
+    expect(screen.getByLabelText("Start date")).toHaveProperty("value", "");
+  });
+
+  // `datePatch` appends `-01` to any seven characters, so an unchecked field
+  // turns a typo into a plausible-looking day — and the wire declares `date`,
+  // which refuses the rest outright. The form says no before either happens.
+  it("refuses to save a date that is not one", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.type(screen.getByLabelText("Start date"), "not-a-date");
+
+    expect(screen.getByRole("button", { name: "Create" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
   it("starts unticked for somebody who already has a current job", async () => {
     // The other half of the default, and the reason it is read off the rows
     // rather than hardcoded: which of two employers is the main one is not
@@ -664,5 +730,59 @@ describe("how the contact is filed", () => {
   it("draws the contact's tags in the rail", async () => {
     mount(granted);
     expect(await screen.findByText("Champion")).toBeTruthy();
+  });
+});
+
+// A contact who still works somewhere and has no primary employer is a state
+// the store reaches deliberately: a human clears the flag, or the primary is
+// retired while two others remain and nothing picks between them on somebody's
+// behalf. It used to arrive as a list with no "current" marker anywhere on it,
+// which is indistinguishable from a value that failed to load.
+describe("a contact with no primary employer", () => {
+  const employment = (id: string, company: string, primary: boolean) => ({
+    relationship_id: id,
+    company_id: id,
+    company_name: company,
+    role: "Head of Fleet",
+    is_current_primary: primary,
+    started_at: "2022-03-01T00:00:00Z",
+    ended_at: null,
+  });
+  const withEmployments = (
+    rows: ReturnType<typeof employment>[],
+  ): Contact360 => ({ ...granted, employments: { data: rows, page } });
+
+  it("says so, and says it is a choice, when two are held and neither leads", async () => {
+    mount(
+      withEmployments([
+        employment("rel-1", "Brandt Automotive GmbH", false),
+        employment("rel-2", "Kessler Logistik AG", false),
+      ]),
+    );
+    expect(
+      await screen.findByText(en["contact.rail.noPrimaryEmployer"]),
+    ).toBeTruthy();
+  });
+
+  it("stays quiet when one of them leads", async () => {
+    mount(
+      withEmployments([
+        employment("rel-1", "Brandt Automotive GmbH", true),
+        employment("rel-2", "Kessler Logistik AG", false),
+      ]),
+    );
+    await screen.findByText("Brandt Automotive GmbH");
+    expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
+  });
+
+  // The empty state is a different sentence about a different fact — nobody has
+  // recorded where this contact works — and asking for a choice there would be
+  // asking them to choose between nothing.
+  it("leaves the empty state to say it when there are no employments", async () => {
+    mount(emptyButGranted);
+    expect(
+      await screen.findByText(en["contact.rail.noEmployment"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
   });
 });

@@ -60,7 +60,7 @@ const VERDICT_LABELS: Record<string, MessageKey> = {
 // healthy deal shouting is how a reader learns to stop looking at the strip.
 const VERDICT_TONE: Record<string, StandingTone> = {
   live: "calm",
-  drifting: "warn",
+  drifting: "warning",
   blocked: "danger",
   cold: "danger",
 };
@@ -166,7 +166,7 @@ export function DealStatusCardPanel({
             // the shape the contract promises. Saying so beats an empty panel,
             // which reads as a deal nobody has touched.
             <PanelBody>
-              <p className="t-caption">{t("deal360.unreadable")}</p>
+              <p>{t("deal360.unreadable")}</p>
             </PanelBody>
           ) : null}
         </QueryStates>
@@ -179,6 +179,7 @@ export function DealStatusCardPanel({
       <TodayPanel
         state={status.isPending ? "loading" : "failed"}
         onOpenTasks={() => navigate({ screen: "worklist" })}
+        tasksLabel={t("today.workQueue")}
       />
     </>
   );
@@ -247,16 +248,25 @@ function Briefing({
         <SignalStrip signals={coverage.signals} />
         {spine}
       </CallCard>
-      <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
-        {card.next ? (
+      {/* Drawn only where there IS a move. A deal whose reading found nothing
+          owed today is a deal with one fewer card to read, not a card whose
+          body says it found nothing: the reading above already reports what
+          the day holds, and a panel repeating that in a sentence spends a
+          card on an absence. The pending and failed states keep their panel,
+          because a read still running has not established a quiet day. */}
+      {card.next ? (
+        <TodayPanel
+          onOpenTasks={() => navigate({ screen: "worklist" })}
+          tasksLabel={t("today.workQueue")}
+        >
           <Move
             key="next"
             dealId={dealId}
             move={card.next}
             onOpenEmail={onOpenEmail}
           />
-        ) : null}
-      </TodayPanel>
+        </TodayPanel>
+      ) : null}
       {/* The reading, under the call and the work: what has happened and
           where that leaves things, in prose with its sources. What is holding
           the deal up, what the buyer wants and the rest of the reasoning sit
@@ -276,7 +286,6 @@ function Briefing({
               // Quiet rather than filled: this asks the panel's own writer to
               // run again, inside the panel that writer already filled.
               variant="aiQuiet"
-              small
               pending={rewriting}
               onClick={onRewrite}
             >
@@ -299,7 +308,7 @@ function Briefing({
             section={card.blocker}
             onOpenRecord={open}
             onOpenEmail={onOpenEmail}
-            tone="warn"
+            tone="warning"
           />
           <Section
             heading={t("deal360.buyer")}
@@ -338,7 +347,7 @@ function Section({
   onOpenRecord: (entityType: string, entityId: string) => void;
   // Opens a cited message; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
-  tone?: "warn";
+  tone?: "warning";
   // The brief's opening block leads with its judgement, the way every other
   // written reading on a record does.
   lead?: boolean;
@@ -349,7 +358,7 @@ function Section({
   return (
     <PanelBody>
       {heading ? (
-        <p className={tone === "warn" ? "t-caption deal360-warn" : "t-caption"}>
+        <p className={tone === "warning" ? "deal360-warning" : undefined}>
           {heading}
         </p>
       ) : null}

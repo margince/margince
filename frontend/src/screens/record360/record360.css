@@ -32,15 +32,11 @@
    tints apart still reads "blocked". Same reasoning the deal card's own
    standing pill carries, and deliberately the same shape. */
 .r360-standing {
-  /* The standing is the word a reader takes the record in by, so it is the
-     loudest type on the pane: display face, in its own tone, left of the
-     sentence that says why. A word rather than a pill, because a pill reads
-     as a status somebody applied and this is the reading itself. */
-  font-family: var(--f-display);
-  font-size: var(--fs-display);
-  font-weight: var(--fw-semibold);
-  line-height: 1.05;
-  letter-spacing: var(--tracking-display);
+  /* The standing is the word a reader takes the record in by: the display
+     face, in its own tone, left of the sentence that says why. A word rather
+     than a pill, because a pill reads as a status somebody applied and this
+     is the reading itself. */
+  font-family: var(--fontFamilyHeading);
   white-space: nowrap;
 }
 
@@ -53,30 +49,19 @@
    as "whatever is around me", which is the one answer the family rule exists
    to refuse. */
 .r360-verdict-compact .r360-standing {
-  font-family: var(--f-body);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  line-height: 1.2;
-  letter-spacing: var(--tracking-normal);
+  font-family: var(--fontFamilyBody);
 }
 
 .r360-standing-calm {
   color: var(--success);
 }
 
-/* A standing this build does not recognise. Neutral on purpose: it is not the
-   all-clear, and painting it green told a reader a word nobody could read was
-   good news. */
-.r360-standing-unknown {
-  color: var(--textMeta);
-}
-
 .r360-standing-accent {
   color: var(--accentText);
 }
 
-.r360-standing-warn {
-  color: var(--warn);
+.r360-standing-warning {
+  color: var(--warning);
 }
 
 .r360-standing-danger {
@@ -93,12 +78,6 @@
    of the sentence, and a sentence that wraps still reads. */
 .r360-because {
   margin: 0;
-  /* The because-sentence is prose beside the word, not a second headline:
-     at reading size the word stays the one loud thing and the sentence is
-     what a reader goes on to. */
-  font-size: var(--fs-lead);
-  line-height: 1.5;
-  color: var(--textContent);
   text-wrap: pretty;
 }
 
@@ -115,13 +94,6 @@
      auto-placement put the working in the middle column whenever the sentence
      was missing — the far end of the head is where it belongs either way. */
   grid-column: 3;
-}
-
-/* The count belongs to the shut state: a block a reader cannot see into needs
-   to say how much is behind it before they decide to open it. */
-.r360-rests-count {
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
 }
 
 /* Opened, the readings lay out in columns rather than a stack. Four one-line
@@ -148,8 +120,6 @@
 .r360-rests-quote {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
   text-wrap: pretty;
 }
 
@@ -182,7 +152,6 @@
 /* The number that tripped the rule, beside the rule's own words. Tabular so a
    column of them lines up when several deals are read together. */
 .r360-figure {
-  color: var(--textMuted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -226,16 +195,6 @@
   align-items: stretch;
 }
 
-/* Under the fold the column reads sideways instead: the phone width a record
-   page draws at has no room for the claim beside a column of verbs, so the
-   verbs move under it and read left to right the way the rest of the row's
-   controls do. */
-@media (max-width: 900px) {
-  .today-actions {
-    flex-direction: row;
-  }
-}
-
 /* The moment's evidence: what the rule fired on, each openable. They are the
    difference between a verdict and a claim with its receipts. What the move
    rests on, as an inline run of links after its caption: one quiet meta line
@@ -249,12 +208,42 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  /* See `.co-move-basis` (company360.css) for why: a source's name is an email
+     subject, so every box between it and the panel has to be allowed to shrink
+     below the words. This is the second of them, and the `li` below the third. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .today-evidence li {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* An UNLINKED source is plain text and wraps on its own once it is allowed to
+   shrink. Its linked twin is a `Button`, which pins `white-space: nowrap`
+   because every other label in the product is one of our verbs at a length we
+   chose — a record's name is not, and the design system's answer to a label
+   that carries DATA is `.btn-valuelabel` (base.css), on the control. That class
+   is the control's to wear, so this sheet does not restate its two
+   declarations here: two spellings of one behaviour is what makes them drift. */
+.today-evidence .pe-source {
+  min-inline-size: 0;
+  max-width: 100%;
+}
+/* A source that takes a second line reads from the left, like the caption above
+   it and the reason above that. `.btn` centres its contents because a verb's
+   label is one short line in the middle of a control; a record's name is a run
+   of prose, and prose centred over two lines reads as a heading for the row
+   rather than as the thing the move was read FROM. Where the words sit in this
+   row is the row's to say; what the control looks like is still the design
+   system's. */
+.today-evidence .btn {
+  justify-content: flex-start;
+  text-align: start;
 }
 
 /* A source names its kind with a glyph before its words, on the same

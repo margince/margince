@@ -54,25 +54,20 @@ func teamScopedCtx() context.Context {
 
 // filterFor builds the timeline filter for one entity type, failing the test
 // on any error.
-func filterFor(ctx context.Context, t *testing.T, entityType string) (join string, where string, args []any) {
+func filterFor(ctx context.Context, t *testing.T, entityType string) (where string, args []any) {
 	t.Helper()
 	entity := ids.NewV7()
-	joined, terms, _, args, err := listActivitiesFilter(ctx, ListActivitiesInput{
+	terms, _, _, args, err := listActivitiesFilter(ctx, ListActivitiesInput{
 		EntityType: &entityType, EntityID: &entity,
 	})
 	if err != nil {
 		t.Fatalf("building the %s filter: %v", entityType, err)
 	}
-	return joined, strings.Join(terms, " AND "), args
+	return strings.Join(terms, " AND "), args
 }
 
 func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
-	join, where, args := filterFor(unscopedCtx(), t, "company")
-
-	if join != "" {
-		t.Errorf("company filter joined %q; a join multiplies an activity "+
-			"reachable through two links into two rows and breaks the keyset cursor", join)
-	}
+	where, args := filterFor(unscopedCtx(), t, "company")
 	if !strings.Contains(where, "EXISTS (") {
 		t.Fatalf("company filter is not an EXISTS: %s", where)
 	}
@@ -133,9 +128,12 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 		"lead":    "al.lead_id",
 		"project": "al.project_id",
 	} {
-		join, where, args := filterFor(unscopedCtx(), t, entityType)
-		if join != " JOIN activity_link al ON al.activity_id = a.id" {
-			t.Errorf("%s filter join = %q, want the flat activity_link join", entityType, join)
+		where, args := filterFor(unscopedCtx(), t, entityType)
+		// An EXISTS rather than a join, like the account arm: a join puts
+		// activity_link's own created_at and id in the FROM list, where the
+		// keyset tuple this page orders by cannot name its columns.
+		if !strings.Contains(where, "EXISTS (SELECT 1 FROM activity_link al") {
+			t.Errorf("%s filter is not an EXISTS over activity_link: %s", entityType, where)
 		}
 		if !strings.Contains(where, "al.entity_type = $1") {
 			t.Errorf("%s filter does not pin the link's entity_type: %s", entityType, where)
@@ -155,7 +153,7 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 // The account walk widens WHICH activities belong to the account. It must not
 // widen WHO may read one, so the row-scope clause is still composed next to it.
 func TestTheAccountWalkStillCarriesTheRowScope(t *testing.T) {
-	_, where, _ := filterFor(teamScopedCtx(), t, "company")
+	where, _ := filterFor(teamScopedCtx(), t, "company")
 	// bool_or is the row-scope walk's own token: it is how the any-link
 	// rule and the link-less-note rule are spelled in one pass, and the
 	// account walk below never emits it.
@@ -307,23 +305,105 @@ func TestTheWaitingQueryMatchesWithinOneMedium(t *testing.T) {
 	}
 }
 
-// An unthreaded message is excluded, not matched loosely.
+// An unthreaded message is never matched loosely. It is also never excluded
+// for being unthreaded.
 //
-// `IS NOT DISTINCT FROM` joins every NULL to every other NULL, so one
-// unthreaded outbound would silence every unthreaded question in the
-// workspace. Plain equality never joins two NULLs, so the rows would all
-// survive and each would be its own thread. Neither is right, so they are
-// excluded — which under-reports by a row rather than by a customer.
-func TestTheWaitingQueryExcludesUnthreadedMessages(t *testing.T) {
-	if !strings.Contains(waitingRepliesSQL, "a.thread_key IS NOT NULL") {
-		t.Fatal("the waiting query admits unthreaded messages, which cross-suppress each other")
-	}
-	// Narrowly: THREAD keys must not be NULL-matched. channel_provider is
-	// matched that way on purpose — a null provider means "not a channel", and
-	// two mail rows both having none is a genuine match rather than an
-	// accidental one.
+// The danger is NULL-matching: `IS NOT DISTINCT FROM` joins every NULL to
+// every other NULL, so one unthreaded outbound would silence every unthreaded
+// question in the workspace. Plain equality never joins two NULLs, so each
+// threadless row simply finds no reply and stays waiting — which is the honest
+// answer about a message nobody answered.
+//
+// The query used to exclude such rows outright instead, on the reasoning that
+// under-reporting by a row was cheaper. It was not cheaper, because this query
+// is also the owed-verdict pass's backlog: an excluded row was never judged,
+// so it never gained the verdict that would have let it back in.
+func TestTheWaitingQueryNeverNullMatchesThreadKeys(t *testing.T) {
+	// channel_provider is NULL-matched on purpose — a null provider means "not
+	// a channel", and two mail rows both having none is a genuine match rather
+	// than an accidental one. THREAD keys never are.
 	if strings.Contains(waitingRepliesSQL, "thread_key IS NOT DISTINCT FROM") {
 		t.Fatal("the waiting query matches NULL thread keys to each other")
+	}
+	// Every thread comparison is plain equality, which a NULL never satisfies.
+	// Asked as a property of all of them rather than by naming one, so the
+	// gate survives the query being reshaped: what matters is that no thread
+	// match anywhere in it compares keys any other way.
+	if strings.Count(waitingRepliesSQL, ".thread_key = a.thread_key") == 0 {
+		t.Fatal("no thread match found — this gate is reading the wrong query")
+	}
+}
+
+// Only the waiting family admits threadless mail.
+//
+// The split is the whole safety argument, so it is held rather than
+// remembered. The waiting queue applies the machine-sender and colleague rules
+// above its scan cap, so a threadless notification is dropped before anybody sees it. The
+// deal card applies neither — dealstatus/move.go takes the first email in the
+// list and offers it as the reply somebody owes — so the wider reading there
+// turns a hand-logged note into a standing obligation on the deal.
+//
+// Asked of the narrow function rather than of its callers: the default is what
+// a new caller gets, and the default must be the safe one.
+func TestOnlyTheWaitingFamilyAdmitsThreadlessMail(t *testing.T) {
+	if strings.Contains(unansweredConversationSQL("$1"), "a.thread_key IS NULL") {
+		t.Fatal("the default conversation predicate admits threadless mail, so the deal " +
+			"card offers a hand-logged note as a reply somebody owes")
+	}
+	if !strings.Contains(unansweredConversationAdmittingThreadless("$1"), "a.thread_key IS NULL") {
+		t.Fatal("the waiting queue's predicate no longer admits threadless mail, so a " +
+			"customer's unanswered message cannot be judged and stays invisible")
+	}
+	// Request review is the deal card's read; it must take the narrow form.
+	if strings.Contains(reviewableRequestSQL("$1"), "a.thread_key IS NULL") {
+		t.Fatal("request review admits threadless mail without a sender rule in front of it")
+	}
+	// And the queue itself must actually ASK the wider question. Checking the
+	// two functions alone passes while every caller uses the narrow one, which
+	// is the shape this defect already had: the predicate was right and the
+	// row still never arrived.
+	if !strings.Contains(waitingRepliesSQL, "%[18]s") {
+		t.Fatal("the waiting query no longer takes the conversation predicate in slot 18 — " +
+			"this gate is reading for a slot that moved, so it can no longer tell which form the queue asks")
+	}
+	for _, caller := range []struct{ name, source string }{
+		{"waiting.go", waitingCallerSource(t, "waiting.go")},
+		{"waitingrecordscope.go", waitingCallerSource(t, "waitingrecordscope.go")},
+		{"hiddenbacklog.go", waitingCallerSource(t, "hiddenbacklog.go")},
+	} {
+		if !strings.Contains(caller.source, "unansweredConversationAdmittingThreadless(") {
+			t.Errorf("%s composes the waiting query with the narrow predicate, so a "+
+				"threadless customer mail never reaches the queue that would judge it", caller.name)
+		}
+	}
+}
+
+// waitingCallerSource reads one file of this package so the gate above can ask
+// which predicate it composes. Read from source because the composition is a
+// function CALL: the resulting SQL is identical either way apart from the one
+// clause, so a string check over the built query cannot tell the callers apart.
+func waitingCallerSource(t *testing.T, name string) string {
+	t.Helper()
+	body, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatalf("reading %s to see which predicate it composes: %v", name, err)
+	}
+	return string(body)
+}
+
+// A threadless message reaches the rules that judge it.
+//
+// The regression this holds: an inbound message with no thread key was dropped
+// before any other rule could read it, unless it already carried a capture
+// label. The label comes from a classifier pass whose backlog is this very
+// query, so the exclusion sustained itself — the row was never judged and so
+// stayed excluded. On staging a client wrote "Dienstag 14 Uhr würde bei uns
+// passen" and the deal card answered "Their move. Nobody here is owed an
+// answer."
+func TestAThreadlessMessageIsNotDroppedBeforeItIsJudged(t *testing.T) {
+	if strings.Contains(waitingRepliesSQL, "AND (a.thread_key IS NOT NULL OR") {
+		t.Fatal("a threadless message is dropped before the reply anti-joins can judge it, " +
+			"so no pass can ever give it the evidence the same clause demands")
 	}
 }
 

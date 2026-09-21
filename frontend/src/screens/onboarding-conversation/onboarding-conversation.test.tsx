@@ -454,7 +454,7 @@ describe("the conversational company act", () => {
     for (const _ of [0, 1, 2]) {
       await screen.findByRole("button", { name: "Next" });
       blockingLabels.push(
-        document.querySelector(".rdeck-question")?.textContent ?? "",
+        document.querySelector(".rdeck-body label")?.textContent ?? "",
       );
       await userEvent.click(screen.getByRole("button", { name: "Next" }));
     }
@@ -498,7 +498,7 @@ describe("the conversational company act", () => {
       "Ideal customer": "Mid-market manufacturers",
     };
     for (const _ of Object.keys(values)) {
-      const label = document.querySelector(".rdeck-question")?.textContent;
+      const label = document.querySelector(".rdeck-body label")?.textContent;
       const value =
         label !== null && label !== undefined ? values[label] : undefined;
       expect(value).toBeDefined();

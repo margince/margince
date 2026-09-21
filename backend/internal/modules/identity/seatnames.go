@@ -24,7 +24,7 @@ import (
 //
 // It carries no row scope, because a seat is not a record: app_user holds no
 // owner_id and no capture privacy, and the surfaces that already name
-// colleagues — who_knows, account_coverage — name them to any member. A
+// colleagues — who_knows, company_coverage — name them to any member. A
 // row-scope clause here would be inventing a rule this table has never had.
 //
 // What bounds it is membership, asked for below. A seat the installation does

@@ -100,6 +100,11 @@ func (r *sentinelRow) fill(dest any, name string, index int) {
 	case **int64:
 		v := int64(index)
 		*d = &v
+	case *map[string]any:
+		// A jsonb column. The map carries the column's own name, so a value
+		// landing in the wrong field is as visible here as a transposed
+		// string is.
+		*d = map[string]any{"column": name}
 	default:
 		r.t.Fatalf("the projection declares a destination this row cannot fill for %s: %T", name, dest)
 	}
@@ -440,6 +445,16 @@ func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
 	}
 	if got.ThreadKey != nil {
 		t.Errorf("a withheld row carried a thread key — it identifies the message at the provider")
+	}
+	// The imported byline is on the same list, and for the same reason. It is a
+	// free-text name that arrived with imported text, about a human usually
+	// party to neither side of the exchange — which is why the Art. 17
+	// redaction clears it alongside the subject and the body rather than
+	// keeping it as a marker. A field the erasure treats as content cannot be
+	// disclosed to a reader refused the content.
+	if got.Author != nil {
+		t.Errorf("a withheld row carried author %q — a reader who may not read a held message "+
+			"must not learn who wrote it either", got.Author.DisplayName)
 	}
 	// The markers a discoverable row keeps. Asserted so the test cannot pass by
 	// blanking everything, which would withhold the row's existence too.

@@ -139,7 +139,15 @@ const waitingRepliesSQL = `
 	          FILTER (WHERE ownerContact.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
 	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
-	         '00000000-0000-0000-0000-000000000000'::uuid)
+	         '00000000-0000-0000-0000-000000000000'::uuid),
+	       -- Whether this message belongs to a conversation at all.
+	       --
+	       -- Two of the three things a rep may do with a waiting row are keyed
+	       -- on the thread: dismissing it workspace-wide judges the THREAD, and
+	       -- snoozing until a reply wakes on a later message with the same
+	       -- thread_key. A row without one can do neither, so the caller must
+	       -- know before it offers them.
+	       a.thread_key IS NOT NULL AND a.thread_key <> ''
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -165,7 +173,21 @@ const waitingRepliesSQL = `
 	   -- waiting on the very record this asks about. "TRUE" for the
 	   -- workspace-wide Worklist read.
 	   AND (%[11]s)
-	   AND (a.thread_key IS NOT NULL OR (` + requestCandidateSQL + `))
+	   -- A message with no thread key is judged by the rules below like any
+	   -- other, rather than being required to carry request evidence first.
+	   --
+	   -- The evidence it was asked for is evidence this queue PRODUCES. The
+	   -- owed-verdict pass reads its backlog from this query narrowed to
+	   -- unjudged rows, so a row excluded here is never judged, never gains a
+	   -- verdict, and is excluded again on the next pass — the exclusion fed
+	   -- itself. A client wrote "Dienstag 14 Uhr würde bei uns passen", the
+	   -- deal card said "Their move. Nobody here is owed an answer.", and no
+	   -- pass could ever reach the message to disagree.
+	   --
+	   -- Nothing is loosened by admitting it. The reply anti-joins below
+	   -- compare thread keys with plain equality and never NULL-match them, so
+	   -- a threadless row simply finds no reply and stays waiting; the machine
+	   -- and colleague rules sit above the scan cap and still apply.
 	   AND NOT EXISTS (SELECT 1 FROM activity request_task
 	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id

@@ -212,7 +212,7 @@ describe("company-360 deep read", () => {
 
     // The page cap is the size this read was CONFIGURED for, so it is stated as
     // what the read did rather than as a warning about what it did not: no
-    // "Stopped early" anywhere, and no warn badge repeating the cap underneath.
+    // "Stopped early" anywhere, and no warning badge repeating the cap underneath.
     await waitFor(() =>
       expect(screen.getByText("Read up to the page limit")).toBeTruthy(),
     );

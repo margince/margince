@@ -23,9 +23,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// maskObject is the RBAC object a deal's masks are configured under — a
+// different vocabulary from dealTable, which happens to spell it the same way:
+// the object is what an administrator writes in field_mask, the table is what
+// Postgres calls the relation, and renaming one would not rename the other.
+//
+// The database holds this package to it: maskable_field carries this name
+// against every key below, and field_mask references that pair, so a mask
+// naming something nothing here withholds is refused where it is written
+// rather than going quietly inert where it is read.
+const maskObject = "deal"
+
 // dealMaskableFields are the columns a mask may name on a deal, and how each
-// is withheld. A mask naming a column not listed here is inert: withholding
-// is a deliberate act per field, not a reflective one over the struct.
+// is withheld. Withholding is a deliberate act per field, not a reflective one
+// over the struct, and the set is therefore finite — which is why it can be
+// offered as a catalog: migrations/testdata/maskable_fields.txt is these keys
+// under maskObject, and the database will not store a mask outside it.
 //
 // The keys are WIRE field names as a configured mask spells them, which is a
 // different vocabulary from the column constants they happen to coincide with:
@@ -148,11 +161,11 @@ func roleMaskedFields(ctx context.Context, deals []crmcontracts.Deal, withheld [
 		return err
 	}
 	// Cheap exit for the common case — no mask on deals at all.
-	if len(auth.MaskedFields(p, "deal", false)) == 0 {
+	if len(auth.MaskedFields(p, maskObject, false)) == 0 {
 		return nil
 	}
 	for i := range deals {
-		for _, field := range auth.MaskedFields(p, "deal", writable[ids.UUID(deals[i].Id)]) {
+		for _, field := range auth.MaskedFields(p, maskObject, writable[ids.UUID(deals[i].Id)]) {
 			withheld[i].add(field)
 		}
 	}

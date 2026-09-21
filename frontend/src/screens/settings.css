@@ -14,29 +14,28 @@
    The gap is the same --space-4 the shell's rule gives, so a settings page and any
    other page space alike.
 
-   ONE measure for every settings page, and it is 720px. A settings page is a
-   column of decisions read top to bottom, and the row language puts the naming on
-   the left and the answer on the right — at 1100px that pair is separated by half
-   a screen of nothing, which is the width doing the opposite of what the layout
-   is for. 720 keeps a label and its answer in one glance and holds the
-   description to a readable line.
+   ONE measure for every settings page, and it is --settingsColumn. A settings
+   page is a column of decisions read top to bottom, and the row language puts
+   the naming on the left and the answer on the right — at the page's own
+   --pageColumn that pair is separated by half a wide screen of nothing, which is
+   the width doing the opposite of what the layout is for.
 
    It is the PAGE's width and not the entry's, which is the part that was wrong
    before: this sheet once carried a measure with an exemption for the two
    table-carrying pages, so a reader navigating between entries watched the page
-   change size. Every entry gets the same 720, tables included — a table wider
-   than that scrolls inside its own box (`.table-scroll`), which is a property of
-   the table rather than a knob the page has to answer for.
+   change size. Every entry gets the same measure, tables included — a table
+   wider than that scrolls inside its own box (`.table-scroll`), which is a
+   property of the table rather than a knob the page has to answer for.
 
-   Centred in the wrap, and the heading above it deliberately is NOT: the page
-   title sits where every other route in the product puts it, so moving between
-   settings and anywhere else does not move the name of the page. Only this
-   column takes the narrower measure. */
+   Centred in the wrap, and the page's NAME is centred on the same measure: the
+   shell reads this very token to cap the head above this stack (app/shell.css,
+   --pageMeasure), so the title starts where the first card starts. The token is
+   why they cannot drift — the number is not written down twice. */
 .settings-stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 720px;
+  max-width: var(--settingsColumn);
   margin-inline: auto;
 }
 
@@ -58,19 +57,11 @@
    line moves into the body — where it is the first thing read, above the form
    or the rows it describes, and it pays for its own interval to them.
 
-   Its type is `SettingRow`'s description size, deliberately: a card's own
-   description says what the whole card is for, so it is never smaller than the
-   description of one row inside it. Seventy panels across twenty screens carry
-   this line, which makes it a primitive stranded in a screen sheet rather than a
-   screen's caption — the design system is where it belongs, as Panel's own
-   intro line, and until it moves there this rule is the one place its type is
-   set. */
+   Seventy panels across twenty screens carry this line, which makes it a
+   primitive stranded in a screen sheet rather than a screen's caption — the
+   design system is where it belongs, as Panel's own intro line. */
 p.settings-panel-sub {
   margin-bottom: var(--space-4);
-  color: var(--textMeta);
-  /* ds:ignore a panel's intro line is a role of its own, until Panel owns it */
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 /* Inside a container that owns its intervals, the description's own margin ADDS
@@ -108,7 +99,7 @@ p.settings-panel-sub {
 }
 .settings-danger-warning {
   margin-top: var(--space-1);
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* A RUN of small items inside one of a row's two columns: a passport's dates,
@@ -411,36 +402,35 @@ p.settings-panel-sub {
   gap: var(--space-1);
   padding: var(--space-2);
   border-radius: var(--r-sm);
-  color: inherit;
   text-decoration: none;
 }
 .settings-home-row:hover {
   background: var(--bgHover);
 }
-/* The name and its scope badge on one line, baseline-aligned so the badge sits
-   with the word rather than centred on a taller box. `flex-wrap` so a long page
-   name in a narrow column drops the badge rather than squeezing the name. */
+/* The name and its scope badge on one line, with the row's whole width between
+   them: the badge answers "whose setting is this" for every row in the group, so
+   it belongs at the trailing edge where the answers line up in one column rather
+   than trailing each name at whatever width that name happens to be. Centred
+   rather than baseline-aligned — out at the edge the badge is a pill beside a
+   word rather than a word beside a word, and a baseline hangs its chrome below
+   the line. `flex-wrap` so a long page name in a narrow column drops the badge
+   rather than squeezing the name. */
 .settings-home-rowhead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
 }
-.settings-home-rowname {
-  font-weight: var(--fw-medium);
-}
-/* One group's heading inside a panel that holds several. Quieter than the
-   panel's own title, because the panel already said whether these are pages the
-   reader can change or only read, and this only says which part of the product
-   they belong to. */
+/* One group's heading inside a panel that holds several. The panel already said
+   whether these are pages the reader can change or only read; this only says
+   which part of the product they belong to. */
 .settings-home-group + .settings-home-group {
   margin-top: var(--space-4);
 }
 .settings-home-groupname {
   margin: 0 0 var(--space-2);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 /* A term and its answer, where the answer is a FACT rather than a setting: who
    the reader is on the settings home, what the mail-sharing rule currently says
@@ -452,9 +442,6 @@ p.settings-panel-sub {
   grid-template-columns: auto 1fr;
   gap: var(--space-2) var(--space-4);
   margin: 0;
-}
-.settings-facts dt {
-  color: var(--textMuted);
 }
 .settings-facts dd {
   margin: 0;

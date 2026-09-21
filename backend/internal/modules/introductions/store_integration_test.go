@@ -446,10 +446,7 @@ func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
 // consumer could pretend to be.
 func (e *introEnv) asCapture() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:intro-advance",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:intro-advance")
 }
 
 // evidence seeds a real captured message and answers its id.

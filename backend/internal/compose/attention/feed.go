@@ -128,6 +128,10 @@ type Service struct {
 	// walks is OPTIONAL like pins above it: nil means this feed freezes no
 	// walk, and every page is an offset into a freshly ranked day.
 	walks Walks
+	// snapshots composes this feed's ~40 lane reads into ONE transaction, and
+	// is OPTIONAL for the reason snapshot.go's inSnapshot gives: unbound is
+	// what this feed did before, which is what a unit test wants.
+	snapshots Snapshots
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
@@ -153,6 +157,9 @@ type Service struct {
 	// dealFacts is OPTIONAL in the same way: nil means a row whose producer
 	// carried only a deal id travels without the deal's figures.
 	dealFacts DealFacts
+	// contactTouch is OPTIONAL in the same way: nil means a row names its
+	// contact and not when either side last wrote.
+	contactTouch ContactTouch
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves DealMoves

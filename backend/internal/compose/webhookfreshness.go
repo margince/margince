@@ -5,10 +5,9 @@ package compose
 
 import "time"
 
-// withinSkew is the freshness comparison shared by the extension inbound
-// edge's admission (extinbound.go), which parses epoch SECONDS, and the
-// HubSpot receiver's freshTimestamp (overlaywebhook.go), which parses epoch
-// MILLISECONDS.
+// withinSkew is the freshness comparison a receiver's admission uses — the
+// extension inbound edge (extinbound.go) parses epoch SECONDS, and a receiver
+// whose provider stamps epoch MILLISECONDS divides before it compares.
 //
 // Two things are easy to get wrong here and both are one-directional bugs, so
 // they are held in one place rather than in each caller: the distance is

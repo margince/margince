@@ -84,7 +84,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		// The account-started send has no anchor either, and for the same
 		// reason: it starts the conversation instead of answering one. Its
 		// links are what carry the refusal here.
-		"send_account_email": fmt.Sprintf(
+		"send_company_email": fmt.Sprintf(
 			`{"to":["a@example.test"],"subject":"s","body":"b","consent_purpose":"support",`+
 				`"links":[{"entity_type":"company","entity_id":%q}]}`, ids.NewV7()),
 		// The whole-call staging the tier floor produces (#982). It patches an

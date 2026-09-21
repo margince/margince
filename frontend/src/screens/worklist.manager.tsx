@@ -141,7 +141,6 @@ export function ReassignControl({
     // hover and in the accessible tree, which a bare square would not.
     return (
       <IconAction
-        small
         icon={<UserRoundArrowLeft aria-hidden="true" />}
         label={t("worklist.manager.reassign")}
         onClick={() => setOpen(true)}
@@ -186,7 +185,7 @@ export function ReassignControl({
               // reader the opposite of what the sentence beside it says.
               onError: () =>
                 toast.show(t("worklist.manager.reassignFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             },
           );
@@ -350,7 +349,7 @@ function coachRefused(
     refused && name
       ? t("worklist.manager.coachRefused", { name })
       : t("worklist.manager.coachFailed"),
-    { mark: false },
+    { tone: "danger" },
   );
 }
 
@@ -427,7 +426,7 @@ export function TakeOwnershipControl({
   // cell's own fold.
   return (
     <div className="worklist-take">
-      <p className="t-caption">{t("worklist.manager.takeOwnershipAsk")}</p>
+      <p>{t("worklist.manager.takeOwnershipAsk")}</p>
       <div className="cell-actions">
         <Button
           variant="ghost"
@@ -455,7 +454,7 @@ export function TakeOwnershipControl({
                 // reader who is not told that believes they now hold it.
                 onError: () =>
                   toast.show(t("worklist.manager.takeOwnershipFailed"), {
-                    mark: false,
+                    tone: "danger",
                   }),
               },
             );

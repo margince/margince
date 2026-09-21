@@ -149,10 +149,9 @@ function RestoreGate({ lookups }: Readonly<{ lookups: RestoreLookup[] }>) {
   return (
     <div className="ob-page ob-conv-page">
       {failed.length > 0 ? (
-        <div className="readfail warn" role="alert">
+        <div className="readfail warning" role="alert">
           <p>{t("ob.conv.loadFailed")}</p>
           <Button
-            small
             onClick={() => {
               for (const lookup of failed) {
                 void lookup.refetch();

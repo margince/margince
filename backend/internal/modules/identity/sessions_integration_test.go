@@ -36,11 +36,11 @@ import (
 func (e *revocationEnv) signIn(t *testing.T, userAgent string) string {
 	t.Helper()
 	ctx := withUserAgent(e.wsOnlyCtx(), userAgent)
-	_, token, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("member login (%s): %v", userAgent, err)
 	}
-	return token
+	return login.Token
 }
 
 // asMember and asAdmin present the context admission would build for that human:
@@ -170,11 +170,11 @@ func TestRevokeSessionRefusesAnotherMembersSession(t *testing.T) {
 
 	// The admin's own session, opened through the real login path.
 	adminLoginCtx := withUserAgent(e.wsOnlyCtx(), "admin device")
-	_, adminToken, err := e.svc.Login(adminLoginCtx, e.admin.Email, bootstrapPassword)
+	_, adminLogin, err := e.svc.Login(adminLoginCtx, e.admin.Email, bootstrapPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
-	adminSessions, err := e.svc.ListSessions(e.asAdmin(), hashToken(adminToken))
+	adminSessions, err := e.svc.ListSessions(e.asAdmin(), hashToken(adminLogin.Token))
 	if err != nil {
 		t.Fatalf("list admin sessions: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestRevokeSessionRefusesAnotherMembersSession(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("cross-member revoke: err=%v, want ErrNotFound", err)
 	}
-	if _, err := e.svc.Authenticate(e.asAdmin(), adminToken); err != nil {
+	if _, err := e.svc.Authenticate(e.asAdmin(), adminLogin.Token); err != nil {
 		t.Fatalf("admin session must remain live after a refused revoke: %v", err)
 	}
 }

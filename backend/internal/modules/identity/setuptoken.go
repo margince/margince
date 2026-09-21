@@ -231,10 +231,7 @@ const (
 // is authenticated before an installation exists, so the ledger says so rather
 // than borrowing an identity that was not there.
 func setupTokenActor(ctx context.Context) context.Context {
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:setup-token",
-	})
+	return principal.SystemActing(ctx, "system:setup-token")
 }
 
 // ensureSetupTokenActor is setupTokenActor for a path that MAY already have a

@@ -72,7 +72,7 @@ describe("leadStanding", () => {
       "en",
       zone,
     );
-    expect(soon.tone).toBe("warn");
+    expect(soon.tone).toBe("warning");
     expect(soon.because).toContain("lead.standing.dueBy");
   });
 

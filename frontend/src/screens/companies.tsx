@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { Heading } from "../design-system/heading";
 import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
@@ -149,7 +150,7 @@ import {
   standardViews,
   tagsColumn,
 } from "./recordlist";
-import { RelationshipsTab } from "./relationships";
+import { RelationshipsTab } from "./relationshiprows";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { listQueryParams } from "./tagfilter";
 import {
@@ -222,6 +223,7 @@ async function fetchCompaniesPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }
@@ -274,7 +276,7 @@ export function CompaniesScreen() {
         })}
         action={
           <>
-            <Button small onClick={() => navigate({ screen: "partners" })}>
+            <Button onClick={() => navigate({ screen: "partners" })}>
               {t("nav.partners")}
             </Button>
             <CreateAction
@@ -303,7 +305,7 @@ export function CompaniesScreen() {
                 />
                 <strong>{company.display_name}</strong>
                 {company.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
+                  <Badge tone="warning">{t("record.archived")}</Badge>
                 )}
               </span>
             ),
@@ -843,11 +845,11 @@ function CompanyRecord({
           // them is this.
           overview: t("tab.overview"),
           contacts: t("tab.contacts"),
-          // Its own key rather than the shared `tab.deals`: the contact page's
-          // Deals tab holds no projects, so renaming the shared label would
-          // rename that tab too. This account's tab is the one that gained a
-          // second body of work.
-          deals: t("co.tab.deals"),
+          // `tab.dealsProjects` rather than the shared `tab.deals`: the contact
+          // page's own Deals tab holds no projects, so renaming that key would
+          // rename a tab that did not change. This label now also names the
+          // lead's own Deals & projects tab, which reads the same two things.
+          deals: t("tab.dealsProjects"),
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card
@@ -1330,11 +1332,7 @@ function CompanyPage({
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-            {verbRefusal && (
-              <p className="t-caption" id={archivedParagraphId}>
-                {verbRefusal}
-              </p>
-            )}
+            {verbRefusal && <p id={archivedParagraphId}>{verbRefusal}</p>}
             <CompanyHeaderActions
               company={company}
               composerOpen={writingEmail}
@@ -1440,9 +1438,13 @@ function CompanyPage({
           labelledBy="co-audit-title"
           size="wide"
         >
-          <h2 id="co-audit-title" className="t-h2 modal-title">
+          <Heading
+            size="large"
+            id="co-audit-title"
+            className="t-h2 modal-title"
+          >
             {t("record.fullHistory")}
-          </h2>
+          </Heading>
           {/* Mounted only while open: the two history reads behind it are the
             page's most expensive, and nobody who never opens the panel should
             pay for them. */}

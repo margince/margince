@@ -99,11 +99,10 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/consent/suppress.go:suppressAdmittedTx":         "somebody recorded that a subject asked us to stop writing to them. An OCCURRENCE and not a replacement: no field of the contact changes, and there is no prior state to image because a stop either was on file or was not — the row is created, never edited, and lifting one revokes it rather than rewriting it. What it has instead of a prior state is the kind of stop and the authority it was recorded at, which together say what was asked and who may lift it. The subject's own words for the reason stay on the row and out of the audit payload, because an audit entry is read by contacts the reason was not given to",
 	"internal/modules/consent/authorizebasis.go:recordBasis":          "the lawful ground an outbound message was permitted on, written down when the engine concludes it. An OCCURRENCE and not a replacement: no field of the contact changes — the contact is the subject because a reader asking why we wrote to somebody looks the contact up, not a basis id — and there is no prior state to image, because a ground either was on file or was not: the row is created, never edited, and the check beside it refuses a second one while the first is live. What it has instead of a prior state is the basis kind and the category the engine resolved, which together say what was concluded and on what footing. The row itself carries the conversation, the window and the source message",
-	"internal/modules/activities/owedverdict.go:SetOwedVerdict":       "a classifier reading one inbound message and saying whether it asks its recipient side for something. An OCCURRENCE and not a replacement, and the CAS is what makes that exact rather than a claim: the UPDATE carries `owed_verdict IS NULL`, so a write that lands is one where there WAS no prior verdict — an image would record the absence of one, for every row, forever. A second judgement never replaces a first; it reports itself unapplied and the earlier verdict stands. What the audit row has instead of a prior state is the verdict itself and the principal that wrote it, which is what \"which of a customer's messages did the classifier read, and what did it decide\" reads",
 	"internal/modules/contacts/sdrhandoff.go:ResubmitHandoff":         "a recycled handoff reopened. An OCCURRENCE and not a replacement, on the CAS: the UPDATE carries `status = recycled`, so a write that lands is one where the prior state WAS recycled — an image would record that one word for every row, forever, which the verb already says. What it has instead of a prior state is sdr_handoff_event, written in the same transaction and append-only, carrying every round this prospect has been through",
 	"internal/modules/assurance/bundle.go:CloseCycle":                 "a pass of assurance ending. An OCCURRENCE and not a replacement, and the CAS makes that exact: the UPDATE carries `closed_at IS NULL`, so a write that lands is one where the cycle WAS open — an image would record that one fact for every row, forever, which the verb already says. A second close reports ErrNotFound and the first moment stands. What the audit row has instead of a prior state is WHO decided the window was over, which the closed_at timestamp on the row cannot say",
 	"internal/modules/contacts/sdrhandoff.go:DecideHandoff":           "an account executive answering a handoff, once. The CAS is what makes the occurrence exact rather than a claim: the UPDATE carries `status = submitted`, so a write that lands is one where there WAS no prior decision — an image would record `submitted` for every row, forever, which is the state the id already implies. A second decision reports itself already-decided and the first stands. What this has instead of a prior state is stronger than one: sdr_handoff_event, written in the same transaction and append-only, carries every transition including the submission this answers, so how the handoff reached its state is recoverable in full rather than one step back",
-	"internal/modules/activities/replyverdict.go:SetReplyVerdict":     "a classifier reading one inbound message and saying whether it was a positive answer. An OCCURRENCE and not a replacement, on exactly the ground SetOwedVerdict records: the UPDATE carries `reply_verdict IS NULL`, so a write that lands is one where there WAS no prior verdict, and an image would record the absence of one for every row forever. A second judgement reports itself unapplied and the first stands. What the audit row has instead of a prior state is the verdict, the classifier that reached it, and the principal that wrote it",
+	"internal/modules/activities/replyverdict.go:SetReplyVerdict":     "a classifier reading one inbound message and saying whether it was a positive answer. An OCCURRENCE and not a replacement, and the CAS is what makes that exact rather than a claim: the UPDATE carries `reply_verdict IS NULL`, so a write that lands is one where there WAS no prior verdict, and an image would record the absence of one for every row forever. A second judgement reports itself unapplied and the first stands. What the audit row has instead of a prior state is the verdict, the classifier that reached it, and the principal that wrote it",
 	"internal/modules/activities/replyverdict.go:CorrectReplyVerdict": "a human overruling that reading — and this one DOES replace, so the answer is not the CAS argument above. What it has instead of a before-image is stronger than one: activity_reply_verdict_history, written in this same transaction and append-only, already carries every prior verdict with who decided it and when. A before-image on the audit row would duplicate the immediately preceding history row, and duplicating it is worse than omitting it — two records of one prior state can disagree after a later migration touches one, and a reader has no way to know which is the account. The audit row answers who overruled the classifier; the history answers what it said before",
 
 	"internal/modules/capture/widenhistory.go:ShareHistory": "a seat re-opening the mail their own counterparty hold caught. An OCCURRENCE and not a replacement: NO field of the seat changes — the seat is the subject because the act is theirs and is what a reader investigating who published a lawyer's correspondence would look up. There is no prior state to name either, because the thing that changed is a SET of import rows, each moving from its own posture, and an image listing them would name the very correspondents this feature keeps private. What it has instead is the count of what moved, plus one activity.updated per re-opened message carrying its new audience",
@@ -206,7 +205,6 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/commissions/decide.go:voidOne":                                    "a void is spelled as its own verb and carries the patch images for the row it retired",
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                       "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                  "each room transition names its own verb and carries the patch images the move built",
-	"internal/modules/privacy/retentionpolicystore.go:Delete":                           "the verb is an archive of the policy row, and the image is the policy as it stood",
 	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
@@ -241,7 +239,7 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 		// below like any other wrapper.
 	}.Files(t)
 
-	constantsByPackage := packageConstants(files)
+	constantsByPackage := packageConstants(t, files)
 
 	var withBefore, eventShaped, unresolvable, direct int
 	for _, parsed := range files {
@@ -305,6 +303,11 @@ type auditSite struct {
 	door           string // which of the four doors
 	args           []ast.Expr
 	beforeIsAbsent bool
+	// fn is the function the call sits in, so a reader can follow an image the
+	// call names rather than spells — a local, or a parameter its own callers
+	// fill. historyfieldlabels_test.go needs it; this gate reads only the
+	// argument.
+	fn *ast.FuncDecl
 }
 
 // action resolves the site's verb: a literal, or a package-level constant this
@@ -437,6 +440,7 @@ func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
 				door:           door,
 				args:           call.Args,
 				beforeIsAbsent: auditDoorsWithBeforeImage[door] && isAbsentImageExpr(call),
+				fn:             fn,
 			})
 			return true
 		})
@@ -488,14 +492,33 @@ func isAbsentImageExpr(call *ast.CallExpr) bool {
 // turn "we could not read this verb" into a standing waiver over sites whose
 // verb is plainly `update` — the census failing short into the one bucket that
 // forgives it.
-func packageConstants(files []gatekit.ParsedFile) map[string]map[string]string {
+// It reads the whole DIRECTORY rather than only the swept files, for the same
+// reason it groups by package at all: a constant lives wherever its author put
+// it, and `kindEmail` sits in the file that defines the sink parts, not in the
+// one that audits them. Resolving only the audit-door files calls such a site
+// unresolvable, and an unresolvable site gets ratified.
+func packageConstants(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]string {
+	t.Helper()
 	byPackage := map[string]map[string]string{}
+	fset := token.NewFileSet()
 	for _, parsed := range files {
 		dir := filepath.Dir(parsed.Path)
-		if byPackage[dir] == nil {
-			byPackage[dir] = map[string]string{}
+		if byPackage[dir] != nil {
+			continue
 		}
-		collectStringConstants(parsed.File, byPackage[dir])
+		byPackage[dir] = map[string]string{}
+		parsed := parsePackageDir(t, fset, dir)
+		for _, file := range parsed {
+			collectStringConstants(file, byPackage[dir])
+		}
+		// A second pass, because a constant may name another rather than a
+		// literal — `freemailDomainObject = captureSettingsObject`, the capture
+		// settings object under the name the free-mail list calls it. One pass
+		// leaves the alias unresolved, and an unresolved entity type is the
+		// answer that gets a site ratified.
+		for _, file := range parsed {
+			collectStringConstants(file, byPackage[dir])
+		}
 	}
 	return byPackage
 }
@@ -515,7 +538,7 @@ func collectStringConstants(file *ast.File, into map[string]string) {
 				if i >= len(value.Values) {
 					continue
 				}
-				if literal, known := resolveString(value.Values[i], nil); known {
+				if literal, known := resolveString(value.Values[i], into); known {
 					into[name.Name] = literal
 				}
 			}

@@ -28,6 +28,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -103,12 +104,17 @@ func (h Reads) DraftIntroNote(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 
-	facts, err := h.noteFactsFor(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), body)
+	contactID := ids.From[ids.ContactKind](ids.UUID(id))
+	facts, err := h.noteFactsFor(r.Context(), contactID, body)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, writeIntroNote(r.Context(), h.introNoteLane, facts))
+	// The contact the note is addressed to. Everything the note says is what
+	// this product knows about them, so an erasure reaching that contact must
+	// reach this call's payloads.
+	ctx := ai.WithSubject(r.Context(), contactID.Ref(), facts.contact)
+	httperr.WriteJSON(w, http.StatusOK, writeIntroNote(ctx, h.introNoteLane, facts))
 }
 
 // checkNoteIDs refuses an id the caller did not send, by name.

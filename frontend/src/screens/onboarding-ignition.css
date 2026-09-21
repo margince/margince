@@ -50,7 +50,6 @@
    says stays true, and a line that vanishes reads as a step undone. */
 .ob-ig-beat {
   margin: 0;
-  font-size: var(--fs-meta);
   color: var(--aiText);
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 1500ms both;
 }
@@ -85,9 +84,6 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-3);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-relaxed);
-  color: var(--textContent);
   animation: ob-ig-rise var(--dur-enter) var(--ease-out) both;
 }
 .ob-ig-can li:nth-child(1) {
@@ -109,9 +105,6 @@
   flex: none;
   min-width: 6.5ch;
   color: var(--aiText);
-}
-.ob-ig-can li[data-can="false"] b {
-  color: var(--textMeta);
 }
 
 .ob-ig-go {

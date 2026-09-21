@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -9,7 +10,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { searchByEntity } from "./relationshipcandidates";
 
 // The three capacities, in the order an invoice moves through them: it is
@@ -86,13 +87,14 @@ export function BillingContactModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {editing ? t("billing.changeTitle") : t("billing.addTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         {editing ? (
           <div className="field">
@@ -128,11 +130,7 @@ export function BillingContactModal({
           )}
         </Field>
         <p className="t-caption">{t("billing.roleNote")}</p>
-        {write.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(write.error, t)}
-          </p>
-        )}
+        {write.isError && <RefusalLine error={write.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
             {t("deals.cancel")}

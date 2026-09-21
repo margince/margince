@@ -306,6 +306,14 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 	if err := repointEchoReviews(ctx, tx, survivorID, echoID); err != nil {
 		return err
 	}
+	// The external identities the folded-in row answered to MOVE, like the work
+	// items above and unlike the evidence. An identity names one message, and
+	// the message is now the survivor: leaving a claim on a row about to be
+	// archived would send the next arrival of that message to a record nobody
+	// can reach.
+	if err := TransferIdentities(ctx, tx, echoID, survivorID); err != nil {
+		return err
+	}
 	return archiveAbsorbedEcho(ctx, tx, survivorID, echoID, stamped)
 }
 
@@ -395,23 +403,6 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 // happens instead of proving the database ended up right for some other reason.
 type StampProject func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error
 
-// repointEchoReviews MOVES the echo's queued counterparty dispositions onto the
-// survivor — the one thing here that is moved rather than copied, because it is
-// a work item and not evidence. What those rows hold is a queued HUMAN review,
-// and an ensure-retry cursor, that the survivor does not re-queue: left on the
-// row this absorb archives, the question "who is this stranger?" would be asked
-// about a message the workspace can no longer see, and copied it would be asked
-// twice. Their live-row uniqueness keys on (email), which this
-// write does not touch, so a re-point can collide with nothing.
-func repointEchoReviews(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE capture_pending_counterparty SET activity_id = $1 WHERE activity_id = $2`,
-		survivorID, echoID); err != nil {
-		return fmt.Errorf("activities: re-pointing the absorbed echo's queued counterparty reviews: %w", err)
-	}
-	return nil
-}
-
 // archiveAbsorbedEcho releases the natural key the folded-in row was holding
 // and takes that row off the timeline.
 //
@@ -469,10 +460,17 @@ func archiveAbsorbedEcho(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.
 	//
 	// archived_at is coalesced: a row a noise disposition already hid keeps the
 	// moment it was hidden, which is the fact its undo window is measured from.
+	//
+	// source_id alone is cleared, and source_system deliberately stays. The key
+	// this row is giving up is uq_activity_source, which is PARTIAL on both
+	// columns being non-null — so nulling either one releases it, and the
+	// audit images below already name source_id as the thing surrendered.
+	// Keeping source_system also keeps the row's answer to "where did this come
+	// from", which an absorbed echo still has: it was captured from somewhere,
+	// and only its claim on the natural key was wrong.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity
-		   SET source_system = NULL,
-		       source_id     = NULL,
+		   SET source_id     = NULL,
 		       archived_at   = coalesce(archived_at, now())
 		 WHERE id = $1 AND source_id = $2`, echoID, stamped)
 	if err != nil {

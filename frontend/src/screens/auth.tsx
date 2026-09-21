@@ -2,7 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { useAuthCapabilities } from "../app/capabilities";
 import {
   forgetHashCredential,
@@ -19,13 +18,16 @@ import wordmarkDark from "../assets/wordmark-dark.png";
 import wordmarkWhite from "../assets/wordmark-white.png";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { usePasswordReveal } from "../design-system/passwordreveal";
-import {
-  ProviderMark,
-  providerBrandName,
-} from "../design-system/provider-mark";
+import { providerBrandName } from "../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AuthExperience, type AuthPhase } from "./auth-core";
+import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
+import {
+  FederatedOnlyCard,
+  type OidcProviders,
+  ProviderButtons,
+  startFederatedSignIn,
+} from "./auth-providers";
 import { problemMessageOf, throwProblem } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
@@ -61,15 +63,14 @@ export type AuthNotice =
 const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
 // isOidcFailureMarker is a PURE read — no mutation — so it is safe under
-// React's StrictMode (development only), which double-invokes a useState
-// lazy initializer to surface impure ones. An earlier version decided the
-// answer AND cleared the address in one impure step: the first invocation
-// cleared it and answered true, the second then saw the already-cleared
-// hash and answered false — and false is the call whose result actually
-// became the committed state, silently dropping the notice on every
-// dev-mode render. Splitting the read from the clear (below) removes the
-// impurity instead of working around it, so no double-invoke count changes
-// the answer.
+// React's StrictMode (development only), which double-invokes a useState lazy
+// initializer to surface impure ones. An earlier version decided the answer AND
+// cleared the address in one impure step: the first invocation cleared it and
+// answered true, the second then saw the already-cleared hash and answered
+// false — and false is the call whose result actually became the committed
+// state, silently dropping the notice on every dev-mode render. Splitting the
+// read from the clear (below) removes the impurity instead of working around
+// it, so no double-invoke count changes the answer.
 function isOidcFailureMarker(): boolean {
   return globalThis.location?.hash === OIDC_FAILURE_HASH;
 }
@@ -88,18 +89,6 @@ function clearOidcFailureMarker(): void {
   const { pathname, search } = globalThis.location;
   globalThis.history?.replaceState?.(null, "", `${pathname}${search}`);
 }
-
-// The installation's operational federated providers, exactly as
-// /auth/capabilities serves them. `label` is the SERVER's string — the contract
-// documents it as the button text, so the installation owns the wording and t()
-// is not involved. Only the MARK is ours to choose, from `key`.
-export type OidcProviders =
-  components["schemas"]["AuthCapabilities"]["oidc_providers"];
-
-// The product's answer to "which providers are unavailable": none. A module-level
-// constant rather than an inline `new Set()` default, so every render of the
-// federated block compares equal instead of allocating a fresh set.
-const NO_UNAVAILABLE_PROVIDERS: ReadonlySet<string> = new Set();
 
 type View =
   | { kind: "login" }
@@ -160,11 +149,10 @@ export function AuthScreen({
     const token = takeHashCredential(RESET_ROUTE);
     return token ? { kind: "reset", token } : { kind: "login" };
   });
-  // Read once, same instant as the reset token above: both are one-shot
-  // markers this screen's own mount is responsible for taking out of the
-  // address before anything else reads it. The read itself is pure — see
-  // isOidcFailureMarker's comment for why — the clear happens in the effect
-  // below.
+  // Read once, same instant as the reset token above: both are one-shot markers
+  // this screen's own mount is responsible for taking out of the address before
+  // anything else reads it. The read itself is pure — see isOidcFailureMarker's
+  // comment for why — the clear happens in the effect below.
   const [oidcFailed] = useState(isOidcFailureMarker);
   useEffect(() => {
     if (oidcFailed) {
@@ -218,15 +206,47 @@ export function AuthScreen({
     clearResetHash();
   };
 
+  // Whether this installation offers email + password at all. An installation
+  // that puts an identity provider in front of Margince turns the method off,
+  // and then the form below must not render: every route it posts to refuses.
+  //
+  // Absent an answer it is offered — a probe still in flight, or one that
+  // failed, shows the method nearly every installation has rather than a blank
+  // card. The server refuses the password routes either way, so the cost of
+  // being wrong here is a form that cannot be submitted, never a session.
+  const passwordOffered = capabilities.data?.password !== false;
+
   const servedOidcProviders = capabilities.data?.oidc_providers ?? [];
-  // True only when previewedOidcProviders (below) actually invented the
-  // list this render draws — never merely because the preview build flag
-  // is set. An installation that genuinely serves OIDC providers keeps
-  // working buttons even under a preview build: the switch exists to
-  // stand in for a server with none configured, not to blanket-disable a
-  // real one.
+  // True only when previewedOidcProviders (below) actually invented the list
+  // this render draws — never merely because the preview build flag is set. An
+  // installation that genuinely serves OIDC providers keeps working buttons
+  // even under a preview build: the switch exists to stand in for a server with
+  // none configured, not to blanket-disable a real one.
   const oidcProvidersSynthesized =
     servedOidcProviders.length === 0 && uiPreviewOidcEnabled();
+  // The server's answer, passed through the ONE ui-preview override site. Off
+  // by default, in which case this is the identity function and the
+  // capability's real value reaches the card verbatim — the label callback
+  // included, which is never consulted on a served provider.
+  //
+  // Built once for both cards: which of them renders is a question about the
+  // password method, and the providers are the same providers either way.
+  const federatedProviders = previewedOidcProviders(
+    servedOidcProviders,
+    (providerKey) =>
+      t("auth.continueWith", {
+        // The key itself if we have no brand word for it: a preview that
+        // invents a company's name is worse than one that shows the operator's
+        // own identifier.
+        brand: providerBrandName(providerKey) ?? providerKey,
+      }),
+  );
+  // Empty in the product, always: the capability carries no availability field,
+  // so only the preview layer can mark a provider (app/ui-preview.ts). Gated on
+  // the same served list as `federatedProviders` above, so the marker never
+  // falls on a provider this installation genuinely serves.
+  const unavailableProviders =
+    previewedUnavailableProviders(servedOidcProviders);
 
   return (
     <AuthExperience phase={view.kind === "login" ? authPhase : "quiet"}>
@@ -244,36 +264,23 @@ export function AuthScreen({
               )}
             </p>
           )}
-          <LoginForm
-            onAuthed={onAuthed}
-            onPhase={setAuthPhase}
-            resetAvailable={resetAvailable}
-            /* The server's answer, passed through the ONE ui-preview override
-               site. Off by default, in which case this is the identity
-               function and the capability's real value reaches the form
-               verbatim — the label callback included, which is never consulted
-               on a served provider. */
-            providers={previewedOidcProviders(
-              servedOidcProviders,
-              (providerKey) =>
-                t("auth.continueWith", {
-                  /* The key itself if we have no brand word for it: a preview
-                     that invents a company's name is worse than one that shows
-                     the operator's own identifier. */
-                  brand: providerBrandName(providerKey) ?? providerKey,
-                }),
-            )}
-            providersSynthesized={oidcProvidersSynthesized}
-            /* Empty in the product, always: the capability carries no
-               availability field, so only the preview layer can mark a provider
-               (app/ui-preview.ts). Gated on the same served list as `providers`
-               above, so the marker never falls on a provider this installation
-               genuinely serves. */
-            unavailableProviders={previewedUnavailableProviders(
-              servedOidcProviders,
-            )}
-            onForgot={() => setView({ kind: "forgot" })}
-          />
+          {!passwordOffered ? (
+            <FederatedOnlyCard
+              providers={federatedProviders}
+              providersSynthesized={oidcProvidersSynthesized}
+              unavailableProviders={unavailableProviders}
+            />
+          ) : (
+            <LoginForm
+              onAuthed={onAuthed}
+              onPhase={setAuthPhase}
+              resetAvailable={resetAvailable}
+              providers={federatedProviders}
+              providersSynthesized={oidcProvidersSynthesized}
+              unavailableProviders={unavailableProviders}
+              onForgot={() => setView({ kind: "forgot" })}
+            />
+          )}
         </>
       )}
       {view.kind === "forgot" && (
@@ -325,14 +332,14 @@ export function AvailabilityScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
-        <h1>
+        <AuthCardTitle>
           {t(
             kind === "connection"
               ? "auth.connectionTitle"
               : "auth.unavailableTitle",
           )}
-        </h1>
-        <p className="card-sub">
+        </AuthCardTitle>
+        <p>
           {t(
             kind === "connection"
               ? "auth.connectionBody"
@@ -433,169 +440,6 @@ function loginErrorKey(error: unknown): MessageKey {
   return "auth.errUnreachable";
 }
 
-/**
- * Federated sign-in, above the password form (§11).
- *
- * Placement is an argument, not a preference: if the installation runs SSO the
- * password form is the FALLBACK path, and putting it first tells every user at
- * that installation to take the slower door. Hence the divider below, which
- * labels the form rather than the buttons.
- *
- * **Renders nothing when the capability is empty**, and that is the §19
- * enforcement point rather than a convenience: `oidc_providers` is served by
- * `/auth/capabilities`, so a control for a flow this installation cannot
- * complete never reaches the screen. An installation with no Google OAuth app
- * configured (or where the deployment's state-signing key/redirect base are
- * incomplete) serves `[]`, and this component draws nothing for it — exactly
- * as an installation with a configured app draws the button. Do not "fix"
- * this to render a disabled button, and do not seed a provider list into the
- * capability response — the empty list IS the gate, and this component must
- * keep asking only "did I get providers?".
- *
- * The one thing that may put providers here without a server is
- * `app/ui-preview.ts`, and it is not an exception to the above: it substitutes
- * at the CALL SITE in `AuthScreen`, off unless `VITE_UI_PREVIEW_OIDC` is set at
- * build time, and it draws the block without making the flow work. This
- * component cannot tell the difference and must not try to.
- *
- * **The label is the server's string, not ours.** The contract types it as
- * `{ key, label }` and documents `label` as the button text, so the installation
- * owns the wording and `t()` is not involved. The consequence is real: a German
- * reader sees the installation's English label. Only the MARK is ours to choose,
- * from `key`.
- */
-export function ProviderButtons({
-  providers,
-  disabled = false,
-  unavailable = NO_UNAVAILABLE_PROVIDERS,
-  onSelect,
-}: Readonly<{
-  providers: OidcProviders;
-  disabled?: boolean;
-  /**
-   * Provider keys to render as not-yet-available. **Empty in the product**, and
-   * structurally so: the capability's items are `{ key, label }` with no
-   * availability field, so nothing on the wire can populate this — only
-   * `app/ui-preview.ts` can, for a design review, and §3.3 keeps a dead provider
-   * control illegal on the shipped surface. This component never infers
-   * availability from a key: a provider it has no logo for is still a working one.
-   */
-  unavailable?: ReadonlySet<string>;
-  onSelect: (providerKey: string) => void;
-}>) {
-  const t = useT();
-  if (providers.length === 0) {
-    return null;
-  }
-  return (
-    <>
-      <div className="auth-sso">
-        {providers.map((provider) => {
-          const isUnavailable = unavailable.has(provider.key);
-          return (
-            <Button
-              key={provider.key}
-              variant="federated"
-              /* The whole of what this screen still decides about the box: it is
-                 an item in a VERTICAL stack, so a default flex-shrink is a
-                 shrink in height. The shape — full width, unfilled, the border
-                 that owes 1.4.11 its 3:1, the mark's size, the hover, the two
-                 dim states — belongs to the variant, which is what the sign-in
-                 surface used to redeclare for itself. */
-              className="auth-social"
-              /* Two unavailabilities, and Button keeps them apart because they
-                 want opposite treatments: `disabled` is how the form marks every
-                 provider while a sign-in is in flight — momentary, and the
-                 control is coming back — while `unavailable` is a provider this
-                 installation advertises with nothing behind it, which is a
-                 resting state. Neither appends copy, so the accessible name
-                 stays the installation's own label. */
-              disabled={disabled}
-              unavailable={isUnavailable}
-              onClick={() => onSelect(provider.key)}
-            >
-              <ProviderMark providerKey={provider.key} />
-              {/* Two labels, and which one SHOWS is the stylesheet's business.
-                  The served label is the installation's own string and is what
-                  the button is called: it is the accessible name at every width.
-                  The brand word is the short form for a key we recognise, so a
-                  phone can show "Google" side by side instead of wrapping
-                  "Continue with Google" over three lines. An unrecognised key has
-                  no brand word and falls back to the served label, which is then
-                  the only text present and needs no second copy. Either way the
-                  button appends nothing of its own, so the accessible name stays
-                  the installation's label — including for an unavailable one. */}
-              <ProviderLabel
-                label={provider.label}
-                providerKey={provider.key}
-              />
-            </Button>
-          );
-        })}
-      </div>
-      {/* Labels the path BELOW it, so a screen reader hears what the divider
-          separates rather than a decorative rule. */}
-      <p className="auth-or">
-        <span>{t("auth.orDivider")}</span>
-      </p>
-    </>
-  );
-}
-
-/**
- * The two forms of a provider's name, with the accessible name pinned to the
- * server's.
- *
- * When a brand word exists, the served label goes into an `.sr-only` span and the
- * visible text is `aria-hidden`, so the button announces the installation's own
- * words however narrow the layout gets. When it does not, there is one span and
- * one string — a duplicate that says the same thing twice would be read twice.
- */
-function ProviderLabel({
-  label,
-  providerKey,
-}: Readonly<{ label: string; providerKey: string }>) {
-  const brand = providerBrandName(providerKey);
-  // The short form is used ONLY when the served label already contains it.
-  // WCAG 2.2 SC 2.5.3 (Label in Name) wants the accessible name to contain the
-  // visible text, and an installation is free to label its `google` provider
-  // "Firmen-Login" — showing "Google" there would both break that and put a
-  // brand claim on screen that the operator never made.
-  if (!brand || !label.toLowerCase().includes(brand.toLowerCase())) {
-    return <span>{label}</span>;
-  }
-  return (
-    <>
-      <span className="sr-only">{label}</span>
-      <span aria-hidden>
-        <span>{label}</span>
-        <span className="auth-social-brand">{brand}</span>
-      </span>
-    </>
-  );
-}
-
-// startFederatedSignIn is the hand-off itself: a full-page navigation to
-// `/v1/auth/oidc/{provider}/start` (identity/ssologin.go), never an XHR — the
-// server's redirect chain to the provider's consent screen and back has to
-// carry the browser's whole address bar, not a fetch response this app could
-// read. `location.assign` (not a hash route) because the target is outside
-// this SPA's own address space entirely.
-//
-// `synthesized` is the caller's answer to "did previewedOidcProviders invent
-// the button this click came from?" — NOT the global preview-build flag on
-// its own. An installation that genuinely serves OIDC providers must keep
-// working buttons even under a preview build; the flag alone would make
-// every real provider inert the moment someone enabled it against a real
-// backend. Only a button that stands in for a server with none configured
-// (app/ui-preview.ts's own reason for existing) has nowhere real to go.
-function startFederatedSignIn(providerKey: string, synthesized: boolean): void {
-  if (synthesized) {
-    return;
-  }
-  globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
-}
-
 function LoginForm({
   onAuthed,
   onPhase,
@@ -689,14 +533,14 @@ function LoginForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      {/* The page says its name once. The greeting above IS this page's
-          heading, so the form's own title and sub-line would repeat it in a
+      {/* The page says its name once. The greeting beside this form IS the
+          page's h1, so the form's own title and sub-line would repeat it in a
           larger voice than the sentence they follow. Both stay in the
           accessibility tree, where a form still wants its name, and leave the
-          composition. The other views keep theirs: nothing above a password
-          reset form says what it is. */}
-      <h1 className="sr-only">{t("auth.loginTitle")}</h1>
-      <p className="card-sub sr-only">{t("auth.loginSub")}</p>
+          composition. The other views keep theirs visible: nothing above a
+          password reset form says what it is. */}
+      <AuthCardTitle className="sr-only">{t("auth.loginTitle")}</AuthCardTitle>
+      <p className="sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
         disabled={login.isPending}
@@ -832,8 +676,8 @@ function ForgotForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <h1>{t("auth.forgotTitle")}</h1>
-      <p className="card-sub">{t("auth.forgotSub")}</p>
+      <AuthCardTitle>{t("auth.forgotTitle")}</AuthCardTitle>
+      <p>{t("auth.forgotSub")}</p>
       <div className="auth-fields">
         {/* Same icon as the sign-in card's email field. Without it the text
             starts 22px further left than on the screen the user just came from,
@@ -981,8 +825,8 @@ function ResetForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <h1>{t("auth.resetTitle")}</h1>
-      <p className="card-sub">{t("auth.resetSub")}</p>
+      <AuthCardTitle>{t("auth.resetTitle")}</AuthCardTitle>
+      <p>{t("auth.resetSub")}</p>
       <div className="auth-fields">
         <Field
           label={t("auth.newPassword")}
@@ -1059,8 +903,8 @@ function Notice({
 }>) {
   return (
     <section className="auth-card">
-      <h1>{title}</h1>
-      <p className="card-sub">{body}</p>
+      <AuthCardTitle>{title}</AuthCardTitle>
+      <p>{body}</p>
       <div className="auth-actions">
         <Button variant="primary" onClick={onAction}>
           {action}

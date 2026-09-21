@@ -123,9 +123,10 @@ describe("FieldBuilder", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "A picklist needs at least one option",
     );
-    // And unmarked: this is a refusal, and the completion dot beside it said the
-    // opposite of what the sentence says.
-    expect(document.body.querySelector(".dot-auto")).toBeNull();
+    // And marked as a refusal: the completion dot beside it said the opposite
+    // of what the sentence says, so the message wears the danger one.
+    expect(document.body.querySelector(".toast-dot-success")).toBeNull();
+    expect(document.body.querySelector(".toast-dot-danger")).not.toBeNull();
     expect(view.onSubmit).not.toHaveBeenCalled();
   });
 

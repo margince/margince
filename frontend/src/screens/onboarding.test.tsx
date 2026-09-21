@@ -322,12 +322,10 @@ async function chooseManual() {
   });
 }
 
+// The board asks one question at a time, so its answer box is the only text
+// entry on screen — found by what it IS rather than by the class it wears.
 async function answerManual(value: string) {
-  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-    ".ob-manual-input",
-  );
-  expect(input).not.toBeNull();
-  await userEvent.type(input as HTMLInputElement, value);
+  await userEvent.type(screen.getByRole("textbox"), value);
   await userEvent.click(screen.getByRole("button", { name: /Next question/ }));
 }
 

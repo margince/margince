@@ -35,33 +35,57 @@ type bookingConsentAdapter struct {
 // lane, never escalate into a marketing grant.
 const bookingScopedPurposeKey = "transactional"
 
-// ValidatePurpose confirms the purpose exists AND is the booking-scoped
-// `transactional` purpose BEFORE the surface writes anything — a public
-// capture may not create a contact it cannot attach a recordable consent
-// to, and may not reach beyond its own consent lane.
-func (a bookingConsentAdapter) ValidatePurpose(ctx context.Context, purposeID ids.UUID) error {
+// ScopedPurpose answers WHICH purpose this booking's grant lands on, BEFORE
+// the surface writes anything — a public capture may not create a contact it
+// cannot attach a recordable consent to, and may not reach beyond its own
+// consent lane.
+//
+// It answers the purpose rather than merely admitting one so that the id the
+// handler writes is the id this decision reached. Validating an id and then
+// carrying the caller's own value forward were two statements that had to
+// agree; now there is one.
+func (a bookingConsentAdapter) ScopedPurpose(ctx context.Context, requested *ids.UUID) (ids.UUID, error) {
 	purposes, err := a.store.ListPurposes(ctx)
 	if err != nil {
-		return err
+		return ids.Nil, err
 	}
-	return admitBookingPurpose(purposes, purposeID)
+	return admitBookingPurpose(purposes, requested)
 }
 
-// admitBookingPurpose is the pure admission decision: the id must resolve
-// within the tracked catalog and be the booking-scoped purpose. An
-// unknown id and an out-of-scope purpose are both a 422 — neither leaks
-// which of the two it was beyond what the caller already supplied.
-func admitBookingPurpose(purposes []consent.Purpose, purposeID ids.UUID) error {
+// admitBookingPurpose is the pure decision.
+//
+// A caller that names NO purpose gets the booking lane's own id, looked up by
+// key. That is the answer a published page needs and not a convenience: purpose
+// ids are per-installation uuids minted at seed time, the contract exposes no
+// anonymous read of them, and the door admits exactly one purpose anyway — so
+// an anonymous form that names an id is naming a value nobody ever gave it, and
+// a form shipped with a stand-in refuses on every installation there is.
+//
+// A caller that DOES name one still has to have named the lane. An unknown id
+// and an out-of-scope purpose are both a 422 — neither leaks which of the two
+// it was beyond what the caller already supplied.
+func admitBookingPurpose(purposes []consent.Purpose, requested *ids.UUID) (ids.UUID, error) {
+	if requested == nil {
+		for _, p := range purposes {
+			if p.Key == bookingScopedPurposeKey {
+				return p.ID.UUID, nil
+			}
+		}
+		// Said plainly, because an operator whose catalog is missing the lane
+		// can act on it and no subject data is disclosed by saying so.
+		return ids.Nil, httperr.Validation("consent.purpose_id", "invalid",
+			"this installation tracks no transactional consent purpose for a booking to record against")
+	}
 	for _, p := range purposes {
-		if p.ID.UUID == purposeID {
+		if p.ID.UUID == *requested {
 			if p.Key != bookingScopedPurposeKey {
-				return httperr.Validation("consent.purpose_id", "invalid",
+				return ids.Nil, httperr.Validation("consent.purpose_id", "invalid",
 					"public booking may only record consent for the transactional purpose")
 			}
-			return nil
+			return p.ID.UUID, nil
 		}
 	}
-	return httperr.Validation("consent.purpose_id", "invalid", "not a tracked consent purpose")
+	return ids.Nil, httperr.Validation("consent.purpose_id", "invalid", "not a tracked consent purpose")
 }
 
 // ValidateMarketingPurpose admits the purpose a booking form's marketing tick
@@ -118,7 +142,7 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 		PurposeID:     ids.From[ids.PurposeKind](c.PurposeID),
 		NewState:      "granted",
 		Source:        &source,
-		PolicyText:    c.Wording,
+		PolicyText:    &c.Wording,
 		PolicyVersion: &c.PolicyVersion,
 		// Anyone knowing an email can post this form: a decision already
 		// on record — above all a withdrawal — must stand.
@@ -136,6 +160,21 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	}
 	outcome, err := a.askMarketing(ctx, contactID, c.Marketing)
 	return outcome, err
+}
+
+// RecordBookingInquiry stamps the qualifying event a public booking IS: the
+// subject asked for a meeting, which ADR-0098 D2 counts as them initiating
+// correspondence exactly as an inbound message does.
+//
+// The cross-module edge, here for the reason every other one in this file is:
+// `activities` owns the booking door and `consent` owns the basis, and neither
+// imports the other.
+//
+// Its own transaction. The booking is already committed by the time this runs —
+// it has to be, since the row cites the meeting as its evidence — so there is no
+// transaction left to join, and nothing here may take the meeting back.
+func (a bookingConsentAdapter) RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error {
+	return a.store.RecordInquiry(ctx, ids.From[ids.ContactKind](contactID), activityID)
 }
 
 // askMarketing mails the confirmation link an affirmative tick earns, and it

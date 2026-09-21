@@ -18,6 +18,9 @@
 // and domains the sink refuses before any write), capture_owner_identity
 // (a seat's OTHER addresses, so mail among a colleague's own addresses is
 // not read as correspondence and an alias is never minted as a contact),
+// capture_alias_sighting (the evidence behind a discovered alias: one row
+// per seat, address and message, so the two distinct sightings the ladder
+// demands cannot be one message counted twice),
 // capture_import (one row per mailbox that delivered a message — an email
 // is stored once, so this is the only place a second importing seat's
 // decisions about it can live), capture_counterparty_hold (whose mail one

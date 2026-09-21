@@ -145,10 +145,7 @@ func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePr
 func (p *CompanyNamePromoter) RunWorkspace(ctx context.Context, ws ids.UUID) error {
 	// The promotion writes an audit row and a company.updated event,
 	// so the pass binds the system actor like every worker job.
-	wsCtx := principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   companyNamePromotionActor,
-	}), ids.NewV7())
+	wsCtx := principal.SystemActing(ctx, companyNamePromotionActor)
 	return p.sweepWorkspace(wsCtx, ws)
 }
 

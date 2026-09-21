@@ -89,10 +89,11 @@ func TestResetRateLimitsOnAHandlerSetWithoutBucketsIsANoOp(t *testing.T) {
 	}
 }
 
-// A policy read that fails must not leave a reader with no way in. The login
-// screen renders from this response, so the degraded answer is the method every
-// installation always has — password — and never a refusal. The ROUTES fail
-// closed separately, so a short list here can admit nothing the policy refuses.
+// A policy read that fails must cost a reader the buttons and not the page. The
+// login screen renders from this response, so the degraded answer is whatever
+// methods this deployment still offers — here, password — and never a refusal.
+// The ROUTES fail closed separately, so a short list here can admit nothing the
+// policy refuses.
 func TestGetAuthCapabilitiesReportsPasswordWhenTheProviderPolicyCannotBeRead(t *testing.T) {
 	h := Handlers{}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return nil, errors.New("the settings row is unreachable")
@@ -108,7 +109,7 @@ func TestGetAuthCapabilitiesReportsPasswordWhenTheProviderPolicyCannotBeRead(t *
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if !body.Password {
-		t.Error("password sign-in was withheld because a provider policy read failed; it is the method that always remains")
+		t.Error("password sign-in was withheld because a provider policy read failed; this deployment offers it")
 	}
 	if len(body.OidcProviders) != 0 {
 		t.Errorf("oidc_providers = %v on a failed policy read, want none", body.OidcProviders)
@@ -118,7 +119,7 @@ func TestGetAuthCapabilitiesReportsPasswordWhenTheProviderPolicyCannotBeRead(t *
 // The capabilities probe is anonymous and, once the provider policy is wired,
 // reaches the database on every call. A flood must therefore cost the caller
 // their buttons rather than costing the installation a pool connection each
-// time — and password, the method that always remains, still has to render.
+// time — and the method this deployment offers still has to render.
 func TestGetAuthCapabilitiesStopsReadingTheProviderPolicyUnderAFlood(t *testing.T) {
 	reads := 0
 	h := NewHandlers(nil).WithOIDCProvidersEnabledFn(
@@ -149,7 +150,7 @@ func TestGetAuthCapabilitiesStopsReadingTheProviderPolicyUnderAFlood(t *testing.
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if !body.Password {
-		t.Error("password sign-in was withheld from a throttled caller; it is the method that always remains")
+		t.Error("password sign-in was withheld from a throttled caller; this deployment offers it")
 	}
 }
 

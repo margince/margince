@@ -25,7 +25,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -47,8 +46,7 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 		return ctx, false, err
 	}
 	ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: actor})
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.SystemActing(ctx, actor)
 	return ctx, true, nil
 }
 

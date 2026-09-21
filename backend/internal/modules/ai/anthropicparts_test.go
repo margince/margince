@@ -87,7 +87,7 @@ func TestAnthropicImageBecomesABase64BlockOnTheLastUserTurn(t *testing.T) {
 		{Role: roleUser, Content: "first"},
 		{Role: roleAssistant, Content: "answered"},
 		{Role: roleUser, Content: "read this"},
-	}, []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}})
+	}, []model.Attachment{{MIME: "image/png", Bytes: pngSample}})
 
 	if len(msgs) != 3 {
 		t.Fatalf("want 3 messages, got %d", len(msgs))
@@ -110,7 +110,7 @@ func TestAnthropicImageBecomesABase64BlockOnTheLastUserTurn(t *testing.T) {
 	if blocks[1].Type != "image" || src == nil {
 		t.Fatalf("want an image block, got %+v", blocks[1])
 	}
-	if src.Type != "base64" || src.MediaType != "image/png" || src.Data != "UE5H" {
+	if src.Type != "base64" || src.MediaType != "image/png" || src.Data != pngSampleBase64 {
 		t.Errorf("inline bytes must become a base64 source, got %+v", src)
 	}
 	// The base64 rides the `data` field, never a data: URL — that spelling is the
@@ -144,10 +144,10 @@ func TestAnthropicPDFBecomesADocumentBlockNotAnImageOne(t *testing.T) {
 		check func(*testing.T, *anthropicSource)
 	}{
 		"inline bytes": {
-			att: model.Attachment{MIME: "application/pdf", Bytes: []byte("%PDF")},
+			att: model.Attachment{MIME: "application/pdf", Bytes: pdfSample},
 			check: func(t *testing.T, src *anthropicSource) {
 				t.Helper()
-				if src.Type != "base64" || src.MediaType != "application/pdf" || src.Data != "JVBERg==" {
+				if src.Type != "base64" || src.MediaType != "application/pdf" || src.Data != pdfSampleBase64 {
 					t.Errorf("inline bytes must become a base64 document source, got %+v", src)
 				}
 			},
@@ -187,7 +187,7 @@ func TestAnthropicPDFBecomesADocumentBlockNotAnImageOne(t *testing.T) {
 // system prompt travels elsewhere on this wire — gets one created rather than
 // the image being hung off an assistant turn.
 func TestAnthropicAttachmentWithNoUserTurnGetsOne(t *testing.T) {
-	msgs := anthropicMessages(nil, []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}})
+	msgs := anthropicMessages(nil, []model.Attachment{{MIME: "image/png", Bytes: pngSample}})
 	if len(msgs) != 1 || msgs[0].Role != roleUser {
 		t.Fatalf("want one created user turn, got %+v", msgs)
 	}

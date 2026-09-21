@@ -26,27 +26,23 @@
   background: var(--bgCard);
   border-radius: var(--r-sm);
   padding: var(--space-3);
-  line-height: 1.5;
   margin-top: var(--space-4);
 }
 
 .share-ceiling svg {
   width: 14px;
   height: 14px;
-  color: var(--textMeta);
   flex: none;
   margin-top: 2px; /* ds:ignore centres the 14px glyph on the first 18px line */
 }
 
 .share-ceiling b {
   color: var(--textPrimary);
-  font-weight: 600;
 }
 
 .share-backlink svg {
   width: 14px;
   height: 14px;
-  color: var(--textTertiary);
 }
 
 .share-subject-list {
@@ -83,13 +79,6 @@
   min-width: 0;
 }
 
-/* The body face, both values: an address is words a contact reads and a member
-   count is a sentence, and the mono face is for code alone. */
-.share-subject-note {
-  font-size: var(--fs-meta);
-  color: var(--textTertiary);
-}
-
 /* Contact/team affordance: the kind glyph sits inline before the name, in both
    the picker rows and the who-has-access list, so a name is never shown without
    a cue to whether it's a human or a team. */
@@ -104,7 +93,6 @@
 .share-kind-icon {
   width: 15px;
   height: 15px;
-  color: var(--textTertiary);
   flex: none;
 }
 
@@ -140,6 +128,5 @@
   width: 100%;
   resize: vertical;
   min-height: 60px;
-  line-height: 1.5;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }

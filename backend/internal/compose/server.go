@@ -141,7 +141,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		contactsHandlers: newContactsHandlers(pool).WithUploadLimit(limits.LinkedInImport),
 		dealsHandlers:    dealsH,
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
-		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool)).
+		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
 		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
@@ -167,6 +167,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// read rather than answer anything at all.
 		jobHealthHandlers: jobHealthHandlers{pool: pool},
 		captureHealthHandlers: captureHealthHandlers{
+			pool: pool, now: func() time.Time { return time.Now().UTC() },
+		},
+		extensionIngestHealthHandlers: extensionIngestHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
 		},
 		consentHandlers:     newConsentHandlers(pool),

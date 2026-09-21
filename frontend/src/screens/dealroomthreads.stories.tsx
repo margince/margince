@@ -99,7 +99,6 @@ function board(
     <StoryProviders>
       <DocumentBoard
         title="Documents"
-        sub="What the buyer can read, and what they have asked about it."
         groups={GROUPS}
         documents={documents}
         threads={threads}
@@ -247,7 +246,6 @@ export const ManyRoomThreadsGerman: Story = {
     <StoryProviders locale="de">
       <DocumentBoard
         title="Dokumente"
-        sub="Was der Käufer lesen kann — und was er dazu gefragt hat."
         groups={GROUPS}
         documents={DOCUMENTS}
         threads={Array.from({ length: 1204 }, (_, index) =>

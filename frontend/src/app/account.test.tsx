@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
@@ -76,7 +77,7 @@ const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
 };
 
 const row = (name: string) => screen.getByRole("menuitem", { name });
-const choice = (name: string) => screen.getByRole("menuitemradio", { name });
+const choice = (name: string) => screen.getByRole("radio", { name });
 
 describe("AccountMenu", () => {
   // The rail's chip and the settings page's chip are the SAME contact, so they
@@ -140,11 +141,13 @@ describe("AccountMenu", () => {
     await openMenu(user, railTrigger());
 
     const theme = row("Theme");
-    expect(theme.getAttribute("aria-haspopup")).toBe("menu");
+    // No popup claim: what the row opens is a group of radios, and every value
+    // `aria-haspopup` takes names a widget this is not.
+    expect(theme.getAttribute("aria-haspopup")).toBeNull();
     expect(theme.getAttribute("aria-expanded")).toBe("false");
     // Closed, the choices are not merely hidden — they are not rendered, so
     // there is nothing behind the row for a Tab or a screen reader to find.
-    expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
 
   it("opens the theme submenu from the pointer", async () => {
@@ -154,9 +157,11 @@ describe("AccountMenu", () => {
 
     await user.click(row("Theme"));
     expect(row("Theme").getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByRole("menu", { name: "Theme" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Theme" })).toBeTruthy();
     expect(
-      screen.getAllByRole("menuitemradio").map((item) => item.textContent),
+      screen
+        .getAllByRole("radio")
+        .map((item) => item.closest("label")?.textContent),
     ).toEqual(["Light", "Dark", "System"]);
   });
 
@@ -186,18 +191,18 @@ describe("AccountMenu", () => {
 
     const system = choice("System");
     const dark = choice("Dark");
-    expect(system.getAttribute("aria-checked")).toBe("true");
-    expect(dark.getAttribute("aria-checked")).toBe("false");
+    expect(system).toBeChecked();
+    expect(dark).not.toBeChecked();
 
     await user.click(dark);
 
-    expect(dark.getAttribute("aria-checked")).toBe("true");
-    expect(system.getAttribute("aria-checked")).toBe("false");
+    expect(choice("Dark")).toBeChecked();
+    expect(choice("System")).not.toBeChecked();
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem(THEME_KEY)).toBe("dark");
-    // The menu stays open on a pick: the whole of the feedback is the document
-    // repainting under it with the tick on the row that did it.
-    expect(screen.getByRole("menu", { name: "Theme" })).toBeTruthy();
+    // The group stays open on a pick: the whole of the feedback is the document
+    // repainting under it with the tick on the answer that did it.
+    expect(screen.getByRole("group", { name: "Theme" })).toBeTruthy();
   });
 
   // One keystroke, one layer. The dismissal both layers share stands the outer
@@ -211,7 +216,7 @@ describe("AccountMenu", () => {
     expect(document.activeElement).toBe(choice("System"));
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByRole("menu", { name: "Theme" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Theme" })).toBeNull();
     expect(container.querySelector(".accountmenu")).not.toBeNull();
     expect(document.activeElement).toBe(row("Theme"));
     expect(row("Theme").getAttribute("aria-expanded")).toBe("false");

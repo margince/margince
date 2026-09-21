@@ -6,6 +6,7 @@ import { isOption } from "../app/options";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -221,13 +222,12 @@ function LeadSourceRow({
           onChange={(next) => onUpdate({ active: next })}
         />
         {removable ? (
-          <Button small variant="danger" onClick={onRemove}>
+          <Button variant="danger" onClick={onRemove}>
             {t("leadSources.remove")}
           </Button>
         ) : (
           canRemove && (
             <span
-              className="t-caption"
               title={
                 builtIn
                   ? t("leadSources.builtInKept")
@@ -276,9 +276,9 @@ function AddSourceDialog({
           );
         }}
       >
-        <h2 className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
           {t("leadSources.newLabel")}
-        </h2>
+        </Heading>
         {create.isError && (
           <Callout
             kind="outcome"
@@ -321,14 +321,13 @@ function AddSourceDialog({
           )}
         </Field>
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("deals.cancel")}
           </Button>
           {/* Two facts, two props: `!ready` is a form with nothing in it yet
               and `isPending` is a write already on its way, and one `disabled`
               covering both draws them the same. */}
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!create.isPending && !ready}
@@ -397,7 +396,7 @@ export function LeadSourcesCard() {
       // list of sources as though it were one of them.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("leadSources.addOpen")}
           </Button>
         )
@@ -470,7 +469,6 @@ export function LeadSourcesCard() {
                       <span className="lead-vocab-flags">
                         {canCreate && (
                           <Button
-                            small
                             onClick={() =>
                               create.mutate({
                                 key: found.key,
@@ -527,9 +525,7 @@ export function LeadSourcesCard() {
             }
           }}
         >
-          <p className="t-caption">
-            {t("leadSources.removeBody", { label: removing?.label ?? "" })}
-          </p>
+          <p>{t("leadSources.removeBody", { label: removing?.label ?? "" })}</p>
         </ConfirmModal>
       </PanelBody>
     </Panel>
@@ -663,7 +659,6 @@ export function LeadDisqualifyReasonsCard() {
                             />
                             {removable ? (
                               <Button
-                                small
                                 variant="danger"
                                 onClick={() => setRemoving(reason)}
                               >
@@ -672,7 +667,6 @@ export function LeadDisqualifyReasonsCard() {
                             ) : (
                               canRemove && (
                                 <span
-                                  className="t-caption"
                                   title={
                                     builtIn
                                       ? t("leadSources.builtInKept")
@@ -719,7 +713,6 @@ export function LeadDisqualifyReasonsCard() {
                     onChange={(e) => setLabel(e.target.value)}
                   />
                   <Button
-                    small
                     type="submit"
                     variant="primary"
                     disabled={create.isPending}
@@ -751,9 +744,7 @@ export function LeadDisqualifyReasonsCard() {
             }
           }}
         >
-          <p className="t-caption">
-            {t("leadReasons.removeBody", { label: removing?.label ?? "" })}
-          </p>
+          <p>{t("leadReasons.removeBody", { label: removing?.label ?? "" })}</p>
         </ConfirmModal>
       </PanelBody>
     </Panel>

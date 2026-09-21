@@ -270,7 +270,14 @@ var errRefusedReading = errors.New("signal extract: the model's reading was refu
 func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extractedEvent, error) {
 	req := extractRequest(thread, identity.BaseLanguageForPrompt(ctx, x.pool))
 	validate := extractShapeValid(thread)
-	resp, err := ai.Ask(ctx, x.brain, req, validate)
+	// A conversation is several messages and one account, so the call names the
+	// ACCOUNT: the ruling behind the citation column is that a call spanning
+	// records names its subject rather than every record it touched, and a list
+	// that is right half the time is a citation nobody can trust. What that
+	// costs is stated where the purge runs — a contact's erasure reaches this
+	// payload by its text, not by this citation.
+	resp, err := ai.Ask(ai.WithSubject(ctx, ids.From[ids.CompanyKind](thread.CompanyID).Ref(), ""),
+		x.brain, req, validate)
 	if err != nil {
 		// The validator ran inside CompleteStructured and its policy is spent:
 		// three attempts, the last escalated, still refused. Re-reading the

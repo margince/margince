@@ -92,7 +92,7 @@ describe("the licence pill leads to the seats settings page", () => {
   it("links a missing licence to the seats page", async () => {
     const opened = await openPanel("absent");
     await waitFor(() => {
-      const pill = opened.querySelector("a.arwarn");
+      const pill = opened.querySelector("a.arwarning");
       expect(pill?.textContent).toBe("No license");
       expect(pill?.getAttribute("href")).toBe("#/settings/seats");
     });
@@ -103,7 +103,7 @@ describe("the licence pill leads to the seats settings page", () => {
   it("links a refused licence to the seats page", async () => {
     const opened = await openPanel("rejected");
     await waitFor(() => {
-      const pill = opened.querySelector("a.arwarn");
+      const pill = opened.querySelector("a.arwarning");
       expect(pill?.textContent).toBe("License refused");
       expect(pill?.getAttribute("href")).toBe("#/settings/seats");
     });

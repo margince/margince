@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { navigate, type Route } from "../app/router";
 import { Button, Modal, SearchField } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import "./candidatepicker.css";
@@ -121,7 +122,6 @@ export function MergeAction<Survivor extends { id: string }>({
   return (
     <>
       <Button
-        small
         reasonId={disabledReasonId}
         onClick={() => setOpen(true)}
         data-testid="merge-record"
@@ -129,10 +129,15 @@ export function MergeAction<Survivor extends { id: string }>({
         {label}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: "var(--space-3)" }}
+        >
           {label}
-        </h2>
-        <p className="t-caption" style={{ marginBottom: 8 }}>
+        </Heading>
+        <p style={{ marginBottom: "var(--space-2)" }}>
           {t("merge.pickTarget")}
         </p>
         <SearchField
@@ -145,11 +150,13 @@ export function MergeAction<Survivor extends { id: string }>({
           }}
         />
         {searchFailure ? (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(searchFailure, t)}
           </p>
         ) : null}
-        <ul style={{ listStyle: "none", margin: "8px 0", padding: 0 }}>
+        <ul
+          style={{ listStyle: "none", margin: "var(--space-2) 0", padding: 0 }}
+        >
           {candidates.map((candidate) => (
             <li key={candidate.id}>
               <Button
@@ -163,21 +170,20 @@ export function MergeAction<Survivor extends { id: string }>({
           ))}
         </ul>
         {target && (
-          <p style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: "var(--space-4)" }}>
             {t("merge.confirm", { source: sourceName, target: target.name })}
           </p>
         )}
         {mutation.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}
         <div className="actions">
-          <Button small onClick={close} disabled={mutation.isPending}>
+          <Button onClick={close} disabled={mutation.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             disabled={!target || mutation.isPending}
             onClick={() => {

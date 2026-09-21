@@ -60,6 +60,28 @@ func TestMixedReleaseRefusalNamesBothReleasesAndTheFix(t *testing.T) {
 	}
 }
 
+// TestMixedReleaseRefusalNamesTheRolloutThatProducesItToo: the refusal is read by
+// somebody deciding what to change, and for half of them the answer is not their
+// deploy. The record is last writer wins, so an api still on the previous release
+// restarting after the new one recorded puts the older release back — and every
+// correctly deployed role refuses with exactly this message. A message that
+// offered only "you deployed two releases" sends that operator to audit the one
+// thing that is right, which is the expensive half of this failure.
+func TestMixedReleaseRefusalNamesTheRolloutThatProducesItToo(t *testing.T) {
+	msg := strings.ToLower(refuseMixedRelease("1970.41", "1970.42").Error())
+	for _, want := range []string{"api", "restart", "last"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("the refusal does not mention %q, so it names only one of the two shapes that "+
+				"produce it: %s", want, msg)
+		}
+	}
+	// The correction for that shape, which is a different action from redeploying
+	// the set: the api is what restores the record.
+	if !strings.Contains(msg, "restores the record") {
+		t.Errorf("the refusal names the rollout shape without saying what corrects it: %s", msg)
+	}
+}
+
 // TestMixedReleaseRefusalNamesNoDeploymentMechanism: this software runs on any
 // container platform AND on a plain host, so the refusal must not tell an
 // operator to re-pull an image. Somebody who deployed no image cannot act on

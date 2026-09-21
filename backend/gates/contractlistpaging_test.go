@@ -56,9 +56,6 @@ var boundedButWhole = gatekit.Waive(map[string]string{
 	"listCommunicationReviews (/communication-reviews)": "a reviewer's queue with the defect this " +
 		"gate was written for, unfixed: oldest first, bounded at 100, no cursor. Fixing it here " +
 		"would multiply a paging change across a module this one does not touch; issue 5730",
-	"listWebhookDeliveries (/webhook-subscriptions/{id}/deliveries)": "answers a `page` and takes " +
-		"no cursor, so a caller is told there is more and handed no way to ask for it — the same " +
-		"defect, half-built; issue 5730",
 })
 
 // listPagingHolds is the census.

@@ -5,7 +5,7 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import {
   type AssignmentRecordType,
   type RecordAssignment,
@@ -63,7 +63,7 @@ export function RecordTeam({
   // that may already be there.
   const canWrite = !readOnly && !isPending && !isError;
   const assign = canWrite ? (
-    <Button small={bare} variant="ghost" onClick={() => setEditing("new")}>
+    <Button variant="ghost" onClick={() => setEditing("new")}>
       {t("assignments.add")}
     </Button>
   ) : undefined;
@@ -84,11 +84,7 @@ export function RecordTeam({
             so without this a responsibility that is still standing looks
             exactly like one that ended — and the next thing the reader does,
             they do believing it is gone. */}
-        {archive.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(archive.error, t)}
-          </p>
-        )}
+        {archive.isError && <RefusalLine error={archive.error} />}
         {isPending || isError || rows.length === 0 ? (
           <SurfaceState
             state={isPending ? "loading" : isError ? "failed" : "empty"}
@@ -182,7 +178,6 @@ function AssignmentRow({
               rail is narrow enough that a full-size pair pushed the role and
               name onto two wrapped lines each. */}
           <Button
-            small
             variant="ghost"
             onClick={onChange}
             disabled={busy}
@@ -197,7 +192,6 @@ function AssignmentRow({
           <IconAction
             label={t("assignments.removeOne", { who: row.subject_name })}
             icon={<X aria-hidden />}
-            small
             disabled={busy}
             onClick={onRemove}
           />

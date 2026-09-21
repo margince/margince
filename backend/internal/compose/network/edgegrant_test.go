@@ -30,8 +30,8 @@ func TestTheCoworkerReadRefusesBeforeItReachesAStatement(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	_, _, err := readAccountContacts(ctx, nil, ids.From[ids.ContactKind](ids.NewV7()))
+	_, _, err := readCompanyContacts(ctx, nil, ids.From[ids.ContactKind](ids.NewV7()))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("readAccountContacts(no edge grant) = %v, want ErrPermissionDenied", err)
+		t.Errorf("readCompanyContacts(no edge grant) = %v, want ErrPermissionDenied", err)
 	}
 }

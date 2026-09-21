@@ -1,5 +1,12 @@
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
 import { BusyMark } from "./atoms";
@@ -112,37 +119,19 @@ export function InlineChoice({
     return (
       <span>
         {!hideLabel && <>{label}: </>}
-        {canEdit ? (
-          <button
-            ref={trigger}
-            type="button"
-            className="inline-editable inline-editable-choice"
-            // aria-label, not title: the button's content is the VALUE, so
-            // without this a screen reader announces "Not assessed, button" —
-            // the state, with no hint that pressing it changes anything. title
-            // does not override content for the accessible name; aria-label
-            // does, and stays as the tooltip for a pointer. Carried
-            // regardless of `hideLabel`: the visible prefix is what a sighted
-            // reader does not need twice, not the accessible name a screen
-            // reader needs at all.
-            aria-label={t("inlineChoice.change", { field: label })}
-            title={t("inlineChoice.change", { field: label })}
-            onClick={() => {
-              setPending(value);
-              setFailure(null);
-              setEditing(true);
-            }}
-          >
-            {render(value)}
-            <ChevronDown
-              className="inline-editable-caret"
-              size={12}
-              aria-hidden="true"
-            />
-          </button>
-        ) : (
-          <span title={readOnlyReason}>{render(value)}</span>
-        )}
+        <ChoiceReading
+          canEdit={canEdit}
+          label={label}
+          value={value}
+          render={render}
+          readOnlyReason={readOnlyReason}
+          triggerRef={trigger}
+          onOpen={() => {
+            setPending(value);
+            setFailure(null);
+            setEditing(true);
+          }}
+        />
       </span>
     );
   }
@@ -232,5 +221,72 @@ export function InlineChoice({
         </span>
       )}
     </span>
+  );
+}
+
+/**
+ * The choice at rest: the value, as a trigger where the reader may change it
+ * and as words where they may not.
+ *
+ * Its own component rather than a branch inside the control: the editing form
+ * below carries the state, the guards and the write, and folding the resting
+ * pair in beside them put four unrelated decisions in one function.
+ */
+function ChoiceReading({
+  canEdit,
+  label,
+  value,
+  render,
+  readOnlyReason,
+  triggerRef,
+  onOpen,
+}: Readonly<{
+  canEdit: boolean;
+  label: string;
+  value: string;
+  render: (value: string) => ReactNode;
+  readOnlyReason?: string;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  onOpen: () => void;
+}>) {
+  const t = useT();
+  // A choice nobody has made still says so. Rendered blank, the row was a
+  // caret with nothing in front of it, and a reader could not tell an unset
+  // owner from a value that failed to load.
+  const shown = value ? render(value) : t("field.unset");
+  if (!canEdit) {
+    return (
+      <span
+        className={value ? undefined : "inlinechoice-unset"}
+        title={readOnlyReason}
+      >
+        {shown}
+      </span>
+    );
+  }
+  return (
+    <button
+      ref={triggerRef}
+      type="button"
+      className="inline-editable inline-editable-choice"
+      data-empty={!value}
+      // aria-label, not title: the button's content is the VALUE, so without
+      // this a screen reader announces "Not assessed, button", the state, with
+      // no hint that pressing it changes anything. title does not override
+      // content for the accessible name; aria-label does, and stays as the
+      // tooltip for a pointer. Carried regardless of `hideLabel`: the visible
+      // prefix is what a sighted reader does not need twice, not the
+      // accessible name a screen reader needs at all.
+      aria-label={t("inlineChoice.change", { field: label })}
+      title={t("inlineChoice.change", { field: label })}
+      onClick={onOpen}
+    >
+      {shown}
+      <ChevronDown
+        className="inline-editable-caret"
+        size={12}
+        aria-hidden="true"
+      />
+    </button>
   );
 }

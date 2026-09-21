@@ -71,8 +71,11 @@ func TestACitedMessageCarriesItsRowForAReaderWhoMayReadIt(t *testing.T) {
 	if got.ActivityId != logged.Id {
 		t.Errorf("the row names activity %v, want the cited %v", got.ActivityId, logged.Id)
 	}
-	if got.DisplayStatus != crmcontracts.EmailAccessStatusTeam {
-		t.Errorf("display_status = %q, want team for an unlimited mail", got.DisplayStatus)
+	// `workspace` and not `team`: the mail is filed against a shared contact, so
+	// a seat with no standing of any kind can find it, and that is what the two
+	// words tell apart. `team` here would be the badge understating the audience.
+	if got.DisplayStatus != crmcontracts.EmailAccessStatusWorkspace {
+		t.Errorf("display_status = %q, want workspace for a mail every seat can reach", got.DisplayStatus)
 	}
 }
 

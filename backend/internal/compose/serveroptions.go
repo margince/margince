@@ -85,16 +85,17 @@ func WithDealRoomInviteMail(m mailer.Mailer) Option {
 
 // WithMCPResource injects the canonical MCP resource URL — public_base_url
 // + "/mcp" — onto the identity discovery handlers, so the RFC 9728
-// protected-resource document names the MCP server URL itself rather than
-// the bare request origin. cmd computes the value from --public-base-url;
-// an OAuth audience decision must never be derived from the Host header.
-// The connector's Origin guard reads its allowlist from the same value: the
-// origin a browser client may present is the origin the resource document
-// names, so the two cannot drift apart through a second flag.
+// protected-resource document names the MCP server URL itself and both
+// discovery documents name their issuer from it rather than from the request.
+// cmd computes the value from --public-base-url; nothing that tells a client
+// where to send its credentials may be derived from the Host header. The connector's Origin guard and the transport's 401 challenge read
+// the same origin: the origin a browser client may present, the one the
+// challenge points at and the one the documents name cannot drift apart
+// through a second flag.
 func WithMCPResource(resource string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithMCPResource(resource)
-		s.mcpAllowedOrigin = mcpOriginOf(resource)
+		s.mcpAllowedOrigin = httpserver.ConfiguredOrigin(resource)
 	}
 }
 
@@ -341,7 +342,8 @@ func WithRetrievalEmbedder(embedder search.Embedder) Option {
 }
 
 // readinessChecks assembles the /readyz dependency probes for this role.
-// Postgres and the runtime role it connects as are always probed; the bus,
+// Postgres, the runtime role it connects as and the schema it was built
+// against are always probed; the bus,
 // the object store, the secret vault, and the schema pool are probed only
 // when this role wired them, so a split deployment answers ready on exactly
 // what it depends on. A wedged dependency must fail readiness — a probe is
@@ -350,7 +352,7 @@ func WithRetrievalEmbedder(embedder search.Embedder) Option {
 // runtimeRole takes the same shape as pgPing rather than a pool, because the
 // two unit-testable states here are the answers, not the connections: both
 // arrive as the caller's readings of the one pool routes.go serves from.
-func (s *Server) readinessChecks(pgPing, runtimeRole func(context.Context) error) []httpserver.ReadyCheck {
+func (s *Server) readinessChecks(pgPing, runtimeRole, schema func(context.Context) error) []httpserver.ReadyCheck {
 	checks := []httpserver.ReadyCheck{
 		{Name: "postgres", Check: pgPing},
 		// Boot already refused a pool holding an exemption; this reports the
@@ -358,6 +360,11 @@ func (s *Server) readinessChecks(pgPing, runtimeRole func(context.Context) error
 		// attributes are cluster state a grant can change under a running
 		// replica without restarting it.
 		{Name: "runtime-role", Check: runtimeRole},
+		// Re-read on every scrape rather than settled at boot: the ordinary
+		// deployment order starts the new binary and applies the migrations
+		// after it, so the first scrapes are meant to fail and a later one to
+		// pass — without a restart. schemareadiness.go carries the rest.
+		{Name: "schema-migrations", Check: schema},
 	}
 	if s.busReady != nil {
 		checks = append(checks, httpserver.ReadyCheck{Name: "redis", Check: s.busReady})

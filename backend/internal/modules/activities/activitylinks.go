@@ -126,7 +126,9 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 				return err
 			}
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+		// ATTACH: the named record gains an activity that every reader of it
+		// will see, so a share marked read-only does not confer this.
+		if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
 			return err
 		}
 		// AFTER the target probe, not before it. A caller naming a company they
@@ -218,7 +220,7 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // giving a written reason. relink_activity was raised to confirm-first for a
 // project destination for exactly that reason. The create path reaches the same
 // write and five tools ride it — log_activity, create_task, book_meeting,
-// draft_email, send_account_email — every one of them auto-execute. A passport
+// draft_email, send_company_email — every one of them auto-execute. A passport
 // holding activity:update could call any of them in a loop and mint one mark
 // per call with nobody watching (#2266).
 //

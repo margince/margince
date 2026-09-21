@@ -102,6 +102,9 @@ func base(
 		// then cannot pin the write is the last-write-wins this field ends.
 		Version: item.Version,
 		Deal:    dealFactsOf(item),
+		// The human behind the row, where the lane named one: a rep reads
+		// whose row it is before choosing a verb (contacttouch.go).
+		Contact: contactOf(item),
 		// Whose page a meeting's brief opens on. Forwarded rather than derived
 		// here: the lane already decided whether the reader may see anybody on
 		// the meeting, and an absent value is that decision rather than a gap.
@@ -322,6 +325,9 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
 	row.Subject = waitingSubject(waiting)
+	// The sender, whatever the subject: a thread filed under a deal is still a
+	// message from a contact, and the reply goes to them.
+	row.Contact = waitingContact(waiting)
 	if openableSubject(row.Subject) {
 		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
 		// Answering where the reader is standing, offered only for an EMAIL. The
@@ -360,6 +366,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		waitingDays: days,
 		waitingRank: orderingAge(days),
 		occurredAt:  waiting.Since,
+		// Whether this message is in a conversation, which decides what the
+		// reader is offered: two of the three dispositions are keyed on the
+		// thread and a threadless row can perform neither.
+		threaded: waiting.Threaded,
 		// Who owes the reply, so the scope filters can judge this row the way
 		// they judge a deal-bearing one. A wait carries no deal on the wire, and
 		// without this it is a row the filters cannot place: a named owner's

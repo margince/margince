@@ -63,13 +63,13 @@ export function OutcomeBadge({
       );
     case "skipped":
       return (
-        <Badge tone="warn">
+        <Badge tone="warning">
           <Minus size={12} aria-hidden /> {t("auto.runs.outcomeSkipped")}
         </Badge>
       );
     case "queued_for_approval":
       return (
-        <Badge tone="warn">
+        <Badge tone="warning">
           <Clock size={12} aria-hidden /> {t("auto.runs.outcomeQueued")}
         </Badge>
       );
@@ -77,12 +77,12 @@ export function OutcomeBadge({
 }
 
 // failed/blocked read as an error (danger); skipped/queued as an advisory
-// (warn) — the reason line tone matches its badge so the row reads honestly
+// (warning) — the reason line tone matches its badge so the row reads honestly
 // at a glance.
 function reasonColor(outcome: Outcome): string {
   return outcome === "failed" || outcome === "blocked"
     ? "var(--dangerText)"
-    : "var(--warnText)";
+    : "var(--warningText)";
 }
 
 // A labelled detail line, rendered ONLY by the caller when the field is
@@ -233,7 +233,6 @@ export function AutomationRuns({
           return (
             <Button
               key={option}
-              small
               variant={active ? "primary" : "ghost"}
               aria-pressed={active}
               onClick={() => setOutcome(option === "all" ? undefined : option)}

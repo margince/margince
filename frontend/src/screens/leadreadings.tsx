@@ -89,6 +89,15 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
   );
 }
 
+// The score's own words: the override sentence, else which factor won it,
+// else nothing to point at yet. Shared with the header's Score fact
+// (leadheader.tsx) so the two cannot come to name one number differently.
+export function scoreReasonLabel(lead: Lead, t: Translator): string {
+  if (lead.score_override_reason) return t("lead.overriddenBadge");
+  if (lead.score_reason) return scoreFactorLabel(lead.score_reason, t);
+  return t("lead.scoreNoSignals");
+}
+
 /** The status as the readings state it: the terminal wording when it has one. */
 export function statusReading(lead: Lead, t: Translator): string {
   const terminal = terminalBadge(lead);
@@ -129,11 +138,11 @@ function ScoreCard({
   // a score of ZERO the absence is the truth, whether or not a breakdown was
   // retained.
   const basis = explain.isPending ? (
-    <p className="t-caption">{t("lead.scoreLoading")}</p>
+    <p>{t("lead.scoreLoading")}</p>
   ) : explain.isError ? (
     <>
-      <p className="t-caption">{t("lead.scoreFactorsFailed")}</p>
-      <Button small variant="ghost" onClick={() => explain.refetch()}>
+      <p>{t("lead.scoreFactorsFailed")}</p>
+      <Button variant="ghost" onClick={() => explain.refetch()}>
         {t("common.retry")}
       </Button>
     </>
@@ -148,21 +157,15 @@ function ScoreCard({
       }))}
     />
   ) : explain.data?.explained || lead.score === 0 ? (
-    <p className="t-caption">{t("lead.scoreNoFactors")}</p>
+    <p>{t("lead.scoreNoFactors")}</p>
   ) : (
-    <p className="t-caption">{t("lead.scoreNotStoredYet")}</p>
+    <p>{t("lead.scoreNotStoredYet")}</p>
   );
   return (
     <StatCard
       label={t("lead.score")}
       value={formatNumber(lead.score, locale)}
-      detail={
-        lead.score_override_reason
-          ? t("lead.overriddenBadge")
-          : lead.score_reason
-            ? scoreFactorLabel(lead.score_reason, t)
-            : t("lead.scoreNoSignals")
-      }
+      detail={scoreReasonLabel(lead, t)}
       meter={{ filled: lead.score, total: 100 }}
       basis={basis}
     />
@@ -224,7 +227,7 @@ function FirstResponseCard({
       detail={t(breached ? "lead.sla.overdueSince" : "lead.sla.dueBy", {
         at: formatDateTime(clock.deadline, locale, zone),
       })}
-      tone={breached ? "danger" : atRisk ? "warn" : undefined}
+      tone={breached ? "danger" : atRisk ? "warning" : undefined}
     />
   );
 }

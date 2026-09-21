@@ -174,9 +174,16 @@ session or a token that has since rotated.
   reasoning that one outliving every copy of the message it rode on protects
   nobody: there is no longer a link for a subject to press, only a working
   credential for whoever finds one. Leads get one too, which is what gives a lead-only recipient an
-  opt-out. It works for the broad all-marketing scope; a lead pressing a
-  NAMED-PURPOSE credential records no stop at all, because the purpose-scoped
-  writer resolves contacts and a lead is not one.
+  opt-out. A lead pressing the broad all-marketing scope records an objection to
+  every marketing message; a lead pressing a NAMED-PURPOSE credential records a
+  stop narrowed to that one purpose, on `communication_suppression.purpose_id`,
+  and the engine binds it only to a marketing send that resolves to the same
+  purpose. It leaves the subject's OTHER marketing purposes running, which is
+  what "unsubscribe from this list" means, and it leaves the other categories
+  alone exactly as a broad objection does — an objection of either width says
+  nothing about an invoice. There is no unscoped marketing send for a narrow
+  stop to miss: a marketing message is only ever allowed once it has resolved
+  through a purpose, so the comparison always has both sides.
 - **A stop says who said it and how far it reaches.** An Art. 21 objection to
   direct marketing and a request to stop contact entirely are different legal
   acts with different reach, and the objection binds marketing alone while the
@@ -265,6 +272,31 @@ This is the one sanctioned exception to "a module writes only its own tables." E
 or stale waiver fails the test. See
 [reference/modules.md](../reference/modules.md) for the ownership map and
 [write-backbone.md](write-backbone.md) for the write shape these purges still ride.
+
+## What an erasure reaches in the AI telemetry, and what it does not
+
+With payload capture enabled (`ai.capture_payloads`, opt-in), `ai_call_payload` holds the request and
+response of every model call. For a reading of a meeting transcript that request **is** the transcript,
+which makes it the largest copy of somebody's words this product holds.
+
+An erasure reaches that table two ways, and the difference is worth knowing before you rely on either.
+
+**By citation.** A call that said which record it was about carries that record on `ai_call`
+(`subject_type`, `subject_id`), and the erasure deletes the payloads of every call that named the
+subject, an activity of theirs, or a lead wiped with them. This is the lane that reaches a transcript:
+a transcript names its speakers rather than addressing them, so it can hold a whole conversation
+without spelling one address.
+
+**By content.** Any payload whose text names one of the subject's addresses, matched crudely and on
+purpose — over-deleting captured telemetry is recoverable, under-deleting personal data is not.
+
+**The citation is an optimisation for the reachable half, not the boundary.** A call whose input spans
+several records names none, deliberately: a list that is right half the time is a citation nobody can
+trust for a purge. Those calls are reached by the content match or not at all, exactly as they were
+before the column existed, and their guaranteed end is the `ai_call_payload` retention window an
+installation configures. `backend/gates/aicallsubject_test.go` is the census that keeps the covered
+half honest: every model call in the tree either names its subject, says why it is about no single
+record, or is listed as owing one.
 
 ## Jurisdiction retention floors
 

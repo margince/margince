@@ -22,6 +22,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
@@ -150,9 +151,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   return (
     <div className="form-stack">
-      <p className="t-caption purpose-form-warning">
-        {t("privacy.purposeAppendOnly")}
-      </p>
+      <p>{t("privacy.purposeAppendOnly")}</p>
       <Field label={t("privacy.purposeKey")}>
         {(control) => (
           <TextInput
@@ -178,7 +177,6 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
         )}
       </Field>
       <Checkbox
-        className="t-caption"
         label={t("privacy.purposeDoi")}
         checked={requiresDoi}
         onChange={(event) => {
@@ -187,12 +185,11 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
         }}
       />
       {create.isError && (
-        <p className="t-caption purpose-form-error">
+        <p className="purpose-form-error">
           {problemMessageOf(create.error, t)}
         </p>
       )}
       <Button
-        small
         variant="primary"
         disabled={!key.trim() || !label.trim() || create.isPending}
         onClick={() => create.mutate()}
@@ -248,7 +245,7 @@ export function ConsentPurposesCard() {
       // stated instead.
       titleAction={
         canAdminister ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("privacy.addPurpose")}
           </Button>
         ) : undefined
@@ -286,7 +283,7 @@ export function ConsentPurposesCard() {
                       <Badge
                         key={purpose.id}
                         tone={
-                          purpose.requires_double_opt_in ? "warn" : undefined
+                          purpose.requires_double_opt_in ? "warning" : undefined
                         }
                       >
                         {purpose.label}
@@ -304,9 +301,9 @@ export function ConsentPurposesCard() {
           onClose={() => setAdding(false)}
           labelledBy={addTitleId}
         >
-          <h2 id={addTitleId} className="t-h2 modal-title">
+          <Heading size="large" id={addTitleId} className="t-h2 modal-title">
             {t("privacy.addPurpose")}
-          </h2>
+          </Heading>
           <PurposeCreateForm onDone={() => setAdding(false)} />
         </Modal>
       </PanelBody>
@@ -473,13 +470,10 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
       </Field>
 
       {create.isError && (
-        <p className="t-caption dsr-error">
-          {problemMessageOf(create.error, t)}
-        </p>
+        <p className="dsr-error">{problemMessageOf(create.error, t)}</p>
       )}
 
       <Button
-        small
         variant="primary"
         disabled={!subjectRef.trim() || !dueAt || create.isPending}
         onClick={() => create.mutate()}
@@ -495,10 +489,10 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
 // here rather than a silently untoned badge.
 const STATUS_TONE: Record<
   DsrStatus,
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   open: undefined,
-  in_progress: "warn",
+  in_progress: "warning",
   fulfilled: "success",
   rejected: "danger",
 };
@@ -620,7 +614,6 @@ function DsrTransitions({
       {nextStatuses(status).map((next) => (
         <Button
           key={next}
-          small
           disabled={
             ((next === "fulfilled" || next === "rejected") && !answered) ||
             pending
@@ -662,7 +655,6 @@ function DsrRow({
   const t = useT();
   const queryClient = useQueryClient();
   const [resolution, setResolution] = useState(dsr.resolution ?? "");
-  const assigneeFieldId = useId();
   const panelId = useId();
   const toggleId = useId();
 
@@ -761,7 +753,6 @@ function DsrRow({
   return (
     <li className="dsr-row">
       <Button
-        small
         id={toggleId}
         className="dsr-row-toggle"
         onClick={onToggle}
@@ -790,17 +781,20 @@ function DsrRow({
             </div>
 
             <div className="field">
-              <label className="t-label" htmlFor={assigneeFieldId}>
-                {t("privacy.assignee")}
-              </label>
-              <Select
-                id={assigneeFieldId}
-                options={assigneeOptions(assignableUsers, currentAssignee)}
-                value={dsr.assignee_id ?? ""}
-                disabled={patch.isPending}
-                onChange={(value) => patch.mutate({ assignee_id: value })}
-              />
-              <p className="t-caption">{t("privacy.assigneeUnassignable")}</p>
+              <Field
+                label={t("privacy.assignee")}
+                hint={t("privacy.assigneeUnassignable")}
+              >
+                {(control) => (
+                  <Select
+                    {...control}
+                    options={assigneeOptions(assignableUsers, currentAssignee)}
+                    value={dsr.assignee_id ?? ""}
+                    disabled={patch.isPending}
+                    onChange={(value) => patch.mutate({ assignee_id: value })}
+                  />
+                )}
+              </Field>
               {/* Who this list leaves out is already its subject, so a roster
                   that stopped short of the workspace belongs on the same line
                   rather than being the one omission nobody is told about. */}
@@ -824,13 +818,13 @@ function DsrRow({
                 either way. The paragraph mounts carrying its message, which is
                 the case an assertive region is for. */}
             {patchErrorMessage && (
-              <p className="t-caption dsr-error" role="alert">
+              <p className="dsr-error" role="alert">
                 {patchErrorMessage}
               </p>
             )}
 
             {terminal ? (
-              <p className="t-caption">{t("privacy.closed")}</p>
+              <p>{t("privacy.closed")}</p>
             ) : (
               <>
                 <Field
@@ -989,16 +983,15 @@ function FulfilErasureModal({
       returnFocusTo={returnFocusTo}
     >
       <p>{t("privacy.erasureIrreversible")}</p>
-      <div className="field dsr-erase-field">
-        <label className="t-label" htmlFor="dsr-type-erase">
-          {t("privacy.typeErase")}
-        </label>
-        <TextInput
-          id="dsr-type-erase"
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-      </div>
+      <Field className="dsr-erase-field" label={t("privacy.typeErase")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        )}
+      </Field>
       <ErasureRefusals held={held} movedOn={movedOn} />
     </ConfirmModal>
   );
@@ -1173,7 +1166,7 @@ export function PrivacyInboxCard() {
       // verb and refused it.
       titleAction={
         !canOpenRequest ? null : (
-          <Button small onClick={() => setCreating(true)}>
+          <Button onClick={() => setCreating(true)}>
             {t("privacy.newRequest")}
           </Button>
         )
@@ -1218,9 +1211,13 @@ export function PrivacyInboxCard() {
             onClose={() => setCreating(false)}
             labelledBy={createTitleId}
           >
-            <h2 id={createTitleId} className="t-h2 modal-title">
+            <Heading
+              size="large"
+              id={createTitleId}
+              className="t-h2 modal-title"
+            >
               {t("privacy.newRequest")}
-            </h2>
+            </Heading>
             <NewDsrForm onDone={() => setCreating(false)} />
           </Modal>
           <FulfilErasureModal

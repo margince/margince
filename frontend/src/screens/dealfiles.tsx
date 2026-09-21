@@ -86,16 +86,15 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   return (
     <Panel
       title={t("files.title")}
-      sub={t("files.sub")}
       titleAction={
         mayWrite ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("docs.add.action")}
           </Button>
         ) : undefined
       }
       footer={
-        <Button small variant="ghost" onClick={() => setShowHidden((s) => !s)}>
+        <Button variant="ghost" onClick={() => setShowHidden((s) => !s)}>
           {showHidden ? t("files.hideHidden") : t("files.showHidden")}
         </Button>
       }
@@ -151,7 +150,7 @@ function FileRow({
         >
           {file.title || file.filename}
         </a>
-        <p className="t-caption deal-file-origin">
+        <p className="t-caption">
           {doc.origin
             ? t("files.origin", {
                 who: doc.origin.counterparty_email ?? t("files.originUnknown"),
@@ -237,13 +236,12 @@ function FileMenu({
       label={t("files.rowActions", { name: doc.attachment.filename })}
     >
       {captured && !doc.hidden ? (
-        <Button small variant="ghost" onClick={onHide}>
+        <Button variant="ghost" onClick={onHide}>
           {t("files.hide")}
         </Button>
       ) : null}
       {captured && doc.hidden ? (
         <Button
-          small
           variant="ghost"
           pending={unhide.isPending}
           onClick={() => unhide.mutate()}
@@ -252,7 +250,7 @@ function FileMenu({
         </Button>
       ) : null}
       {!captured ? (
-        <Button small variant="ghost" onClick={onDelete}>
+        <Button variant="ghost" onClick={onDelete}>
           {t("files.delete")}
         </Button>
       ) : null}
@@ -311,7 +309,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
     // The same obligation the team restore carries, for the same reason: this
     // is what the hide's Undo runs, and that message is consumed on the press.
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
     },
     onSuccess: async () => {
       await refresh();

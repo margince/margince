@@ -101,6 +101,13 @@ type ranked struct {
 	// both published the bounded number as though it were the real one: a row
 	// saying "waiting 180 days" while its own explanation compared 30 against
 	// 20, which is a reason nobody can check.
+	// threaded says the message behind a waiting row belongs to a conversation.
+	//
+	// Carried on the ranked row rather than on the wire item, because it is not
+	// a fact a client needs — what a client needs is the dispositions it
+	// produces, which is what travels. Zero for every other source, and read
+	// only where the source is waiting.
+	threaded bool
 	// pinned says the reader put this row at the top, and semanticLevel is the
 	// level its own classifier gave it before the pin overwrote item.Level.
 	//
@@ -252,7 +259,7 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// classifier, so a source added later carries a primary action by
 		// arriving in this loop instead of by its author remembering to.
 		if item.Source == sourceWaiting {
-			offered := waitingDispositions()
+			offered := waitingDispositions(row.threaded)
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)

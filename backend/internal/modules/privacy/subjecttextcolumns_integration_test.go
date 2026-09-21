@@ -76,11 +76,15 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 				 VALUES ($1, $2, 'manual', 'user:'||$3::text)`, contact, subjectEmail, user)
 			// The twin the erasure reaches through promoted_contact_id.
 			mustExec(ctx, t, tx,
+				// score_computed alongside the override reason, which the table
+				// now requires: an override RETAINS the machine value it
+				// overrides, so a reason with nothing behind it is a row the
+				// product cannot produce.
 				`INSERT INTO lead (id, full_name, source, captured_by, promoted_contact_id,
-				                   linkedin_url, disqualify_note, score_override_reason)
+				                   linkedin_url, disqualify_note, score_computed, score_override_reason)
 				 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text, $3,
 				         'https://www.linkedin.com/in/hedda-subject',
-				         'said on the call she has moved to a competitor',
+				         'said on the call she has moved to a competitor', 61,
 				         'raised by hand after she answered the second mail')`,
 				lead, user, contact)
 
@@ -112,11 +116,15 @@ func TestTheLeadRetentionActionClearsTheSameThreeColumns(t *testing.T) {
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
 		user, "admin-"+user.String()+"@anon.test")
 	mustExec(ctx, t, tx,
+		// score_computed alongside the override reason, for the reason the
+		// erasure seed above carries it: an override RETAINS the machine value
+		// it overrides, so a reason with nothing behind it is a row the product
+		// cannot produce.
 		`INSERT INTO lead (id, full_name, source, captured_by,
-		                   linkedin_url, disqualify_note, score_override_reason)
+		                   linkedin_url, disqualify_note, score_computed, score_override_reason)
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text,
 		         'https://www.linkedin.com/in/hedda-subject',
-		         'said on the call she has moved to a competitor',
+		         'said on the call she has moved to a competitor', 61,
 		         'raised by hand after she answered the second mail')`,
 		lead, user)
 

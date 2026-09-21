@@ -153,11 +153,14 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var linkedinURL *string
 	var version int64
 	var visibility string
+	var sourceSystem, authorName, authorSeatName *string
+	var authorID *ids.UUID
 
 	dests := []any{
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&lifecycle, &relevance, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
+		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
 		&o.LastActivityAt,
 	}
@@ -184,5 +187,6 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		o.Address = a
 	}
 	o.Version = &version
+	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	return o, nil
 }

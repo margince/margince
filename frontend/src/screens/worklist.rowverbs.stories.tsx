@@ -10,7 +10,9 @@ import type { MessageKey } from "../i18n/en";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import { rowHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
+import { WaitingReply } from "./worklist.reply";
 import { RowActs } from "./worklist.rowverbs";
+import { TriageActs } from "./worklist.rowverbs.triage";
 // The line's own sheet. `.worklist-row-acts` is where its trailing alignment,
 // its wrapping and its `--gapActions` interval live, so a story without it
 // draws the verbs as a bare inline run on the leading edge with no gap between
@@ -86,11 +88,7 @@ function Verb({
   answer,
 }: Readonly<{ message: MessageKey; answer?: boolean }>) {
   const t = useT();
-  return (
-    <Button small variant={answer ? "primary" : "ghost"}>
-      {t(message)}
-    </Button>
-  );
+  return <Button variant={answer ? "primary" : "ghost"}>{t(message)}</Button>;
 }
 
 function taskRow(): WorklistItem {
@@ -252,14 +250,20 @@ export const TheLineInDark: Story = {
  *
  * The one frame drawn INSIDE the row's own box, because the target floor is the
  * ROW's rule rather than the line's: without that box the verbs would be drawn
- * here at the 36px a coarse pointer gets them to, which is not what a reader
- * meets. At this width the box costs nothing — the row is a wrapping flex line
+ * here at the plain --controlHeight every control in the product wears, which
+ * is not what a reader meets — the row raises its own targets, and it is the
+ * only thing that does now that a control is one size under any pointer. At this width the box costs nothing — the row is a wrapping flex line
  * and the verbs take all of it — while above it the row's kind column would
  * stand empty beside them, which is why the other three frames go without.
  */
 export const TheLineOnAPhone: Story = {
   ...AWaitingRowWithEveryVerb,
   globals: { viewport: { value: "phone" } },
+  // `uat-phone` is what makes the capture gate drive the browser to 390px. The
+  // viewport global alone moves Storybook's own frame and not the gate's, so
+  // without the tag this frame was captured at the desktop width — which draws
+  // the band this story exists to show folded away.
+  tags: ["uat-phone"],
   decorators: [
     (Story) => (
       <div className="worklist-row">
@@ -286,5 +290,64 @@ export const ReplyToANamedDealConversation: Story = {
     },
     href: "#/deals/01a00000-0000-7000-8000-000000000001",
     owner: "",
+  },
+};
+
+/**
+ * THE SAME VERBS, REORDERED FOR THE ROW IN HAND on the Brief.
+ *
+ * A queue row is one of many and its line ends on the lane's answer. The card
+ * in hand is the only row a reader is looking at, so the line reads the way
+ * answering ONE row goes: the set-asides lead from the opening edge, because
+ * declining steps away from the work before any of it is done; the ways into
+ * it follow; and the move the product prepared closes the line on the trailing
+ * edge. The verb that only reaches the record is not on it at all — the card
+ * names that record and links it.
+ *
+ * What to look for against `A waiting row with every verb` directly above: the
+ * same controls, the put-downs moved from the middle of the line to its head,
+ * and the prepared move moved from its head to the end.
+ */
+export const TheLineOnTheCardInHand: Story = {
+  render: () => (
+    <TriageActs
+      item={waitingRow()}
+      href={rowHref(waitingRow())}
+      owner=""
+      primary={<Verb message="compose.reply" answer />}
+    />
+  ),
+};
+
+/**
+ * THE ANSWER A RULE PREPARED, which is the reply itself and not a button
+ * beside it.
+ *
+ * A waiting message whose move is `draft_reply` gets ONE control on the line:
+ * the composer's own reply, wearing the agent's face and mark because the
+ * ranking and the steer are a machine's doing, and carrying the word for the
+ * act rather than the bare "Reply". The frames above show the same line with
+ * no prepared move on it, where the answer is that bare word.
+ *
+ * What to look for: one marked control and not two, still last and still on
+ * the trailing edge, and the mark reading as a mark beside a word rather than
+ * as a stray glyph.
+ */
+export const ThePreparedReplyIsTheAnswer: Story = {
+  render: () => {
+    const item = waitingRow();
+    return (
+      <TriageActs
+        item={item}
+        href={rowHref(item)}
+        owner=""
+        primary={
+          <WaitingReply
+            item={item}
+            to={{ type: "deal", id: "01a05500-0000-7000-8000-0000000000bb" }}
+          />
+        }
+      />
+    );
   },
 };

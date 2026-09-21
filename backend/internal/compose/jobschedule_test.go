@@ -215,7 +215,7 @@ func assertTableAnswersExactly(t *testing.T, table string, answered, declared []
 func TestEveryDeclaredRegistrationFieldIsAnswered(t *testing.T) {
 	assertTableAnswersExactly(t, "configDependencies",
 		slices.Sorted(maps.Keys(configDependencies(JobRunnerConfig{}))),
-		declaredFieldPaths(func(spec jobs.Spec) []string { return spec.Registration.When }))
+		slices.Sorted(maps.Keys(gatedDependencyPaths())))
 }
 
 // TestEveryDeclaredCadenceFieldIsAnswered is the same obligation for the

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../story-utils";
-import { DealCommitteeMap } from "./dealcommittee";
+import { CommitteeReading } from "./dealcommittee";
 
 // The buying committee, drawn.
 //
@@ -15,9 +15,9 @@ import { DealCommitteeMap } from "./dealcommittee";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
-const meta: Meta<typeof DealCommitteeMap> = {
+const meta: Meta<typeof CommitteeReading> = {
   title: "Records/Deal committee",
-  component: DealCommitteeMap,
+  component: CommitteeReading,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -31,7 +31,7 @@ const meta: Meta<typeof DealCommitteeMap> = {
 };
 export default meta;
 
-type Story = StoryObj<typeof DealCommitteeMap>;
+type Story = StoryObj<typeof CommitteeReading>;
 
 const DEAL_ID = "01a03000-0000-7000-8000-000000000001";
 
