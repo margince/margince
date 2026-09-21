@@ -6,7 +6,6 @@ package contacts
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 // cjkCompany is one real-shaped CJK name and the brand it must reduce to.
@@ -212,17 +211,27 @@ func TestACJKFormInsideABrandIsKept(t *testing.T) {
 // company-name write lock is held and `display_name` has no length cap in
 // the contract. Measured before the bound, a name of 10 000 concatenated forms
 // took 370ms; every other company-name writer waits behind that.
+//
+// Asserted as WORK, never as milliseconds. A clock bound here means one thing
+// on an idle laptop and another on a runner with five lanes on it, and this
+// test sits in the merge gate — the verdict has to be the same on both.
+//
+// The work IS the loop bound: everything past the strip is one normalizing
+// pass over the name, so what made the unbounded version quadratic was the
+// number of times it went round. Counting the forms that came off states that
+// exactly, and answers the same on any machine. Removing the bound trips it at
+// 20 000 forms shed against 4 — and takes nine seconds doing it.
 func TestTheCJKStripIsBounded(t *testing.T) {
-	name := strings.Repeat("株式会社", 20000) + "ガナ"
-	start := time.Now()
+	const forms = 20000
+	name := strings.Repeat("株式会社", forms) + "ガナ"
 	got, isCJK := cjkNameForMatching(name)
-	elapsed := time.Since(start)
 	if !isCJK {
 		t.Fatal("a name of nothing but legal forms is still this path's to answer")
 	}
-	if elapsed > 200*time.Millisecond {
-		t.Errorf("stripping took %v — the bound is not holding, and this runs "+
-			"under the company-name write lock", elapsed)
+	if left := strings.Count(got, "株式会社"); left != forms-cjkMaxFormsStripped {
+		t.Errorf("the strip shed %d forms, want %d — the loop bound is not holding, "+
+			"and this runs under the company-name write lock",
+			forms-left, cjkMaxFormsStripped)
 	}
 	// Bounded, not wrong: the brand is still found at the end of what remains.
 	if !strings.HasSuffix(got, "ガナ") {
