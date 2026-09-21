@@ -194,7 +194,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// says why they are registered anyway.
 	"sendEmail":           sendEmailCommand,
 	"sendMessage":         sendMessageCommand,
-	"sendAccountEmail":    sendAccountEmailCommand,
+	"sendCompanyEmail":    sendCompanyEmailCommand,
 	"bookMeeting":         bookMeetingCommand,
 	"promoteLead":         promoteLeadCommand,
 	"disqualifyLead":      disqualifyLeadCommand,

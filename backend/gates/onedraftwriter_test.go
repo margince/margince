@@ -18,7 +18,7 @@ package gates
 // failed while they were two, which is why they stayed two — and they were
 // already deciding independently what the fence looks like, how a fenced answer
 // is unwrapped, what a starved MAX_TOKENS reply does, and which drafts carry the
-// Art. 50 disclosure.
+// AI provenance notice.
 //
 // This gate fails in both directions:
 //

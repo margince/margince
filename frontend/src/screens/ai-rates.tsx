@@ -161,7 +161,7 @@ function LaneSlot({
       <StatCard
         label={label}
         value={t("aiRates.unpriced")}
-        tone="warn"
+        tone="warning"
         detail={
           <>
             <span>{modelId}</span>

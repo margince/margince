@@ -334,11 +334,7 @@ function TriggerButton({
         </span>
       )}
       <span
-        className={
-          placeholderShown
-            ? "select-face select-face-placeholder"
-            : "select-face"
-        }
+        className={placeholderShown ? "select-face " : "select-face"}
         // The face repeats a selected option's label, so it inherits that
         // option's language declaration. A placeholder is our own copy and is
         // therefore in the document's language, which is why the caller passes

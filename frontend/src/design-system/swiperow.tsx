@@ -167,7 +167,6 @@ export function SwipeRow({
         // from.
         <div className="swipe-row-staged" role="status">
           <Button
-            small
             onClick={() => {
               staged.onAct();
               setStaged(null);
@@ -175,7 +174,7 @@ export function SwipeRow({
           >
             {staged.label}
           </Button>
-          <Button small variant="ghost" onClick={() => setStaged(null)}>
+          <Button variant="ghost" onClick={() => setStaged(null)}>
             {cancelLabel}
           </Button>
         </div>

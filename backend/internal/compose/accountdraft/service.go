@@ -157,11 +157,11 @@ func NewService(view Assembler, lane Completer) *Service {
 // Draft writes one email. It performs no write of any kind.
 func (s *Service) Draft(
 	ctx context.Context, companyID ids.CompanyID, req Request,
-) (crmcontracts.AccountEmailDraft, error) {
+) (crmcontracts.CompanyEmailDraft, error) {
 	// Human-only: drafting spends the workspace's model budget on prose for a
 	// contact to send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The gates that matter run HERE, in the caller's own composite read: an
 	// account they cannot read refuses before a word is written, a contact
@@ -169,12 +169,12 @@ func (s *Service) Draft(
 	// they cannot see refuses the scoped read itself (activities.RequireProjectScope).
 	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID})
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	req.Envelope = s.envelopeFor(ctx, view)
 	in, err := FromView(view, req)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	in.Dossier = s.facts(ctx, companyID)
 	// Loaded after the 360 read, so a caller who may not read this account is
@@ -182,7 +182,7 @@ func (s *Service) Draft(
 	voice := draftvoice.Load(ctx, s.voice, s.log)
 	draft, by, err := Write(ctx, s.lane, in, voice)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	out := wire(draft, by, voice.Degraded, req.Envelope.Language)
 	// The scoped read's own report of what the narrowing kept, so the
@@ -191,7 +191,7 @@ func (s *Service) Draft(
 	// Nothing here is stored, so there is no ordering to respect — only the
 	// one read, over the reasons this draft actually cites.
 	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromReasons(out.Reasoning)); err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	return out, nil
 }
@@ -201,9 +201,9 @@ func (s *Service) Draft(
 // draft_ref is deliberately absent. The reply drafter returns one so the voice
 // model can learn from what the rep changed — and recording a served draft is
 // a WRITE, which this operation does not perform.
-func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.AccountEmailDraft {
+func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.CompanyEmailDraft {
 	aiWritten := by == crmcontracts.WrittenByModel
-	out := crmcontracts.AccountEmailDraft{
+	out := crmcontracts.CompanyEmailDraft{
 		Subject:       draft.Subject,
 		Body:          draft.Body,
 		GeneratedBy:   by,
@@ -218,7 +218,7 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		}
 		out.To = &to
 	}
-	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, textlang.Lang(lang))
+	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
 	return out
 }
 

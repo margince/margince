@@ -253,7 +253,9 @@ paths:
       summary: Authenticate with email + password and open a session.
       description: |
         Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
-        and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
+        and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`), plus a
+        `crm_device` cookie (same attributes, 90-day `Max-Age`) whose proof lets this browser
+        sign in to the same account while a failed-login lock someone else tripped is in force. Accepts
         email + password only — no tenant selector (ADR-0061). Failures are neutral (no
         account enumeration), rate-limited, and verified at full cost either way. The MFA and
         SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
@@ -265,11 +267,11 @@ paths:
             schema: { $ref: '#/components/schemas/LoginRequest' }
       responses:
         '200':
-          description: Authenticated; session cookie set.
+          description: Authenticated; session and device cookies set.
           headers:
             Set-Cookie:
               schema: { type: string }
-              description: 'crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/'
+              description: 'crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ — and crm_device=<proof>; Max-Age=7776000; HttpOnly; Secure; SameSite=Strict; Path=/'
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeResponse' }
@@ -638,6 +640,45 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CaptureHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller is an agent/passport principal (this endpoint is human-only)
+            or a human without the admin role. Not an object/action RBAC grant denial.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /admin/extension-ingest-health:
+    get:
+      tags: [Identity]
+      operationId: getExtensionIngestHealth
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Which composed units are handing the core records it cannot express.
+      description: >
+        Admin-only. Reports, per composed unit, how many records the core's ingress grammar
+        refused over the reporting window and which check refused them.
+
+
+        A unit moves its cursor past a record the core cannot express — stopping on one
+        malformed message parks the whole connection — so the drop leaves the unit's own
+        logs and nothing else. Without this an installation reading only the CRM cannot
+        tell a provider format change from a feed with nothing on it: every record refused
+        presents exactly like a healthy quiet feed.
+
+
+        COUNTS AND A CLASS ONLY. Never the refused record, and never the core's own sentence
+        about it: that sentence quotes the record back — a participant's account id, a
+        provider name — and the extension tier deliberately holds no third-party content and
+        no retention apparatus for any. The class is the core's closed vocabulary and is the
+        granularity an operator acts on. Human session only (x-agent-access: human-only).
+      responses:
+        '200':
+          description: What the core has refused from this installation's units.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionIngestHealth' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: >
@@ -1481,7 +1522,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1797,7 +1838,7 @@ paths:
           description: The note, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -2939,7 +2980,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -3536,7 +3577,7 @@ paths:
       - $ref: '#/components/parameters/Id'
     post:
       tags: [Companies, AI]
-      operationId: draftAccountEmail
+      operationId: draftCompanyEmail
       x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
@@ -3616,7 +3657,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -4015,6 +4056,53 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /companies/{id}/capture-triage:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: getCompanyCaptureTriage
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Which mail domains were triaged into this company, and what each concluded.
+      description: |
+        The company-keyed door onto the capture pipeline's one domain-subject stage
+        (`company_triage`). The other two doors — `readActivityPipelineTrace` and
+        `readCaptureTracePipeline` — are message-keyed, and this stage does not fit either: its
+        subject is a DOMAIN, and a domain is triaged once for every message that ever arrives
+        from it. A per-message rung would answer "done" for the message that prompted the triage
+        and for the hundredth one after it alike, which reads as that message having been the
+        cause. So the message ladder names where the answer lives (`answered_on_the_company`)
+        and this is the answer.
+
+
+        One entry per domain the ledger resolved into this company, each carrying a rung in the
+        same vocabulary the message ladder uses — status, reason class, reason text — so a
+        client renders both from one catalog. A company nobody triaged into (typed in by hand,
+        or imported) answers an empty list: that is not a gap, and the surface says so rather
+        than reporting one.
+
+
+        Gated by the COMPANY's own row scope: a company outside the caller's scope is
+        existence-hidden exactly as `getCompany` hides it, never answered with an empty list.
+      responses:
+        '200':
+          description: The domains triaged into this company (empty array when none were).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyCaptureTriage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503':
+          description: >
+            This deployment composed no domain triage, so there is no company check to read.
+            An empty list would say the domains were never triaged, which a composition gap
+            cannot support.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /companies/{id}/facts:
     parameters:
@@ -6576,7 +6664,7 @@ paths:
   /emails:
     post:
       tags: [Activities, AI]
-      operationId: sendAccountEmail
+      operationId: sendCompanyEmail
       summary: Start a new email conversation from a record — runs directly, consent-gated.
       description: |
         The account-started twin of `send_email` (ADR-0087). "Write email" from a company,
@@ -6601,14 +6689,14 @@ paths:
 
         Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
         directly on the passport holder's own authority (ADR-0055). Under a tier floor on
-        `send_account_email` it stages instead, and what is staged is a CREATE — this send
+        `send_company_email` it stages instead, and what is staged is a CREATE — this send
         answers no message, so there is no anchor to name and no version to pin — released
         by a human holding `activity.create`, the grant `send_email` already asks of its
         approver. Whichever door
         the call arrives at, every entry in `links` is row-scope probed before the message is
         sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
         see is refused before a human is asked about it at all.
-      x-mcp-tool: { verb: send_account_email, record_type: activity, tier: auto_execute, scope: send }
+      x-mcp-tool: { verb: send_company_email, record_type: activity, tier: auto_execute, scope: send }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -6616,7 +6704,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/SendAccountEmailRequest' }
+            schema: { $ref: '#/components/schemas/SendCompanyEmailRequest' }
       responses:
         '202':
           description: Accepted for send (queued); the resulting outbound activity is logged.
@@ -6899,7 +6987,7 @@ paths:
                   description: |
                     Entities to associate the resulting meeting activity with. At least one is
                     required: a meeting belonging to no record appears on no timeline and is one
-                    nobody will find again, which is the same reason `SendAccountEmailRequest`
+                    nobody will find again, which is the same reason `SendCompanyEmailRequest`
                     carries the bound. Each one is row-scope probed and written as its own row,
                     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
                     before it stages.
@@ -8334,7 +8422,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -10338,6 +10426,15 @@ paths:
         saves the company form: that 404 IS the "this installation has not described itself yet" signal,
         and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
         customer records.
+
+
+        ADMIN ONLY, and the read as much as the write beside it. The installation's identity is
+        administered — the same answer user administration, privacy and the audit log give — rather
+        than a record owned by a role in the customer-record vocabulary. It used to ride the
+        `company` object, which governs customer accounts, so every role holding that object could
+        edit the installation's own name. Whether this installation has described itself YET is a
+        different question and is not administered: the growth fit and the onboarding conversation
+        both resolve it, for any seat.
       responses:
         '200':
           description: The anchor company's profile.
@@ -10345,6 +10442,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CompanyProfile' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No company saved yet — onboarding has not been completed.
           content:
@@ -10369,6 +10467,10 @@ paths:
         Unlike the cold-start accept path this never resolves a target by domain: the workspace names its
         own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
         a website. Fields omitted from the body are left untouched; fields sent empty are cleared.
+
+
+        ADMIN ONLY — see the read above for why the installation's identity is administered rather
+        than gated on the object that governs customer accounts.
       requestBody:
         required: true
         content:
@@ -16433,6 +16535,69 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /users/former:
+    post:
+      tags: [Identity]
+      operationId: createFormerMember
+      summary: Record a colleague who has already left. Admin-only, human-only.
+      description: |
+        Creates a DEACTIVATED seat for somebody who worked here before this installation
+        existed, so imported history can name them as its author and the interface can
+        resolve that name.
+
+        It is not an invitation and not a deactivated invitation. No set-password token is
+        minted, no mail is sent, and there is no way in: `password_hash` is null and the
+        status is `deactivated`, which is the one status that may never sign in. Nor does it
+        consume a licence — the seat count excludes deactivated seats, which is what makes
+        recording thirty-six departed colleagues a bookkeeping act rather than a purchase.
+
+        `archived_at` stays null on purpose. An archived seat stops resolving in the roster
+        reads that put a name on a timeline row, and a former member exists precisely so
+        their name still appears on the work they did.
+
+        Admin-only (`role: admin`); an agent may never provision a human. A duplicate email
+        answers 409 `email_taken` — if that member is merely deactivated they are already
+        what this route would create, and if they are active this is the wrong route.
+
+        Emits no event: the closed V1 catalog carries `user.invited`, which announces an
+        invitation a subscriber is expected to deliver, and nothing was invited here.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FormerMemberRequest' }
+      responses:
+        '201':
+          description: The former member's seat.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >-
+            Refused: `permission_denied` — the caller is not an admin, or is an agent.
+            No seat-limit refusal is possible here, because a deactivated seat is not
+            metered.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404':
+          description: >-
+            `unknown_role` — this company defines no role with the requested key. The
+            enum is documentation rather than binding validation, so a mistyped key
+            reaches the server.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >-
+            `email_taken` — a seat with this address already exists. A former member is
+            recorded once; if they came back, reactivate the seat rather than adding a
+            second one.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /users/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -18668,7 +18833,7 @@ paths:
         Copies the sent offer's header + lines into revision N+1 as a new `draft`, marks the prior revision
         `superseded` and emits `offer.superseded` + `offer.created`. A sent offer is never
         mutated in place. When an AI draft applies (regenerate-from-signal), the response Offer
-        also carries the Art. 50 disclosure (`ai_generated`/`ai_disclosure`) and the
+        also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
         `diff_from_previous` line-item summary versus the prior revision; a mechanical
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
         produced draft still cannot leave without the send gate, which is human-only too.
@@ -18988,7 +19153,7 @@ paths:
       description: |
         Names the route-in contact (the strongest live relationship at the resolved
         company), the relationship we have, and a concrete suggested next move with a
-        drafted message carrying the Art. 50 AI-assisted disclosure and evidence back to the
+        drafted message carrying the AI provenance notice and evidence back to the
         warm signal. PROPOSAL ONLY: nothing is sent and no record mutates — the outbound
         send rides the governed send tool (POST /activities/{id}/send-email); the warm
         room proposes, the rep sends.
@@ -21900,8 +22065,15 @@ paths:
         neither starts nor reads a migration run.
 
         Mapping a source column to a field the object does not have is refused
-        here rather than at row 40,000: the mapping is validated against the
-        object's live field catalog, custom fields included.
+        here rather than at row 40,000: the mapping is validated against the set
+        of targets `uploadImportSource` reported for this object.
+
+        Custom fields are NOT in that set. An import lands its rows through the
+        stores' caller-opened transaction seams, which refuse custom fields by
+        design — reading the catalog is the second connection those seams exist
+        to avoid — so a `cf_` target would be accepted, reported as written, and
+        dropped. It is refused here instead, and it arrives when the seam can
+        carry it.
       requestBody:
         required: true
         content:
@@ -23731,6 +23903,38 @@ components:
           description: |
             Expiry is within the warning window, or already past it. True whenever `in_grace`
             is true, so a client that reads only this one still warns.
+    CompanyCaptureTriage:
+      type: object
+      additionalProperties: false
+      description: >-
+        Which mail domains were triaged into one company, and what each concluded. The
+        company-keyed door onto the pipeline's one domain-subject stage — see
+        `getCompanyCaptureTriage` for why that stage is not on the per-message ladder.
+      required: [company_id, domains]
+      properties:
+        company_id: { type: string, format: uuid }
+        domains:
+          type: array
+          description: >-
+            One entry per domain the ledger resolved into this company, ordered by domain so two
+            reads of an unchanged company render identically. Empty for a company nobody triaged
+            into, which is an answer rather than a gap.
+          items: { $ref: '#/components/schemas/CompanyTriagedDomain' }
+
+    CompanyTriagedDomain:
+      type: object
+      additionalProperties: false
+      required: [domain, rung]
+      properties:
+        domain:
+          type: string
+          description: The mail domain, lower-cased as the ledger stores it.
+        rung:
+          $ref: '#/components/schemas/PipelineStageRung'
+          description: >-
+            The triage answer in the ladder's own vocabulary, so a client renders this and the
+            per-message rungs from one catalog rather than two that drift.
+
     PipelineTrace:
       type: object
       description: >-
@@ -24736,14 +24940,20 @@ components:
       properties:
         object_type:
           type: string
-          enum: [activity]
+          enum: [activity, contact, company, deal, lead, project]
           description: >-
-            Activities only, for now. The record tables carry the same column
-            pair, but each lives behind its own module with its own write
-            conventions and its own erasure obligations — so they arrive as
-            their own change rather than as four more arms of this one. The
-            enum is where that boundary is stated, so a caller sending a
-            contact is refused rather than silently skipped.
+            Which kind of record this row attributes. All six carry the same
+            column pair, and each is written through its own module's store:
+            activities through one that must also reckon with retention holds
+            and message audiences, the five record types through simpler ones
+            that have neither.
+
+            The enum is enforced twice — here for a reader, and in the route,
+            because the generated wrapper validates no enum. An unchecked type
+            would be worse than cosmetic: the ledger is keyed on whatever the
+            caller sent, so two rows naming one id under two types would edit
+            one record while recording their revisions in different places, and
+            the gate meant to refuse a stale answer would stop seeing it.
         object_id:
           type: string
           format: uuid
@@ -24961,11 +25171,16 @@ components:
       type: string
       x-email-presentation: exempt
       x-email-presentation-reason: A status word, not email content.
-      enum: [team, participants, selected, withheld]
+      enum: [workspace, team, participants, selected, withheld]
       description: |
         What a reader is allowed to know about who else reads this message, in one word the
-        badge can print. `team` never means the whole workspace: the linked record's own scope
-        still decides who may discover the row at all.
+        badge can print.
+
+        `workspace` means what it says: a seat with no standing of any kind — no team, no
+        ownership, nothing shared with it — can still find this message, so everyone who reads
+        mail here reads this one. `team` is the narrower answer, where the linked record's own
+        scope decides who may discover the row at all. The two used to be one word, and the
+        badge printed `team` over a sentence saying everyone in the company could read it.
 
         `withheld` is the only value that says the content is not this caller's, and it never
         travels with a reason: why a message is private describes what it is about.
@@ -26054,7 +26269,14 @@ components:
         targets:
           type: array
           items: { type: string }
-          description: 'Every field this object can receive, custom fields included — the closed set a mapping may name.'
+          description: |
+            The closed set a mapping may name — every field this object can receive THROUGH AN
+            IMPORT, which is not every field it has.
+
+            Custom fields are absent on purpose. An import writes through the stores'
+            caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+            target would be accepted, reported as written, and dropped. Naming one is refused by
+            `createImportRun` rather than silently ignored.
 
     CreateImportRunRequest:
       type: object
@@ -27207,6 +27429,22 @@ components:
         strength: { allOf: [ { $ref: '#/components/schemas/RelationshipStrength' } ], readOnly: true, description: 'Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.' }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        author:
+          allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who created this contact in the system it came FROM, present only on a record
+            imported from another system and only once the author repair has reached it.
+            Null on everything else, which is most rows: a contact somebody entered here has
+            no author but the one `captured_by` already names.
+
+            It does not replace `captured_by`, and a reader needs both. `captured_by` is
+            who recorded the row in THIS installation — the authenticated principal,
+            server-stamped, the value every trust decision reads. `author` is who created
+            it in the system it was migrated out of. On an imported row those are
+            different colleagues, and showing only the first is how a migration comes to
+            claim one colleague entered a decade of everybody else's records.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         last_activity_at:
@@ -27642,6 +27880,22 @@ components:
             `listCompanies` and `getCompany`; write responses omit it.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        author:
+          allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who created this company in the system it came FROM, present only on a record
+            imported from another system and only once the author repair has reached it.
+            Null on everything else, which is most rows: a company somebody entered here has
+            no author but the one `captured_by` already names.
+
+            It does not replace `captured_by`, and a reader needs both. `captured_by` is
+            who recorded the row in THIS installation — the authenticated principal,
+            server-stamped, the value every trust decision reads. `author` is who created
+            it in the system it was migrated out of. On an imported row those are
+            different colleagues, and showing only the first is how a migration comes to
+            claim one colleague entered a decade of everybody else's records.
         raw: { type: [object, 'null'], additionalProperties: true }
         partner: { $ref: '#/components/schemas/Partner' }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -30115,7 +30369,7 @@ components:
         whole — the same grounding rule every sentence in `sections` runs.
       required:
         [generated_by, readiness, meeting_type, likely_asks, questions, scenarios,
-         account_arc, advance, unknowns]
+         company_arc, advance, unknowns]
       properties:
         generated_by:
           $ref: '#/components/schemas/WrittenBy'
@@ -30144,7 +30398,7 @@ components:
           type: array
           maxItems: 3
           items: { $ref: '#/components/schemas/MeetingPlanScenario' }
-        account_arc:
+        company_arc:
           type: array
           maxItems: 5
           description: >-
@@ -32340,6 +32594,22 @@ components:
             discover through `GET /activities` can therefore be newer than this instant.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        author:
+          allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who created this deal in the system it came FROM, present only on a record
+            imported from another system and only once the author repair has reached it.
+            Null on everything else, which is most rows: a deal somebody entered here has
+            no author but the one `captured_by` already names.
+
+            It does not replace `captured_by`, and a reader needs both. `captured_by` is
+            who recorded the row in THIS installation — the authenticated principal,
+            server-stamped, the value every trust decision reads. `author` is who created
+            it in the system it was migrated out of. On an imported row those are
+            different colleagues, and showing only the first is how a migration comes to
+            claim one colleague entered a decade of everybody else's records.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -32923,6 +33193,22 @@ components:
           description: 'The newest WORKSPACE-AUDIENCE activity filed under the project, maintained from the timeline on link write; a read accelerator, never a second truth — a rebuild must reproduce it exactly. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
+        author:
+          allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who created this project in the system it came FROM, present only on a record
+            imported from another system and only once the author repair has reached it.
+            Null on everything else, which is most rows: a project somebody entered here has
+            no author but the one `captured_by` already names.
+
+            It does not replace `captured_by`, and a reader needs both. `captured_by` is
+            who recorded the row in THIS installation — the authenticated principal,
+            server-stamped, the value every trust decision reads. `author` is who created
+            it in the system it was migrated out of. On an imported row those are
+            different colleagues, and showing only the first is how a migration comes to
+            claim one colleague entered a decade of everybody else's records.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -34295,6 +34581,19 @@ components:
         due_at: { type: [string, 'null'], format: date-time }
         remind_at: { type: [string, 'null'], format: date-time, description: Task only. }
         assignee_id: { type: [string, 'null'], format: uuid }
+        host_user_id:
+          type: string
+          format: uuid
+          description: >-
+            Meeting only: the member of this company who HELD it, which is not the same
+            question as who typed it up. Omit it for a meeting you held yourself and the
+            server fills in the caller; name a colleague when you are minuting theirs, so
+            it counts into their week rather than yours. A label and never an authority —
+            what a caller may read is decided before this field is filled in.
+
+            Not nullable: omitting it is how you say nothing, and the server answers that
+            with the caller. A meeting nobody here hosted is a state imports reach, not
+            one a human logging their own day can assert.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled] }
@@ -34741,8 +35040,8 @@ components:
         body: { type: string }
         to: { type: array, items: { type: string, format: email } }
         in_reply_to_activity_id: { type: [string, 'null'], format: uuid }
-        ai_generated: { type: boolean, readOnly: true, description: 'Art. 50 AI-assisted disclosure: true when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false.' }
-        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.' }
+        ai_generated: { type: boolean, readOnly: true, description: 'True when a model produced this draft; stamped on the drafting call itself, never persisted. Absent reads as false.' }
+        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.' }
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
         voice_degraded: { type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.' }
@@ -34793,7 +35092,7 @@ components:
             thread whose every participant is a colleague — which the reader fills in
             themselves.
 
-    AccountEmailDraft:
+    CompanyEmailDraft:
       type: object
       description: |
         A draft written from an account's records, and what it was written from
@@ -34832,11 +35131,14 @@ components:
         ai_generated:
           type: boolean
           readOnly: true
-          description: 'Art. 50 AI-assisted disclosure: true when a model produced this draft. Stamped on the drafting call, never persisted.'
+          description: 'True when a model produced this draft. Stamped on the drafting call, never persisted.'
         ai_disclosure:
           type: [string, 'null']
           readOnly: true
-          description: The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
+          description: >-
+            The provenance notice shown to the drafting user, marking the text as model-written so they
+            review it before sending; non-null iff ai_generated=true. Carried beside the draft rather
+            than inside body, and not appended to it on send.
         voice_profile_version:
           type: [integer, 'null']
           readOnly: true
@@ -35387,7 +35689,7 @@ components:
             liftability itself would be a second copy of that rule. The copy that stopped
             matching would offer a rep a button that cannot lawfully be pressed.
 
-    SendAccountEmailRequest:
+    SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]
       description: |
@@ -35724,6 +36026,22 @@ components:
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        author:
+          allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who created this lead in the system it came FROM, present only on a record
+            imported from another system and only once the author repair has reached it.
+            Null on everything else, which is most rows: a lead somebody entered here has
+            no author but the one `captured_by` already names.
+
+            It does not replace `captured_by`, and a reader needs both. `captured_by` is
+            who recorded the row in THIS installation — the authenticated principal,
+            server-stamped, the value every trust decision reads. `author` is who created
+            it in the system it was migrated out of. On an imported row those are
+            different colleagues, and showing only the first is how a migration comes to
+            claim one colleague entered a decade of everybody else's records.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -36666,8 +36984,8 @@ components:
               enum: [draft_to_contact, intro_request]
               description: 'intro_request when the signal resolved (under consent) to a specific contact other than the route-in contact; otherwise a direct draft to the contact.'
             draft_subject: { type: string }
-            draft_body: { type: string, description: Renders the Art. 50 AI-assisted disclosure (features/07 §11 gate 9). }
-            ai_disclosure: { type: string, description: The machine-readable Art. 50 disclosure line the draft carries. }
+            draft_body: { type: string, description: 'Ends with the AI provenance notice, so a rep who sends this body unchanged sends the notice with it.' }
+            ai_disclosure: { type: string, description: 'The provenance notice, repeated here as its own field; unlike the composer drafts this one is also rendered into draft_body above.' }
         evidence:
           type: object
           description: Provenance back to the warm signal (evidence-or-omit).
@@ -37198,6 +37516,38 @@ components:
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
 
+    FormerMemberRequest:
+      type: object
+      description: >-
+        A colleague who already left, recorded so imported history can name them. No
+        password and no invitation: this creates a seat that cannot be signed into.
+      required: [email, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+          description: >-
+            Their work address as the source system spelled it. It is the identity the
+            seat is keyed on, so a second record for the same address is refused.
+        display_name: { type: string, minLength: 1, maxLength: 255 }
+        role:
+          type: string
+          enum: [admin, management, manager, rep, read_only, ops]
+          default: rep
+          description: >-
+            Defaults to `rep`. A deactivated seat exercises no authority whatever its role,
+            so this records what they were rather than granting anything — but the caller
+            may still not name a role they could not assign themselves.
+        left_at:
+          type: [string, 'null']
+          format: date-time
+          description: When they left, when the source system knows it. Recorded on the audit row.
+        source:
+          type: [string, 'null']
+          maxLength: 200
+          description: >-
+            Where this record came from, for an operator reading the audit trail later
+            ("hubspot-mirror-2026-09-17").
     InviteUserRequest:
       type: object
       description: Admin-supplied details for a new member. No password — the invite issues a set-password token.
@@ -38996,6 +39346,59 @@ components:
           type: integer
           description: Out of attempts, so nothing will ask again without a human.
         oldest_pending_age_seconds: { type: [integer, 'null'] }
+
+    ExtensionIngestHealth:
+      type: object
+      additionalProperties: false
+      description: |
+        Which composed units are handing the core records it cannot express, for an
+        administrator asking whether a connector is broken or merely quiet.
+
+        COUNTS AND A CLASS ONLY — never the refused record and never the core's sentence
+        about it, which quotes the record back. A unit with nothing refused in the window
+        is absent rather than listed at zero: this page answers "what is wrong", and a roll
+        of healthy units is the thing a reader has to scan past to find it.
+      required: [generated_at, window_days, units]
+      properties:
+        generated_at: { type: string, format: date-time }
+        window_days:
+          type: integer
+          description: How many days back the counts reach, ending today (UTC).
+        units:
+          type: array
+          description: One row per composed unit with anything refused in the window.
+          items: { $ref: '#/components/schemas/ExtensionUnitIngestHealth' }
+
+    ExtensionUnitIngestHealth:
+      type: object
+      additionalProperties: false
+      required: [unit, refused, refusals]
+      properties:
+        unit: { type: string, description: The composed unit's name. }
+        refused:
+          type: integer
+          description: Records the core refused from this unit over the whole window.
+        last_refused_at: { type: string, format: date-time }
+        refusals:
+          type: array
+          description: The same total broken out by the check that refused, largest first.
+          items: { $ref: '#/components/schemas/ExtensionIngestRefusal' }
+
+    ExtensionIngestRefusal:
+      type: object
+      additionalProperties: false
+      required: [refusal, refused]
+      properties:
+        refusal:
+          type: string
+          enum: [key, activity, addresses, counterparty, participants, size]
+          description: |
+            Which check refused the record — the core's closed vocabulary
+            (`extension.RecordRefusal`), one per check the ingress grammar runs. It is what
+            names the mapping to fix: "every record fails its participants" is a different
+            bug from "every record fails its key".
+        refused: { type: integer, description: Records this check refused in the window. }
+        last_refused_at: { type: string, format: date-time }
 
     JobHealth:
       type: object
@@ -42155,11 +42558,38 @@ components:
         The consent passthrough every capture surface (booking, public forms, imports) must carry
         (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
         wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
-      required: [purpose_id, policy_version]
+      required: [policy_version]
       properties:
-        purpose_id: { type: string, format: uuid }
+        purpose_id:
+          type: string
+          format: uuid
+          description: |
+            The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+            — the booking doors are, to the `transactional` lane — and the server resolves that
+            lane's own id for this installation.
+
+            Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+            per-installation uuids minted at seed time and there is no anonymous read of them, so
+            an anonymous form that names one is naming a value it was never given. Sending an id
+            is for a caller that read the catalog; it is still admitted only if it IS the lane the
+            surface is confined to.
         policy_version: { type: string, maxLength: 200, description: Version id of the consent wording shown to the subject. }
-        wording: { type: [string, 'null'], maxLength: 2000, description: 'The exact wording shown, stored with the consent event for demonstrability.' }
+        wording:
+          type: [string, 'null']
+          maxLength: 2000
+          description: |
+            The exact wording shown, stored with the consent event for demonstrability.
+
+            Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+            that cannot say what the subject read — before a contact row exists, because the
+            door is anonymous and a refusal further in would grow the contact table one rejected
+            request at a time. Omitting it is a 422 naming this field. It is not marked required
+            here because tightening a shipped request field is the breaking change the contract
+            gate refuses; the obligation lives in the doors, and it is stated here so a caller
+            reading the schema is not surprised by it.
+
+            Unlike `purpose_id`, this is something only the surface knows: the server cannot
+            resolve what a page put in front of somebody.
         marketing:
           type: object
           description: |
@@ -43570,8 +44000,8 @@ components:
         template_id: { type: [string, 'null'], format: uuid, description: The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale. }
         pdf_asset_ref: { type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer (B-E03.22/WP7).' }
         accepted_at: { type: [string, 'null'], format: date-time, readOnly: true }
-        ai_generated: { type: boolean, readOnly: true, default: false, description: 'Art. 50 AI-assisted disclosure (features/07 §11 gate 9). true only on the response of the regenerate call that produced this draft revision; false on every other read — disclosure is stamped on the drafting call itself, not persisted across future reads.' }
-        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line (features/07 §11 gate 9); non-null iff ai_generated=true.' }
+        ai_generated: { type: boolean, readOnly: true, default: false, description: 'True only on the response of the regenerate call that produced this draft revision; false on every other read — provenance is stamped on the drafting call itself, not persisted across future reads.' }
+        ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The provenance notice shown to the drafting user, marking the text as model-written so they review it before sending; non-null iff ai_generated=true. Carried beside the draft rather than inside body, and not appended to it on send.' }
         diff_from_previous:
           type: [object, 'null']
           readOnly: true

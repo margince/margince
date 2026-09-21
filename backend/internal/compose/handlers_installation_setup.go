@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -175,12 +174,8 @@ func (s *Server) firstRunAnswer(svc *identity.Service) func(context.Context) (bo
 		if err != nil {
 			return false, fmt.Errorf("resolving the installation for the first-run signal: %w", err)
 		}
-		readCtx := principal.WithCorrelationID(
-			principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
-				Type: principal.PrincipalSystem,
-				ID:   installationSetupReadActor,
-			}), ids.NewV7(),
-		)
+		readCtx := principal.SystemActing(
+			principal.WithWorkspaceID(ctx, wsID.UUID), installationSetupReadActor)
 		steps, err := s.steps(readCtx)
 		if err != nil {
 			return false, err

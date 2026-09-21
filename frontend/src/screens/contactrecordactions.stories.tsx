@@ -67,7 +67,7 @@ function ContactMenu({
           // What `beforeArchive` is for: the caller's own quieter rows, seated
           // ahead of the destructive one. On the record page this is Share,
           // Full history and Research.
-          <Button small>Share</Button>
+          <Button>Share</Button>
         }
       />
     </OverflowMenu>

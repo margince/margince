@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Button, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
@@ -363,7 +363,7 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
     return null;
   }
   return (
-    <p className="t-caption">
+    <p>
       {t("compose.channelFiling", {
         // The same shape the picker labels an option with, so the project a rep
         // reads here and the one they read on a mail reply are one name.
@@ -916,7 +916,6 @@ function MailOnlyFields({
   onToEditing,
   subject,
   onSubjectChange,
-  subjectId,
   rejectionInFlight,
   answering,
   flagged,
@@ -945,7 +944,6 @@ function MailOnlyFields({
   onToEditing: () => void;
   subject: string;
   onSubjectChange: (next: string) => void;
-  subjectId: string;
   /** The fields a pressed Send is still waiting for. Empty until it is pressed. */
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
@@ -995,7 +993,6 @@ function MailOnlyFields({
         disabled={rejectionInFlight}
       />
       <SubjectRow
-        id={subjectId}
         subject={subject}
         onChange={onSubjectChange}
         invalid={flagged.has("subject")}
@@ -1026,7 +1023,7 @@ function MailSendNotices({
   return (
     <>
       {sharedUnsubscribeAhead(to, cc, context) && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("compose.multiRecipientWarning")}
         </p>
       )}
@@ -1381,7 +1378,6 @@ export function ComposeModal({
   const queryClient = useQueryClient();
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
-  const subjectId = useId();
   const bodyId = useId();
   // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
   // opening choice stands until the reader turns the dial; an empty selection
@@ -1850,8 +1846,8 @@ export function ComposeModal({
 
   // The drafted words, brought back under the reader's eyes.
   //
-  // A draft does not only fill the body — it raises the disclosure band above
-  // it, and that band (the Art. 50 sentence, what the draft was based on, the
+  // A draft does not only fill the body — it raises the provenance band above
+  // it, and that band (the provenance notice, what the draft was based on, the
   // voice version) is several times the height of the bar the rep pressed. The
   // head below it grows too, because the same answer fills To and the subject.
   // So the press that asks for words pushes those words down past the fold, and
@@ -2425,11 +2421,7 @@ export function ComposeModal({
             />
           )}
           <div className="compose-fields">
-            {draftKept && (
-              <p className="t-caption" role="status">
-                {t("compose.draftKept")}
-              </p>
-            )}
+            {draftKept && <p role="status">{t("compose.draftKept")}</p>}
             {/* HOW this is going, above everything that depends on it. A reader
             who changes the dial changes what the rest of the head even is —
             a channel carries no subject and names no addressee — so the
@@ -2442,7 +2434,7 @@ export function ComposeModal({
             <StaleThreadNotice stale={staleThread} />
             {/* Whose conversation this is. Not a warning and not a refusal —
             covering for a colleague is ordinary work — so it states the fact
-            and lets the reader decide. Info rather than warn for that reason,
+            and lets the reader decide. Info rather than warning for that reason,
             and no live region: it renders with the drawer rather than in
             answer to anything the reader just did. */}
             {answeringColleaguesMail && (
@@ -2509,7 +2501,6 @@ export function ComposeModal({
                 onToEditing={stopOfferingRecipient}
                 subject={subject}
                 onSubjectChange={setSubject}
-                subjectId={subjectId}
                 rejectionInFlight={rejectionInFlight}
                 deadRecipients={deadRecipients}
               />
@@ -2593,27 +2584,26 @@ export function ComposeModal({
             reading, which is how the dropdown this replaces ended up set to
             whatever came first in the list. */}
             {asksWhy(anchorActivity) ? (
-              <>
-                <label className="t-body compose-check">
-                  {t("compose.why")}
+              <Field
+                label={t("compose.why")}
+                hint={t("compose.whyHint")}
+                error={
+                  flagged.has("context") ? t("compose.missingWhy") : undefined
+                }
+              >
+                {(control) => (
                   <Select
-                    aria-label={t("compose.why")}
+                    {...control}
                     options={contextOptions(t)}
                     value={context}
-                    aria-invalid={flagged.has("context") || undefined}
                     onChange={(value) =>
                       setContext(value as CommunicationContext | "")
                     }
                   />
-                </label>
-                <FieldNeed
-                  show={flagged.has("context")}
-                  need={t("compose.missingWhy")}
-                />
-                <p className="t-caption">{t("compose.whyHint")}</p>
-              </>
+                )}
+              </Field>
             ) : (
-              <p className="t-caption">{t("compose.derivedReply")}</p>
+              <p>{t("compose.derivedReply")}</p>
             )}
 
             {!isChannelReply && (
@@ -2631,19 +2621,13 @@ export function ComposeModal({
                 />
               </>
             )}
-            {sendUnavailable && (
-              <p className="t-caption">{t("compose.sendUnavailable")}</p>
-            )}
+            {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
             {/* The rejection failed, and the rep has to be told: the judgment is
             still open and the words on screen are still the ones it names.
             Announced rather than merely coloured, on the same terms as every
             other failure in this drawer. */}
             {discardControl?.error && (
-              <p
-                className="t-caption"
-                role="alert"
-                style={{ color: "var(--dangerText)" }}
-              >
+              <p role="alert" style={{ color: "var(--dangerText)" }}>
                 {discardControl.error}
               </p>
             )}
@@ -2652,7 +2636,7 @@ export function ComposeModal({
               contactId={contactId}
               review={sendReview}
             />
-            <p className="t-caption">
+            <p>
               {t(
                 isChannelReply
                   ? "compose.sendMessageBody"

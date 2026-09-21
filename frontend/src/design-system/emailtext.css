@@ -10,7 +10,6 @@
  * which is not what a sign-off is. */
 .emailtext__signoff {
   margin: var(--space-3) 0 0;
-  color: var(--textMeta);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -22,7 +21,6 @@
 
 .emailtext__quoted > p {
   margin: var(--space-2) 0 0;
-  color: var(--textMeta);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

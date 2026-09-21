@@ -309,7 +309,7 @@ function renderWork(three60: Company360) {
   render(sinceLastVisitFooter(three60) ?? null);
 }
 
-// The lead panel, rendered on its own: it moved out of AccountBrief so the
+// The lead panel, rendered on its own: it moved out of CompanyBrief so the
 // stack could tint and box it separately, and the advice it carries is
 // exercised through it directly now.
 function renderSuggestions(
@@ -735,7 +735,7 @@ describe("company view — a section still loading is not one that failed", () =
     // the honest answer the brief gives once it has actually read the account,
     // never the failure text a still-loading read would be mistaken for.
     expect(
-      within(brief()).getByText("No outstanding work found in this view."),
+      within(brief()).getByText("Nothing needs you right now."),
     ).toBeTruthy();
     expect(within(brief()).queryByText(/Could not be loaded/)).toBeNull();
   });

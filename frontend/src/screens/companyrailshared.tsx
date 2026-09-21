@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
+import { Heading } from "../design-system/heading";
 import { type SectionState, sectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
@@ -32,7 +33,9 @@ export function SectionSummary({
       {/* A heading, so the section is reachable by name in the outline: the
           column is one pane of named slices, and each slice's name is a
           heading under the pane rather than a card title of its own. */}
-      <h3 className="co-sect-title">{title}</h3>
+      <Heading size="medium" className="co-sect-title">
+        {title}
+      </Heading>
       {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
     </span>
   );

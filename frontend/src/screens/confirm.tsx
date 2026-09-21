@@ -5,9 +5,11 @@ import {
   Button,
   Card,
   EmptyState,
+  Field,
   Skeleton,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -209,7 +211,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
     return (
       <div className="pref-page">
         <Card>
-          <h1 className="t-h2">{t("confirm.done.title")}</h1>
+          <Heading size="xlarge" className="t-h2">
+            {t("confirm.done.title")}
+          </Heading>
           <p className="t-body">{t("confirm.done.body")}</p>
           <RequestReceipts receipts={receipts} />
         </Card>
@@ -219,28 +223,33 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
 
   return (
     <div className="pref-page">
-      <h1 className="t-h2">{t("confirm.title")}</h1>
+      <Heading size="xlarge" className="t-h2">
+        {t("confirm.title")}
+      </Heading>
       <p className="t-body confirm-intro">{t("confirm.intro")}</p>
 
       <Card>
-        <h2 className="t-h3">{t("confirm.card.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("confirm.card.title")}
+        </Heading>
         <ul className="confirm-fields">
           {CORRECTABLE.map((field) => (
-            <li key={field} className="confirm-field">
-              <label className="t-caption" htmlFor={`confirm-${field}`}>
-                {t(FIELD_LABELS[field])}
-              </label>
-              <TextInput
-                id={`confirm-${field}`}
-                value={edits[field] ?? card[field]}
-                onChange={(event) =>
-                  setEdits({ ...edits, [field]: event.target.value })
-                }
-              />
+            <li key={field}>
+              <Field label={t(FIELD_LABELS[field])}>
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    value={edits[field] ?? card[field]}
+                    onChange={(event) =>
+                      setEdits({ ...edits, [field]: event.target.value })
+                    }
+                  />
+                )}
+              </Field>
             </li>
           ))}
           <li className="confirm-field">
-            <span className="t-caption">{t("confirm.field.company")}</span>
+            <span>{t("confirm.field.company")}</span>
             <span className="confirm-readonly">
               {card.company || t("confirm.field.none")}
             </span>
@@ -249,7 +258,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </Card>
 
       <Card>
-        <h2 className="t-h3">{t("confirm.marketing.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("confirm.marketing.title")}
+        </Heading>
         <p className="t-body">{marketingWording}</p>
         <div className="confirm-choices">
           <Button
@@ -271,9 +282,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </Card>
 
       <details className="confirm-provenance">
-        <summary className="t-caption">{t("confirm.provenance.title")}</summary>
+        <summary>{t("confirm.provenance.title")}</summary>
         {card.provenance.length === 0 ? (
-          <p className="t-caption">{t("confirm.provenance.empty")}</p>
+          <p>{t("confirm.provenance.empty")}</p>
         ) : (
           <ul>
             {card.provenance.map((origin) => (
@@ -293,9 +304,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </details>
 
       {submit.error && (
-        <p className="t-caption confirm-error">
-          {explainPublicError(submit.error, t)}
-        </p>
+        <p className="confirm-error">{explainPublicError(submit.error, t)}</p>
       )}
 
       <div className="confirm-actions">

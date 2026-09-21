@@ -12,7 +12,7 @@
    unengaged seat is a name on a list, and a line to one would claim a
    conversation that never happened. */
 .dc-thread {
-  stroke: var(--accent);
+  stroke: var(--success);
   stroke-width: 2;
 }
 
@@ -22,7 +22,7 @@
 }
 
 .dc-seat-engaged {
-  fill: var(--accent);
+  fill: var(--success);
 }
 
 /* A seat with a name and no two-way exchange. Hollow, because the gap is the
@@ -43,7 +43,7 @@
    because absence is the insight this map exists to carry. */
 .dc-ghost {
   fill: none;
-  stroke: var(--warn);
+  stroke: var(--warning);
   stroke-width: 2;
   stroke-dasharray: 3 3;
 }
@@ -72,7 +72,7 @@
 }
 
 .dc-swatch-engaged {
-  background: var(--accent);
+  background: var(--success);
 }
 
 .dc-swatch-quiet {
@@ -81,5 +81,5 @@
 }
 
 .dc-swatch-gap {
-  border: 2px dashed var(--warn);
+  border: 2px dashed var(--warning);
 }

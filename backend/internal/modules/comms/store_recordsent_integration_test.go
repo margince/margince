@@ -62,10 +62,7 @@ func (e *storeEnv) storeWith(identity MessageIdentityReconciler) *Store {
 // as well — the workspace alone is not enough.
 func (e *storeEnv) asSendWorker() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:comms-send",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:comms-send")
 }
 
 // receipt reads back the three facts a receipt is made of.

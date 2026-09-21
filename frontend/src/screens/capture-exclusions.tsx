@@ -12,6 +12,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -139,7 +140,7 @@ export function CaptureExclusionsCard() {
       // their OWN correspondent out — the dialog refuses the scope that binds
       // everyone, where that choice is made.
       titleAction={
-        <Button small onClick={() => setExcluding(true)}>
+        <Button onClick={() => setExcluding(true)}>
           {t("captureExclusions.addOpen")}
         </Button>
       }
@@ -177,11 +178,7 @@ export function CaptureExclusionsCard() {
             }
           />
         </SettingList>
-        {refusesARow && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {remove.isError && (
           <Callout
             tone="danger"
@@ -251,7 +248,6 @@ function ExclusionRows({
           value={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
           control={
             <Button
-              small
               variant="ghost"
               aria-label={t("captureExclusions.remove", { value: rule.value })}
               disabled={pending}
@@ -262,7 +258,7 @@ function ExclusionRows({
               }
               onClick={() => onRemove(rule.id)}
             >
-              <Trash2 aria-hidden size={16} />
+              <Trash2 aria-hidden />
             </Button>
           }
         />
@@ -292,9 +288,9 @@ function ExcludeDialog({
   const value = draft.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("captureExclusions.addLabel")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -331,11 +327,7 @@ function ExcludeDialog({
           aria-describedby={refused ? denialId : undefined}
           onChange={(event) => setDraft(event.target.value)}
         />
-        {refused && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {add.isError && (
           <Callout
             tone="danger"
@@ -346,11 +338,10 @@ function ExcludeDialog({
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || value === ""}

@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { Field } from "./atoms";
 import { Select } from "./select";
-import "./projectpicker.css";
 
 // The ONE way a surface is told which project it is about, and the ONE line
 // that says which project its output was narrowed to.
@@ -125,23 +125,24 @@ export function ProjectPicker({
   const counted = scope?.project_id === projectId ? scope : undefined;
   return (
     <>
-      <label className="t-body projectpicker">
-        {t("compose.project")}
-        <Select
-          aria-label={t("compose.project")}
-          options={[
-            { value: "", label: t("compose.projectNone") },
-            ...projects.map((project) => ({
-              value: project.project_id,
-              label: project.key
-                ? `${project.key} · ${project.name}`
-                : project.name,
-            })),
-          ]}
-          value={projectId}
-          onChange={onChange}
-        />
-      </label>
+      <Field label={t("compose.project")}>
+        {(control) => (
+          <Select
+            {...control}
+            options={[
+              { value: "", label: t("compose.projectNone") },
+              ...projects.map((project) => ({
+                value: project.project_id,
+                label: project.key
+                  ? `${project.key} · ${project.name}`
+                  : project.name,
+              })),
+            ]}
+            value={projectId}
+            onChange={onChange}
+          />
+        )}
+      </Field>
       {counted && <ScopeLine scope={counted} />}
       {!counted && chosen && (
         <p className="t-caption">

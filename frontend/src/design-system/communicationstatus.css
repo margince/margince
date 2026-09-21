@@ -10,7 +10,6 @@
   align-items: center;
   border: 0;
   background: transparent;
-  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
   padding: 0;
@@ -25,10 +24,8 @@
 
 .commstatus.popover-trigger:hover,
 .commstatus.popover-trigger:focus-visible {
-  /* --bgHover, not --bgChip: the chip fill is measured against a closed list of
-   * inks and --textMeta is not one of them, so painting it here would be a
-   * contrast pair nobody has checked. This is a pointer resting on a control,
-   * which is exactly what --bgHover is for. */
+  /* --bgHover, not --bgChip: this is a pointer resting on a control, which is
+   * exactly what --bgHover is for. */
   background: var(--bgHover);
 }
 
@@ -72,14 +69,19 @@
 }
 
 .commstatus-attention {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .commstatus-restricted {
   color: var(--dangerText);
 }
 
-/* checking, context_only and external stay --textMeta: none of them is news. */
+/* The state that is not a verdict: the check has not answered yet. It was the
+   one state in the vocabulary with no ink at all, so a row still being read
+   looked exactly like one whose reading came back neutral. */
+.commstatus-checking {
+  color: var(--infoText);
+}
 
 .commstatus-panel {
   display: flex;
@@ -97,12 +99,10 @@
  * mark for it would say the refusal was resolved. */
 .commstatus-exception {
   margin: 0;
-  color: var(--textMeta);
 }
 
 .commstatus-freshness {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* The mark and the verbs it stands beside, in one row. The mark comes first

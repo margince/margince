@@ -7,6 +7,7 @@ import { useCan, useCanWrite } from "../app/capability";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -65,9 +66,7 @@ export function TagVocabularyCard() {
       title={t("tagAdmin.title")}
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
-            {t("tagAdmin.add")}
-          </Button>
+          <Button onClick={() => setAdding(true)}>{t("tagAdmin.add")}</Button>
         )
       }
     >
@@ -104,7 +103,7 @@ export function TagVocabularyCard() {
                           the cap, and merge could not name it as a target. */}
                         {answer.page.has_more && (
                           <Callout
-                            tone="warn"
+                            tone="warning"
                             kind="standing"
                             title={t("tagAdmin.truncatedTitle")}
                           >
@@ -217,29 +216,29 @@ function TagVocabularyRow({
           // claim about the vocabulary nobody made.
           t("tagAdmin.usagePending")
         ) : (
-          <Button small variant="ghost" onClick={() => setWanted(true)}>
+          <Button variant="ghost" onClick={() => setWanted(true)}>
             {t("tagAdmin.countUsage")}
           </Button>
         )}
       </span>
       <span className="tagadmin-verbs">
         {canEdit && !archived && (
-          <Button small variant="ghost" onClick={onEdit}>
+          <Button variant="ghost" onClick={onEdit}>
             {t("tagAdmin.edit")}
           </Button>
         )}
         {canEdit && !archived && (
-          <Button small variant="ghost" onClick={onMerge}>
+          <Button variant="ghost" onClick={onMerge}>
             {t("tagAdmin.merge")}
           </Button>
         )}
         {canArchive &&
           (archived ? (
-            <Button small variant="ghost" onClick={onRestore}>
+            <Button variant="ghost" onClick={onRestore}>
               {t("tagAdmin.restore")}
             </Button>
           ) : (
-            <Button small variant="ghost" onClick={onArchive}>
+            <Button variant="ghost" onClick={onArchive}>
               {t("tagAdmin.archive")}
             </Button>
           ))}
@@ -383,7 +382,7 @@ function TagDialog({
       </Field>
       {near.length > 0 && (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           title={t("tagAdmin.nearMatchTitle")}
         >
@@ -434,7 +433,9 @@ function MergeDialog({
     return (
       <Modal open onClose={onClose} labelledBy="tagadmin-merged">
         <div className="tagadmin-merged">
-          <h2 id="tagadmin-merged">{t("tagAdmin.mergedTitle")}</h2>
+          <Heading size="large" id="tagadmin-merged">
+            {t("tagAdmin.mergedTitle")}
+          </Heading>
           {/* Moved and collapsed are counted apart because they are different
               facts: a record that carried only the source now carries the
               target, while a record that carried both simply loses a duplicate
@@ -476,7 +477,7 @@ function MergeDialog({
           />
         )}
       </Field>
-      {/* `danger` and not `warn`: the act is irreversible, which is what the
+      {/* `danger` and not `warning`: the act is irreversible, which is what the
           dialog's own confirm button says with its tone. */}
       <Callout
         tone="danger"

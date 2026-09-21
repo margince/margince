@@ -103,7 +103,7 @@ function ScanSteps({ report }: Readonly<{ report: SiteReadReport }>) {
           {/* The state in words as well as in the mark: three tinted circles
               are three tinted circles to a reader who cannot tell them
               apart. */}
-          <span className="deepread-step-state t-caption">
+          <span className="t-caption">
             {t(`deepread.step.${states[stage]}`)}
           </span>
         </li>
@@ -130,7 +130,7 @@ const SITE_READ_CAPPED_LABELS: Record<ConfiguredStopReason, MessageKey> = {
 };
 
 /**
- * Why a read was INTERRUPTED, for the warn badge.
+ * Why a read was INTERRUPTED, for the warning badge.
  *
  * Only the stops a later run might get past appear here. A configured ceiling
  * is named by the status instead, so a label for one would be unreachable copy
@@ -247,7 +247,7 @@ function SiteReadPanel({
   }
   if (reportQuery.isError) {
     return (
-      <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+      <p style={{ color: "var(--dangerText)" }}>
         {problemMessageOf(reportQuery.error, t)}
       </p>
     );
@@ -286,12 +286,12 @@ function SiteReadPanel({
       <SiteReadDeferral report={report} />
       {/* Only the stops a reader can do something about are drawn as a
           warning. A page or byte cap is already stated by the status beside
-          the page count, and repeating it in a warn badge told a rep their
+          the page count, and repeating it in a warning badge told a rep their
           read had gone wrong when it had done exactly what it was configured
           to do. */}
       {report.stopped_reason && !stopIsConfigured(report.stopped_reason) && (
         <p style={{ margin: "var(--space-2) 0 0" }}>
-          <Badge tone="warn">
+          <Badge tone="warning">
             {t("deepread.stoppedEarly", {
               reason: t(SITE_READ_STOP_LABELS[report.stopped_reason]),
             })}
@@ -314,7 +314,7 @@ function SiteReadPanel({
               count: formatNumber(report.proposal_ids.length, locale),
             })}
           </span>
-          <Button small onClick={() => navigate({ screen: "worklist" })}>
+          <Button onClick={() => navigate({ screen: "worklist" })}>
             {t("enrich.toInbox")}
           </Button>
         </p>
@@ -429,7 +429,6 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
       titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
       actions={
         <Button
-          small
           pending={start.isPending}
           busyLabel={t("deepread.starting")}
           onClick={() => start.mutate()}
@@ -444,7 +443,7 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
             the panel is still an offer — see `offering`. */}
         {offering && <p className="t-sub">{t("deepread.sub")}</p>}
         {start.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(start.error, t)}
           </p>
         )}

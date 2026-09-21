@@ -46,6 +46,13 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
+  // The release channel's own name on the rail head's stage marker. "Beta" is
+  // the word all three catalogs use for it — Vietnamese borrows it as a term of
+  // art the way it borrows "deal" and "pipeline" — and a marker four letters
+  // long is also the only spelling that fits the 56px rail it must survive.
+  // Temporary, with the badge that renders it: app/betabadge.tsx names this
+  // entry among the things its deletion takes.
+  "shell.beta",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.

@@ -205,13 +205,13 @@ func TestAReplyThatNamesNobodyIsRefused(t *testing.T) {
 	}
 }
 
-// A model-written note carries the Art. 50 disclosure; a template-written one
+// A model-written note carries the AI provenance notice; a template-written one
 // does not, because no model wrote it.
 //
 // The contract's rule is that ai_disclosure is non-null exactly when
-// ai_generated is true, and this note is read by a customer — so the pair is
-// not decoration.
-func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
+// ai_generated is true, and this note goes out under the sender's own name — so
+// the pair is not decoration.
+func TestOnlyAModelWrittenNoteCarriesTheProvenanceNotice(t *testing.T) {
 	t.Parallel()
 	note := introNote{subject: "s", body: "b"}
 
@@ -220,7 +220,7 @@ func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
 		t.Error("a model-written note does not say so")
 	}
 	if written.AiDisclosure == nil || *written.AiDisclosure == "" {
-		t.Error("a model-written note carries no Art. 50 disclosure")
+		t.Error("a model-written note carries no provenance notice")
 	}
 
 	floor := wireIntroNote(note, crmcontracts.WrittenByDeterministic, warmNote())
@@ -254,7 +254,7 @@ func TestTheDisclosureSpeaksTheNotesLanguage(t *testing.T) {
 func TestReasoningIsAlwaysAnArrayOnTheWire(t *testing.T) {
 	t.Parallel()
 	bare := noteFacts{lang: textlang.English}
-	for name, out := range map[string]crmcontracts.AccountEmailDraft{
+	for name, out := range map[string]crmcontracts.CompanyEmailDraft{
 		"with facts": wireIntroNote(
 			introNote{subject: "s", body: "b"}, crmcontracts.WrittenByModel, warmNote()),
 		"with none": wireIntroNote(

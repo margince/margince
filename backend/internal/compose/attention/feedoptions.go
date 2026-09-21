@@ -170,3 +170,14 @@ func (s *Service) WithWalks(w Walks) *Service {
 	s.walks = w
 	return s
 }
+
+// WithSnapshots binds the seam that composes this feed's lane reads into one
+// transaction and one instant.
+//
+// UNBOUND MEANS WHAT THIS FEED DID BEFORE: a transaction per lane reader, and a
+// day assembled from as many instants as it has lanes. Bound, the assembled day
+// costs one transaction and every lane answers from the same moment.
+func (s *Service) WithSnapshots(snap Snapshots) *Service {
+	s.snapshots = snap
+	return s
+}

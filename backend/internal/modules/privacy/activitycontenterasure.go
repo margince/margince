@@ -81,7 +81,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	// Here rather than beside each of those column writes, for the reason this
 	// function exists at all: the sweep and the lift both run this, and a clear
 	// spelled separately at each of them is the second list that goes short.
-	if err := clearAttributionLedgerNames(ctx, tx, []ids.UUID{id}); err != nil {
+	if err := clearAttributionLedgerNames(ctx, tx, "activity", []ids.UUID{id}); err != nil {
 		return err
 	}
 	// What a classifier concluded the message MEANT, and every human correction
@@ -97,14 +97,10 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
 		return err
 	}
-	// The external identities this message answered to — its Message-ID, its
-	// calendar occurrence. Erasure ARCHIVES the activity rather than deleting
-	// it, so the foreign key's cascade never fires and the claim would outlive
-	// the content it points at: a later arrival of the same message would
-	// resolve onto the emptied row and bind to it, which both answers wrongly
-	// and discloses that the message was erased.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM activity_identity WHERE activity_id = $1`, id); err != nil {
+	// The external identities this message answered to, through the helper the
+	// Art. 17 cascade also calls — see retireActivityIdentities for why they
+	// cannot be left behind.
+	if err := retireActivityIdentities(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {

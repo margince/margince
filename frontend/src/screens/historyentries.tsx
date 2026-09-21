@@ -116,9 +116,7 @@ function EntryFieldDetail({
     <ul className="entry-fields">
       {changes.map((change) => (
         <li key={change.field} className="entry-field">
-          <span className="entry-field-name t-caption">
-            {historyFieldLabel(change.field, t)}
-          </span>
+          <span>{historyFieldLabel(change.field, t)}</span>
           <HistoryFieldDiff
             field={change.field}
             oldValue={change.oldValue}
@@ -253,7 +251,6 @@ function UndoButton({
   return (
     <span className="entry-undo">
       <Button
-        small
         variant="ghost"
         reason={upFront}
         pending={putBack.isPending}
@@ -262,7 +259,7 @@ function UndoButton({
       >
         {t(label)}
       </Button>
-      {refused && <span className="t-caption">{refused}</span>}
+      {refused && <span>{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -285,9 +282,7 @@ function UndoButton({
         <ul className="entry-fields">
           {changes.map((change) => (
             <li key={change.field} className="entry-field">
-              <span className="entry-field-name t-caption">
-                {historyFieldLabel(change.field, t)}
-              </span>
+              <span>{historyFieldLabel(change.field, t)}</span>
               <span>
                 {historyValue(change.field, change.oldValue, {
                   currency,

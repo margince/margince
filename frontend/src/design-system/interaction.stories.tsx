@@ -39,12 +39,6 @@ const column: CSSProperties = {
   gap: "var(--space-4)",
   minWidth: "320px",
 };
-const label: CSSProperties = {
-  fontSize: "var(--fs-eyebrow)",
-  letterSpacing: "var(--tracking-eyebrow)",
-  textTransform: "uppercase",
-  color: "var(--textMeta)",
-};
 const field: CSSProperties = {
   padding: "var(--space-2)",
   border: "1px solid var(--borderControl)",
@@ -63,7 +57,7 @@ const field: CSSProperties = {
 export const TextCursor: Story = {
   render: () => (
     <div style={column}>
-      <span style={label}>caret-color + caret-shape</span>
+      <span>caret-color + caret-shape</span>
       <input style={field} defaultValue="Click here and move the cursor" />
       <textarea
         style={field}
@@ -83,7 +77,7 @@ export const TextCursor: Story = {
 export const NativeControls: Story = {
   render: () => (
     <div style={column}>
-      <span style={label}>accent-color</span>
+      <span>accent-color</span>
       <label style={{ display: "flex", gap: "var(--space-2)" }}>
         <input type="checkbox" defaultChecked /> Checked
       </label>
@@ -106,7 +100,7 @@ export const NativeControls: Story = {
 export const Scrollbars: Story = {
   render: () => (
     <div style={column}>
-      <span style={label}>scrollbar-width + scrollbar-color</span>
+      <span>scrollbar-width + scrollbar-color</span>
       <div
         style={{
           ...field,
@@ -147,8 +141,8 @@ export const Selection: Story = {
     }, []);
     return (
       <div style={column}>
-        <span style={label}>::selection</span>
-        <p ref={paragraph} style={{ margin: 0, color: "var(--textContent)" }}>
+        <span>::selection</span>
+        <p ref={paragraph} style={{ margin: 0 }}>
           Selected text is the accent holding it.
         </p>
         <input style={field} defaultValue="Select inside a field too" />

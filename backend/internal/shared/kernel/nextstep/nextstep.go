@@ -5,8 +5,8 @@
 // this deal have a next step, or has nobody agreed one?
 //
 // It exists because two surfaces answered it separately and disagreed in front
-// of a reader. The contact page said "No next step with them on an open deal —
-// book a meeting"; the deal page, about the same deal on the same morning, said
+// of a reader. The contact page said "No next step on the open deal — book a
+// meeting"; the deal page, about the same deal on the same morning, said
 // nothing needed doing. Both were reading real records. Neither was reading the
 // same rule.
 //

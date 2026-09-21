@@ -38,7 +38,7 @@ export function ReadWarnings({
   }
   return (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="standing"
       title={t("settings.companyRefreshWarnings")}
     >

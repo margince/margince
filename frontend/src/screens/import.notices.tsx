@@ -28,7 +28,11 @@ export function UndoInterruptedNotice({
     return null;
   }
   return (
-    <Callout tone="warn" kind="event" title={t("import.undoInterruptedTitle")}>
+    <Callout
+      tone="warning"
+      kind="event"
+      title={t("import.undoInterruptedTitle")}
+    >
       {t("import.undoInterrupted")}
     </Callout>
   );
@@ -50,7 +54,7 @@ export function UndoErrors({
     return null;
   }
   return (
-    <Callout tone="warn" kind="outcome" title={t("import.undoErroredLead")}>
+    <Callout tone="warning" kind="outcome" title={t("import.undoErroredLead")}>
       <ul className="import__issues t-sub">
         {rows.map((row) => (
           <li key={`${row.object}-${row.id}`}>

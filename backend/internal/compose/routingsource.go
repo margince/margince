@@ -306,10 +306,7 @@ func routingCtx(ctx context.Context, ws ids.UUID) context.Context {
 // any request exists is still attributable to the thing that made it.
 func bootCtx(ctx context.Context, ws ids.UUID, actor string) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: actor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, actor)
 }
 
 func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfig, error) {

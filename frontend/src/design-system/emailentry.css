@@ -16,8 +16,6 @@
   width: 100%;
   min-width: 0;
   padding: var(--space-3);
-  font: inherit;
-  color: var(--textContent);
   text-align: left;
 }
 
@@ -26,15 +24,12 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 .emailentry__lead > svg {
   flex: none;
   width: 14px;
   height: 14px;
-  color: var(--textTertiary);
 }
 
 .emailentry__who {
@@ -53,7 +48,6 @@
 .emailentry__subject {
   overflow: hidden;
   color: var(--textPrimary);
-  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -64,8 +58,6 @@
  * made a timeline of them unreadable. */
 .emailentry__preview {
   overflow: hidden;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -76,9 +68,6 @@
 .emailentry__words {
   display: -webkit-box;
   overflow: hidden;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -90,17 +79,10 @@
   gap: var(--space-2);
 }
 
-.emailentry__move {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 .emailentry__files {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .emailentry__files > svg {
@@ -116,7 +98,6 @@
   align-items: flex-start;
   gap: var(--space-1);
   color: var(--dangerText);
-  font-size: var(--fs-meta);
 }
 
 .emailentry__trouble > svg {

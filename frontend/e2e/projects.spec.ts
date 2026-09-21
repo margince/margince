@@ -154,7 +154,6 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     }).toPass();
   };
 
-
   await page
     .getByRole("group", { name: "Phase" })
     .getByRole("button", { name: "Won" })

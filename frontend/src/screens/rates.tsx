@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -137,7 +138,7 @@ export function FxRatesCard() {
         canManage ? (
           <>
             <RefreshFromSources path="/fx-rates/propose-refresh" />
-            <Button variant="primary" small onClick={() => setOpen(true)}>
+            <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.fxAdd")}
             </Button>
           </>
@@ -158,9 +159,7 @@ export function FxRatesCard() {
             not change it — no write verb on the object, or a read licensing seat.
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
-        {!canManage && (
-          <p className="t-caption">{t("settings.rates.readOnly")}</p>
-        )}
+        {!canManage && <p>{t("settings.rates.readOnly")}</p>}
         <SettingList>
           {/* The sheet IS this card's subject rather than an answer that fits
               beside a label, so it takes the full width below the naming
@@ -253,9 +252,9 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           title starts the outline at level 2 — the spelling ConfirmModal uses
           for every other dialog in the tree. `.modal-title` is the catalog's
           own name for the interval under it. */}
-      <h2 id={labelId} className="t-h2 modal-title">
+      <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.fxModalTitle")}
-      </h2>
+      </Heading>
       {/* `Field` owns each box's id and hands it to the input, so the label a
           reader sees and the name the control announces are one string written
           once. The stack owns the interval between them: a `.field` sets no
@@ -296,11 +295,10 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
         </Field>
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             onClick={() => {
               setError(null);
@@ -364,7 +362,7 @@ export function ModelCostsCard() {
         canManage ? (
           <>
             <RefreshFromSources path="/ai-model-rates/propose-refresh" />
-            <Button variant="primary" small onClick={() => setOpen(true)}>
+            <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.modelAdd")}
             </Button>
           </>
@@ -385,9 +383,7 @@ export function ModelCostsCard() {
             not change it — no write verb on the object, or a read licensing seat.
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
-        {!canManage && (
-          <p className="t-caption">{t("settings.rates.readOnly")}</p>
-        )}
+        {!canManage && <p>{t("settings.rates.readOnly")}</p>}
         <SettingList>
           {/* Stacked for the reason spelled out on FxRatesCard: the price sheet
               is the subject, and this row names which prices they are. */}
@@ -523,9 +519,9 @@ function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
 
   return (
     <Modal open onClose={onClose} labelledBy={labelId}>
-      <h2 id={labelId} className="t-h2 modal-title">
+      <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.modelModalTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         {field(t("settings.rates.colProvider"), provider, setProvider, {
           inputMode: "text",
@@ -554,11 +550,10 @@ function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
         </Field>
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             onClick={() => {
               setError(null);

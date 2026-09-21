@@ -108,11 +108,7 @@ func setup(t *testing.T) *env {
 // on every operation, and storekit.LogSystem needs both.
 func (e *env) ctxFor(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   "system:extsecrets-test",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:extsecrets-test")
 }
 
 // currentRef reads the ref a mapping row names, through the owner connection.

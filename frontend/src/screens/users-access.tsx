@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -69,7 +70,7 @@ export function AccessPreviewPanel({
   const preview = useAccessPreview(role, teamIds);
   return (
     <div className="users-access-preview" aria-live="polite">
-      <p className="t-caption">{t("users.access.title")}</p>
+      <p>{t("users.access.title")}</p>
       <QueryGate query={preview} pendingLabel={t("users.access.title")}>
         {(access) => <AccessSummary access={access} />}
       </QueryGate>
@@ -91,7 +92,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   };
   const teams = (access.teams ?? []).map((team) => team.name).join(", ");
   return (
-    <ul className="t-caption users-access-list">
+    <ul className="users-access-list">
       <li>{t("users.access.identity")}</li>
       <li>
         {access.row_scope === "all"
@@ -197,7 +198,7 @@ export function TeamsCard() {
     // came back. Sticky, because a refusal is not a courtesy to withdraw after
     // three and a half seconds.
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
     },
     onSuccess: (_restored, { name }) => {
       qc.invalidateQueries({ queryKey: ["teams"] });
@@ -319,7 +320,7 @@ function TeamRow({
           {/* The TEAM's own count key, not the roster's: this counts members OF
               a team, while the card above counts users of the installation.
               One key for both made renaming either silently rewrite the other. */}
-          <span className="t-caption users-team-count">
+          <span className="t-caption">
             {plural("users.teamMemberCount", count, {
               count: formatNumber(count, locale),
             })}
@@ -329,7 +330,6 @@ function TeamRow({
       action={
         canEditTeam ? (
           <Button
-            small
             variant="ghost"
             iconOnly
             aria-label={t("users.archiveTeam", { name: team.name })}
@@ -414,7 +414,7 @@ function TeamMembers({
   });
 
   if (!canSeeMembership) {
-    return <p className="t-caption">{t("users.teamMembersAdminOnly")}</p>;
+    return <p>{t("users.teamMembersAdminOnly")}</p>;
   }
 
   return (
@@ -441,7 +441,7 @@ function TeamMembers({
               <EmptyState>{t("users.teamNobodyToAdd")}</EmptyState>
             ) : (
               <fieldset className="users-team-members">
-                <legend className="t-caption">
+                <legend className="t-name">
                   {t("users.teamMembersLabel")}
                 </legend>
                 {contacts.map((contact) => (
@@ -511,9 +511,7 @@ function NewTeamAction() {
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team", so
           the two buttons on screen together are tellable apart. */}
-      <Button small onClick={() => setOpen(true)}>
-        {t("users.newTeamOpen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("users.newTeamOpen")}</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
         <form
           className="form-stack"
@@ -522,9 +520,9 @@ function NewTeamAction() {
             if (ready) create.mutate(draft.trim());
           }}
         >
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.newTeamLabel")}
-          </h2>
+          </Heading>
           <Field label={t("users.teamNameLabel")} required>
             {(control) => (
               <TextInput
@@ -545,7 +543,7 @@ function NewTeamAction() {
           {/* `.form-stack` stretches its children, so the submit takes its own
               trailing row rather than filling the dialog's width. */}
           <div className="form-actions">
-            <Button type="submit" variant="primary" small disabled={!ready}>
+            <Button type="submit" variant="primary" disabled={!ready}>
               {t("users.createTeam")}
             </Button>
           </div>

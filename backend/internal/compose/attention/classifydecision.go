@@ -91,7 +91,7 @@ func blocksCustomerWork(item crmcontracts.AttentionItem) bool {
 	// site_lead is deliberately absent: a contact scraped off the company's own
 	// site has nobody outside waiting on the decision, so it is hygiene however
 	// fresh the page is.
-	case "send_email", "send_account_email", "send_message",
+	case "send_email", "send_company_email", "send_message",
 		"book_meeting",
 		"deal_follow_up", "transcript_proposal":
 		return true

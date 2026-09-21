@@ -443,7 +443,7 @@ function CommitteeBoard({
           // The gap, where it is: a critical role nobody holds says so in the
           // column that would hold them, not in a line underneath the board.
           column.deals.length === 0 && committee.gaps.includes(column.stage) ? (
-            <p className="t-caption" data-testid={`gap-${column.stage}`}>
+            <p data-testid={`gap-${column.stage}`}>
               {t("co.contacts.board.nobodyHolds")}
             </p>
           ) : null
@@ -563,14 +563,13 @@ function SeatCard({
       {suggested && seat.relationship_id && seat.relationship_version && (
         <div className="cp-seat-verbs">
           <Button
-            small
             onClick={() => onConfirm(seat)}
             pending={confirming.has(seat.relationship_id)}
             busyLabel={t("co.contacts.board.confirming")}
           >
             {t("co.contacts.board.confirm")}
           </Button>
-          <Button small variant="ghost" onClick={() => onChange(seat)}>
+          <Button variant="ghost" onClick={() => onChange(seat)}>
             {t("co.contacts.board.change")}
           </Button>
         </div>
@@ -707,7 +706,7 @@ function WriteNote({
   // is the less relevant one exactly when a newer write has gone wrong.
   if (patch.isError) {
     return (
-      <p className="t-caption cp-write-note">
+      <p className="cp-write-note">
         {isVersionSkewOf(patch.error)
           ? t("edit.versionSkew")
           : problemMessageOf(patch.error, t)}
@@ -716,7 +715,7 @@ function WriteNote({
   }
   if (suggest.isError) {
     return (
-      <p className="t-caption cp-write-note">
+      <p className="cp-write-note">
         {problemCodeOf(suggest.error) === "not_implemented"
           ? t("co.contacts.board.suggestUnavailable")
           : problemMessageOf(suggest.error, t)}
@@ -729,7 +728,7 @@ function WriteNote({
   }
   if (result.written.length > 0) {
     return (
-      <p className="t-caption cp-write-note">
+      <p className="cp-write-note">
         {t("co.contacts.board.suggestWrote", {
           count: formatNumber(result.written.length, locale),
         })}
@@ -737,7 +736,7 @@ function WriteNote({
     );
   }
   return (
-    <p className="t-caption cp-write-note">
+    <p className="cp-write-note">
       {result.skipped > 0
         ? t("co.contacts.board.suggestRefused", {
             count: formatNumber(result.skipped, locale),
@@ -768,7 +767,6 @@ function SuggestRoles({
   const t = useT();
   return (
     <Button
-      small
       variant="ai"
       onClick={() => dealId && writes.suggest.mutate(dealId)}
       reason={dealId ? undefined : t("co.contacts.board.suggestNoDeal")}

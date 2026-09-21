@@ -85,16 +85,17 @@ func WithDealRoomInviteMail(m mailer.Mailer) Option {
 
 // WithMCPResource injects the canonical MCP resource URL — public_base_url
 // + "/mcp" — onto the identity discovery handlers, so the RFC 9728
-// protected-resource document names the MCP server URL itself rather than
-// the bare request origin. cmd computes the value from --public-base-url;
-// an OAuth audience decision must never be derived from the Host header.
-// The connector's Origin guard reads its allowlist from the same value: the
-// origin a browser client may present is the origin the resource document
-// names, so the two cannot drift apart through a second flag.
+// protected-resource document names the MCP server URL itself and both
+// discovery documents name their issuer from it rather than from the request.
+// cmd computes the value from --public-base-url; nothing that tells a client
+// where to send its credentials may be derived from the Host header. The connector's Origin guard and the transport's 401 challenge read
+// the same origin: the origin a browser client may present, the one the
+// challenge points at and the one the documents name cannot drift apart
+// through a second flag.
 func WithMCPResource(resource string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithMCPResource(resource)
-		s.mcpAllowedOrigin = mcpOriginOf(resource)
+		s.mcpAllowedOrigin = httpserver.ConfiguredOrigin(resource)
 	}
 }
 

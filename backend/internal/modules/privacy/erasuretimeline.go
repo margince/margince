@@ -148,7 +148,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err != nil {
 		return nil, err
 	}
-	if err := clearAttributionLedgerNames(ctx, tx, redacted); err != nil {
+	if err := clearAttributionLedgerNames(ctx, tx, "activity", redacted); err != nil {
 		return nil, err
 	}
 	// The redacted rows' field-level provenance goes with the fields it
@@ -245,13 +245,18 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 // here already carry the scar of the alternative — purgeContentDerivedFrom is
 // shared for exactly this reason, after two copies of a content list went out of
 // step and the shorter one missed the provider original.
-func clearAttributionLedgerNames(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
-	if len(activityIDs) == 0 {
+// `objectType` names which kind of record these ids are, because the ledger is
+// keyed on (object_type, object_id) and two tables may hold the same uuid. It
+// was the literal 'activity' while the repair wrote nothing else; the record
+// repair reaches five more types, and a clear that still named only activities
+// would leave a contact's byline standing under its own key.
+func clearAttributionLedgerNames(ctx context.Context, tx pgx.Tx, objectType string, objectIDs []ids.UUID) error {
+	if len(objectIDs) == 0 {
 		return nil
 	}
 	_, err := tx.Exec(ctx, `
 		UPDATE source_attribution_repair SET source_author_name = NULL, payload_hash = '', batch_ref = ''
-		 WHERE object_type = 'activity' AND object_id = ANY($1)`, activityIDs)
+		 WHERE object_type = $1 AND object_id = ANY($2)`, objectType, objectIDs)
 	return err
 }
 

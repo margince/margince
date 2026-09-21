@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -22,8 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -41,7 +38,7 @@ type onboardingVoiceReader interface {
 // the results and connect acts recognize a company saved through the
 // manual path — not only one confirmed from a site read.
 type onboardingCompanyReader interface {
-	GetAnchorCompany(ctx context.Context) (contacts.Company, error)
+	AnchorProfileStanding(ctx context.Context) (exists, minimumComplete bool, err error)
 }
 
 // companyPresent is the acts' company-existence probe: a confirmed site
@@ -54,13 +51,13 @@ func (a *onboardingCompanyAssistant) companyPresent(ctx context.Context, researc
 	if a.company == nil {
 		return false, nil
 	}
-	if _, err := a.company.GetAnchorCompany(ctx); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return false, nil
-		}
+	// The standing rather than the profile: this asks whether a company exists
+	// to speak about, which is not the administered read.
+	exists, _, err := a.company.AnchorProfileStanding(ctx)
+	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return exists, nil
 }
 
 // onboardingVoiceContext carries only server-computed numbers — the

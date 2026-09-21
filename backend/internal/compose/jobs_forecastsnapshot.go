@@ -75,10 +75,7 @@ const forecastSnapshotActor = "system:forecast-snapshot"
 
 func (w *forecastSnapshotSweepWorker) snapshotWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: forecastSnapshotActor,
-	})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.SystemActing(wsCtx, forecastSnapshotActor)
 	return jobs.FaultContext(ctx, w.freeze(wsCtx, workspace))
 }
 

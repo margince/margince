@@ -30,7 +30,7 @@ import (
 )
 
 // ErrChannelConnectionAmbiguous reports more than one live channel binding for
-// one provider in one workspace. uq_channel_connection_ws makes that state
+// one provider in one workspace. uq_channel_connection_provider makes that state
 // unreachable through this application, and this refusal is what stops the
 // resolver depending on that: it reads the rows rather than trusting a constraint
 // it cannot see, because replying through the wrong bot reaches a chat the
@@ -222,7 +222,7 @@ func (r *Registry) liveChannelBinding(ctx context.Context, provider string) (cha
 func (r *Registry) liveChannelBindings(ctx context.Context, provider string) ([]channelBinding, error) {
 	var bindings []channelBinding
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Every live binding of this provider, which uq_channel_connection_ws
+		// Every live binding of this provider, which uq_channel_connection_provider
 		// permits exactly one of — the caller below is what refuses to guess if
 		// that ever stops being true.
 		rows, err := tx.Query(ctx, `

@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -586,5 +587,82 @@ func headerParticipant(t *testing.T, e *Env, activityID ids.UUID, role, address,
 		return err
 	}); err != nil {
 		t.Fatalf("stamping a header participant: %v", err)
+	}
+}
+
+// The badge tells "everyone here" apart from "whoever this record admits", and
+// says the same word on the row as in the editor.
+//
+// A workspace audience is not by itself the whole workspace: the record the
+// message is filed against still decides who may discover it. The badge read
+// `team` for both, beside a sentence saying everyone in the company could read
+// it — a privacy label understating the real audience, on the one surface where
+// the read boundary is real.
+//
+// Both halves are asserted on ONE message, because the defect is a
+// disagreement: the word is derived twice, once by the page pass over a list
+// and once by the single read behind the editor, and two derivations that can
+// differ are how a reader gets one answer on the timeline and another when they
+// open it.
+func TestTheBadgeSaysEveryoneOnlyWhenAStrangerCanReachTheMessage(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Renewal terms", "the usual")
+
+	assertBadge(author, t, e, id, contact, crmcontracts.EmailAccessStatusWorkspace,
+		"a message filed against a shared contact is one every seat can find")
+
+	// The same message, now filed against a contact its owner keeps to
+	// themselves. Nothing about the message changed — the audience column still
+	// says workspace — and it is no longer correspondence everyone reads.
+	private := "owner"
+	if _, err := e.Contacts.UpdateContact(author, ids.From[ids.ContactKind](contact),
+		contacts.UpdateContactInput{Visibility: &private}); err != nil {
+		t.Fatalf("making the contact owner-private: %v", err)
+	}
+
+	assertBadge(author, t, e, id, contact, crmcontracts.EmailAccessStatusTeam,
+		"the record it is filed against admits nobody else, so the message does not either")
+}
+
+// assertBadge reads the word off both derivations — the editor's single read,
+// and the page pass a LIST runs — and requires both to be the one given.
+//
+// Two reads and not one: the editor asks the gate directly, and a list cannot,
+// so the page pass widens rows the projection could only call narrow. Those are
+// two code paths to the same word, and a test that exercised one would let the
+// other say something else on the timeline the reader was looking at.
+func assertBadge(
+	reader context.Context, t *testing.T, e *Env, id ids.ActivityID, contact ids.UUID,
+	want crmcontracts.EmailAccessStatus, because string,
+) {
+	t.Helper()
+	presented, err := e.Activities.GetEmailPresentation(reader, id, nil)
+	if err != nil {
+		t.Fatalf("reading the message: %v", err)
+	}
+	if presented.Access.DisplayStatus != want {
+		t.Errorf("the editor badge says %q, want %q — %s",
+			presented.Access.DisplayStatus, want, because)
+	}
+
+	page, _, err := e.Activities.ListActivities(reader, activities.ListActivitiesInput{
+		EntityType: strPtr("contact"), EntityID: &contact,
+	})
+	if err != nil {
+		t.Fatalf("listing the contact's timeline: %v", err)
+	}
+	var row *crmcontracts.EmailSummary
+	for i := range page {
+		if ids.UUID(page[i].Id) == id.UUID {
+			row = page[i].EmailSummary
+		}
+	}
+	if row == nil {
+		t.Fatalf("the message carries no summary on a timeline of %d rows", len(page))
+	}
+	if row.DisplayStatus != want {
+		t.Errorf("the timeline badge says %q, want %q — %s", row.DisplayStatus, want, because)
 	}
 }

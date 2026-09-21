@@ -4,6 +4,7 @@
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -269,7 +270,7 @@ export function WorklistRow({
         )}
         {/* WHAT KIND of work, in its own column at a width that has one, so a
             reader running down the queue reads the kinds as a list without
-            reading a title first — and in the warn tone on the rows the day
+            reading a title first — and in the warning tone on the rows the day
             put in its first band, where the kind is also why it is there. The
             title line keeps the states that are about this row alone: overdue,
             unprepared.
@@ -281,7 +282,7 @@ export function WorklistRow({
             width the kinds share; `conditionOf` says what a system row
             draws there instead. */}
         <span className={kindClass(named)} title={named ?? undefined}>
-          <Badge tone={item.band === "now" ? "warn" : undefined}>
+          <Badge tone={item.band === "now" ? "warning" : undefined}>
             {named ?? t(eyebrowKeyFor(item))}
           </Badge>
         </span>
@@ -392,7 +393,7 @@ function RowText({
               danger — an unprepared meeting is work to do, not a deadline
               already missed. */}
           {isUnprepared(item) && (
-            <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+            <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
           )}
         </p>
       )}
@@ -625,7 +626,6 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
   const { dismiss, restore } = useNudgeDismissal();
   return (
     <Button
-      small
       pending={dismiss.isPending}
       onClick={() =>
         dismiss.mutate(
@@ -649,14 +649,14 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
                   onAct: () => {
                     restore.mutateAsync({ contactId }).catch(() =>
                       toast.show(t("worklist.verb.dismissUndoFailed"), {
-                        mark: false,
+                        tone: "danger",
                       }),
                     );
                   },
                 },
               }),
             onError: () =>
-              toast.show(t("worklist.verb.dismissFailed"), { mark: false }),
+              toast.show(t("worklist.verb.dismissFailed"), { tone: "danger" }),
           },
         )
       }
@@ -695,9 +695,7 @@ function Rank({
   // decorative: the list element carries the order for a screen reader and the
   // number states it for everybody else.
   const digit = (
-    <span className="t-caption worklist-rank">
-      {formatNumber(position, locale)}
-    </span>
+    <span className="worklist-rank">{formatNumber(position, locale)}</span>
   );
   if (!onSelect) {
     return digit;
@@ -778,7 +776,9 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         size="wide"
         returnFocusTo={() => opener.current}
       >
-        <h2 id={titleId}>{t("worklist.decision.title")}</h2>
+        <Heading size="large" id={titleId}>
+          {t("worklist.decision.title")}
+        </Heading>
         {usable?.bundle_id ? (
           <ApprovalBundleReview approval={usable} />
         ) : usable ? (
@@ -812,7 +812,6 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
   const acknowledge = useNoticeRead([worklistKey]);
   return (
     <Button
-      small
       pending={acknowledge.isPending}
       onClick={() =>
         acknowledge.mutate(id, {
@@ -822,7 +821,7 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
           // reader has no reason to try again.
           onError: () =>
             toast.show(t("worklist.verb.acknowledgeFailed"), {
-              mark: false,
+              tone: "danger",
             }),
         })
       }
@@ -856,7 +855,6 @@ function TaskComplete({
     update.mutateAsync({ id: task, version: at, body: { is_done: false } });
   return (
     <Button
-      small
       variant="primary"
       pending={update.isPending}
       onClick={() =>
@@ -886,7 +884,7 @@ function TaskComplete({
                   onAct: () => {
                     undo(id, completedAt).catch(() =>
                       toast.show(t("worklist.verb.completeUndoFailed"), {
-                        mark: false,
+                        tone: "danger",
                       }),
                     );
                   },
@@ -896,7 +894,7 @@ function TaskComplete({
             // on screen to say so — the same rendering a click that did
             // nothing would leave, and the reader has no reason to try again.
             onError: () =>
-              toast.show(t("worklist.verb.completeFailed"), { mark: false }),
+              toast.show(t("worklist.verb.completeFailed"), { tone: "danger" }),
           },
         )
       }
@@ -920,7 +918,6 @@ function AutomationRetry({ id }: Readonly<{ id: string }>) {
   const retry = useAutomationRetry([worklistKey]);
   return (
     <Button
-      small
       pending={retry.isPending}
       onClick={() =>
         retry.mutate(id, {
@@ -929,12 +926,14 @@ function AutomationRetry({ id }: Readonly<{ id: string }>) {
               result?.retried === true
                 ? t("worklist.verb.retryStarted")
                 : t(refusalMessage(result?.refusal)),
-              { mark: result?.retried === true },
+              // `info` and not `success`: a retry that was accepted has
+              // STARTED, not finished, and the work is still in flight.
+              { tone: result?.retried === true ? "info" : "danger" },
             ),
           // A rejected retry leaves the button idle with nothing on screen to
           // say so, which renders exactly like a click that did nothing.
           onError: () =>
-            toast.show(t("worklist.verb.retryFailed"), { mark: false }),
+            toast.show(t("worklist.verb.retryFailed"), { tone: "danger" }),
         })
       }
     >
@@ -982,7 +981,6 @@ function PromiseKept({ id }: Readonly<{ id: string }>) {
   const settle = useClaimSettle([worklistKey]);
   return (
     <Button
-      small
       variant="primary"
       pending={settle.isPending}
       onClick={() =>
@@ -994,7 +992,7 @@ function PromiseKept({ id }: Readonly<{ id: string }>) {
             // the same as a click that did nothing.
             onError: () =>
               toast.show(t("worklist.verb.promiseSettleFailed"), {
-                mark: false,
+                tone: "danger",
               }),
           },
         )

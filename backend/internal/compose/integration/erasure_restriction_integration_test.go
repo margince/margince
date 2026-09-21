@@ -861,3 +861,85 @@ func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// The guard covers the byline, not just the four fields it was written with.
+//
+// activity_refuse_restricted_mutation is what makes "a restriction is not left
+// while the content is still readable" true INDEPENDENTLY of any caller. That
+// is its whole job: both application release routes go through the Go helper
+// that erases as it lifts, so what the trigger is for is the statement nobody
+// has written yet.
+//
+// `source_author_name` arrived after the guard and was never added to it, so
+// the statement below — the exact shape a legitimate release takes, minus the
+// byline — passed, and the row came back readable with somebody's name on it.
+//
+// Raw SQL on purpose. Going through the helper would prove the helper clears
+// the column, which was never in doubt; what is in doubt is whether the
+// database refuses a caller that does not.
+func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
+	e := Setup(t)
+	f := seedRestrictionFixture(t, e)
+	admin := e.Admin()
+	// Written BEFORE the erasure, because a restricted row refuses every
+	// ordinary write — the guard's other arm. This is the state a row imported
+	// with a byline is in when the statutory floor holds it back.
+	//
+	// With a source_system, because activity_source_author_needs_a_source
+	// refuses a byline on a row that names no system it came from: a byline is
+	// what the OTHER system said, and a row with no other system has none.
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity SET source_system = 'import:legacy', source_id = 'legacy-42',
+			        source_author_name = 'Held Subject'
+			  WHERE id = $1`, f.email)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the byline: %v", err)
+	}
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, f.contact, "test"); err != nil {
+		t.Fatalf("erasing the subject → %v", err)
+	}
+	// The floor holds the row back rather than redacting it, so the byline is
+	// still there — which is what makes the release below the case this guards.
+	var byline *string
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT source_author_name FROM activity WHERE id = $1`, f.email).Scan(&byline)
+	}); err != nil {
+		t.Fatalf("reading the held row: %v", err)
+	}
+	if byline == nil {
+		t.Fatal("the restriction cleared the byline, so the release below proves nothing")
+	}
+
+	// The release statement, complete except for the byline. Everything the
+	// guard knew about before is cleared, so a trigger that had not learned
+	// this column takes it.
+	lift := `UPDATE activity
+	            SET restricted_at = NULL, restricted_until = NULL, restricted_reason = NULL,
+	                body = NULL, raw = NULL, counterparty_email = NULL, subject = 'Erased'
+	          WHERE id = $1`
+	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), lift, f.email)
+		return err
+	})
+	var pgErr interface{ SQLState() string }
+	if !errors.As(err, &pgErr) || pgErr.SQLState() != "23514" {
+		t.Fatalf("a release leaving the byline was not refused: %v", err)
+	}
+
+	// And the same statement WITH the byline cleared is admitted, so what the
+	// guard refuses is the omission rather than the release.
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE activity
+			    SET restricted_at = NULL, restricted_until = NULL, restricted_reason = NULL,
+			        body = NULL, raw = NULL, counterparty_email = NULL, subject = 'Erased',
+			        source_author_name = NULL
+			  WHERE id = $1`, f.email)
+		return err
+	}); err != nil {
+		t.Fatalf("a complete release was refused: %v", err)
+	}
+}

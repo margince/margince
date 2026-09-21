@@ -292,7 +292,7 @@ export function WorklistHeader({
             which reads as a broken page rather than a narrowed one. The way
             back out is the same control, so the sentence carries it. */}
         {isLinkedOnlyFilter(filter) && (
-          <p className="t-caption worklist-completeness">
+          <p className="worklist-completeness">
             {t(`worklist.filter.linked.${filter}` as const)}{" "}
             <button
               type="button"
@@ -306,7 +306,7 @@ export function WorklistHeader({
         {/* What the page is NOT showing. Drawn only when there is a difference
             to report: on a day the queue carries whole, "12 of 12" is noise. */}
         {completeness !== null && (
-          <p className="t-caption worklist-completeness">{completeness}</p>
+          <p className="worklist-completeness">{completeness}</p>
         )}
       </div>
     </div>

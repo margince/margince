@@ -66,7 +66,7 @@ export function Triage({
       lead.source === "task" ||
       lead.source === "meeting_outcome");
   const details = context ? (
-    <Button small variant="ghost" onClick={() => onContext(lead)}>
+    <Button variant="ghost" onClick={() => onContext(lead)}>
       {t("brief.focus.context")}
     </Button>
   ) : undefined;
@@ -116,14 +116,12 @@ export function Triage({
         <Card as="article" className="brief-triage-lead" key={identity(lead)}>
           <div className="brief-triage-lead-head">
             {/* Why it is here, as its label: the strongest reason the ranking
-              weighed, in the warn tone on a row the day put first; the kind
+              weighed, in the warning tone on a row the day put first; the kind
               of work where the ranking gave none. Then the rest, quieter. */}
-            <Badge tone={lead.band === "now" ? "warn" : undefined}>
+            <Badge tone={lead.band === "now" ? "warning" : undefined}>
               {label}
             </Badge>
-            {when && (
-              <span className="t-caption brief-triage-when">{when}</span>
-            )}
+            {when && <span className="t-caption">{when}</span>}
             <Eyebrow className="t-num brief-triage-position">
               {t("brief.focus.position", {
                 at: formatNumber(at + 1, locale),
@@ -228,9 +226,7 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const inbox = item.email_summary?.display_status;
   return (
     <p className="t-caption brief-triage-about">
-      {contact?.label && (
-        <Avatar name={contact.label} identity={contact.id} size="xs" />
-      )}
+      {contact?.label && <Avatar name={contact.label} identity={contact.id} />}
       <a className="entity-link" href={href}>
         {label}
       </a>

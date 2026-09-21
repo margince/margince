@@ -122,7 +122,7 @@ export const RefusedWithRetry: Story = {
       <WriteRefused
         titleKey="settings.saveFailed"
         message="The connection dropped before the save landed."
-        actions={<Button small>Retry</Button>}
+        actions={<Button>Retry</Button>}
       />
     </StoryProviders>
   ),

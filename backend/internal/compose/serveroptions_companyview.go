@@ -53,7 +53,7 @@ func WithAccountDraft(brain completer) Option {
 	}
 }
 
-// WithAccountBrief binds the summarize lane both of the company view's
+// WithCompanyBrief binds the summarize lane both of the company view's
 // grounded-prose surfaces are written by — the standing brief and the
 // prepared "Ask Margince" questions — and the routing version that
 // identifies the binding in every cached brief's fingerprint.
@@ -63,7 +63,7 @@ func WithAccountDraft(brain completer) Option {
 // tells the reader which of the two they have. routingVersion rides the
 // fingerprint so re-pointing this lane rewrites cached briefs instead of
 // leaving text attributed to a model that no longer writes it.
-func WithAccountBrief(brain completer, routingVersion string) Option {
+func WithCompanyBrief(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))

@@ -39,7 +39,7 @@ func wirePlan(plan Plan, in Input) crmcontracts.MeetingPlan {
 		LikelyAsks: wireAsks(plan.LikelyAsks, known),
 		Questions:  wireQuestions(plan.Questions, known),
 		Scenarios:  wireScenarios(plan.Scenarios, known),
-		AccountArc: wireArc(plan.Arc, known),
+		CompanyArc: wireArc(plan.Arc, known),
 		Advance:    wireAdvance(plan.Advance, in, known),
 		Unknowns:   wireUnknowns(plan.Unknowns),
 	}

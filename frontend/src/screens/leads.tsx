@@ -192,12 +192,10 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 
   return (
     <div className="lead-stack-tight">
-      <span className="t-caption">{t("lead.shortfall.lead")}</span>
+      <span>{t("lead.shortfall.lead")}</span>
       <ul className="lead-plainlist">
         {missing.map((reason) => (
-          <li key={reason} className="t-caption">
-            {reason}
-          </li>
+          <li key={reason}>{reason}</li>
         ))}
       </ul>
     </div>
@@ -221,12 +219,10 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   });
 
   if (explain.isPending) {
-    return <span className="t-caption">{t("lead.scoreLoading")}</span>;
+    return <span>{t("lead.scoreLoading")}</span>;
   }
   if (explain.isError) {
-    return (
-      <span className="t-caption">{problemMessageOf(explain.error, t)}</span>
-    );
+    return <span>{problemMessageOf(explain.error, t)}</span>;
   }
   const current = explain.data?.current;
   if (!explain.data?.explained || !current) {
@@ -242,7 +238,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
     return lead.score === 0 ? (
       <ScoreShortfall lead={lead} />
     ) : (
-      <span className="t-caption">{t("lead.scoreNotStoredYet")}</span>
+      <span>{t("lead.scoreNotStoredYet")}</span>
     );
   }
   const factors = current.factors ?? [];
@@ -254,14 +250,14 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   return (
     <div className="lead-stack-tight">
       {overridden && (
-        <span className="t-caption">
+        <span>
           {t("lead.scoreFactorsExplainMachine", {
             score: formatNumber(current.score_computed, locale),
           })}
         </span>
       )}
       {factors.length === 0 ? (
-        <span className="t-caption">{t("lead.scoreNoFactors")}</span>
+        <span>{t("lead.scoreNoFactors")}</span>
       ) : (
         <ul className="lead-plainlist">
           {factors.map((factor) => (
@@ -355,7 +351,7 @@ function LeadScorePanel({
 
   return (
     <div className="lead-stack">
-      <span className="t-caption">{t("lead.explainScore")}</span>
+      <span>{t("lead.explainScore")}</span>
       <ScoreBreakdown id={id} lead={lead} />
       {lead.score_override_reason ? (
         <div className="lead-stack">
@@ -372,7 +368,6 @@ function LeadScorePanel({
             </p>
           )}
           <Button
-            small
             disabled={writer.patch.isPending || readOnly}
             reasonId={readOnly ? terminalReasonId : undefined}
             onClick={() => writer.save({ score: null })}
@@ -407,7 +402,6 @@ function LeadScorePanel({
           <div className="lead-line">
             <Button
               variant="primary"
-              small
               disabled={reasonBlank || scoreInvalid || writer.patch.isPending}
               reasonId={readOnly ? terminalReasonId : undefined}
               onClick={() =>
@@ -419,7 +413,7 @@ function LeadScorePanel({
             >
               {t("lead.saveOverride")}
             </Button>
-            <Button small onClick={() => setOverriding(false)}>
+            <Button onClick={() => setOverriding(false)}>
               {t("create.cancel")}
             </Button>
           </div>
@@ -429,7 +423,6 @@ function LeadScorePanel({
         // naming what the badge above already says. The override is a rare
         // action and stands alone.
         <Button
-          small
           reasonId={readOnly ? terminalReasonId : undefined}
           onClick={() => setOverriding(true)}
         >
@@ -630,7 +623,7 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
  * It is the tinted panel because it is the only surface here asking for a
  * MOVE — everything else on the page reports. The tone follows the finding
  * rather than the layout: a first response already breached is bad news, and
- * the warn family is what says so, in the same pairing `Callout` draws.
+ * the warning family is what says so, in the same pairing `Callout` draws.
  */
 /**
  * The score as a card of the reading: it folds to one line with its top
@@ -851,9 +844,7 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   };
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.demote")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("lead.demote")}</Button>
       <ConfirmModal
         open={open}
         onClose={close}
@@ -1047,8 +1038,8 @@ function LeadOverviewPane({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The lead carries no task id of its own, so both the panel head's "View
-  // tasks" and the "Next task" row's own verb open the same queue.
+  // The lead carries no task id of its own, so both the panel head's way out
+  // and the "Next task" row's own verb open the same queue.
   const onOpenTasks = () => navigate({ screen: "worklist" });
   return (
     <div className="record-stack">
@@ -1070,7 +1061,7 @@ function LeadOverviewPane({
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
         <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
-        <TodayPanel onOpenTasks={onOpenTasks}>
+        <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
           {leadTodoRows(
             lead,
             t,
@@ -1217,9 +1208,7 @@ function LeadActions({
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
       {!archived && logGrantKnown && !canLog && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
+        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
       )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in, the same pair contactactions.tsx and
@@ -1227,20 +1216,18 @@ function LeadActions({
           next. The drawer stays local to this header, unlike company's own
           daily-brief card, because nothing else on the lead page opens it. */}
       <Button
-        small
         disabled={logPending}
         reasonId={logRefused}
         onClick={() => setDrawer("log")}
       >
-        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" /> {t("log.title")}
       </Button>
       <Button
-        small
         disabled={logPending}
         reasonId={logRefused}
         onClick={() => setDrawer("task")}
       >
-        <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
+        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
       </Button>
       {drawer && (
         <LogActivityAction
@@ -1284,7 +1271,6 @@ function LeadActions({
                 seam (atoms.css) belongs to the destructive verbs. A terminal
                 lead keeps the control, disabled with the page's one reason. */}
         <Button
-          small
           data-testid="lead-disqualify"
           reasonId={refusedReasonId}
           onClick={onDisqualify}

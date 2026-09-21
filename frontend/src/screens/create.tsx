@@ -20,6 +20,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -411,8 +412,8 @@ export function NewRecordButton({
   testId?: string;
 }>) {
   return (
-    <Button small onClick={onClick} data-testid={testId}>
-      <Plus aria-hidden style={{ width: 14, height: 14 }} /> {label}
+    <Button onClick={onClick} data-testid={testId}>
+      <Plus aria-hidden /> {label}
     </Button>
   );
 }
@@ -691,17 +692,12 @@ export function RecordFormBody({
         // left the form: nothing moves when this appears, and the server's
         // reason is the only thing that says why the dialog is still open. The
         // edit dialog renders this same body, so both carry it.
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {error}
         </p>
       )}
       {existing && resolveExisting && (
         <Button
-          small
           type="button"
           style={{ alignSelf: "flex-start" }}
           onClick={() => navigate(resolveExisting(existing.code, existing.id))}
@@ -710,11 +706,10 @@ export function RecordFormBody({
         </Button>
       )}
       <div className="actions">
-        <Button small type="button" onClick={onClose}>
+        <Button type="button" onClick={onClose}>
           {t("create.cancel")}
         </Button>
         <Button
-          small
           variant="primary"
           type="submit"
           disabled={!pending && (requiredMissing || refusals.size > 0)}
@@ -805,9 +800,14 @@ export function CreateRecordModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {title}
-      </h2>
+      </Heading>
       <RecordFormBody
         fields={fields}
         values={values}

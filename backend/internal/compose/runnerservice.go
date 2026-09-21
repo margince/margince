@@ -222,10 +222,7 @@ const resumeActor = "system:agent_resume"
 // schedulerContext binds the pass's actor and one correlation id, so every row
 // a single tick writes groups under the tick that wrote it.
 func schedulerContext(ctx context.Context) context.Context {
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: schedulerActor,
-	})
+	return principal.SystemActing(ctx, schedulerActor)
 }
 
 // stuckRunGrace is how far past its wall clock a 'running' row must be before

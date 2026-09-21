@@ -190,15 +190,11 @@ export function ActorTag({
       <span className="audit-actor-name">
         {name ?? (labelKey ? t(labelKey) : null)}
       </span>
-      {identifier && <span className="audit-actor-id">{identifier}</span>}
+      {identifier && <span>{identifier}</span>}
       {qualifierName && (
-        <span className="audit-behalf">
-          {t("audit.viaNamed", { client: qualifierName })}
-        </span>
+        <span>{t("audit.viaNamed", { client: qualifierName })}</span>
       )}
-      {!qualifierName && qualifierKey && (
-        <span className="audit-behalf">{t(qualifierKey)}</span>
-      )}
+      {!qualifierName && qualifierKey && <span>{t(qualifierKey)}</span>}
     </span>
   );
 }
@@ -216,7 +212,7 @@ export function AuditEntryLine({
     <div className="audit-line t-sub">
       <ActorTag entry={entry} meUserId={meUserId} />
       <Badge tone="accent">{humanizeToken(entry.action)}</Badge>
-      <span className="audit-entity">{humanizeToken(entry.entity_type)}</span>
+      <span>{humanizeToken(entry.entity_type)}</span>
       {/* An audit entry is a fact in the company's book, like the change
           history beside it, so it reads on the company's clock. On the
           viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin

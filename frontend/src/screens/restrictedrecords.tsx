@@ -145,7 +145,7 @@ function OverrideModal({
       pending={decide.isPending}
       error={decide.error ? problemMessageOf(decide.error, t) : null}
     >
-      <p className="t-caption">{t(`restricted.${kind}.body`)}</p>
+      <p>{t(`restricted.${kind}.body`)}</p>
       <Field
         label={t("restricted.reasonLabel")}
         hint={t("restricted.reasonHint")}
@@ -283,7 +283,6 @@ export function RestrictedRecordsCard() {
       header: t("restricted.decide"),
       render: (row: RestrictedRecord) => (
         <Button
-          small
           variant="danger"
           onClick={() => setReleasing({ activityId: row.activity_id })}
         >
@@ -361,12 +360,12 @@ export function RestrictedRecordsCard() {
                     {/* The short verb, because the row's label already says
                         what the form does: the button carried the same three
                         words a hand to the left of it. */}
-                    <Button small type="submit" disabled={!pinIdIsWellFormed}>
+                    <Button type="submit" disabled={!pinIdIsWellFormed}>
                       {t("restricted.pin.submit")}
                     </Button>
                     {pinIdIsMalformed && (
                       <p
-                        className="t-caption restricted-pin-error"
+                        className="restricted-pin-error"
                         id={pinErrorId}
                         role="alert"
                       >

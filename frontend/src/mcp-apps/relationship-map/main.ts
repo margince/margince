@@ -11,7 +11,7 @@
 // It renders and nothing else. Introducing someone is a human act with its own
 // route; a button here would be this view inventing authority it was not given.
 
-import { count, el, onResult, warned } from "../bridge";
+import { count, el, heading, onResult, warned } from "../bridge";
 import {
   asFiniteNumber,
   asList,
@@ -123,7 +123,7 @@ export function render(
   }
   const answer = asRecord(data);
   const colleagues = known(answer);
-  root.appendChild(el("h1", undefined, "Who knows this contact"));
+  root.appendChild(heading("xlarge", "Who knows this contact"));
   root.appendChild(
     el(
       "p",

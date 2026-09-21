@@ -64,8 +64,8 @@ export function DealPulse({
     // date is true; inventing the date would not be.
     return (
       <p className="d360-pulse">
-        <span className="d360-pulse-lead">{t("deal.pulse.yourMove")}</span>{" "}
-        <span className="d360-pulse-rest">{t("deal.pulse.wroteUnknown")}</span>
+        <span>{t("deal.pulse.yourMove")}</span>{" "}
+        <span>{t("deal.pulse.wroteUnknown")}</span>
       </p>
     );
   }
@@ -81,20 +81,16 @@ export function DealPulse({
     // reply rendered identically to one where nothing at all is outstanding.
     return (
       <p className="d360-pulse">
-        <span className="d360-pulse-lead">
-          {t("deal.pulse.nothingFlagged")}
-        </span>{" "}
-        <span className="d360-pulse-rest">
-          {t("deal.pulse.nothingFlaggedWhy")}
-        </span>
+        <span>{t("deal.pulse.nothingFlagged")}</span>{" "}
+        <span>{t("deal.pulse.nothingFlaggedWhy")}</span>
       </p>
     );
   }
   const days = calendarDaysBetween(new Date(waiting.at), new Date());
   return (
     <p className="d360-pulse">
-      <span className="d360-pulse-lead">{t("deal.pulse.yourMove")}</span>{" "}
-      <span className="d360-pulse-rest">
+      <span>{t("deal.pulse.yourMove")}</span>{" "}
+      <span>
         {t("deal.pulse.wroteOn", {
           date: formatDayMonth(waiting.at, locale, zone),
           days: formatNumber(days, locale),

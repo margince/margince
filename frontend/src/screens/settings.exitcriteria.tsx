@@ -149,7 +149,7 @@ function CriterionRow({
       <span className="criterion-label">{criterion.label}</span>
       <span className="t-caption">{criterion.key}</span>
       <Badge>{t(KIND_LABEL[criterion.kind])}</Badge>
-      <Badge tone={criterion.required ? "warn" : undefined}>
+      <Badge tone={criterion.required ? "warning" : undefined}>
         {criterion.required
           ? t("stage.criteria.required")
           : t("stage.criteria.optional")}
@@ -230,7 +230,6 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
   return (
     <>
       <Button
-        small
         data-testid={`new-criterion-${stageId}`}
         onClick={() => setOpen(true)}
       >
@@ -281,7 +280,7 @@ function CriterionRemove({
   });
   return (
     <>
-      <Button small variant="ghost" onClick={() => setOpen(true)}>
+      <Button variant="ghost" onClick={() => setOpen(true)}>
         {t("stage.criteria.remove")}
       </Button>
       <ConfirmModal

@@ -15,6 +15,7 @@ import {
   SearchField,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -411,7 +412,6 @@ export function AddRelationshipAction({
   return (
     <>
       <Button
-        small
         reasonId={refusedReasonId}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
@@ -419,9 +419,14 @@ export function AddRelationshipAction({
         {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: "var(--space-3)" }}
+        >
           {t(copy.add)}
-        </h2>
+        </Heading>
         <div className="form-stack">
           {!copy.singleKind && (
             <Field label={t("rel.kind")}>
@@ -457,7 +462,7 @@ export function AddRelationshipAction({
             }}
           />
           {searchFailure ? (
-            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+            <p style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(searchFailure, t)}
             </p>
           ) : null}
@@ -494,7 +499,7 @@ export function AddRelationshipAction({
             )}
           </Field>
           {target && (
-            <p style={{ marginBottom: 4 }}>
+            <p style={{ marginBottom: "var(--space-1)" }}>
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
@@ -502,7 +507,7 @@ export function AddRelationshipAction({
             </p>
           )}
           {mutation.isError && (
-            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+            <p style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(mutation.error, t)}
             </p>
           )}
@@ -513,11 +518,10 @@ export function AddRelationshipAction({
               justifyContent: "flex-end",
             }}
           >
-            <Button small onClick={close} disabled={mutation.isPending}>
+            <Button onClick={close} disabled={mutation.isPending}>
               {t("create.cancel")}
             </Button>
             <Button
-              small
               variant="primary"
               disabled={!target || mutation.isPending}
               onClick={() =>

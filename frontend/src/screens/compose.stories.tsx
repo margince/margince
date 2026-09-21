@@ -208,7 +208,7 @@ export const Empty: Story = {
 };
 
 // "Draft with AI" fills To/Subject/Body from the returned EmailDraft and
-// discloses it: the Art. 50 disclosure, the voice version that styled it, and
+// discloses it: the AI provenance notice, the voice version that styled it, and
 // the provisional label its profile currently carries.
 //
 // The disclosure is the house card in its machine-authored tone — indigo edge,

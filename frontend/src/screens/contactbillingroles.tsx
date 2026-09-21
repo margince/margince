@@ -40,7 +40,7 @@ export function ContactBillingRoles({
           {companies.map((c) => (
             <li className="billing-row" key={c.relationship_id}>
               <div className="billing-who">
-                <span className="billing-name">{c.company_name}</span>
+                <span>{c.company_name}</span>
                 <Badge>{t(ROLE_LABEL[c.role])}</Badge>
               </div>
             </li>

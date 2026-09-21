@@ -20,7 +20,6 @@ import { Sparkles } from "lucide-react";
 import { Children, type ReactNode } from "react";
 import {
   Avatar,
-  Badge,
   Button,
   EmptyState,
   Skeleton,
@@ -75,13 +74,14 @@ export function TodayPanel({
   // an empty array is truthy.
   const rows = Children.toArray(children);
   // Panel's own head, rather than one this pane stacks for itself: the title,
-  // the disclosure beside it, and the way to the list at the far end. A
-  // tone="ai" head is already built for a title that takes two lines
-  // (panel.css), which is what a pane drawn at phone width needs — and the
-  // head this pane used to draw could not have it, because the title, the
-  // badge and the read's three-part line all competed for one row, and a
-  // `.badge` is a shrinkable flex item like any other: "AI-assisted" came out
-  // as "AI-" over "assisted".
+  // and the way to the record's own list at the far end.
+  //
+  // The band carries no authorship mark. The pane is already indigo, which IS
+  // the claim, and the rows under it are of two kinds: what the agent found
+  // says so in its own byline, while a to-do is a commitment the record
+  // already carried. A mark over the head claims both, and the reader it
+  // reaches is the one deciding whether a machine wrote the promise somebody
+  // else made.
   //
   // Stated ONCE for all three states rather than per branch: a skeleton or an
   // error under a different head is a reader unable to tell whether they are
@@ -94,18 +94,16 @@ export function TodayPanel({
       // the claim, right-aligned, and the whole width beside them was empty.
       className="co-lead"
       title={t("today.title")}
+      // One control, handed in bare: `Button`'s link variant is the text
+      // affordance the head wants, and panel.css already holds everything
+      // after the title at its natural width, so there is nothing left for a
+      // strip around it to lay out.
       titleAction={
-        <div className="co-reading-today-actions">
-          {onOpenTasks && (
-            <button type="button" className="link-button" onClick={onOpenTasks}>
-              {tasksLabel ?? t("co.suggest.viewTasks")}
-            </button>
-          )}
-          {/* The rows under this head are the agent's reading of the record,
-              what it found and what it prepared. The claim closes the band,
-              after the way out, so the head reads verb then mark. */}
-          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-        </div>
+        onOpenTasks ? (
+          <Button variant="link" onClick={onOpenTasks}>
+            {tasksLabel ?? t("co.suggest.viewTasks")}
+          </Button>
+        ) : undefined
       }
       footer={footer}
     >
@@ -153,17 +151,17 @@ export function WithheldNotice({
     return null;
   }
   return (
-    <p className="today-withheld t-caption">
+    <p className="today-withheld">
       {t("today.withheld", { sections: sections.join(", ") })}
     </p>
   );
 }
 
 /**
- * FoundMove is the move the agent is asking for: whose ask it is and when it
- * was read, the ask at the row's loudest weight, the reason under it — which
- * is the part a rep judges — and, opposite all of it, what a reader can do
- * about it.
+ * FoundMove is the move the agent is asking for: whose ask it is, what it was
+ * read against and when, the ask at the row's loudest weight, the reason under
+ * it — which is the part a rep judges — and, opposite all of it, what a reader
+ * can do about it.
  *
  * Under the reason sit the records it was read from, each a chip that opens
  * the record's own words on hover. They are in the row rather than behind a
@@ -173,6 +171,7 @@ export function WithheldNotice({
  */
 export function FoundMove({
   when,
+  kicker,
   title,
   why,
   basis,
@@ -188,6 +187,12 @@ export function FoundMove({
   // When the reading behind the row is dated. Never a deadline the system
   // chose.
   when?: string;
+  // What the agent read the record AGAINST — the rule's own name. It
+  // qualifies the authorship claim rather than the move, so it is a second
+  // clause of the byline and never a line over the ask: set above it, a rule's
+  // name reads as the move's own title and the move stops being the sentence
+  // the row exists to say.
+  kicker?: ReactNode;
   title: ReactNode;
   // The reason, which is the part a rep judges. Absent when the ask IS the
   // reason — a move written as one sentence has nothing to put under itself.
@@ -221,7 +226,8 @@ export function FoundMove({
           <span className="co-move-by">
             <Sparkles aria-hidden="true" className="co-move-spark" />
             {t("co.suggest.byline")}
-            {when && <span className="t-num co-move-when">{when}</span>}
+            {kicker && <span className="co-move-kicker">{kicker}</span>}
+            {when && <span className="t-num">{when}</span>}
           </span>
         )}
         <span className="co-move-ask">{title}</span>
@@ -242,7 +248,6 @@ export function FoundMove({
                 <span className="today-verb">
                   <Button
                     variant="ghost"
-                    small
                     className="co-move-defer"
                     onClick={defer.onDefer}
                     disabled={defer.pending}
@@ -284,7 +289,7 @@ export function TodoRow({
   meta?: ReactNode;
   // When it is owed, coloured only where it is bad news: a late promise is the
   // one thing on the row that may shout.
-  due?: { label: string; tone?: "warn" | "danger" };
+  due?: { label: string; tone?: "warning" | "danger" };
   // The verb that advances it. `byMargince` marks a verb whose work the agent
   // does — a draft it writes — because the indigo mark means authorship and
   // nothing else.
@@ -294,38 +299,47 @@ export function TodoRow({
 }>) {
   return (
     <PanelRow className="co-todo">
-      {who && <Avatar name={who} size="xs" />}
+      {who && <Avatar name={who} />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
         {meta && <span className="t-caption">{meta}</span>}
       </span>
-      {due && (
-        <span
-          className={[
-            "co-todo-due",
-            "t-caption",
-            due.tone ? `co-todo-due-${due.tone}` : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          {due.label}
+      {/* What is owed and the verb that settles it, as ONE item. They are the
+          row's own last two children at reading width — the wrapper draws no
+          box there — and the pair is what moves under the title at the fold,
+          where a date and a button holding their own widths beside it left the
+          title a word wide. */}
+      {(due || action || verb) && (
+        <span className="co-todo-owed">
+          {due && (
+            <span
+              className={[
+                "co-todo-due",
+                "t-caption",
+                due.tone ? `co-todo-due-${due.tone}` : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {due.label}
+            </span>
+          )}
+          {action ??
+            (verb && (
+              <Button
+                // Tinted, not filled: three filled buttons down a column
+                // outshout the one move above them that the pane is actually
+                // recommending, and `aiQuiet` is that volume for an agent's
+                // verb among equals.
+                variant={verb.byMargince ? "aiQuiet" : "ghost"}
+                onClick={verb.onAct}
+              >
+                {verb.byMargince && <Sparkles aria-hidden="true" />}
+                {verb.label}
+              </Button>
+            ))}
         </span>
       )}
-      {action ??
-        (verb && (
-          <Button
-            small
-            // Tinted, not filled: three filled buttons down a column outshout
-            // the one move above them that the pane is actually recommending,
-            // and `aiQuiet` is that volume for an agent's verb among equals.
-            variant={verb.byMargince ? "aiQuiet" : "ghost"}
-            onClick={verb.onAct}
-          >
-            {verb.byMargince && <Sparkles aria-hidden="true" />}
-            {verb.label}
-          </Button>
-        ))}
     </PanelRow>
   );
 }

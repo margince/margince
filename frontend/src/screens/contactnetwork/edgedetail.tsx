@@ -137,7 +137,6 @@ function RecordWorksWith({
         <span role="alert">{problemMessageOf(record.error, t)}</span>
       ) : (
         <Button
-          small
           disabled={record.isPending}
           onClick={() => {
             if (peer.contact_id) {

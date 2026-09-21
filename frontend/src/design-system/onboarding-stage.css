@@ -191,8 +191,6 @@
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--borderSubtle);
   background: color-mix(in srgb, var(--bgCard) 70%, transparent);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 .ob-stage-who {
@@ -244,11 +242,9 @@
    the dashes are already for. */
 .ob-stage-flow {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 .ob-stage-step,
 .ob-stage-where {
-  color: var(--textMeta);
   min-width: 0;
 }
 
@@ -268,7 +264,7 @@
   height: 3px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textMuted);
+  background: var(--borderSubtle);
   transition:
     background var(--dur-move) var(--ease-out),
     width var(--dur-move) var(--ease-out);
@@ -286,12 +282,8 @@
    Not a live region: see the component. */
 .ob-stage-corestate {
   margin: 0;
-  font-size: var(--fs-eyebrow);
   color: var(--aiText);
   white-space: nowrap;
-}
-.ob-stage-corestate[data-unlit="true"] {
-  color: var(--textTertiary);
 }
 
 /* ---- the scene ---------------------------------------------------------- */
@@ -446,10 +438,6 @@
 
 .ob-stage-title {
   margin: 0;
-  font-size: var(--fs-hero-fluid);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
   /* A measure, not a width: a hero line that runs the full board reads as a
      paragraph set large rather than as a title. */
@@ -458,9 +446,6 @@
 
 .ob-stage-sub {
   margin: 0;
-  font-size: var(--fs-lead);
-  line-height: var(--lh-relaxed);
-  color: var(--textMeta);
   max-width: 52ch;
 }
 
@@ -501,12 +486,9 @@
 .ob-stage-note {
   margin: 0;
   color: var(--dangerText);
-  font-size: var(--fs-sm);
 }
 .ob-stage-hint {
   margin: 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   max-width: 62ch;
 }
 

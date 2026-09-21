@@ -20,7 +20,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Field } from "../design-system/atoms";
+import { Checkbox, Field } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
@@ -202,14 +202,12 @@ export function DirectSendModal({
       </Field>
       {/* UNTICKED, always. A pre-ticked acknowledgement records a decision
           nobody made, which is the one thing this record must never say. */}
-      <label className="t-body">
-        <input
-          type="checkbox"
-          checked={acknowledged}
-          onChange={(e) => setAcknowledged(e.target.checked)}
-        />{" "}
-        {t("directSend.acknowledge")}
-      </label>
+      <Checkbox
+        className="t-body"
+        checked={acknowledged}
+        label={t("directSend.acknowledge")}
+        onChange={(e) => setAcknowledged(e.target.checked)}
+      />
     </ConfirmModal>
   );
 }

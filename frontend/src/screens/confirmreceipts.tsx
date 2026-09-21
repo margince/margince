@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
@@ -34,7 +35,9 @@ export function RequestReceipts({
   }
   return (
     <section className="confirm-receipts">
-      <h2 className="t-h3">{t("confirm.receipt.title")}</h2>
+      <Heading size="large" className="t-h3">
+        {t("confirm.receipt.title")}
+      </Heading>
       <p className="t-body">{t("confirm.receipt.body")}</p>
       <ul className="confirm-receipts-list">
         {receipts.map((receipt) => {

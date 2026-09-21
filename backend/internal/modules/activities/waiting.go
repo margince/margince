@@ -70,6 +70,18 @@ type WaitingReply struct {
 	// a rep sees.
 	OwedVerdict  string
 	CaptureLabel string
+	// Threaded reports that this message belongs to a conversation.
+	//
+	// Not every captured message does: a first contact from an address nobody
+	// has written to, or a provider that hands over no chain to root on,
+	// arrives with no thread_key at all and still reaches this queue.
+	//
+	// It travels because two of the three judgements a rep may make about a
+	// waiting row are keyed on the thread, and a row without one can perform
+	// neither. Deciding that here, where the column is read, rather than
+	// letting the caller infer it from a record id that is absent for other
+	// reasons too.
+	Threaded bool
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -302,7 +314,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)

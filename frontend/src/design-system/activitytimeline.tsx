@@ -134,7 +134,11 @@ export function activityTimeline(
       threadKey: activity.thread_key,
       bulkAttested: activity.bulk_mail_attested,
       atIso: activity.occurred_at,
-      provenance: provenanceOf(activity.captured_by, viewerUserId),
+      provenance: provenanceOf(
+        activity.captured_by,
+        viewerUserId,
+        activity.author,
+      ),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance
       // ends up on the deal and missing on the contact who was in the meeting.

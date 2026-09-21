@@ -51,11 +51,11 @@ type ContactSort =
  */
 export const ENGAGEMENT_TONES: Record<
   Engagement,
-  "success" | "warn" | undefined
+  "success" | "warning" | undefined
 > = {
-  waiting: "warn",
+  waiting: "warning",
   answered: "success",
-  no_reply: "warn",
+  no_reply: "warning",
   lapsed: undefined,
   untried: undefined,
 };
@@ -215,9 +215,7 @@ export function CompanyContactsList({
             key: "strength",
             header: t("co.contacts.strength"),
             cell: (contact: CompanyContact) => (
-              <span className="t-caption">
-                {t(`strength.bucket.${contact.strength.bucket}`)}
-              </span>
+              <span>{t(`strength.bucket.${contact.strength.bucket}`)}</span>
             ),
             sort: "strength",
             numeric: true,
@@ -247,13 +245,13 @@ function LastTouch({ contact }: { readonly contact: CompanyContact }) {
   const inbound = contact.last_inbound_at;
   const outbound = contact.last_outbound_at;
   if (!inbound && !outbound) {
-    return <span className="t-caption">{t("co.contacts.neverInTouch")}</span>;
+    return <span>{t("co.contacts.neverInTouch")}</span>;
   }
   const theyWroteLast =
     inbound && (!outbound || new Date(inbound) > new Date(outbound));
   const at = theyWroteLast ? inbound : outbound;
   return (
-    <span className="t-caption">
+    <span>
       {theyWroteLast ? t("co.contacts.theyWrote") : t("co.contacts.weWrote")}
       {at && ` · ${formatDate(at, locale, recordZone)}`}
     </span>

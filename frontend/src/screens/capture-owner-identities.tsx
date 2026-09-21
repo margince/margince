@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -105,7 +106,7 @@ export function OwnerIdentitiesCard() {
             label={t("ownerIdentities.addLabel")}
             description={t("ownerIdentities.addDescription")}
             control={
-              <Button small onClick={() => setDeclaring(true)}>
+              <Button onClick={() => setDeclaring(true)}>
                 {t("ownerIdentities.add")}
               </Button>
             }
@@ -211,13 +212,12 @@ function IdentityRows({
             value={t(kindLabel[identity.kind])}
             control={
               <Button
-                small
                 variant="ghost"
                 disabled={pending}
                 aria-label={t("ownerIdentities.remove")}
                 onClick={() => onRemove(identity.id)}
               >
-                <Trash2 aria-hidden size={16} />
+                <Trash2 aria-hidden />
               </Button>
             }
           />
@@ -238,9 +238,9 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const value = draft.trim();
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("ownerIdentities.addLabel")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {

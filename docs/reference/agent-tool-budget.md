@@ -20,7 +20,7 @@ The window is 32768 tokens. An agent's listing may take 23210 of them (17/24). T
 served catalog is held to 28672 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
-Before any tool is listed the frame itself costs **353 tokens** — the output contract,
+Before any tool is listed the frame itself costs **448 tokens** — the output contract,
 the rules and the prompt fence. It is published here because a rule moved OUT of the
 per-tool schemas and INTO the frame trades tools × a sentence for one × a sentence,
 and only the first half is held by a bound: the floor above measures the LISTING
@@ -75,7 +75,7 @@ window for the goal, the grounding and everything it reads.
 **15 dangling cross-references** — this agent's own tool copy points at tools it
 cannot call, so a run may spend a step discovering the refusal:
 
-- at_risk_relationships → account_coverage
+- at_risk_relationships → company_coverage
 - at_risk_relationships → intro_path_to
 - at_risk_relationships → who_knows
 - catch_me_up_on → prep_for_meeting
@@ -136,7 +136,7 @@ a term in an addition.
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
 | `run_report` | 1010 | 3 scenarios |
-| `send_account_email` | 823 | — |
+| `send_company_email` | 823 | — |
 | `send_email` | 754 | 1 scenario |
 | `preview_import` | 726 | — |
 | `log_activity` | 677 | 1 scenario |
@@ -177,7 +177,7 @@ a term in an addition.
 | `list_approvals` | 268 | — |
 | `prepare_handoff` | 267 | 1 scenario |
 | `describe_query_vocabulary` | 266 | — |
-| `account_coverage` | 246 | 2 scenarios |
+| `company_coverage` | 246 | 2 scenarios |
 | `describe_report_blocks` | 245 | — |
 | `decide_approval_bundle` | 236 | — |
 | `qualify_lead` | 229 | — |

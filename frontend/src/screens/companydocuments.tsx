@@ -75,7 +75,9 @@ const STATE_LABELS: Record<DocState, MessageKey> = {
 
 // Superseded is the one state that changes how a row should READ: it is history,
 // not a candidate. The rest are equal citizens and get no tone.
-const STATE_TONE: Partial<Record<DocState, "warn">> = { superseded: "warn" };
+const STATE_TONE: Partial<Record<DocState, "warning">> = {
+  superseded: "warning",
+};
 
 // A FILTERED read that found nothing is not an empty account. SectionCard's
 // empty state replaces the whole body — filters included — so reporting it here
@@ -199,11 +201,7 @@ export function CompanyDocumentsCard({
       // library is the state this verb exists to leave, and hiding it there
       // would withhold the control exactly when it is wanted.
       titleAction={
-        <Button
-          small
-          reasonId={refusedReasonId}
-          onClick={() => setAdding(true)}
-        >
+        <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
           {t("docs.add.action")}
         </Button>
       }
@@ -219,7 +217,6 @@ export function CompanyDocumentsCard({
               })}
             </span>
             <Button
-              small
               className="rec-foot-action"
               aria-pressed={showSuperseded}
               onClick={() => setShowSuperseded(!showSuperseded)}
@@ -361,7 +358,6 @@ function DocumentRow({
           )}
           {offersReading && (
             <Button
-              small
               aria-expanded={reading}
               onClick={() => setReading(!reading)}
             >

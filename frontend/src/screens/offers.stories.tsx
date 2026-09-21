@@ -122,7 +122,7 @@ export const Sent: Story = {
   },
 };
 
-// Task 4.1 (OP-11): the Art. 50 disclosure + diff summary a fresh AI draft
+// Task 4.1 (OP-11): the AI provenance notice + diff summary a fresh AI draft
 // carries on its own 201 regenerate response (the `Sent` story above already
 // exercises the plain regenerate button, since it's shown for any `sent`
 // offer regardless of provenance).

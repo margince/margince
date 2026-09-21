@@ -41,7 +41,7 @@ import "./record360.css";
  * for a word nobody could interpret. It renders neutral instead — the card
  * shows the call it was given and does not pretend to grade it.
  */
-export type StandingTone = "danger" | "warn" | "accent" | "calm" | "unknown";
+export type StandingTone = "danger" | "warning" | "accent" | "calm" | "unknown";
 
 /**
  * One reading the call was made from: what it said, and which reading said it.
@@ -171,7 +171,6 @@ export function Proof({
           head's hand-rolled chip was drawing for itself. The class is all
           that is left of it: where the control sits in the head's grid. */}
       <Button
-        small
         variant="aiQuiet"
         className="r360-rests-toggle"
         onClick={() => setOpen((shown) => !shown)}
@@ -181,7 +180,7 @@ export function Proof({
         <Caret aria-hidden="true" />
         {label}
         {count ? (
-          <span className="r360-rests-count">
+          <span>
             <span className="t-num">{formatNumber(items.length, locale)}</span>{" "}
             {/* The unit as a word, not a bare figure. "What this rests on 2"
                 asks the reader to guess what was counted; the count is only
@@ -210,7 +209,7 @@ export function Proof({
  * loud element on the card and answers a different question — including
  * "I do not recognise this word", which a badge never has to say.
  */
-export type SignalTone = "danger" | "warn" | "accent" | undefined;
+export type SignalTone = "danger" | "warning" | "accent" | undefined;
 
 /** One scannable finding, stating the number that tripped it. */
 export type Signal = {

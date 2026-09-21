@@ -16,6 +16,7 @@ import {
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
@@ -81,7 +82,7 @@ function RoomPage({
     <div className="roompage">
       <header className="roompage-head">
         <div className="roompage-id">
-          <p className="t-caption">
+          <p>
             <button
               type="button"
               className="link-button"
@@ -97,7 +98,9 @@ function RoomPage({
               the row, where a reader looking for the state found three
               buttons. */}
           <div className="roompage-title-row">
-            <h1 className="t-display">{room.title}</h1>
+            <Heading size="xlarge" className="t-display">
+              {room.title}
+            </Heading>
             <RoomStateBadge state={room.state} />
           </div>
           <RoomFacts room={room} />
@@ -141,11 +144,13 @@ function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
   const recordZone = useRecordZone();
   switch (room.state) {
     case "paused":
-      return <StateNotice tone="warn" claim={t("roompage.banner.paused")} />;
+      return <StateNotice tone="warning" claim={t("roompage.banner.paused")} />;
     case "closed":
       return <StateNotice claim={t("roompage.banner.closed")} />;
     case "expired":
-      return <StateNotice tone="warn" claim={t("roompage.banner.expired")} />;
+      return (
+        <StateNotice tone="warning" claim={t("roompage.banner.expired")} />
+      );
     case "archived":
       return (
         <StateNotice tone="danger" claim={t("roompage.banner.archived")} />
@@ -195,20 +200,18 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
       <OverflowMenu label={t("roompage.accessMenu")}>
         {room.state === "live" ? (
           <Button
-            small
             variant="ghost"
             pending={move.isPending}
             onClick={() => move.mutate("pause")}
           >
             {t("roompage.pause")}
-            <span className="t-caption roompage-menu-hint">
+            <span className="roompage-menu-hint">
               {t("roompage.pauseHint")}
             </span>
           </Button>
         ) : null}
         {room.state === "paused" ? (
           <Button
-            small
             variant="ghost"
             pending={move.isPending}
             onClick={() => move.mutate("resume")}
@@ -217,24 +220,24 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
           </Button>
         ) : null}
         {room.state === "live" || room.state === "paused" ? (
-          <Button small variant="ghost" onClick={() => setClosing(true)}>
+          <Button variant="ghost" onClick={() => setClosing(true)}>
             {t("roompage.close")}
-            <span className="t-caption roompage-menu-hint">
+            <span className="roompage-menu-hint">
               {t("roompage.closeHint")}
             </span>
           </Button>
         ) : null}
         {!FINISHED_STATES.has(room.state) ? (
-          <Button small variant="ghost" onClick={() => setExpiring(true)}>
+          <Button variant="ghost" onClick={() => setExpiring(true)}>
             {t("roompage.setExpiry")}
-            <span className="t-caption roompage-menu-hint">
+            <span className="roompage-menu-hint">
               {t("roompage.setExpiryHint")}
             </span>
           </Button>
         ) : null}
       </OverflowMenu>
       {move.isError ? (
-        <p className="t-caption t-danger">{problemMessageOf(move.error, t)}</p>
+        <p className="t-danger">{problemMessageOf(move.error, t)}</p>
       ) : null}
       <ConfirmModal
         open={closing}

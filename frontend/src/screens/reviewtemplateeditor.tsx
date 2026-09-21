@@ -9,9 +9,10 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,
@@ -70,10 +71,10 @@ export function ReviewTemplateEditor({
     );
   return (
     <Modal open onClose={onClose} labelledBy="review-template-heading">
-      <h2 id="review-template-heading" className="t-h2">
+      <Heading size="large" id="review-template-heading" className="t-h2">
         {template.label}
-      </h2>
-      <p className="t-caption">{t("reviewTemplates.editHint")}</p>
+      </Heading>
+      <p>{t("reviewTemplates.editHint")}</p>
       <div className="form-stack">
         {questions.map((question, index) => (
           <div key={question.key} className="form-stack">
@@ -159,11 +160,7 @@ export function ReviewTemplateEditor({
         >
           {t("reviewTemplates.addQuestion")}
         </Button>
-        {save.isError && (
-          <p role="alert" className="t-caption">
-            {problemMessageOf(save.error, t)}
-          </p>
-        )}
+        {save.isError && <RefusalLine error={save.error} />}
         <div className="actions">
           <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
             {t("deals.cancel")}

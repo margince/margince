@@ -15,7 +15,7 @@ import {
 // WHERE a finished draft leaves the reader.
 //
 // The draft answers into the middle of a scrolling drawer and grows everything
-// above the body as it lands: the Art. 50 band appears where the draft bar was,
+// above the body as it lands: the provenance band appears where the draft bar was,
 // carrying the disclosure sentence, what the draft was based on and the voice
 // version, and the head below it fills with a recipient and a subject. The
 // words the rep pressed the button for end up under all of that — off the fold

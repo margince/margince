@@ -54,7 +54,13 @@ type EmailAccessStatus = components["schemas"]["EmailAccessStatus"];
 // on purpose — the body below a withheld message already says it is not shared
 // with this reader, and the same sentence twice on one screen reads as a
 // surface that does not know what it has said.
+//
+// `workspace` and `team` are two sentences because they are two facts, and the
+// mark and the sentence used to disagree about which one this was: the badge
+// read "Team" over "Everyone in the company can read this." The server now
+// tells them apart, so each word gets the sentence that is true of it.
 const STATUS_SENTENCE: Partial<Record<EmailAccessStatus, MessageKey>> = {
+  workspace: "email.access.sentence.workspace",
   team: "email.access.sentence.team",
   participants: "email.access.sentence.participants",
   selected: "email.access.sentence.selected",

@@ -5,6 +5,7 @@ import { useId, useMemo, useState } from "react";
 
 import { Button, EmptyState, Modal, SearchField } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
 import type { RecordTag, TaggableType } from "./tags.queries";
@@ -63,7 +64,9 @@ export function AddTagDialog({
   return (
     <Modal open onClose={onClose} labelledBy={titleID}>
       <div className="tagpicker">
-        <h2 id={titleID}>{t("tags.add")}</h2>
+        <Heading size="large" id={titleID}>
+          {t("tags.add")}
+        </Heading>
         <SearchField
           aria-label={t("tags.pickerLabel")}
           value={query}

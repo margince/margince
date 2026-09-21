@@ -43,7 +43,7 @@ function StillReading() {
     return () => clearInterval(tick);
   }, []);
   return (
-    <p style={{ font: "var(--fs-display)/1 var(--f-display)" }}>
+    <p style={{ fontFamily: "var(--fontFamilyHeading)" }}>
       <CountUp value={pages} locale="en" />
     </p>
   );

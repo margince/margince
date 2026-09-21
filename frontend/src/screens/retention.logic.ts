@@ -116,15 +116,15 @@ export function effectReasonKey(effect: PolicyEffect): MessageKey | null {
   return EFFECT_REASON_KEYS[effect];
 }
 
-const EFFECT_TONES: Record<PolicyEffect, "success" | "warn" | undefined> = {
+const EFFECT_TONES: Record<PolicyEffect, "success" | "warning" | undefined> = {
   acting: "success",
-  suppressed: "warn",
+  suppressed: "warning",
   disabled: undefined,
 };
 
 export function effectTone(
   effect: PolicyEffect,
-): "success" | "warn" | undefined {
+): "success" | "warning" | undefined {
   return EFFECT_TONES[effect];
 }
 

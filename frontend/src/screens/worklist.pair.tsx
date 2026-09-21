@@ -117,7 +117,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // miss, and the press that follows fails identically. "Try again"
           // is the only one of the three that means it.
           toast.show(t(message), {
-            mark: false,
+            tone: "danger",
             sticky: code === "permission_denied" || code === "conflict",
           });
         },
@@ -148,7 +148,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // A list ITEM, so the two stay one list of two: the card is the
           // chrome and the `<ul>` is still what says there are two of them.
           <Card as="li" inset key={side.id} className="worklist-pair-card">
-            <span className="worklist-pair-name">{side.label}</span>
+            <span>{side.label}</span>
             {side.detail && <span className="t-caption">{side.detail}</span>}
             {/* The reader's best single signal for which side is the real
                 one, where the record type carries such a count. */}
@@ -180,7 +180,6 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
               // on the row rather than on whatever body the card has.
               <div className="card-actions">
                 <Button
-                  small
                   variant="primary"
                   pending={decide.isPending}
                   aria-label={keepLabel(pair, side, t)}
@@ -204,7 +203,6 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         // harder for the answer that says it was never a pair.
         <div className="worklist-pair-actions">
           <Button
-            small
             variant="ghost"
             pending={decide.isPending}
             onClick={() => answer("not_a_duplicate")}
@@ -217,7 +215,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         // Said in words rather than shown as disabled buttons. A greyed-out
         // control asks the reader to work out why it is grey; a sentence tells
         // them the pair is real, that they cannot settle it, and who can.
-        <p className="t-caption worklist-pair-steward">
+        <p className="worklist-pair-steward">
           {t("worklist.pair.stewardOnly")}
         </p>
       )}

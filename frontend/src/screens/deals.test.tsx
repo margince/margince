@@ -1613,7 +1613,7 @@ describe("DealsScreen filters", () => {
     const menu = screen.getByRole("group", { name: "Filter" });
     await user.click(within(menu).getByRole("button", { name: "Stage" }));
     expect(
-      within(menu).getByRole("button", { name: "All stages" }),
+      within(menu).getByRole("radio", { name: "All stages" }),
     ).toBeTruthy();
   });
 
@@ -1638,7 +1638,7 @@ describe("DealsScreen filters", () => {
       within(menu).getByRole("button", { name: "Stalled only" }),
     );
     await userEvent.click(
-      within(menu).getByRole("button", { name: "Stalled only" }),
+      within(menu).getByRole("radio", { name: "Stalled only" }),
     );
 
     await waitFor(() =>
@@ -1665,7 +1665,7 @@ describe("DealsScreen filters", () => {
     await userEvent.click(
       within(menu).getByRole("button", { name: "Forecast" }),
     );
-    await userEvent.click(within(menu).getByRole("button", { name: "Commit" }));
+    await userEvent.click(within(menu).getByRole("radio", { name: "Commit" }));
 
     await waitFor(() =>
       expect(urls.some((u) => u.includes("forecast_category=commit"))).toBe(
@@ -2343,7 +2343,7 @@ describe("the partner filter", () => {
     );
     // The option is the company's NAME, resolved from the company list —
     // never the bare id, which names nothing to a reader.
-    await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
+    await userEvent.click(within(menu).getByRole("radio", { name: "Acme" }));
 
     await waitFor(() =>
       expect(urls.some((u) => u.includes("partner_company_id=o1"))).toBe(true),
@@ -2385,7 +2385,7 @@ describe("the partner filter", () => {
     await userEvent.click(
       within(menu).getByRole("button", { name: "Partner" }),
     );
-    await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
+    await userEvent.click(within(menu).getByRole("radio", { name: "Acme" }));
 
     await waitFor(() =>
       expect(

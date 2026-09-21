@@ -59,11 +59,6 @@
 
 .merge-side-name {
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
-}
-
-.merge-side-detail {
-  color: var(--textMeta);
 }
 
 /* The evidence is a definition list, not a table: it has one column of names
@@ -84,10 +79,6 @@
   grid-template-columns: minmax(0, 6rem) 1fr;
   gap: var(--space-3);
   align-items: baseline;
-}
-
-.merge-evidence-field {
-  color: var(--textMeta);
 }
 
 /* The two values sit either side of the verdict, in the same order as the two
@@ -113,7 +104,6 @@
 }
 
 .merge-withheld {
-  color: var(--textMeta);
   margin: 0;
 }
 

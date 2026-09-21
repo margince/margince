@@ -179,8 +179,8 @@ export const TopBarMenu: Story = {
  *
  * That direction is the point of the frame: the menu is anchored to a trigger at
  * the viewport's right edge, so a flyout that opened outward would open past the
- * window. The tick is on the standing choice — it is a `menuitemradio`, and the
- * tick is the visible half of `aria-checked` rather than an ornament.
+ * window. The three answers are the product's own radios, so the tick on the
+ * standing one is the control's state rather than an ornament beside it.
  */
 export const TopBarThemeFlyout: Story = {
   name: "Top bar theme flyout",

@@ -134,10 +134,7 @@ const verdictActor = "agent:" + verdictReason
 // layer does that from the args' own role declaration, and re-binding here
 // would make this a second, independent source of truth for the tenant.
 func (e *CounterpartyVerdictEngine) workspaceCtx(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: verdictActor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, verdictActor)
 }
 
 // verdictResult is one model answer.

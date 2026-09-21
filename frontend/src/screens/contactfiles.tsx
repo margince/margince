@@ -118,11 +118,7 @@ export function ContactFilesTab({
       // which the primitive documents as a place for verbs a caller renders
       // only once the panel's content is real.
       titleAction={
-        <Button
-          small
-          reasonId={refusedReasonId}
-          onClick={() => setAdding(true)}
-        >
+        <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
           {t("docs.add.action")}
         </Button>
       }
@@ -156,9 +152,7 @@ export function ContactFilesTab({
               title if somebody gave it one, else the filename — a display
               name is what a reader looks for, and the filename is what the
               saved file is called. */}
-            <span className="pe-row-label">
-              {formatDateAbbrev(file.created_at, locale, recordZone)}
-            </span>
+            <span>{formatDateAbbrev(file.created_at, locale, recordZone)}</span>
             <span className="pe-row-value">
               <a
                 className="link-button"

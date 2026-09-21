@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -244,10 +245,14 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
 		join, reach = "", activityReachesCompany(anchorPos)
 	}
+	// The seventh column is the import marker the trust ladder reads, as one
+	// boolean. trustOfWriter states what it means and why it is spelled this
+	// way — the namespace, the coalesce, and what each would break without.
 	activitySQL := fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, '')
+		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
+		       (coalesce(a.source_system, '') LIKE '%s%%')
 		FROM activity a %s
-		WHERE %s AND a.archived_at IS NULL`, join, reach)
+		WHERE %s AND a.archived_at IS NULL`, provenance.ReservedSourceSystemPrefix, join, reach)
 	if scope != "" {
 		activitySQL += " AND " + scope
 	}
@@ -263,9 +268,9 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	for rows.Next() {
 		var id ids.ActivityID
 		var summary, kind, capturedBy string
-		var isDone bool
+		var isDone, imported bool
 		var occurredAt time.Time
-		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy); err != nil {
+		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported); err != nil {
 			return nil, nil, nil, err
 		}
 		activityIDs = append(activityIDs, id)
@@ -274,7 +279,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		// the untyped UUID.
 		item := graphItem{
 			entityType: string(datasource.EntityActivity), id: id.UUID, summary: summary,
-			score: rankScore(0, occurredAt, capturedBy, now), occurredAt: occurredAt,
+			score: rankScore(0, occurredAt, capturedBy, imported, now), occurredAt: occurredAt,
 		}
 		if kind == "task" && !isDone {
 			openTasks = append(openTasks, item)

@@ -34,7 +34,7 @@ import (
 // depths), so a walk keyed on tool names finds sixteen routes and would find a
 // seventeenth the contract grew for any of them.
 var singlePurposeTools = []string{
-	"send_email", "send_message", "send_account_email", "book_meeting",
+	"send_email", "send_message", "send_company_email", "book_meeting",
 	"promote_lead", "disqualify_lead", "advance_project_phase", "advance_deal",
 	"merge_records", "enrich",
 	"log_activity", "draft_email", "relink_activity", "run_report",
@@ -64,7 +64,7 @@ var singlePurposeTools = []string{
 var contractBodies = map[string]string{
 	"sendEmail":        `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales"}`,
 	"sendMessage":      `{"body":"hi","consent_purpose":"support"}`,
-	"sendAccountEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
+	"sendCompanyEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
 	"bookMeeting":      `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000002"}]}`,
 	"promoteLead":      `{"trigger":"inbound_reply"}`,
 	// Optional on the wire so a governed agent disqualify works bare; the

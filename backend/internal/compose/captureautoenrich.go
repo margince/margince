@@ -313,8 +313,5 @@ func startAutoEnrichRead(ctx context.Context, contactsStore *contacts.Store,
 // enforce, without impersonating any human.
 func (w *captureAutoEnrichSweepWorker) workspaceCtx(ctx context.Context, ws ids.WorkspaceID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: systemAutoEnrichActor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, systemAutoEnrichActor)
 }

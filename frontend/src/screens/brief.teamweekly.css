@@ -9,7 +9,6 @@
 
 .teamweekly-coverage {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* The panel's opening block: the verdict, what the agenda holds and how much
@@ -44,7 +43,6 @@
    all start and end at one x and the column reads as one comparison. */
 .teamweekly-movement-name {
   flex: 0 0 9rem;
-  color: var(--textContent);
 }
 
 .teamweekly-movement-row > .meterbar {
@@ -56,7 +54,6 @@
   flex: 0 0 auto;
   min-width: 3ch;
   text-align: right;
-  color: var(--textContent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -93,15 +90,9 @@
   width: 100%;
 }
 
-.teamweekly-rep-name {
-  font-weight: 500;
-  color: var(--textContent);
-}
-
 .teamweekly-rep-focus {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  color: var(--textMeta);
 }

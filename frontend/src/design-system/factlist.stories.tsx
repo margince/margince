@@ -70,7 +70,7 @@ export const RichValues: Story = {
       {
         key: "status",
         term: "Mailbox",
-        value: <Badge tone="warn">Reconnect needed</Badge>,
+        value: <Badge tone="warning">Reconnect needed</Badge>,
       },
       { key: "size", term: "Employees", value: "Not recorded" },
       {
@@ -87,7 +87,7 @@ export const RichValues: Story = {
 // scans before reading anything else on the page.
 export const InACard: Story = {
   render: (args) => (
-    <Card title="At a glance" sub="Globex GmbH">
+    <Card title="At a glance">
       <FactList {...args} />
     </Card>
   ),

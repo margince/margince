@@ -27,7 +27,7 @@ import {
 //  (a) the `t-mono` class, in markup, a stylesheet or a selector string;
 //  (b) a `font-family` or `font` declaration naming a mono family on a rule
 //      whose selectors do not ALL target code — plus any custom property
-//      carrying one, except the `--f-mono` token itself in tokens.css;
+//      carrying one, except the `--fontFamilyMono` token itself in tokens.css;
 //  (c) the same family inside a TypeScript string: an inline `fontFamily`, a
 //      style string, or a constant handed to either.
 //
@@ -57,7 +57,7 @@ function corpus(): string[] {
 
 // `monospace` also matches inside `ui-monospace`, which is intended: a hyphen is
 // a word boundary.
-const MONO_FAMILY = /var\(\s*--f-mono\s*\)|Geist Mono|\bmonospace\b/i;
+const MONO_FAMILY = /var\(\s*--fontFamilyMono\s*\)|Geist Mono|\bmonospace\b/i;
 const T_MONO = /(?<![\w-])t-mono(?![\w-])/;
 
 // Splits on a character at the top level only, so a comma inside `:is(a, b)` or
@@ -161,7 +161,7 @@ function monoDeclarations(css: string): MonoDeclaration[] {
 function isAllowed(file: string, declaration: MonoDeclaration): boolean {
   if (declaration.property.startsWith("--")) {
     return (
-      declaration.property === "--f-mono" &&
+      declaration.property === "--fontFamilyMono" &&
       file.endsWith("design-system/tokens.css")
     );
   }
@@ -287,48 +287,58 @@ describe("mono is for code", { timeout: 60_000 }, () => {
   it("refuses mono on a rule that does not dress code", () => {
     const refused = (css: string, file = "src/screens/x.css") =>
       monoViolations(file, css).length > 0;
-    expect(refused(".foo { font-family: var(--f-mono); }")).toBe(true);
+    expect(refused(".foo { font-family: var(--fontFamilyMono); }")).toBe(true);
     expect(refused('.foo { font: 12px/1 "Geist Mono", monospace; }')).toBe(
       true,
     );
     expect(refused(".foo { font-family: ui-monospace; }")).toBe(true);
     // One selector in the list that is not code puts mono on that element.
-    expect(refused(".foo, code { font-family: var(--f-mono); }")).toBe(true);
-    // The subject is what is dressed: here it is the label, not the code.
-    expect(refused("code .label { font-family: var(--f-mono); }")).toBe(true);
-    expect(refused(".code-block .label { font-family: var(--f-mono); }")).toBe(
+    expect(refused(".foo, code { font-family: var(--fontFamilyMono); }")).toBe(
       true,
     );
-    expect(refused(".a { code & { font-family: var(--f-mono); } }")).toBe(true);
+    // The subject is what is dressed: here it is the label, not the code.
+    expect(refused("code .label { font-family: var(--fontFamilyMono); }")).toBe(
+      true,
+    );
+    expect(
+      refused(".code-block .label { font-family: var(--fontFamilyMono); }"),
+    ).toBe(true);
+    expect(
+      refused(".a { code & { font-family: var(--fontFamilyMono); } }"),
+    ).toBe(true);
     expect(
       refused("@media (width > 1px) { .a { font-family: monospace; } }"),
     ).toBe(true);
     // A token of its own is a second way to spell the face.
-    expect(refused(":root { --code-face: var(--f-mono); }")).toBe(true);
-    expect(refused(':root { --f-mono: "Geist Mono"; }')).toBe(true);
+    expect(refused(":root { --code-face: var(--fontFamilyMono); }")).toBe(true);
+    expect(refused(':root { --fontFamilyMono: "Geist Mono"; }')).toBe(true);
     expect(refused(".t-mono { color: red; }")).toBe(true);
   });
 
   it("allows mono on code, pre, samp and .code-block, and on the token", () => {
     const allowed = (css: string, file = "src/screens/x.css") =>
       monoViolations(file, css);
-    expect(allowed(".foo code { font-family: var(--f-mono); }")).toEqual([]);
-    expect(allowed("code, pre, samp { font-family: var(--f-mono); }")).toEqual(
-      [],
-    );
+    expect(
+      allowed(".foo code { font-family: var(--fontFamilyMono); }"),
+    ).toEqual([]);
+    expect(
+      allowed("code, pre, samp { font-family: var(--fontFamilyMono); }"),
+    ).toEqual([]);
     expect(allowed("pre.code-block:hover { font-family: monospace; }")).toEqual(
       [],
     );
-    expect(allowed(".code-block { font-family: var(--f-mono); }")).toEqual([]);
-    expect(allowed(".a { & code { font-family: var(--f-mono); } }")).toEqual(
-      [],
-    );
+    expect(
+      allowed(".code-block { font-family: var(--fontFamilyMono); }"),
+    ).toEqual([]);
+    expect(
+      allowed(".a { & code { font-family: var(--fontFamilyMono); } }"),
+    ).toEqual([]);
     expect(
       allowed("@media (width > 1px) { pre { font-family: monospace; } }"),
     ).toEqual([]);
     expect(
       allowed(
-        ':root { --f-mono: "Geist Mono", ui-monospace, monospace; }',
+        ':root { --fontFamilyMono: "Geist Mono", ui-monospace, monospace; }',
         "src/design-system/tokens.css",
       ),
     ).toEqual([]);
@@ -352,7 +362,7 @@ describe("mono is for code", { timeout: 60_000 }, () => {
     ).toBe(true);
     expect(
       refused(
-        'export const A = () => <b style={{ fontFamily: "var(--f-mono)" }} />;',
+        'export const A = () => <b style={{ fontFamily: "var(--fontFamilyMono)" }} />;',
       ),
     ).toBe(true);
     expect(refused("const face = { fontFamily: 'monospace' };")).toBe(true);
@@ -367,11 +377,13 @@ describe("mono is for code", { timeout: 60_000 }, () => {
     const allowed = (source: string, file = "src/screens/x.tsx") =>
       monoViolations(file, source);
     expect(allowed('const a = "t-monochrome t-num";')).toEqual([]);
-    expect(allowed("// the t-mono class and var(--f-mono) are gone")).toEqual(
-      [],
-    );
     expect(
-      allowed('const sheet = "pre code { font-family: var(--f-mono); }";'),
+      allowed("// the t-mono class and var(--fontFamilyMono) are gone"),
+    ).toEqual([]);
+    expect(
+      allowed(
+        'const sheet = "pre code { font-family: var(--fontFamilyMono); }";',
+      ),
     ).toEqual([]);
     expect(
       allowed("<style>pre { font-family: monospace; }</style>", "index.html"),

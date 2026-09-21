@@ -14,8 +14,6 @@
 
 .emailaccess__sentence {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
 }
 
 .emailaccess__members {
@@ -34,7 +32,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  line-height: 1.7;
 }
 
 /* The verb, with its scope and what came of pressing it UNDER it rather than
@@ -51,5 +48,4 @@
 
 .emailaccess__error {
   color: var(--dangerText);
-  font-size: var(--fs-sm);
 }

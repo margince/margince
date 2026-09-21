@@ -66,6 +66,63 @@ func TestActivityLogInputRefusesTheMailIdentity(t *testing.T) {
 	}
 }
 
+// A STATED Message-ID is accepted, and that acceptance is correct.
+//
+// `rfc_message_id` carries no namespace guard. It is checked only for kind
+// (mailimportmapping.go: an email may state one, other kinds may not) and then
+// becomes the `mail` identity key verbatim. So a caller CAN claim the identity
+// of a Message-ID they never received.
+//
+// What that costs, and why it is not the hole ReservedMailIdentityError closes:
+//
+//   - The planted row keeps the IMPORTER'S OWN natural key. source_system
+//     'email' is separately refused (TestActivityLogInputRefusesTheMailIdentity),
+//     so the row is filed under whatever the caller states — never under
+//     ('email', <Message-ID>).
+//   - A later capture of the real message therefore does NOT collide with it.
+//     Both sides resolve this key — replayedActivity here, capture's own
+//     ON CONFLICT (source_system, source_id) there — and the keys differ, so
+//     the capture lands its own row. The message is not suppressed.
+//   - The capture's own identity claim loses, which ClaimIdentity reports as a
+//     non-error by contract — a lost claim is indistinguishable from having no
+//     identity to claim, which is what stops it being an existence oracle.
+//
+// So the cost is a DENIED DEDUPLICATION, not denied mail: the planter can force
+// one message to exist as two rows, and can attach their own row to a Message-ID
+// they never held. That is a visible annoyance a human can delete.
+//
+// If a future change makes a stated Message-ID decide more than an identity
+// claim — routing a create through the replay path, or letting it widen an
+// audience — this is the test that must be read and revised rather than left
+// silently passing.
+func TestAStatedMessageIDIsAcceptedAndClaimsOnlyAnIdentity(t *testing.T) {
+	planted := "never-received@counterparty.example"
+	ordinary := "hubspot"
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+		Kind: "email", SourceSystem: &ordinary, SourceId: strPtr("engagement-4471"),
+		RfcMessageId: &planted,
+	})
+	if err != nil {
+		t.Fatalf("a stated Message-ID must stay writable — an importer states the "+
+			"Message-ID of every message it carries: %v", err)
+	}
+	// It becomes the mail identity, which is the whole cross-door mechanism.
+	kind, key := identityOf(in)
+	if kind != IdentityKindMail || key != planted {
+		t.Fatalf("identityOf = (%q, %q), want (%q, %q)", kind, key, IdentityKindMail, planted)
+	}
+	// And the row's OWN key stays the importer's. This is the line between a
+	// nuisance and a suppression: were the natural key rewritten to
+	// ('email', <Message-ID>), the planted row would collide with the real
+	// capture and take the message away from the mailbox that holds it.
+	if in.SourceSystem == nil || *in.SourceSystem != ordinary {
+		t.Fatalf("SourceSystem = %q, want the importer's own %q", deref(in.SourceSystem), ordinary)
+	}
+	if in.SourceID == nil || *in.SourceID != "engagement-4471" {
+		t.Errorf("SourceID = %q, want the importer's own record id", deref(in.SourceID))
+	}
+}
+
 // The `source` guard matters as much as source_system's: activity is one
 // of the classes the crash repair scans by provenance, so a client that
 // could write the namespace there could have a planted row adopted.

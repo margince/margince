@@ -27,6 +27,14 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	if err := auth.RequireMember(ctx); err != nil {
 		return crmcontracts.Attention{}, err
 	}
-	day, _, err := s.assembleDay(ctx)
+	// ONE snapshot for every lane. Read lane-by-lane the page could contradict
+	// itself — a deal that closed between lane 3 and lane 11 appeared in one
+	// and not the other — and it paid a transaction per lane to do it.
+	var day crmcontracts.Attention
+	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+		var err error
+		day, _, err = s.assembleDay(ctx)
+		return err
+	})
 	return day, err
 }

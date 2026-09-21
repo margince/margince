@@ -149,22 +149,33 @@ func wordRune(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r)
 }
 
-// AIDisclosure is the Art. 50 authorship line, in the draft's own language, and
-// it is the ONLY spelling of it in the tree.
+// AIProvenanceNotice tells the rep reviewing a draft that a model wrote it, in
+// the draft's own language, and it is the ONLY spelling of it in the tree.
 //
-// Here rather than beside one drafting site because it is a LEGAL obligation:
-// the tree carried five copies that had drifted, some naming the article and
-// some not, so which sentence a customer received depended on which surface
-// wrote their message. That is the shape of defect nobody notices until two
-// emails are compared side by side.
+// IT DISCHARGES NO DISCLOSURE DUTY, whatever its wording says: it asks the rep
+// to read the draft before sending, and that review is what keeps an Art. 50
+// duty from attaching in the first place. Why that is so, and what would make it
+// stop being so: docs/explanation/ai-provenance-notice.md.
 //
-// It NAMES THE ARTICLE, which is what three of the five did and what the German
-// copy did: consolidating had to pick one, and the citation is the half a reader
-// can act on — it says which obligation the line is discharging rather than
-// leaving them to guess. Nothing that carried it loses it.
+// WHO SEES IT depends on the surface, so do not generalise from one. The
+// composer and offer banners carry it as its own field beside the draft and
+// never append it to the body, so only the rep reads it. renderIntroDraft
+// (modules/signals) formats it INTO the intro body, so a rep who sends that
+// body unchanged sends the sentence with it.
 //
-// Held by: TestTheAIDisclosureHasOneSpelling (backend/gates/aidisclosure_test.go)
-func AIDisclosure(lang textlang.Lang) string {
+// Here rather than beside one drafting site because a rep shown a different
+// sentence by each surface learns to skim past all of them: the tree carried
+// five copies that had drifted, some naming the article and some not, so which
+// sentence appeared depended on which surface wrote the draft. That is the
+// shape of defect nobody notices until two drafts are compared side by side.
+//
+// The wording still calls itself an Art. 50 disclosure, which is the half this
+// rename did not fix — it is user-visible copy in three languages and a product
+// call. Tracked in margince#5920.
+//
+// Held by: TestTheAIProvenanceNoticeHasOneSpelling
+// (backend/gates/aiprovenancenotice_test.go)
+func AIProvenanceNotice(lang textlang.Lang) string {
 	switch lang {
 	case textlang.German:
 		return "Diese Nachricht wurde mit KI-Unterstützung verfasst (Offenlegung nach Art. 50 EU-KI-Verordnung)."
@@ -175,21 +186,21 @@ func AIDisclosure(lang textlang.Lang) string {
 	}
 }
 
-// AIDisclosureFor answers the contract's optional disclosure field: the Art. 50
-// line when a model wrote the draft, and nil when a contact did.
+// AIProvenanceNoticeFor answers the contract's optional ai_disclosure field:
+// the notice when a model wrote the draft, and nil when a contact did.
 //
-// The DRAFT's language, not the server's — a German draft owes a German
-// disclosure, and the caller passes the language the draft is written in.
+// The DRAFT's language, not the server's — a German draft is reviewed by
+// someone reading German, and the caller passes the language it is written in.
 //
-// The pointer is why this exists beside AIDisclosure rather than at each
+// The pointer is why this exists beside AIProvenanceNotice rather than at each
 // composer. Four of them stamp the field under the same condition, and the
 // failure mode is not a wrong sentence but an ABSENT one — a nil field is a
-// draft that discloses nothing, which reads to every test around it exactly
-// like a draft a contact wrote.
-func AIDisclosureFor(aiWritten bool, lang textlang.Lang) *string {
+// model-written draft that presents as a human one, which reads to every test
+// around it exactly like a draft a contact wrote.
+func AIProvenanceNoticeFor(aiWritten bool, lang textlang.Lang) *string {
 	if !aiWritten {
 		return nil
 	}
-	line := AIDisclosure(lang)
+	line := AIProvenanceNotice(lang)
 	return &line
 }

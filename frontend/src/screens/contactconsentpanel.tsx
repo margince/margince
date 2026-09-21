@@ -3,6 +3,7 @@ import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { Button, Modal, Skeleton } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
@@ -68,7 +69,7 @@ export function ConsentAndChannels({
         ) : failed ? (
           <p role="alert">
             {t("consent.guardFailed")}{" "}
-            <Button small variant="ghost" onClick={onRetry}>
+            <Button variant="ghost" onClick={onRetry}>
               {t("common.retry")}
             </Button>
           </p>
@@ -126,9 +127,8 @@ export function ConsentAndChannels({
               ))}
           </>
         )}
-        <p className="t-caption">{t("consent.permissionScope")}</p>
+        <p>{t("consent.permissionScope")}</p>
         <Button
-          small
           variant="ghost"
           onClick={() => {
             setEverManaged(true);
@@ -154,7 +154,9 @@ export function ConsentAndChannels({
         placement="right"
       >
         <div className="pe-drawer-title">
-          <h2 id={titleId}>{t("consent.manage")}</h2>
+          <Heading size="large" id={titleId}>
+            {t("consent.manage")}
+          </Heading>
         </div>
         {everManaged && (
           <ConsentSection
@@ -198,13 +200,7 @@ function ConsentRow({
           {icon}
           {label}
         </span>
-        <span
-          className={
-            reachable
-              ? verdictClass(verdict)
-              : "pe-rail-value pe-rail-value-muted"
-          }
-        >
+        <span className={reachable ? verdictClass(verdict) : "pe-rail-value "}>
           {reachable ? consentWord(verdict, t) : unreachableWord}
         </span>
       </div>
@@ -222,7 +218,7 @@ function verdictClass(verdict: string | undefined): string {
     case "allowed":
       return "pe-rail-value pe-rail-value-good";
     case "blocked":
-      return "pe-rail-value pe-rail-value-warn";
+      return "pe-rail-value pe-rail-value-warning";
     default:
       return "pe-rail-value pe-rail-value-muted";
   }

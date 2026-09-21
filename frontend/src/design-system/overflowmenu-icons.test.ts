@@ -34,10 +34,17 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
+import {
+  extensionFrontendFiles,
+  filesUnder,
+  parseSource,
+} from "../../scripts/lib/source-tree";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const srcDir = join(frontendRoot, "src");
+// A unit's screen is shipped UI in the same bundle, so a gate stopping at
+// frontend/src would hold the core to a rule the extension tier escapes.
+const extensionsRoot = join(frontendRoot, "..", "extensions");
 
 // The menu this gate is about, named once. Checked against the design system
 // below, so a rename fails loudly rather than quietly emptying the census.
@@ -163,7 +170,9 @@ describe("an item in an overflow menu carries words, not glyphs", () => {
   // written in a story is a menu a reader is shown, and a skip-list is the one
   // way this gate can fail short: it reads a smaller tree, finds nothing, and
   // reports the same word a clean tree does.
-  const surfaces = filesUnder(srcDir).filter((file) => /\.tsx$/.test(file));
+  const surfaces = filesUnder(srcDir)
+    .concat(extensionFrontendFiles(extensionsRoot))
+    .filter((file) => /\.tsx$/.test(file));
 
   it("names a menu the design system still exports", () => {
     // The subject, read off its owner. Renaming the component without renaming
@@ -220,6 +229,12 @@ describe("an item in an overflow menu carries words, not glyphs", () => {
     // collected no files and a detector that matched no menus print the same
     // clean verdict as a tree that is genuinely clean.
     expect(surfaces.length).toBeGreaterThan(100);
+    // And the extension tier specifically: the floor above is one the core
+    // satisfies alone, so it cannot notice a walk that stops at src/.
+    expect(
+      surfaces.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
+    ).toBe(true);
     const menus = surfaces.filter((file) =>
       readFileSync(file, "utf8").includes(`<${MENU}`),
     );

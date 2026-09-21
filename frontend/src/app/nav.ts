@@ -243,12 +243,20 @@ export function opensCreateForm(route: Route): boolean {
 //
 // The rest of the app is scanned ACROSS — a list, a board, a table — and the
 // cap only ever pushed columns off the right edge there.
+//
+// Projects is the one list in this set, and it is here because the product owner
+// asked for it by name: it is the shortest of the record lists (five columns,
+// and a phase dial rather than a board), and the page a reader most often meets
+// is its first-run plate — a paragraph and one verb, which at 4K stood alone in
+// the top-left corner of a metre of ground. The four wider lists stay out, so
+// the arrangement Projects keeps is deliberate rather than an oversight in them.
 export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "home",
   "worklist",
   "filters",
   "analytics",
   "ai",
+  "projects",
 ]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,

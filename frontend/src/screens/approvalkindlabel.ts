@@ -75,6 +75,6 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   // message that was already scheduled and got stopped. Different lifecycles,
   // so different words.
   scheduled_send_held: "approval.kind.scheduled_send_held",
-  send_account_email: "approval.kind.send_account_email",
+  send_company_email: "approval.kind.send_company_email",
   send_message: "approval.kind.send_message",
 };

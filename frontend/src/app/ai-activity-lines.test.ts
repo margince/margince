@@ -179,7 +179,7 @@ describe("speak", () => {
       (key) => en[key],
     );
     expect(line).toEqual({
-      before: "What I know about ",
+      before: "My summary of ",
       subject: {
         name: "Acme",
         route: {
@@ -205,7 +205,7 @@ describe("speak", () => {
       },
       (key) => en[key],
     );
-    expect(line?.before).toBe("What I know about ");
+    expect(line?.before).toBe("My summary of ");
     expect(line?.subject?.name).toBe("I");
     expect(line?.subject?.route?.screen).toBe("contacts");
   });
@@ -239,7 +239,7 @@ describe("speak", () => {
       (key) => en[key],
     );
     expect(line?.subject).toEqual({ name: "Acme", route: null });
-    expect(line && spokenText(line)).toBe("What I know about Acme is ready.");
+    expect(line && spokenText(line)).toBe("My summary of Acme is ready.");
   });
 
   it("renders the line for a state that has copy", () => {

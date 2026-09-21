@@ -163,7 +163,7 @@ func replySendInput(req crmcontracts.SendEmailRequest) (SendEmailInput, error) {
 // accountSendInput is the same decode for an account-started send, which names
 // its own links and has no anchor to derive a category from — the one shape
 // where a caller's claim is the only thing that can say what the message is.
-func accountSendInput(req crmcontracts.SendAccountEmailRequest) (SendEmailInput, error) {
+func accountSendInput(req crmcontracts.SendCompanyEmailRequest) (SendEmailInput, error) {
 	claimed, err := sendContextFrom((*string)(req.CommunicationContext),
 		req.MarketingPurpose, req.OperatorReason, req.Evidence)
 	if err != nil {

@@ -205,7 +205,6 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/commissions/decide.go:voidOne":                                    "a void is spelled as its own verb and carries the patch images for the row it retired",
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                       "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                  "each room transition names its own verb and carries the patch images the move built",
-	"internal/modules/privacy/retentionpolicystore.go:Delete":                           "the verb is an archive of the policy row, and the image is the policy as it stood",
 	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
@@ -240,7 +239,7 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 		// below like any other wrapper.
 	}.Files(t)
 
-	constantsByPackage := packageConstants(files)
+	constantsByPackage := packageConstants(t, files)
 
 	var withBefore, eventShaped, unresolvable, direct int
 	for _, parsed := range files {
@@ -304,6 +303,11 @@ type auditSite struct {
 	door           string // which of the four doors
 	args           []ast.Expr
 	beforeIsAbsent bool
+	// fn is the function the call sits in, so a reader can follow an image the
+	// call names rather than spells — a local, or a parameter its own callers
+	// fill. historyfieldlabels_test.go needs it; this gate reads only the
+	// argument.
+	fn *ast.FuncDecl
 }
 
 // action resolves the site's verb: a literal, or a package-level constant this
@@ -436,6 +440,7 @@ func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
 				door:           door,
 				args:           call.Args,
 				beforeIsAbsent: auditDoorsWithBeforeImage[door] && isAbsentImageExpr(call),
+				fn:             fn,
 			})
 			return true
 		})
@@ -487,14 +492,33 @@ func isAbsentImageExpr(call *ast.CallExpr) bool {
 // turn "we could not read this verb" into a standing waiver over sites whose
 // verb is plainly `update` — the census failing short into the one bucket that
 // forgives it.
-func packageConstants(files []gatekit.ParsedFile) map[string]map[string]string {
+// It reads the whole DIRECTORY rather than only the swept files, for the same
+// reason it groups by package at all: a constant lives wherever its author put
+// it, and `kindEmail` sits in the file that defines the sink parts, not in the
+// one that audits them. Resolving only the audit-door files calls such a site
+// unresolvable, and an unresolvable site gets ratified.
+func packageConstants(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]string {
+	t.Helper()
 	byPackage := map[string]map[string]string{}
+	fset := token.NewFileSet()
 	for _, parsed := range files {
 		dir := filepath.Dir(parsed.Path)
-		if byPackage[dir] == nil {
-			byPackage[dir] = map[string]string{}
+		if byPackage[dir] != nil {
+			continue
 		}
-		collectStringConstants(parsed.File, byPackage[dir])
+		byPackage[dir] = map[string]string{}
+		parsed := parsePackageDir(t, fset, dir)
+		for _, file := range parsed {
+			collectStringConstants(file, byPackage[dir])
+		}
+		// A second pass, because a constant may name another rather than a
+		// literal — `freemailDomainObject = captureSettingsObject`, the capture
+		// settings object under the name the free-mail list calls it. One pass
+		// leaves the alias unresolved, and an unresolved entity type is the
+		// answer that gets a site ratified.
+		for _, file := range parsed {
+			collectStringConstants(file, byPackage[dir])
+		}
 	}
 	return byPackage
 }
@@ -514,7 +538,7 @@ func collectStringConstants(file *ast.File, into map[string]string) {
 				if i >= len(value.Values) {
 					continue
 				}
-				if literal, known := resolveString(value.Values[i], nil); known {
+				if literal, known := resolveString(value.Values[i], into); known {
 					into[name.Name] = literal
 				}
 			}

@@ -117,12 +117,12 @@ export function ContactActions({
           on hover as well as to a screen reader. */}
       <IconAction
         label={t("contact.action.call")}
-        icon={<Phone size={15} aria-hidden="true" />}
+        icon={<Phone aria-hidden="true" />}
         onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
       />
       <IconAction
         label={t("contact.action.meetings")}
-        icon={<CalendarDays size={15} aria-hidden="true" />}
+        icon={<CalendarDays aria-hidden="true" />}
         onClick={() =>
           navigate({ screen: "contacts", id: contactId, id2: "meetings" })
         }
@@ -130,11 +130,7 @@ export function ContactActions({
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
-      {logRefused && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
-      )}
+      {logRefused && <p id={logRefusedId}>{t("record.logActivityRefused")}</p>}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form
           when its rung decides logging is the thing to do next. */}
@@ -143,7 +139,7 @@ export function ContactActions({
         reasonId={logRefused}
         onClick={onLogActivity}
       >
-        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" /> {t("log.title")}
       </Button>
       {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
           squaring this one would name the opposite of what it does. Files the
@@ -151,8 +147,7 @@ export function ContactActions({
           on its task kind, rather than a navigation to the Worklist, which has
           no way to add one. */}
       <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
-        <CheckSquare size={15} aria-hidden="true" />{" "}
-        {t("contact.action.addTask")}
+        <CheckSquare aria-hidden="true" /> {t("contact.action.addTask")}
       </Button>
       {/* Every secondary verb, behind one control. A header that put edit,
           merge and archive beside the daily verbs made the destructive one as
@@ -179,12 +174,11 @@ export function ContactActions({
                 disabledReasonId={refusedReasonId}
               />
               <Button
-                small
                 onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
               >
                 {t("record.fullHistory")}
               </Button>
-              <Button small onClick={onResearch}>
+              <Button onClick={onResearch}>
                 {t("contact.action.research")}
               </Button>
             </>

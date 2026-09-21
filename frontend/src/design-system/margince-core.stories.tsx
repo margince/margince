@@ -178,16 +178,7 @@ export const Ladder: Story = {
             size="md"
             feed={false}
           />
-          <figcaption
-            style={{
-              color: "var(--textMeta)",
-              fontSize: "var(--fs-eyebrow)",
-              letterSpacing: "var(--tracking-eyebrow)",
-              textTransform: "uppercase",
-            }}
-          >
-            {state}
-          </figcaption>
+          <figcaption>{state}</figcaption>
         </figure>
       ))}
     </div>

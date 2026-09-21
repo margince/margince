@@ -276,15 +276,21 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// registry rebuilds in WithKeyvault/WithGraphCapture apply it too — not just
 	// the Gmail path WithGmailCapture threads it into (ADR-0072).
 	opts = append(opts, compose.WithCaptureConfig(capCfg))
-	// Always applied, including the empty default — which SERVES the
-	// exposition, so the posture is said out loud here rather than left for
-	// somebody to infer from an absent variable. The same reason the two
-	// unset-base-URL warnings exist: an installation whose /metrics is
-	// reachable from further away than its operator assumes needs to see that
-	// in the boot log, not discover it from who is scraping it.
+	// Always applied, including the empty default — which REFUSES every
+	// scrape — so the posture is said out loud here rather than left for
+	// somebody to infer from an absent variable. An open endpoint is warned
+	// about for the reason the two unset-base-URL warnings exist: an
+	// installation whose /metrics is reachable from further away than its
+	// operator assumes needs to see that in the boot log, not discover it from
+	// who is scraping it. A closed one without a token is said once too,
+	// because a scraper answered 401 is otherwise a mystery.
 	opts = append(opts, compose.WithMetricsToken(cfg.metricsToken))
-	if cfg.metricsToken == "" {
-		logger.Warn("api: MARGINCE_METRICS_TOKEN is unset — /metrics is served to anything that reaches this port, and its exposition carries workspace ids; set the variable to require a Bearer credential")
+	switch {
+	case cfg.metricsAccess == metricsAccessOpen:
+		opts = append(opts, compose.WithOpenMetrics())
+		logger.Warn("api: MARGINCE_METRICS_ACCESS=open — /metrics is served to anything that reaches this port, and its exposition names every route and carries workspace ids; keep the port contained")
+	case cfg.metricsToken == "":
+		logger.Info("api: /metrics refuses every scrape — set MARGINCE_METRICS_TOKEN to require a Bearer credential, or MARGINCE_METRICS_ACCESS=open where the port is already contained")
 	}
 	if cfg.publicBaseURL != "" {
 		opts = append(opts, compose.WithPublicBaseURL(cfg.publicBaseURL))

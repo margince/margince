@@ -45,7 +45,7 @@ function ConnectWarn({ title, body }: { title: string; body: string }) {
     // the banner: as an inline `margin` shorthand they also reset the top
     // margin the banner declares for itself, so the one block on the surface
     // that says something went wrong was the one with nothing above it.
-    <div className="readfail warn ob-connect-warn">
+    <div className="readfail warning ob-connect-warning">
       <span className="rfi">
         <Circle aria-hidden />
       </span>
@@ -205,7 +205,7 @@ export function OAuthConnectPanel({
           that screen without having been told reasonably concludes something
           is wrong with the thing they just pressed. A caution about what a
           button does belongs beside the button, never behind a fold. */}
-      <p className="t-caption ob-google-unverified">{t(copy.unverified)}</p>
+      <p className="ob-google-unverified">{t(copy.unverified)}</p>
       {/* Last thing read before the grant screen, because after it the mailbox
           is connected and the telling is too late. */}
       <CaptureNotice />

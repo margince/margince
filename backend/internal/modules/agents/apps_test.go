@@ -120,7 +120,7 @@ func TestTheSharedNegotiationStillReadsTasksExactly(t *testing.T) {
 // tools that have no view.
 func TestOnlyAToolWithAViewCarriesUIMeta(t *testing.T) {
 	withView := mcp.ToolSpec{Name: "read_brief", UI: &mcp.ToolUI{
-		ResourceURI: "ui://margince/account-brief.html",
+		ResourceURI: "ui://margince/company-brief.html",
 	}}
 	meta := toolUIMeta(withView)
 	if meta == nil {
@@ -133,7 +133,7 @@ func TestOnlyAToolWithAViewCarriesUIMeta(t *testing.T) {
 	// Both members are asserted on the BYTES rather than on the struct: what a
 	// host reads is the JSON, and a mis-tagged field would satisfy a struct
 	// comparison while advertising nothing.
-	const want = `{"resourceUri":"ui://margince/account-brief.html","visibility":["model","app"]}`
+	const want = `{"resourceUri":"ui://margince/company-brief.html","visibility":["model","app"]}`
 	if string(encoded) != want {
 		t.Errorf("_meta.ui = %s, want %s", encoded, want)
 	}
@@ -179,7 +179,7 @@ func TestADeclaredVisibilityIsServedAsDeclared(t *testing.T) {
 // or was dropped as a zero value would hand the host nothing to deny from.
 func TestAViewsEmptyAllowlistReachesTheWireAsAnEmptyAllowlist(t *testing.T) {
 	meta := resourceUIMeta(mcp.Resource{
-		URI: "ui://margince/account-brief.html", UI: &mcp.ResourceUI{PrefersBorder: true},
+		URI: "ui://margince/company-brief.html", UI: &mcp.ResourceUI{PrefersBorder: true},
 	})
 	if meta == nil {
 		t.Fatal("a view carries no _meta.ui, so the host has no policy to build a sandbox from")

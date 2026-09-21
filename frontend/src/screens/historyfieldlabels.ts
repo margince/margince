@@ -79,46 +79,69 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["acquisition_source", "history.field.acquisition_source"],
 ]);
 
-// Fields a SYNTHETIC AuditEvent payload names — a write with no before/after
-// image of a real column, described instead by its own free-form keys. The
-// five consent-module writers that emit them today:
-// backend/internal/modules/consent/suppress.go (`suppression_kind`,
-// `decided_by_level`), qualifyingevent.go (`qualifying_event`, `note`),
-// authorizebasis.go (`communication_basis`, `resolved_category`), lift.go
-// (`lifted_suppression`, `recorded_at_level`, `lifted_by_level`,
-// `lifted_by`, `reason`), and confirmsubmit.go (`confirm_submission`,
-// `submission_id`).
+// Fields a HAND-BUILT audit image names — a write described by its own
+// free-form keys rather than by the before/after image of a contract column.
+// They come from all over the tree: a consent withdrawal, a VAT consultation, a
+// bounce report, a cohort repair, a reply verdict.
 //
-// Every key here is deliberately NOT the bare word a writer's own struct
-// field would suggest (`suppress.go`'s wire request names its kind `kind`,
-// not `suppression_kind`): this lookup carries no entity context, so a key
-// this generic would also answer for an unrelated writer's field of the same
-// name on the SAME projected entity type (`contact`) — `kind` already belongs
-// to every activity's own audited create
-// (backend/internal/modules/activities/activity.go), and reusing it here
-// mislabelled every activity in history as a suppression.
+// It is a SEPARATE map from HISTORY_FIELD_LABELS on purpose. The census below
+// derives that one from what an `Update<Type>Request` actually writes, and its
+// own "no word for an unwritten field" direction would fail the moment one of
+// these appeared there.
 //
-// A SEPARATE map from HISTORY_FIELD_LABELS on purpose: the census below derives
-// that one from what an `Update<Type>Request` actually writes, and its own
-// "no word for an unwritten field" direction would fail the moment a synthetic
-// key appeared there — these never will be one, because nothing here forces
-// upstream to keep it in sync with these Go literals. That absence of a gate is
-// tracked (margince#4928) rather than papered over: this list is only as
-// complete as the last writer somebody walked into this file.
+// Held by TestEveryProjectedAuditKeyHasALabel
+// (backend/gates/historyfieldlabels_test.go), which walks the audit doors,
+// resolves the images they carry, and fails in both directions: a writer's key
+// with no word here, and a word here no writer emits. It also refuses a key
+// this map and the contract map both claim unless that collision is ratified —
+// the shape `kind` took, which already belongs to every activity's own audited
+// create and would have mislabelled every activity in history as a suppression.
+// That is why a key here is not the bare word a writer's struct field suggests:
+// this lookup carries no entity context, so `suppression_kind` rather than
+// `kind`.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  ["admission", "history.field.admission"],
+  ["admission_reason", "history.field.admission_reason"],
+  ["admission_source", "history.field.admission_source"],
+  ["bounce", "history.field.bounce"],
+  ["capture_question", "history.field.capture_question"],
+  ["channel_identity", "history.field.channel_identity"],
+  ["channel_username", "history.field.channel_username"],
+  ["cohort_linked", "history.field.cohort_linked"],
+  ["cohort_promoted", "history.field.cohort_promoted"],
   ["communication_basis", "history.field.communication_basis"],
   ["confirm_submission", "history.field.confirm_submission"],
+  ["corrected", "history.field.corrected"],
   ["decided_by_level", "history.field.decided_by_level"],
+  ["disposition", "history.field.disposition"],
+  ["domain", "history.field.domain"],
   ["lifted_by", "history.field.lifted_by"],
   ["lifted_by_level", "history.field.lifted_by_level"],
   ["lifted_suppression", "history.field.lifted_suppression"],
   ["note", "history.field.note"],
+  ["nudge_dismissal", "history.field.nudge_dismissal"],
+  ["provider_claims_received", "history.field.provider_claims_received"],
   ["qualifying_event", "history.field.qualifying_event"],
+  ["reachability", "history.field.reachability"],
   ["reason", "history.field.reason"],
   ["recorded_at_level", "history.field.recorded_at_level"],
+  ["reply_verdict", "history.field.reply_verdict"],
+  ["reply_verdict_by", "history.field.reply_verdict_by"],
+  ["research_claims_accepted", "history.field.research_claims_accepted"],
   ["resolved_category", "history.field.resolved_category"],
+  ["scope", "history.field.scope"],
+  ["stopped", "history.field.stopped"],
+  ["stops_carried", "history.field.stops_carried"],
+  ["submission_decision", "history.field.submission_decision"],
   ["submission_id", "history.field.submission_id"],
   ["suppression_kind", "history.field.suppression_kind"],
+  ["vat_checked_at", "history.field.vat_checked_at"],
+  ["vat_consultation_number", "history.field.vat_consultation_number"],
+  ["vat_number", "history.field.vat_number"],
+  ["vat_registered_address", "history.field.vat_registered_address"],
+  ["vat_registered_name", "history.field.vat_registered_name"],
+  ["vat_requested", "history.field.vat_requested"],
+  ["vat_status", "history.field.vat_status"],
 ]);
 
 // The label a history row shows for one field.

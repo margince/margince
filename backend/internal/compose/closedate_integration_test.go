@@ -104,8 +104,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 // run.
 func (e *closeDateEnv) sweep() error {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: closeDateSweepActor})
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.SystemActing(ctx, closeDateSweepActor)
 	return e.corrector.SweepWorkspace(ctx)
 }
 

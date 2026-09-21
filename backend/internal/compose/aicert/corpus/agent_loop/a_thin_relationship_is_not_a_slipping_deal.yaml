@@ -29,13 +29,13 @@ expect:
     open deals and both read as "deals at risk", which is exactly why the
     confusion is worth measuring.
 
-    account_coverage is the second reach, and it is the same question asked of
+    company_coverage is the second reach, and it is the same question asked of
     ONE deal — the goal asks it of all of them, and the window carries no
     deal_id, so a turn calling it both narrowed the question and invented the
     id it narrowed by.
   near_misses:
     - whats_slipping_this_week
-    - account_coverage
+    - company_coverage
   bands:
     certified_min: 70
     degraded_min: 50

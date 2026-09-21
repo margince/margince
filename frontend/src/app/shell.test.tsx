@@ -569,7 +569,11 @@ describe("Shell", () => {
     ["#/contacts", false],
     ["#/deals", false],
     ["#/leads", false],
-    ["#/projects", false],
+    // The one list that IS capped, asked for by name: its table is the narrowest
+    // of the five and the page a reader most often meets is its first-run plate,
+    // which uncapped stood alone in the corner of a wide display. The four rows
+    // above are the arrangement it left, not an oversight in them.
+    ["#/projects", true],
     // `#/deals/new` carries the create segment rather than a record id: it is
     // the deals LIST with its form open, and a list is scanned across. The
     // segment belongs to deals alone, so the lead row above it keeps the

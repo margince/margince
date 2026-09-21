@@ -58,19 +58,19 @@ export function missingSendGrant(
 /** Each contract status gets its own Badge tone. Collapsing reauth_required
  *  and error into the same tone is what made a dead mailbox and a merely-
  *  stale one indistinguishable at a glance. `disconnected` gets no tone (the
- *  shipped card's neutral, undecorated row). `pending` reads as `warn`, the
+ *  shipped card's neutral, undecorated row). `pending` reads as `warning`, the
  *  same "needs a look" tone as reauth_required — never `success`: a row this
  *  installation cannot produce must not be rendered as a healthy channel if an
  *  older or foreign server ever sends one. */
 export function statusTone(
   status: ConnectorStatus,
-): "success" | "warn" | "danger" | undefined {
+): "success" | "warning" | "danger" | undefined {
   switch (status) {
     case "connected":
       return "success";
     case "pending":
     case "reauth_required":
-      return "warn";
+      return "warning";
     case "error":
       return "danger";
     case "disconnected":

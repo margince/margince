@@ -33,15 +33,27 @@ function Picker() {
 export const TenYears: Story = { render: () => <Picker /> };
 export const TenYearsDark: Story = { ...TenYears, globals: { theme: "dark" } };
 
-export const Options: Story = {
-  ...TenYears,
-  play: async ({ canvasElement }) => {
-    await userEvent.click(
-      within(canvasElement).getByRole("combobox", { name: "Import window" }),
-    );
-    await within(canvasElement.ownerDocument.body).findByRole("option", {
-      name: "10 years",
-    });
-  },
+// The press both open-list frames make, NAMED on each rather than inherited by
+// one from the other.
+//
+// A story that picks up its `play` through a spread is indexed WITHOUT the
+// `play-fn` tag — the indexer reads the object literal in front of it, not what
+// the spread resolves to — and the capture gate keys its settle on that tag. So
+// the dark frame was screenshotted 250ms after paint rather than 1.5s, which is
+// before the list this story is named for has opened. The `render` can still be
+// spread; nothing is keyed on it.
+const openTheList: Story["play"] = async ({ canvasElement }) => {
+  await userEvent.click(
+    within(canvasElement).getByRole("combobox", { name: "Import window" }),
+  );
+  await within(canvasElement.ownerDocument.body).findByRole("option", {
+    name: "10 years",
+  });
 };
-export const OptionsDark: Story = { ...Options, globals: { theme: "dark" } };
+
+export const Options: Story = { ...TenYears, play: openTheList };
+export const OptionsDark: Story = {
+  ...TenYears,
+  play: openTheList,
+  globals: { theme: "dark" },
+};

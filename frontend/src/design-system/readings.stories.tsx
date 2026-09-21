@@ -36,7 +36,7 @@ export const Meters: Story = {
       </div>
       <div>
         <p className="t-caption">Payment behaviour — low is the bad end</p>
-        <Meter value={3} max={10} label="Payment behaviour" tone="warn" />
+        <Meter value={3} max={10} label="Payment behaviour" tone="warning" />
       </div>
       <div>
         <p className="t-caption">Nothing measured yet</p>
@@ -144,7 +144,7 @@ export const DenseChips: Story = {
         <span style={NAME_CELL}>
           <strong>Northwind Traders</strong>
           <Chip icon={Hash}>NWT-4</Chip>
-          <Badge tone="warn">Archived</Badge>
+          <Badge tone="warning">Archived</Badge>
         </span>
       </div>
       <div>
@@ -154,7 +154,7 @@ export const DenseChips: Story = {
           <Chip icon={Hash} dense>
             NWT-4
           </Chip>
-          <Badge tone="warn">Archived</Badge>
+          <Badge tone="warning">Archived</Badge>
         </span>
       </div>
     </>
@@ -192,7 +192,7 @@ export const BarsAgainstAWhole: Story = {
           label: "Slipped",
           value: 12,
           amount: "€12,000",
-          tone: "warn",
+          tone: "warning",
         },
       ]}
     />

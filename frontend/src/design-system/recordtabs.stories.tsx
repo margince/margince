@@ -76,11 +76,7 @@ export const Single: Story = {
       options={["overview"]}
       value="overview"
       labels={LABELS}
-      trailing={
-        <Button small aria-pressed={false}>
-          Details
-        </Button>
-      }
+      trailing={<Button aria-pressed={false}>Details</Button>}
     />
   ),
 };
@@ -97,11 +93,7 @@ export const WithTrailingControl: Story = {
       onChange={() => undefined}
       labels={LABELS}
       counts={{ contacts: 10, activity: 27 }}
-      trailing={
-        <Button small aria-pressed={false}>
-          Details
-        </Button>
-      }
+      trailing={<Button aria-pressed={false}>Details</Button>}
     />
   ),
 };

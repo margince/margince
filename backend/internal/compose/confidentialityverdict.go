@@ -93,10 +93,7 @@ func (e *ConfidentialityVerdictEngine) CanJudge() bool { return e.brain != nil }
 // does that from the args' own role declaration, and re-binding here would make
 // this a second, independent source of truth for the tenant.
 func (e *ConfidentialityVerdictEngine) workspaceCtx(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: confidentialityActor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, confidentialityActor)
 }
 
 // RunWorkspace drains up to maxVerdicts threads in the workspace already bound

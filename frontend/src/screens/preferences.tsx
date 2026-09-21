@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
@@ -333,7 +334,9 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             headline is this page's primary voice, so it stacks full-width
             above the subtitle instead, at its own (larger) size. */}
       <div className="pref-header">
-        <h1 className="t-display">{t("prefs.title")}</h1>
+        <Heading size="xlarge" className="t-display">
+          {t("prefs.title")}
+        </Heading>
         <p className="t-sub">{t("prefs.sub")}</p>
       </div>
       <ul className="pref-list">
@@ -361,7 +364,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
           {t("prefs.unsubscribeAll")}
         </Button>
         {unsubscribeAll.isError && (
-          <p className="t-caption pref-unsub-error">
+          <p className="pref-unsub-error">
             {explainPublicError(unsubscribeAll.error, t)}
           </p>
         )}
@@ -376,7 +379,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
           </p>
           {lastUnsubscribed.length > 0 &&
             (undoStaged ? (
-              <p className="t-caption">{t("prefs.undoExplicit")}</p>
+              <p>{t("prefs.undoExplicit")}</p>
             ) : (
               <Button disabled={writePending} onClick={undoUnsubscribe}>
                 {t("prefs.undo")}

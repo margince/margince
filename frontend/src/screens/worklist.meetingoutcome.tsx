@@ -43,6 +43,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { calendarDay, middayInstant } from "../format/calendarday";
@@ -90,11 +91,10 @@ export function MeetingOutcome({
   const record = useMeetingOutcome([worklistKey]);
   return (
     <>
-      <Button small pending={record.isPending} onClick={() => setOpen(true)}>
+      <Button pending={record.isPending} onClick={() => setOpen(true)}>
         {t("worklist.verb.meetingUpdate")}
       </Button>
       <Button
-        small
         pending={record.isPending}
         onClick={() =>
           record.mutate(
@@ -106,7 +106,7 @@ export function MeetingOutcome({
               // identically to a click that did nothing.
               onError: () =>
                 toast.show(t("worklist.verb.meetingOutcomeFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             },
           )
@@ -210,9 +210,9 @@ function MeetingOutcomeDialog({
   });
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {title ?? t("worklist.verb.meetingUpdateTitle")}
-      </h2>
+      </Heading>
       {meeting.isPending && (
         <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
       )}
@@ -310,7 +310,6 @@ function MeetingOutcomeDialog({
               {t("common.close")}
             </Button>
             <Button
-              small
               variant="primary"
               type="submit"
               disabled={!save.isPending && !draft.subject.trim()}

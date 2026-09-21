@@ -29,12 +29,12 @@ func (h Handlers) WithEmailDrafter(drafter EmailDrafter) Handlers {
 }
 
 // DraftResult is one prepared draft with its provenance: whether a model
-// produced it (Art. 50 disclosure) and which Voice DNA version styled it.
+// produced it (the AI provenance notice) and which Voice DNA version styled it.
 type DraftResult struct {
 	Subject             string
 	Body                string
 	AIGenerated         bool
-	AIDisclosure        *string
+	AIProvenanceNotice  *string
 	VoiceProfileVersion *int
 	// DraftRef identifies this served voice draft for learning feedback
 	// (rejectVoiceDraft); nil when no voice profile styled it.
@@ -74,7 +74,7 @@ type ProvenanceEmailDrafter interface {
 }
 
 // DraftEmail serves a reply draft for the anchored activity, with its
-// provenance: the Art. 50 disclosure, the voice version that styled it, and
+// provenance: the AI provenance notice, the voice version that styled it, and
 // whether the sender's voice was lost on the way (voice_degraded). Drafting
 // never sends; the send endpoint stays a separate consent-gated operation.
 func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -102,7 +102,7 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 		To:                  h.replyAddresses(ctx, ids.From[ids.ActivityKind](ids.UUID(id))),
 		InReplyToActivityId: &replyTo,
 		AiGenerated:         &result.AIGenerated,
-		AiDisclosure:        result.AIDisclosure,
+		AiDisclosure:        result.AIProvenanceNotice,
 		VoiceProfileVersion: result.VoiceProfileVersion,
 		DraftRef:            result.DraftRef,
 		VoiceDegraded:       &result.VoiceDegraded,

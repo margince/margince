@@ -29,8 +29,8 @@
 //	Correct and dismiss are available on every claim, and a human's verdict
 //	is final against the provider.
 //
-//	Art. 50 disclosure rides the surface: the reader is told this is
-//	AI-assisted and reads from public sources.
+//	The surface says so: the reader is told this is AI-assisted and reads
+//	from public sources.
 package contactdata
 
 import (

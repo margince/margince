@@ -151,11 +151,7 @@ export function BlockedDomainsCard() {
       // grows. Refused rather than hidden, like every other control on this
       // card — the sentence under the list is what `reasonId` names.
       titleAction={
-        <Button
-          small
-          reasonId={refusal}
-          onClick={() => setEditing(BLANK_DECISION)}
-        >
+        <Button reasonId={refusal} onClick={() => setEditing(BLANK_DECISION)}>
           {t("blockedDomains.recordOpen")}
         </Button>
       }
@@ -220,11 +216,7 @@ export function BlockedDomainsCard() {
             }
           />
         </SettingList>
-        {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("blockedDomains.adminOnly")}
-          </p>
-        )}
+        {!canManage && <p id={denialId}>{t("blockedDomains.adminOnly")}</p>}
         {/* What LANDED, named, and on the CARD rather than in the dialog: the
             server normalizes the domain to its registrable form and the write
             replaces any entry already on it, so without this a sub-domain
@@ -365,7 +357,6 @@ function decisionColumns({
       render: (row: BlockedDomain) =>
         row.admission === "undecided" ? (
           <Button
-            small
             variant="ghost"
             disabled={reopen.isPending}
             reasonId={refusal}
@@ -375,7 +366,6 @@ function decisionColumns({
           </Button>
         ) : (
           <Button
-            small
             variant="ghost"
             disabled={set.isPending}
             reasonId={refusal}
@@ -399,12 +389,12 @@ function decisionColumns({
  */
 function admissionTone(
   admission: BlockedDomain["admission"],
-): "success" | "warn" | undefined {
+): "success" | "warning" | undefined {
   switch (admission) {
     case "admitted":
       return "success";
     case "suppressed":
-      return "warn";
+      return "warning";
     default:
       return undefined;
   }

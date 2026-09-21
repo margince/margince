@@ -11,8 +11,9 @@
 
 import { useId, useState } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button, Field, Modal } from "../design-system/atoms";
+import { Badge, Button, Checkbox, Field, Modal } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { RouteLine } from "./contactroutes";
 import { type IntroRequestInput, useCreateIntroRequest } from "./introrequests";
@@ -85,7 +86,9 @@ export function IntroDrawer({
       placement="right"
       size="wide"
     >
-      <h2 id={titleId}>{t("contact.intro.askTitle", { name: contactName })}</h2>
+      <Heading size="large" id={titleId}>
+        {t("contact.intro.askTitle", { name: contactName })}
+      </Heading>
 
       {route ? (
         <p className="pn-route">
@@ -137,14 +140,11 @@ export function IntroDrawer({
         )}
       </Field>
 
-      <label>
-        <input
-          type="checkbox"
-          checked={nameDrop}
-          onChange={(e) => setNameDrop(e.target.checked)}
-        />
-        {t("contact.intro.nameDropAsk")}
-      </label>
+      <Checkbox
+        checked={nameDrop}
+        label={t("contact.intro.nameDropAsk")}
+        onChange={(e) => setNameDrop(e.target.checked)}
+      />
 
       <ChoiceList<FallbackPolicy>
         legend={t("contact.intro.fallbackLegend")}

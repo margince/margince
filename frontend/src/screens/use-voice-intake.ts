@@ -27,7 +27,7 @@ export type SpeakerAsk = Readonly<{
 export type IntakeNotice = Readonly<{
   ref: string;
   label: string;
-  tone: "ok" | "warn";
+  tone: "ok" | "warning";
   kind:
     | "kept"
     | "skippedType"
@@ -171,7 +171,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
             note({
               ref: outcome.ref,
               label: outcome.label,
-              tone: "warn",
+              tone: "warning",
               kind: "askQueueFull",
             });
             return;
@@ -195,7 +195,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
           note({
             ref: outcome.ref,
             label: outcome.label,
-            tone: "warn",
+            tone: "warning",
             kind: "refused",
             reason: outcome.reason,
             problem: outcome.problem,
@@ -205,7 +205,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
           note({
             ref: outcome.ref,
             label: outcome.label,
-            tone: "warn",
+            tone: "warning",
             kind: skippedKinds[outcome.reason],
           });
           return;
@@ -235,7 +235,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
             note({
               ref: `failed:${label}`,
               label,
-              tone: "warn",
+              tone: "warning",
               kind: "failed",
               problem: err,
             });
@@ -282,7 +282,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
           note({
             ref: `skipped:${file.name}`,
             label: file.name,
-            tone: "warn",
+            tone: "warning",
             kind: "skippedType",
           });
           continue;
@@ -328,7 +328,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
     note({
       ref: ask.ref,
       label: ask.label,
-      tone: "warn",
+      tone: "warning",
       kind: "dismissed",
     });
   }, [asks, note, settleAsk]);

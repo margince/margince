@@ -41,9 +41,24 @@ const exceptionsBound = 25
 
 // TeamExceptions is what a lead can act on across their team.
 func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptions, error) {
+	// ONE snapshot, and this page needs it most: it reads the roster, the whole
+	// assembled day and the money on top, which measured as 54 transactions per
+	// request against the worklist's 33 (margince#4912).
+	// Admission BEFORE the snapshot, for the reason worklist.go gives.
 	if err := requireLeadTier(ctx); err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
+	var out crmcontracts.TeamExceptions
+	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.teamExceptionsIn(ctx)
+		return err
+	})
+	return out, err
+}
+
+// teamExceptionsIn is TeamExceptions' body, inside the snapshot it opened.
+func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExceptions, error) {
 	if s.teammates == nil {
 		// A REFUSAL, the same answer TeamBoard gives: a page assembled without
 		// the membership reader has no team to answer for, and reporting that

@@ -46,13 +46,54 @@ var (
 	agentWriterPrefix = string(principal.PrincipalAgent) + ":"
 )
 
-// trustOfWriter reads the ladder off a captured_by value.
+// trustOfWriter reads the ladder off a captured_by value, and off whether the
+// row was written in this installation at all.
 //
 // An unrecognized or empty prefix takes T2 rather than a middle value: an
 // unattributed row is captured content until something says otherwise, and
 // guessing upward is the direction that misleads.
-func trustOfWriter(capturedBy string) float64 {
+//
+// `imported` applies that same principle to the one case where captured_by is
+// not merely unrecognized but actively misleading, so it is checked FIRST and
+// wins over the human prefix. An import runs as whoever ran it, so every record
+// it writes carries that administrator's `human:` — truthfully, and about the
+// wrong one. The HubSpot migration alone is 34,521 activities that would
+// otherwise take full human-statement trust, ranking another company's CRM
+// history as first-party testimony this installation's colleagues gave.
+//
+// Not the author columns, and the distinction is the whole reason this
+// parameter exists. The attribution repair skips a record whose author it
+// cannot resolve, so an imported row may carry no author at all — testing for
+// attribution rather than for provenance would hand exactly those rows T0.
+//
+// Not `source_system IS NOT NULL` either, which is what an earlier draft of
+// this change used and what made it wrong. That column is not exclusive to
+// imports: activities.outboundmessage stamps `email` on a message this
+// installation SENT, and requesttask stamps its own reminder identity. Both are
+// first-party writes, and both would have been demoted to T2.
+//
+// What IS exclusive is provenance.ReservedSourceSystemPrefix — the `mirror:`
+// namespace only an import may write, refused on every client-facing create
+// path by provenance.Refuse.
+//
+// The caller derives this boolean in SQL, and both halves of how it spells the
+// test are load-bearing:
+//
+//   - the prefix is interpolated from the kernel constant rather than written
+//     as a literal, so the one package that defines the namespace is the one
+//     place that spells it. It is a compile-time constant and never request
+//     data, so interpolating it reaches no caller input;
+//   - `source_system` is COALESCED first, because `NULL LIKE 'mirror:%'` is
+//     NULL rather than false — SQL propagates the unknown through the operator
+//     — and a NULL scanned into a *bool is an error, not a zero. Almost every
+//     row the walk meets has a NULL source_system, since that is what a
+//     natively typed note carries, so without the coalesce the walk fails on
+//     the first ORDINARY activity rather than on some exotic one. It shipped
+//     that way for one test run.
+func trustOfWriter(capturedBy string, imported bool) float64 {
 	switch {
+	case imported:
+		return trustCapturedExternal
 	case strings.HasPrefix(capturedBy, humanWriterPrefix):
 		return trustHumanStatement
 	case strings.HasPrefix(capturedBy, agentWriterPrefix):
@@ -69,11 +110,11 @@ func trustOfWriter(capturedBy string) float64 {
 // third only in the spec.
 //
 //nolint:unparam // see above — the zero is meaningful, not unused.
-func rankScore(similarity float64, occurredAt time.Time, capturedBy string, now time.Time) float64 {
+func rankScore(similarity float64, occurredAt time.Time, capturedBy string, imported bool, now time.Time) float64 {
 	days := now.Sub(occurredAt).Hours() / 24
 	if days < 0 {
 		days = 0
 	}
 	recency := math.Exp2(-days / recencyHalfLifeDays)
-	return wRankSim*similarity + wRankRec*recency + wRankTrust*trustOfWriter(capturedBy)
+	return wRankSim*similarity + wRankRec*recency + wRankTrust*trustOfWriter(capturedBy, imported)
 }

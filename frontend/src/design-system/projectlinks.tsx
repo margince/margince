@@ -211,13 +211,10 @@ export function ProjectLinks({
       adapter.linked.map((project) => (
         <PanelRow key={project.project_id}>
           <div className="pl-row">
-            <a
-              className="pl-name"
-              href={project.href ?? `#/projects/${project.project_id}`}
-            >
+            <a href={project.href ?? `#/projects/${project.project_id}`}>
               {project.name}
             </a>
-            {project.key && <span className="pl-key">{project.key}</span>}
+            {project.key && <span>{project.key}</span>}
             {project.phase}
             {adapter.detach && !adapter.readOnly && (
               <Button

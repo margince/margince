@@ -240,6 +240,46 @@ export const NothingOwedAndNothingAdvised: Story = {
   ),
 };
 
+// The account's moment as an ASK rather than an all-clear: the rung it fired
+// on beside the byline, the server's own sentence as the move, and the verb
+// the server named a destination for. It is the same row the contact page
+// leads with — one gallery entry each, so the two can be compared.
+const owedPromise: View = {
+  ...company360,
+  ...populated,
+  moment: {
+    claim_key: "moment:open_promise",
+    evidence_fingerprint: "fp-owed",
+    rule: "open_promise",
+    headline: "You owe Brandt the retrofit quote",
+    why_now: "Promised on Monday, and nothing has gone out since.",
+    confidence: "observed_fact",
+    evidence: [
+      {
+        type: "activity",
+        id: "a-1",
+        label: "Re: retrofit timeline",
+        snippet: "We'll get the quote over to you by Friday.",
+        observed_at: "2026-08-01T10:15:00Z",
+      },
+    ],
+    recommended_action: {
+      kind: "open_record",
+      label: "Open the thread",
+      state: "available",
+      destination: {
+        surface: "record",
+        entity_type: "activity",
+        entity_id: "a-1",
+      },
+    },
+  },
+};
+
+export const OwedPromise: Story = {
+  render: () => <Brief view={owedPromise} />,
+};
+
 // Advice resting on a message rather than on a quoted receipt: the rule's
 // evidence carries the server's own row model, so the basis is drawn as an
 // EmailEntry — subject, sender and preview — instead of a chip. The preview
@@ -370,7 +410,7 @@ export const SectionWithheld: Story = {
 };
 
 // waiting_on_them is one of only two engagement states ENGAGEMENT_TONE
-// (company360.tsx) colours "warn" — the ball is in their court, not ours —
+// (company360.tsx) colours "warning" — the ball is in their court, not ours —
 // and the one state that also draws a silence note (companytoday.tsx's own
 // `silenceNote`, gated on this exact state plus a `last_outbound_at` to
 // count from). populated above never reaches either: its engagement is
@@ -394,7 +434,7 @@ export const WaitingOnThem: Story = {
   ),
 };
 
-// dormant: the other warn-toned engagement state, but the one that carries no
+// dormant: the other warning-toned engagement state, but the one that carries no
 // silence note of its own — silenceNote only ever fires for waiting_on_them,
 // so a dormant account's warning is the strip's tone and nothing else.
 export const Dormant: Story = {

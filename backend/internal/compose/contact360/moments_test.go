@@ -339,7 +339,7 @@ func TestAnEmptyRelationshipDoesNotInventEvidence(t *testing.T) {
 	if len(got.Evidence) != 0 {
 		t.Fatalf("an empty read manufactured a source: %+v", got.Evidence)
 	}
-	if got.WhyNow != "No interactions or colleague connections were found in the records available to you." {
+	if got.WhyNow != "No interactions or colleagues found in the records you can see." {
 		t.Fatalf("absence claim lost its scope: %s", got.WhyNow)
 	}
 }
@@ -423,7 +423,7 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 	if partial.WhyNow == full.WhyNow {
 		t.Error("a reader shown only part of the record must not be told nobody is waiting on a reply")
 	}
-	if !strings.Contains(partial.WhyNow, "not yours to see") {
+	if !strings.Contains(partial.WhyNow, "hidden from you") {
 		t.Errorf("and it must say WHY the picture is partial, got %q", partial.WhyNow)
 	}
 }
@@ -482,7 +482,7 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 	if moment.Headline != "You owe them: Send the MCP whitepaper" {
 		t.Errorf("headline = %q, want the section's first task named", moment.Headline)
 	}
-	if !strings.Contains(moment.WhyNow, "no date set") {
+	if !strings.Contains(moment.WhyNow, "no due date") {
 		t.Errorf("why_now = %q, want it to say the promise carries no date", moment.WhyNow)
 	}
 	if got := (*moment.RecommendedAction.Destination.Prefill)["subject"]; got != "Send the MCP whitepaper" {
@@ -495,7 +495,7 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 	// A task somebody specific holds is owed by that desk, not by whoever is
 	// reading the card.
 	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
-	if got := deriveMoment(readerCtx(), now, page).Headline; got != "Owed to them: Send the MCP whitepaper" {
+	if got := deriveMoment(readerCtx(), now, page).Headline; got != "Your team owes them: Send the MCP whitepaper" {
 		t.Errorf("headline for an assigned task = %q, want it attributed to its holder", got)
 	}
 	page.NextSteps.Data[0].AssigneeId = nil
@@ -930,7 +930,7 @@ func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 	if got.Rule != crmcontracts.ContactMomentRuleReEngaged {
 		t.Fatalf("rule = %q, want re_engaged", got.Rule)
 	}
-	if want := "They wrote — we last wrote 59 days before"; got.Headline != want {
+	if want := "They wrote back; your last message was 59 days earlier"; got.Headline != want {
 		t.Errorf("headline = %q, want %q", got.Headline, want)
 	}
 	// The claim that could not be checked, gone in both sentences. A reader who

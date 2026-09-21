@@ -106,15 +106,13 @@ export function ThinState({
   return (
     <Panel title={t("contact.thin.title")}>
       <PanelBody>
-        <p style={{ margin: 0, lineHeight: 1.55 }}>
+        <p style={{ margin: 0 }}>
           {t("contact.thin.known", {
             name: view.contact.full_name,
             what: [email, employer?.company_name].filter(Boolean).join(" · "),
           })}
         </p>
-        <p style={{ margin: "var(--space-2) 0 0", lineHeight: 1.55 }}>
-          {remediation}
-        </p>
+        <p style={{ margin: "var(--space-2) 0 0" }}>{remediation}</p>
         {/* A bare `.btn` names no variant, and the variants are what carry the
             fill, the border and the ink — so this rendered transparent,
             borderless and unreadable against the plate behind it. It is the one
@@ -155,7 +153,7 @@ export function RelationshipPulse({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <Panel title={t("contact.pulse.title")}>
       <PanelBody>
-        <p style={{ margin: 0, lineHeight: 1.5 }}>
+        <p style={{ margin: 0 }}>
           {warmest
             ? t("contact.pulse.warmestIs", { name: warmest.display_name })
             : t("contact.pulse.nobodyYet")}
@@ -185,7 +183,7 @@ export function RelationshipPulse({ view }: Readonly<{ view: Contact360 }>) {
         />
         {s && (
           <Disclosure summary={t("contact.pulse.why")}>
-            <p style={{ margin: 0, lineHeight: 1.55 }}>
+            <p style={{ margin: 0 }}>
               {t("contact.pulse.arithmetic", {
                 score: formatNumber(s.score, locale),
                 recency: formatDecimal(s.factors.recency, locale, 2),
@@ -225,9 +223,7 @@ function RelationshipChanges({ view }: Readonly<{ view: Contact360 }>) {
       }}
     >
       {changes.map((c) => (
-        <li key={c.kind} style={{ fontSize: "var(--fs-body)", opacity: 0.85 }}>
-          {changeSentence(c, t)}
-        </li>
+        <li key={c.kind}>{changeSentence(c, t)}</li>
       ))}
     </ul>
   );
@@ -393,7 +389,7 @@ function ConsentGuard({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <Panel title={t("contact.consent.title")}>
       <PanelBody>
-        <p style={{ margin: 0, lineHeight: 1.5 }}>
+        <p style={{ margin: 0 }}>
           {granted.length > 0
             ? t("contact.consent.allowed", {
                 purposes: granted.map((g) => g.purpose_key ?? "").join(", "),
@@ -401,7 +397,7 @@ function ConsentGuard({ view }: Readonly<{ view: Contact360 }>) {
             : t("contact.consent.noneGranted")}
         </p>
         {blocked.length > 0 && (
-          <p style={{ margin: "var(--space-1) 0 0", lineHeight: 1.5 }}>
+          <p style={{ margin: "var(--space-1) 0 0" }}>
             {t("contact.consent.blocked", {
               purposes: blocked.map((b) => b.purpose_key ?? "").join(", "),
             })}
@@ -468,9 +464,7 @@ export function WhoKnowsThem({ view }: Readonly<{ view: Contact360 }>) {
           {colleagues.map((c) => (
             <li key={c.user_id} style={{ padding: "var(--space-2) 0" }}>
               <strong>{c.display_name}</strong>
-              <div style={{ fontSize: "var(--fs-meta)", opacity: 0.75 }}>
-                {proofLine(c, t, locale, recordZone)}
-              </div>
+              <div>{proofLine(c, t, locale, recordZone)}</div>
             </li>
           ))}
         </ul>

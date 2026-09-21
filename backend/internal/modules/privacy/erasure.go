@@ -253,8 +253,9 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 }
 
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction
-// just emptied: their vectors, their own audit spines, the proposals read out of
-// them, and the transmitted copy in the send log.
+// just emptied: their vectors, their own audit spines, the external identities
+// they answered to, the proposals read out of them, and the transmitted copy in
+// the send log.
 func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
 	// The vectors go with the text they were built from. purgeDerivedTraces
 	// reaches embeddings through activity_link, which by construction cannot
@@ -269,6 +270,12 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 		}
 	}
 	if err := tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure); err != nil {
+		return err
+	}
+	// The external identities of the messages just emptied. The activity-content
+	// arm has always retired these and this arm never did, so a subject's
+	// Message-IDs outlived the erasure that emptied their correspondence.
+	if err := retireActivityIdentities(ctx, tx, activities); err != nil {
 		return err
 	}
 	// The readings of those rows, which describe a body that is now gone. The
@@ -356,6 +363,27 @@ func anonymizeSubjectRows(
 	wiped, err := anonymizeLeadTwins(ctx, tx, contactID, emails)
 	if err != nil {
 		return nil, err
+	}
+	// The author repair's bookkeeping about this subject, cleared in the same
+	// transaction as the columns above.
+	//
+	// The UPDATE at the top of this function clears `contact.source_author_name`
+	// and anonymizeLeadTwins clears `lead.source_author_name`, but the repair
+	// keeps a SECOND copy of that free text in source_attribution_repair, plus an
+	// unkeyed SHA-256 of it and the operator's batch label. Until the record
+	// repair landed, that ledger held activities only and the timeline's own
+	// clear covered it; it now holds contact and lead rows under their own
+	// object_type, and nothing reached them. An erasure that stopped at the
+	// record would leave the erased name readable one table over.
+	//
+	// Both types, and not merely the contact: a promoted subject's lead twin
+	// carries its own ledger row keyed `lead`, so clearing one and not the other
+	// leaves half the copies standing.
+	if err := clearAttributionLedgerNames(ctx, tx, "contact", []ids.UUID{contactID.UUID}); err != nil {
+		return nil, fmt.Errorf("privacy: clearing the contact's attribution ledger: %w", err)
+	}
+	if err := clearAttributionLedgerNames(ctx, tx, "lead", wiped); err != nil {
+		return nil, fmt.Errorf("privacy: clearing the lead twins' attribution ledger: %w", err)
 	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
 		return nil, err

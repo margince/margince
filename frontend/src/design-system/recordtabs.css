@@ -133,13 +133,11 @@
   border: 0;
   border-block-end: 2px solid transparent;
   background: none;
-  font-family: var(--f-body);
-  /* The body rung: the strip ends in a Button (the details toggle), and a tab
-     word half a pixel smaller than the button beside it reads as drift, not as
-     a second kind of control. */
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
+  font-family: var(--fontFamilyBody);
+  /* Medium, the weight of text inside a component and of anything that may sit
+     beside a line icon: a tab carries a count and a mark on the same line, and
+     the stroke of the glyph and the stroke of the letter should match. */
+  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -171,17 +169,6 @@
   color: var(--textPrimary);
   border-block-end-color: var(--accent);
   cursor: default;
-}
-
-/* The count is a figure, so it reads in tabular digits (`.t-num`, through
-   `OptionCount`) that share one width — a strip of counts lines up instead of
-   shifting tab to tab. Quieter
-   than the label it follows: the word is what a reader is looking for and the
-   number is what they check once they have found it. */
-.recordtabs-count {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-regular);
-  color: var(--textMeta);
 }
 
 /* Something waits behind this tab. An accent dot rather than an indigo one:

@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import type { MouseEvent } from "react";
 import { navigate } from "../app/router";
 import { Badge, EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
 import { useT } from "../i18n";
@@ -138,10 +139,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
       </Panel>
 
       {manageable.length > 0 && (
-        <Panel
-          title={t("settings.home.manage")}
-          sub={t("settings.home.manageSub")}
-        >
+        <Panel title={t("settings.home.manage")}>
           <PanelBody>
             {manageable.map(({ group, items }) => (
               <GroupRows key={group} group={group} items={items} />
@@ -151,10 +149,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
       )}
 
       {consultable.length > 0 && (
-        <Panel
-          title={t("settings.home.lookUp")}
-          sub={t("settings.home.lookUpSub")}
-        >
+        <Panel title={t("settings.home.lookUp")}>
           <PanelBody>
             {consultable.map(({ group, items }) => (
               <GroupRows key={group} group={group} items={items} />
@@ -227,9 +222,9 @@ function GroupRows({
   const t = useT();
   return (
     <section className="settings-home-group">
-      <h3 className="t-caption settings-home-groupname">
+      <Heading size="small" as="h3" className="settings-home-groupname">
         {t(`settings.group.${group}`)}
-      </h3>
+      </Heading>
       <PageRows pages={items} />
     </section>
   );
@@ -261,9 +256,7 @@ function PageRows({ pages }: Readonly<{ pages: readonly SettingsPage[] }>) {
           }}
         >
           <span className="settings-home-rowhead">
-            <span className="settings-home-rowname">
-              {t(`settings.tab.${page.id}`)}
-            </span>
+            <span>{t(`settings.tab.${page.id}`)}</span>
             <Badge>{t(`settings.scope.${page.scope}`)}</Badge>
           </span>
           <span className="t-caption">{t(`settings.page.${page.id}.sub`)}</span>

@@ -6,8 +6,8 @@ import type { components } from "../../api/schema";
 import { installFetchStub, StoryProviders } from "../story-utils";
 import { briefModelPlan, briefWithPlan } from "./fixtures";
 import {
-  AccountArc,
   AdvancePanel,
+  CompanyArc,
   LikelyAsks,
   ObjectivePanel,
   Scenarios,
@@ -61,7 +61,7 @@ function plan(brief: MeetingBrief) {
           <TopRisk plan={it} onOpenRecord={() => {}} />
           <LikelyAsks plan={it} onOpenRecord={() => {}} />
           <Scenarios plan={it} />
-          <AccountArc
+          <CompanyArc
             plan={it}
             onOpenRecord={() => {}}
             // A fixed day, never a formatted clock: `make fe-clock-drift` runs

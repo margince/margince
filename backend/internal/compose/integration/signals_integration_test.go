@@ -411,7 +411,7 @@ func TestWarmthClassifiesByOwnContactGraph(t *testing.T) {
 }
 
 // The intro path is a proposal: it names the route-in contact and drafts a
-// message carrying the Art. 50 disclosure, and it mutates nothing (the
+// message carrying the AI provenance notice, and it mutates nothing (the
 // signal's version does not move).
 func TestIntroPathProposesWithoutMutating(t *testing.T) {
 	e := SetupSearch(t)
@@ -438,8 +438,14 @@ func TestIntroPathProposesWithoutMutating(t *testing.T) {
 	if ids.UUID(path.ContactId) != contact {
 		t.Fatalf("intro contact = %v, want %v", path.ContactId, contact)
 	}
-	if !strings.Contains(path.NextMove.DraftBody, "Art. 50") {
-		t.Fatalf("draft body missing the Art. 50 disclosure: %q", path.NextMove.DraftBody)
+	// This surface is the one that renders the notice INTO the body, so the body
+	// must end with the very sentence the response reports beside it. Compared
+	// against the response's own field rather than a spelling typed here: the
+	// draft's language is resolved from the signal, and a copy of the sentence
+	// in this file would be the copy the one-spelling gate cannot see.
+	if !strings.HasSuffix(strings.TrimSpace(path.NextMove.DraftBody), path.NextMove.AiDisclosure) {
+		t.Fatalf("draft body does not end with the provenance notice %q: %q",
+			path.NextMove.AiDisclosure, path.NextMove.DraftBody)
 	}
 
 	var versionAfter int64

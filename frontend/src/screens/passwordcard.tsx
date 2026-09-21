@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -132,7 +133,7 @@ export function PasswordSettingRow({
         label={t("password.title")}
         description={t("password.body")}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button variant="ghost" onClick={() => setOpen(true)}>
             {t("password.open")}
           </Button>
         }
@@ -160,9 +161,9 @@ export function PasswordSettingRow({
             if (ready && !change.isPending) change.mutate(fields);
           }}
         >
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("password.title")}
-          </h2>
+          </Heading>
           {change.isError && (
             <Callout
               kind="outcome"
@@ -236,7 +237,7 @@ export function PasswordSettingRow({
             )}
           </Field>
           <div className="form-actions">
-            <Button small variant="ghost" onClick={close}>
+            <Button variant="ghost" onClick={close}>
               {t("password.cancel")}
             </Button>
             {/* Two facts, two props. `!ready` is a form that is not filled in
@@ -252,7 +253,6 @@ export function PasswordSettingRow({
                   of `pending`, and — since refusal outranks busy — drop both the
                   focus and the busy state in the middle of the change. */}
             <Button
-              small
               type="submit"
               variant="primary"
               disabled={!change.isPending && !ready}

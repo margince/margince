@@ -96,11 +96,7 @@ func StageProgressionDecisions(pool *pgxpool.Pool) *approvals.Service {
 // failure: most deals at most moments have an unmet criterion, and a proposer
 // that put a card up for each of them would be a proposer nobody reads.
 func (p *StageProgressionProposer) Propose(ctx context.Context, dealID ids.DealID) (bool, error) {
-	actorCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   stageProgressionActor,
-	})
-	actorCtx = principal.WithCorrelationID(actorCtx, ids.NewV7())
+	actorCtx := principal.SystemActing(ctx, stageProgressionActor)
 	// Bound before the first transaction opens. A caller that already carries
 	// one — the HTTP surface, a test — resolves the same installation, so this
 	// is not a narrowing.

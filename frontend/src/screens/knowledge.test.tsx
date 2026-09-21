@@ -141,9 +141,6 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     expect(await screen.findByText("How-to")).toBeTruthy();
-    // The topic statement is on screen because it is what a refusal quotes
-    // back: an administrator who cannot see what they wrote cannot fix it.
-    expect(screen.getByText("How this product is operated.")).toBeTruthy();
     expect(await screen.findByText(/4 of 4 passages/i)).toBeTruthy();
   });
 

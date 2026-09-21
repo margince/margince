@@ -124,6 +124,14 @@ func validateOptOutAcknowledgement(
 	if subject.Kind != entityContact {
 		return unsupported, nil
 	}
+	// KIND ONLY, DELIBERATELY NOT purpose_id. A narrow marketing_objection
+	// (communication_suppression.purpose_id set to one newsletter) still keeps
+	// kind = 'marketing_objection', so this EXISTS already matches it — an
+	// acknowledgement is owed. That is correct, not an oversight: the
+	// acknowledgement is subject-level ("we received your opt-out"), not
+	// purpose-level ("we received your opt-out of THIS newsletter"). Filtering
+	// by purpose here would refuse the acknowledgement a narrow objection
+	// equally owes, under-serving the subject Art. 16 exists to protect.
 	var standing bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (

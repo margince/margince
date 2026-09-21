@@ -7,7 +7,7 @@ import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import { type Receipt, worklistKey } from "./worklist.queries";
 import { ReceiptUndo } from "./worklist.receiptundo";
 
@@ -49,12 +49,10 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
   });
   const review = receipt.review;
   if (!review) return <ReceiptUndo receipt={receipt} />;
-  if (review.reversed)
-    return <span className="t-caption">{t("brief.changes.undone")}</span>;
-  if (review.accepted)
-    return <span className="t-caption">{t("brief.changes.accepted")}</span>;
+  if (review.reversed) return <span>{t("brief.changes.undone")}</span>;
+  if (review.accepted) return <span>{t("brief.changes.accepted")}</span>;
   if (!review.can_accept && !review.can_undo)
-    return <p className="t-caption">{t("brief.changes.superseded")}</p>;
+    return <p>{t("brief.changes.superseded")}</p>;
   const subject = receipt.subject;
   if (!writable || !review.writable || subject?.type !== "deal") return null;
   const press = (action: "accept" | "undo") =>
@@ -71,7 +69,6 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
           <ReceiptUndo receipt={receipt} />
         ) : (
           <Button
-            small
             variant="ghost"
             pending={decide.isPending}
             onClick={() => press("undo")}
@@ -80,19 +77,11 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
           </Button>
         ))}
       {review.can_accept && (
-        <Button
-          small
-          pending={decide.isPending}
-          onClick={() => press("accept")}
-        >
+        <Button pending={decide.isPending} onClick={() => press("accept")}>
           {t("brief.changes.accept")}
         </Button>
       )}
-      {decide.error && (
-        <p role="alert" className="t-caption">
-          {problemMessageOf(decide.error, t)}
-        </p>
-      )}
+      {decide.error && <RefusalLine error={decide.error} />}
     </div>
   );
 }
