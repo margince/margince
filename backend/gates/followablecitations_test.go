@@ -37,12 +37,20 @@ package gates
 // meets — it is a bar somebody disables. Scoped by line, the rule costs what
 // the change costs, and the backlog converges as those lines are edited.
 //
-// WHAT IT CANNOT SEE, said rather than left to be assumed. It judges the
-// PHRASING, not the prose: a directive word in front of a number is a pointer,
-// and a number standing alone is a label. A comment that names a decision and
-// then explains nothing is compliant here, because no pattern can tell an
-// explanation from a sentence. What this stops is the form that leaves a
-// reader with an instruction and no way to satisfy it.
+// WHAT IT CANNOT SEE, said rather than left to be assumed.
+//
+// For a DECISION NUMBER it judges the phrasing, not the prose: a directive word
+// in front of a number is a pointer, and a number standing alone is a label. A
+// comment that names a decision and then explains nothing is compliant here,
+// because no pattern can tell an explanation from a sentence.
+//
+// And it cannot see a section whose document is never named. `the §4
+// arithmetic`, `the §1.3 merge` — around two hundred of these, and they are the
+// worst of the family rather than the least of it, because a reader has not
+// even a name to search for. They are left because the remedy is not a rewrite
+// of the citation: somebody has to know what that section said, and no pattern
+// can supply it. The arms below stop the forms that CAN be repaired by whoever
+// touches the line.
 
 import (
 	"os"
@@ -80,10 +88,117 @@ var unreachableDocument = []struct {
 	// and loses nothing a reader could have used.
 	{"retired specification number", regexp.MustCompile(
 		`(?i)(\bA\d{2,3}/ADR-\d{4}|\bADR-\d{4}/A\d{2,3}|\b(see|per|cf\.?|under|following|according to)\s+A\d{2,3}\b)`)},
-	// A chapter of the retired specification, which is a path into a document
-	// that was never in this repository.
-	{"specification chapter", regexp.MustCompile(
-		`\b(data-model|features|architecture)\.md\s*§`)},
+	// The three retired documents whose names carry no punctuation to derive
+	// from. `design §6.6`, `formulas §11`, `spec §3` — each names a document
+	// that was never in this repository, and a bare word gives the check below
+	// nothing to recognise it by, so these three are named.
+	//
+	// A LIST, where the check below derives, and the reason is worth stating:
+	// a name with a dot, a hyphen or a slash is unambiguously a filename and
+	// can be resolved against the tree, which is how an unlisted family gets
+	// caught. A bare word cannot be told from English — `the §4 arithmetic` is
+	// prose — so the derivation has no purchase and the retired names are
+	// spelled. `architecture` is deliberately absent: docs/explanation/architecture.md
+	// is in this tree, and the retired chapters spell themselves `architecture/03`,
+	// which the derived check resolves and refuses on its own.
+	{"retired design document", regexp.MustCompile(`\b(design|formulas|spec)\s*§`)},
+	// A path INTO the retired specification. Unlike a chapter this needs no
+	// section mark: a path is already an instruction to open a file, and
+	// `spec/` names a directory that has never been in this repository. The
+	// sibling gate bans `specs/` — the plural — and the tree spells it
+	// singular, which is how eighty-eight of these sat under a green gate.
+	{"specification path", regexp.MustCompile(`(^|[^\w/.-])spec/[a-z0-9]`)},
+	// A number from the retired backlog: epics, their numbered items, and the
+	// acceptance plan.
+	//
+	// Matched WHEREVER it appears, for the reason the A-numbers above are. The
+	// rulebook blesses a decision number as a label because the record is filed
+	// and somebody can ask for it; nothing files an `EP07` or a `B-E11.32`, so
+	// the number labels nothing and can only read as a pointer. Where one sits
+	// beside a decision record that survived, the record is the label already:
+	// `(EP05 / ADR-0006 scrape seam)` becomes `(ADR-0006 scrape seam)` and
+	// loses nothing a reader could have used.
+	//
+	// `AC-W2` is deliberately NOT here. docs/reference/make-targets.md says what
+	// it is in the same sentence it names it, so it is a label with its rule
+	// beside it — which is the whole of what this gate asks for.
+	{"retired backlog number", regexp.MustCompile(
+		`\b(B-)?EP?\d{2}(\.\d+[a-z]?)*\b|\bUAT-PLAN-\d\b|\bOP-\d{1,2}\b`)},
+}
+
+// chapterCitation is a NAMED document opened at a section: `data-model §12.5`,
+// `events.md §7`, `features/07 §11`. The name is captured so it can be resolved
+// against this tree.
+//
+// Required to carry a dot, a hyphen or a slash. That punctuation is what makes
+// it a filename rather than English — `the §4 arithmetic` and `the §1.3 merge`
+// are prose about a section whose document is never named, and no resolution
+// can help a reader there. Those are real and they are not this: see the
+// retired-design-document arm above for the bare-word half, and the note on
+// what this gate cannot see for the half that names nothing at all.
+var chapterCitation = regexp.MustCompile(`\b([A-Za-z][\w.-]*(?:/[\w.-]+)*)\s*§`)
+
+// aDecisionRecord is the one name the derived check hands back untouched.
+//
+// The rulebook blesses a decision number as a label and the arm at the top of
+// this file already judges it by PHRASING — `see ADR-0054` is a pointer,
+// `(ADR-0054)` is a filing reference. Resolving it here as an unreachable
+// document would overturn that ratified reading from a helper, and for two
+// thousand five hundred sites. If the section mark should make a decision
+// record a destination too, that is its own change with its own argument.
+var aDecisionRecord = regexp.MustCompile(`(?i)^ADR-\d{4}$`)
+
+// treeDocuments collects the Markdown this repository carries, keyed by the
+// spellings a citation uses: the path, and the basename with and without its
+// extension. A name that misses this set names nothing a reader can open.
+//
+// DERIVED from the tree rather than listed, which is the whole point. A gate
+// carrying a list of retired document names reports the families somebody
+// thought of — `data-model` and `features` were listed, and `events.md`,
+// `interfaces.md`, `formulas-and-rules`, `ai-operational-spec` and
+// `data-semantics` were not, so two hundred sites sat under a green gate. A
+// gate that asks the tree cannot miss a family, and it stops being wrong on its
+// own the day one of those documents is written here.
+func treeDocuments(t testing.TB) map[string]bool {
+	t.Helper()
+	// `-C ..` for the reason changedFilesAgainstMain uses it: this package runs
+	// from backend/, and docs/ — which is most of what a citation legitimately
+	// names — is above it. Listed from backend/ the set holds no docs/ page at
+	// all and every citation resolves as unfollowable, which is a gate that
+	// fails in the loud direction rather than the silent one and is still wrong.
+	out, err := exec.Command("git", "-C", "..", "ls-files", "*.md").Output()
+	if err != nil {
+		t.Fatalf("listing this tree's documents: %v", err)
+	}
+	docs := map[string]bool{}
+	for _, path := range strings.Fields(string(out)) {
+		base := filepath.Base(path)
+		for _, spelling := range []string{path, base, strings.TrimSuffix(base, ".md")} {
+			docs[strings.ToLower(spelling)] = true
+		}
+	}
+	// A tree with no Markdown in it is a broken checkout, and clearing every
+	// citation over it is the direction this gate must not fail in.
+	if len(docs) == 0 {
+		t.Fatal("this tree lists no Markdown at all, so every citation would resolve as unfollowable")
+	}
+	return docs
+}
+
+// citesAnAbsentDocument reports the named documents on this line that are not
+// in this tree.
+func citesAnAbsentDocument(line string, docs map[string]bool) []string {
+	var absent []string
+	for _, m := range chapterCitation.FindAllStringSubmatch(line, -1) {
+		name := m[1]
+		if !strings.ContainsAny(name, ".-/") || aDecisionRecord.MatchString(name) {
+			continue
+		}
+		if !docs[strings.ToLower(name)] && !docs[strings.ToLower(name)+".md"] {
+			absent = append(absent, name)
+		}
+	}
+	return absent
 }
 
 // citationRemedy is what an author does about a finding. It is one sentence
@@ -117,6 +232,7 @@ func TestEveryTouchedFileExplainsWhatItCites(t *testing.T) {
 		}
 		t.Skip("no origin/main to diff against — this gate is diff-scoped by design")
 	}
+	docs := treeDocuments(t)
 	for rel, lines := range changed {
 		if !citationScanned[filepath.Ext(rel)] || generatedSource(rel) {
 			continue
@@ -133,6 +249,10 @@ func TestEveryTouchedFileExplainsWhatItCites(t *testing.T) {
 				}
 				t.Errorf("%s:%d cites a %s as though a reader could open it — %s\n\t%s",
 					rel, at.line, doc.name, citationRemedy, strings.TrimSpace(at.text))
+			}
+			for _, name := range citesAnAbsentDocument(at.text, docs) {
+				t.Errorf("%s:%d opens %q at a section, and no such document is in this tree — %s\n\t%s",
+					rel, at.line, name, citationRemedy, strings.TrimSpace(at.text))
 			}
 		}
 	}
@@ -266,5 +386,76 @@ diff --git a/backend/gone.go b/backend/gone.go
 		if strings.Contains(at.text, "old()") || strings.Contains(at.text, "deleted()") {
 			t.Errorf("a removed line was reported as touched: %+v", at)
 		}
+	}
+}
+
+// The arms, read against the spellings the tree actually carries and against
+// the prose they must leave alone.
+//
+// The sweep above is diff-scoped, so on a branch that touches none of these
+// lines it reports nothing — and an arm that had stopped matching would report
+// nothing in exactly the same way. That is how the listed version of this gate
+// cleared six hundred citations while looking healthy. These cases fail
+// instead.
+func TestEveryCitationArmSeesTheSpellingsTheTreeCarries(t *testing.T) {
+	t.Parallel()
+	docs := treeDocuments(t)
+	flagged := func(line string) bool {
+		for _, doc := range unreachableDocument {
+			if doc.pattern.MatchString(line) {
+				return true
+			}
+		}
+		return len(citesAnAbsentDocument(line, docs)) > 0
+	}
+	for _, k := range []struct {
+		why  string
+		line string
+		want bool
+	}{
+		{
+			"the numbered chapter path, the family the listed gate missed",
+			"// routed the lead (features/07 §11 gate 9), so the rep never sees it", true,
+		},
+		{"the same document without a path", "// versioned (data-model §4.3) — optimistic concurrency", true},
+		{"a retired document that no list named", "// the catalog (events.md §7) and its payloads", true},
+		{
+			"another, to show the derivation is not two entries",
+			"// the seam (interfaces.md §3) hands it across", true,
+		},
+		{
+			"a retired document whose bare name has nothing to derive from",
+			"// Weighted value (formulas §6) is computed twice", true,
+		},
+		{"a path into the specification directory", "// Derived from `spec/data-model.md` (the schema)", true},
+		{"a retired epic", "// The Morning-Brief HTTP surface (E05): the home read", true},
+		{"a retired backlog item", "// the preference center (B-E11.32). The token resolves to", true},
+		{
+			"a document that IS in this tree, cited at a section",
+			"// the layout rules (architecture.md §2) put modules below compose", false,
+		},
+		{
+			"a decision number as a label, which the rulebook blesses",
+			"// single-company invariant (ADR-0091 §8) holds here", false,
+		},
+		{
+			"prose about a section that names no document at all",
+			"// invites a client to draw a precision the §4 arithmetic does not claim", false,
+		},
+		{
+			"an ordinary word that happens to precede a section mark",
+			"// see the §5 catalog below", false,
+		},
+		{
+			"a published budget id explained where it is named",
+			"// AC-W2 workflow trigger->dispatch p95, 200ms objective", false,
+		},
+	} {
+		t.Run(k.why, func(t *testing.T) {
+			t.Parallel()
+			if got := flagged(k.line); got != k.want {
+				t.Errorf("the arms report %v for %q, want %v", got, k.line, k.want)
+			}
+		})
 	}
 }
