@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import { readingsDay, taskRow } from "./brief.fixtures";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
@@ -38,8 +39,11 @@ it("keeps the summary visible and puts informational updates after the prioritie
   });
   const { container } = render(<BriefScreen />);
   await screen.findAllByText("Send the promised comparison");
+  // The strip's own label, read from the catalog: this test is about WHERE the
+  // readings sit, so a literal copy of their name would fail every time the
+  // words changed without the placement having moved at all.
   const summary = await screen.findByRole("region", {
-    name: "Your morning, in five readings",
+    name: en["brief.readings.label"],
   });
   expect(summary.closest("details")).toBeNull();
   expect(summary.closest(".brief-overview")).toBeTruthy();

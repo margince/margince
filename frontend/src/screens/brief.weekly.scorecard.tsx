@@ -67,13 +67,21 @@ function LeadBlockStrip({
         value={n(block.advanced)}
         detail={t("brief.weekly.scorecard.advancedBasis")}
       />
+      {/* The BREACH is the figure, and what was answered in time is the line
+          under it. A card that led with the leads answered in target put the
+          reassurance where the reading goes and left the week's one actionable
+          number as a footnote. */}
       <StatCard
         narrow="row"
         label={t("brief.weekly.scorecard.answeredInTarget")}
-        value={n(block.answered_in_target)}
-        detail={t("brief.weekly.scorecard.breachedDetail", {
-          count: n(block.breached),
-        })}
+        value={n(block.breached)}
+        detail={
+          block.breached === 0
+            ? t("brief.weekly.scorecard.allInTarget")
+            : t("brief.weekly.scorecard.answeredDetail", {
+                count: n(block.answered_in_target),
+              })
+        }
       />
       <StatCard
         narrow="row"
@@ -105,6 +113,17 @@ function DealBlockStrip({
 }: Readonly<{ block: DealBlock; t: Translator }>) {
   const { locale } = useLocale();
   const n = (value: number) => formatNumber(value, locale);
+  // THREE CARDS READ AGAINST ONE DENOMINATOR, and a week with no open deal has
+  // none. "0 of 0 open deals" states a coverage nobody could have and the bar
+  // under it draws a share of nothing, so both give way to the plain fact that
+  // there was nothing to cover. One arm, because the three are read across as
+  // one comparison and a week where two said it differently would be two weeks.
+  const noOpen = block.open === 0;
+  const ofOpen = noOpen
+    ? t("brief.weekly.scorecard.noOpen")
+    : t("brief.weekly.scorecard.ofOpen", { total: n(block.open) });
+  const share = (filled: number) =>
+    noOpen ? undefined : { filled, total: block.open };
   return (
     <StatStrip
       label={t("brief.weekly.scorecard.dealBlock")}
@@ -132,24 +151,28 @@ function DealBlockStrip({
         narrow="row"
         label={t("brief.weekly.scorecard.withNextStep")}
         value={n(block.with_next_step)}
-        meter={{ filled: block.with_next_step, total: block.open }}
-        detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
+        meter={share(block.with_next_step)}
+        detail={ofOpen}
       />
       <StatCard
         narrow="row"
         label={t("brief.weekly.scorecard.multiThreaded")}
         value={n(block.multi_threaded)}
-        meter={{ filled: block.multi_threaded, total: block.open }}
-        detail={t("brief.weekly.scorecard.multiThreadedBasis", {
-          total: n(block.open),
-        })}
+        meter={share(block.multi_threaded)}
+        detail={
+          noOpen
+            ? t("brief.weekly.scorecard.noOpen")
+            : t("brief.weekly.scorecard.multiThreadedBasis", {
+                total: n(block.open),
+              })
+        }
       />
       <StatCard
         narrow="row"
         label={t("brief.weekly.scorecard.closeDateSound")}
         value={n(block.close_date_sound)}
-        meter={{ filled: block.close_date_sound, total: block.open }}
-        detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
+        meter={share(block.close_date_sound)}
+        detail={ofOpen}
       />
       <StatCard
         narrow="row"

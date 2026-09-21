@@ -21,12 +21,13 @@ const AiReadings = () => (
 // still worth one story because of what follows.
 //
 // The two header readings are the point of the shape and they follow DIFFERENT
-// grants — spend on `automation:update`, the vendor keys on `ai_routing:read` —
-// so a seat holding one and not the other sees one figure and one withheld
-// notice side by side. That pair is what these stories are for; each tab's own
-// card has its own story.
+// grants — spend and the call trace on `ai_diagnostics:read`, the vendor keys
+// on `ai_routing:read` — so a seat holding one and not the other sees one
+// figure and one withheld notice side by side. That pair is what these stories
+// are for; each tab's own card has its own story.
 const OPERATOR: GrantSpec = {
   ai_routing: ["read", "update"],
+  ai_diagnostics: ["read"],
   automation: ["read", "update"],
   ai_model_rate: ["read"],
 };
@@ -70,12 +71,37 @@ const USAGE = {
   },
 };
 
-function story(allow: GrantSpec) {
+// The same month metered and never priced: no task carries a cost, so the
+// estimate has nothing to state. Absent is not zero, which is the whole reason
+// the card says so in words.
+const UNPRICED_USAGE = {
+  ...USAGE,
+  days: [
+    {
+      date: "2026-09-01",
+      tasks: [
+        {
+          task: "company.enrich",
+          tier: "cheap_cloud",
+          calls: 640,
+          cached_hits: 96,
+          tokens_in: 190000,
+          tokens_out: 24000,
+        },
+      ],
+    },
+  ],
+};
+
+function story(
+  allow: GrantSpec,
+  reads: { usage?: unknown; calls?: unknown[] } = {},
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /ai/routing": () => jsonResponse(ROUTING),
-      "GET /ai/usage": () => jsonResponse(USAGE),
+      "GET /ai/usage": () => jsonResponse(reads.usage ?? USAGE),
       "GET /ai-model-rates": () => jsonResponse({ data: [] }),
       "GET /ai/provider-keys": () =>
         jsonResponse({
@@ -93,7 +119,7 @@ function story(allow: GrantSpec) {
         }),
       "GET /ai/calls": () =>
         jsonResponse({
-          data: [
+          data: reads.calls ?? [
             {
               id: "01a0-0000-7000-8000-000000000001",
               occurred_at: "2026-09-01T14:22:09Z",
@@ -147,9 +173,24 @@ export const Operator: Story = { render: story(OPERATOR) };
 // truth is only about who may read it.
 export const WithheldReadings: Story = { render: story(AUTOMATIONS_ONLY) };
 
+// The keys are readable and the per-call trace is not — two different grants,
+// so the count still answers and the line under it simply goes quiet. "Never
+// called" here would be a claim about the installation made on no evidence.
+export const TraceWithheld: Story = {
+  render: story({ ai_routing: ["read", "update"], ai_model_rate: ["read"] }),
+};
+
 // Dark. The header's figures and the strip's current-tab underline are the two
 // things a flattened token costs the reader here.
 export const OperatorDark: Story = {
   globals: { theme: "dark" },
   render: story(OPERATOR),
+};
+
+// Nothing priced and nothing called yet, which is a fresh installation's first
+// month. Both cards answer in WORDS where a figure would be invented: an absent
+// estimate reads as a month that cost nothing, and an absent last-call line
+// used to draw a caption with nothing in it.
+export const NothingPricedOrCalled: Story = {
+  render: story(OPERATOR, { usage: UNPRICED_USAGE, calls: [] }),
 };

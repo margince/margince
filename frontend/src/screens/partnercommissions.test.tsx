@@ -10,7 +10,9 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 
 type CommissionEntry = components["schemas"]["CommissionEntry"];
 
@@ -315,7 +317,11 @@ describe("the outstanding figure", () => {
       { ...accrued, id: "c-4", status: "void", amount_minor: 99900 },
     ]);
 
-    expect(owed).toEqual([{ currency: "EUR", amountMinor: 25000 }]);
+    // The entry count travels with the sum, because the card states both and a
+    // second pass over the same rows would be a second answer to one question.
+    expect(owed).toEqual([
+      { currency: "EUR", amountMinor: 25000, entryCount: 2 },
+    ]);
   });
 
   it("keeps currencies apart rather than adding them", () => {
@@ -326,8 +332,8 @@ describe("the outstanding figure", () => {
 
     // Two slots, not one sum: EUR 200 plus USD 30 is not 230 of anything.
     expect(owed).toEqual([
-      { currency: "EUR", amountMinor: 20000 },
-      { currency: "USD", amountMinor: 3000 },
+      { currency: "EUR", amountMinor: 20000, entryCount: 1 },
+      { currency: "USD", amountMinor: 3000, entryCount: 1 },
     ]);
   });
 
@@ -347,7 +353,43 @@ describe("the outstanding figure", () => {
     render(<PartnerCommissions companyId="o-1" />);
     const strip = await screen.findByTestId("commission-outstanding");
 
-    expect(strip.textContent).toContain("€200.00");
+    // To the cent. This is money somebody is OWED, so it keeps every digit —
+    // the compact form carries no fraction below ten thousand, and forty cents
+    // outstanding would read "€0".
+    expect(strip.textContent).toContain(formatMoney(20000, "EUR", "en"));
+  });
+
+  // The defect the compact form caused: a balance under €100 lost its cents,
+  // and forty cents owed read "€0" — a partner told they are owed nothing.
+  it("keeps the cents on a balance the compact form would round to zero", async () => {
+    stubCommissions([{ ...accrued, amount_minor: 40 }]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const strip = await screen.findByTestId("commission-outstanding");
+
+    expect(strip.textContent).toContain(formatMoney(40, "EUR", "en"));
+    expect(strip.textContent).not.toContain("€0 ");
+  });
+
+  it("says what the total is made of rather than where paying happens", async () => {
+    stubCommissions([
+      { ...accrued, amount_minor: 20000 },
+      { ...accrued, id: "c-2", status: "approved", amount_minor: 5000 },
+    ]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const strip = await screen.findByTestId("commission-outstanding");
+
+    // The detail counts the entries behind the figure. Where the money
+    // actually leaves is true of the whole ledger, so it is said once above it
+    // and not on every currency's slot.
+    expect(strip.textContent).toContain(
+      en["commission.outstandingDetail_other"].replace("{count}", "2"),
+    );
+    expect(strip.textContent).not.toContain("finance system");
+    expect(
+      screen.getByText(en["commission.decide.settledElsewhere"]),
+    ).toBeTruthy();
   });
 });
 

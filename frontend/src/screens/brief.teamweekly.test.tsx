@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatMoneyCompact } from "../format/format";
 import { en } from "../i18n/en";
 import { TeamWeeklyPanel, TeamWeeklySection } from "./brief.teamweekly";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
@@ -204,8 +205,13 @@ describe("the scorecard says what the wins were worth", () => {
 
     // The review's OWN currency, not the installation's current setting: base
     // currency is operator-mutable, and re-reading it would re-label a closed
-    // week with a currency its numbers were never in.
-    expect(await screen.findByText(/25.000,00\s*€|€25,000\.00/)).toBeTruthy();
+    // week with a currency its numbers were never in. Compact, like every other
+    // figure on this plate — the slot is a row and a full amount clips there.
+    expect(
+      await screen.findByText(
+        new RegExp(formatMoneyCompact(2_500_000, "EUR", "en")),
+      ),
+    ).toBeTruthy();
     // The lost count survives the money arriving: it is a different fact, not a
     // delta the value replaces.
     expect(screen.getAllByText(/1 lost|1 verloren/)[0]).toBeTruthy();
@@ -225,6 +231,48 @@ describe("the scorecard says what the wins were worth", () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/€|EUR/)).toBeNull();
+  });
+
+  // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
+  // and the basis line beside it explains a measurement that was never taken.
+  // One arm for the three, because the strip is read across and three
+  // spellings of one absence would read as three different weeks.
+  it("states an empty population rather than scoring a share of none", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(
+          review({
+            leads_routed: 0,
+            leads_answered_in_target: 0,
+            leads_breached: 0,
+            meetings_held: 0,
+            meetings_with_next_step: 0,
+            commitments_due: 0,
+            commitments_kept: 0,
+          }),
+        ),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+
+    expect(await screen.findByText(en["teamweekly.card.noLeads"])).toBeTruthy();
+    expect(screen.getByText(en["teamweekly.card.noMeetings"])).toBeTruthy();
+    expect(screen.getByText(en["teamweekly.card.noCommitments"])).toBeTruthy();
+    expect(
+      screen.queryByText(
+        en["teamweekly.ofTotal"].replace("{part}", "0").replace("{whole}", "0"),
+      ),
+    ).toBeNull();
+    // The basis lines go with the figures they explained: "task linked before
+    // week end" over a week with no meeting describes a rule nobody applied.
+    expect(screen.queryByText(en["teamweekly.card.meetingsBasis"])).toBeNull();
+    expect(
+      screen.queryByText(en["teamweekly.card.commitmentsBasis"]),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        en["teamweekly.card.firstResponseBasis"].replace("{breached}", "0"),
+      ),
+    ).toBeNull();
   });
 });
 

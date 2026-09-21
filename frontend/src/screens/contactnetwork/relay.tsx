@@ -14,6 +14,7 @@ import { Avatar } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useMe } from "../common";
 import type { IntroRequest } from "../introrequests";
 
 type StepState = "done" | "current" | "waiting";
@@ -31,8 +32,10 @@ export function RelayPanel({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const reader = useMe().data?.user;
   const steps = stepsFor(ask, t);
-  const owner = ask && !SETTLED.has(ask.status) ? ownerOf(ask, t) : undefined;
+  const owner =
+    ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
   return (
     <Panel title={t("contact.intro.relayTitle")}>
       <PanelBody>
@@ -88,14 +91,38 @@ export function RelayPanel({
  * Shared with the strip's handoff slot, so the two never disagree about
  * whose turn it is. A status that nobody owes says so rather than naming a
  * contact who has already done their part.
+ *
+ * It NAMES someone, the reader included. Once the colleague has agreed, the
+ * move is the requester's — usually the reader's own — and "you" made the one
+ * line on this panel that addresses somebody, on a surface whose whole job is
+ * to state facts about a relationship.
+ *
+ * `undefined` is "nobody can be named yet", which is NOT the neutral colleague
+ * noun. A name that is merely unread arrives a moment later, and standing a
+ * colleague in for it made the slot say someone owed the move and then
+ * replace them with another — a handoff that changed hands on screen while
+ * nothing had happened.
  */
-export function ownerOf(ask: IntroRequest, t: ReturnType<typeof useT>): string {
+export function ownerOf(
+  ask: IntroRequest,
+  t: ReturnType<typeof useT>,
+  // The session, for the ask whose requester the payload leaves unnamed.
+  // Absent while it is still being read.
+  reader?: Readonly<{ id: string; display_name: string }>,
+): string | undefined {
   switch (ask.status) {
     case "requested":
       return ask.introducer_display_name ?? t("contact.intro.ownerColleague");
     case "accepted":
     case "name_drop_approved":
-      return ask.requester_display_name ?? t("contact.intro.ownerYou");
+      // The reader's name only where the reader IS the requester. An ask this
+      // page can show was not necessarily made by whoever is looking at it,
+      // and a colleague's ask read by somebody else would otherwise be signed
+      // with the wrong name — worse than leaving the line off.
+      return (
+        ask.requester_display_name ??
+        (reader?.id === ask.requester_user_id ? reader.display_name : undefined)
+      );
     default:
       return t("contact.intro.ownerNobody");
   }

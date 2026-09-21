@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { IntroRequest } from "../introrequests";
-import { StoryProviders } from "../story-utils";
+import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
 import { RelayPanel } from "./relay";
 import "../contactnetwork.css";
 
@@ -51,6 +51,11 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
 const meta: Meta<typeof RelayPanel> = {
   title: "Records/Contact/Introduction relay",
   component: RelayPanel,
+  beforeEach: () => {
+    // The owner line asks the session who the reader is, for the ask whose
+    // requester the payload leaves unnamed.
+    installFetchStub({ "GET /me": meRoute({ introduction: ["read"] }) });
+  },
 };
 export default meta;
 type Story = StoryObj<typeof RelayPanel>;
@@ -119,4 +124,17 @@ export const Replied: Story = {
 export const AwaitingAnswerDark: Story = {
   globals: { theme: "dark" },
   render: relay(ask()),
+};
+
+/** The colleague agreed, and the payload does not name who asked. The owner
+ *  line is the reader's own name rather than "you": this panel states facts
+ *  about a relationship and addresses nobody. */
+export const AcceptedByAnUnnamedRequester: Story = {
+  render: relay(
+    ask({
+      status: "accepted",
+      requester_display_name: undefined,
+      decided_at: "2026-08-31T09:00:00Z",
+    }),
+  ),
 };

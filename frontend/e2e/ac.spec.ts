@@ -1534,74 +1534,109 @@ test.describe("§3.8: 390px mobile", () => {
     expect(tall).toEqual([]);
   });
 
-  // The queue is WORKABLE with a thumb, not merely present.
-  //
-  // What stood here asserted that one text node was visible at 390px, and it
-  // passed for as long as the screen was unusable: the row is a three-column
-  // line whose verbs never yield width, so the title column was squeezed to a
-  // few characters while three buttons held their full size beside it. A test
-  // that cannot tell that from a working screen is part of the defect.
-  //
-  // So this measures the row itself — every row, not the first — and the
-  // targets a rep presses.
-  test("S-E11.2: the day's queue is workable with a thumb at 390px", async ({
-    page,
-  }) => {
-    await page.goto("/#/worklist");
-    await page.waitForLoadState("networkidle");
-    await expect(
-      page.getByText(/Send the follow-up to Anna Weber/).first(),
-    ).toBeVisible();
+  // A THUMB, not a mouse aimed at a phone-sized window. Every touch floor in
+  // this product is declared under `@media (pointer: coarse)`, and Chromium
+  // resolves that off touch emulation rather than off the viewport — so a run
+  // without it measures the desktop sizes and reports them as a phone's.
+  test.describe("under a coarse pointer", () => {
+    test.use({ hasTouch: true });
 
-    // Nothing runs off the side. The row wraps instead of pushing the page
-    // wider, which is the difference between a stacked layout and a squeezed
-    // one.
-    expect(await pageOverflow(page)).toEqual([]);
-
-    // The text column is wide enough to read a sentence in. Half the viewport
-    // is a low bar deliberately: it is the one this layout FAILED, at roughly a
-    // quarter, and a ceiling tuned to today's rows would break on tomorrow's
-    // longer verb.
-    const narrow = await page.evaluate(() => {
-      const floor = 390 / 2;
-      return Array.from(document.querySelectorAll(".worklist-row-text"))
-        .map((element) => ({
-          width: element.getBoundingClientRect().width,
-          text: (element.textContent ?? "").slice(0, 40),
-        }))
-        .filter(({ width }) => width < floor)
-        .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
-    });
-    expect(narrow).toEqual([]);
-
-    // Every verb in the QUEUE is a real target — the rows and the focus card
-    // above them, which is the work this screen exists for. The focus CTA is a
-    // full-size `.btn` and already clears the floor through `--controlHeight`; it
-    // is measured anyway, because a rule that holds only where somebody
-    // remembered to look is not a floor.
+    // The queue is WORKABLE with a thumb, not merely present.
     //
-    // The readings strip above is deliberately NOT measured. Its "open this
-    // lane" link is a 24px target on a phone and genuinely too small, but it
-    // belongs to the design system's StatCard rather than to this screen —
-    // fixing it here would size every reading card in the product from the
-    // worklist's stylesheet. Filed as #3961.
+    // What stood here asserted that one text node was visible at 390px, and it
+    // passed for as long as the screen was unusable: the row is a three-column
+    // line whose verbs never yield width, so the title column was squeezed to a
+    // few characters while three buttons held their full size beside it. A test
+    // that cannot tell that from a working screen is part of the defect.
     //
-    // Visible controls only: the page carries collapsed panels whose buttons
-    // lay out at zero height, and those are not targets a thumb can miss.
-    const small = await page.evaluate(() => {
-      const controls = document.querySelectorAll(
-        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button",
-      );
-      return Array.from(controls)
-        .filter((element) => element.getBoundingClientRect().height > 0)
-        .map((element) => ({
-          height: element.getBoundingClientRect().height,
-          label: (element.textContent ?? "").trim(),
-        }))
-        .filter(({ height }) => height < 44)
-        .map(({ height, label }) => `${label}: ${Math.round(height)}px`);
+    // So this measures the row itself — every row, not the first — and the
+    // targets a rep presses.
+    test("the day's queue is workable with a thumb at 390px", async ({
+      page,
+    }) => {
+      await page.goto("/#/worklist");
+      await page.waitForLoadState("networkidle");
+      await expect(
+        page.getByText(/Send the follow-up to Anna Weber/).first(),
+      ).toBeVisible();
+
+      // Nothing runs off the side. The row wraps instead of pushing the page
+      // wider, which is the difference between a stacked layout and a squeezed
+      // one.
+      expect(await pageOverflow(page)).toEqual([]);
+
+      // The text column is wide enough to read a sentence in. Half the viewport
+      // is a low bar deliberately: it is the one this layout FAILED, at roughly a
+      // quarter, and a ceiling tuned to today's rows would break on tomorrow's
+      // longer verb.
+      const narrow = await page.evaluate(() => {
+        const floor = 390 / 2;
+        return Array.from(document.querySelectorAll(".worklist-row-text"))
+          .map((element) => ({
+            width: element.getBoundingClientRect().width,
+            text: (element.textContent ?? "").slice(0, 40),
+          }))
+          .filter(({ width }) => width < floor)
+          .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
+      });
+      expect(narrow).toEqual([]);
+
+      // Every control this screen is FOR is a real target: the queue's rows and
+      // the readings strip above them, whose "Open →" is the way into a lane.
+      // The strip used to be left out of this sweep on the argument that its
+      // door belongs to the design system's StatCard rather than to this screen
+      // — true of where the fix goes, and no reason for the screen to stop
+      // measuring a control a rep presses on it.
+      //
+      // TWO censuses, not one list, and each reports what it FOUND before it
+      // reports what was too small. A selector that matches nothing returns an
+      // empty list of offenders — the same value a clean screen returns — so a
+      // renamed class would leave this sweep measuring half the page and still
+      // green. Counting first is what makes a region going missing a red.
+      //
+      // Both spellings of the strip are named: this route draws the Brief's
+      // readings today and the worklist's own strip is the same component in
+      // the same place, so whichever is present is the one a rep presses.
+      //
+      // Visible controls only: the page carries collapsed panels whose buttons
+      // lay out at zero height, and those are not targets a thumb can miss.
+      const targets = await page.evaluate(() => {
+        const census = (scopes: readonly string[]) => {
+          const found = scopes.flatMap((scope) =>
+            Array.from(
+              document.querySelectorAll(
+                `${scope} button, ${scope} a.btn, ${scope} .link-button`,
+              ),
+            ),
+          );
+          // One control can answer to two of those selectors (a `.link-button`
+          // that is a `<button>`), and a census that counted it twice would
+          // report a page busier than it is.
+          const visible = Array.from(new Set(found)).filter(
+            (element) => element.getBoundingClientRect().height > 0,
+          );
+          return {
+            counted: visible.length,
+            small: visible
+              .map((element) => ({
+                height: element.getBoundingClientRect().height,
+                label: (element.textContent ?? "").trim(),
+              }))
+              .filter(({ height }) => height < 44)
+              .map(({ height, label }) => `${label}: ${Math.round(height)}px`),
+          };
+        };
+        return {
+          readings: census([".brief-readings", ".worklist-readings"]),
+          queue: census([".worklist-list"]),
+        };
+      });
+
+      expect(targets.readings.counted).toBeGreaterThan(0);
+      expect(targets.readings.small).toEqual([]);
+      expect(targets.queue.counted).toBeGreaterThan(0);
+      expect(targets.queue.small).toEqual([]);
     });
-    expect(small).toEqual([]);
   });
 
   // The bar's centre cell and the panel it opens, neither of which exists above

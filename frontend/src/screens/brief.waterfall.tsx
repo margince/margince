@@ -4,7 +4,8 @@ import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
 import { middayInstant } from "../format/calendarday";
-import { formatDate, formatMoneyOrAbsent } from "../format/format";
+import { formatDate, formatMoney, formatMoneyOrAbsent } from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useT } from "../i18n";
 
 type Review = components["schemas"]["WeeklyReview"];
@@ -50,8 +51,19 @@ export function OutlookPanel({
 
   const shown =
     outlook.find((one) => one.period_kind === horizon) ?? outlook[0];
+  // A STAT CARD'S VALUE IS A READING, and an em dash is not one. The word for
+  // the absence belongs to the slot: on a frozen outlook it means the period
+  // was never forecast in a currency this review could convert to.
   const money = (minor: number) =>
-    formatMoneyOrAbsent(minor, shown.base_currency, locale);
+    formatMoneyOrWord(
+      minor,
+      shown.base_currency,
+      locale,
+      t("format.notForecast"),
+      // In FULL: an outlook figure is read once, at panel width, and this
+      // panel is a record of what the week WAS.
+      formatMoney,
+    );
 
   return (
     <>
@@ -96,11 +108,15 @@ export function OutlookPanel({
           value={money(shown.commit_minor)}
           onOpen={onOpenForecast}
         />
-        {/* The label says "incl. commit" because the figure includes it, and a
-            reader adding best case to commit would double-count the overlap. */}
+        {/* The detail says the figure already contains commit, because a reader
+            adding best case to the slot beside it would double-count the
+            overlap. It is a basis and not a label: the label names the
+            reading, and a qualifier folded into it made the one card in the
+            row whose name was a sentence. */}
         <StatCard
           label={t("brief.weekly.outlook.bestCase")}
           value={money(shown.best_case_minor)}
+          detail={t("brief.weekly.outlook.bestCaseDetail")}
           onOpen={onOpenForecast}
         />
         <StatCard

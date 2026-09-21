@@ -87,7 +87,7 @@ describe("ProjectScreen", () => {
     expect(within(rollups).getByText("€12,000.00")).toBeTruthy();
     expect(within(rollups).getByText("€4,500.00")).toBeTruthy();
     expect(within(rollups).getByText("4")).toBeTruthy();
-    expect(within(rollups).getByText("142")).toBeTruthy();
+    expect(within(rollups).getByText("142 filed")).toBeTruthy();
     // No coverage line: three numbers about how well the FILING SYSTEM has
     // done its job are the machine's bookkeeping, not a reading of the work,
     // and they were the first thing a reader met under the title.
@@ -135,7 +135,7 @@ describe("ProjectScreen", () => {
     await userEvent.setup().click(
       screen.getByRole("button", {
         name: en["stat.open"],
-        description: en["project.rollups.lastActivity"],
+        description: en["project.rollups.activityCount"],
       }),
     );
 

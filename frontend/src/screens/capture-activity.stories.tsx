@@ -10,6 +10,11 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The states worth seeing side by side are the ones that differ in what the
 // surface may HONESTLY say: content it holds, content it deliberately does not,
 // and a sender whose question a verdict later closed.
+//
+// The funnel above them is this page's row of readings, and its tiles carry the
+// buckets' SHORT names — the full outcome sentences stay on the filter line and
+// on each row's chip, where a reader meets one at a time. `Filtered` below puts
+// both spellings on screen together.
 
 const ENTRIES = [
   {
@@ -215,8 +220,19 @@ export const Filtered: Story = {
     // count line this story exists to show sits inside it, and a click with
     // nothing visible behind it demonstrates the opposite of the point.
     await user.click(await canvas.findByText("Messages"));
-    await user.click(
-      await canvas.findByRole("button", { name: /dropped as internal/i }),
-    );
+    await user.click(await canvas.findByRole("button", { name: /^internal/i }));
   },
+};
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+// The funnel is five BUTTON slots, so the fold is also a press-target question:
+// a folded row is space-3 above and below a 1.75rem figure, which clears the
+// 44px a coarse pointer needs without the tile keeping its box.
+export const FunnelPhone: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

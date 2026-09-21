@@ -40,20 +40,16 @@ import type {
 // The day's readings, on one dense plate.
 //
 // FIVE slots, and every one of them answerable. The plate asks: what is urgent,
-// what is on today's calendar, which leads are owed a reply, where the pipeline
-// stands this quarter, and what is waiting on a decision.
+// what is on today's calendar, which leads are owed a reply, what the drifting
+// deals are worth, and what is waiting on a decision.
 //
-// FOUR OF THE FIVE come from the ONE worklist answer the queue below is drawn
-// from, so no second read can put a different number beside the same rows. The
-// pipeline outlook is the exception and is read separately, through the same
-// query key Analytics uses — one answer to "what is the pipeline worth",
-// wherever it is asked.
+// ALL FIVE come from the ONE worklist answer the queue below is drawn from, so
+// no second read can put a different number beside the same rows.
 //
-// THE WHOLE CELL IS THE DOOR, AND EACH DOOR SAYS WHAT IT DOES. The cell is the
-// control, so what a reader presses is the reading they are looking at. Its
-// foot said "Open" on all five, which is one entry repeated five times in a
-// screen reader's control list. Each now names its own action — REPLACING the
-// generic word, never appending, which produced "Open Open pipeline".
+// THE WHOLE CELL IS THE DOOR, and which reading it opens is that door's
+// DESCRIPTION rather than its name. `StatCard onOpen` owns the word and
+// stretches the press target over the tile, so five doors read as five
+// different readings to a screen reader while still being one control each.
 //
 // A BOUNDED READ IS A `+` ON THE FIGURES IT IS TRUE OF. The row used to carry a
 // sentence saying a source hit its limit; the fact belongs on the number, and
@@ -92,6 +88,15 @@ type Reading = Readonly<{
   /** The figure itself, so the slot can tell a floor of none from a floor. */
   count: number | null;
   basis: ReactNode;
+  /**
+   * Why this slot has no figure, in the words of ITS OWN source.
+   *
+   * "Not counted" says a number is missing; it does not say the calendar never
+   * answered while the lead lane did. Kept beside the basis rather than folded
+   * into it because the two are answers to different questions, and a reader
+   * who meets one where the other belongs learns to trust neither.
+   */
+  unavailable: string;
   warning?: boolean;
   /** The source behind the figure was read to its bound: it is a floor. */
   floor?: boolean;
@@ -131,6 +136,7 @@ function LaneReading({
   label,
   count,
   basis,
+  unavailable,
   warning,
   floor,
   lane,
@@ -172,7 +178,9 @@ function LaneReading({
       label={label}
       value={readingFigure(figure, marked)}
       tone={warning ? "warning" : undefined}
-      detail={basis}
+      // The basis says what the figure was taken over. With no figure there was
+      // nothing to take it over, so the line says what failed instead.
+      detail={count === null ? unavailable : basis}
       // On a phone the plate is a list, not five boxes stacked.
       narrow="row"
       onOpen={openable ? () => openLane(lane, scope) : undefined}
@@ -231,6 +239,8 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // already reads as "none"; a line repeating that says the same thing
           // twice and drops the one fact it could add.
           basis={t("brief.readings.urgentBasis")}
+          // Urgent is taken over every lane, so the reason names none of them.
+          unavailable={t("brief.readings.unavailable.urgent")}
           // ITS OWN LANE, not the whole queue. This figure counts levels 0 to
           // 2; opening `all` landed a reader who was sent by a 4 in a list of
           // thirty, with nothing saying which four it meant.
@@ -256,6 +266,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
             )
           }
           basis={meetingsDetail(meetings, locale, t, plural)}
+          unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
         />
         <LaneReading
@@ -279,6 +290,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
                   value: formatDateTime(soonest, locale, viewerZone()),
                 })
           }
+          unavailable={t("brief.readings.unavailable.leads")}
           lane="leads"
         />
         <RiskReading day={day} />
@@ -303,6 +315,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
                   count: formatNumber(blocking, locale),
                 })
           }
+          unavailable={t("brief.readings.unavailable.decisions")}
           lane="decisions"
         />
       </StatStrip>
@@ -444,7 +457,10 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
     day.counts.some(
       (entry) => entry.category === "deals_at_risk" && entry.more_available,
     );
-  const complete = !incomplete;
+  // NOTHING FLAGGED is not the same as NOTHING PRICED, and only a complete read
+  // can tell them apart: a day that flagged no deal at all has none to price,
+  // while a day that flagged some and priced none has money nobody can size.
+  const nothingFlagged = count === 0 && !incomplete && amount == null;
   return (
     <StatCard
       narrow="row"
@@ -456,23 +472,25 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
               incomplete,
             )
           : t(
-              count === 0 && complete && amount == null
+              nothingFlagged
                 ? "brief.readings.noDealWork"
                 : "brief.readings.unpriced",
             )
       }
       detail={
-        incomplete
-          ? t("brief.readings.riskPartial")
-          : day.readings.unpriced_deals
-            ? plural(
-                "brief.readings.unpricedCount",
-                day.readings.unpriced_deals,
-                {
-                  count: formatNumber(day.readings.unpriced_deals, locale),
-                },
-              )
-            : t("brief.readings.riskBasis")
+        nothingFlagged
+          ? t("brief.readings.noDealWorkWhy")
+          : incomplete
+            ? t("brief.readings.riskPartial")
+            : day.readings.unpriced_deals
+              ? plural(
+                  "brief.readings.unpricedCount",
+                  day.readings.unpriced_deals,
+                  {
+                    count: formatNumber(day.readings.unpriced_deals, locale),
+                  },
+                )
+              : t("brief.readings.riskBasis")
       }
       onOpen={() => openLane("deals_at_risk", day.scope)}
     />

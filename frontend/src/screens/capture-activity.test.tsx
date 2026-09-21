@@ -19,6 +19,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { CaptureActivityTab } from "./capture-activity";
 
 // What this surface must never do is state a fact it does not have. Every test
@@ -400,8 +401,10 @@ describe("capture activity", () => {
       }),
     );
     const funnel = within(await screen.findByTestId("capture-activity-funnel"));
+    // The tile carries the bucket's short NAME; the full sentence still feeds
+    // the filter line and the row chip, where it is read one at a time.
     expect(
-      funnel.getByText(/waiting on a sender verdict/i),
+      funnel.getByText(en["captureActivity.funnel.deferred"]),
     ).toBeInTheDocument();
     expect(funnel.queryByText(/sent for a verdict/i)).not.toBeInTheDocument();
   });
@@ -603,12 +606,19 @@ describe("capture activity", () => {
       }),
     );
     await openLog();
-    await user.click(
-      screen.getByRole("button", { name: /^no contact created/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /^no contact/i }));
     expect(
       await screen.findByText(/showing 1 of 1 no contact created/i),
     ).toBeInTheDocument();
+    // TWO vocabularies for one bucket, and each earns its own. A slot compared
+    // across a row of five carries a NAME; a sentence a reader meets one at a
+    // time — the filter line above, the chip on the row — carries the whole
+    // claim. The tile must not have taken the sentence's place.
+    const funnel = within(screen.getByTestId("capture-activity-funnel"));
+    expect(
+      funnel.getByText(en["captureActivity.funnel.suppressed"]),
+    ).toBeInTheDocument();
+    expect(funnel.queryByText(/no contact created/i)).not.toBeInTheDocument();
   });
 
   it("does not say a settled deferral is still waiting for its verdict", async () => {
@@ -716,9 +726,7 @@ describe("the pipeline drill-down", () => {
     const user = userEvent.setup();
     renderTab(windowBody());
     await openLog();
-    await user.click(
-      screen.getByRole("button", { name: /dropped as internal/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /^internal/i }));
     expect(await screen.findByText(/showing 1 of 3/i)).toBeInTheDocument();
   });
 

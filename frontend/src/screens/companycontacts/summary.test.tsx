@@ -132,7 +132,62 @@ test("says nobody has answered rather than naming a fallback", async () => {
     />,
   );
 
-  expect(await screen.findByText("Nobody has answered")).not.toBeNull();
+  expect(await screen.findByText("Written to · no replies")).not.toBeNull();
+});
+
+// A bare "6" says nothing about an account until the reader knows whether it
+// holds seven contacts or seventy, and the two gaps under it are different
+// work: nobody has approached one group at all, and the other wrote to us and
+// is still owed an answer.
+test("reads coverage against the roster, and names both gaps", async () => {
+  stub({
+    summary: {
+      contacts_total: 9,
+      waiting: 2,
+      answered: 4,
+      no_reply: 1,
+      untried: 2,
+      lapsed: 0,
+    },
+  });
+  render(
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
+  );
+
+  // Answered plus waiting: a contact whose mail we still owe a reply is
+  // talking to us.
+  expect(await screen.findByText("6 of 9")).not.toBeNull();
+  expect(
+    await screen.findByText("2 not approached · 2 owed a reply"),
+  ).not.toBeNull();
+});
+
+// The fold is the PLATE's — `.stat-strip:has(.stat-card-narrow-row)` restyles
+// the whole row — so a strip where only some cards declared it would draw a
+// bordered box among a column of borderless rows.
+test("every slot on the band declares the narrow shape", async () => {
+  stub({
+    best_way_in: {
+      contact_id: "p-1",
+      full_name: "Dietmar Rietsch",
+      engagement: "answered",
+    },
+  });
+  render(
+    <CoverageBand
+      companyId="o-1"
+      accountName="Brandt GmbH"
+      onNarrow={() => {}}
+    />,
+  );
+
+  const band = await screen.findByTestId("coverage-band");
+  expect(band.childElementCount).toBe(3);
+  expect(band.querySelectorAll(".stat-card-narrow-row").length).toBe(3);
 });
 
 test("names the missing critical role", async () => {
@@ -176,7 +231,8 @@ test("tells an unreadable committee apart from an empty one", async () => {
     />,
   );
 
-  expect(await screen.findByText("Hidden from you")).not.toBeNull();
+  expect(await screen.findByText("Restricted")).not.toBeNull();
+  expect(await screen.findByText("Deals not visible")).not.toBeNull();
   expect(screen.queryByText(/No champion/)).toBeNull();
 });
 
@@ -194,7 +250,7 @@ test("does not name a gap when seats are hidden", async () => {
     />,
   );
 
-  expect(await screen.findByText("2 more you cannot see")).not.toBeNull();
+  expect(await screen.findByText("2 hidden")).not.toBeNull();
   expect(screen.queryByText(/No champion/)).toBeNull();
 });
 
@@ -251,7 +307,7 @@ test("tells no-open-deal apart from withheld", async () => {
   );
 
   expect(await screen.findByText("No open deal")).not.toBeNull();
-  expect(screen.queryByText("Hidden from you")).toBeNull();
+  expect(screen.queryByText("Restricted")).toBeNull();
 });
 
 // The server empties `gaps` whenever a seat is hidden, because it cannot tell
@@ -267,8 +323,8 @@ test("does not claim a complete committee when seats are hidden", async () => {
     />,
   );
 
-  expect(await screen.findByText("Cannot be judged")).not.toBeNull();
-  expect(screen.queryByText("Champion and economic buyer named")).toBeNull();
+  expect(await screen.findByText("Partly hidden")).not.toBeNull();
+  expect(screen.queryByText("Complete")).toBeNull();
 });
 
 // Every door on the plate says the same word, so the press is the only thing
@@ -344,7 +400,10 @@ test("says the reading failed rather than vanishing", async () => {
     />,
   );
 
-  expect(await screen.findByText("Could not be read")).not.toBeNull();
+  expect(await screen.findByText("Unavailable")).not.toBeNull();
+  expect(
+    await screen.findByText("Read failed · list unaffected"),
+  ).not.toBeNull();
 });
 
 test("offers the board and the map, and switches between them", async () => {

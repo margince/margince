@@ -1192,7 +1192,10 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
       }),
     );
     render(<LeadScreen id="l-1" />);
-    expect(await screen.findByText(/First response due by/)).toBeTruthy();
+    // The label already says which response, so the detail says only when.
+    // The call at the head of the page states the same deadline, which is why
+    // more than one element carries it.
+    expect((await screen.findAllByText(/^Due /)).length).toBeGreaterThan(0);
     expect(screen.getByText("Due soon")).toBeTruthy();
   });
 
@@ -2446,7 +2449,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       }),
     );
     render(<LeadScreen id="l-1" />);
-    await waitFor(() => expect(screen.getByText("overridden")).toBeTruthy());
+    // The header's word stays lower-case because it sits inside a line the
+    // score begins; the readings card writes its own line and says so in
+    // sentence case.
+    await waitFor(() =>
+      expect(screen.getAllByText(/· overridden$/).length).toBeGreaterThan(0),
+    );
   });
 
   it("explains the score with its factors and the arithmetic that reconciles them", async () => {

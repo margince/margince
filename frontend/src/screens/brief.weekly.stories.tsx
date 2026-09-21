@@ -282,6 +282,19 @@ export const OutlookNotForecast: Story = {
   render: frozen(<OutlookFrame outlook={[]} />),
 };
 
+// A horizon frozen with no base currency. The figures exist as minor units and
+// nothing can say what they are worth, so every slot says which absence that is
+// instead of drawing the em dash a reader has to interpret — and "not forecast"
+// is the honest word here, because a period nobody could price is a period
+// nobody forecast.
+export const OutlookWithoutACurrency: Story = {
+  render: frozen(
+    <OutlookFrame
+      outlook={weeklyOutlook.map((one) => ({ ...one, base_currency: "" }))}
+    />,
+  ),
+};
+
 // ── How well the week went ──────────────────────────────────────────────────
 
 // Both blocks, each a strip of its own. The meters under "with next step",
@@ -302,6 +315,43 @@ export const ScorecardDealsOnly: Story = {
   render: frozen(
     <InTheWeeksPanel>
       <ScorecardPanel scorecard={{ deal: weeklyScorecard.deal }} />
+    </InTheWeeksPanel>,
+  ),
+};
+
+/** Both blocks of the catalog's scorecard, which a frame varying one needs
+ *  narrowed: the payload's halves are each optional, because a week the server
+ *  could not score in one lane carries neither zeros nor a block for it. */
+function bothBlocks() {
+  const { lead, deal } = weeklyScorecard;
+  if (!lead || !deal) {
+    throw new Error("the scorecard fixture carries a lead and a deal block");
+  }
+  return { lead, deal };
+}
+
+// A CLEAN WEEK AND AN EMPTY ONE, in the two places the scorecard has to tell
+// them apart. No lead breached its target, so the card that LEADS with breaches
+// reads zero over "all answered in target" rather than counting exceptions that
+// were not there; and no deal was open, so the three coverage cards have no
+// denominator — "0 of 0 open deals" would be a rate nobody could have scored,
+// and the bars under it a share of nothing. One arm for all three, because the
+// strip is read across and three spellings of one absence read as three weeks.
+export const ScorecardNothingToCover: Story = {
+  render: frozen(
+    <InTheWeeksPanel>
+      <ScorecardPanel
+        scorecard={{
+          lead: { ...bothBlocks().lead, breached: 0 },
+          deal: {
+            ...bothBlocks().deal,
+            open: 0,
+            with_next_step: 0,
+            multi_threaded: 0,
+            close_date_sound: 0,
+          },
+        }}
+      />
     </InTheWeeksPanel>,
   ),
 };

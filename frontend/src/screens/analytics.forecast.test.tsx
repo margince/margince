@@ -9,7 +9,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateAbbrev, formatMoneyCompact } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ForecastView } from "./analytics.forecast";
 
 // The population these tests read under. Workspace because that is what a
@@ -144,6 +146,70 @@ describe("ForecastView", () => {
     const answer = await screen.findByText(/current call is/i);
     expect(answer.textContent).toContain("2,000.00");
     expect(answer.textContent).toContain("1,200.00");
+  });
+
+  // The gap between a call and its evidence has a DIRECTION, and one sentence
+  // cannot carry both: a signed figure in "… over evidence" printed a call
+  // twenty thousand short of its evidence as "-€200.00 over evidence", which is
+  // the wrong direction stated twice. Three arms, and the magnitude unsigned.
+  describe("how far the call sits from the evidence", () => {
+    function withCall(amountMinor: number) {
+      vi.stubGlobal(
+        "fetch",
+        forecastStub({
+          readings: readings({
+            current_call: {
+              id: "c1",
+              period_start: "2026-04-01",
+              period_end: "2026-06-30",
+              scope_kind: "workspace",
+              amount_minor: amountMinor,
+              currency: "EUR",
+              author_id: "u1",
+              created_at: "2026-05-01T09:00:00Z",
+            },
+          }),
+        }),
+      );
+      render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    }
+
+    it("says a call above its evidence is over it", async () => {
+      withCall(200_000);
+
+      const detail = await screen.findByText(/over evidence$/);
+      expect(detail.textContent).toContain(
+        formatMoneyCompact(80_000, "EUR", "en"),
+      );
+      expect(detail.textContent).not.toContain("-");
+    });
+
+    it("says a call below its evidence is under it, not over it by a minus", async () => {
+      withCall(100_000);
+
+      const detail = await screen.findByText(/under evidence$/);
+      expect(detail.textContent).toContain(
+        formatMoneyCompact(20_000, "EUR", "en"),
+      );
+      expect(detail.textContent).not.toContain("-");
+      expect(screen.queryByText(/over evidence/)).toBeNull();
+    });
+
+    // Its own arm rather than a zero: "±€0 over evidence" is a difference
+    // nobody has.
+    it("says a call that matches its evidence carries no gap at all", async () => {
+      withCall(120_000);
+
+      expect(
+        await screen.findByText(
+          en["forecast.currentCallDetailEven"].replace(
+            "{date}",
+            formatDateAbbrev("2026-05-01T09:00:00Z", "en", "Europe/Berlin"),
+          ),
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText(/(over|under) evidence/)).toBeNull();
+    });
   });
 
   // Nobody having called is a real answer, and a different one from a call of

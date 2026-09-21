@@ -122,6 +122,36 @@ export const NothingMoved: Story = {
   }),
 };
 
+// A week that routed no lead, held no meeting and carried no commitment. Each
+// of those three cards is a SHARE, and a share needs a denominator: "0 of 0"
+// states a rate nobody could have scored, and the basis line beside it explains
+// a measurement that was never taken. So the card says the population was empty
+// and says nothing else. Read beside `OneTeamReadStraight`, where all three
+// carry their figures and their bases, the difference is the whole point.
+export const NothingToScore: Story = {
+  render: panel({
+    "GET /teams": () =>
+      jsonResponse({
+        data: [team],
+        page: { next_cursor: null, has_more: false },
+      }),
+    "GET /weekly-reviews/team": () =>
+      jsonResponse({
+        ...teamWeek,
+        counts: {
+          ...teamWeek.counts,
+          leads_routed: 0,
+          leads_answered_in_target: 0,
+          leads_breached: 0,
+          meetings_held: 0,
+          meetings_with_next_step: 0,
+          commitments_due: 0,
+          commitments_kept: 0,
+        },
+      }),
+  }),
+};
+
 export const NoPriorityIsNotInactivity: Story = {
   render: panel({
     "GET /teams": () =>

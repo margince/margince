@@ -14,7 +14,13 @@ import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyCompact,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
@@ -110,6 +116,44 @@ export function ForecastView({
   );
 }
 
+// How far the call sits from the evidence, in the sentence that direction
+// needs.
+//
+// THREE sentences and an UNSIGNED magnitude, because a difference cannot be
+// said in one. A signed figure in a sentence ending "over evidence" printed a
+// call twenty thousand SHORT of its evidence as "-€20,000.00 over evidence",
+// which is the wrong direction stated twice and then contradicted by a minus
+// sign. Equal is its own arm rather than a zero: "±€0 over evidence" is a
+// difference nobody has.
+function callDetail(
+  call: NonNullable<Readings["current_call"]>,
+  readings: Readings,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string {
+  // The day the call was authored, cut in the zone the period itself was cut
+  // in: a reporting figure and the date beside it must not be bucketed on two
+  // different calendars.
+  const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
+  const difference = call.amount_minor - readings.evidence_minor;
+  if (difference === 0) {
+    return t("forecast.currentCallDetailEven", { date });
+  }
+  const gap = formatMoneyOrWord(
+    Math.abs(difference),
+    readings.base_currency,
+    locale,
+    t("format.notForecast"),
+    formatMoneyCompact,
+  );
+  return t(
+    difference > 0
+      ? "forecast.currentCallDetailOver"
+      : "forecast.currentCallDetailUnder",
+    { date, gap },
+  );
+}
+
 // The answer, in one sentence and then in three readings.
 function ForecastAnswer({
   readings,
@@ -117,8 +161,25 @@ function ForecastAnswer({
 }: Readonly<{ readings: Readings; locale: Locale }>) {
   const t = useT();
   const currency = readings.base_currency;
+  // The sentence carries the amount in FULL — it is read once, at prose width,
+  // and a call somebody authored to the cent is a number they should meet as
+  // they wrote it. The slots below carry the same figures compactly, because a
+  // slot is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
     formatMoneyOrAbsent(minor ?? null, currency, locale);
+  // Compact, and a WORD where the pair cannot be said as money at all: a slot
+  // is about a hundred points wide, and one compared across a row must not
+  // answer with a glyph. The landing cards at the end of this strip answer the
+  // same way, so the row reads as one comparison.
+  const slot = (minor: number | null | undefined) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatMoneyCompact,
+    );
+  const call = readings.current_call;
 
   return (
     <>
@@ -131,9 +192,9 @@ function ForecastAnswer({
               reader shown only one of the two has no way to tell whether the
               call is ahead of the evidence or behind it. */}
           <p>
-            {readings.current_call
+            {call
               ? t("forecast.answerWithCall", {
-                  call: money(readings.current_call.amount_minor),
+                  call: money(call.amount_minor),
                   evidence: money(readings.evidence_minor),
                 })
               : t("forecast.answerNoCall", {
@@ -143,7 +204,7 @@ function ForecastAnswer({
         </PanelBody>
       </Panel>
 
-      {/* An unpriced deal is real pipeline contributing zero money, so the gap
+      {/* An unpriced deal is a real deal contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
@@ -159,25 +220,30 @@ function ForecastAnswer({
         </Callout>
       )}
 
+      {/* EVERY slot declares the narrow shape, the landing pair included: the
+          fold is the strip's, so a card that did not declare it would keep its
+          box while the rows beside it lost theirs. */}
       <StatStrip>
         <StatCard
+          narrow="row"
           label={t("forecast.currentCall")}
           // No call is a reading, not a missing figure: the sentence above
           // already says the book is running on evidence alone, and a slot in a
           // row compared across must not answer that with a glyph.
-          value={
-            readings.current_call
-              ? money(readings.current_call.amount_minor)
-              : t("forecast.currentCallNone")
-          }
+          value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
+          detail={call ? callDetail(call, readings, locale, t) : undefined}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.evidence")}
-          value={money(readings.evidence_minor)}
+          value={slot(readings.evidence_minor)}
+          detail={t("forecast.evidenceDetail")}
         />
         <StatCard
+          narrow="row"
           label={t("forecast.alreadyWon")}
-          value={money(readings.won_minor)}
+          value={slot(readings.won_minor)}
+          detail={t("forecast.alreadyWonDetail")}
         />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called

@@ -299,7 +299,7 @@ export const ReadingsCapped: Story = {
 // edge, one hairline between, and no boxes at all. Two-up it was five 190px
 // cards and 600px of readings before a reader reached the day's own work. The
 // shape belongs to `StatStrip` and keys off the slots declaring
-// `narrow="row"`, so no other strip in the product folds this way —
+// `narrow="row"`, which the record strips now declare too —
 // `Design System/StatStrip` has both side by side.
 export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
@@ -325,6 +325,27 @@ export const ReadingsQuiet: Story = {
       day={readingsDay({ buyer_replies: 0, prospecting: 0 }, [])}
     />,
   ),
+};
+
+/** A day whose calendar, lead and decision sources all refused to answer. */
+function unreadableDay() {
+  const day = readingsDay({ prospecting: 2, review: 0 }, [], [], { urgent: 0 });
+  day.sources_unavailable = [
+    { source: "meeting", reason: "failed", category: "meetings" },
+    { source: "lead_response", reason: "failed", category: "leads" },
+    { source: "decision", reason: "failed", category: "decisions" },
+  ];
+  return day;
+}
+
+// A morning whose sources went missing, and the plate says WHICH. Each slot
+// that could not be counted carries the same figure — "Not counted" — over a
+// reason of its own: the calendar, the lead source, the decision source. Four
+// identical lines would leave a reader nowhere to go and look. The slot with no
+// figure also drops its basis line, because a basis says what a figure was
+// taken over and there was no figure to take.
+export const ReadingsUnreadable: Story = {
+  render: part(<BriefReadingsStrip day={unreadableDay()} />),
 };
 
 // ── The week ahead ──────────────────────────────────────────────────────────

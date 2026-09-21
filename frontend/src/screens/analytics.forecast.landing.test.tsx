@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
@@ -39,9 +40,13 @@ describe("the projected landing", () => {
   it("says the sum it made, so a reader can check the arithmetic", () => {
     draw(<LandingCard landing={landing()} currency="EUR" locale="en" />);
 
+    // ONE label over both measures, with the measure leading the detail: a
+    // label that changed with the measure made one figure read as two
+    // different readings between two periods.
+    expect(screen.getByText("Landing")).toBeTruthy();
     // The two halves, both named. A figure alone leaves a reader to guess
     // which readings were added, and the wrong guess is Won plus Best case.
-    const detail = screen.getByText(/already won plus/i);
+    const detail = screen.getByText(/^Projected ·/);
     expect(detail.textContent).toContain("400");
     expect(detail.textContent).toContain("500");
   });
@@ -61,10 +66,11 @@ describe("the projected landing", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/replaces the projection rather than adding/i),
-    ).toBeTruthy();
-    expect(screen.queryByText(/already won plus/i)).toBeNull();
+    // The same label, and a detail that says the call IS the answer rather
+    // than a remainder added to what is won.
+    expect(screen.getByText("Landing")).toBeTruthy();
+    expect(screen.getByText(/^From the call ·/)).toBeTruthy();
+    expect(screen.queryByText(/^Projected ·/)).toBeNull();
   });
 
   it("names the fallback when nobody has called the period", () => {
@@ -100,8 +106,9 @@ describe("the projected landing", () => {
   });
 });
 
-describe("whether the pipeline supports the reference", () => {
-  it("names the basis, so a reader can disagree with it rather than the sum", () => {
+describe("whether the open deals support the reference", () => {
+  it("keeps the basis in the receipt and out of the two-line detail", async () => {
+    const user = userEvent.setup();
     draw(
       <SufficiencyCard
         sufficiency={sufficiency()}
@@ -110,9 +117,33 @@ describe("whether the pipeline supports the reference", () => {
       />,
     );
 
+    // The detail holds two lines and both are spoken for, so the measure lives
+    // ONLY in the receipt: as a fragment on the second line it cost that line a
+    // third row, which the clamp then took away in German.
+    expect(screen.queryByText(/4-period median/)).toBeNull();
+
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+
     expect(
-      screen.getByText(/median of the last four comparable periods/i),
+      await screen.findByText(/median of the last four comparable periods/i),
     ).toBeTruthy();
+  });
+
+  // The need is the VALUE, so a detail that repeated it said one number twice.
+  it("says what is open and what it is reaching for, never the need again", () => {
+    draw(
+      <SufficiencyCard
+        sufficiency={sufficiency()}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    // Compact, because a slot is not as wide as an amount.
+    expect(screen.getByText("€2,400")).toBeTruthy();
+    const detail = screen.getByText(/open ·/);
+    expect(detail.textContent).toBe("€1,200 open · to reach €1,000");
+    expect(detail.textContent).not.toContain("€2,400");
   });
 
   it("renders coverage as a whole percent", () => {
@@ -124,7 +155,7 @@ describe("whether the pipeline supports the reference", () => {
       />,
     );
 
-    expect(screen.getByText(/50% of the pipeline this needs/i)).toBeTruthy();
+    expect(screen.getByText(/50% of the deal value this needs/i)).toBeTruthy();
   });
 
   // The case a zeroed figure would get exactly backwards: no basis must not
@@ -141,7 +172,7 @@ describe("whether the pipeline supports the reference", () => {
     expect(
       screen.getByText(en["forecast.pipelineAbsent.insufficient_basis"]),
     ).toBeTruthy();
-    expect(screen.queryByText(/of the pipeline this needs/i)).toBeNull();
+    expect(screen.queryByText(/of the deal value this needs/i)).toBeNull();
   });
 
   it("says when the history is too thin for a conversion rate", () => {
@@ -156,6 +187,6 @@ describe("whether the pipeline supports the reference", () => {
     expect(
       screen.getByText(en["forecast.pipelineAbsent.insufficient_history"]),
     ).toBeTruthy();
-    expect(screen.queryByText(/of the pipeline this needs/i)).toBeNull();
+    expect(screen.queryByText(/of the deal value this needs/i)).toBeNull();
   });
 });

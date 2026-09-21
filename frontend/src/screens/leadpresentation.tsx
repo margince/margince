@@ -37,25 +37,31 @@ export function scoreTone(score: number): "success" | "warning" | undefined {
   return undefined;
 }
 
-export const LEAD_STATUS_FILTER_OPTIONS = [
-  { value: "new", label: "lead.statusNew" },
-  { value: "contacted", label: "lead.statusContacted" },
-  { value: "engaged", label: "lead.statusEngaged" },
-  { value: "promoted", label: "lead.statusPromoted" },
-  { value: "disqualified", label: "lead.statusDisqualified" },
-] as const;
+// The word for every rung, TOTAL over the contract's union: a status the server
+// can send has a word here or this file does not compile, so no surface is left
+// with a branch for a raw enum to reach a reader through.
+const STATUS_LABEL: Record<Lead["status"], MessageKey> = {
+  new: "lead.statusNew",
+  contacted: "lead.statusContacted",
+  engaged: "lead.statusEngaged",
+  promoted: "lead.statusPromoted",
+  disqualified: "lead.statusDisqualified",
+};
+
+// The picker's ORDER, the one thing the map above does not carry: the ladder
+// reads as a progression, not an alphabet. Annotated because inferring
+// `MessageKey` five times over is more than the compiler will serialise.
+type StatusOption = Readonly<{ value: Lead["status"]; label: MessageKey }>;
+export const LEAD_STATUS_FILTER_OPTIONS: readonly StatusOption[] = (
+  ["new", "contacted", "engaged", "promoted", "disqualified"] as const
+).map((value) => ({ value, label: STATUS_LABEL[value] }));
 
 /**
- * The catalogue key for a status, shared by the badge and the record page's
- * readings strip. Exported because the strip states the SAME word the badge
- * does — a second spelling here is how one lead comes to read "Qualified" in
- * a pill and "promoted" in the slot beside it.
+ * The catalogue key for a status, shared by the badge and the readings strip,
+ * so one lead cannot read "Qualified" in a pill and "promoted" beside it.
  */
-export function leadStatusLabel(status: Lead["status"]): MessageKey | null {
-  return (
-    LEAD_STATUS_FILTER_OPTIONS.find((option) => option.value === status)
-      ?.label ?? null
-  );
+export function leadStatusLabel(status: Lead["status"]): MessageKey {
+  return STATUS_LABEL[status];
 }
 
 // The ladder's colours: a new lead is quiet, contact is in motion, engaged
@@ -73,8 +79,7 @@ function statusTone(status: Lead["status"]): "accent" | "success" | undefined {
 
 export function StatusBadge({ status }: Readonly<{ status: Lead["status"] }>) {
   const t = useT();
-  const label = leadStatusLabel(status);
-  return <Badge tone={statusTone(status)}>{label ? t(label) : status}</Badge>;
+  return <Badge tone={statusTone(status)}>{t(leadStatusLabel(status))}</Badge>;
 }
 
 export function SlaBadge({ state }: Readonly<{ state: Lead["sla_state"] }>) {

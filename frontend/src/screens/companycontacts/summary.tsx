@@ -105,21 +105,22 @@ export function CoverageBand({
   const query = useCompanyCoverage(companyId);
   // A band that could not load is absent, not an error banner: the list below
   // it still answers, and a reading nobody can act on is not worth a shout.
-  //
   // `summary` is required by the contract, so its absence means the response
-  // was not the one this reads — a stub, a proxy, a version skew. Rendering
-  // half a band off a payload this does not recognise is worse than rendering
-  // none, and reading through it crashes the whole tab.
+  // was not the one this reads — a stub, a proxy, a version skew. Half a band
+  // off a payload this does not recognise is worse than none, and reading
+  // through it crashes the tab.
   if (query.isPending) {
     return null;
   }
   // A read that FAILED says so. Rendering nothing makes a server error look
   // like a band this account does not offer, and the reader then works from a
-  // list with no reading above it and no reason to doubt it.
+  // list with no reading above it and no reason to doubt it. One slot, and it
+  // folds like the row it stands in for.
   if (query.isError) {
     return (
       <StatStrip testId="coverage-band">
         <StatCard
+          narrow="row"
           label={t("co.contacts.band.coverage")}
           value={t("co.contacts.band.unavailable")}
           detail={t("co.contacts.band.unavailableWhy")}
@@ -133,22 +134,31 @@ export function CoverageBand({
   const coverage = query.data;
   return (
     <>
+      {/* Every slot declares the NARROW shape, and every slot on the row must:
+          below the two-up width a `row` slot folds to one full-width line
+          (statstrip.css), and a strip where only some carry it draws a
+          bordered box among a column of borderless rows. */}
       <StatStrip testId="coverage-band">
         <WayIn coverage={coverage} onNarrow={onNarrow} />
         <CommitteeReading coverage={coverage} />
         <StatCard
+          narrow="row"
           label={t("co.contacts.band.coverage")}
           // Everyone who has written to us in the window, whichever side wrote
-          // last: the band answers "is anybody here talking to us", and a
-          // contact whose mail we still owe a reply is talking to us.
+          // last, against the ROSTER: a bare "6" says nothing until the reader
+          // knows whether the account holds seven contacts or seventy.
           value={t("co.contacts.band.reachable", {
             count: formatNumber(
               coverage.summary.answered + coverage.summary.waiting,
               locale,
             ),
+            total: formatNumber(coverage.summary.contacts_total, locale),
           })}
+          // Two gaps, and different work: nobody has approached the first at
+          // all, and the second wrote to us and is still owed an answer.
           detail={t("co.contacts.band.untried", {
             count: formatNumber(coverage.summary.untried, locale),
+            waiting: formatNumber(coverage.summary.waiting, locale),
           })}
           onOpen={() => onNarrow("untried")}
         />
@@ -163,11 +173,10 @@ export function CoverageBand({
 }
 
 /**
- * WayIn names the contact worth writing to and why.
- *
- * An account where everyone was written to and nobody answered has no way in,
- * and the card says so rather than naming the least cold contact: dressing a
- * fourth follow-up up as an opening is the one thing this reading must not do.
+ * WayIn names the contact worth writing to and why. An account where everyone
+ * was written to and nobody answered has no way in, and the card says so
+ * rather than naming the least cold contact: a fourth follow-up dressed as an
+ * opening is what this reading must not do.
  */
 function WayIn({
   coverage,
@@ -178,27 +187,27 @@ function WayIn({
 }>) {
   const t = useT();
   const way = coverage.best_way_in;
+  const slot = { label: t("co.contacts.band.wayIn"), narrow: "row" } as const;
   if (!way) {
     return (
       <StatCard
-        label={t("co.contacts.band.wayIn")}
+        {...slot}
         value={t("co.contacts.band.noWayIn")}
         detail={t("co.contacts.band.noWayInWhy")}
       />
     );
   }
   const stateLabel = ENGAGEMENT_LABELS[way.engagement];
-  // The label names what the press DOES. A door for a conversational state
-  // narrows to that state; a way in nobody has approached narrows to nothing
-  // in particular, so its door says "show everyone" rather than promising a
-  // list and clearing the filter instead.
+  // The label names what the press DOES: a door for a conversational state
+  // narrows to that state, and a way in nobody has approached narrows to
+  // nothing in particular, so its door says "show everyone" instead.
   const door: "waiting" | "answered" | null =
     way.engagement === "waiting" || way.engagement === "answered"
       ? way.engagement
       : null;
   return (
     <StatCard
-      label={t("co.contacts.band.wayIn")}
+      {...slot}
       value={way.full_name}
       detail={
         <span>
@@ -212,25 +221,28 @@ function WayIn({
 }
 
 /**
- * CommitteeReading says which critical role nobody holds.
- *
- * Three readings, not two. A committee that could not be read says so; one
- * read whole with a hole names the hole; one read whole with none says it is
- * complete. Collapsing the first into either of the others is how a page tells
- * a reader a deal has no champion when it has one they cannot see.
+ * CommitteeReading says which critical role nobody holds. Three readings, not
+ * two: a committee that could not be read says so, one read whole with a hole
+ * names the hole, one read whole with none says it is complete. Collapsing the
+ * first into either tells a reader a deal has no champion when it has one they
+ * cannot see.
  */
 function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
   const t = useT();
   const { locale } = useLocale();
-  // A committee can be absent for two OPPOSITE reasons, and the flag is the
-  // only thing that tells them apart: the reader may not look, or there is
-  // nothing to look at. Reading absence alone as "hidden from you" accuses the
-  // reader's own role on every account that simply has no open deal.
+  // A committee can be absent for two OPPOSITE reasons, and only the flag
+  // tells them apart: the reader may not look, or there is nothing to look at.
+  // Absence alone read as "hidden" accuses the reader's own role on every
+  // account that simply has no open deal.
+  const slot = {
+    label: t("co.contacts.band.committee"),
+    narrow: "row",
+  } as const;
   if (!coverage.committee) {
     const withheld = !coverage.completeness.committee_read;
     return (
       <StatCard
-        label={t("co.contacts.band.committee")}
+        {...slot}
         value={t(
           withheld
             ? "co.contacts.band.committeeUnread"
@@ -248,17 +260,16 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
   const unlisted = coverage.committee.unlisted_seats;
   return (
     <StatCard
-      label={t("co.contacts.band.committee")}
+      {...slot}
       value={
         gaps.length > 0
           ? t("co.contacts.band.missing", {
               role: t(ROLE_LABELS[gaps[0] as keyof typeof ROLE_LABELS]),
             })
-          : // No gaps means one of two things, and only one is good news. The
-            // server empties `gaps` whenever a seat is hidden, precisely
-            // because it cannot tell whether the role is held — so reading the
-            // empty list as "both roles named" turns a suppressed answer into
-            // a confident one.
+          : // No gaps means one of two things, and only one is good news: the
+            // server empties `gaps` whenever a seat is hidden, because it
+            // cannot tell whether the role is held, so reading the empty list
+            // as "both roles named" turns a suppressed answer into a sure one.
             t(
               unlisted > 0
                 ? "co.contacts.band.committeePartial"
@@ -579,18 +590,16 @@ function SeatCard({
 }
 
 /**
- * useCommitteeWrites is the three writes this board performs.
- *
- * The reading POSTs to the deal and then invalidates the ACCOUNT's coverage,
- * which is the key this whole band reads under: a seat written to a deal is a
- * change to the committee the account shows, and refreshing the deal alone
- * would leave the board displaying the state before the write.
+ * useCommitteeWrites is the three writes this board performs. Each POSTs to the
+ * deal and then invalidates the ACCOUNT's coverage, which is the key this band
+ * reads under: a seat written to a deal changes the committee the account
+ * shows, and refreshing the deal alone would leave the board on the state
+ * before the write.
  *
  * Confirm and Change are the same patch on the same row. The store reassigns
  * `captured_by` to whoever edits, so a human touching the row is what clears
- * the mark — there is no separate "confirmed" column, and there does not need
- * to be: the question the mark asks is "did a contact answer this", and an edit
- * IS that answer.
+ * the mark — the question the mark asks is "did a contact answer this", and an
+ * edit IS that answer.
  */
 function useCommitteeWrites(
   companyId: string,
@@ -681,12 +690,10 @@ function useCommitteeWrites(
 
 /**
  * WriteNote says what the last write did, in words rather than a count alone.
- *
- * The two empty answers are DIFFERENT facts and get different sentences.
- * Nothing proposed means their messages do not say who buys; everything
- * refused means the product read something and would not stand behind it. A
- * single "no roles found" would report the second as the first, and a reader
- * would go looking for evidence that was in fact considered and dropped.
+ * The two empty answers are DIFFERENT facts: nothing proposed means their
+ * messages do not say who buys, everything refused means the product read
+ * something and would not stand behind it. A single "no roles found" would
+ * report the second as the first.
  */
 function WriteNote({
   suggest,

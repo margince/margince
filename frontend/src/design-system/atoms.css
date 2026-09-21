@@ -2191,8 +2191,11 @@
      the smallest text on the card and the only thing on it to press, so weight
      is what carries it rather than size: semibold, because --fw-bold is
      reserved for the word that must outrank a heading, and a door does not.
-     24px tall, which is the AA target floor (WCAG 2.5.8, and axe runs it in the
-     wcag22aa sweep) — the same rung the worklist's rank button takes. The words
+     24px tall under a pointer that can be AIMED, which is the AA target floor
+     for one (WCAG 2.5.8, and axe runs it in the wcag22aa sweep). A finger aims
+     at nothing, so the coarse-pointer block below raises this same control to
+     the 44px floor every touch target in the product stands at: the compact
+     foot is what a mouse gets, and it was never a floor for a thumb. The words
      box to 15px at this size, and axe measures the BUTTON's own rectangle: the
      overlay that stretches the door over the tile is a pseudo-element, which
      never enters it. Centred in an inline-flex rather than padded, so the words
@@ -2205,6 +2208,21 @@
      as a space in the markup: this is a flex line, and a whitespace-only text
      node between two items is not a flex item — the space simply vanished. */
   gap: var(--space-1);
+}
+/* The same door under a thumb. 44px is the floor every touch target in this
+   product stands at (`.btn-federated` in base.css, the list row in
+   listtable.css), and a reading's door is the one thing on the tile to press —
+   a target a finger misses on a card it covers is a reading a reader cannot
+   open at all.
+   Raised HERE rather than on the rule above, because the foot is read as well
+   as pressed: a mouse already lands on 24px, and lifting every reading's foot
+   to 44 would set the height of a strip of cards from a control that did not
+   need it. `max()` for the reason `.btn-federated` gives — a later rise in the
+   shared control height must not be capped by this floor. */
+@media (pointer: coarse) {
+  .stat-card-open {
+    min-height: max(var(--controlHeight), 44px);
+  }
 }
 /* The arrow LEANS toward the door on the way in: the one movement on the tile,
    3px, at the state duration — a card that answers the pointer reads as one a

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ProvidersStat, SpendStat } from "./ai-settings";
 
 // Settings → AI, as one page: two readings above a strip that chooses between
@@ -85,11 +86,33 @@ const KEYS = {
   ],
 };
 
+// A month the runtime metered but could not price: the same shape, with no
+// `cost_est_minor` on any task. Nothing in it is zero — the price is ABSENT,
+// which is the difference the spend card's second line exists to say.
+const UNPRICED_USAGE = {
+  ...USAGE,
+  days: [
+    {
+      date: "2026-09-01",
+      tasks: [
+        {
+          task: "company.enrich",
+          tier: "cheap_cloud",
+          calls: 12,
+          tokens_in: 1000,
+          tokens_out: 200,
+        },
+      ],
+    },
+  ],
+};
+
 /** A backend answering every read this page makes, with per-route overrides. */
 function backendFor(
   allow: GrantSpec,
   fail: { usage?: boolean; keys?: boolean } = {},
   routing: unknown = ROUTING,
+  reads: { usage?: unknown; calls?: unknown[]; callsFail?: boolean } = {},
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
@@ -100,7 +123,7 @@ function backendFor(
     if (req.url.includes("/ai/usage")) {
       return fail.usage
         ? jsonResponse({ title: "upstream" }, 500)
-        : jsonResponse(USAGE);
+        : jsonResponse(reads.usage ?? USAGE);
     }
     if (req.url.includes("/ai/provider-keys")) {
       return fail.keys
@@ -116,8 +139,11 @@ function backendFor(
       return jsonResponse({ rungs: [] });
     }
     if (req.url.includes("/ai/calls")) {
+      if (reads.callsFail) {
+        return jsonResponse({ title: "upstream" }, 500);
+      }
       return jsonResponse({
-        data: [],
+        data: reads.calls ?? [],
         page: { next_cursor: null, has_more: false },
         tasks: [],
         payload_capture_enabled: false,
@@ -178,22 +204,24 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR, {}, { profile: "eu_hosted" }));
     render(<BothStats />);
 
-    expect(await screen.findByText("1 keyed")).toBeTruthy();
-    expect(screen.queryByText(/bound with no key/)).toBeNull();
+    expect(await screen.findByText("1 of 2")).toBeTruthy();
+    expect(screen.queryByText(/bound, no key/)).toBeNull();
   });
 
   it("answers both readings", async () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR));
     render(<BothStats />);
 
-    // Tokens are the budget the runtime actually enforces; the money is the
-    // estimate priced on read, and it is a second line rather than the figure.
-    expect(await screen.findByText(/214,000 of 1,000,000 tokens/)).toBeTruthy();
-    expect(screen.getByText(/estimated/)).toBeTruthy();
-    // One vendor keyed, and the one the routing binds without a key named as
-    // the thing to act on.
-    expect(await screen.findByText("1 keyed")).toBeTruthy();
-    expect(await screen.findByText(/1 bound with no key/)).toBeTruthy();
+    // Tokens are the budget the runtime actually enforces, so they ARE the
+    // figure and the unit is in the label; the money is the estimate priced on
+    // read and rides the line under it.
+    expect(screen.getByText(en["aiSettings.spend.label"])).toBeTruthy();
+    expect(await screen.findByText("214k of 1m")).toBeTruthy();
+    expect(screen.getByText(/US\$4\.12 spent/)).toBeTruthy();
+    // One vendor keyed OUT OF the vendors this installation knows about, and
+    // the one the routing binds without a key named as the thing to act on.
+    expect(await screen.findByText("1 of 2")).toBeTruthy();
+    expect(await screen.findByText(/1 bound, no key/)).toBeTruthy();
   });
 
   // Withheld, not absent. An absent spend reading would claim this installation
@@ -210,19 +238,19 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(NO_READINGS));
     const { unmount } = render(<BothStats />);
 
-    expect(await screen.findAllByText("Not yours to see")).toHaveLength(2);
+    expect(await screen.findAllByText("Restricted")).toHaveLength(2);
     unmount();
     cleanup();
 
     // The positive control, and the whole proof: swap ONLY the grants and the
     // same two stats answer. A gate asking for the wrong object leaves this
-    // half showing "Not yours to see" and fails here.
+    // half showing "Restricted" and fails here.
     vi.stubGlobal("fetch", backendFor(BOTH_READINGS));
     render(<BothStats />);
 
-    expect(await screen.findByText(/214,000 of 1,000,000 tokens/)).toBeTruthy();
-    expect(await screen.findByText("1 keyed")).toBeTruthy();
-    expect(screen.queryByText("Not yours to see")).toBeNull();
+    expect(await screen.findByText("214k of 1m")).toBeTruthy();
+    expect(await screen.findByText("1 of 2")).toBeTruthy();
+    expect(screen.queryByText("Restricted")).toBeNull();
   });
 
   // A read that FAILED and a read that has not arrived are different facts, and
@@ -233,8 +261,86 @@ describe("the AI readings", () => {
     render(<BothStats />);
 
     await waitFor(() =>
-      expect(screen.getAllByText("Could not be read")).toHaveLength(2),
+      expect(screen.getAllByText("Unavailable")).toHaveLength(2),
     );
-    expect(screen.queryByText("Reading…")).toBeNull();
+    expect(screen.queryByText("Loading")).toBeNull();
+  });
+
+  // A month nothing priced is not a month that cost nothing. The estimate line
+  // used to be absent there, which reads as free — the one claim this product
+  // must never make by accident.
+  it("says a month is not priced rather than leaving the estimate out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, {}, ROUTING, { usage: UNPRICED_USAGE }),
+    );
+    render(<SpendStat />);
+
+    expect(await screen.findByText("214k of 1m")).toBeTruthy();
+    expect(screen.getByText(en["aiSettings.spend.notPriced"])).toBeTruthy();
+    expect(screen.queryByText(/spent/)).toBeNull();
+  });
+
+  // A vendor bound and never reached is its own fact, and it used to fall
+  // through to a detail line with nothing in it at all.
+  it("says a runtime has never been called rather than drawing an empty line", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR));
+    render(<ProvidersStat />);
+
+    expect(
+      await screen.findByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeTruthy();
+  });
+
+  // The two halves qualify the SAME reading, so they share one line — and the
+  // second one's case is the first one's to decide.
+  it("puts what is broken and when a vendor was last reached on one line", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, {}, ROUTING, {
+        calls: [{ id: "call-1", occurred_at: new Date().toISOString() }],
+      }),
+    );
+    render(<ProvidersStat />);
+
+    const missing = await screen.findByText("1 bound, no key");
+    const line = missing.parentElement;
+    expect(line?.textContent).toMatch(/1 bound, no key · last call/);
+    expect(
+      screen.queryByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeNull();
+  });
+
+  // "Never called" is a claim about the INSTALLATION, and a reader who may not
+  // read diagnostics has given this card no evidence for it. The keys are a
+  // different grant, so the count still answers — the trace line is what goes
+  // quiet.
+  it("says nothing about the last call when the trace is not this reader's", async () => {
+    vi.stubGlobal("fetch", backendFor({ ai_routing: ["read"] }));
+    render(<ProvidersStat />);
+
+    expect(await screen.findByText("1 of 2")).toBeTruthy();
+    expect(
+      screen.queryByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeNull();
+    expect(screen.queryByText(/last call/i)).toBeNull();
+  });
+
+  // A BROKEN trace read is not a quiet one. Waiting will not fix it, so the
+  // line says so rather than leaving a reader to read silence as "nothing to
+  // report" — the same distinction the two readings above it already make.
+  it("says the call trace could not be read rather than going quiet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, {}, ROUTING, { callsFail: true }),
+    );
+    render(<ProvidersStat />);
+
+    expect(
+      await screen.findByText(en["aiSettings.providers.traceFailed"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(en["aiSettings.providers.neverCalled"]),
+    ).toBeNull();
   });
 });
