@@ -117,7 +117,9 @@ var calleeGatedLeadReads = gatekit.Waive(map[string]string{
 })
 
 // ruledLeadReads: a DISCLOSING read the product has ruled needs no lead grant.
-var ruledLeadReads = gatekit.Waive(map[string]string{})
+var ruledLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/legalholdlist.go": "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+})
 
 // notTheLeadTable: the read pattern matched SQL's OWN `lead()` window function
 // rather than the table named lead.

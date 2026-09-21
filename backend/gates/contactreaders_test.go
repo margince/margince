@@ -186,7 +186,9 @@ var calleeGatedContactReads = gatekit.Waive(map[string]string{
 })
 
 // ruledContactReads: a DISCLOSING read the product has ruled needs no contact grant.
-var ruledContactReads = gatekit.Waive(map[string]string{})
+var ruledContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/legalholdlist.go": "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+})
 
 // deferredContactReads: a DISCLOSING read that is still ungated, each naming
 // the issue that will close it.

@@ -259,7 +259,7 @@ var projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("project") + `,
-	version, created_at, updated_at, archived_at`
+	version, created_at, updated_at, archived_at, legal_hold`
 
 // readProject resolves one project row; active names the custom-field
 // columns to carry alongside the core ones — nil for internal decision
@@ -293,7 +293,7 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt,
 		&p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
-		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LegalHold,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {

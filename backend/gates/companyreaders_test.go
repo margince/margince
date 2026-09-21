@@ -150,6 +150,7 @@ var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
 // ruledCompanyReads: a DISCLOSING read the product has ruled needs no company
 // grant.
 var ruledCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/legalholdlist.go":                              "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
 	"internal/modules/contacts/anchorissuername.go:ConfirmedIssuerLegalName": "the name this installation issues documents UNDER, read off its own anchor record so a quote names its issuer from a confirmed row rather than from a settings value with no provenance. The company object governs the accounts an installation sells TO; this answers what the installation itself is called, which every seat already reads off every quote it opens. Asked for a grant, it would refuse the send path for a rep who holds the offer grant and not the account list — which is most of them, and the reason this ruling exists rather than a Require",
 })
 

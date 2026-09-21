@@ -34,7 +34,7 @@ var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("deal") + `,
-	version, created_at, updated_at, archived_at`
+	version, created_at, updated_at, archived_at, legal_hold`
 
 // readDeal resolves one deal row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads
@@ -75,7 +75,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 		&expectedClose, &closeDateProvisional, &d.ClosedAt, &forecastCat, &waitUntil, &d.LastActivityAt,
 		&d.Source, &d.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
-		&version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt,
+		&version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt, &d.LegalHold,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
