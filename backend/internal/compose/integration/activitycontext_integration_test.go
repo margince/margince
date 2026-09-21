@@ -650,3 +650,40 @@ func TestALeadAnchorWalksItsOwnTimeline(t *testing.T) {
 		t.Errorf("recent_touches = %v, want the note filed against this lead", touches)
 	}
 }
+
+// A lead in the room is in the picture.
+//
+// The hop-2 walk reported four record types and not the fifth, which was never
+// a decision about leads — the list predated the arm. So a discovery call
+// filed against both a deal and an unqualified lead prepped as though the lead
+// had not been there, and the caller reading "what cannot be evidenced is
+// absent rather than inferred" would conclude it had not.
+//
+// The lead is the record the reader was NOT prepared against, which is exactly
+// why naming it is worth a section: the deal is what they came for, and the
+// lead is what else was on the call.
+func TestALeadSharingAnActivityWithTheAnchorIsReportedAsANeighbour(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedMeetingFixture(t, e)
+	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, status, source, captured_by)
+		VALUES ($1, $2, 'Bruno Kellner', 'Kellner Anlagenbau', 'new', 'manual', 'human:x')`, e.Rep1)
+	call := seedMeeting(t, e, "Discovery — Turbinenbau + Kellner")
+	linkMeeting(t, e, call, "deal", "deal_id", f.rep1Deal)
+	linkMeeting(t, e, call, "lead", "lead_id", lead)
+
+	assembled, err := search.NewRetriever(e.Store, nil).AssembleContext(e.Admin(),
+		datasource.EntityRef{Type: datasource.EntityDeal, ID: f.rep1Deal},
+		retrieval.AssembleOptions{MaxItems: 5})
+	if err != nil {
+		t.Fatalf("walking the deal's context: %v", err)
+	}
+
+	neighbours := summariesIn(assembled, "related_leads")
+	if len(neighbours) == 0 {
+		t.Fatalf("a lead on the anchor's own call is absent from the picture, which reads as a "+
+			"room it was not in: sections %+v", assembled.Sections)
+	}
+	if !strings.Contains(strings.Join(neighbours, " | "), "Kellner") {
+		t.Errorf("related_leads = %v, want the lead the call was also filed against", neighbours)
+	}
+}

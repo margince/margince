@@ -7,9 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -369,104 +367,6 @@ func MemberNames(ctx context.Context, tx pgx.Tx, edges []InteractionEdge) (map[i
 	return out, rows.Err()
 }
 
-// relatedSectionOrder is the hop-2 neighbor types the walk renders a related_*
-// section for, in the order they are emitted.
-//
-// It is a SUBSET of activity_link's arms (activityLinkArms) and the walk skips
-// the rest: a lead reached at hop 2 has nowhere to be reported, so reading it
-// would be a query whose result is discarded. A project IS reported — the
-// bodies of work an account's correspondence is filed under are what a
-// catch-up on that account is about.
-var relatedSectionOrder = []string{
-	string(datasource.EntityContact),
-	string(datasource.EntityCompany),
-	string(datasource.EntityDeal),
-	string(datasource.EntityProject),
-}
-
-func (s *Store) relatedViaLinks(ctx context.Context, tx pgx.Tx, anchorType string, anchorID ids.UUID, activityIDs []ids.ActivityID, maxItems int) ([]graphSection, error) {
-	if len(activityIDs) == 0 {
-		return nil, nil
-	}
-	sectionsByType := map[string][]graphItem{}
-	for _, hop := range activityLinkArms {
-		if hop.entity == anchorType || !slices.Contains(relatedSectionOrder, hop.entity) {
-			continue // the anchor is not its own neighbor, and neither is a type with no section
-		}
-		// Object RBAC hides a denied type SILENTLY here, unlike at the anchor:
-		// a neighbor is context the caller did not ask for by name, so a type
-		// they hold no grant on is absent rather than a 403 on a read they did
-		// not make. Search's branch admission takes the same posture.
-		if auth.Require(ctx, hop.entity, principal.ActionRead) != nil {
-			continue
-		}
-		items, err := hopNeighbors(ctx, tx, hop, anchorID, activityIDs)
-		if err != nil {
-			return nil, err
-		}
-		sectionsByType[hop.entity] = items
-	}
-	var out []graphSection
-	for _, entity := range relatedSectionOrder {
-		items := sectionsByType[entity]
-		if len(items) == 0 {
-			continue
-		}
-		sort.Slice(items, func(i, j int) bool { return items[i].id.String() < items[j].id.String() })
-		if len(items) > maxItems {
-			items = items[:maxItems]
-		}
-		out = append(out, graphSection{name: "related_" + plural(entity), items: items})
-	}
-	return out, nil
-}
-
-// hopNeighbors reads one hop's bounded, deterministic candidate window and
-// returns the visible ones as graph items. Each candidate is
-// visibility-probed individually: the walk widens context, never authority.
-func hopNeighbors(ctx context.Context, tx pgx.Tx, hop activityLinkArm, anchorID ids.UUID, activityIDs []ids.ActivityID) ([]graphItem, error) {
-	// Bounded like the activity leg: the id order makes the window
-	// deterministic before the per-row visibility probe thins it.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT t.id, t.%s
-		FROM activity_link l JOIN %s t ON t.id = l.%s
-		WHERE l.activity_id = ANY($1) AND t.archived_at IS NULL AND l.%s IS NOT NULL AND t.id <> $2
-		ORDER BY t.id LIMIT %d`,
-		hop.title(), hop.entity, hop.column, hop.column, graphExpansionLimit), activityIDs, anchorID)
-	if err != nil {
-		return nil, err
-	}
-	type candidate struct {
-		id    ids.UUID
-		title string
-	}
-	var candidates []candidate
-	for rows.Next() {
-		var c candidate
-		if err := rows.Scan(&c.id, &c.title); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		candidates = append(candidates, c)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	var items []graphItem
-	for _, c := range candidates {
-		visible, err := auth.VisibleTo(ctx, tx, hop.entity, c.id)
-		if err != nil {
-			return nil, err
-		}
-		if !visible {
-			continue
-		}
-		items = append(items, graphItem{entityType: hop.entity, id: c.id, summary: c.title})
-	}
-	return items, nil
-}
-
 // sortAndTrim orders by score descending with the §10.7.2 id-ascending
 // tie-break, then bounds the section.
 func sortAndTrim(items *[]graphItem, maxItems int) {
@@ -481,11 +381,4 @@ func sortAndTrim(items *[]graphItem, maxItems int) {
 		list = list[:maxItems]
 	}
 	*items = list
-}
-
-func plural(entity string) string {
-	if strings.HasSuffix(entity, "contact") {
-		return "contacts"
-	}
-	return entity + "s"
 }
