@@ -92,14 +92,14 @@ export function RelayPanel({
  * whose turn it is. A status that nobody owes says so rather than naming a
  * contact who has already done their part.
  *
- * It NAMES people, including the reader. Once the colleague has agreed, the
+ * It NAMES someone, the reader included. Once the colleague has agreed, the
  * move is the requester's — usually the reader's own — and "you" made the one
  * line on this panel that addresses somebody, on a surface whose whole job is
  * to state facts about a relationship.
  *
  * `undefined` is "nobody can be named yet", which is NOT the neutral colleague
  * noun. A name that is merely unread arrives a moment later, and standing a
- * colleague in for it made the slot say one person owed the move and then
+ * colleague in for it made the slot say someone owed the move and then
  * replace them with another — a handoff that changed hands on screen while
  * nothing had happened.
  */

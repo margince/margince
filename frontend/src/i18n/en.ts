@@ -3188,7 +3188,7 @@ export const en = {
   "brief.weekly.planCommitmentsKept": "Commitments kept",
   "brief.weekly.meetingsHeld": "Meetings with follow-up",
   "brief.weekly.ofMeetings": "{withStep} of {held}",
-  "brief.weekly.carriedOver": "Tasks carried over",
+  "brief.weekly.carriedOver": "Carried over",
   "brief.weekly.outcome.moved": "moved",
   "brief.weekly.outcome.won": "won",
   "brief.weekly.outcome.lost": "lost",

@@ -30,7 +30,7 @@ type Translate = ReturnType<typeof useT>;
  * same name in a smaller type read as two findings rather than one. The reader
  * is one of the routes the server ranks, so they are counted like anybody else
  * and named on a line of their own — a stat card states a reading and does not
- * address the person reading it.
+ * address its reader.
  */
 export function DecisionStrip({
   routes,

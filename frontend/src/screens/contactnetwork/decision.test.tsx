@@ -171,8 +171,8 @@ describe("a name the server sent blank is no name", () => {
 
 // Once the colleague has agreed the move is the requester's — usually the
 // reader's own — and their name comes from the session rather than the ask.
-// A colleague standing in while that read is in flight made the slot say one
-// person owed the move and then replace them with another, with nothing about
+// A colleague standing in while that read is in flight made the slot say
+// someone owed the move and then replace them with another, with nothing about
 // the ask having changed.
 describe("the handoff names nobody it cannot name yet", () => {
   const accepted = ask({

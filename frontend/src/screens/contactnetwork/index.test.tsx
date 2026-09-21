@@ -818,7 +818,7 @@ describe("the reader's own route", () => {
     renderTab(reachedByReader([mine]));
 
     // Counted like anybody else, and named on a line of its own: a reading
-    // states a fact and does not address the person reading it.
+    // states a fact and does not address its reader.
     expect(
       await screen.findByText("1", { selector: ".stat-card-value" }),
     ).toBeTruthy();

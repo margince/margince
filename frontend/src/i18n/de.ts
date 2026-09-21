@@ -3091,7 +3091,7 @@ export const de = {
   "brief.weekly.planCommitmentsKept": "Zusagen eingehalten",
   "brief.weekly.meetingsHeld": "Termine mit Folgeaufgabe",
   "brief.weekly.ofMeetings": "{withStep} von {held}",
-  "brief.weekly.carriedOver": "Aufgaben übertragen",
+  "brief.weekly.carriedOver": "Übernommen",
   "brief.weekly.outcome.moved": "bewegt",
   "brief.weekly.outcome.won": "gewonnen",
   "brief.weekly.outcome.lost": "verloren",

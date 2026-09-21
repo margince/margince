@@ -1074,7 +1074,7 @@ describe("the consent rail names the purpose behind each answer", () => {
 
 // An import runs as ONE administrator, so `captured_by` names that one seat on
 // every row it wrote — and where the reader IS that administrator, `self` is
-// true of a decade of other people's work. The author is the only field on the
+// true of a decade of work colleagues did. The author is the only field on the
 // row that knows who wrote it, so the head's Source cell has to read it.
 describe("who wrote an imported contact", () => {
   // The id meFixture answers /me with, which is who mount() renders the page as.
