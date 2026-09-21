@@ -32,6 +32,13 @@ package consent
 // WITHOUT that pre-lock — none exists today, but nothing stops one being
 // written tomorrow — cannot let a concurrent Allow interleave and drop a row
 // the same way suppressionlock.go's header describes losing a stop.
+//
+// A SECOND LOCK, WHICH THE SUBJECT KEYS CANNOT STAND IN FOR. The copy below
+// EXTENDS a carry chain, and a chain outlives the subject it started on: the
+// caller revoking it holds an id on a record this merge never names, so their
+// subject lock and ours never meet. lockCarriedFamilies takes the chain's own
+// key as well, after the subject keys, and overridechain.go carries the whole
+// argument.
 
 import (
 	"context"
@@ -94,6 +101,15 @@ func (s *Store) CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsa
 	// the write. See the file header for why this is free from mergeContactTx
 	// and load-bearing for any other caller.
 	if err := lockBothSidesOfACarry(ctx, tx, from, to); err != nil {
+		return err
+	}
+	// AND THE CHAINS THEMSELVES, after the subject keys and never before them.
+	// A subject key does not reach the revoker of a vouch that started two
+	// merges ago: it holds an id neither side of this carry names, so without
+	// this the copy below can land a live descendant beneath an override
+	// somebody is taking back in the next connection. overridechain.go states
+	// the key, the order and the interleaving it closes.
+	if err := lockCarriedFamilies(ctx, tx, from); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)

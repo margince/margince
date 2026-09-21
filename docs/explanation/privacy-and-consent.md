@@ -61,7 +61,10 @@ The engine answers the second. It resolves a **category** from what the send act
   stricter `CanOverrule` for a stop, where erring toward not-sending is the safe direction. It
   survives a merge onto the
   surviving contact (`consent.CarryOverridesTx`) with its original `decided_by_level` and reason
-  intact, so a merge cannot launder a vouch down to a lower authority. Art. 17 erasure and the retention
+  intact, so a merge cannot launder a vouch down to a lower authority. Revoking one therefore
+  reaches every copy a merge made of it, on the id the caller was actually given — the pre-merge
+  one — and announces each copy lifted on the stream that heard it recorded, because a vouch left
+  standing under an id its author never saw goes on allowing the send. Art. 17 erasure and the retention
   sweep DELETE it outright, with the rest of the contact's consent record — a standing "write to
   them anyway" must not outlive the contact it was about — while Art. 15 subject access EXPORTS it
   (`privacy.AssembleSAR`'s `communication_overrides`), because somebody asking what is held about
@@ -348,7 +351,7 @@ have with a supervisory authority, and destruction is irreversible.
 | The authorization engine | `internal/modules/consent/authorize*.go` (`AuthorizeStagingTx`, `AuthorizeTransmit`) |
 | The shared vocabulary | `internal/shared/ports/commsauthz/` (category, basis, phase, verdict, mode) |
 | Per-recipient decisions | `communication_decision`, `communication_basis`, `communication_suppression` |
-| Standing rep overrides | `internal/modules/consent/override.go` and `internal/modules/consent/overridecarry.go` (`Allow`, `RevokeOverride`, `CarryOverridesTx`, `communication_override`); the merge reaches the carry through `internal/modules/contacts/overridecarry.go`, which owns the port and not the table |
+| Standing rep overrides | `internal/modules/consent/override.go` and `internal/modules/consent/overridecarry.go` (`Allow`, `RevokeOverride`, `CarryOverridesTx`, `communication_override`), with `internal/modules/consent/overridechain.go` holding the walk a revoke takes across the copies a merge made and the lock that keeps a merge from outrunning it; the merge reaches the carry through `internal/modules/contacts/overridecarry.go`, which owns the port and not the table |
 | Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `contact_consent`, `consent_event`) |
 | Art. 17 erasure | `internal/modules/privacy/eraser.go` (`NewEraser`, `EraseContact`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |
