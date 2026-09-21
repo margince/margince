@@ -118,6 +118,10 @@ type WaitingCustomer struct {
 	// headers gives each message its own thread, so this demotes rather than
 	// hides.
 	Engaged bool
+	// Threaded says the message belongs to a conversation, which decides which
+	// dispositions the row may offer: two of the three are keyed on the thread
+	// and a message without one can perform neither. See waitingDispositions.
+	Threaded bool
 	// AddressedElsewhere says every header recipient on this message names
 	// somebody OTHER than this reader — a thread they were copied on, or one on
 	// a record they own. That is real mail and stays on the page; it is simply
