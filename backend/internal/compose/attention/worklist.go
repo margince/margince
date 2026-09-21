@@ -4,16 +4,12 @@
 package attention
 
 // The Worklist: the same day the lane feed reads, projected as ONE ranked queue.
+// It reads THROUGH Assemble rather than beside it, so a lane added there reaches
+// the queue by being classified here rather than read a second time.
 //
-// It reads through Assemble rather than beside it. Two readers of one day would
-// be two answers to "what is waiting on me", and they would drift the first time
-// a lane changed — so this is a PROJECTION of the assembled day, and a lane
-// added there reaches the queue by being classified here rather than by being
-// read again.
-//
-// What it adds is the part a lane feed cannot: a level, a reason, and a
-// consequence. Those are what let a reader compare a duplicate merge with an
-// unanswered buyer without reading fourteen panels first.
+// What it adds is a level, a reason and a consequence — what lets a reader
+// compare a duplicate merge with an unanswered buyer without reading fourteen
+// panels first.
 
 import (
 	"context"
@@ -29,11 +25,9 @@ import (
 const worklistPage = 25
 
 // leadResponseBound is how many leads still owed a reply one read carries.
-//
-// Declared here and passed through the interface, the way plannedCap is, so
-// the number the reach figure reports is the number the read actually asked
-// for. A source read to its bound reports "more may exist" rather than a total
-// it does not know.
+// Passed through the interface so the reach figure reports the number actually
+// asked for: a source read to its bound says "more may exist" rather than a
+// total it does not know.
 const leadResponseBound = 50
 
 // worklistMaxPage is the ceiling the contract publishes. A larger ask is

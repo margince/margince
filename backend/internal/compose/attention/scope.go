@@ -3,18 +3,14 @@
 
 package attention
 
-// WHOSE day the queue answers.
+// WHOSE day the queue answers. The default is the reader's own work: an admin
+// can read every deal in the installation, so a queue showing everything
+// readable would hand a rep hundreds of colleagues' rows and call it their day.
 //
-// The default is the reader's own work, and that is the point rather than a
-// convenience: an admin account can read every deal in the installation, so a
-// queue that showed everything readable would hand a rep several hundred rows
-// belonging to colleagues and call it their day. "Mine" is the honest default
-// for a surface whose whole claim is "what should I do next".
-//
-// A wider scope is OFFERED only where the reader's row scope already reaches
-// that far, and asking for one they do not hold is refused rather than quietly
-// narrowed. Silently narrowing would answer a question about the team with
-// facts about one contact, and the reader would have no way to tell.
+// A wider scope is offered only where the reader's row scope already reaches
+// that far, and one they do not hold is REFUSED rather than quietly narrowed —
+// narrowing would answer a question about the team with facts about one contact
+// and give the reader no way to tell.
 
 import (
 	"context"
@@ -28,11 +24,9 @@ import (
 // The scopes a reader may ask the queue for.
 const (
 	scopeMine = "mine"
-	// scopeUnassigned is the work nobody answers for.
-	//
-	// Its own scope because "mine" stopped carrying it. Unowned work is real and
-	// somebody has to pick it up, but it arrives in a queue a reader opens on
-	// purpose rather than in the one that claims to be theirs.
+	// Its own scope rather than part of "mine": unowned work is real and somebody
+	// must pick it up, but it belongs in a queue opened on purpose rather than
+	// the one claiming to be yours.
 	scopeUnassigned = "unassigned"
 	scopeTeam       = "team"
 	scopeAll        = "all"
