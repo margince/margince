@@ -678,7 +678,7 @@ export const de = {
   "tab.rollup": "Roll-up",
   "tab.history": "Verlauf",
 
-  "rollup.weightedPipeline": "Gewichtete Pipeline",
+  "rollup.weightedPipeline": "Gewichteter Dealwert",
   "rollup.closedWon": "Abgeschlossen (aktuelles Quartal)",
   "rollup.activity30d": "Aktivität (30 Tage)",
   "rollup.accounts": "Zusammengefasste Accounts",
@@ -1003,7 +1003,7 @@ export const de = {
   "co.strip.title": "Wo dieser Account steht",
   "co.strip.convertedAsOf": "{count} umgerechnet, Kurse vom {date}",
   "co.strip.noOpenDeals": "Keine offenen Deals",
-  "co.strip.pipeline": "Offene Pipeline",
+  "co.strip.pipeline": "Offene Deals",
   "co.description.label": "Beschreibung",
 
   "co.strip.netInvoiced": "Netto fakturiert · 12 Monate",
@@ -1474,7 +1474,7 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
-  "co.facts.pipeline": "Offene Pipeline",
+  "co.facts.pipeline": "Offene Deals",
   "co.facts.inFlight": "Laufend",
   "co.facts.reading": "Wird gelesen\u2026",
   "co.facts.noDeals": "Keine offenen Deals",
@@ -2731,7 +2731,7 @@ export const de = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
-    "Durch das Archivieren wird dieser Deal aus der aktiven Pipeline entfernt. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
+    "Durch das Archivieren wird dieser Deal aus den offenen Deals entfernt. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und nimmt keine Änderungen an.",
   "deal.notYoursToChange":
@@ -3052,8 +3052,7 @@ export const de = {
   "brief.weekly.outlook.landing": "Prognostizierter Abschluss",
   "brief.weekly.outlook.measure.commit_evidence":
     "Aus dem Commit-Nachweis gelesen",
-  "brief.weekly.outlook.measure.weighted":
-    "Aus der gewichteten Pipeline gelesen",
+  "brief.weekly.outlook.measure.weighted": "Gewichtet aus offenen Deals",
   "brief.weekly.outlook.measure.manager_call":
     "Aus der Einschätzung der Führungskraft gelesen",
   "brief.weekly.bridge": "Wie die Woche das bewegt hat",
@@ -3872,10 +3871,10 @@ export const de = {
   "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
-  "analytics.reportDeals": "Offene Pipeline nach Phase",
+  "analytics.reportDeals": "Offene Deals nach Phase",
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionPipeline": "Deals",
   "analytics.sectionPerformance": "Ergebnisse",
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
@@ -3908,7 +3907,7 @@ export const de = {
     "Nicht verbunden — nichts zu reparieren, etwas zu entscheiden",
   "analytics.coverageInputsElsewhere":
     "Probleme auf Datensatzebene werden in der Forecast-Eingangsprüfung gelistet und gelöst.",
-  "analytics.myPipeline": "Meine offene Pipeline",
+  "analytics.myPipeline": "Meine offenen Deals",
   "analytics.myMeetings": "Meine Termine",
   "analytics.meetingsAsTheyStand":
     "Von Ihnen gehaltene Termine, nach heutigem Stand — ein stattgefundener Termin zählt nicht mehr als gebucht.",
@@ -3940,7 +3939,7 @@ export const de = {
   "analytics.share.kindLegend": "Was der Link zeigt",
   "analytics.share.liveLabel": "Live-Ansicht",
   "analytics.share.liveHelp":
-    "Wird bei jedem Öffnen neu berechnet, begrenzt auf das, was die lesende Person sehen darf. Die Zahlen bewegen sich mit der Pipeline.",
+    "Wird bei jedem Öffnen neu berechnet, begrenzt auf das, was die lesende Person sehen darf. Die Zahlen bewegen sich mit den Deals.",
   "analytics.share.snapshotLabel": "Eingefrorener Stand",
   "analytics.share.snapshotHelp":
     "Die Zahlen, wie sie beim Einfrieren standen. Sie ändern sich nicht, deshalb nennt der Link den Zeitpunkt.",
@@ -4016,7 +4015,7 @@ export const de = {
     "Für diesen Zeitraum gibt es noch keinen Call. Durch Belege gestützt sind {evidence}.",
   "forecast.partialTitle": "Nicht jeder Deal hat einen Betrag",
   "forecast.partial":
-    "{priced} von {eligible} Deals führen einen Betrag. Die übrigen sind echte Pipeline und tragen nichts zu den Summen oben bei.",
+    "{priced} von {eligible} Deals führen einen Betrag. Die übrigen sind echte Deals und tragen nichts zu den Summen oben bei.",
   "forecast.currentCall": "Aktueller Call",
   "forecast.currentCallNone": "Keine Prognose abgegeben",
   "forecast.evidence": "Durch Belege gestützt",
@@ -5365,7 +5364,7 @@ export const de = {
   "senders.kind.undecided": "Noch nicht entschieden",
   "mailSharing.title": "E-Mail-Freigabe",
   "mailSharing.sub":
-    "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet — das macht die Pipeline gemeinsam.",
+    "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet — das macht Deals zur gemeinsamen Arbeit.",
   "mailSharing.label": "Erfasste E-Mails im Team teilen",
   "mailSharing.help":
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen und Domains vorab ausschließen.",
@@ -7845,11 +7844,11 @@ export const de = {
   "installationSettings.forwardMeasure":
     "Prognostizierter Abschluss beruht auf",
   "installationSettings.forwardMeasureHint":
-    "Welche verbleibende Pipeline zu den bereits gewonnenen Beträgen addiert wird. Commit-Nachweis ist am strengsten: zugesagte Deals mit bestätigtem Abschlussdatum. Gewichtet zählt jeden offenen Deal mit seiner Phasenwahrscheinlichkeit — die ehrliche Lesart für ein Team, das alles zusagt. Die Einschätzung der Führungskraft ersetzt die Prognose ganz, statt zum Gewonnenen zu addieren; ohne erfasste Einschätzung fällt die Periode auf den Commit-Nachweis zurück und sagt das auch.",
+    "Welcher verbleibende Dealwert zu den bereits gewonnenen Beträgen addiert wird. Commit-Nachweis ist am strengsten: zugesagte Deals mit bestätigtem Abschlussdatum. Gewichtet zählt jeden offenen Deal mit seiner Phasenwahrscheinlichkeit — die ehrliche Lesart für ein Team, das alles zusagt. Die Einschätzung der Führungskraft ersetzt die Prognose ganz, statt zum Gewonnenen zu addieren; ohne erfasste Einschätzung fällt die Periode auf den Commit-Nachweis zurück und sagt das auch.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Commit-Nachweis — nur bestätigte Abschlussdaten",
   "installationSettings.forwardMeasure.weighted":
-    "Gewichtete Pipeline — jeder offene Deal mit seiner Phasenwahrscheinlichkeit",
+    "Gewichtet — jeder offene Deal mit seiner Phasenwahrscheinlichkeit",
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft — die erfasste Zahl für die Periode",
   "forecast.landing": "Prognostizierter Abschluss",
@@ -7862,7 +7861,7 @@ export const de = {
     "Für diese Periode liegt keine Einschätzung vor, daher steht hier der Commit-Nachweis.",
   "forecast.landing.caveat.call_below_actual":
     "Die Einschätzung liegt unter dem bereits Gewonnenen. Sie wird wie erfasst gezeigt und nicht korrigiert.",
-  "forecast.pipelineNeeded": "Benötigte Pipeline",
+  "forecast.pipelineNeeded": "Benötigter Dealwert",
   "forecast.pipelineNeededDetail":
     "{current} offen gegenüber {needed} benötigt, um {reference} zu erreichen.",
   "forecast.pipelineBasis.manager_call":
@@ -7871,10 +7870,10 @@ export const de = {
     "Gemessen am Median der letzten vier vergleichbaren Perioden.",
   "forecast.pipelineAbsentTitle": "Keine Deckungszahl für diese Periode",
   "forecast.pipelineAbsent.insufficient_basis":
-    "Es fehlt der Vergleichsmaßstab: Für diese Periode wurde keine Einschätzung erfasst, und es sind weniger als vier vergleichbare Perioden abgeschlossen. Eine Deckungszahl, gemessen an einer aus derselben Pipeline abgeleiteten Zahl, sähe immer gut aus.",
+    "Es fehlt der Vergleichsmaßstab: Für diese Periode wurde keine Einschätzung erfasst, und es sind weniger als vier vergleichbare Perioden abgeschlossen. Eine Deckungszahl, gemessen an einer aus denselben offenen Deals abgeleiteten Zahl, sähe immer gut aus.",
   "forecast.pipelineAbsent.insufficient_history":
     "Zu wenige abgeschlossene Deals für eine Abschlussquote. Eine Quote aus einer Handvoll Deals schwankt stärker, als die Antwort wert ist.",
-  "forecast.coverage": "{percent}% der dafür nötigen Pipeline",
+  "forecast.coverage": "{percent}% des dafür nötigen Dealwerts",
   "installationSettings.baseCurrency": "Basiswährung",
   "installationSettings.baseCurrencyHint":
     "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Betrag dagegen umgerechnet wurde.",
@@ -8103,7 +8102,7 @@ export const de = {
     "Bisher: {clean} wie vorgeschlagen übernommen, {edited} nach einer Änderung, {rejected} abgelehnt.",
   "autonomy.kind.close_date_correction.label": "Abschlussdaten",
   "autonomy.kind.close_date_correction.help":
-    "Deine Deals werden über Nacht gepflegt: Fehlende oder überfällige Abschlussdaten werden anhand des Pipeline-Tempos geschätzt und ruhige Deals überprüft. Ausschalten beendet diese Pflege.",
+    "Deine Deals werden über Nacht gepflegt: Fehlende oder überfällige Abschlussdaten werden anhand des Deal-Tempos geschätzt und ruhige Deals überprüft. Ausschalten beendet diese Pflege.",
   "autonomy.kind.company_name_promotion.label": "Firmennamen",
   "autonomy.kind.company_name_promotion.help":
     "Vorgeschlagene Firmennamen aus E-Mail-Signaturen für Unternehmen übernehmen, die nach ihrer Domain benannt sind. Ausschalten lässt dich diese Vorschläge selbst prüfen. Durch unabhängige Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -9281,7 +9280,7 @@ export const de = {
   "project.deals.title": "Deals",
   "project.deals.empty":
     "Noch kein Deal nennt dieses Projekt. Ein Deal wählt sein Projekt in seinem eigenen Formular.",
-  "project.deals.more": "Mehr Deals als hier gezeigt — öffne die Pipeline.",
+  "project.deals.more": "Mehr Deals als hier gezeigt — öffne Deals.",
   "project.stakeholders.title": "Beteiligte",
   "project.stakeholders.empty":
     "Noch niemand ist an diesem Projekt beteiligt. Beteiligte sind Kontakte mit einer Rolle hier — Sponsor, Projektleitung, Champion.",
@@ -9389,12 +9388,12 @@ export const de = {
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",
   "worklist.dueGroup.later": "Später",
-  "worklist.band.build_pipeline": "Pipeline aufbauen",
+  "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
   "worklist.bandClear.now":
     "Keine dringenden Unterbrechungen. Weitere Aufgaben stehen unten.",
-  "worklist.bandClear.build_pipeline": "Keine neue Pipeline-Arbeit offen.",
+  "worklist.bandClear.build_pipeline": "Keine Akquise-Arbeit offen.",
   "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Schlummern",

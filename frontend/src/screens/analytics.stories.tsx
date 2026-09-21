@@ -234,7 +234,7 @@ export const Forecast: Story = {
 // selection. This story asked for a button by the card's title and found none.
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
-  play: clickButton("Pipeline"),
+  play: clickButton("Deals"),
 };
 
 // "Explain this number" open: the report card above, the derivation card below
@@ -362,7 +362,7 @@ export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and
   // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButton("Pipeline", "Explain this number"),
+  play: clickButton("Deals", "Explain this number"),
 };
 
 // The three absences a slot has to tell apart, side by side, because they are

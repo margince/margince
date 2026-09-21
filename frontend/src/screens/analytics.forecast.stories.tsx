@@ -98,8 +98,8 @@ export const EveryDealPriced: Story = {
   },
 };
 
-// Eleven of the fifty-two carry no amount. The caveat is the frame's point: it
-// is real pipeline contributing zero money to every figure below it, said
+// Eleven of the fifty-two carry no amount. The caveat is the frame's point:
+// they are real deals contributing zero money to every figure below them, said
 // beside the total rather than left in the receipt for somebody to find.
 export const SomeDealsUnpriced: Story = {
   render: () => {

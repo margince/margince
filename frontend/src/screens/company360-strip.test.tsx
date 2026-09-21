@@ -250,7 +250,7 @@ describe("a slot with no reading says which absence it is", () => {
 // A card's door, by the reading it belongs to. Every door on the plate carries
 // the SAME word — "Open" is the component's, not the caller's — so what tells
 // five of them apart for a screen reader is the DESCRIPTION, which is the
-// reading's own label. Folded into the name it read "Open Open pipeline".
+// reading's own label. Folded into the name it read "Open Open deals".
 function door(label: string): HTMLElement {
   return screen.getByRole("button", { name: "Open", description: label });
 }
@@ -262,7 +262,7 @@ describe("a reading offers the tab it is a reading of", () => {
     renderStrip(view({ state_strip: customer }), (tab) => opened.push(tab));
     await readings();
 
-    for (const label of ["Open pipeline", "Finance"]) {
+    for (const label of ["Open deals", "Finance"]) {
       await userEvent.click(door(label));
     }
     // THREE readings open the same page, and each is read off it: the

@@ -34,7 +34,7 @@ afterEach(() => {
 async function openPipeline() {
   await userEvent
     .setup()
-    .click(await screen.findByRole("button", { name: "Pipeline" }));
+    .click(await screen.findByRole("button", { name: "Deals" }));
 }
 
 async function openPerformance() {
@@ -178,7 +178,7 @@ describe("the data coverage section", () => {
     const fetch = reportsStub({ coverage: { status: 403 } });
     vi.stubGlobal("fetch", fetch);
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline" });
+    await screen.findByRole("button", { name: "Deals" });
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: "Data coverage" }),
@@ -309,7 +309,7 @@ describe("the my-outcomes section", () => {
   it("hides the tab when the lens covers more than one seat", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline" });
+    await screen.findByRole("button", { name: "Deals" });
     expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
   });
 });
@@ -410,9 +410,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
       bodies.some(
@@ -457,9 +455,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
 
@@ -513,9 +509,7 @@ describe("AnalyticsScreen", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
     await waitFor(() => expect(screen.getByText("o1")).toBeTruthy());
   });
 
@@ -526,7 +520,7 @@ describe("AnalyticsScreen", () => {
   // proves the link appears would pass a version that always draws it.
   describe("a count opens exactly the deals it counted", () => {
     const openPipelineTab = async () =>
-      userEvent.click(await screen.findByRole("button", { name: "Pipeline" }));
+      userEvent.click(await screen.findByRole("button", { name: "Deals" }));
 
     it("addresses a company trading in one currency, and says the deals are open", async () => {
       vi.stubGlobal(
@@ -830,7 +824,7 @@ describe("reports never sum money across currencies", () => {
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -1009,7 +1003,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
       await screen.findByText(formatMoney(202_720_000, "EUR", "en")),
@@ -1052,7 +1046,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     // Both categories, both figures, all in the one base currency.
     expect(
@@ -1097,7 +1091,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
 
     expect(
       await screen.findByText(formatMoney(2_500_000, "EUR", "en")),
@@ -1129,7 +1123,7 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline"));
+    await userEvent.setup().click(await screen.findByText("Deals"));
     await waitFor(() =>
       expect(screen.getByText(formatMoney(1000, "EUR", "en"))).toBeTruthy(),
     );

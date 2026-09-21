@@ -13,7 +13,7 @@ import { day, renderWorklist, row, stub } from "./worklist.testkit";
 // inferred from the rows instead, which draws the same page in every case but
 // one: a band with nothing under it has no row to hang a heading on, so it drew
 // nothing at all. A reader whose Now band was empty saw a page that started at
-// Build pipeline and could not tell that from a day where Now had simply not
+// Prospecting and could not tell that from a day where Now had simply not
 // been read.
 
 afterEach(() => {
@@ -68,7 +68,7 @@ describe("a band holding nothing says so", () => {
     ).toBeTruthy();
     // A band that stays in the day. `review` is drawn in its own panel below
     // now, so it declares no empty run here.
-    expect(screen.getByText("No new pipeline work waiting.")).toBeTruthy();
+    expect(screen.getByText("No prospecting work waiting.")).toBeTruthy();
   });
 
   // And the heading above it, so the line is attributed. A line saying
@@ -82,7 +82,7 @@ describe("a band holding nothing says so", () => {
       "No urgent interruptions. Check the remaining work below.",
     );
     expect(headings()).toContain("Now");
-    expect(headings()).toContain("Build pipeline");
+    expect(headings()).toContain("Prospecting");
   });
 
   // Each band says what the reader is clear OF. Four copies of one generic
@@ -94,7 +94,7 @@ describe("a band holding nothing says so", () => {
     await screen.findByText(
       "No urgent interruptions. Check the remaining work below.",
     );
-    for (const line of ["No new pipeline work waiting."]) {
+    for (const line of ["No prospecting work waiting."]) {
       expect(screen.queryByText(line)).toBeTruthy();
     }
     // NOT the review band's line, and this is the split rather than a gap:

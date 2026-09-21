@@ -3,7 +3,7 @@
 **Using the product rather than changing it?** The end-to-end walkthroughs for a
 rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
 is mostly for the contact changing the code — with one deliberate exception:
-`how-to/` carries product how-tos (working your pipeline, setting up projects,
+`how-to/` carries product how-tos (working your deals, setting up projects,
 partner programs) beside the engineering ones, because a how-to is a thing you
 return to for one answer whichever audience you are in.
 
@@ -103,8 +103,8 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md) — bind a site to the production request builder and validator that certify it: the test-first loop, the case interface, the three site kinds, scenario and rubric authoring, scope.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
-- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the pipeline numbers; no code.
-- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline.
+- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the deal numbers; no code.
+- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the deals.
 - [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
 - [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.

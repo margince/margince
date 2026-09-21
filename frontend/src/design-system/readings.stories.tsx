@@ -177,12 +177,12 @@ export const Bars: Story = {
   ),
 };
 
-// The caller's whole as the denominator: four stages of a pipeline that holds
-// more than they add up to, so no bar claims to be everything.
+// The caller's whole as the denominator: four stages drawn from open deals
+// that total more than the bars add up to, so no bar claims to be everything.
 export const BarsAgainstAWhole: Story = {
   render: () => (
     <BarList
-      label="Open pipeline by stage"
+      label="Open deals by stage"
       max={200}
       rows={[
         { key: "qualified", label: "Qualified", value: 80, amount: "€80,000" },

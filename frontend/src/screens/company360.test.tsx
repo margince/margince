@@ -1529,7 +1529,7 @@ describe("company view — the KPI row never invents a figure", () => {
     expect(within(strip).getByText("1 of 2 deals priced")).toBeTruthy();
   });
 
-  it("labels the sum of open deals Open pipeline, never revenue or potential", async () => {
+  it("labels the sum of open deals Open deals, never revenue or potential", async () => {
     stub(
       view({
         state_strip: commercial({
@@ -1544,7 +1544,7 @@ describe("company view — the KPI row never invents a figure", () => {
       name: "Where this account stands",
     });
 
-    expect(within(strip).getByText("Open pipeline")).toBeTruthy();
+    expect(within(strip).getByText("Open deals")).toBeTruthy();
     expect(strip.textContent).not.toMatch(/revenue|potential/i);
   });
 
@@ -2223,7 +2223,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
       ).toBe(1),
     );
 
-    expect(within(region).getByText("Open pipeline")).toBeTruthy();
+    expect(within(region).getByText("Open deals")).toBeTruthy();
     // The card's own label: the tile reads the correspondence and is named
     // Conversation, while the health receipt still names a Relationship
     // dimension of its own.
@@ -2252,7 +2252,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     const region = await strip();
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
-    expect(within(region).getByText("Open pipeline")).toBeTruthy();
+    expect(within(region).getByText("Open deals")).toBeTruthy();
     // The card's own label: the tile reads the correspondence and is named
     // Conversation, while the health receipt still names a Relationship
     // dimension of its own.

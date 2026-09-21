@@ -124,7 +124,7 @@ describe("whether the pipeline supports the reference", () => {
       />,
     );
 
-    expect(screen.getByText(/50% of the pipeline this needs/i)).toBeTruthy();
+    expect(screen.getByText(/50% of the deal value this needs/i)).toBeTruthy();
   });
 
   // The case a zeroed figure would get exactly backwards: no basis must not
@@ -141,7 +141,7 @@ describe("whether the pipeline supports the reference", () => {
     expect(
       screen.getByText(en["forecast.pipelineAbsent.insufficient_basis"]),
     ).toBeTruthy();
-    expect(screen.queryByText(/of the pipeline this needs/i)).toBeNull();
+    expect(screen.queryByText(/of the deal value this needs/i)).toBeNull();
   });
 
   it("says when the history is too thin for a conversion rate", () => {
@@ -156,6 +156,6 @@ describe("whether the pipeline supports the reference", () => {
     expect(
       screen.getByText(en["forecast.pipelineAbsent.insufficient_history"]),
     ).toBeTruthy();
-    expect(screen.queryByText(/of the pipeline this needs/i)).toBeNull();
+    expect(screen.queryByText(/of the deal value this needs/i)).toBeNull();
   });
 });

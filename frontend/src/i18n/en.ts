@@ -692,7 +692,7 @@ export const en = {
   "tab.rollup": "Roll-up",
   "tab.history": "History",
 
-  "rollup.weightedPipeline": "Weighted pipeline",
+  "rollup.weightedPipeline": "Weighted deal value",
   "rollup.closedWon": "Closed-won (current quarter)",
   "rollup.activity30d": "Activity (30d)",
   "rollup.accounts": "Aggregated accounts",
@@ -1057,7 +1057,7 @@ export const en = {
   "co.strip.title": "Where this account stands",
   "co.strip.convertedAsOf": "{count} converted, rates from {date}",
   "co.strip.noOpenDeals": "No open deals",
-  "co.strip.pipeline": "Open pipeline",
+  "co.strip.pipeline": "Open deals",
   "co.description.label": "Description",
 
   "co.strip.netInvoiced": "Net invoiced · 12 mo",
@@ -1555,7 +1555,7 @@ export const en = {
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
-  "co.facts.pipeline": "Open pipeline",
+  "co.facts.pipeline": "Open deals",
   "co.facts.inFlight": "In flight",
   "co.facts.reading": "Reading\u2026",
   "co.facts.noDeals": "No open deals",
@@ -2810,7 +2810,7 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
-    "Archiving removes this deal from the active pipeline. This cannot be undone from the UI.",
+    "Archiving removes this deal from the open deals. This cannot be undone from the UI.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
     "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.",
@@ -3153,7 +3153,7 @@ export const en = {
   "brief.weekly.outlook.weighted": "Weighted",
   "brief.weekly.outlook.landing": "Projected landing",
   "brief.weekly.outlook.measure.commit_evidence": "Read from commit evidence",
-  "brief.weekly.outlook.measure.weighted": "Read from the weighted pipeline",
+  "brief.weekly.outlook.measure.weighted": "Weighted from open deals",
   "brief.weekly.outlook.measure.manager_call": "Read from the manager's call",
   "brief.weekly.bridge": "How the week moved it",
   "brief.weekly.bridge.opening": "Monday",
@@ -3248,7 +3248,7 @@ export const en = {
   // landed, or its period start is not a month this calendar has.
   // The cell's hover line. The title has room for a quarter and nothing more,
   // so the full range lives here — and where the figure is the whole
-  // company's rather than this reader's, whose pipeline it is.
+  // company's rather than this reader's, whose deals they are.
   "brief.snooze.done": "Set aside until {at}",
   "brief.snooze.undo": "Undo",
   "brief.readings.meetings": "Upcoming meetings",
@@ -4006,10 +4006,10 @@ export const en = {
   "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "analytics.reportDeals": "Open pipeline by stage",
+  "analytics.reportDeals": "Open deals by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionPipeline": "Deals",
   "analytics.sectionPerformance": "Performance",
   "analytics.noClosedDeals": "No deals have closed yet.",
   "analytics.sectionOutcomes": "My outcomes",
@@ -4040,7 +4040,7 @@ export const en = {
     "Not connected — nothing to fix, something to decide",
   "analytics.coverageInputsElsewhere":
     "Record-level input problems are listed and resolved in the Forecast input review.",
-  "analytics.myPipeline": "My open pipeline",
+  "analytics.myPipeline": "My open deals",
   "analytics.myMeetings": "My meetings",
   "analytics.meetingsAsTheyStand":
     "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
@@ -4072,7 +4072,7 @@ export const en = {
   "analytics.share.kindLegend": "What the link shows",
   "analytics.share.liveLabel": "Live view",
   "analytics.share.liveHelp":
-    "Recomputed each time it is opened, under what the reader may see. The numbers move as the pipeline does.",
+    "Recomputed each time it is opened, under what the reader may see. The numbers move as the deals move.",
   "analytics.share.snapshotLabel": "Frozen state",
   "analytics.share.snapshotHelp":
     "The figures as they stood when the state was taken. They do not change, so the link says which moment it describes.",
@@ -4151,7 +4151,7 @@ export const en = {
     "Nobody has called this period yet. Evidence supports {evidence}.",
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
-    "{priced} of {eligible} deals carry an amount. The rest are real pipeline contributing nothing to the totals above.",
+    "{priced} of {eligible} deals carry an amount. The rest are real deals contributing nothing to the totals above.",
   "forecast.currentCall": "Current call",
   "forecast.currentCallNone": "No call made",
   "forecast.evidence": "Supported by evidence",
@@ -5548,7 +5548,7 @@ export const en = {
   "senders.kind.undecided": "Not yet decided",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
-    "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
+    "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes deals shared work.",
   "mailSharing.label": "Share captured mail with the team",
   "mailSharing.help":
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
@@ -8029,11 +8029,11 @@ export const en = {
     "The month your business year begins. Reports group by this year and quarter — a year that does not start in January is labelled with both calendar years it spans, like FY2026/27. Changing it re-labels every report at once, and a saved report view filtered on a period will then ask for different months.",
   "installationSettings.forwardMeasure": "Projected landing built from",
   "installationSettings.forwardMeasureHint":
-    "Which remaining pipeline a projected landing adds to the money already won. Commit evidence is the strictest: committed deals whose close date somebody confirmed. Weighted counts every open deal at its stage probability, which is the honest reading for a team that commits everything. A manager's call replaces the projection entirely rather than adding to what is won — with no call recorded for a period, that period falls back to commit evidence and says so.",
+    "Which remaining deal value a projected landing adds to the money already won. Commit evidence is the strictest: committed deals whose close date somebody confirmed. Weighted counts every open deal at its stage probability, which is the honest reading for a team that commits everything. A manager's call replaces the projection entirely rather than adding to what is won — with no call recorded for a period, that period falls back to commit evidence and says so.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Commit evidence — confirmed close dates only",
   "installationSettings.forwardMeasure.weighted":
-    "Weighted pipeline — every open deal at its stage probability",
+    "Weighted — every open deal at its stage probability",
   "installationSettings.forwardMeasure.manager_call":
     "The manager's call — the authored number for the period",
   "forecast.landing": "Projected landing",
@@ -8045,7 +8045,7 @@ export const en = {
     "Nobody has called this period, so this is commit evidence instead.",
   "forecast.landing.caveat.call_below_actual":
     "The call is below the money already won. It is shown as recorded rather than corrected.",
-  "forecast.pipelineNeeded": "Pipeline needed",
+  "forecast.pipelineNeeded": "Deal value needed",
   "forecast.pipelineNeededDetail":
     "{current} open against {needed} needed to reach {reference}.",
   "forecast.pipelineBasis.manager_call":
@@ -8054,10 +8054,10 @@ export const en = {
     "Measured against the median of the last four comparable periods.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
   "forecast.pipelineAbsent.insufficient_basis":
-    "Nothing to measure against: no call has been recorded for this period, and fewer than four comparable periods have finished. A coverage figure measured against a number derived from this same pipeline would always look fine.",
+    "Nothing to measure against: no call has been recorded for this period, and fewer than four comparable periods have finished. A coverage figure measured against a number derived from these same open deals would always look fine.",
   "forecast.pipelineAbsent.insufficient_history":
     "Too few closed deals to read a conversion rate from. A rate drawn from a handful of deals moves further than the answer is worth.",
-  "forecast.coverage": "{percent}% of the pipeline this needs",
+  "forecast.coverage": "{percent}% of the deal value this needs",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
     "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",
@@ -8285,7 +8285,7 @@ export const en = {
     "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
-    "Maintain your deals overnight: estimate missing or overdue close dates from pipeline pace and review deals that have gone quiet. Turn off to stop this maintenance.",
+    "Maintain your deals overnight: estimate missing or overdue close dates from deal pace and review deals that have gone quiet. Turn off to stop this maintenance.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accept proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -9495,7 +9495,7 @@ export const en = {
   "project.deals.title": "Deals",
   "project.deals.empty":
     "No deal names this project yet. A deal picks its project on its own form.",
-  "project.deals.more": "More deals than shown here — open the pipeline.",
+  "project.deals.more": "More deals than shown here — open Deals.",
   "project.stakeholders.title": "Stakeholders",
   "project.stakeholders.empty":
     "Nobody is seated on this project yet. A stakeholder is a contact with a role here — a sponsor, a project lead, a champion.",
@@ -9601,7 +9601,7 @@ export const en = {
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
   "worklist.dueGroup.later": "Later",
-  "worklist.band.build_pipeline": "Build pipeline",
+  "worklist.band.build_pipeline": "Prospecting",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
   // A band holding nothing, said rather than left out. Each says what is
@@ -9609,7 +9609,7 @@ export const en = {
   // one line naming what they are clear of.
   "worklist.bandClear.now":
     "No urgent interruptions. Check the remaining work below.",
-  "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
+  "worklist.bandClear.build_pipeline": "No prospecting work waiting.",
   "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
   "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Snooze",
