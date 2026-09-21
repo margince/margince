@@ -124,39 +124,28 @@ const candidateColumns = `a.id, a.kind, coalesce(a.subject, ''), coalesce(left(a
 // priorOutboundJoin finds OUR newest message before this one in the same
 // conversation, or nothing.
 //
-// Thread keys are compared with PLAIN EQUALITY, never IS NOT DISTINCT FROM,
-// and the join is guarded on the candidate having one at all. NULL-matching
-// them would join every threadless row to every other, so one unthreaded
-// outbound of ours would become the "context" for every unthreaded question in
-// the workspace — the same defect the waiting query's own reply anti-joins are
-// careful to avoid.
+// The conversation test is ourOutboundInThisThread, shared with the settlement
+// pass, and why a thread key alone is not evidence of one is written there.
+// What this adds is its own, and the two additions are for the same reason:
+// this join ships the prior message's BODY to a model.
+//
+// The join is guarded on the CANDIDATE having a thread and a correspondent at
+// all. The helper compares both by equality, so a NULL on either side matches
+// nothing — but a guard that says so at the top reads as the intent rather than
+// as a consequence, and it lets the planner drop the lateral outright.
 //
 // The audience and hold clauses are on the prior message too. It is our own
 // text, but it goes to the same cloud tier as the message being judged, and a
 // thread the confidentiality engine narrowed is exactly the mail that must not.
-//
-// A THREAD KEY IS NOT EVIDENCE, and matching on it alone is the hole this
-// avoids. The key is the message's own References root, so the SENDER types it:
-// a stranger who has seen one of our Message-IDs — they were copied on the
-// thread, it went to a list, somebody forwarded it — can send a cold mail
-// carrying that root and manufacture a conversation out of correspondence we
-// had with somebody else. This join would then hand our half of it to the
-// model. capture's wroteBackTx refuses the same forgery on the same column, and
-// these are its two clauses: counterparty_email binds both halves to one
-// correspondent, and counterparty_outbound_attested is the provider's own
-// filing of a message as sent to them, which a typed header cannot reach.
-const priorOutboundJoin = `LEFT JOIN LATERAL (
+var priorOutboundJoin = `LEFT JOIN LATERAL (
   SELECT prior.id, prior.subject, left(prior.body, $%[4]d) AS body, prior.occurred_at
     FROM activity prior
    WHERE a.thread_key IS NOT NULL
      AND a.counterparty_email IS NOT NULL
-     AND prior.thread_key = a.thread_key
-     AND prior.kind = a.kind
-     AND prior.channel_provider IS NOT DISTINCT FROM a.channel_provider
-     AND prior.direction = 'outbound'
-     AND prior.counterparty_email = a.counterparty_email
-     AND prior.counterparty_outbound_attested
-     AND prior.archived_at IS NULL
+     AND ` + ourOutboundInThisThread("prior", "a") + `
+     -- On the prior row and not on the settlement pass's own uses of the same
+     -- helper, because this one ships the body to a model. A thread the
+     -- confidentiality engine narrowed is exactly the mail that must not go.
      AND prior.audience = 'workspace'
      AND prior.restricted_at IS NULL
      AND (prior.occurred_at, prior.id) < (a.occurred_at, a.id)

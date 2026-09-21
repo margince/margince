@@ -126,29 +126,40 @@ type RepliedRequest struct {
 // thread already judged through its newest outbound is skipped; one that has
 // since been written on again comes back, because the newest outbound is no
 // longer the one the row names.
-const repliedRequestsSQL = outstandingRequestSQL + `
+var repliedRequestsSQL = outstandingRequestSQL + `
  AND a.audience = 'workspace'
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (SELECT 1 FROM activity reply
-   WHERE reply.thread_key = a.thread_key AND reply.kind = a.kind
-     AND reply.channel_provider IS NOT DISTINCT FROM a.channel_provider
-     AND reply.direction = 'outbound' AND reply.archived_at IS NULL
-     AND reply.counterparty_email = a.counterparty_email
-     AND reply.counterparty_outbound_attested
+   WHERE ` + ourOutboundInThisThread("reply", "a") + `
      AND reply.occurred_at <= $1
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id))
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
-     AND judged.judged_through_activity_id = (
-       SELECT newest.id FROM activity newest
-        WHERE newest.thread_key = a.thread_key AND newest.kind = a.kind
-          AND newest.channel_provider IS NOT DISTINCT FROM a.channel_provider
-          AND newest.direction = 'outbound' AND newest.archived_at IS NULL
-          AND newest.counterparty_email = a.counterparty_email
-          AND newest.counterparty_outbound_attested
+     AND judged.judged_through_activity_id = (` + newestOutboundSince + `))`
+
+// newestOutboundSince names OUR latest message on this conversation after the
+// request, as of the pass's own instant ($1).
+//
+// Spelled once for the two statements that need it — the watermark arm above,
+// which skips a thread already judged through it, and the candidate read, which
+// hands the same id back so the judgement records what it was judged through.
+// Two spellings of "the newest" would let a thread be skipped against one
+// message and judged against another.
+//
+// Held by: TestOurOwnOutboundIsAskedTheSameWayEverywhere
+// (backend/internal/modules/activities/ourownoutbound_test.go)
+//
+// It adds no audience or restriction clause to the matched row, where the
+// owed-verdict pass's own use of ourOutboundInThisThread adds both. Nothing of
+// this row's TEXT leaves here: it resolves an ID, to decide whether a request
+// has been answered and to stamp what it was answered through. That pass ships
+// the prior message's body to a model. The clauses that bound an exposure
+// belong where the exposure is.
+var newestOutboundSince = `SELECT newest.id FROM activity newest
+        WHERE ` + ourOutboundInThisThread("newest", "a") + `
           AND newest.occurred_at <= $1
           AND (newest.occurred_at, newest.id) > (a.occurred_at, a.id)
-        ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1))`
+        ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1`
 
 // RepliedRequests reads the requests this workspace has answered and not yet
 // judged, oldest first.
@@ -168,15 +179,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
-			       (SELECT newest.id FROM activity newest
-			         WHERE newest.thread_key = a.thread_key AND newest.kind = a.kind
-			           AND newest.channel_provider IS NOT DISTINCT FROM a.channel_provider
-			           AND newest.direction = 'outbound' AND newest.archived_at IS NULL
-			           AND newest.counterparty_email = a.counterparty_email
-			           AND newest.counterparty_outbound_attested
-			           AND newest.occurred_at <= $1
-			           AND (newest.occurred_at, newest.id) > (a.occurred_at, a.id)
-			         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1),
+			       (`+newestOutboundSince+`),
 			       task.id, coalesce(task.version, 0),
 			       -- Whether the reminder is still the machine's to sharpen: the
 			       -- pass filed it, nobody has dated it, and nobody has renamed
