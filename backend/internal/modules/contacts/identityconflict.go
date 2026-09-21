@@ -17,8 +17,11 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // fieldMatchedLane is the evidence field name for an exact-lane conflict
@@ -33,6 +36,15 @@ const fieldMatchedLane = "matched_lane"
 // different existing contact — a disagreement between established bindings,
 // not a similarity judgment.
 const evidenceSignalExactConflict = "exact_conflict"
+
+// evidenceSignalLaneSplit marks the case where ONE lane named two contacts: a
+// card carrying two addresses that belong to two contacts, an import row with
+// two numbers. It is a separate signal from exact_conflict rather than the same one
+// with matching lane names on both sides, because the two say different things
+// to whoever opens the queue row. An exact conflict says the bindings we hold
+// disagree; a lane split says the PAYLOAD does, and the record it landed on was
+// chosen by id order with nothing else to go on.
+const evidenceSignalLaneSplit = "lane_split"
 
 // identityConflictConfidence is the standing convention design §7.3 leaves
 // open, settled here against dedupe_candidate's actual shape (DH-DDL-1):
@@ -53,6 +65,81 @@ const evidenceSignalExactConflict = "exact_conflict"
 // similar to another.
 const identityConflictConfidence = 1.0
 
+// laneConflictEvidence renders what a conflict row says. Both shapes go through
+// it — two lanes disagreeing, and one lane disagreeing with itself — because
+// the difference between them is a signal name and nothing else, and spelling
+// that twice is how the two would come to describe one disagreement
+// differently.
+func laneConflictEvidence(conflict LaneConflict) []map[string]any {
+	signal := evidenceSignalExactConflict
+	if conflict.SplitWithinLane() {
+		signal = evidenceSignalLaneSplit
+	}
+	return []map[string]any{
+		{
+			evidenceFieldKey:  fieldMatchedLane,
+			evidenceLeftKey:   conflict.RoutedLane,
+			evidenceRightKey:  conflict.RivalLane,
+			evidenceSignalKey: signal,
+		},
+	}
+}
+
+// raiseCardSplit files the review for a card that named two contacts.
+//
+// Never returns: see its caller. The pair is in the log line because that is
+// what makes it actionable — an operator can open both records — and because a
+// message that named only the card index would be unusable by the time anybody
+// read it.
+func (s *Store) raiseCardSplit(ctx context.Context, split LaneConflict) {
+	by, err := storekit.CapturedBy(ctx)
+	if err == nil {
+		_, err = s.EnqueueIdentityConflict(ctx, split, vcardSource, by)
+	}
+	if err != nil {
+		slog.ErrorContext(ctx, "contacts: a card named two contacts and the review could not be raised",
+			"routed_to", split.RoutedTo.String(), "rival", split.Rival.String(), "err", err)
+	}
+}
+
+// laneDomain names the company ladder's one exact lane, for a split's evidence
+// to say which key disagreed with itself. It is the same word the resolve
+// surface uses for the axis, because it is the same axis.
+const laneDomain = "domain"
+
+// EnqueueDomainSplit raises the review for a candidate whose own domains named
+// two live companies — a card carrying a parent and a subsidiary, an address
+// whose subdomain is registered to somebody else.
+//
+// Same posture as EnqueueIdentityConflict next door, and for the same reasons:
+// its own transaction, so a capture that reached the timeline cannot be rolled
+// back by this write; idempotent through dedupe_candidate's pair index, so the
+// next message from the same domains proposes nothing new.
+func (s *Store) EnqueueDomainSplit(ctx context.Context, split DomainSplit, source, capturedBy string) (bool, error) {
+	evidence := []map[string]any{
+		{
+			evidenceFieldKey: fieldMatchedLane,
+			// Both sides name the same lane, because both sides came from it.
+			// That is the statement: not "two kinds of key disagree" but "one
+			// kind of key, asked twice, gave two answers".
+			evidenceLeftKey:   laneDomain,
+			evidenceRightKey:  laneDomain,
+			evidenceSignalKey: evidenceSignalLaneSplit,
+		},
+	}
+	var recorded bool
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		recorded, err = recordDedupeCandidate(ctx, tx, entityCompany,
+			split.RoutedTo.UUID, split.Rival.UUID, identityConflictConfidence, evidence, source, capturedBy)
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("contacts: enqueueing domain split review: %w", err)
+	}
+	return recorded, nil
+}
+
 // EnqueueIdentityConflict raises the identity review for one exact-lane
 // disagreement. It runs in its OWN transaction, never the caller's ensure
 // transaction: capture's contract is that an inbound message lands on the
@@ -70,19 +157,11 @@ const identityConflictConfidence = 1.0
 // second time. That is also design §7.3's warning honored: a dismissed pair
 // must not be re-raised.
 func (s *Store) EnqueueIdentityConflict(ctx context.Context, conflict LaneConflict, source, capturedBy string) (bool, error) {
-	evidence := []map[string]any{
-		{
-			evidenceFieldKey:  fieldMatchedLane,
-			evidenceLeftKey:   conflict.RoutedLane,
-			evidenceRightKey:  conflict.RivalLane,
-			evidenceSignalKey: evidenceSignalExactConflict,
-		},
-	}
 	var recorded bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		recorded, err = recordDedupeCandidate(ctx, tx, entityContact,
-			conflict.RoutedTo.UUID, conflict.Rival.UUID, identityConflictConfidence, evidence, source, capturedBy)
+		recorded, err = recordDedupeCandidate(ctx, tx, entityContact, conflict.RoutedTo.UUID, conflict.Rival.UUID,
+			identityConflictConfidence, laneConflictEvidence(conflict), source, capturedBy)
 		return err
 	})
 	if err != nil {

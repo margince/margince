@@ -232,28 +232,30 @@ func exactContactOwners(ctx context.Context, tx pgx.Tx, c ResolveCandidate) ([]R
 	seen := map[ids.ContactID]bool{}
 	// The first lane to name someone keeps them: precedence is the ladder's, and
 	// a contact found by both their address and their phone is an address match.
-	keep := func(id ids.ContactID, found bool, lane string, exact bool) {
-		if !found || seen[id] {
-			return
+	keep := func(hits []ids.ContactID, lane string, exact bool) {
+		for _, id := range hits {
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+			out = append(out, ResolveRef{
+				Kind: ResolveContact, ID: id.UUID, Exact: exact, Confidence: 1, MatchedOn: lane,
+			})
 		}
-		seen[id] = true
-		out = append(out, ResolveRef{
-			Kind: ResolveContact, ID: id.UUID, Exact: exact, Confidence: 1, MatchedOn: lane,
-		})
 	}
 	for _, email := range c.Emails {
-		hit, found, err := exactContactByEmail(ctx, tx, []string{email})
+		hits, err := exactContactByEmail(ctx, tx, []string{email})
 		if err != nil {
 			return nil, err
 		}
-		keep(hit, found, LaneEmail, true)
+		keep(hits, LaneEmail, true)
 	}
 	for _, phone := range c.Phones {
-		hit, found, err := exactContactByPhone(ctx, tx, []string{phone})
+		hits, err := exactContactByPhone(ctx, tx, []string{phone})
 		if err != nil {
 			return nil, err
 		}
-		keep(hit, found, lanePhone, false)
+		keep(hits, lanePhone, false)
 	}
 	return out, nil
 }
@@ -318,17 +320,19 @@ func exactCompanyOwners(ctx context.Context, tx pgx.Tx, domains []string) ([]Res
 	var out []ResolveRef
 	seen := map[ids.CompanyID]bool{}
 	for _, domain := range domains {
-		hit, found, err := exactCompanyByDomain(ctx, tx, []string{domain}, nil)
+		hits, err := exactCompanyByDomain(ctx, tx, []string{domain}, nil)
 		if err != nil {
 			return nil, err
 		}
-		if !found || seen[hit] {
-			continue
+		for _, hit := range hits {
+			if seen[hit] {
+				continue
+			}
+			seen[hit] = true
+			out = append(out, ResolveRef{
+				Kind: ResolveCompany, ID: hit.UUID, Exact: true, Confidence: 1, MatchedOn: axisDomain,
+			})
 		}
-		seen[hit] = true
-		out = append(out, ResolveRef{
-			Kind: ResolveCompany, ID: hit.UUID, Exact: true, Confidence: 1, MatchedOn: axisDomain,
-		})
 	}
 	return out, nil
 }

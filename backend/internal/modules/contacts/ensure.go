@@ -112,6 +112,13 @@ type EnsureCounterpartyResult struct {
 	// TriagePending instead.
 	CompanyID      *ids.CompanyID
 	DedupeRecorded bool
+	// DomainSplit is non-nil when the two domains this ensure asked about — the
+	// sender's own, and its base — are registered to two different companies.
+	// The contact was attached to the lower id, which is the answer this path
+	// has always given; the report is what says the choice was between two.
+	// Raising it is the caller's job, for the same reason the contact
+	// conflict's is: a failure to raise must never cost the message.
+	DomainSplit *DomainSplit
 	// NameFilled reports that this ensure completed an incumbent's split name
 	// that was previously unknown — the fill-only-if-empty path, never an
 	// overwrite. Counting it separately keeps "created a contact" honest.
@@ -328,6 +335,7 @@ func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in En
 	if err != nil {
 		return err
 	}
+	res.DomainSplit = match.DomainSplit
 	if match.Decision != DecisionExactCollision {
 		// No company yet. Whether one may be created is not this path's
 		// call any more.

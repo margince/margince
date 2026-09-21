@@ -34799,7 +34799,7 @@ export interface components {
              * @description What the detector made of the comparison. Mirrors the detector's own vocabulary, held by a gate that fails in both directions: a signal missing here costs its evidence row the whole card, and one listed here that nothing writes is a phrase every locale carries for a row that never arrives.
              * @enum {string}
              */
-            signal: "collide" | "one_sided" | "exact_conflict";
+            signal: "collide" | "one_sided" | "exact_conflict" | "lane_split";
         };
         /** @description One side of a proposed merge, named and weighed so a reader can tell which record to keep. */
         AttentionPairSide: {
