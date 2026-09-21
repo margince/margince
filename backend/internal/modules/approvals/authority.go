@@ -50,11 +50,15 @@ type grantRequirement struct {
 }
 
 // kindLinkedInMatch is the staged kind for "this imported connection is this
-// contact". This module makes three separate statements about it — the grants
-// deciding it needs, that only the member it was staged for may decide it, and
-// that it declines the version pin — and a typo across them would leave the
-// kind half-governed with nothing saying so. Compose owns the registration
-// spelling; the compose-side waiver fitness tests bind the two together.
+// contact". This module makes two separate statements about it — the grants
+// deciding it needs, and that it declines the version pin — and a typo across
+// them would leave the kind half-governed with nothing saying so. Compose owns
+// the registration spelling; the compose-side waiver fitness tests bind the two
+// together.
+//
+// It is NOT narrowed to one seat. The proposal's subject is a contact the
+// decider can already read, so who may decide it is the inbox's ordinary rule:
+// the grant below, and visibility of that contact.
 const kindLinkedInMatch = "linkedin_match"
 
 // kindHeldDraft is an automation-composed reply held for the rep it was written
