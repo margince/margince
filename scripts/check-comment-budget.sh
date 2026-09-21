@@ -10,7 +10,11 @@
 # code line run 1.98 on changes under ten lines and 0.37 on changes over five
 # hundred. A small edit narrates itself; a large one is too big to.
 #
-# The bar is 1.0, roughly twice the Go standard library's 0.17-0.23.
+# The bar is 1.0, roughly twice the Go standard library's 0.17-0.23, and it is
+# read on the NET: a change that removes more comment lines than it adds is a
+# reduction whatever its added-line ratio says. Without that, rewriting a comment
+# to be shorter counts every rewritten line as added against unchanged code, and
+# the gate blocks the cleanup it exists to ask for.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -29,9 +33,10 @@ fi
 # doc.go is exempt: a package's documentation is not an explanation of the code
 # beside it. The scope is read from the diff's own `+++` header rather than set
 # by pathspec, so it is one rule in one place and does not turn on git's globbing.
-read -r code comments < <(
+read -r code comments removed < <(
 	git diff --unified=0 "$base"...HEAD -- backend extensions fixtures desktop \
 	| awk '
+		/^--- / { next }
 		/^\+\+\+ / {
 			path = substr($0, 7)
 			want = (path ~ /\.go$/) &&
@@ -49,26 +54,39 @@ read -r code comments < <(
 			if (line ~ /^\/\//) { c++; next }
 			k++
 		}
-		END { printf "%d %d\n", k + 0, c + 0 }'
+		/^-/ {
+			line = substr($0, 2); sub(/^[ \t]+/, "", line)
+			if (line == "") next
+			if (line ~ /^\/\/ SPDX-/) next
+			if (line ~ /^\/\//) { gone++ }
+		}
+		END { printf "%d %d %d\n", k + 0, c + 0, gone + 0 }'
 )
+
+net=$(( comments - removed ))
+
+if (( net <= 0 )); then
+	echo "comment-budget: ${comments} comment lines added, ${removed} removed — a reduction, ok"
+	exit 0
+fi
 
 if (( code < FLOOR )); then
 	echo "comment-budget: ${code} added code line(s) — under the ${FLOOR}-line floor, ok"
 	exit 0
 fi
 
-if (( comments > code )); then
+if (( net > code )); then
 	cat >&2 <<MSG
-FAIL: comment-budget — this change adds ${comments} comment lines for ${code} lines of code.
+FAIL: comment-budget — this change adds ${net} comment lines (net) for ${code} lines of code.
 
 A comment earns its line by carrying a why the code cannot. Cut the ones that
 restate the code, narrate how it got here ("used to", "was answered twice", a
 rule or ticket number), or repeat a rule a gate already holds.
 
 The Go standard library runs 0.17-0.23 comment lines per code line. The bar
-here is 1.0, and this change is at $(awk -v c="$comments" -v k="$code" 'BEGIN{printf "%.2f", c/k}').
+here is 1.0, and this change is at $(awk -v c="$net" -v k="$code" 'BEGIN{printf "%.2f", c/k}').
 MSG
 	exit 1
 fi
 
-echo "comment-budget: ${comments} comment / ${code} code added — ok"
+echo "comment-budget: ${net} comment (net) / ${code} code added — ok"

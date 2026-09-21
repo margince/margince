@@ -85,6 +85,24 @@ fixture "$dir"
 git -C "$dir" add -A && git -C "$dir" commit -q -m docgo
 expect "doc.go is exempt" 0
 
+# A comment REDUCTION: the rewrite shortens prose, so every rewritten line reads
+# as added against unchanged code. Judged on additions alone this is a ratio of
+# many-to-nothing, and the gate would block the cleanup it exists to ask for.
+dir="$tmp/reduction"
+fixture "$dir"
+{
+	for i in $(seq 1 30); do echo "// a long-winded explanation, line ${i}"; done
+	for i in $(seq 1 20); do echo "x${i} := ${i}"; done
+} > "$dir/backend/wordy.go"
+git -C "$dir" add -A && git -C "$dir" commit -q -m wordy
+git -C "$dir" branch -f origin/main HEAD
+{
+	echo "// the same why, said once"
+	for i in $(seq 1 20); do echo "x${i} := ${i}"; done
+} > "$dir/backend/wordy.go"
+git -C "$dir" add -A && git -C "$dir" commit -q -m trimmed
+expect "a change that removes comment lines passes" 0
+
 if (( fails )); then
 	echo "FAIL: test-check-comment-budget — ${fails} of ${ran} case(s) failed"
 	exit 1
