@@ -35514,12 +35514,12 @@ type SearchResult struct {
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
 
-	// TrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
 }
 
-// SearchResultTrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
+// SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
