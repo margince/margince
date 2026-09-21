@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (116)
+## Parity
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -136,7 +136,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (161)
+## Census
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -302,7 +302,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 | `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 
-## Reachability (20)
+## Reachability
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -327,7 +327,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (25)
+## Shape
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -357,7 +357,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (70)
+## Prohibition
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -432,7 +432,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (17)
+## Claim
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -454,7 +454,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `signatureeligibilityonespelling_test.go` | H2 | One spelling of "may this message be mined for this contact's signature", held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 
-## Budget (5)
+## Budget
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -464,7 +464,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (14)
+## Falsification
 
 | Gate | Hardness | What it holds |
 |---|---|---|
