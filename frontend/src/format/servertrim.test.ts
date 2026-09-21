@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { trimServerSpace, trimSubjectSpace } from "./servertrim";
 
@@ -47,4 +48,53 @@ it("handles a long run of space that does not reach either end", () => {
 it("hands back an empty string unchanged", () => {
   expect(trimServerSpace("")).toBe("");
   expect(trimSubjectSpace("")).toBe("");
+});
+
+// And the whole of it, against the server's own answers.
+//
+// Everything above is hand-written and checkable by eye, which is what makes it
+// worth reading — and it is also a second opinion about what Go does. The
+// corpus below is not: backend/gates/servertrimparity_test.go writes it from
+// what `strings.TrimSpace` itself answers, and this reads that same file rather
+// than a copy of it. A copy would be a third answer, and the drift this exists
+// to catch is exactly the kind nobody notices.
+//
+// The Go side fails if the file is stale, and a sibling test there fails if the
+// corpus stops reaching every character `unicode.IsSpace` names. So neither
+// side can be corrected alone, and the corpus cannot quietly shrink.
+type TrimCase = Readonly<{ in: string; want: string }>;
+
+function codePointsOf(text: string): string {
+  return (
+    Array.from(text)
+      .map(
+        (char) =>
+          `U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, "0")}`,
+      )
+      .join(" ") || "(empty)"
+  );
+}
+
+it("trims what the server trims, character for character", () => {
+  const corpus: TrimCase[] = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../backend/gates/testdata/servertrim.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  // A corpus that failed to load reads exactly like a passing suite, so its
+  // size is asserted before anything in it is.
+  expect(corpus.length).toBeGreaterThan(100);
+  // Code points, not characters: every character this exists for is invisible,
+  // and a failure printing them shows two strings that look identical.
+  const wrong = corpus
+    .filter(({ in: input, want }) => trimServerSpace(input) !== want)
+    .map(
+      ({ in: input, want }) =>
+        `[${codePointsOf(input)}] -> [${codePointsOf(trimServerSpace(input))}], the server says [${codePointsOf(want)}]`,
+    );
+  expect(wrong).toEqual([]);
 });
