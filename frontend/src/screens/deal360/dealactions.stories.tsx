@@ -61,12 +61,14 @@ export default meta;
 
 type Story = StoryObj;
 
+const DEAL_GRANTS: Parameters<typeof meRoute>[0] = {
+  deal: ["read", "update"],
+  activity: ["create"],
+};
+
 const actions = (
   over: Partial<Deal> = {},
-  grants: Parameters<typeof meRoute>[0] = {
-    deal: ["read", "update"],
-    activity: ["create"],
-  },
+  grants: Parameters<typeof meRoute>[0] = DEAL_GRANTS,
   refusedReasonId?: string,
 ) => {
   installFetchStub({ "GET /me": meRoute(grants) });

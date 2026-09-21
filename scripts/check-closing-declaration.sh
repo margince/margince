@@ -48,7 +48,7 @@ readonly NONE_PATTERN='^[[:space:]]*closes:[[:space:]]*none[[:space:]]*$'
 refs="${CLOSING_DECL_REFS-}"
 body="${CLOSING_DECL_BODY-}"
 
-if [ -n "${refs//[[:space:]]/}" ]; then
+if [[ -n "${refs//[[:space:]]/}" ]]; then
 	echo "declared: closes $(printf '%s' "$refs" | tr '\n' ' ' | sed 's/ *$//')"
 	exit 0
 fi
