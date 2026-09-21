@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
-import { useAnchoredToTrigger } from "./anchored";
+import { anchoredPanelBox, useAnchoredToTrigger } from "./anchored";
 import { Button } from "./atoms";
 import { useHoverIntent } from "./hoverintent";
 import { usePortalPanelFocus } from "./portalfocus";
@@ -187,11 +187,7 @@ export function EvidenceMark({
             // portalled panel carries the same pair.
             {...hover}
             {...panelFocus}
-            style={{
-              top: `${at.top}px`,
-              left: `${at.left}px`,
-              maxHeight: `${at.maxHeight}px`,
-            }}
+            style={anchoredPanelBox(at)}
           >
             <p className="evmark-row">
               <ProvenanceTag provenance={source.provenance} />

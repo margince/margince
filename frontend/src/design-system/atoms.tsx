@@ -24,7 +24,7 @@ import {
 import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { useAnchoredToTrigger } from "./anchored";
+import { anchoredPanelBox, useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import "./atoms.css";
@@ -1603,11 +1603,7 @@ export function OverflowMenu({
           ref={panel}
           className="overflow-menu-items"
           hidden={!open}
-          style={{
-            top: `${at.top}px`,
-            left: `${at.left}px`,
-            maxHeight: `${at.maxHeight}px`,
-          }}
+          style={anchoredPanelBox(at)}
           onClick={(event) => {
             if (!(event.target instanceof Element)) {
               return;

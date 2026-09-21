@@ -3,26 +3,66 @@
 
 // Putting a portalled panel where its trigger is.
 //
-// Its own module because two controls need it and neither owns it: the
-// overflow menu (atoms.tsx) and the popover (popover.tsx) both hang a fixed
-// panel off a button, and a hook living inside one of them would make the
-// other import a menu to borrow arithmetic.
+// Its own module because three controls need it and none owns it: the overflow
+// menu (atoms.tsx), the popover (popover.tsx) and the evidence mark's receipt
+// (evidencemark.tsx) all hang a fixed panel off a button, and a hook living
+// inside one of them would make the others import a menu to borrow arithmetic.
 
-import { type RefObject, useEffect, useState } from "react";
+import {
+  type CSSProperties,
+  type RefObject,
+  useLayoutEffect,
+  useState,
+} from "react";
+
+// Which edge of the viewport the panel is anchored from, and how tall it may be.
+export type VerticalPlacement = Readonly<{
+  maxHeight: number;
+  // Exactly one of these is set. A panel with room below its trigger is
+  // anchored by its TOP; a flipped one by its BOTTOM, because anchoring a
+  // flipped panel by its top would need the panel's rendered height — see
+  // `verticalPlacement` for why that height is the one thing not available
+  // here.
+  top?: number;
+  bottom?: number;
+}>;
+
+export type AnchoredPanel = VerticalPlacement & Readonly<{ left: number }>;
+
+/**
+ * The inline box for a panel anchored to its trigger.
+ *
+ * One writer, because the three panels sharing the placement each used to
+ * spell it out: a placement that anchors by `bottom` is only as good as the
+ * callers that read it, and a caller still writing `top` from a placement that
+ * no longer sets one pins the panel to the top of the page.
+ */
+export function anchoredPanelBox(at: AnchoredPanel): CSSProperties {
+  return {
+    top: at.top,
+    bottom: at.bottom,
+    left: at.left,
+    maxHeight: at.maxHeight,
+  };
+}
 
 // Where the portalled panel sits: beside the trigger, edge to edge on the side
 // the caller names, and INSIDE the viewport on both axes.
 //
 // The panel is fixed, so the viewport is all the room there is — a panel placed
 // below a trigger near the bottom edge puts its actions where no amount of page
-// scrolling reaches them. So it opens upward when the space below cannot hold
-// it, takes whichever side has more room when neither can, and is capped to
-// that space so a panel with many items scrolls inside itself.
+// scrolling reaches them. So it opens upward when the room below is too little
+// to open into, takes whichever side has more when neither is enough, and is
+// capped to that room so a panel with more to show scrolls inside itself.
 //
 // Measured on OPEN and again whenever anything moves it. Scroll is listened to
 // in the CAPTURE phase because a scroll event does not bubble — the trigger may
 // sit inside a scrolling region, and a panel that stayed at the coordinates it
 // was opened at would drift away from the button it belongs to.
+//
+// A layout effect rather than an effect, as the listbox and tooltip positioners
+// are: the placement is computed before the browser paints, so the panel never
+// appears at the wrong place for one frame.
 export function useAnchoredToTrigger(
   open: boolean,
   trigger: RefObject<HTMLElement | null>,
@@ -34,9 +74,13 @@ export function useAnchoredToTrigger(
   // words that opened it. Those triggers ask for "start" and the panel begins
   // where the reading does.
   align: "start" | "end" = "end",
-): { top: number; left: number; maxHeight: number } {
-  const [at, setAt] = useState({ top: 0, left: 0, maxHeight: 0 });
-  useEffect(() => {
+): AnchoredPanel {
+  const [at, setAt] = useState<AnchoredPanel>({
+    top: 0,
+    left: 0,
+    maxHeight: 0,
+  });
+  useLayoutEffect(() => {
     if (!open) {
       return;
     }
@@ -45,11 +89,14 @@ export function useAnchoredToTrigger(
       if (!anchor) {
         return;
       }
+      // The panel's WIDTH is its own — a stylesheet decides it (`max-content`
+      // under a ceiling), so reading it back is reading the panel's own answer.
+      // Its height is not, which is the whole of `verticalPlacement`'s note.
       const width = panel.current?.offsetWidth ?? 0;
       const room = globalThis.innerWidth - width - MENU_EDGE_GAP;
       const wanted = align === "start" ? anchor.left : anchor.right - width;
       setAt({
-        ...verticalPlacement(anchor, panel.current?.offsetHeight ?? 0),
+        ...verticalPlacement(anchor),
         left: Math.max(MENU_EDGE_GAP, Math.min(wanted, room)),
       });
     };
@@ -64,25 +111,44 @@ export function useAnchoredToTrigger(
   return at;
 }
 
-// Below the trigger while the panel fits there, above it when it does not, and
-// on the roomier side when neither fits — capped to that side either way.
+// Below the trigger while there is room there worth opening into, above it when
+// there is not, and on the roomier side when neither has enough — capped to
+// that room either way.
 //
-// Exported for its own test: jsdom gives every element a zero-sized rectangle,
-// so the only way to state this rule as a test is to state it over the
-// measurements themselves.
-export function verticalPlacement(
-  anchor: DOMRect,
-  height: number,
-): { top: number; maxHeight: number } {
+// It never reads the panel's own height, and that is the rule rather than an
+// omission. The panel is capped BY this placement, so the only height it can
+// report while being placed is the one already imposed on it: the first
+// placement of every panel measured its own `max-height: 0`, decided from a
+// 26px box of padding what belonged in a 143px one, and anchored a flipped
+// panel 26px above the trigger — from where it drew its real height straight
+// past the bottom edge, fixed, with nothing able to scroll it back. So the side
+// is chosen from the ROOM alone, and a flipped panel is anchored by the edge
+// that needs no height: its bottom.
+//
+// Exported for its own test (anchored.test.ts): the test environment gives
+// every element a zero-sized rectangle, so the only way to state this rule as a
+// test is to state it over the measurements themselves.
+export function verticalPlacement(anchor: DOMRect): VerticalPlacement {
   const below = globalThis.innerHeight - anchor.bottom - MENU_EDGE_GAP * 2;
   const above = anchor.top - MENU_EDGE_GAP * 2;
-  const opensDown = height <= below || below >= above;
-  if (opensDown) {
-    return { top: anchor.bottom + MENU_EDGE_GAP, maxHeight: below };
+  if (below < MIN_PANEL_ROOM && above > below) {
+    return {
+      // Measured from the viewport's bottom edge up to the trigger's top. The
+      // panel grows upward out of that line, so how tall it turns out to be
+      // stays its own business.
+      bottom: Math.max(
+        MENU_EDGE_GAP,
+        globalThis.innerHeight - anchor.top + MENU_EDGE_GAP,
+      ),
+      maxHeight: Math.max(above, 0),
+    };
   }
   return {
-    top: Math.max(MENU_EDGE_GAP, anchor.top - MENU_EDGE_GAP - height),
-    maxHeight: above,
+    top: anchor.bottom + MENU_EDGE_GAP,
+    // Zero is the floor because a negative max-height is not a length: the
+    // browser drops the declaration and the panel opens uncapped, which is the
+    // one outcome this whole placement exists to prevent.
+    maxHeight: Math.max(below, 0),
   };
 }
 
@@ -90,3 +156,9 @@ export function verticalPlacement(
 // viewport edge beside it, in px because it is arithmetic rather than a
 // stylesheet value: --space-1.
 const MENU_EDGE_GAP = 4;
+
+// Less room than this is not worth opening a panel into, so it flips rather
+// than being squeezed: every panel here carries at least a line of prose and
+// usually a control under it, and neither is readable in less. It is the choice
+// of SIDE and nothing else — it never becomes the panel's height.
+const MIN_PANEL_ROOM = 96;

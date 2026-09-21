@@ -22,7 +22,7 @@
 
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAnchoredToTrigger } from "./anchored";
+import { anchoredPanelBox, useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
 import { useHoverIntent } from "./hoverintent";
 import { usePortalPanelFocus } from "./portalfocus";
@@ -220,11 +220,7 @@ export function Popover({
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
             {...panelFocus}
-            style={{
-              top: `${at.top}px`,
-              left: `${at.left}px`,
-              maxHeight: `${at.maxHeight}px`,
-            }}
+            style={anchoredPanelBox(at)}
           >
             {children}
           </section>,

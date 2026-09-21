@@ -8,7 +8,6 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
-import { verticalPlacement } from "./anchored";
 import {
   Checkbox,
   DataTable,
@@ -209,35 +208,6 @@ it("draws its trigger as the square the icon-only button defines", () => {
 
   const trigger = screen.getByRole("button", { name: "More actions" });
   expect(trigger.classList.contains("btn-icon")).toBe(true);
-});
-
-// The panel is FIXED, so the viewport is all the room there is: a menu placed
-// below a trigger near the bottom edge puts its actions where no page scrolling
-// reaches them. Stated over the measurements themselves, because jsdom gives
-// every element a zero-sized rectangle and the rule is arithmetic.
-it("opens the panel toward whichever side of the trigger has room", () => {
-  const viewport = 800;
-  vi.stubGlobal("innerHeight", viewport);
-  // A real DOMRect, not a two-field literal cast into the shape: a box whose
-  // `top` was supplied and whose height was not is a box no element has, and
-  // `verticalPlacement` is free to read a field the literal never spelled.
-  const near = (top: number) => new DOMRect(0, top, 0, 30);
-
-  // Room below: the panel hangs from the trigger.
-  const down = verticalPlacement(near(100), 200);
-  expect(down.top).toBeGreaterThan(130);
-  expect(down.maxHeight).toBeGreaterThan(200);
-
-  // A trigger on the last row of a long page: below is 30px, so the panel
-  // opens UPWARD and ends above the trigger rather than off the bottom edge.
-  const up = verticalPlacement(near(viewport - 40), 200);
-  expect(up.top + 200).toBeLessThanOrEqual(viewport - 40);
-
-  // Taller than either side: it takes the roomier one and is capped to it, so
-  // it scrolls inside itself instead of running past an edge.
-  const squeezed = verticalPlacement(near(500), 2000);
-  expect(squeezed.maxHeight).toBeLessThan(viewport);
-  expect(squeezed.maxHeight).toBeGreaterThan(0);
 });
 
 // The label is half the control. Every hand-rolled site this atom replaces got
