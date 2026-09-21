@@ -50,15 +50,25 @@ function panelEdges(at: VerticalPlacement, natural: number, view = VIEWPORT) {
 // room there is: a panel hanging past the bottom edge puts its own controls
 // where no amount of page scrolling reaches them.
 it("keeps the panel inside the viewport from every trigger position", () => {
-  // Taller than the room at either end of the page, which is the case a
-  // placement that trusted the panel to fit somewhere puts past an edge.
-  const TALL = 240;
-  // The last is a trigger scrolled OFF the bottom: the panel stays open while
-  // the page moves under it, so this is an ordinary frame and not a freak one.
-  for (const top of [0, 100, 400, 680, 760, 790, 820]) {
-    const edges = panelEdges(verticalPlacement(near(top)), TALL);
+  // Taller than the VIEWPORT, not merely taller than the room. A fixture that
+  // only outgrows the room is bounded by whatever cap the placement returns,
+  // so it cannot reach an edge the cap itself overshot — and the one trigger
+  // position able to break the rule is then the one the fixture is too small to
+  // exercise. This panel is larger than every cap there can be.
+  const TALL = VIEWPORT + 100;
+  // The last two are a trigger scrolled OFF the bottom and off the top: the
+  // panel stays open while the page moves under it, so these are ordinary
+  // frames rather than freak ones.
+  for (const top of [0, 100, 400, 680, 760, 790, 820, -130]) {
+    const at = verticalPlacement(near(top));
+    const edges = panelEdges(at, TALL);
     expect(edges.upper, `trigger at ${top}`).toBeGreaterThanOrEqual(0);
     expect(edges.lower, `trigger at ${top}`).toBeLessThanOrEqual(VIEWPORT);
+    // And the cap itself, stated rather than inferred from where a panel of one
+    // particular height happened to land: a cap bigger than the screen is the
+    // defect whatever is drawn under it.
+    expect(at.maxHeight, `the cap at ${top}`).toBeLessThanOrEqual(VIEWPORT);
+    expect(at.maxHeight, `the cap at ${top}`).toBeGreaterThanOrEqual(0);
   }
 });
 
@@ -108,7 +118,11 @@ it("takes the roomier side when neither side has room for a panel", () => {
 //
 // Reached from a trigger LARGER than the room it sits in — a popover opened by
 // a whole sentence, wrapped over several lines at 200% zoom, whose own box is
-// taller than the 400px viewport that zoom leaves it.
+// taller than the 400px viewport that zoom leaves it. There is no room on
+// either side of such a trigger, so nought is the honest answer and the panel
+// is drawn empty; what this pins is that the cap is a LENGTH, because the
+// alternative is the declaration being dropped and the panel opening uncapped
+// over a screen that had no room for it at all.
 it("never asks for a negative height", () => {
   vi.stubGlobal("innerHeight", 400);
 

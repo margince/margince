@@ -40,6 +40,13 @@ const WIDTH = 1024;
 // does not carry the case away.
 const SNUG = 56;
 
+// The shortest viewport this suite will ask for. The height is derived from
+// where the trigger lands, and a shell that ever moved that button near the top
+// would derive a window too short to render a page at all — which fails as a
+// timeout on a missing rail, naming nothing about placement. Below this the
+// derivation is refused instead, and says so.
+const MIN_USABLE_HEIGHT = 160;
+
 function box(locator: Locator) {
   return locator.boundingBox().then((found) => {
     if (!found) {
@@ -69,10 +76,12 @@ test("an overflow menu opened near the bottom edge stays inside the viewport", a
   // button, and a test that hard-coded a height would quietly stop exercising
   // the case it exists for the day it did.
   const first = await box(trigger);
-  await page.setViewportSize({
-    width: WIDTH,
-    height: Math.round(first.y + first.height + SNUG),
-  });
+  const height = Math.round(first.y + first.height + SNUG);
+  expect(
+    height,
+    "the trigger sits too near the top to size a usable viewport to it — this suite needs a new way to put a trigger near the bottom edge",
+  ).toBeGreaterThanOrEqual(MIN_USABLE_HEIGHT);
+  await page.setViewportSize({ width: WIDTH, height });
   trigger = await openContactsMenu(page);
 
   const anchor = await box(trigger);
