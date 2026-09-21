@@ -932,7 +932,11 @@ function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(contact.captured_by, viewerId)}
+              provenance={provenanceOf(
+                contact.captured_by,
+                viewerId,
+                contact.author,
+              )}
             />
           }
         >

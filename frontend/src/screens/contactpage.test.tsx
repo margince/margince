@@ -1071,3 +1071,28 @@ describe("the consent rail names the purpose behind each answer", () => {
     ).not.toBeNull();
   });
 });
+
+// A contact somebody wrote in the system it was imported from.
+//
+// An import runs as ONE administrator, so `captured_by` names that seat on
+// every row it wrote — true, and useless as a statement about authorship. The
+// author field is the one that knows, and the facts strip has to prefer it: the
+// timeline on this same page already reads "Logged in HubSpot by …" while the
+// strip said "Typed by you", and the two sat side by side disagreeing.
+describe("a contact imported from somewhere else", () => {
+  it("names who wrote it there, not the seat that ran the import", async () => {
+    mount("overview", {
+      ...view,
+      contact: {
+        ...view.contact,
+        captured_by: "human:u-1",
+        author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+      },
+    });
+
+    expect(
+      await screen.findByText("Logged in HubSpot by Mutaz Suleiman"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Typed by you")).toBeNull();
+  });
+});

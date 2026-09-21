@@ -122,7 +122,11 @@ export function CompanyIdentityFacts({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(company.captured_by, viewerId)}
+              provenance={provenanceOf(
+                company.captured_by,
+                viewerId,
+                company.author,
+              )}
               renderUser={companyAuthorName(roster.data)}
             />
           }

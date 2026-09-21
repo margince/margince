@@ -58,6 +58,7 @@ export type DealIdentity = Partial<
     | "masked_fields"
     | "source"
     | "captured_by"
+    | "author"
   >
 > &
   WonWithoutContract;
@@ -189,7 +190,7 @@ export function DealIdentityFacts({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(deal.captured_by, viewerId)}
+              provenance={provenanceOf(deal.captured_by, viewerId, deal.author)}
             />
           }
         >
