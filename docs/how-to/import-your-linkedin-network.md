@@ -138,6 +138,13 @@ the decisions are independent and a batch proposal would force you to take thirt
 three you wanted. The proposal carries the export's own spelling of the connection (name and employer)
 plus the contact it is proposed against, because that is what you judge the guess on.
 
+**Anyone with access decides one** — it is not held for you. The proposal's subject is a contact
+already on file, and the inbox only shows a proposal to somebody who can already see that contact,
+so deciding one takes the ordinary two things: the contact write, and being able to see the contact.
+What a colleague learns is that a contact already in the CRM appears in somebody's network, which is
+the same who-knows-whom that contact's own network card already draws. Whichever of you decides it, the
+link is written against the network the export came from, never against the decider's.
+
 Rejection is **durable**. The approval row persists and the matcher skips a ghost that already carries a
 decided proposal, so refusing "André is Andre" once means never being asked again — including after a
 re-import, which is the case that matters when you refresh a five-thousand-row export.
