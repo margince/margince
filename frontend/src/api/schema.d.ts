@@ -94,7 +94,7 @@ export interface paths {
          *     SSO (`require_sso`) refuses a non-admin password login with the SAME neutral 401 a wrong
          *     password earns — a distinct answer would only ever follow a correct password, verifying
          *     guesses — so a client offers single sign-on from `GET /auth/capabilities`, never from
-         *     this response. Every attempt (success/failure/lockout) is audited (`features/04 §7`).
+         *     this response. Every attempt is audited — the success, the failure and the lockout alike.
          */
         post: operations["login"];
         delete?: never;
