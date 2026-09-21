@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as router from "../app/router";
 import { PageTitle } from "../app/shell";
+import { navGroupNames } from "../app/testing/shellharness";
 import { translate } from "../i18n";
 import { SettingsScreen } from "./settings";
 import {
@@ -46,27 +47,31 @@ describe("SettingsScreen page layout", () => {
     // The RAIL, at a page address: this case is about the sidebar's own shape
     // and its current row, which the home address has no answer for.
     renderNav();
-    // ONE navigation landmark in the chrome: the level names itself with a
-    // heading inside it rather than opening a second `nav` beside the sidebar's
+    // ONE navigation landmark in the chrome: the level names itself through the
+    // group it heads rather than opening a second `nav` beside the sidebar's
     // own. The name stands over the level's FIRST group, which is the one the
-    // Overview row belongs to.
+    // Overview row belongs to — read as the group's accessible NAME, because
+    // that is what a reader stepping into the set is told it holds.
     const nav = screen.getByRole("navigation", { name: /primary navigation/i });
-    const [name] = within(nav).getAllByRole("heading", { level: 2 });
-    expect(name?.textContent).toBe("Settings");
+    expect(navGroupNames(nav)[0]).toBe("Settings");
     // The granted pages appear once the /me probe resolves the grant map.
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Fields" })).toBeTruthy(),
     );
-    // The subject headings the level carries, after the one naming the level. A
-    // group with no visible member is dropped rather than printed empty, so
-    // this fixture's grants decide which of the seven appear — and the subjects
-    // it does open are named in catalog order.
-    expect(
-      within(nav)
-        .getAllByRole("heading", { level: 2 })
-        .slice(1)
-        .map((heading) => heading.textContent),
-    ).toEqual(["You", "People", "Sales", "Governance"]);
+    // The subjects the level carries, after the group naming the level. A group
+    // with no visible member is dropped rather than printed empty, so this
+    // fixture's grants decide which of the seven appear — and the subjects it
+    // does open are named in catalog order.
+    expect(navGroupNames(nav).slice(1)).toEqual([
+      "You",
+      "People",
+      "Sales",
+      "Governance",
+    ]);
+    // And the name is one the accessibility tree computes, not only one this
+    // file can read off an attribute: the role and the name have to find the
+    // same box.
+    expect(within(nav).getByRole("group", { name: "Governance" })).toBeTruthy();
     for (const label of [
       "Account",
       "Writing voice",

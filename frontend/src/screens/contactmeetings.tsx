@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Button, type ButtonVariant } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { dateTileParts } from "../format/datetile";
 import { formatTimeOfDay } from "../format/format";
@@ -49,7 +50,7 @@ export function MeetingBriefAction({
   }
   const activityId = activity.id;
   return (
-    <Button small variant={variant} onClick={() => onBriefMeeting(activityId)}>
+    <Button variant={variant} onClick={() => onBriefMeeting(activityId)}>
       {t("contact.meeting.brief")}
     </Button>
   );
@@ -73,7 +74,6 @@ function MeetingMomentAction({
   const blocked = action.state === "blocked";
   return (
     <Button
-      small
       onClick={() => onAction(action)}
       reason={
         blocked
@@ -131,7 +131,7 @@ function MeetingCard({
   return (
     <article className="pe-meeting">
       <time className="pe-meeting-date" dateTime={startsAt}>
-        <span className="t-caption pe-meeting-weekday">{tile.weekday}</span>
+        <span className="t-caption">{tile.weekday}</span>
         <span className="pe-meeting-day">{tile.day}</span>
         <span className="t-caption">{tile.month}</span>
       </time>
@@ -218,7 +218,9 @@ export function ContactMeetingsTab({
   return (
     <div className="record-stack">
       <section>
-        <h2 className="t-h3">{t("contact.meetings.upcoming")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("contact.meetings.upcoming")}
+        </Heading>
         <SurfaceState
           loadingLabel={t("contact.meetings.upcoming")}
           state={sectionState(
@@ -258,7 +260,9 @@ export function ContactMeetingsTab({
         </SurfaceState>
       </section>
       <section>
-        <h2 className="t-h3">{t("contact.meetings.past")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("contact.meetings.past")}
+        </Heading>
         <SurfaceState
           loadingLabel={t("contact.meetings.past")}
           state={past === "ready" && hasMore ? "partial" : past}

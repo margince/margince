@@ -21,10 +21,8 @@
      one row and the next; at 6px the labels ran together into one grey block
      with no rows in it. */
   gap: var(--space-3);
-  font-size: var(--fs-sm);
 }
 .fieldgrid-label {
-  color: var(--textMeta);
   /* The label column is a fixed rung, and a label longer than it — which
      German reaches on half this panel's fields — has to wrap inside it rather
      than run on across its own value. */
@@ -32,7 +30,6 @@
   overflow-wrap: anywhere;
 }
 .fieldgrid-value {
-  color: var(--textContent);
   min-width: 0;
   /* A grouped value may arrive as lines (an address, one part per line):
      the newline is kept, and everything else still wraps as text. Stated
@@ -77,9 +74,6 @@
 .fieldgrid-value .inlinetext,
 .fieldgrid-value .inline-editable {
   text-align: left;
-  font-size: inherit;
-  font-weight: var(--fw-regular);
-  color: inherit;
 }
 /* An address or a number is a `ContactLink`, a button in the accent, and it
    KEEPS the accent: it is an action, not a fact the row edits. What it gives
@@ -95,8 +89,7 @@
    verb, so a verb that wraps to the next line starts at the column's edge. */
 .fieldgrid-value .link-button {
   text-align: left;
-  font-size: inherit;
-  font-weight: var(--fw-regular);
+  font-weight: var(--fontWeightRegular);
   padding-inline: 0;
 }
 /* A handle and its edit verb stack, always: the verb on its own line under
@@ -132,24 +125,6 @@
 .fieldgrid-value .evmark {
   margin-inline-start: var(--space-1);
 }
-/* An empty row states an absence, and it states it the way a form's own
-   placeholder does: the "Add …" text sits BELOW the filled values in weight
-   and tone, so a reader scanning the column reads the record's actual facts
-   first and the gaps as gaps. It stays pressable, and the hover fill
-   (inlinechoice.css) is what says so — the invitation is in the affordance,
-   not in the colour. Paint it in the accent instead and every unfilled field
-   shouts louder than every filled one, which is the reading exactly backwards
-   on a record whose values are the point. */
-.fieldgrid-value .inlinetext[data-empty="true"],
-.fieldgrid-value .inline-editable[data-empty="true"] {
-  /* --textMeta and not --textTertiary: this is 13px TEXT, and the contrast law
-     at the top of tokens.css gives all 11-13px meta text one role. The
-     tertiary tone is a MARK tone and measures 2.49:1 here, which axe reads as
-     a serious AA failure on every record carrying an unfilled field. It still
-     sits below the filled values, which is what the paragraph above asks of
-     it — the invitation is the hover fill, never the colour. */
-  color: var(--textMeta);
-}
 
 /* The glyph column, opened only by a grid that asked for one. Its own track
    rather than room taken from the label rung: the rung has nothing to give,
@@ -168,16 +143,13 @@
   row-gap: var(--space-4);
 }
 
-/* The kind-of-fact glyph. A rung quieter than the label beside it: it is what
-   a reader's eye lands on while scanning, and at the label's own tone ten
-   glyphs compete with the ten names they introduce. Held to the label's line
-   box, so it centres on the first line of a name that wraps rather than on
-   the whole block. */
+/* The kind-of-fact glyph. Held to one line of its own type (`1lh`), so it
+   centres on the first line of a name that wraps rather than on the whole
+   block. */
 .fieldgrid-icon {
   display: inline-flex;
   align-items: center;
-  block-size: calc(var(--fs-sm) * 1.5);
-  color: var(--textTertiary);
+  block-size: 1lh;
 }
 
 .fieldgrid-icon svg {

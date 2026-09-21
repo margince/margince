@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
+import { Heading } from "../design-system/heading";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -167,28 +168,22 @@ export function RunView({
         staleForMs={stale ? agoMs : null}
       />
       {run.state === "error" && (
-        <p className="t-caption backfill-error">
+        <p className="backfill-error">
           {t("backfill.errorNote")}
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
         </p>
       )}
       <div className="backfill-foot">
         {live ? (
-          <Button small disabled={cancelling} onClick={onCancel}>
+          <Button disabled={cancelling} onClick={onCancel}>
             {t("backfill.cancel")}
           </Button>
         ) : (
-          <Button small onClick={onRestart}>
-            {t("backfill.restart")}
-          </Button>
+          <Button onClick={onRestart}>{t("backfill.restart")}</Button>
         )}
       </div>
-      {live && cancelError && (
-        <p className="t-caption backfill-error">{cancelError}</p>
-      )}
-      {run.state === "cancelled" && (
-        <p className="t-caption">{t("backfill.cancelledNote")}</p>
-      )}
+      {live && cancelError && <p className="backfill-error">{cancelError}</p>}
+      {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
     </div>
   );
 }
@@ -214,7 +209,9 @@ function RunHead({
           <History className={reading ? "spin-slow" : ""} />
         )}
       </span>
-      <h3 className="backfill-h">{t(stateTitle(state))}</h3>
+      <Heading size="medium" className="backfill-h">
+        {t(stateTitle(state))}
+      </Heading>
       {reading && (
         <span className="capture-head-tag">
           <Badge tone="ai">{t("backfill.readingBadge")}</Badge>
@@ -243,7 +240,7 @@ function RunProgress({
   return (
     <>
       {staleForMs !== null && (
-        <p className="t-caption backfill-stale">
+        <p className="t-caption">
           {t("backfill.staleUpdated", {
             duration: formatDuration(staleForMs, locale),
           })}

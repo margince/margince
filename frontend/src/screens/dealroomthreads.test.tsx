@@ -61,7 +61,6 @@ function draw(verbs: Partial<ThreadVerbs> = {}, threads = [thread()]) {
     <LocaleProvider initial="en">
       <DocumentBoard
         title="Documents"
-        sub="Everything shared with the buyer"
         groups={[{ key: "contract", label: "Contract" }]}
         documents={[DOCUMENT]}
         threads={threads}
@@ -116,7 +115,6 @@ describe("what a tile says about its document", () => {
       <LocaleProvider initial="en">
         <DocumentBoard
           title="Documents"
-          sub=""
           groups={[{ key: "contract", label: "Contract" }]}
           documents={[{ ...DOCUMENT, read }]}
           threads={[]}
@@ -146,7 +144,6 @@ describe("what a tile says about its document", () => {
       <LocaleProvider initial="en">
         <DocumentBoard
           title="Documents"
-          sub=""
           groups={[{ key: "contract", label: "Contract" }]}
           documents={[{ ...DOCUMENT, byteSize: 412_000 }]}
           threads={[]}
@@ -306,7 +303,6 @@ describe("a board nobody may write to", () => {
       <LocaleProvider initial="en">
         <DocumentBoard
           title="Documents"
-          sub="Everything shared with the buyer"
           groups={[]}
           documents={[]}
           threads={[]}
@@ -331,7 +327,6 @@ describe("a board nobody may write to", () => {
       <LocaleProvider initial="en">
         <DocumentBoard
           title="Documents"
-          sub="Everything shared with the buyer"
           groups={[{ key: "contract", label: "Contract" }]}
           documents={[DOCUMENT, { ...DOCUMENT, id: "doc-2", title: "Anhang" }]}
           threads={[]}

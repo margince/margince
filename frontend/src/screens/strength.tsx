@@ -31,11 +31,11 @@ type RelationshipStrength = components["schemas"]["RelationshipStrength"];
 
 const BUCKET_TONE: Record<
   RelationshipStrength["bucket"],
-  "success" | "accent" | "warn" | undefined
+  "success" | "accent" | "warning" | undefined
 > = {
   strong: "success",
   moderate: "accent",
-  weak: "warn",
+  weak: "warning",
   none: undefined,
 };
 
@@ -155,7 +155,7 @@ function StrengthBody({
           alignItems: "center",
           gap: "var(--space-2)",
           flexWrap: "wrap",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <Badge tone={BUCKET_TONE[bucket]}>
@@ -165,18 +165,18 @@ function StrengthBody({
           {t("strength.score", { score: formatNumber(score, locale) })}
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+        }}
+      >
         {factorRows.map((row) => {
           const pct = factorPercent(row.value);
           return (
             <div key={row.key}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--fs-sm)",
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{t(`strength.factor.${row.key}`)}</span>
                 <span className="t-num">{formatNumber(pct, locale)}%</span>
               </div>

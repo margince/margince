@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -21,7 +22,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { formatMoney, formatNumber, identifierNumber } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import {
   isVersionSkewOf,
@@ -142,10 +143,9 @@ function EditOfferHeaderModal({
     offer.buyer_company_id ?? null,
     open,
   );
-  // Only the closed→open transition reprimes the form — a background
-  // refetch handing this component a fresh `offer` reference mid-edit must
-  // never clobber what the user is typing (same convention as
-  // EditRecordModal, edit.tsx).
+  // Only the closed→open transition reprimes the form — a background refetch
+  // handing this component a fresh `offer` mid-edit must never clobber what the
+  // user is typing (same convention as EditRecordModal, edit.tsx).
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -198,9 +198,14 @@ function EditOfferHeaderModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {t("offer.edit")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <Field label={t("offer.currency")}>
           {(control) => (
@@ -219,22 +224,21 @@ function EditOfferHeaderModal({
             />
           )}
         </Field>
-        <div className="field">
-          <span className="t-label" id="offer-valid-until-label">
-            {t("offer.validUntil")}
-          </span>
-          <TextInput
-            type="date"
-            aria-labelledby="offer-valid-until-label"
-            value={values.valid_until}
-            onChange={(event) =>
-              setValues((prev) => ({
-                ...prev,
-                valid_until: event.target.value,
-              }))
-            }
-          />
-        </div>
+        <Field label={t("offer.validUntil")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="date"
+              value={values.valid_until}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  valid_until: event.target.value,
+                }))
+              }
+            />
+          )}
+        </Field>
         <div className="field">
           <span className="t-label">{t("offer.buyerCompany")}</span>
           <RecordPicker
@@ -255,58 +259,60 @@ function EditOfferHeaderModal({
             </p>
           )}
         </div>
-        <div className="field">
-          <span className="t-label" id="offer-template-label">
-            {t("offer.template")}
-          </span>
-          <Select
-            aria-labelledby="offer-template-label"
-            value={values.template_id ?? ""}
-            onChange={(value) =>
-              setValues((prev) => ({ ...prev, template_id: value || null }))
-            }
-            // The dash is a real OPTION for "no template", not the select's
-            // placeholder: a placeholder is only a face for an unset value, and
-            // an offer that picked a template has to be able to drop it again.
-            options={[
-              { value: "", label: "—" },
-              ...(templatesQuery.data ?? []).map((template: OfferTemplate) => ({
-                value: template.id,
-                label: template.name,
-              })),
-            ]}
-          />
-        </div>
-        <div className="field">
-          <span className="t-label" id="offer-intro-label">
-            {t("offer.introText")}
-          </span>
-          <TextInput
-            aria-labelledby="offer-intro-label"
-            value={values.intro_text}
-            onChange={(event) =>
-              setValues((prev) => ({ ...prev, intro_text: event.target.value }))
-            }
-          />
-        </div>
-        <div className="field">
-          <span className="t-label" id="offer-terms-label">
-            {t("offer.termsText")}
-          </span>
-          <TextInput
-            aria-labelledby="offer-terms-label"
-            value={values.terms_text}
-            onChange={(event) =>
-              setValues((prev) => ({ ...prev, terms_text: event.target.value }))
-            }
-          />
-        </div>
+        <Field label={t("offer.template")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={values.template_id ?? ""}
+              onChange={(value) =>
+                setValues((prev) => ({ ...prev, template_id: value || null }))
+              }
+              // The dash is a real OPTION for "no template", not the select's
+              // placeholder: a placeholder is only a face for an unset value, and
+              // an offer that picked a template has to be able to drop it again.
+              options={[
+                { value: "", label: "—" },
+                ...(templatesQuery.data ?? []).map(
+                  (template: OfferTemplate) => ({
+                    value: template.id,
+                    label: template.name,
+                  }),
+                ),
+              ]}
+            />
+          )}
+        </Field>
+        <Field label={t("offer.introText")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={values.intro_text}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  intro_text: event.target.value,
+                }))
+              }
+            />
+          )}
+        </Field>
+        <Field label={t("offer.termsText")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={values.terms_text}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  terms_text: event.target.value,
+                }))
+              }
+            />
+          )}
+        </Field>
       </div>
       {errorMessage && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
           {errorMessage}
         </p>
       )}
@@ -462,11 +468,7 @@ function UnitPriceCell({
 // something a human free-types over. It stays ungrounded until a regenerate
 // re-grounds it, or the human removes it and re-adds it with a price.
 function UnpricedCaption({ label }: Readonly<{ label: string }>) {
-  return (
-    <span className="t-caption" style={{ color: "var(--textMeta)" }}>
-      {label}
-    </span>
-  );
+  return <span className="t-caption">{label}</span>;
 }
 
 function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
@@ -654,7 +656,6 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       header: "",
       render: (line: OfferLineItem) => (
         <Button
-          small
           data-testid={`remove-line-${line.id}`}
           disabled={removeMutation.isPending}
           onClick={() => removeMutation.mutate(line.id)}
@@ -682,10 +683,10 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <div
           style={{
             display: "flex",
-            gap: 8,
+            gap: "var(--space-2)",
             flexWrap: "wrap",
             alignItems: "flex-end",
-            marginTop: 8,
+            marginTop: "var(--space-2)",
           }}
         >
           <Field label={t("offer.description")}>
@@ -756,9 +757,9 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <div
           style={{
             display: "flex",
-            gap: 8,
+            gap: "var(--space-2)",
             alignItems: "flex-start",
-            marginTop: 12,
+            marginTop: "var(--space-3)",
           }}
         >
           <div className="field" style={{ minWidth: 220 }}>
@@ -779,7 +780,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             variant="primary"
             data-testid="add-line"
             disabled={addMutation.isPending}
-            style={{ marginTop: 24 }}
+            style={{ marginTop: "var(--space-6)" }}
             onClick={() =>
               addMutation.mutate({
                 product_id: product?.id ?? undefined,
@@ -806,7 +807,6 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         </div>
         {errorMessage && (
           <p
-            className="t-caption"
             style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
           >
             {errorMessage}
@@ -859,7 +859,6 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         variant="primary"
-        small
         data-testid="send-offer"
         onClick={() => setOpen(true)}
       >
@@ -931,7 +930,6 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         variant="primary"
-        small
         data-testid="accept-offer"
         onClick={() => setOpen(true)}
       >
@@ -1002,7 +1000,6 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         variant="danger"
-        small
         data-testid="reject-offer"
         onClick={() => setOpen(true)}
       >
@@ -1032,15 +1029,14 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
-// Regenerate a new draft revision from a sent offer (OP-11). The 201
-// response is the ONLY place the Art. 50 disclosure and diff summary ever
-// appear (every later read of the same offer returns them null), so the
-// cache for the NEW draft's id is seeded directly from this response —
-// before navigating — and OfferScreen's own query for that id skips its
-// refetch-on-mount for exactly this reason (see its `refetchOnMount: false`
-// below). Regenerate is non-destructive to the current (sent) offer, which
-// stays sent/superseded server-side rather than being deleted, so unlike
-// Send it isn't gated behind a confirm modal.
+// Regenerate a new draft revision from a sent offer (OP-11). The 201 response
+// is the ONLY place the AI provenance notice and diff summary ever appear (every
+// later read of that offer returns them null), so the cache for the NEW draft's
+// id is seeded from this response — before navigating — and OfferScreen's own
+// query for that id skips its refetch-on-mount for this reason (see its
+// `refetchOnMount: false` below). Regenerate is non-destructive to the current
+// (sent) offer, which stays sent/superseded server-side rather than deleted, so
+// unlike Send it isn't gated behind a confirm modal.
 function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -1074,7 +1070,6 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   return (
     <>
       <Button
-        small
         data-testid="regenerate-offer"
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
@@ -1082,10 +1077,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}>
           {errorMessage}
         </p>
       )}
@@ -1093,7 +1085,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
-// The Art. 50 disclosure + diff-from-previous summary (OP-11). Both fields
+// The AI provenance notice + diff-from-previous summary (OP-11). Both fields
 // are transient — populated only on the regenerate response that produced
 // this draft — but the offer object here may be a stale/refetched read
 // (ai_generated back to false), so the banner degrades to nothing rather
@@ -1250,7 +1242,6 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
       actions={
         <>
           <Button
-            small
             data-testid="render-pdf"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
@@ -1275,14 +1266,10 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
       {(unavailable || errorMessage) && (
         <PanelBody>
           {unavailable && (
-            <p className="t-caption" data-testid="pdf-unavailable">
-              {t("offer.pdfUnavailable")}
-            </p>
+            <p data-testid="pdf-unavailable">{t("offer.pdfUnavailable")}</p>
           )}
           {errorMessage && (
-            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
-              {errorMessage}
-            </p>
+            <p style={{ color: "var(--dangerText)" }}>{errorMessage}</p>
           )}
         </PanelBody>
       )}
@@ -1321,14 +1308,10 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 change it, so they take the band rather than the head. */}
             <Panel
               title={offer.offer_number}
-              sub={t("offer.revision", {
-                revision: identifierNumber(offer.revision),
-              })}
               titleAction={<Badge>{offer.status}</Badge>}
               actions={
                 <>
                   <Button
-                    small
                     onClick={() =>
                       navigate({ screen: "deals", id: offer.deal_id })
                     }
@@ -1337,7 +1320,6 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                   </Button>
                   {offer.status === "draft" && (
                     <Button
-                      small
                       data-testid="edit-offer-header"
                       onClick={() => setEditing(true)}
                     >

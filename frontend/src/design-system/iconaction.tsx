@@ -36,7 +36,6 @@ export function IconAction({
   hint,
   icon,
   variant,
-  small,
   reason,
   reasonId,
   disabled,
@@ -63,7 +62,6 @@ export function IconAction({
   /** The glyph, `aria-hidden` — the label is what names this control. */
   icon: ReactNode;
   variant?: "primary" | "ghost" | "danger";
-  small?: boolean;
   /** Why this verb is unavailable; refuses the press, as on `Button`. */
   reason?: string;
   /**
@@ -103,7 +101,6 @@ export function IconAction({
       <Button
         iconOnly
         variant={variant}
-        small={small}
         reason={reason}
         reasonId={reasonId}
         disabled={disabled}

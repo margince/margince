@@ -6,8 +6,9 @@ import {
   SegmentedControl,
   Textarea,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import {
   type ProjectHealthState,
   useCorrectProjectHealth,
@@ -125,7 +126,8 @@ export function ProjectHealthModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
@@ -133,7 +135,7 @@ export function ProjectHealthModal({
         {correcting
           ? t("projectHealth.correctTitle")
           : t("projectHealth.recordTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <SegmentedControl
           label={t("projectHealth.stateLabel")}
@@ -168,11 +170,7 @@ export function ProjectHealthModal({
         {correcting && (
           <p className="t-caption">{t("projectHealth.correctionNote")}</p>
         )}
-        {write.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(write.error, t)}
-          </p>
-        )}
+        {write.isError && <RefusalLine error={write.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
             {t("deals.cancel")}

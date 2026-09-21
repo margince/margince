@@ -70,8 +70,7 @@ const closeDateSweepActor = "system:close-date"
 
 func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: closeDateSweepActor})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.SystemActing(wsCtx, closeDateSweepActor)
 	return jobs.FaultContext(ctx, w.corrector.SweepWorkspace(wsCtx))
 }
 
@@ -93,7 +92,6 @@ func (w *followUpReconcileWorker) reconcileWorkspace(ctx context.Context, worksp
 	// carry agent:overnight provenance (features/07 §8a), and every read the
 	// reconciler makes is scoped by its own query predicate against the
 	// workspace the binding above put on the context.
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "agent:overnight"})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.SystemActing(wsCtx, "agent:overnight")
 	return jobs.FaultContext(ctx, w.reconciler.ReconcileWorkspace(wsCtx))
 }

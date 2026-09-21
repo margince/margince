@@ -946,11 +946,7 @@ export function ListTable<Row>({
       <p style={{ marginTop: "var(--space-1)" }}>
         {problemMessageOf(error, t)}
       </p>
-      <Button
-        small
-        onClick={() => refetch()}
-        style={{ marginTop: "var(--space-2)" }}
-      >
+      <Button onClick={() => refetch()} style={{ marginTop: "var(--space-2)" }}>
         {t("common.retry")}
       </Button>
     </>

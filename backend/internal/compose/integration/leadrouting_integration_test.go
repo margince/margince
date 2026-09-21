@@ -119,9 +119,19 @@ func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
 	// Promoting one of rep1's leads frees capacity; the next lead goes
 	// to rep1 — the cap counts OPEN leads, so closed work hands the
 	// rotation back.
+	// The whole promotion, not the status alone: it writes the contact the lead
+	// became and the archive instant in one statement, and the table now says
+	// so. A row carrying the status without them is one no promotion produces.
+	promoted := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE lead SET status = 'promoted', promoted_at = now()
-		 WHERE id IN (SELECT id FROM lead WHERE owner_id = $1 LIMIT 1)`, e.Rep1); err != nil {
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, 'Promoted Lead', 'manual', 'human:x')`, promoted); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE lead SET status = 'promoted', promoted_at = now(), archived_at = now(),
+		        promoted_contact_id = $2
+		 WHERE id IN (SELECT id FROM lead WHERE owner_id = $1 LIMIT 1)`, e.Rep1, promoted); err != nil {
 		t.Fatal(err)
 	}
 	if _, owner := e.routeNewLead(t, "manual"); owner == nil || *owner != e.Rep1 {

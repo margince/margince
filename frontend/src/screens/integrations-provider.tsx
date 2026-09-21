@@ -20,6 +20,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { type Fact, FactList } from "../design-system/factlist";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Meter } from "../design-system/readings";
@@ -154,7 +155,9 @@ function ProviderConnectionRow({
           <span className="provider-mark">
             <ProviderMark providerKey={connection.provider} />
           </span>
-          <h3 className="provider-name">{connection.provider}</h3>
+          <Heading size="small" as="h3" className="provider-name">
+            {connection.provider}
+          </Heading>
           <Badge tone={connectionTone(connection.status)}>
             {t(connectionLabel(connection.status))}
           </Badge>
@@ -233,7 +236,7 @@ function SpendReading({
                   counted them either way would assert something it cannot
                   support. This is the figure a human reconciles against the
                   provider's invoice. */}
-              <td className="provider-held">
+              <td>
                 {month.held_credits > 0
                   ? formatNumber(month.held_credits, locale)
                   : "—"}
@@ -658,10 +661,10 @@ function DestructiveActions({
   const t = useT();
   return (
     <OverflowMenu label={t("record.moreActions")}>
-      <Button small type="button" onClick={onDisconnect}>
+      <Button type="button" onClick={onDisconnect}>
         {t("provider.disconnect")}
       </Button>
-      <Button small variant="danger" type="button" onClick={onDeleteData}>
+      <Button variant="danger" type="button" onClick={onDeleteData}>
         {t("provider.deleteData")}
       </Button>
     </OverflowMenu>
@@ -704,7 +707,7 @@ function CredentialDialog({
       pending={pending}
       error={error}
     >
-      <p className="t-caption">{t("provider.connectConfirm.body")}</p>
+      <p>{t("provider.connectConfirm.body")}</p>
       {/* The field is write-only in both states: a sealed key is never sent
           back to the browser, so the box is empty even when one is in place.
           Left unexplained that reads as "no key connected" while the card
@@ -832,7 +835,6 @@ function CredentialRow({
                 column. A reader who may not connect has nothing to open. */}
             {canConnect && (
               <Button
-                small
                 variant="primary"
                 type="button"
                 onClick={() => setConnecting(true)}
@@ -944,10 +946,8 @@ function FreeTierNote({
     // nothing about the surface, so it reads as the list's own lead caption. A
     // band that never changes teaches a reader to skip it.
     <div className="provider-free-note">
-      <p className="t-caption">{t("provider.freeTier.hint")}</p>
-      {priced.length > 0 && (
-        <p className="t-caption">{t("provider.pricedTier.hint")}</p>
-      )}
+      <p>{t("provider.freeTier.hint")}</p>
+      {priced.length > 0 && <p>{t("provider.pricedTier.hint")}</p>}
     </div>
   );
 }

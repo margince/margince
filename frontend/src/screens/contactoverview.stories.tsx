@@ -54,8 +54,7 @@ const sparse: View = {
   moment: {
     rule: "thin_relationship",
     headline: "No interactions recorded",
-    why_now:
-      "No interactions or colleague connections were found in the records available to you.",
+    why_now: "No interactions or colleagues found in the records you can see.",
     confidence: "observed_fact",
     claim_key: "empty",
     evidence_fingerprint: "empty",

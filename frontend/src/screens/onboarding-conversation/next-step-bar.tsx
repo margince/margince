@@ -80,7 +80,7 @@ export function NextStepBar({
           this control only scrolls to it — no model does any work behind the
           press, and the AI colour is a claim about authorship rather than a
           way to draw attention. */}
-      <Button variant="ghost" small onClick={() => scrollToTarget(target)}>
+      <Button variant="ghost" onClick={() => scrollToTarget(target)}>
         {label}
       </Button>
     </div>

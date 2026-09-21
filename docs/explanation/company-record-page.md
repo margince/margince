@@ -580,7 +580,7 @@ list, approval, signal) and durably own no business entity. See
 | The account scan: row, rail carrier, ensure rule, merge | `backend/internal/compose/companyscan/{store,service}.go` |
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/company360/viewbaseline.go` |
-| The account card, and the moment vocabulary every record page reads it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/moment.tsx` |
+| The account card, the row every record page draws it as, and the moment vocabulary they read it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/today.tsx`, `frontend/src/screens/record360/moment.ts` |
 | The live record cadence (FE-PARAM-5), and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/company360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport | `backend/internal/compose/company360/handlers.go` |

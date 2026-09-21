@@ -169,10 +169,7 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 // is, so an audit row says the installation went looking rather than leaving a
 // gated read with no one behind it.
 func geocodeBackfillActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:geocode-backfill",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:geocode-backfill")
 }
 
 // GeocodingConfig is the backfill's cadence.

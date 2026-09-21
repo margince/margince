@@ -160,7 +160,7 @@ export function VoiceInsights({
   const { locale } = useLocale();
   return (
     <div className="vdna-insights">
-      <div className="vdna-provenance t-caption">
+      <div className="t-caption">
         {t("voice.insights.provenance", {
           n: identifierNumber(profileVersion),
         })}
@@ -190,14 +190,14 @@ export function VoiceInsights({
         </div>
       )}
       {data.thinking && (
-        <div className="vdna-thinking">
+        <div>
           <div className="vdna-label">
             <Lightbulb aria-hidden /> {t("voice.insights.thinkingLabel")}
           </div>
           <p>{data.thinking}</p>
         </div>
       )}
-      {data.identity && <p className="vdna-identity">{data.identity}</p>}
+      {data.identity && <p>{data.identity}</p>}
       {data.obsessions.length > 0 && (
         <div className="vdna-chips">
           {data.obsessions.map((theme) => (
@@ -218,7 +218,7 @@ export function VoiceInsights({
       )}
       <SampleDrafts drafts={data.sampleDrafts} />
       {(data.nextBestKey || data.nextBest) && (
-        <div className="vdna-nextbest">
+        <div>
           <b>{t("voice.insights.nextBestLabel")}</b>{" "}
           {nextBestCopy(t, data, locale) ?? data.nextBest}
         </div>

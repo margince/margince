@@ -15,7 +15,7 @@ const GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send";
 describe("statusTone", () => {
   it("gives each status its own tone so four states never collapse to two", () => {
     expect(statusTone("connected")).toBe("success");
-    expect(statusTone("reauth_required")).toBe("warn");
+    expect(statusTone("reauth_required")).toBe("warning");
     expect(statusTone("error")).toBe("danger");
     expect(statusTone("disconnected")).toBe(undefined);
   });
@@ -24,8 +24,8 @@ describe("statusTone", () => {
   // half-registration, not a live channel — it must read as "needs a look"
   // (the same tone as reauth_required), never as the "success" tone a
   // healthy connected row gets (§9.1).
-  it("renders pending as a warn tone, distinct from connected", () => {
-    expect(statusTone("pending")).toBe("warn");
+  it("renders pending as a warning tone, distinct from connected", () => {
+    expect(statusTone("pending")).toBe("warning");
     expect(statusLabel("pending")).toBe("connectors.statusPending");
     expect(statusLabel("pending")).not.toBe(statusLabel("connected"));
   });

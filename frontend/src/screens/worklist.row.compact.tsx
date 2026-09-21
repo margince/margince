@@ -122,7 +122,7 @@ export function CompactRowLine({
             anything beside them. */}
         {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
         {isUnprepared(item) && (
-          <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+          <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
         )}
       </p>
       {inline && (

@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -47,17 +46,23 @@ var ErrAuthUnavailable = errors.New("agents: the credential could not be verifie
 
 // ResourceMetadataChallenge builds the RFC 9728 WWW-Authenticate challenge a
 // 401 on this transport carries: the "Bearer" scheme name plus a pointer at
-// the protected-resource document. The pointer is ABSOLUTE on the request's
-// own origin because a client dereferences it as given — a bare path only
-// resolves for a client that already knows where it is talking to, which is
-// the one thing discovery exists to tell it.
+// the protected-resource document. The pointer is ABSOLUTE because a client
+// dereferences it as given — a bare path only resolves for a client that
+// already knows where it is talking to, which is the one thing discovery
+// exists to tell it.
+//
+// origin is the installation's CONFIGURED origin, never the request's: the
+// document this points at names the authorization server a client sends its
+// credentials to, so where the pointer leads must not be the sender's choice.
+// The challenge is therefore the same for every request, and is built once.
 //
 // The scope hint is not decoration: absent it, a client requests every scope
 // the protected-resource metadata advertises in scopes_supported, including
 // send. Naming "read draft" makes the conservative grant the default, with
 // the human free to widen it on the consent page.
-func ResourceMetadataChallenge(r *http.Request) string {
-	return `Bearer resource_metadata="` + httpserver.RequestOrigin(r) + `/.well-known/oauth-protected-resource", scope="read draft"` // NOSONAR: RFC 9728 challenge, not a secret
+func ResourceMetadataChallenge(origin string) func(*http.Request) string {
+	challenge := `Bearer resource_metadata="` + origin + `/.well-known/oauth-protected-resource", scope="read draft"` // NOSONAR: RFC 9728 challenge, not a secret
+	return func(*http.Request) string { return challenge }
 }
 
 // writeRPCResponse writes one JSON-RPC response under status, framed per the

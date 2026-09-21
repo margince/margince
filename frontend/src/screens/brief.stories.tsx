@@ -199,7 +199,14 @@ export const DecisionApproved: Story = {
         within(canvasElement).queryByRole("button", { name: "Decide" }),
       ).toBeNull(),
     );
-    await within(canvasElement).findByText("2 priorities in focus");
+    // The refreshed agenda still stands, counted rather than named: the panel
+    // head lost its sub slot, so the sentence that said how many rows it holds
+    // is gone from every catalog and asserting it would test nothing.
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
+      ).toHaveLength(2),
+    );
   },
 };
 

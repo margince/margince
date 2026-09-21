@@ -132,9 +132,7 @@ func (e *WorkflowEngine) RetryRun(ctx context.Context, runID ids.UUID) (RetryOut
 	// The same context shape HandleEvent builds: a retry is the firing
 	// happening again, not a new kind of caller.
 	runCtx := principal.WithWorkspaceID(ctx, candidate.event.WorkspaceID)
-	runCtx = principal.WithActor(runCtx,
-		principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
-	runCtx = principal.WithCorrelationID(runCtx, ids.NewV7())
+	runCtx = principal.SystemActing(runCtx, systemActor)
 	runCtx = principal.WithCausationEvent(runCtx, candidate.event.ID)
 	if err := e.runOne(runCtx, candidate.handler, candidate.event); err != nil {
 		return RetryOutcome{}, fmt.Errorf("retrying %s: %w", candidate.handler.Spec().Name, err)

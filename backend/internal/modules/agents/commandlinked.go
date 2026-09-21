@@ -75,25 +75,25 @@ func (n *namedLinks) stageable(ctx context.Context, links []RecordLink) ([]Recor
 	return unique, rows, nil
 }
 
-// SendAccountEmailCommand is one account-started email, whichever door asked
+// SendCompanyEmailCommand is one account-started email, whichever door asked
 // for it: the reply's operands minus the anchor, plus the records the new
 // conversation is filed under.
 //
 // It carries no body and no consent purpose, for the reason SendEmailCommand's
 // own doc gives — nothing here reads either.
-type SendAccountEmailCommand struct {
+type SendCompanyEmailCommand struct {
 	To      []string
 	Cc      []string
 	Subject string
 	Links   []RecordLink
 }
 
-// NewSendAccountEmailCall binds one account-started send to the resolver that
+// NewSendCompanyEmailCall binds one account-started send to the resolver that
 // answers for it, reading its named records through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewSendAccountEmailCall(records datasource.SystemOfRecordProvider, cmd SendAccountEmailCommand) GovernedCall {
-	return bind[SendAccountEmailCommand](&accountSendResolver{links: namedLinks{records: records}}, cmd)
+func NewSendCompanyEmailCall(records datasource.SystemOfRecordProvider, cmd SendCompanyEmailCommand) GovernedCall {
+	return bind[SendCompanyEmailCommand](&accountSendResolver{links: namedLinks{records: records}}, cmd)
 }
 
 type accountSendResolver struct {
@@ -119,7 +119,7 @@ type accountSendResolver struct {
 // its approver to the anchor. That difference is stated rather than closed:
 // closing it takes a target derived from the body on BOTH doors, and this
 // command is the half of that which now exists.
-func (r *accountSendResolver) Subject(ctx context.Context, cmd SendAccountEmailCommand) (StageInfo, error) {
+func (r *accountSendResolver) Subject(ctx context.Context, cmd SendCompanyEmailCommand) (StageInfo, error) {
 	links, _, err := r.links.stageable(ctx, cmd.Links)
 	if err != nil {
 		return StageInfo{}, err
@@ -145,7 +145,7 @@ func (r *accountSendResolver) Subject(ctx context.Context, cmd SendAccountEmailC
 // per-purpose verdict, the workspace's mailbox send capability, and whether an
 // address belongs to a contact on file. All are refusals a human's yes cannot
 // fix, and all need reads staging does not have.
-func (r *accountSendResolver) Guards(ctx context.Context, cmd SendAccountEmailCommand) error {
+func (r *accountSendResolver) Guards(ctx context.Context, cmd SendCompanyEmailCommand) error {
 	if err := requireAddressee(cmd.To); err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func requireAccountSendLinks(links []RecordLink) error {
 // their ids mean nothing to a human reading one line, and the staged row is
 // decidable on the activity floor rather than on those records, so naming them
 // would disclose more than the decision rests on.
-func describeAccountSend(cmd SendAccountEmailCommand, links []RecordLink) string {
+func describeAccountSend(cmd SendCompanyEmailCommand, links []RecordLink) string {
 	summary := fmt.Sprintf("Start an email conversation with %s", strings.Join(cmd.To, ", "))
 	if len(cmd.Cc) > 0 {
 		summary += fmt.Sprintf(", cc %s", strings.Join(cmd.Cc, ", "))

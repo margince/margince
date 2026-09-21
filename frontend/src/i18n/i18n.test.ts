@@ -24,8 +24,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
   "contact.research.field.linkedin",
-  // The product name of the buyer surface.
+  // The product name of the buyer surface, on the card that names it and on
+  // the tab that opens it.
   "room.card.title",
+  "tab.dealRoom",
   // Two sales nouns Vietnamese borrows rather than translates, on the
   // drill-through's column headers. The vi catalog already carries both
   // untranslated where they appear as words in a sentence — "Thuộc deal" on
@@ -44,6 +46,13 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
+  // The release channel's own name on the rail head's stage marker. "Beta" is
+  // the word all three catalogs use for it — Vietnamese borrows it as a term of
+  // art the way it borrows "deal" and "pipeline" — and a marker four letters
+  // long is also the only spelling that fits the 56px rail it must survive.
+  // Temporary, with the badge that renders it: app/betabadge.tsx names this
+  // entry among the things its deletion takes.
+  "shell.beta",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.

@@ -52,7 +52,7 @@ export function LandingCard({
           rather than as a remark about it. */}
       {landing.caveat && (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           title={t("forecast.landingCaveat")}
         >

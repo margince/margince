@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
@@ -67,7 +68,6 @@ export function ImapMailboxForm({
   onDismiss,
   onConnected,
   onPendingChange,
-  small = false,
   renderActions = (actions) => actions,
 }: Readonly<{
   /** What backing out is called on this surface: Cancel in a dialog, Not
@@ -81,8 +81,6 @@ export function ImapMailboxForm({
   /** Reports the in-flight connect, so a surface that owns other controls
    * can hold them while the credentials are being proven. */
   onPendingChange?: (pending: boolean) => void;
-  /** The dialog's compact buttons; a step in a room keeps the room's size. */
-  small?: boolean;
   /**
    * Where the two buttons go. Inline under the fields by default; a surface
    * with a rail of its own (the first-run stage) places them there. Connect
@@ -193,16 +191,10 @@ export function ImapMailboxForm({
           {t("connectors.imapStillNeeded", { fields: missing.join(", ") })}
         </p>
       )}
-      <Button
-        small={small}
-        type="button"
-        onClick={onDismiss}
-        disabled={connect.isPending}
-      >
+      <Button type="button" onClick={onDismiss} disabled={connect.isPending}>
         {dismissLabel}
       </Button>
       <Button
-        small={small}
         variant="primary"
         type="button"
         onClick={submit}
@@ -339,16 +331,16 @@ export function ImapConnectForm({
   const headingId = useId();
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("connectors.imapModalTitle")}
-      </h2>
+      </Heading>
       {open && (
         <ImapMailboxForm
-          small
           dismissLabel={t("create.cancel")}
           onDismiss={onClose}
           onConnected={onConnected}

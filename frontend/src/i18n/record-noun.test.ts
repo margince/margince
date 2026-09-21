@@ -52,7 +52,6 @@ const RECORD_TYPE_NAME_KEYS = [
   "lead.qualify.contact",
   "approval.field.contact_name",
   "today.source.contacts",
-  "deal.strip.contacts",
   "provider.backlogRemaining_one",
   "provider.backlogRemaining_other",
   // The one sentence that names the type rather than labelling it: it tells a
@@ -112,7 +111,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "access.sub",
     "captureNotice.whoReads",
     "captureSettings.signatureEnrich.help",
     "compose.audienceMembersLoading",
@@ -200,7 +198,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // recipient, an attendee, a guest.
     "access.capabilityLegend",
     "access.issued.oneTime",
-    "access.sub",
     "book.tellThemYourself",
     "captureSettings.signatureEnrich.help",
     "compose.audienceParticipantsHint",
@@ -335,7 +332,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "stageAutomation.noRules",
     "stageAutomation.reviewedHint",
-    "teamweekly.agenda.sub",
     "users.access.title",
     "users.adminOnly",
     "users.deactivateConfirmBody",
@@ -358,7 +354,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "access.sub",
     "book.attendee",
     "book.tellThemYourself",
     "buyer.contact",
@@ -387,7 +382,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "connectors.mailPosture.help.held",
     "email.access.sentence.participants",
     "email.access.sentence.selected",
-    "email.access.sentence.team",
+    "email.access.sentence.workspace",
     "email.access.unnamedMember",
     "hold.confirmAddressBody",
     "hold.confirmDomainBody",
@@ -402,7 +397,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roompage.closeHint",
     "roompage.pauseHint",
     "roompage.previewNotYours",
-    "roompage.text.sub",
     "roompage.viewAsBuyer",
     "sched.held.consentWithdrawn",
     "sched.recipientsMore",
@@ -480,8 +474,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deal.committee.legendGap",
     "deal.committee.threads",
     "deal.ownerKeep",
-    "deal.strip.contacts.champion",
-    "deal.strip.contacts.noChampion",
     "deal360.buyer",
     "deals.bulkOwner",
     "deals.bulkOwnerPick",
@@ -529,9 +521,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "review.reassign",
     "role.rep",
     "room.card.lastSeen",
+    // "người mua" — the BUYER who walks into the room: a human being from
+    // outside the company, not a contact record.
     "room.create.sub",
     "room.create.titleHint",
-    "room.docs.sub",
     "senders.colSender",
     "senders.emptyBody",
     "senders.keepOutBody",

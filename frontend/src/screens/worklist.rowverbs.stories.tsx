@@ -88,11 +88,7 @@ function Verb({
   answer,
 }: Readonly<{ message: MessageKey; answer?: boolean }>) {
   const t = useT();
-  return (
-    <Button small variant={answer ? "primary" : "ghost"}>
-      {t(message)}
-    </Button>
-  );
+  return <Button variant={answer ? "primary" : "ghost"}>{t(message)}</Button>;
 }
 
 function taskRow(): WorklistItem {
@@ -254,14 +250,20 @@ export const TheLineInDark: Story = {
  *
  * The one frame drawn INSIDE the row's own box, because the target floor is the
  * ROW's rule rather than the line's: without that box the verbs would be drawn
- * here at the 36px a coarse pointer gets them to, which is not what a reader
- * meets. At this width the box costs nothing — the row is a wrapping flex line
+ * here at the plain --controlHeight every control in the product wears, which
+ * is not what a reader meets — the row raises its own targets, and it is the
+ * only thing that does now that a control is one size under any pointer. At this width the box costs nothing — the row is a wrapping flex line
  * and the verbs take all of it — while above it the row's kind column would
  * stand empty beside them, which is why the other three frames go without.
  */
 export const TheLineOnAPhone: Story = {
   ...AWaitingRowWithEveryVerb,
   globals: { viewport: { value: "phone" } },
+  // `uat-phone` is what makes the capture gate drive the browser to 390px. The
+  // viewport global alone moves Storybook's own frame and not the gate's, so
+  // without the tag this frame was captured at the desktop width — which draws
+  // the band this story exists to show folded away.
+  tags: ["uat-phone"],
   decorators: [
     (Story) => (
       <div className="worklist-row">

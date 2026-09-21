@@ -12,7 +12,7 @@
 // visible: a warning with no source beside it is advice, and neither the tool
 // nor the view gives advice.
 
-import { day, el, money, onResult, warned } from "../bridge";
+import { day, el, heading, money, onResult, warned } from "../bridge";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -91,7 +91,7 @@ function promisesOf(data: Record<string, unknown>): Promise_[] {
 function section(title: string, rows: HTMLElement[]): HTMLElement | null {
   if (rows.length === 0) return null;
   const block = el("div", "section");
-  block.appendChild(el("h2", "section-title", title));
+  block.appendChild(heading("large", title, { className: "section-title" }));
   const list = el("div", "rows");
   for (const row of rows) list.appendChild(row);
   block.appendChild(list);
@@ -188,7 +188,9 @@ function verdict(
   if (gaps.length > 0) {
     const block = el("div", "section");
     block.appendChild(
-      el("h2", "section-title", `${gaps.length} thing(s) still missing`),
+      heading("large", `${gaps.length} thing(s) still missing`, {
+        className: "section-title",
+      }),
     );
     for (const gap of gaps) block.appendChild(gapRow(gap));
     if (bounded) block.appendChild(el("div", "state", boundedNote));
@@ -250,7 +252,7 @@ export function render(
     return;
   }
   root.appendChild(
-    el("h1", undefined, asText(answer.name) || "Delivery handoff"),
+    heading("xlarge", asText(answer.name) || "Delivery handoff"),
   );
   root.appendChild(
     el("p", "meta", `${headline(answer)} · ${ownerLine(answer)}`),

@@ -74,13 +74,6 @@ export function BriefFeed({
         title={t(
           day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
         )}
-        sub={
-          day?.summary
-            ? plural("brief.feed.visible", rows.length, {
-                count: formatNumber(rows.length, locale),
-              })
-            : undefined
-        }
         titleAction={
           <span className="brief-focus-actions">
             {/* The panel offers the agent's verbs — the reply it drafted, the
@@ -102,11 +95,11 @@ export function BriefFeed({
                 verbs it read as a caption. */}
             {day && (
               <a
-                className="btn btn-sm brief-focus-open"
+                className="btn brief-focus-open"
                 href={worklistLaneHref("all", day.scope)}
               >
                 {t("brief.feed.fullWorklist")}
-                <ArrowRight size={14} aria-hidden="true" />
+                <ArrowRight aria-hidden="true" />
               </a>
             )}
           </span>
@@ -139,7 +132,7 @@ export function BriefFeed({
         >
           {rows.length === 0 && partial && (
             <PanelBody>
-              <p className="t-caption">{t("brief.feed.incomplete")}</p>
+              <p>{t("brief.feed.incomplete")}</p>
             </PanelBody>
           )}
           {lead && (

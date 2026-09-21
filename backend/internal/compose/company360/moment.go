@@ -201,7 +201,7 @@ func accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late b
 	}}
 	whyNow := owedWhyNow(now, step.DueAt)
 	if step.DueAt == nil {
-		whyNow = "Open task with no date set. It stays open until somebody does it or closes it."
+		whyNow = "Open task with no due date. Stays open until somebody does it or closes it."
 	}
 	moment := crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_task", step.ActivityId),
@@ -243,7 +243,7 @@ func owedHeadline(who, what string) string {
 // owedWhyNow says what the date on the promise is, in the reader's terms.
 func owedWhyNow(now time.Time, due *time.Time) string {
 	if due == nil {
-		return "Promised with no date set. It stays open until somebody does it or closes it."
+		return "Promised with no due date. Stays open until somebody does it or closes it."
 	}
 	if words, late := owedwork.LateWords(due, now); late {
 		return words

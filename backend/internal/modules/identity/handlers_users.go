@@ -5,6 +5,7 @@ package identity
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -22,6 +23,38 @@ import (
 // actor.hasRole("admin")); the handler resolves the acting Identity the
 // middleware bound and returns the resulting member row.
 
+// seatIdentity reads the two fields every route that CREATES a seat carries: the
+// address the seat is keyed on, and the name a colleague is shown by.
+//
+// It exists because the contract's `format: email` and `maxLength` are
+// documentation — the generated binding enforces neither, so a route that
+// skipped these checks would take a malformed address or an empty name and
+// create a member from it. Both routes need exactly the same two refusals, and
+// the second one was a copy of the first until this was extracted.
+//
+// It takes the two strings rather than a request, because the two requests are
+// different generated types that happen to agree on these fields; a parameter
+// naming one of them would make the other one's route convert into a shape it
+// is not.
+//
+// Writes its own refusal and answers false, in the idiom h.actor uses: a caller
+// that gets false has already answered the request and returns.
+func seatIdentity(
+	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
+) (values.Email, string, bool) {
+	email, perr := values.ParseEmail(rawEmail)
+	if perr != nil {
+		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
+		return values.Email{}, "", false
+	}
+	name := strings.TrimSpace(rawName)
+	if name == "" || utf8.RuneCountInString(name) > 255 {
+		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+		return values.Email{}, "", false
+	}
+	return email, name, true
+}
+
 // InviteUser (POST /users): provision a new member and mail the set-password link.
 func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.actor(w, r)
@@ -32,16 +65,8 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// The contract's format/length constraints are not enforced by the binding —
-	// validate here so a malformed email or empty name can't create a member.
-	email, perr := values.ParseEmail(string(req.Email))
-	if perr != nil {
-		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
-		return
-	}
-	name := strings.TrimSpace(req.DisplayName)
-	if name == "" || utf8.RuneCountInString(name) > 255 {
-		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	if !ok {
 		return
 	}
 	// An invite creates an ACTIVE member with no password whose only way in is
@@ -338,4 +363,62 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
 	if err := h.resetMailer.Send(r.Context(), email, words.InviteSubject, body); err != nil {
 		slog.Error("invite email failed", "err", err)
 	}
+}
+
+// CreateFormerMember (POST /users/former): record a colleague who already left,
+// as a deactivated seat with no password and no invitation.
+//
+// formerSourceMax is the contract's own bound on `source`, enforced in the
+// handler because the generated wrapper enforces no maxLength.
+const formerSourceMax = 200
+
+// CreateFormerMember (POST /users/former) records a colleague who already left,
+// as a deactivated seat with no password and no invitation.
+//
+// The three refusals InviteUser carries that this one does not are all about
+// delivery: there is no set-password token, so no mail channel is required and
+// no "this member could never sign in" conflict applies. Being unable to sign
+// in is the point here rather than the failure.
+func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.FormerMemberRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	if !ok {
+		return
+	}
+	in := FormerMemberInput{Email: email.String(), DisplayName: name}
+	if req.Role != nil {
+		in.Role = string(*req.Role)
+	}
+	if req.LeftAt != nil {
+		in.LeftAt = req.LeftAt
+	}
+	if req.Source != nil {
+		// CHARACTERS, not bytes, and bounded here because the generated wrapper
+		// enforces no maxLength — the same gap seatIdentity covers one function
+		// over. Unbounded, this string rides into the audit row's `after` image
+		// at whatever length a caller sends: an operator's label, not content,
+		// and nothing downstream truncates it.
+		if utf8.RuneCountInString(*req.Source) > formerSourceMax {
+			httperr.Write(w, r, httperr.Validation("source", "length",
+				fmt.Sprintf("Name where this record came from in %d characters or fewer.", formerSourceMax)))
+			return
+		}
+		in.Source = *req.Source
+	}
+	userID, err := h.svc.CreateFormerMember(r.Context(), actor, in)
+	if err != nil {
+		err = conflictIf(err, errEmailTaken, "email_taken",
+			"a seat with this email already exists; a former member is recorded once, "+
+				"and somebody who came back is reactivated from the roster rather than added again")
+		httperr.Write(w, r, unknownRoleRefusal(err))
+		return
+	}
+	h.writeUserByID(w, r, userID, http.StatusCreated)
 }

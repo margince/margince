@@ -95,7 +95,16 @@ func captureWithTakeOver(
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
-			activities.ResolveBindableIdentity,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
+			// The proving variant, spelled the way compose/capture.go spells it:
+			// a sink wired with the plain resolve cannot bind across seats at
+			// all, so a test using one would report the same-seat behaviour as
+			// though it were the new rule.
+			activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx),
 			activities.ClaimIdentity,
 		)
 	if _, err := sink.Upsert(connectorCtx(e, adapter, owner), parsed.ToRecord(adapter, raw)); err != nil {
@@ -143,6 +152,11 @@ func TestAConnectorWithoutUpdateCannotTakeOverItsOwnImport(t *testing.T) {
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)
@@ -205,6 +219,11 @@ func TestAnErasureRacingTheTakeOverSkipsInsteadOfStalling(t *testing.T) {
 		WithAssertedTakeOver(racing).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)
@@ -276,6 +295,11 @@ func TestASentMessageIsNotRewrittenByAColleaguesMailbox(t *testing.T) {
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
 		WithMessageIdentity(
 			activities.IdentityKindMail,
+			// Meetings resolve on the iCal UID plus the occurrence: a provider's
+			// own event id differs per calendar, so two colleagues on one meeting
+			// sync two ids for it.
+			activities.IdentityKindMeeting,
+			activities.MeetingIdentityKey,
 			activities.ResolveBindableIdentity,
 			activities.ClaimIdentity,
 		)

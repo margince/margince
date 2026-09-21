@@ -72,7 +72,7 @@ function InvoiceRow({
             of its own: an unpaid invoice has no date to put there, and a
             column of dashes states nothing the status does not. */}
         {invoice.paid_at && (
-          <span className="fin-cell-paid">
+          <span>
             {" · "}
             {t("finance.paidOn", {
               when: formatDate(invoice.paid_at, locale, recordZone),
@@ -122,14 +122,14 @@ const STATUS_LABEL: Record<FinanceInvoice["status"], MessageKey> = {
 
 const STATUS_TONE: Record<
   FinanceInvoice["status"],
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   draft: undefined,
   open: undefined,
-  partially_paid: "warn",
+  partially_paid: "warning",
   paid: "success",
   overdue: "danger",
-  disputed: "warn",
+  disputed: "warning",
   credited: undefined,
   void: undefined,
 };

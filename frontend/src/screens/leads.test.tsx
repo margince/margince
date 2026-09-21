@@ -146,8 +146,8 @@ describe("score thresholds (AC-leads colour bands)", () => {
   it("maps ≥60 accent-strong, 40–59 medium, <40 low", () => {
     expect(scoreTone(60)).toBe("success");
     expect(scoreTone(95)).toBe("success");
-    expect(scoreTone(59)).toBe("warn");
-    expect(scoreTone(40)).toBe("warn");
+    expect(scoreTone(59)).toBe("warning");
+    expect(scoreTone(40)).toBe("warning");
     expect(scoreTone(39)).toBeUndefined();
   });
 });
@@ -1104,7 +1104,7 @@ async function pickFilter(attribute: string, value: string) {
     within(step("Filter")).getByRole("button", { name: attribute }),
   );
   await userEvent.click(
-    within(step(attribute)).getByRole("button", { name: value }),
+    within(step(attribute)).getByRole("radio", { name: value }),
   );
 }
 
@@ -1686,7 +1686,7 @@ describe("LeadsScreen — archived marking (P-3)", () => {
     );
     const warned = screen
       .getAllByText("Disqualified", { selector: ".badge-label" })
-      .filter((label) => label.closest(".badge.badge-warn"));
+      .filter((label) => label.closest(".badge.badge-warning"));
     expect(warned).toHaveLength(1);
   });
 });
@@ -1755,7 +1755,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
       .find((button) => button.hasAttribute("aria-expanded"));
     if (!valueButton) throw new Error("owner value control is missing");
     await user.click(valueButton);
-    await user.click(within(owner).getByRole("button", { name: "Unassigned" }));
+    await user.click(within(owner).getByRole("radio", { name: "Unassigned" }));
 
     await waitFor(() =>
       expect(
@@ -2263,12 +2263,12 @@ describe("terminalBadge (archived/terminal labelling)", () => {
   it("labels disqualified and promoted distinctly and leaves open leads unbadged", () => {
     expect(terminalBadge({ status: "disqualified" })).toEqual({
       label: "lead.disqualified",
-      tone: "warn",
+      tone: "warning",
     });
     // A promoted lead IS archived, but reads "Archived" — never "Disqualified".
     expect(terminalBadge({ status: "promoted" })).toEqual({
       label: "record.archived",
-      tone: "warn",
+      tone: "warning",
     });
     expect(terminalBadge({ status: "new" })).toBeNull();
     expect(terminalBadge({ status: "contacted" })).toBeNull();
@@ -2318,7 +2318,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       "More actions",
       // The day's work opens the task LIST: a door to another screen, which
       // writes nothing on this record.
-      "View tasks",
+      en["today.workQueue"],
       // A reading's receipt: it opens what the figure was computed from and
       // writes nothing.
       "Evidence",

@@ -309,7 +309,11 @@ func (s *Service) write(
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, laneDeadline)
 	defer cancel()
-	written, err := s.ask(laneCtx, in, f.lang)
+	// The deal the card is about. Its request carries the deal's own timeline —
+	// the buyer's words, quoted — so an erasure reaching a contact on this deal
+	// reaches these payloads through the deal it names.
+	written, err := s.ask(ai.WithSubject(laneCtx, ids.From[ids.DealKind](ids.UUID(f.deal.Id)).Ref(), in.Deal.Name),
+		in, f.lang)
 	if err != nil {
 		// The degrade is declared, but a SILENT one is indistinguishable from
 		// a lane nobody wired: the reader sees a deterministic card either

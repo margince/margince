@@ -388,8 +388,12 @@ func (s *Service) pageOf(
 func (s *Service) freezeWalk(
 	ctx context.Context, rows []ranked, asOf time.Time, scope, filter string,
 ) walkState {
+	// DETACHED, and it is the swallow below that demands it: a joined INSERT
+	// that failed would abort the page's whole transaction, so "a walk we could
+	// not record costs the reader their next page, not their day" would become
+	// a 500 three lanes later. Its own transaction is what keeps that true.
 	id, err := s.walks.Freeze(
-		ctx, fingerprint(scope, filter, s.taskOwner), asOf,
+		s.detached(ctx), fingerprint(scope, filter, s.taskOwner), asOf,
 		frozenBuckets(bucketsOf(rows)), frozenRows(rows))
 	if err != nil {
 		return walkState{}

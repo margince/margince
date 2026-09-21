@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -176,6 +177,29 @@ func TestAnAbsentReaderCompletesNoLane(t *testing.T) {
 
 	if len(got.Completed) != 0 {
 		t.Errorf("completed %v with nothing wired", got.Completed)
+	}
+}
+
+// enricherLanes is a second spelling of the lanes Read asks — it exists so a
+// deployment with no enricher can record an outcome per lane without an engine
+// to ask. Two spellings of one list drift, so this is what holds them equal: a
+// lane added to Read and not to the list would leave the ledger silent about it.
+func TestReadAnswersForExactlyTheDeclaredLanes(t *testing.T) {
+	t.Parallel()
+	enricher := NewTechnicalEnricher(
+		stubResolver{mx: []dnsread.MXHost{{Host: "aspmx.l.google.com"}}},
+		stubCertLog{hostnames: []string{"shop.example.de"}},
+		newRecordingCache(), fixedClock(),
+	)
+
+	_, outcomes := enricher.Read(context.Background(), ids.CompanyID{}, "example.de")
+
+	asked := make([]contacts.TechnicalLane, 0, len(outcomes))
+	for _, outcome := range outcomes {
+		asked = append(asked, outcome.Lane)
+	}
+	if !slices.Equal(asked, enricherLanes) {
+		t.Errorf("Read answers for %v, enricherLanes says %v", asked, enricherLanes)
 	}
 }
 

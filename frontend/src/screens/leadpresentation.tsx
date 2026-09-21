@@ -31,9 +31,9 @@ import { sourceLabelFor } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
 
-export function scoreTone(score: number): "success" | "warn" | undefined {
+export function scoreTone(score: number): "success" | "warning" | undefined {
   if (score >= 60) return "success";
-  if (score >= 40) return "warn";
+  if (score >= 40) return "warning";
   return undefined;
 }
 
@@ -83,7 +83,7 @@ export function SlaBadge({ state }: Readonly<{ state: Lead["sla_state"] }>) {
     return <Badge tone="danger">{t("lead.sla.breached")}</Badge>;
   }
   if (state === "at_risk") {
-    return <Badge tone="warn">{t("lead.sla.atRisk")}</Badge>;
+    return <Badge tone="warning">{t("lead.sla.atRisk")}</Badge>;
   }
   return null;
 }
@@ -378,24 +378,24 @@ export function LeadBoard({
   return (
     <>
       {move.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(move.error, t)}
         </p>
       )}
       {rows.length > 0 && live.length === 0 && (
-        <p className="t-caption">{t("lead.boardTerminalOnly")}</p>
+        <p>{t("lead.boardTerminalOnly")}</p>
       )}
       {/* The two reads behind the terminal columns, when they fail. A failed
           report renders as 0 and a failed row read as an empty column, and
           both read as fact — "nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("lead.boardCountsUnavailable")}
         </p>
       )}
       {terminalRows.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("lead.boardTerminalRowsUnavailable")}
         </p>
       )}
@@ -405,7 +405,6 @@ export function LeadBoard({
         columnExtras={(column) =>
           column.stage === openTerminal && terminalRows.hasNextPage ? (
             <Button
-              small
               onClick={() => {
                 terminalRows.fetchNextPage();
               }}
@@ -483,11 +482,7 @@ export function LeadBoard({
           },
         })}
       />
-      {hasMore && (
-        <Button small onClick={loadMore}>
-          {t("list.loadMore")}
-        </Button>
-      )}
+      {hasMore && <Button onClick={loadMore}>{t("list.loadMore")}</Button>}
       {/* Keyed by lead so a half-filled deal block for one never carries to
           the next, the same reason the detail screen keys its pair. */}
       {pending?.dialog === "qualify" && (

@@ -18,9 +18,6 @@
   corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  line-height: 18px; /* ds:ignore the 20px pill less its two 1px edges, as .badge */
   white-space: nowrap;
 }
 
@@ -28,13 +25,6 @@
   flex: none;
   width: 12px;
   height: 12px;
-  color: var(--textMeta);
-}
-
-/* Open: outlined and in the secondary ink, so a column of shared rows reads as
-   a column and not as a stripe of pills. */
-.visibility-open {
-  color: var(--textMeta);
 }
 
 /* Limited: filled and in the primary ink. A sealed thing is the exception in
@@ -50,15 +40,12 @@
 
 /* Withheld: the one state about the reader, drawn as the caution it is. The
    tint composites over its own --bgElevated so its contrast does not depend on
-   which surface a caller put it on — the same reason .badge-warn does. */
+   which surface a caller put it on — the same reason .badge-warning does. */
 .visibility-withheld {
-  background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
+  background:
+    linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated);
   border-color: transparent;
-  color: var(--warnText);
-}
-
-.visibility-withheld > svg {
-  color: currentColor;
+  color: var(--warningText);
 }
 
 /* The mark and its verb on one line, the verb immediately AFTER the fact it

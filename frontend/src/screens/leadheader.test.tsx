@@ -150,6 +150,6 @@ describe("the lead page's head", () => {
       .closest(".record-pulse")
       ?.querySelector(".badge:last-child");
     expect(pill?.textContent).toBe("Disqualified");
-    expect(pill?.classList.contains("badge-warn")).toBe(true);
+    expect(pill?.classList.contains("badge-warning")).toBe(true);
   });
 });

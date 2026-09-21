@@ -70,7 +70,7 @@ function CommitBand({
         </Callout>
       )}
       {dirty && (
-        <Button small variant="primary" disabled={pending} onClick={onSave}>
+        <Button variant="primary" disabled={pending} onClick={onSave}>
           {t("mailSharing.save")}
         </Button>
       )}
@@ -195,7 +195,7 @@ export function MailSharingCard() {
                     sharedShown ? (
                       <Callout
                         kind="standing"
-                        tone="warn"
+                        tone="warning"
                         title={t("mailSharing.sharedPosture.warningTitle")}
                       >
                         {t("mailSharing.sharedPosture.warning")}
@@ -216,7 +216,7 @@ export function MailSharingCard() {
                     shown ? null : (
                       <Callout
                         kind="standing"
-                        tone="warn"
+                        tone="warning"
                         title={t("mailSharing.dangerTitle")}
                       >
                         {t("mailSharing.danger")}
@@ -288,7 +288,7 @@ export function MailSharingPostureRow() {
           </dd>
         </dl>
         {canChangeIt && (
-          <p className="t-caption">
+          <p>
             <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
           </p>
         )}

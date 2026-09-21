@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
@@ -117,7 +118,6 @@ export function ArchiveAction<Archived extends { id: string }>({
   return (
     <>
       <Button
-        small
         variant="danger"
         reasonId={disabledReasonId}
         onClick={() => setConfirming(true)}
@@ -130,32 +130,31 @@ export function ArchiveAction<Archived extends { id: string }>({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: "var(--space-3)" }}
+        >
           {label}
-        </h2>
-        <p style={{ marginBottom: 16 }}>{confirmText}</p>
+        </Heading>
+        <p style={{ marginBottom: "var(--space-4)" }}>{confirmText}</p>
         {mutation.isError && (
           // role="alert" so a refused archive is announced: the dialog stays
           // open either way, and without this the only difference between "it
           // failed" and "it is still working" is a line of red text.
-          <p
-            className="t-caption"
-            role="alert"
-            style={{ color: "var(--dangerText)" }}
-          >
+          <p role="alert" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}
         <div className="actions">
           <Button
-            small
             onClick={() => setConfirming(false)}
             disabled={mutation.isPending}
           >
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}

@@ -7,9 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
-import { CardBoundary } from "../design-system/cardboundary";
 import { type Fact, FactList } from "../design-system/factlist";
-import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import {
   formatDateTime,
@@ -28,7 +26,8 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { throwProblem } from "./common";
+import { HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
 import "./jobhealth.css";
 
@@ -51,9 +50,9 @@ type JobFailure = components["schemas"]["JobFailure"];
 // makes a state added upstream a compile error here instead of an untoned badge.
 const FAILURE_STATE: Record<
   JobFailure["state"],
-  Readonly<{ label: MessageKey; tone: "warn" | "danger" | undefined }>
+  Readonly<{ label: MessageKey; tone: "warning" | "danger" | undefined }>
 > = {
-  retryable: { label: "jobs.state.retryable", tone: "warn" },
+  retryable: { label: "jobs.state.retryable", tone: "warning" },
   discarded: { label: "jobs.state.discarded", tone: "danger" },
   cancelled: { label: "jobs.state.cancelled", tone: undefined },
 };
@@ -96,7 +95,7 @@ function KindCounts({ kind }: Readonly<{ kind: JobKindHealth }>) {
     <span className="jobhealth-counts">
       <Badge>{t("jobs.count.waiting", { count: shown(kind.waiting) })}</Badge>
       <Badge>{t("jobs.count.running", { count: shown(kind.running) })}</Badge>
-      <Badge tone={kind.retrying > 0 ? "warn" : undefined}>
+      <Badge tone={kind.retrying > 0 ? "warning" : undefined}>
         {t("jobs.count.retrying", { count: shown(kind.retrying) })}
       </Badge>
       <Badge tone={kind.dead > 0 ? "danger" : undefined}>
@@ -306,7 +305,7 @@ function FailureSection({
             <div className="settingrow-measure">
               <FactList facts={failureFacts(failures, t, locale, zone)} />
             </div>
-            <p className="t-caption">{t("jobs.reasonVetted")}</p>
+            <p>{t("jobs.reasonVetted")}</p>
           </>
         )
       }
@@ -361,11 +360,6 @@ export function JobHealthCard() {
   // Resolved once for the card and handed down, so the stamp in the footer and
   // the failure timestamps in the body cannot read two different clocks.
   const zone = viewerZone();
-  // The probe itself, not only its answer: every capability predicate reads
-  // false while /me is in flight, so branching on `!canSee` alone told every
-  // administrator that job health was not theirs, on every load, until the
-  // session landed.
-  const me = useMe();
   // `job_health:read`, which is what the endpoint asks for (compose/jobhealth.go).
   //
   // It was the literal admin role while no RBAC object described background
@@ -406,62 +400,20 @@ export function JobHealthCard() {
     },
   });
 
-  let body: ReactNode;
-  if (!canSee) {
-    // Withheld, not absent. The card keeps its place on a maintenance page a
-    // non-admin reaches for its other sections, and an absent card there would
-    // read as "nothing is queued" — a different claim entirely.
-    //
-    // Behind the probe, so the notice states a settled denial rather than the
-    // absence of an answer: while /me is in flight nobody holds any role yet.
-    body = (
-      <QueryGate query={me} pendingLabel={t("settings.jobs")}>
-        {() => <EmptyState>{t("jobs.adminOnly")}</EmptyState>}
-      </QueryGate>
-    );
-  } else {
-    // No `empty` predicate on the gate: its generic copy would understate the
-    // one thing this card exists to report, so the body owns that rung.
-    body = (
-      <QueryGate query={query} pendingLabel={t("settings.jobs")}>
-        {(health) => <JobHealthBody health={health} zone={zone} />}
-      </QueryGate>
-    );
-  }
-
-  // When the report was read belongs to the whole card rather than to any one
-  // reading in it, which is what `Panel`'s footer band is: the card's own
-  // trailing fact, ruled off edge to edge like the header. Read off the query
-  // rather than passed up out of the body, so the stamp is absent for exactly
-  // the states that have no report — withheld, pending, failed — and present
-  // for every state that does, the idle one included: an operator trusting
-  // "nothing is queued" needs to know how old that answer is.
-  // Behind `canSee` as well as behind the data, because a cache outlives a
-  // grant: a role edited mid-session leaves the last report sitting in the
-  // query cache, and a stamp under a withheld body would date a reading the
-  // card is no longer showing.
-  const report = canSee ? query.data : undefined;
-
-  // No bottom margin: `.settings-stack` owns the gap between cards, and a card
-  // that adds its own gets two.
   return (
-    <Panel
+    <HealthCard
       title={t("settings.jobs")}
-      footer={
-        report &&
+      sub={t("settings.jobsSub")}
+      withheld={t("jobs.adminOnly")}
+      canSee={canSee}
+      query={query}
+      footer={(report) =>
         t("jobs.generatedAt", {
           time: formatDateTime(report.generated_at, locale, zone),
         })
       }
     >
-      <PanelBody>
-        <p className="settings-panel-sub">{t("settings.jobsSub")}</p>
-        {/* One card's throw stays inside one card. This body derives every
-            line from a payload the background system writes, so it has more
-            ways to give out than the panels beside it — and without a boundary
-            the whole Maintenance tab, navigation rail included, goes with it. */}
-        <CardBoundary>{body}</CardBoundary>
-      </PanelBody>
-    </Panel>
+      {(health) => <JobHealthBody health={health} zone={zone} />}
+    </HealthCard>
   );
 }

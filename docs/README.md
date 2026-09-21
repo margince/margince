@@ -181,6 +181,7 @@ budget rather than keeping its own list of which pages are generated.
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
+- [ai-provenance-notice.md](explanation/ai-provenance-notice.md) — the sentence a model-written draft carries: what it is for, why it discharges no EU AI Act Art. 50 disclosure duty, which surface shows it to the rep only and which renders it into the outgoing body, and the send-without-review path that would make the analysis stop holding.
 - [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a contact, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md) — the lexical and hybrid lanes, row scope inside the query, embedding identity, and the two kinds of staleness with their two different answers.
 - [relationship-graph.md](explanation/relationship-graph.md) — who on our team knows this contact: participants, the interaction projection, warmth, deal coverage and its risk rules.

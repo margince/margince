@@ -138,7 +138,7 @@ function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
 
   return (
     <>
-      <Button small onClick={() => void copy()}>
+      <Button onClick={() => void copy()}>
         {copied ? t("teamweekly.agenda.copied") : t("teamweekly.agenda.copy")}
       </Button>
       {failed && (
@@ -175,7 +175,6 @@ export function AgendaPanel({
   return (
     <Panel
       title={t("teamweekly.agenda.title")}
-      sub={t("teamweekly.agenda.sub")}
       titleAction={rows.length > 0 ? <CopyAgenda rows={rows} /> : undefined}
     >
       {rows.length === 0 && (
@@ -205,7 +204,7 @@ export function AgendaPanel({
                     ? undefined
                     : CELEBRATED.has(rep.focus_kind)
                       ? "success"
-                      : "warn"
+                      : "warning"
                 }
               >
                 {t(FOCUS_LABEL[rep.focus_kind])}

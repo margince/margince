@@ -1,6 +1,7 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { components } from "../api/schema";
-import { Button, Checkbox, TextInput } from "../design-system/atoms";
+import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { DateFieldSelect } from "./automations.datefield";
@@ -21,13 +22,11 @@ type Automation = components["schemas"]["Automation"];
 
 function ParamFieldControl({
   field,
-  formId,
   value,
   object,
   onChange,
 }: Readonly<{
   field: ParamField;
-  formId: string;
   value: string;
   object: string;
   onChange: (value: string) => void;
@@ -46,36 +45,35 @@ function ParamFieldControl({
     );
   }
   return (
-    <div className="field">
-      <span className="t-label" id={`${formId}-${field.key}`}>
-        {field.key}
-      </span>
-      {field.kind === "date_field" ? (
-        <DateFieldSelect
-          object={object}
-          value={value}
-          onChange={onChange}
-          labelId={`${formId}-${field.key}`}
-        />
-      ) : field.kind === "enum" ? (
-        <Select
-          aria-labelledby={`${formId}-${field.key}`}
-          options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
-          value={value}
-          onChange={onChange}
-        />
-      ) : (
-        <TextInput
-          type={field.kind === "integer" ? "number" : "text"}
-          aria-labelledby={`${formId}-${field.key}`}
-          min={field.min}
-          max={field.max}
-          required
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </div>
+    <Field label={field.key}>
+      {(control) =>
+        field.kind === "date_field" ? (
+          <DateFieldSelect
+            object={object}
+            value={value}
+            onChange={onChange}
+            control={control}
+          />
+        ) : field.kind === "enum" ? (
+          <Select
+            {...control}
+            options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
+            value={value}
+            onChange={onChange}
+          />
+        ) : (
+          <TextInput
+            {...control}
+            type={field.kind === "integer" ? "number" : "text"}
+            min={field.min}
+            max={field.max}
+            required
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )
+      }
+    </Field>
   );
 }
 
@@ -108,7 +106,6 @@ export function AutomationForm({
   onCancel: () => void;
 }>) {
   const t = useT();
-  const formId = useId();
   const fields = paramFields(entry.params_schema);
   const [name, setName] = useState(initialName);
   const [values, setValues] = useState<Record<string, string>>(() =>
@@ -133,27 +130,25 @@ export function AutomationForm({
     >
       {/* The dialog covers the row that would otherwise have said which
           automation is open, so the heading says it instead. */}
-      <h2 className="t-h3 modal-title" id={titleId}>
+      <Heading size="large" className="t-h3 modal-title" id={titleId}>
         {initialName}
-      </h2>
+      </Heading>
       <p className="t-caption">
         {entry.trigger} {"->"} {entry.action}
       </p>
-      <div className="field">
-        <span className="t-label" id={`${formId}-name`}>
-          {t("auto.name")}
-        </span>
-        <TextInput
-          aria-labelledby={`${formId}-name`}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </div>
+      <Field label={t("auto.name")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        )}
+      </Field>
       {fields.map((field) => (
         <ParamFieldControl
           key={field.key}
           field={field}
-          formId={formId}
           value={values[field.key] ?? field.initial}
           object={values.object ?? ""}
           onChange={(next) =>
@@ -168,10 +163,10 @@ export function AutomationForm({
             nothing and is simply not available while the write is out, since
             backing out of something already on its way to the server would say
             it was stopped. */}
-        <Button small disabled={pending} onClick={onCancel}>
+        <Button disabled={pending} onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-        <Button type="submit" variant="primary" small pending={pending}>
+        <Button type="submit" variant="primary" pending={pending}>
           {submitLabel}
         </Button>
       </div>

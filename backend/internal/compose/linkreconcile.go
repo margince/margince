@@ -323,11 +323,7 @@ func (w *linkReconcileWorker) systemContext(ctx context.Context, ws ids.UUID) co
 	// every contact failed on its own event, the whole sweep retried three
 	// times and was discarded, and the backlog it exists to clear sat there
 	// looking as though the job had simply not run yet.
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   linkReconcileActor,
-	})
+	return principal.SystemActing(ctx, linkReconcileActor)
 }
 
 // linkReconcileActor names the sweep in the trail, so a link that appeared with

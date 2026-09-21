@@ -141,5 +141,8 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		       archived_at = coalesce(a.archived_at, now())
 		 WHERE a.id = $1 AND a.restricted_at IS NOT NULL `+due+`
 		 RETURNING a.retention_class`, id).Scan(&class)
-	return class, err
+	if err != nil {
+		return class, err
+	}
+	return class, nil
 }

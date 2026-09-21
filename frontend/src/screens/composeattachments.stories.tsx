@@ -26,7 +26,7 @@ export default meta;
 
 type Story = StoryObj;
 
-// The warn callout as the shelf draws it: the claim in the heading, one broken
+// The warning callout as the shelf draws it: the claim in the heading, one broken
 // bound per line under it. No live region — it is true as the shelf renders.
 export const CarriageBlocked: Story = {
   render: () => (

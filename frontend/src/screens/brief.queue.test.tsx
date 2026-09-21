@@ -199,7 +199,7 @@ it("counts the queue the button actually opens", async () => {
   });
   await waitFor(() => {
     expect(
-      toggle.querySelector(".record-details-toggle-count")?.textContent,
+      toggle.querySelector(".optioncount")?.textContent,
       "the switch counted a different queue from the one it opens",
     ).toContain("42");
   });

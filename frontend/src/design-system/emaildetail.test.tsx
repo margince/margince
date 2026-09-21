@@ -332,7 +332,7 @@ describe("the drawer's reply", () => {
         // native button here would place a shape in the header that no
         // production caller can produce, and the claim is about where the
         // header puts the verb it is given.
-        renderReply={() => <Button small>Reply</Button>}
+        renderReply={() => <Button>Reply</Button>}
       />,
     );
 

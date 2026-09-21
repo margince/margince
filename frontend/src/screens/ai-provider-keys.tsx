@@ -118,7 +118,7 @@ export function AiProviderKeysCard() {
     // no credentials — a claim about the DATA — where the truth is only that
     // which vendors are keyed is not this reader's to know.
     return (
-      <Panel title={t("aiProviderKeys.title")} sub={t("aiProviderKeys.sub")}>
+      <Panel title={t("aiProviderKeys.title")}>
         <PanelBody>
           <EmptyState>{t("aiProviderKeys.withheld")}</EmptyState>
         </PanelBody>
@@ -131,7 +131,7 @@ export function AiProviderKeysCard() {
   // reader auditing the page travels one column instead of reading six open
   // paste fields to find the one vendor that is not set up.
   return (
-    <Panel title={t("aiProviderKeys.title")} sub={t("aiProviderKeys.sub")}>
+    <Panel title={t("aiProviderKeys.title")}>
       <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
         {(list) => (
           <>
@@ -197,7 +197,7 @@ function ProviderKeyRow({
       <div data-testid={`ai-provider-key-${status.provider}`}>
         <div className="ai-provider">
           <span className="ai-provider-who">
-            <span className="ai-provider-vendor">{status.provider}</span>
+            <span>{status.provider}</span>
             {/* The variable is the only thing that says HOW a key reached the
                 vault, and an operator debugging a vendor wants to know whether
                 an export seeded it. Verbatim, because it is a name to be typed
@@ -206,7 +206,7 @@ function ProviderKeyRow({
               {keyless ? "\u2014" : status.env_var}
             </span>
           </span>
-          <Badge tone={status.configured || keyless ? "success" : "warn"}>
+          <Badge tone={status.configured || keyless ? "success" : "warning"}>
             {keyless
               ? t("aiProviderKeys.keyless")
               : status.configured

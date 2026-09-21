@@ -67,9 +67,7 @@ function SettledFace({
       <ul className="entry-fields">
         {entryFieldChanges(row.reversal).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name t-caption">
-              {historyFieldLabel(change.field, t)}
-            </span>
+            <span>{historyFieldLabel(change.field, t)}</span>
             <span>
               {historyValue(change.field, change.newValue, values) ??
                 t("history.cleared")}
@@ -101,9 +99,7 @@ function ResidualFace({
       <ul className="entry-fields">
         {netChanges(row).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name t-caption">
-              {historyFieldLabel(change.field, t)}
-            </span>
+            <span>{historyFieldLabel(change.field, t)}</span>
             <HistoryFieldDiff
               field={change.field}
               oldValue={change.oldValue}
@@ -157,7 +153,6 @@ export function ReversalPairRow({
             changes with opposite intents have no honest single label, so the
             verbs live on the rows they belong to, inside. */}
         <Button
-          small
           variant="ghost"
           className="reversal-toggle"
           aria-expanded={open}

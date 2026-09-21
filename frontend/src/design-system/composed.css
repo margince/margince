@@ -129,8 +129,14 @@
   top: 0;
   z-index: 1;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  /* CENTRED, not on a baseline: the count is a CHIP now rather than a bare
+     figure, and a box has no baseline worth sharing with the word beside it. */
+  align-items: center;
+  /* The name and its count are ONE thing — a stage and how much is in it — so
+     they stand together at the head's start with the scale's own 8 between
+     them. The probability is the other fact on this line and rides the
+     trailing edge (below), which is why this gap never measures it. */
+  gap: var(--space-2);
   padding: var(--space-3) calc(var(--space-3) + 4px) 4px;
   margin-inline: calc(-1 * var(--space-3));
   /* The column's own ground, or the cards slide visibly behind a transparent
@@ -138,33 +144,37 @@
   background: var(--bgWell);
 }
 .board-col-head .stage {
-  font-size: var(--fs-sm);
-  font-weight: 600;
   color: var(--textPrimary);
-  flex: 1;
+  /* The medium weight every label inside a component wears: this is the name of
+     the pile a card belongs to, and it leads the line it shares. */
+  font-weight: var(--fontWeightMedium);
   /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
      count. Without `min-width: 0` a flex item cannot shrink below its longest
      word, so a name longer than the stage is wide overflowed the head — and
-     the column clips, so the count at the end of the line was what got cut.
-     The NAME is what gives way. */
+     the column clips, so the count beside it was what got cut. The NAME is
+     what gives way; it takes no `flex: 1`, because growing it would push the
+     count away from the word it counts. */
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* HOW MUCH IS IN THE STAGE, and it never truncates: it is the figure a reader
-   compares across the board, three characters wide against a name that can be
-   any length. `flex: none` is what keeps the name's ellipsis from eating it. */
+/* HOW MUCH IS IN THE STAGE, in the product's one count chip (`OptionCount`,
+   atoms.css) — the same figure a tab strip draws beside a tab's name. This
+   wrapper exists to hold `aria-hidden` (the chip speaks, and the column
+   already announces "12 deals" below), so it hugs the chip and never
+   truncates: `flex: none` is what keeps the name's ellipsis from eating it. */
 .board-col-head .board-col-count {
+  display: flex;
   flex: none;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--textPrimary);
 }
+/* THE STAGE'S ODDS, and they read at the far edge: a percentage is a property
+   of the column rather than of the name, and against the name it read as part
+   of it. `auto` rather than a spacer, so the head stays three nodes. */
 .board-col-head .prob {
+  flex: none;
+  margin-inline-start: auto;
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
 }
 /* Two lines rather than three figures fighting for one: a stage column is
  * narrow by design, and a money figure broken across lines is unreadable. */
@@ -172,8 +182,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   padding: 0 4px 4px;
 }
 /* A MONEY FIGURE IS ONE LINE AND ELLIPSISES; A SENTENCE WRAPS.
@@ -189,8 +197,6 @@
   overflow: hidden;
 }
 .board-col-money {
-  font-weight: 600;
-  color: var(--textContent);
   font-variant-numeric: tabular-nums;
   /* A flex item's floor is its own min-content width unless it is told
      otherwise, and a `nowrap` amount has no shrink in it at all. */
@@ -218,6 +224,11 @@
 .board-col-refusal {
   white-space: normal;
   overflow-wrap: break-word;
+  /* SECONDARY, and the small rung: it stands where a money figure stands, and
+     in the primary ink at body size it read as the total rather than as the
+     note explaining why there is none. */
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
 }
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage
@@ -233,10 +244,10 @@
  * 700px is THE SHELL'S PHONE BREAKPOINT (app/shell.css, topbar.css,
  * agentrail.css): it is the width at which the sidebar leaves the layout row
  * altogether and becomes a fixed bottom bar, so it is also the width at which
- * the board is handed the whole window. At 720 the swipe shape switched on
- * while the rail was still a 224px column beside it — a 720px desktop window
- * got mandatory snap and a stage that jumped 240 → 328px next to a full
- * sidebar. The swipe and the phone chrome change on one line. */
+ * the board is handed the whole window. The swipe and the phone chrome change
+ * on ONE line, and it has to be that line: anywhere above it the rail is still
+ * a column standing beside the board, and a window with a sidebar in it is not
+ * a place for mandatory snap and a stage sized for a thumb. */
 @media (max-width: 700px) {
   .board {
     --board-col-w: calc(80% - var(--space-4));
@@ -262,7 +273,6 @@
      carries the deal's link and the company's without nesting one inside the
      other. The colour and decoration resets stay: they cover the anchors this
      card contains, which `a:not([class])` in base.css does not reach. */
-  color: inherit;
   text-decoration: none;
   /* The containing block the stretched link measures itself against. Without
      it the deal anchor would spread to the nearest positioned ancestor — the
@@ -284,7 +294,7 @@
   cursor: pointer;
   text-align: left;
   width: 100%;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 /* The edge firms up under the pointer. A background step would fight the
    staged card's own tint, and this card's whole job is to keep those two
@@ -320,7 +330,6 @@
 .deal-company-link {
   position: relative;
   z-index: 1;
-  color: inherit;
   text-decoration: none;
 }
 .deal-company-link:hover {
@@ -351,8 +360,7 @@
 /* The size of the stall, in the stall's own tone: it sits beside the word, and
    only ever beside it. */
 .deal-card .deal-age {
-  font-size: var(--fs-sm);
-  color: var(--warnText);
+  color: var(--warningText);
   font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-company {
@@ -360,8 +368,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 /* The card is one line of company in a narrow column, so a long name elides
@@ -384,24 +390,19 @@
 }
 /* Tabular so a column of figures lines up digit for digit. */
 .deal-card .deal-value {
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-closes {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 /* A warning about the DATE, not about the deal: one nobody has confirmed, or
    one already behind us. The tone marks the figure and leaves the card alone,
    which is the deal strip's rule for the same fact. */
-.deal-card .deal-closes-warn {
-  color: var(--warnText);
+.deal-card .deal-closes-warning {
+  color: var(--warningText);
 }
 .deal-card .deal-name {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 /* The company and, at the far edge of its line, who carries the deal: a mark
@@ -527,57 +528,12 @@
    (min-width: 0) but not grown: at its natural width a short name keeps the
    standing badge beside it on the same row. */
 .record-head h1 {
-  font-family: var(--f-display);
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-/* The RECORD page's identity block, at the scale the mockups draw it: the name
-   is the largest thing on the page and the mark beside it is a logo rather
-   than the list-row avatar it shares a component with. The list keeps its own
-   compact sizes — this applies only where the header runs wide. */
-.record-head-wide h1 {
-  font-size: var(--fs-record-fluid);
-  /* The head box is `overflow: hidden` for the ellipsis, so a line box shorter
-     than the glyphs crops them: at 1.05 the record rung's fluid size cut the
-     descenders and accents out of a name. `--lh-tight` gives them their box. */
-  line-height: var(--lh-tight);
-  /* Tighter than the display rung's tracking: a name set this large wears the
-     scale's own spacing as gaps between its letters. */
-  letter-spacing: -0.035em; /* ds:ignore optical, at the record rung's fluid size: --tracking-display reads as gaps between letters this large */
-}
-/* The record page's verbs are the page's own rather than a toolbar's: one rung
-   taller than a control in a form, beside a name at the record rung. Below
-   that they read as chrome that happens to sit near the name.
-
-   Set on the ROW's rung variable rather than on each button, because
-   `.record-actions` spends that one variable on both shapes it holds: raising
-   the labelled buttons alone is exactly how the ellipsis square came to be 32
-   wide beside 40-tall neighbours once already.
-
-   A descendant selector reaches every verb a wide head has: `RecordView` draws
-   this header wide only when it was handed `controls` or `actionsInline`, and
-   both of those place the verbs INSIDE it. The row below the header belongs to
-   the narrow head, which keeps the form rung. */
-.record-head-wide .record-actions {
-  --control-h: var(--control-h-lg);
-}
-.record-head-wide .record-actions > .btn {
-  padding-inline: var(--space-4);
-}
-/* The compact head: one rung under the masthead. The name takes the h1 rung
-   rather than the record's fluid one, and its tracking follows, because the
-   record rung's tighter setting was chosen for the larger size. The mark is
-   `lg`, set by RecordHead; nothing else about the wide head changes, so the
-   verbs, the subtitle and the identity lines keep their places. */
-.record-head-wide.record-head-compact h1 {
-  font-size: var(--fs-h1);
-  letter-spacing: var(--tracking-display);
 }
 /* The compact head's second register: a caption line on the name's own row
    (the role and the company), the pills under it, and the facts strip as a
@@ -590,8 +546,6 @@
   gap: var(--space-3);
 }
 .record-sub-inline {
-  font-size: var(--fs-body);
-  color: var(--textMeta);
   min-width: 0;
 }
 .record-head-compact .record-pulse {
@@ -670,8 +624,6 @@
 }
 .record-fact dd {
   margin: 0;
-  font-size: var(--fs-body);
-  color: var(--textPrimary);
 }
 
 /* A hairline between two groups of verbs: reaching the record, and recording
@@ -682,19 +634,10 @@
   margin-inline: var(--space-1);
   background: var(--borderSubtle);
 }
-.record-head .record-sub {
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textMeta);
-}
-/* One quiet line under the name, at the same size as the facts under it (the
-   identity line's body rung). Set larger it competed with the name above and
-   read as a second title; the facts row under it carries what a reader
-   actually scans for. */
+/* One quiet line under the name, at the same size as the facts beside it. Set
+   larger it competed with the name above and read as a second title; the facts
+   row under it carries what a reader actually scans for. */
 .record-head-wide .record-sub {
-  font-size: var(--fs-body);
-  line-height: 1.45;
-  color: var(--textMeta);
   max-width: 62ch;
 }
 .record-badges {
@@ -708,8 +651,6 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 4px;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 /* A wide header's pulse is a STACK, not a row: the record page puts two blocks
    here — what the account is, then the figures it stands on — and side by side
@@ -729,23 +670,18 @@
   margin: var(--space-3) 0 var(--space-4);
 }
 
-/* A record's verbs share ONE rung, whatever size each call site asked for: the
-   ellipsis and the panel switch sit among the account's other verbs, and a 32px
-   control in a row of 40px ones reads as a lesser class of thing rather than as
-   one more of the same. Stated on the row, because the rung belongs to the row
-   and not to each button — the alternative was a size prop threaded through
-   fourteen call sites, half of which are table rows where the small rung is the
-   right one.
-
-   Explicitly, and not by letting the row stretch them: stretch makes every
-   button's height a function of the tallest one beside it, which is how the
-   icon-only square came to be 32 wide and 40 tall in the first place. */
+/* A record's verbs wear the house rung EXPLICITLY, rather than by letting the
+   row stretch them: stretch makes every button's height a function of the
+   tallest one beside it, which is how the icon-only square came to be 32 wide
+   and 40 tall once already. Stated on the row because the rung belongs to the
+   row and not to each button — the ellipsis and the panel switch sit among the
+   account's other verbs and are one more of the same. */
 .record-actions :is(.btn, .overflow-menu > .btn) {
-  min-block-size: var(--control-h);
+  min-block-size: var(--controlHeight);
 }
 .record-actions :is(.btn-icon, .overflow-menu > .btn-icon) {
-  inline-size: var(--control-h);
-  block-size: var(--control-h);
+  inline-size: var(--controlHeight);
+  block-size: var(--controlHeight);
 }
 
 /* `actionsInline`: the verbs sit on the SAME baseline as the identity block
@@ -911,6 +847,35 @@
   margin-bottom: var(--space-5);
 }
 
+/* Where the record stands, on its own row at the foot of the head — under the
+   facts and the verbs, above the tab strip. `flex-basis: 100%` is what takes
+   that row: the head is a wrapping flex, so a full-basis child wraps to a line
+   of its own rather than competing with the name for width.
+   
+   A plate rather than a run of controls on the head's own ground: the ladder
+   reads as an element inside a card, and the same ladder floating bare read as
+   chrome nobody had finished. Not `PanelPlate`, which is the recessed plate for
+   what IS and says so — a ladder is the controls that change it.
+   
+   No bottom margin: the head's own `margin-bottom` is the one interval between
+   the identity and the strip, and a second one here would widen it. */
+.record-standing {
+  flex-basis: 100%;
+  /* Last in the head whichever head this is. The compact head lifts its facts
+     strip to `order: 1`, so DOM order alone put the ladder ABOVE the facts it
+     stands under. */
+  order: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--padCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-rest);
+}
+
 /* One vertical stack of full-width panels, which is what a record's work
    column is: every panel in it is read top to bottom once rather than compared
    with the one beside it, and a panel whose body is prose gets a measure too
@@ -997,6 +962,12 @@
   flex-direction: column;
   gap: 0;
   margin-top: 0;
+  /* The rows measure THE LIST, not the window: the same chronology is drawn in
+     a record's work column with the details pane open, in a full-width tab and
+     in a drawer, which are three widths on one screen — and only some of those
+     put a card around it, so the card cannot be what answers. */
+  container-type: inline-size;
+  container-name: chronology;
 }
 
 /* An expanded conversation's members are a list INSIDE a row, not a second
@@ -1027,6 +998,28 @@
   border-block-end: 0;
 }
 
+/* THE VERBS TAKE THEIR OWN LINE BEFORE THE ENTRY GIVES UP ITS WIDTH.
+   The trailing track is `auto`, so it is sized to its content and wins over the
+   `minmax(0, 1fr)` beside it — and there is ONE button size in this product, so
+   a row offering three verbs asks for more than a narrowed column can give.
+   What that cost was not a cramped row but an invisible one: the track resolved
+   to zero and the headline a reader came for was drawn at no width at all, on a
+   row still measuring its full height. Under the width where both fit, the
+   verbs drop below the entry — pinned to the entry's own column, so they keep
+   the gutter and the rail rather than sliding under the date. */
+@container chronology (max-width: 38rem) {
+  .timeline li {
+    grid-template-columns: 76px 20px minmax(0, 1fr);
+  }
+  .timeline .tl-actions {
+    grid-column: 3;
+    margin-left: 0;
+    padding-top: 0;
+    padding-bottom: var(--space-3);
+    flex-wrap: wrap;
+  }
+}
+
 /* A record's CHANGE history carries its date inside the body, under the
    sentence, and draws no rail: its rows are the body alone, across the whole
    grid, rather than a body squeezed into the date gutter. */
@@ -1038,8 +1031,6 @@
    beside it rather than floating at the top of a three-line row. */
 .timeline .tl-when {
   padding-top: var(--space-3);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
   /* Right against the rail. The eye reads the date and the mark it belongs to
      as one thing; ranged left, a short date and a long one pointed at
@@ -1083,8 +1074,8 @@
   block-size: 0.5rem;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textMeta);
-  border: 1px solid var(--textMeta);
+  background: var(--borderStrong);
+  border: 1px solid var(--borderStrong);
 }
 
 .timeline .tl-dot-quiet {
@@ -1133,7 +1124,6 @@
   border: 1px solid var(--borderStrong);
   display: grid;
   place-items: center;
-  color: var(--textMeta);
   flex: none;
 }
 .timeline .tl-icon svg {
@@ -1152,9 +1142,6 @@
    with, what changed — qualifies this line, and set at the same weight as its
    qualifiers the reader had to read all four to find out what happened. */
 .timeline .tl-title {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  line-height: 1.35;
   color: var(--textPrimary);
   text-wrap: pretty;
 }
@@ -1165,7 +1152,6 @@
   align-items: center;
   gap: 6px;
   font-style: italic;
-  color: var(--textMeta);
 }
 .timeline .tl-withheld svg {
   width: 14px;
@@ -1175,8 +1161,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 /* Lead segregation (§3.5): the lead surface is visibly apart from the
@@ -1195,12 +1179,6 @@
   flex-direction: column;
   gap: 2px;
 }
-/* The term in a firmographics pair is an eyebrow: the markup carries
-   .t-eyebrow, so this sheet no longer keeps its own near-copy of that type. */
-.firmo dd {
-  font-size: var(--fs-body);
-  color: var(--textContent);
-}
 
 /* Partner detail's longer field list (partners.tsx PartnerDetail) wraps
  * unevenly in .firmo's flex-wrap layout — a two-column definition grid reads
@@ -1209,17 +1187,6 @@
   display: grid;
   grid-template-columns: 140px 1fr;
   gap: 8px 16px;
-}
-.detail-grid dt {
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
-}
-.detail-grid dd {
-  font-size: var(--fs-body);
-  color: var(--textContent);
 }
 
 /* A timeline list whose rows carry no date gutter or rail of their own —
@@ -1259,17 +1226,12 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-wrap;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 .tl-text-full {
   display: block;
   white-space: pre-wrap;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 .tl-text-toggle {
@@ -1277,8 +1239,6 @@
   border: none;
   padding: 0;
   margin-top: var(--space-1);
-  font: inherit;
-  font-size: var(--fs-meta);
   color: var(--accentText);
   cursor: pointer;
 }
@@ -1292,7 +1252,6 @@
    of buttons doing the same thing. */
 .tl-text-tail-toggle {
   display: block;
-  color: var(--textMeta);
 }
 
 /* The folded tail, once asked for. Quieter than the message and inset, because
@@ -1303,9 +1262,6 @@
   padding-inline-start: var(--space-2);
   border-inline-start: 2px solid var(--borderSubtle);
   white-space: pre-wrap;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 /* A link the sender wrote, not one we generated: it carries the address as its
@@ -1314,24 +1270,6 @@
   color: var(--accentText);
   text-decoration: underline;
   overflow-wrap: anywhere;
-}
-
-/* Which way it went is carried by `.tl-direction`'s own words beside the kind.
-   The coloured edge these classes used to draw fought the date column for the
-   row's left margin, and two hues on a spine is a distinction a reader has to
-   learn where a phrase is one they already know. The classes stay because the
-   row still declares its direction for anything else reading it. */
-
-.tl-direction {
-  font-size: var(--fs-eyebrow);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
-}
-
-/* A collapsed conversation states what it is before what it says. */
-.tl-group-count {
-  font-weight: 500;
 }
 
 /* A thread's members are a card on the body side of the rail: the
@@ -1364,8 +1302,6 @@
    would compete with it, where this only has to be findable when a reader is
    scanning for one deal among several. */
 .timeline .tl-about {
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: 0 var(--space-2);
@@ -1388,8 +1324,6 @@
 .timeline .tl-when-time {
   display: block;
   margin-top: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  color: var(--textTertiary);
 }
 
 /* A conversation on the chronology: one card on the body side of the rail,
@@ -1404,11 +1338,6 @@
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-lg);
   background: var(--pane);
-}
-
-/* Who the thread was with, beside the count. */
-.tl-thread-with {
-  color: var(--textMeta);
 }
 
 /* The thread's verbs sit at the end of its own head line — Reply belongs to
@@ -1454,33 +1383,28 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 .tl-msg-who {
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 /* The moment holds its width: it is what tells two replies apart, so it is
    the last thing that may be squeezed. */
 .tl-msg-when {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 /* The mark for a message that is not their word — ours, or one the reader
    may not open — drawn at the same size as the face beside their word, so
-   the column of marks stays one column. */
+   the column of marks stays one column. That face is `Avatar`'s `sm` rung, and
+   this number is the one that has to move when it does. */
 .tl-msg-mark {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
-  color: var(--textMeta);
 }
 .tl-msg-mark svg {
   width: 11px;
@@ -1490,11 +1414,6 @@
    than one because a message is read here, not scanned past; two rather than
    more because the whole thread stands open and a message that grew with
    its text would decide the card's height. */
-/* The withheld sentence inside a thread has no title to sit on, so it takes
-   the message's own size. */
-.tl-msg-body > .tl-withheld {
-  font-size: var(--fs-sm);
-}
 /* A message that opens its drawer is the same grid as one that does not;
    the button chrome goes and the ground answers the pointer, as on the
    canonical email row. */
@@ -1503,8 +1422,6 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  font: inherit;
-  color: inherit;
   text-align: left;
   cursor: pointer;
   transition: background var(--dur-state) var(--ease-out);
@@ -1624,7 +1541,7 @@
    words the way a name is set apart everywhere else this product lists
    contacts. */
 .meta-row-who {
-  font-weight: var(--fw-medium);
+  font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
 }
 /* A dot between the words of the meta line, drawn by the line rather than
@@ -1632,7 +1549,6 @@
 .meta-row-line > * + *::before {
   content: "·";
   margin-inline-end: var(--space-2);
-  color: var(--textMeta);
 }
 /* The standing pill is a mark, not a word in the sentence, so no dot leads
    into it. The wrapper takes the cancel; the pill itself stays atoms.css's. */

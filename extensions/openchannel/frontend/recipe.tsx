@@ -109,15 +109,13 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
   });
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.recipe.title")}
-        sub={t("extOpenchannel.recipe.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.recipe.title")} />
+      <p>{t("extOpenchannel.recipe.sub")}</p>
       {/* Said WHERE THE URL IS, not in a tooltip: a member who believes the
           link is the secret will paste it where a secret goes, and the link is
           in every access log and proxy between a sender and this installation.
           `info`, because nothing here goes wrong if the reader does nothing —
-          it states what the address IS, and the one `warn` in this section is
+          it states what the address IS, and the one `warning` in this section is
           the command below, which really does leak a key. */}
       <Callout
         kind="standing"
@@ -125,13 +123,15 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
       >
         {t("extOpenchannel.recipe.urlNotSecret")}
       </Callout>
-      <p className="t-caption">{t("extOpenchannel.recipe.urlLabel")}</p>
+      <span className="code-label t-eyebrow">
+        {t("extOpenchannel.recipe.urlLabel")}
+      </span>
       <pre className="code-block" data-testid="openchannel-inbound-url">
         {url}
       </pre>
-      <p className="t-caption">
+      <span className="code-label t-eyebrow">
         {t("extOpenchannel.recipe.signedOver", { material: SIGNED_MATERIAL })}
-      </p>
+      </span>
       <pre className="code-block" data-testid="openchannel-curl">
         {curlRecipe(
           url,
@@ -146,7 +146,7 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
           — so a shared host really does show it in the process list for as
           long as the command runs. Said here rather than left silent. */}
       <Callout
-        tone="warn"
+        tone="warning"
         kind="standing"
         title={t("extOpenchannel.recipe.secretInProcessArgsTitle")}
       >

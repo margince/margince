@@ -126,6 +126,10 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		  -- a human's name in free text, written by neither party to the
 		  -- exchange. It is content about somebody rather than the record of
 		  -- who the exchange was with, so it goes with the words.
+		  --
+		  -- The repair's own ledger holds a second copy, cleared by the UPDATE
+		  -- that follows this statement. A name erased from the activity and
+		  -- left standing in the bookkeeping is still readable.
 		  source_author_name = NULL,
 		  source_id = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
 		                   THEN NULL ELSE a.source_id END,
@@ -142,6 +146,9 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	}
 	redacted, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
+		return nil, err
+	}
+	if err := clearAttributionLedgerNames(ctx, tx, "activity", redacted); err != nil {
 		return nil, err
 	}
 	// The redacted rows' field-level provenance goes with the fields it
@@ -185,6 +192,74 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 // timeline rows. A held activity keeps its embedding along with its text: the
 // vector is derived from evidence the hold freezes, and destroying it while
 // the text stands would be a partial spoliation with nothing to show for it.
+// clearAttributionLedgerNames removes the byline the author repair wrote into
+// its own bookkeeping for these activities.
+//
+// The repair's ledger holds a SECOND copy of the name the caller has just
+// cleared off the message. It is the same free text about the same human, so an
+// erasure that stopped at the activity would leave the erased name sitting in
+// the ledger beside it, readable by anything that reads that table.
+//
+// THE DIGEST GOES WITH THE NAME. `payload_hash` is an unkeyed SHA-256 over the
+// author id and that same name, and a hash of a human name is not anonymous: the
+// candidate set is a staff list, so anyone holding the ledger can hash a few
+// hundred names and match one. Leaving it would keep a re-identifiable copy of
+// the very string the statement above just cleared. Emptied rather than nulled —
+// the column is NOT NULL, and ” is what this package's other erasures write to
+// a NOT NULL text column.
+//
+// THE BATCH LABEL GOES TOO, and this is the second answer to that question.
+// The first was a wire pattern meant to stop a label naming anybody, and it
+// does not: `alice-smith` and `A.Smith` both satisfy it. The label is free text
+// an operator types, so no cheap syntax makes it safe, and a PII declaration
+// resting on one would be false however carefully it were worded. Nothing reads
+// this column — it is written with the row and never queried — so clearing it
+// on an erased record costs an operator one label on a row whose content is
+// already destroyed, and buys a declaration that is simply true.
+//
+// The ROW stays and the REVISION with it: the ledger's job is to say this
+// record has already been reached, and at which revision, so a resumed run
+// neither redoes it nor loses its place.
+//
+// Stated exactly, because a looser version of this sentence stood here and
+// overclaimed: keeping the revision refuses an offer at an EQUAL OR LOWER one.
+// It does not by itself refuse a higher one. What stops a later batch writing a
+// name back onto an erased message is the erasure ARCHIVING the activity — the
+// repair's store refuses an archived row outright, before any comparison.
+//
+// `source_author_id` stays, and the honest statement of why is narrower than
+// any version of this comment has yet managed. It is NOT "what a re-run
+// compares against" — that was wrong, and review caught it: the repair compares
+// the activity's own two author columns, under that row's lock, and never reads
+// this one. What it actually is: a seat id, ordinarily a colleague's account
+// rather than the erased subject's, kept because an erasure of somebody's
+// correspondence is not obviously an instruction to forget which colleague
+// wrote it.
+//
+// Nothing here PROVES the two are different. An author who is also a contact
+// being erased would leave their own seat id standing. Whether that satisfies
+// Art. 17 is a controller's ruling, not this function's, and it is open.
+//
+// ONE spelling for all three paths that clear it: the Art. 17 erasure, the
+// retention sweep's activity/erase, and the restriction lift. The neighbours
+// here already carry the scar of the alternative — purgeContentDerivedFrom is
+// shared for exactly this reason, after two copies of a content list went out of
+// step and the shorter one missed the provider original.
+// `objectType` names which kind of record these ids are, because the ledger is
+// keyed on (object_type, object_id) and two tables may hold the same uuid. It
+// was the literal 'activity' while the repair wrote nothing else; the record
+// repair reaches five more types, and a clear that still named only activities
+// would leave a contact's byline standing under its own key.
+func clearAttributionLedgerNames(ctx context.Context, tx pgx.Tx, objectType string, objectIDs []ids.UUID) error {
+	if len(objectIDs) == 0 {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `
+		UPDATE source_attribution_repair SET source_author_name = NULL, payload_hash = '', batch_ref = ''
+		 WHERE object_type = $1 AND object_id = ANY($2)`, objectType, objectIDs)
+	return err
+}
+
 var subjectActivityEmbeddingsDelete = `
 		DELETE FROM embedding e USING activity_link l
 		WHERE e.entity_type = 'activity' AND l.contact_id = $1 AND e.entity_id = l.activity_id` +

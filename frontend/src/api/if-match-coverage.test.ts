@@ -39,7 +39,7 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/automations.tsx PATCH /automations/{id}",
   // Relationship archives still need their record version threaded through.
   "screens/contactemployers.tsx DELETE /relationships/{id}",
-  "screens/relationships.tsx DELETE /relationships/{id}",
+  "screens/relationshiprows.tsx DELETE /relationships/{id}",
   "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
   // The two FACT writes stay: CompanyFact carries no version on the wire,

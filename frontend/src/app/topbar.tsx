@@ -1,4 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
@@ -113,7 +114,7 @@ function TopBarSearch({
     <div className="topbar-searchslot">
       <button
         type="button"
-        className="topbar-search t-sub"
+        className="topbar-search"
         aria-label={label}
         onClick={onOpenSearch}
       >
@@ -128,7 +129,7 @@ function TopBarSearch({
             listen to the shortcut spelled out. */}
         <span className="topbar-keys" aria-hidden>
           {paletteHotkeyCaps(navigator.platform).map((cap) => (
-            <kbd key={cap}>{cap}</kbd>
+            <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
       </button>

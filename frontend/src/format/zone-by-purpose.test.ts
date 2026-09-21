@@ -162,6 +162,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },
   {
+    file: "screens/projectheaderfacts.test.tsx",
+    why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
+  },
+  {
     file: "screens/taskduedate.test.tsx",
     why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",
   },
@@ -304,6 +308,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "format/calendarday.test.ts",
     why: "middayInstant and calendarDay take a zone and are proven by naming two of them; a machine-dependent zone would make the expectations unwritable.",
+  },
+  {
+    file: "format/daysuntil.test.ts",
+    why: "The zone IS the input under test: the whole case is that a record's date and the count beside it name the same day, which only shows up where the reader's calendar and UTC's disagree — so it needs one named zone east of UTC, one west, and UTC itself to count against. A zone read off the runner would decide whether the defect can appear at all, and the suite would pass over code that is wrong for half the world.",
   },
   {
     file: "format/format.test.ts",

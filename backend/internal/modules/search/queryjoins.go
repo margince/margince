@@ -381,7 +381,7 @@ func joinEdgeCondition(edge JoinEdge) string {
 	if edge.Ends {
 		// A hop is CURRENT membership, which is what every other reader of this
 		// column in the tree means by it (compose/introseams.go,
-		// compose/network/contactgraphaccount.go). "Contacts at this company"
+		// compose/network/contactgraphcompany.go). "Contacts at this company"
 		// answering with the ones who left would be wrong in the direction that
 		// costs something: a stale contact is acted on, a missing one is asked
 		// about.

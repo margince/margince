@@ -179,7 +179,7 @@ var planNatureAllowed = map[string]map[string]bool{
 	"top_risk":    {natureAssessment: true, natureFact: true},
 	"likely_asks": {natureAssessment: true, natureFact: true},
 	"advance":     {natureRecommendation: true},
-	"account_arc": {natureFact: true},
+	"company_arc": {natureFact: true},
 }
 
 // planNatureDefault is what a field's sentence is labelled when the model does
@@ -191,5 +191,5 @@ var planNatureDefault = map[string]string{
 	"top_risk":    natureAssessment,
 	"likely_asks": natureAssessment,
 	"advance":     natureRecommendation,
-	"account_arc": natureFact,
+	"company_arc": natureFact,
 }

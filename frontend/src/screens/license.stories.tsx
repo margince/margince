@@ -100,7 +100,7 @@ export const LicenseRefused: Story = {
   }),
 };
 
-// The refusal in dark, where the warn callout's tint is a color-mix that follows
+// The refusal in dark, where the warning callout's tint is a color-mix that follows
 // the dark accent lift and has to stay apart from the card under it.
 export const LicenseRefusedDark: Story = {
   globals: { theme: "dark" },

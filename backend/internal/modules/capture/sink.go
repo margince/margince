@@ -64,9 +64,11 @@ type Sink struct {
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what
 	// identityOfRecord reads as "this sink files no cross-door identity".
-	mailIdentityKind string
-	resolveIdentity  IdentityResolver
-	claimIdentity    IdentityClaimer
+	mailIdentityKind    string
+	meetingIdentityKind string
+	meetingIdentityKey  MeetingIdentityKeyer
+	resolveIdentity     IdentityResolver
+	claimIdentity       IdentityClaimer
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for

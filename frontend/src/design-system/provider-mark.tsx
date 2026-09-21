@@ -146,7 +146,13 @@ export function ProviderMark({
           textAnchor="middle"
           fill="#fff"
           fontSize="14"
-          fontWeight="700"
+          /* The weight comes from the token, and it has to come through
+             `style`: `font-weight` here is an SVG presentation ATTRIBUTE, and
+             an attribute value is not a CSS value — a var() in one resolves to
+             nothing and the letter renders at the default weight. The property
+             does take it. `fontSize` stays an attribute on purpose: it is a
+             length in this mark's own 24-unit viewBox, not document type. */
+          style={{ fontWeight: "var(--fontWeightBold)" }}
           fontFamily="system-ui, sans-serif"
         >
           S

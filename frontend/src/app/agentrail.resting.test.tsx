@@ -8,10 +8,10 @@ import { cleanup, render, renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { LOCALES, LocaleProvider, translate } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { LOCALES, LocaleProvider, translate, translatePlural } from "../i18n";
+import { en, type MessageKey } from "../i18n/en";
 import { AgentRail } from "./agentrail";
-import { LABELS, TIPS } from "./agentrail-copy";
+import { TIPS } from "./agentrail-copy";
 import {
   restingReadings,
   restingTips,
@@ -117,27 +117,43 @@ describe("restingReadings", () => {
     settled: [] as readonly SpokenLine[],
   };
 
+  // The words the rotation says its readings in, as the rail hands them over:
+  // the English catalogue, and the queue's line through the plural rule rather
+  // than a number pasted onto a noun.
+  const WORDS = {
+    t: (key: MessageKey) => en[key],
+    waiting: (count: number) =>
+      translatePlural("en", "agent.line.waiting", count, {
+        count: String(count),
+      }),
+  };
+
   // The rule the rotation has always held: a read that has not answered is
   // ABSENT, never a zero standing in for an all-clear.
   it("says nothing needs you when every read came back with nothing", () => {
-    expect(restingReadings(QUIET).map(said)).toEqual(["Nothing needs you"]);
+    expect(restingReadings(QUIET, WORDS).map(said)).toEqual([
+      "Nothing needs you",
+    ]);
   });
 
   it("does not count an unanswered approvals read as a clean queue", () => {
-    const answered = restingReadings({ ...QUIET, waiting: 0 });
+    const answered = restingReadings({ ...QUIET, waiting: 0 }, WORDS);
     expect(answered.map(said)).toEqual(["Nothing needs you"]);
   });
 
   // The fix for the pinned line: a day that settled three runs says three
   // things, in severity order behind the queue a contact has to answer.
   it("carries every fresh run, after what is waiting and before the model", () => {
-    const lines = restingReadings({
-      waiting: 2,
-      developmentLine: "offline model",
-      settled: [plain("brief ready"), plain("summary ready")],
-    });
+    const lines = restingReadings(
+      {
+        waiting: 2,
+        developmentLine: "offline model",
+        settled: [plain("brief ready"), plain("summary ready")],
+      },
+      WORDS,
+    );
     expect(lines.map(said)).toEqual([
-      "2 waiting for you",
+      "2 decisions waiting",
       "brief ready",
       "summary ready",
       "offline model",
@@ -300,7 +316,7 @@ function settledRun(
 }
 
 /** The sentence from the screenshot this change was opened against. */
-const SUMMARY_LINE = "What I know about Sabine Mayer is ready.";
+const SUMMARY_LINE = "My summary of Sabine Mayer is ready.";
 const BRIEF_LINE = "Your morning brief is ready.";
 
 const summary = (agoMs: number) =>
@@ -392,7 +408,9 @@ describe("the rail's resting line", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     stubRail([]);
     const { container } = mountRail();
-    await waitFor(() => expect(shown(container)).toBe(LABELS.allClear));
+    await waitFor(() =>
+      expect(shown(container)).toBe(en["agent.line.allClear"]),
+    );
     const tips = restingTips("companies", (key) => translate("en", key)).map(
       said,
     );

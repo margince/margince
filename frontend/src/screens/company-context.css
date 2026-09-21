@@ -38,7 +38,7 @@
   border-left: 3px solid var(--accentMed);
 }
 .company-context-comparison.is-human_conflict {
-  border-left-color: var(--warn);
+  border-left-color: var(--warning);
 }
 .company-context-comparison-title {
   display: flex;
@@ -57,11 +57,6 @@
   align-items: center;
   gap: var(--space-3);
   margin-top: var(--space-2);
-}
-.company-context-resolutions label {
-  color: var(--textMeta);
-  /* ds:ignore Radio owns this <label>; the call site passes words, not a class */
-  font-size: var(--fs-sm);
 }
 .company-context-resolutions .input {
   flex: 1 1 240px;

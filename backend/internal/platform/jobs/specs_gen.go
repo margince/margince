@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "a1a0ebcbb9ff1c02a6233dc9ebbfc2983d8a3f67b5dde0426f918a95ec78dcd8"
+const JobContractHash = "5ca1c5e079a56bc7891535d415790b02688bc525d16f8e7807ab22e523c6e0ae"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -293,7 +293,7 @@ var specs = map[string]Spec{
 		Queue:        "default",
 		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner:    OptsCaller,
-		Registration: Registration{When: []string{"SendRegistry"}},
+		Registration: Registration{When: []string{"SendRegistry", "SendDelivery"}},
 		Args:         []ArgField{{Name: "ScheduledSendID"}, {Name: "Workspace"}},
 	},
 	"comms_scheduled_send_recovery": {
@@ -644,6 +644,17 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}},
 		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "Workspace"}},
+	},
+	"stored_object_reap": {
+		Kind:         "stored_object_reap",
+		GoType:       "StoredObjectReapArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Hour},
+		Registration: Registration{When: []string{"Blobstore"}},
 	},
 	"technical_enrich_backfill": {
 		Kind:         "technical_enrich_backfill",

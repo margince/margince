@@ -114,7 +114,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	return subject, body, nil
 }
 
-// DraftAccountEmail composes the first message to a record.
+// DraftCompanyEmail composes the first message to a record.
 //
 // There is no thread to read, so the draft is built from what a first message
 // actually is rather than from prior correspondence: BandFresh (this IS the
@@ -130,7 +130,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 //
 // It deliberately does NOT resolve a recipient. DraftEmail can ask the store
 // who a thread is with; here the caller names the addressee at send time
-// (send_account_email takes `to`), and inventing one from a link would put an
+// (send_company_email takes `to`), and inventing one from a link would put an
 // address in a draft nobody chose.
 //
 // The links are not read either, and that is a judgment worth stating: the
@@ -154,7 +154,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 // would be unusable, since nobody triages ten drafts out of a chat scrollback.
 // Two writers of one invariant either share a helper or say why they do not;
 // these legitimately do not, and this is the saying why.
-func (c commsAdapter) DraftAccountEmail(
+func (c commsAdapter) DraftCompanyEmail(
 	ctx context.Context, links []agents.RecordLink, intent string,
 ) (string, string, error) {
 	if len(links) == 0 {
@@ -191,12 +191,12 @@ func (c commsAdapter) SendEmail(ctx context.Context, anchor ids.UUID, in agents.
 	return c.send(ctx, activities.FromActivity(ids.From[ids.ActivityKind](anchor)), in)
 }
 
-// SendAccountEmail starts a NEW conversation instead of continuing one
+// SendCompanyEmail starts a NEW conversation instead of continuing one
 // (ADR-0087). It differs from the reply above in the origin and in nothing
 // else: the records the message is filed under are named by the caller because
 // there is no anchor to inherit them from, and each is row-scope probed by the
 // store before the send runs.
-func (c commsAdapter) SendAccountEmail(
+func (c commsAdapter) SendCompanyEmail(
 	ctx context.Context, links []agents.RecordLink, in agents.SendEmailArgs,
 ) (agents.SendEmailResult, error) {
 	filed := make([]activities.ActivityLinkInput, 0, len(links))

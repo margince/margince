@@ -101,7 +101,7 @@ describe("an agent's account-started mail", () => {
     expect(
       stagedSendOf(
         approval({
-          kind: "send_account_email",
+          kind: "send_company_email",
           proposed_change: {
             to: ["buyer@example.test"],
             links: [
@@ -131,7 +131,7 @@ describe("an agent's account-started mail", () => {
     expect(
       stagedSendOf(
         approval({
-          kind: "send_account_email",
+          kind: "send_company_email",
           proposed_change: {
             to: ["buyer@example.test"],
             links: [
@@ -151,7 +151,7 @@ describe("an agent's account-started mail", () => {
     expect(
       stagedSendOf(
         approval({
-          kind: "send_account_email",
+          kind: "send_company_email",
           proposed_change: {
             to: ["buyer@example.test"],
             links: [{ entity_type: "contact", entity_id: "p-1" }],

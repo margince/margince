@@ -38,18 +38,9 @@
 .co-facts dd {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   /* The value column is the one that can run long — an owner's full name, a
      large figure — and a record header is not the place for it to push the
      actions off the row. */
   max-inline-size: 18ch;
   overflow-wrap: anywhere;
-}
-
-/* A value that is not the figure: still reading, withheld, or a stated
-   absence. It reads as meta rather than as an answer. */
-.co-facts-quiet {
-  color: var(--textMeta);
-  font-weight: var(--fw-regular);
 }

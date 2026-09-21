@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { useAgentTierMap, verbTier } from "../../app/autonomy";
-import { Button, Modal, TextInput } from "../../design-system/atoms";
+import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { AutonomyDot } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { problemFieldErrorsOf } from "../common";
 import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
+import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -146,34 +147,37 @@ export function ConfirmAdvanceModal({
           <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
             {t("deals.confirmTerminal", { status: pending.toStage.semantic })}
           </p>
-          {needsLostReason && (
-            <div className="field" style={{ marginTop: "var(--space-2)" }}>
-              <span className="t-label" id="lost-reason-label">
-                {t("deals.lostReason")}
-              </span>
-              <TextInput
-                aria-labelledby="lost-reason-label"
-                value={lostReason}
-                onChange={(event) => setLostReason(event.target.value)}
-              />
+          {(needsLostReason || needsWonReason) && (
+            <div className="advance-reasons">
+              {needsLostReason && (
+                <Field label={t("deals.lostReason")}>
+                  {(control) => (
+                    <TextInput
+                      {...control}
+                      value={lostReason}
+                      onChange={(event) => setLostReason(event.target.value)}
+                    />
+                  )}
+                </Field>
+              )}
+              {needsWonReason && (
+                <WonReasonFields
+                  reason={wonReason}
+                  detail={wonDetail}
+                  onReason={(next) => {
+                    setWonReason(next);
+                    // The detail belongs to "Something else" alone. Kept across
+                    // a change of reason it would sit invisibly behind a field
+                    // the reader can no longer see, which is not a state they
+                    // can correct.
+                    if (next !== WON_REASON_NEEDING_DETAIL) {
+                      setWonDetail("");
+                    }
+                  }}
+                  onDetail={setWonDetail}
+                />
+              )}
             </div>
-          )}
-          {needsWonReason && (
-            <WonReasonFields
-              reason={wonReason}
-              detail={wonDetail}
-              onReason={(next) => {
-                setWonReason(next);
-                // The detail belongs to "Something else" alone. Kept across a
-                // change of reason it would sit invisibly behind a field the
-                // reader can no longer see, which is not a state they can
-                // correct.
-                if (next !== WON_REASON_NEEDING_DETAIL) {
-                  setWonDetail("");
-                }
-              }}
-              onDetail={setWonDetail}
-            />
           )}
           <div className="actions">
             <Button onClick={dismiss}>{t("deals.cancel")}</Button>
@@ -279,35 +283,31 @@ function WonReasonFields({
   const t = useT();
   return (
     <>
-      <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
-        {t("deals.winNoEvidence")}
-      </p>
-      <div className="field" style={{ marginTop: "var(--space-2)" }}>
-        <span className="t-label" id="won-reason-label">
-          {t("deals.winReason")}
-        </span>
-        <Select
-          aria-labelledby="won-reason-label"
-          placeholder={t("deals.winReasonPick")}
-          value={reason}
-          onChange={(value) => onReason(asWonReason(value))}
-          options={WON_REASONS.map((option) => ({
-            value: option,
-            label: t(WON_REASON_LABELS[option]),
-          }))}
-        />
-      </div>
-      {reason === WON_REASON_NEEDING_DETAIL && (
-        <div className="field" style={{ marginTop: "var(--space-2)" }}>
-          <span className="t-label" id="won-detail-label">
-            {t("deals.winReasonDetail")}
-          </span>
-          <TextInput
-            aria-labelledby="won-detail-label"
-            value={detail}
-            onChange={(event) => onDetail(event.target.value)}
+      <p>{t("deals.winNoEvidence")}</p>
+      <Field label={t("deals.winReason")}>
+        {(control) => (
+          <Select
+            {...control}
+            placeholder={t("deals.winReasonPick")}
+            value={reason}
+            onChange={(value) => onReason(asWonReason(value))}
+            options={WON_REASONS.map((option) => ({
+              value: option,
+              label: t(WON_REASON_LABELS[option]),
+            }))}
           />
-        </div>
+        )}
+      </Field>
+      {reason === WON_REASON_NEEDING_DETAIL && (
+        <Field label={t("deals.winReasonDetail")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={detail}
+              onChange={(event) => onDetail(event.target.value)}
+            />
+          )}
+        </Field>
       )}
     </>
   );

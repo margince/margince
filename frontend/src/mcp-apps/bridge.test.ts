@@ -422,6 +422,52 @@ describe("the render helpers refuse to render nonsense", () => {
     expect(node.children).toHaveLength(0);
   });
 
+  // The table is duplicated from src/design-system/heading.tsx on purpose (no
+  // React in a view document), so it is spelled out here in full rather than
+  // sampled: a copy that silently drifted one row would give the same content a
+  // different outline in the app and in a view, and only the row that drifted
+  // would show it.
+  it("gives each size the element the app gives it", async () => {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    const expected = {
+      xxlarge: "H1",
+      xlarge: "H1",
+      large: "H2",
+      medium: "H3",
+      small: "H4",
+      xsmall: "H5",
+      xxsmall: "H6",
+    } as const;
+    for (const [size, tag] of Object.entries(expected)) {
+      const node = bridge.heading(size as keyof typeof expected, "Title");
+      expect(node.tagName).toBe(tag);
+      expect(node.dataset.size).toBe(size);
+      expect(node.className).toBe("heading");
+      expect(node.textContent).toBe("Title");
+    }
+  });
+
+  it("lets a caller override the element and append a class", async () => {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    const node = bridge.heading("large", "Still missing", {
+      as: "h3",
+      className: "section-title",
+    });
+    expect(node.tagName).toBe("H3");
+    expect(node.className).toBe("heading section-title");
+    expect(node.dataset.size).toBe("large");
+  });
+
+  it("puts a heading's text on the page as text, never as markup", async () => {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    const node = bridge.heading("xlarge", "<img>");
+    expect(node.textContent).toBe("<img>");
+    expect(node.children).toHaveLength(0);
+  });
+
   it("reports one raised condition by code and ignores the rest", async () => {
     const parent = stubParent();
     const bridge = await loadBridge(parent.win);

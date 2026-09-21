@@ -3,29 +3,34 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
-import {
-  calendarDaysBetween,
-  formatDate,
-  formatNumber,
-} from "../format/format";
+import { Button, EmptyState } from "../design-system/atoms";
+import { PanelBody } from "../design-system/panel";
+import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { contactTabRoute } from "./contacttab";
 import { useRoster } from "./entityref";
 import { MoveButton } from "./movebutton";
 import {
+  basisAddsARecord,
   FoundMove,
   MomentEvidence,
+  momentKicker,
   TodayPanel,
   TodoRow,
   WithheldNotice,
 } from "./record360";
 import "./record360/record360.css";
 
-// The server selects the recommendation. Empty relationship and quiet results
-// describe coverage; they do not describe outstanding work.
+// WHAT NEEDS A CONTACT TODAY, as the contact page assembles it: the move the
+// server selected at the top of the panel, and the record's own open tasks
+// under it.
+//
+// The panel is drawn on every contact, whatever rung the ladder reached. A
+// quiet record and a thin relationship are ANSWERS to "what needs me", and
+// each has a sentence of its own inside the panel: the question the page
+// exists to answer is answered where it is asked, and a reader can always
+// tell a quiet day from a pane that has not loaded.
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
@@ -61,56 +66,46 @@ export function ContactToday({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const taskRows = useOpenTaskRows(view);
+  // The one move the panel leads with, where the ladder found one. A quiet or
+  // thin rung is an answer rather than an ask, so it draws no row and the
+  // panel's own sentence speaks for the day.
+  const { locale } = useLocale();
+  const move = moment && actionableMoment(moment) ? moment : undefined;
+  const tasks = useOpenTaskRows(view, move);
+  const standing = standingSentence(moment, t);
   const omitted = new Set(view.sections_omitted ?? []);
-  const withheld = (
-    <WithheldNotice
-      sections={[
-        ...(omitted.has("moments") ? [t("today.source.moments")] : []),
-        ...(omitted.has("next_steps") ? [t("today.source.nextSteps")] : []),
-      ]}
-    />
-  );
-  if (!actionableMoment(moment) && taskRows.length === 0) {
-    // A quiet record already says so in the brief (its headline IS the
-    // moment's) so the moment's second sentence under the brief card was the
-    // same news twice, as a line floating between two panels. Only what the
-    // brief cannot say stays: the thin-relationship coverage, and what was
-    // withheld.
-    if (moment?.rule === "nothing_needed") {
-      return withheld;
-    }
-    return (
-      <div className="t-sub">
-        <p>
-          {moment
-            ? moment.rule === "thin_relationship"
-              ? t("contact.moment.rule.thin_relationship")
-              : moment.why_now
-            : t("record.notShown")}
-        </p>
-        {moment?.rule === "thin_relationship" && (
-          <p>{t("contact.overview.coverage")}</p>
-        )}
-        {withheld}
-      </div>
-    );
-  }
   return (
     <TodayPanel
       onOpenTasks={onOpenTasks}
-      tasksLabel={t("brief.feed.fullWorklist")}
-      notice={withheld}
+      tasksLabel={t("today.workQueue")}
+      footer={panelFoot({ moment, more: tasks.more, t, locale })}
+      notice={
+        <WithheldNotice
+          sections={[
+            ...(omitted.has("moments") ? [t("today.source.moments")] : []),
+            ...(omitted.has("next_steps") ? [t("today.source.nextSteps")] : []),
+          ]}
+        />
+      }
     >
-      {moment && actionableMoment(moment) && (
+      {/* Neither a move nor a quiet day. The panel's own sentence claims that
+          nothing needs the reader, and an unread reading and a relationship
+          with nothing recorded are both short of the basis for that claim, so
+          each says what it does know in the quiet line's place. */}
+      {standing && (
+        <PanelBody>
+          <EmptyState>{standing}</EmptyState>
+        </PanelBody>
+      )}
+      {move && (
         <MomentMove
-          moment={moment}
+          moment={move}
           view={view}
           onAction={onAction}
           onOpenEmail={onOpenEmail}
         />
       )}
-      {taskRows}
+      {tasks.rows}
     </TodayPanel>
   );
 }
@@ -128,37 +123,43 @@ function MomentMove({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const secondary = moment.secondary_actions ?? [];
-  const suggestion = suggestionFor(moment, view, t, locale);
   return (
     <FoundMove
       suggested
-      // The line under "Margince suggests" has to BE a suggestion. The
-      // server's headline names the situation ("No reply for 174 days"), so
-      // the card leads with the move that situation calls for and keeps the
-      // situation as the reason under it.
-      title={suggestion.ask}
-      why={suggestion.why}
+      // THIS contact's move first: the server writes the headline from the
+      // record itself ("You owe them: call Alice back about the retrofit"),
+      // and it takes the row's loudest line while the rule it fired on
+      // qualifies the byline beside it.
+      title={moment.headline}
+      // The server's `why_now` is the ONLY reason, here and on the account
+      // brief: one moment gives one reason, and the facts in it ("your last
+      // message went out 131 days ago") are the part a rep judges. A sentence
+      // composed from the rule instead would be the same words for every
+      // contact on that rung.
+      why={moment.why_now}
+      kicker={momentKicker(moment, t)}
       basis={
-        <MomentEvidence
-          evidence={moment.evidence}
-          // The glyph names the KIND of record the move rests on, the same
-          // way the brief's sources and the timeline's rows name theirs.
-          kindOf={(item) =>
-            item.type === "activity"
-              ? view.activities?.data.find((row) => row.id === item.id)?.kind
-              : item.type
-          }
-          onOpen={(item) => {
-            const activity = view.activities?.data.find(
-              (row) => row.id === item.id,
-            );
-            if (activity?.kind === "email" && onOpenEmail && item.id)
-              onOpenEmail(item.id);
-            else navigate(contactTabRoute(view.contact.id, "timeline"));
-          }}
-        />
+        basisAddsARecord(moment) ? (
+          <MomentEvidence
+            evidence={moment.evidence}
+            // The glyph names the KIND of record the move rests on, the same
+            // way the brief's sources and the timeline's rows name theirs.
+            kindOf={(item) =>
+              item.type === "activity"
+                ? view.activities?.data.find((row) => row.id === item.id)?.kind
+                : item.type
+            }
+            onOpen={(item) => {
+              const activity = view.activities?.data.find(
+                (row) => row.id === item.id,
+              );
+              if (activity?.kind === "email" && onOpenEmail && item.id)
+                onOpenEmail(item.id);
+              else navigate(contactTabRoute(view.contact.id, "timeline"));
+            }}
+          />
+        ) : undefined
       }
       action={
         // A fragment, not a column of its own: FoundMove owns the one
@@ -187,54 +188,60 @@ function MomentMove({
   );
 }
 
-// The ask and the reason for it, by rule. The server sends a headline that
-// states the situation and a why_now that cites the rule; a reader under a
-// "Margince suggests" label wants the move, so each rule leads with its verb
-// and keeps the situation as the reason. A rule whose headline already IS a
-// move (meeting prep) keeps it. The day count is read off the record's own
-// dates rather than parsed back out of the server's sentence.
-function suggestionFor(
-  moment: ContactMoment,
-  view: Contact360,
+// What the body says where there is no move to draw. The panel's own quiet
+// line is a claim that nothing needs the reader; a reading nobody may see and
+// a relationship with nothing recorded are both short of the basis for it, so
+// each stands in its place — the first says the reading is not shown, the
+// second says what the server actually found. The quiet rung has the basis,
+// and leaves the line to the panel.
+function standingSentence(
+  moment: ContactMoment | undefined,
   t: ReturnType<typeof useT>,
-  locale: Locale,
-): { ask: string; why: string } {
-  const situation = { ask: moment.headline, why: moment.why_now };
-  const lead = (key: MessageKey, params?: Record<string, string>) => ({
-    ask: t(key, params),
-    why: moment.headline,
-  });
-  switch (moment.rule) {
-    case "gone_quiet": {
-      // Counted from our last message: the silence is how long we have been
-      // waiting. With no such date the server's own sentence stands, rather
-      // than a suggestion with a blank where the count goes.
-      const since = view.last_outbound_at;
-      if (!since) {
-        return situation;
-      }
-      return lead("contact.moment.suggest.goneQuiet", {
-        days: formatNumber(
-          calendarDaysBetween(new Date(since), new Date(view.as_of)),
-          locale,
-        ),
-      });
-    }
-    case "re_engaged":
-      return lead("contact.moment.suggest.reEngaged");
-    case "overdue_promise":
-      return lead("contact.moment.suggest.overduePromise");
-    case "open_promise":
-      return lead("contact.moment.suggest.openPromise");
-    case "job_change":
-      return lead("contact.moment.suggest.jobChange");
-    case "public_signal":
-      return lead("contact.moment.suggest.publicSignal");
-    case "missing_next_step":
-      return lead("contact.moment.suggest.missingNextStep");
-    default:
-      return situation;
+): string | undefined {
+  if (!moment) {
+    return t("record.notShown");
   }
+  return moment.rule === "thin_relationship" ? moment.headline : undefined;
+}
+
+// The band under the rows: what the list did not show, and how far the reading
+// reached. Both are facts about the READING rather than work, so they sit in
+// the foot; as rows they would read as two more things to do. A truncated list
+// with no count reads as "that is everything", which is the one thing a list
+// of commitments may not say.
+function panelFoot({
+  moment,
+  more,
+  t,
+  locale,
+}: Readonly<{
+  moment: ContactMoment | undefined;
+  more: number;
+  t: ReturnType<typeof useT>;
+  locale: Locale;
+}>): ReactNode | undefined {
+  const lines = [
+    ...(more > 0
+      ? [t("co.suggest.more", { count: formatNumber(more, locale) })]
+      : []),
+    // "Nothing needs you" about a relationship with almost nothing recorded is
+    // honest only with the reach of the records behind it named beside it.
+    ...(moment?.rule === "thin_relationship"
+      ? [t("contact.overview.coverage")]
+      : []),
+  ];
+  if (lines.length === 0) {
+    return undefined;
+  }
+  return (
+    <>
+      {lines.map((line) => (
+        <p key={line} className="t-caption">
+          {line}
+        </p>
+      ))}
+    </>
+  );
 }
 
 // The open tasks already on this contact's record, quieter than the move
@@ -243,12 +250,18 @@ function suggestionFor(
 // Rows rather than a component, because the panel counts what it is handed to
 // decide whether the day is quiet — and a component that renders nothing is
 // still one child. A withheld section yields no rows; the rail says what was
-// withheld.
-function useOpenTaskRows(view: Contact360): ReactNode[] {
+// withheld. `more` is what the cut left out, which the foot reports.
+function useOpenTaskRows(
+  view: Contact360,
+  move: ContactMoment | undefined,
+): { rows: ReactNode[]; more: number } {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const tasks = (view.next_steps?.data ?? []).filter((task) => !task.is_done);
+  const named = recordsTheMoveNames(move);
+  const tasks = (view.next_steps?.data ?? []).filter(
+    (task) => !task.is_done && !named.has(task.id),
+  );
   // The assignee's name off the workspace roster, so the row's mark is the
   // colleague it sits with rather than an id. Asked for only when a task names
   // one.
@@ -264,9 +277,8 @@ function useOpenTaskRows(view: Contact360): ReactNode[] {
     return entry && "display_name" in entry ? entry.display_name : undefined;
   };
   const asOf = Date.parse(view.as_of);
-  return tasks
-    .slice(0, OPEN_TASKS_SHOWN)
-    .map((task) => (
+  return {
+    rows: tasks.slice(0, OPEN_TASKS_SHOWN).map((task) => (
       <TodoRow
         key={task.id}
         who={nameOf(task.assignee_id)}
@@ -275,11 +287,29 @@ function useOpenTaskRows(view: Contact360): ReactNode[] {
         action={
           <MoveButton
             contactId={view.contact.id}
-            move={{ action: "open_task", arguments: { activity_id: task.id } }}
+            move={{
+              action: "open_task",
+              arguments: { activity_id: task.id },
+            }}
           />
         }
       />
-    ));
+    )),
+    more: Math.max(tasks.length - OPEN_TASKS_SHOWN, 0),
+  };
+}
+
+// The records the move above the list is itself about. A task the move names
+// is the subject of that row, and listed again underneath it reads as a second
+// thing to do — the same commitment counted twice, once as the ask and once as
+// a chore.
+// Read off the evidence alone, which is where the server names a record: a
+// destination is a surface to open (composer, brief, research, record, the log
+// form) and never a second naming of the row the move is about.
+function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
+  return new Set(
+    (move?.evidence ?? []).flatMap((item) => (item.id ? [item.id] : [])),
+  );
 }
 
 // How many open tasks the day's work lists before the reader is sent to the
@@ -321,12 +351,11 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // Every verb on this card is one the agent proposed and one the agent
-  // carries out on the press: the brief it assembles, the research it runs,
-  // the draft it writes into the composer. So the leading verb wears the AI
-  // fill and the rest the plain outline, whatever the verb: one colour rule
-  // for the column, read once. A green verb among them said "a human does
-  // this one" about a draft the agent writes.
+  // Indigo marks the verb the agent RECOMMENDS, not work the agent performs:
+  // every verb in this column was proposed by the moment, and the leading one
+  // is the move it is asking for. So the lead wears the AI fill and the rest
+  // the plain outline, whatever each verb goes on to do — one colour rule for
+  // the column, read once.
   const variant = primary ? "ai" : "ghost";
   return (
     <span className="today-verb">
@@ -337,7 +366,6 @@ function ActionVerb({
           a caption announcing it under the button was the same step twice. */}
       <Button
         variant={variant}
-        small
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >

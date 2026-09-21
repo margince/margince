@@ -34,12 +34,13 @@ const STATUS_LABELS: Record<CommissionStatus, MessageKey> = {
 // Accrued is the one that still needs a decision, so it leads; approved and
 // paid are both settled and read the same; void is the exception a reader must
 // not skim past.
-const STATUS_TONES: Record<CommissionStatus, "accent" | "success" | "warn"> = {
-  accrued: "accent",
-  approved: "success",
-  paid: "success",
-  void: "warn",
-};
+const STATUS_TONES: Record<CommissionStatus, "accent" | "success" | "warning"> =
+  {
+    accrued: "accent",
+    approved: "success",
+    paid: "success",
+    void: "warning",
+  };
 
 // The whole ledger, followed page by page.
 //
@@ -119,7 +120,7 @@ export function PartnerCommissions({
   });
 
   return (
-    <Panel title={t("commission.panelTitle")} sub={t("commission.panelSub")}>
+    <Panel title={t("commission.panelTitle")}>
       <QueryGate query={query} pendingLabel={t("commission.panelTitle")}>
         {(entries) =>
           entries.length === 0 ? (
@@ -264,7 +265,7 @@ function CommissionLedger({
               }
               if (!canDecide) {
                 return (
-                  <span className="t-caption" data-testid="commission-withheld">
+                  <span data-testid="commission-withheld">
                     {t("commission.decide.withheld")}
                   </span>
                 );

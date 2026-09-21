@@ -94,7 +94,7 @@ export function ProjectsSection({
               section's one thing to do. */}
           {state === "empty" && (
             <div className="card-actions">
-              <Button small variant="ghost" onClick={() => onTab("deals")}>
+              <Button variant="ghost" onClick={() => onTab("deals")}>
                 {t("co.rail.add")}
               </Button>
             </div>
@@ -103,7 +103,7 @@ export function ProjectsSection({
       )}
       {state === "ready" && (
         <div className="card-actions">
-          <Button small variant="ghost" onClick={() => onTab("deals")}>
+          <Button variant="ghost" onClick={() => onTab("deals")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}

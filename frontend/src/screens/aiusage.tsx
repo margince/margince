@@ -22,9 +22,9 @@ type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
 export type Month = { from: string; to: string };
 
-export function bandTone(band: string): "warn" | "danger" | undefined {
+export function bandTone(band: string): "warning" | "danger" | undefined {
   if (band === "normal") return undefined;
-  if (band === "degraded") return "warn";
+  if (band === "degraded") return "warning";
   return "danger";
 }
 
@@ -209,14 +209,12 @@ function AiUsageBody({
           // button moves it.
           <>
             <Button
-              small
               aria-label={t("aiusage.prevMonth")}
               onClick={() => onMonth(adjacentMonth(month, -1))}
             >
               ‹
             </Button>
             <Button
-              small
               aria-label={t("aiusage.nextMonth")}
               disabled={isCurrentMonth(month)}
               onClick={() => onMonth(adjacentMonth(month, 1))}

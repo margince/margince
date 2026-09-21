@@ -82,6 +82,7 @@ func (c *JobCensus) Validate() error {
 		c.everyArgsOwnedKindInsertsOnItsDeclaredQueue(),
 		c.noArgsTypeAnswersToASecondKind(),
 		c.everyDeclaredQueueIsBuiltWithItsDeclaredBound(),
+		everyDeclaredPostureIsHonoured(),
 	)
 	if len(findings) == 0 {
 		return nil

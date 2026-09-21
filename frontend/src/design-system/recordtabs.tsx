@@ -115,9 +115,7 @@ export function RecordTabs<Option extends string>({
             const body = (
               <>
                 {labels[option]}
-                {count !== undefined && (
-                  <OptionCount count={count} className="recordtabs-count" />
-                )}
+                {count !== undefined && <OptionCount count={count} />}
                 {marks?.[option] && (
                   <span className="recordtabs-mark" aria-hidden="true" />
                 )}

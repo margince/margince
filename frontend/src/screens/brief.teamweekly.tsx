@@ -7,6 +7,7 @@ import { useUrlParams } from "../app/urlstate";
 import { Badge, Disclosure, StatCard } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
@@ -146,13 +147,13 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const counts = review.counts;
   if (counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
     return (
-      <h3 className="teamweekly-headline">
+      <Heading size="medium" className="teamweekly-headline">
         {t(
           counts.reps_counted === 0
             ? "teamweekly.headline.unmeasured"
             : "teamweekly.headline.partial",
         )}
-      </h3>
+      </Heading>
     );
   const n = (value: number) => formatNumber(value, locale);
   if (
@@ -162,21 +163,23 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
     counts.leads_routed
   )
     return (
-      <h3 className="teamweekly-headline">
+      <Heading size="medium" className="teamweekly-headline">
         {t("brief.team.outcomes", {
           won: n(counts.deals_won),
           lost: n(counts.deals_lost),
           moved: n(counts.deals_moved),
           leads: n(counts.leads_routed),
         })}
-      </h3>
+      </Heading>
     );
   if (counts.meetings_held === 0 && counts.commitments_due === 0)
     return (
-      <h3 className="teamweekly-headline">{t("teamweekly.headline.plain")}</h3>
+      <Heading size="medium" className="teamweekly-headline">
+        {t("teamweekly.headline.plain")}
+      </Heading>
     );
   return (
-    <h3 className="teamweekly-headline">
+    <Heading size="medium" className="teamweekly-headline">
       {counts.meetings_held > 0 &&
         t("brief.team.meetingRate", {
           done: n(counts.meetings_with_next_step),
@@ -187,7 +190,7 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
           done: n(counts.commitments_kept),
           total: n(counts.commitments_due),
         })}
-    </h3>
+    </Heading>
   );
 }
 

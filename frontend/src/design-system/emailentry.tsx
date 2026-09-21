@@ -272,7 +272,7 @@ export function EmailEntry({
             vocabulary contains every value of it, so the row prints the state
             it was sent and never re-derives one. */}
         <VisibilityBadge state={summary.display_status} />
-        {row.move && <span className="emailentry__move">{t(row.move)}</span>}
+        {row.move && <span>{t(row.move)}</span>}
         {row.attachments > 0 && (
           <span
             className="emailentry__files"

@@ -161,7 +161,7 @@ export function RecordPicker({
         onChange={(event) => setTerm(event.target.value)}
       />
       {searchFailure !== null && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(searchFailure.cause, t)}
         </p>
       )}
@@ -175,9 +175,7 @@ export function RecordPicker({
         </p>
       )}
       {answered && candidates.length === 0 && (
-        <p className="t-caption" aria-live="polite">
-          {t("picker.noMatch")}
-        </p>
+        <p aria-live="polite">{t("picker.noMatch")}</p>
       )}
       {candidates.length > 0 && (
         <ul className="recordpicker-options">

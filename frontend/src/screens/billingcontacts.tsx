@@ -7,7 +7,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BillingContactModal } from "./billingcontactmodal";
 import { useBillingContactActions } from "./billingcontacts.queries";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 
 export type BillingContact = components["schemas"]["BillingContact"];
 export type BillingContactRole = components["schemas"]["BillingContactRole"];
@@ -85,9 +85,7 @@ export function BillingContactsPanel({
           // A refused removal is the one failure here a reader must not have
           // to infer: the row stays and the button re-enables, which reads
           // exactly like a contact who is still on the account.
-          <p className="t-caption" role="alert">
-            {problemMessageOf(actions.remove.error, t)}
-          </p>
+          <RefusalLine error={actions.remove.error} />
         )}
         {contacts.length === 0 ? (
           <p className="t-caption">{t("billing.none")}</p>
@@ -144,7 +142,7 @@ function BillingContactRow({
   return (
     <li className="billing-row">
       <div className="billing-who">
-        <span className="billing-name">{contact.full_name}</span>
+        <span>{contact.full_name}</span>
         <Badge>{t(ROLE_LABEL[contact.role])}</Badge>
         {canWrite && (
           <span className="billing-verbs">
@@ -152,7 +150,6 @@ function BillingContactRow({
                 contacts draws one of these per row and "Change" alone tells a
                 reader on a screen reader nothing about which one. */}
             <Button
-              small
               variant="ghost"
               onClick={onChange}
               disabled={busy}
@@ -162,7 +159,6 @@ function BillingContactRow({
             </Button>
             {canRemove && (
               <Button
-                small
                 variant="ghost"
                 onClick={onRemove}
                 disabled={busy}

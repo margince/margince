@@ -99,7 +99,6 @@ export function DealBrief({
         </p>
         {clampable && (
           <Button
-            small
             variant="ghost"
             onClick={() => setExpanded((open) => !open)}
             aria-expanded={expanded}

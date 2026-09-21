@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* SPDX-FileCopyrightText: 2026 Gradion */
+
+/* One row per checked domain: the domain and its verdict on one line, the
+   sentence under it. The list is short by construction — a company answers to
+   one or two mail domains — so it is a stack rather than anything scrollable. */
+.company-triage__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.company-triage__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}

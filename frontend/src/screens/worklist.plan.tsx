@@ -24,7 +24,6 @@ export function PlanWorkActions({ item }: Readonly<{ item: WorklistItem }>) {
       ) : (
         <Button
           variant="ghost"
-          small
           onClick={() =>
             navigate({ screen: "home" }, new Map([["view", "weekly"]]))
           }
@@ -34,7 +33,6 @@ export function PlanWorkActions({ item }: Readonly<{ item: WorklistItem }>) {
       )}
       {canEdit && own && (
         <Button
-          small
           pending={settle.isPending}
           onClick={() => settle.mutate({ id: item.id, state: "done" })}
         >

@@ -53,6 +53,9 @@ var apiPublic = map[string]bool{
 	"MARGINCE_GMAIL_JWKS_URL":             true,
 	"MARGINCE_GMAIL_PUSH_AUDIENCE":        true,
 	"MARGINCE_GMAIL_PUSH_SERVICE_ACCOUNT": true,
+	// A posture word, token or open: it says which credential /metrics
+	// requires, and is not one.
+	"MARGINCE_METRICS_ACCESS": true,
 }
 
 // apiConfigItems is this role's whole configurable surface: its own flags, plus

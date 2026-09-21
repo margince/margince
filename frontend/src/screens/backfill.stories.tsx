@@ -103,7 +103,7 @@ export const RunningDark: Story = {
 };
 
 // The finished run in dark. `.capture-hero.done` is the one tinted plate in this
-// panel — `--successBg` behind the text with an `--online` border and a
+// panel — `--successBg` behind the text with an `--success` border and a
 // `--success` glyph — and "arrival" is the whole message of the state. A tint
 // that composites to the same value as the card leaves a hero saying nothing.
 export const DoneDark: Story = {

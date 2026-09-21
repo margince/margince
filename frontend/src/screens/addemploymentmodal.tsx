@@ -6,6 +6,7 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -118,13 +119,14 @@ export function AddEmploymentModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("contact.rail.addEmployment")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <div className="field">
           <span className="t-label">{t("contact.rail.employer")}</span>
@@ -136,9 +138,7 @@ export function AddEmploymentModal({
             disabled={create.isPending}
           />
           {!company && allConnected && (
-            <p className="t-caption">
-              {t("contact.rail.allCompaniesConnected")}
-            </p>
+            <p>{t("contact.rail.allCompaniesConnected")}</p>
           )}
         </div>
         <Field label={t("rel.role")}>
@@ -169,11 +169,7 @@ export function AddEmploymentModal({
         />
       </div>
       {create.isError && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(create.error, t)}
         </p>
       )}

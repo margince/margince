@@ -138,11 +138,11 @@ function ScoreCard({
   // a score of ZERO the absence is the truth, whether or not a breakdown was
   // retained.
   const basis = explain.isPending ? (
-    <p className="t-caption">{t("lead.scoreLoading")}</p>
+    <p>{t("lead.scoreLoading")}</p>
   ) : explain.isError ? (
     <>
-      <p className="t-caption">{t("lead.scoreFactorsFailed")}</p>
-      <Button small variant="ghost" onClick={() => explain.refetch()}>
+      <p>{t("lead.scoreFactorsFailed")}</p>
+      <Button variant="ghost" onClick={() => explain.refetch()}>
         {t("common.retry")}
       </Button>
     </>
@@ -157,9 +157,9 @@ function ScoreCard({
       }))}
     />
   ) : explain.data?.explained || lead.score === 0 ? (
-    <p className="t-caption">{t("lead.scoreNoFactors")}</p>
+    <p>{t("lead.scoreNoFactors")}</p>
   ) : (
-    <p className="t-caption">{t("lead.scoreNotStoredYet")}</p>
+    <p>{t("lead.scoreNotStoredYet")}</p>
   );
   return (
     <StatCard
@@ -227,7 +227,7 @@ function FirstResponseCard({
       detail={t(breached ? "lead.sla.overdueSince" : "lead.sla.dueBy", {
         at: formatDateTime(clock.deadline, locale, zone),
       })}
-      tone={breached ? "danger" : atRisk ? "warn" : undefined}
+      tone={breached ? "danger" : atRisk ? "warning" : undefined}
     />
   );
 }

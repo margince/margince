@@ -328,7 +328,6 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
         title={t("deal.startDeliveryTitle")}
         actions={
           <Button
-            small
             variant="primary"
             disabled={attach.isPending}
             data-testid="deal-start-delivery"

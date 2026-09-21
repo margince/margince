@@ -13,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -206,9 +207,9 @@ function AddConnectionDialog({
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
       <div className="form-stack">
-        <h2 id={headingId} className="t-h2">
+        <Heading size="large" id={headingId} className="t-h2">
           {t("connectors.addConnection")}
-        </h2>
+        </Heading>
         <SettingList>
           {addable.map((provider) => (
             <SettingRow
@@ -226,7 +227,6 @@ function AddConnectionDialog({
               // hears.
               control={({ id, "aria-describedby": describedBy }) => (
                 <Button
-                  small
                   id={id}
                   aria-describedby={describedBy}
                   variant="ghost"
@@ -247,7 +247,7 @@ function AddConnectionDialog({
         {/* The fact is standing — this deployment never wired that provider —
             but the reader learns it BY pressing Connect and it is set on that
             press alone, so it is an `outcome` and is spoken. `info` and not
-            `warn`: an unwired provider is a documented configuration, and
+            `warning`: an unwired provider is a documented configuration, and
             nothing about it is wrong. */}
         {notConfigured501 && (
           <Callout
@@ -331,10 +331,10 @@ function TelegramConnectionRow({
       }
       control={
         <div className="connector-actions">
-          <Button small onClick={onEdit}>
+          <Button onClick={onEdit}>
             <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
           </Button>
-          <Button small variant="ghost" onClick={onDisconnect}>
+          <Button variant="ghost" onClick={onDisconnect}>
             {t("connectors.disconnect")}
           </Button>
         </div>
@@ -350,7 +350,7 @@ function TelegramNotice({
 }: Readonly<{ query: ReturnType<typeof useChannelConnections> }>) {
   const t = useT();
   if (query.isPending) {
-    return <p className="t-caption">{t("connectors.loading")}</p>;
+    return <p>{t("connectors.loading")}</p>;
   }
   if (query.isError) {
     return (
@@ -426,7 +426,6 @@ function TelegramConnectorsPanel() {
         !query.data.notConfigured &&
         connections.length === 0 && (
           <Button
-            small
             data-testid="telegram-connect"
             onClick={() => setConnectOpen(true)}
           >
@@ -493,7 +492,7 @@ function TelegramConnectorsPanel() {
           }
         }}
       >
-        <p className="t-caption">{t("connectors.telegramDisconnectBody")}</p>
+        <p>{t("connectors.telegramDisconnectBody")}</p>
       </ConfirmModal>
     </Panel>
   );
@@ -618,7 +617,7 @@ function ConnectorRow({
               {t(statusLabel(conn.status))}
             </Badge>
             {missingSendGrant(conn) && (
-              <Badge tone="warn">{t("connectors.cannotSend")}</Badge>
+              <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
             )}
           </span>
         }
@@ -630,15 +629,15 @@ function ConnectorRow({
                 // different unavailability from one the reader could fix, and
                 // disabling the button they just pressed drops their focus to
                 // <body> at the moment there is something to say.
-                <Button small pending={connectPending} onClick={onReconnect}>
+                <Button pending={connectPending} onClick={onReconnect}>
                   <RefreshCw aria-hidden /> {t("connectors.reconnect")}
                 </Button>
               ) : (
-                <Button small onClick={onImapReconnect}>
+                <Button onClick={onImapReconnect}>
                   <RefreshCw aria-hidden /> {t("connectors.reconnect")}
                 </Button>
               ))}
-            <Button small variant="ghost" onClick={onDisconnect}>
+            <Button variant="ghost" onClick={onDisconnect}>
               {t("connectors.disconnect")}
             </Button>
           </div>
@@ -954,7 +953,7 @@ function PublicOriginRow({
       ? undefined
       : status.reachable
         ? "success"
-        : "warn";
+        : "warning";
   const stateLabel =
     status.reachable === null || status.reachable === undefined
       ? t("connectors.originUnchecked")
@@ -1124,7 +1123,7 @@ function MailConnectorsPanel() {
       // in the column a reader travels to find what each mailbox is set to.
       titleAction={
         offerAdd ? (
-          <Button small onClick={() => setAddOpen(true)}>
+          <Button onClick={() => setAddOpen(true)}>
             {t("connectors.addOpen")}
           </Button>
         ) : undefined
@@ -1133,9 +1132,7 @@ function MailConnectorsPanel() {
       <PanelBody>
         <p className="settings-panel-sub">{t("connectors.sub")}</p>
         <OAuthOutcomeNote />
-        {connectors.isPending && (
-          <p className="t-caption">{t("connectors.loading")}</p>
-        )}
+        {connectors.isPending && <p>{t("connectors.loading")}</p>}
         {connectors.isError && (
           <Callout
             tone="danger"
@@ -1197,7 +1194,7 @@ function MailConnectorsPanel() {
           }
         }}
       >
-        <p className="t-caption">{t("connectors.disconnectBody")}</p>
+        <p>{t("connectors.disconnectBody")}</p>
         {disconnectNoteKey && (
           <p className="t-caption">{t(disconnectNoteKey)}</p>
         )}

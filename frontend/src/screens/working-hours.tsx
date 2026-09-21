@@ -203,7 +203,7 @@ function WorkingHoursForm({
         </Field>
       </div>
       <fieldset className="form-stack">
-        <legend>{t("workingHours.days")}</legend>
+        <legend className="t-name">{t("workingHours.days")}</legend>
         {WEEK.map((day) => (
           <Checkbox
             key={day}
@@ -236,7 +236,7 @@ function WorkingHoursForm({
       </Button>
       {/* After the save, never before: the reader has made the change, and the
           sentence is about what it will do rather than a warning against making
-          it — which is why the tone is `info` and not `warn`. The save
+          it — which is why the tone is `info` and not `warning`. The save
           SUCCEEDED, and the copy says as much in words: that is the change, not
           a fault. */}
       {narrowed && save.isSuccess && (

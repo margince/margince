@@ -49,9 +49,6 @@ export const OnInk: Story = {
       <span style={{ color: "var(--accent)" }}>
         <Logomark size={44} />
       </span>
-      <span style={{ color: "var(--textMeta)" }}>
-        <Logomark size={44} />
-      </span>
     </span>
   ),
 };

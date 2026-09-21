@@ -447,8 +447,7 @@ const thinRelationshipMoment: components["schemas"]["ContactMoment"] = {
   rule: "thin_relationship",
   rule_version: "v1",
   headline: "No interactions recorded",
-  why_now:
-    "No interactions or colleague connections were found in the records available to you.",
+  why_now: "No interactions or colleagues found in the records you can see.",
   confidence: "observed_fact",
   evidence: [],
   recommended_action: {
@@ -829,6 +828,85 @@ export const LeadMomentLadder: Story = {
   ),
 };
 
+// The rung the ladder above never reaches, on the shape that makes the panel
+// say one thing once: the server writes a promise's headline FROM the task,
+// and the same task is on the record's own list. The move names it, the chip
+// under the move would name it a second time and the list a third, so the
+// card keeps the ask and drops both copies.
+const openPromiseMoment: components["schemas"]["ContactMoment"] = {
+  claim_key: "open_promise:p-1:a-9",
+  evidence_fingerprint: "fp-openpromise-1",
+  rule: "open_promise",
+  rule_version: "v1",
+  headline: "You owe them: send the retrofit quote",
+  why_now: "A commitment with a date on it, still open.",
+  confidence: "observed_fact",
+  freshness_at: "2026-08-13T09:00:00Z",
+  evidence: [{ type: "task", id: "a-9", label: "Send the retrofit quote" }],
+  recommended_action: {
+    kind: "complete_task",
+    label: "Open the task",
+    state: "available",
+    destination: { surface: "task", entity_type: "activity", entity_id: "a-9" },
+  },
+};
+
+const promised: View = {
+  ...populated,
+  moment: openPromiseMoment,
+  next_steps: {
+    data: [
+      {
+        id: "a-9",
+        kind: "task",
+        subject: "Send the retrofit quote",
+        occurred_at: "2026-08-10T09:00:00Z",
+        due_at: "2026-08-14T09:00:00Z",
+        is_done: false,
+        source: "manual",
+        captured_by: "human:u1",
+        created_at: "2026-08-10T09:00:00Z",
+        updated_at: "2026-08-10T09:00:00Z",
+      },
+      {
+        id: "a-8",
+        kind: "task",
+        subject: "Book the depot walkthrough",
+        occurred_at: "2026-08-09T09:00:00Z",
+        is_done: false,
+        source: "manual",
+        captured_by: "human:u1",
+        created_at: "2026-08-09T09:00:00Z",
+        updated_at: "2026-08-09T09:00:00Z",
+      },
+    ],
+    page,
+  },
+};
+
+export const LeadMomentPromised: Story = {
+  name: "Lead moment · a promise already on the list",
+  render: () => {
+    // The only lead-moment story with a task row under the move, so it is the
+    // only one whose verb reads the session. Routed here because the card is
+    // rendered on its own: the stub's list-shaped fallback reads as a
+    // malformed session, which closes every grant and draws a refused button
+    // instead of the one this story is about.
+    installFetchStub({ "GET /me": meRoute({ activity: ["read", "update"] }) });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <ContactToday
+            view={promised}
+            moment={openPromiseMoment}
+            onAction={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+};
+
 // --- Rail --------------------------------------------------------------------
 
 export const Rail: Story = {
@@ -919,7 +997,7 @@ export const RailEmployments: Story = {
 };
 
 // The rail's consent slot when a purpose is refused rather than merely
-// unrecorded: verdictClass (contactrail.tsx) reads this as the refused/warn
+// unrecorded: verdictClass (contactrail.tsx) reads this as the refused/warning
 // treatment. The readings above carry no consent slot — the header's Write
 // verb states the refusal — so this is the one surface that draws it.
 export const RailConsentBlocked: Story = {

@@ -60,10 +60,7 @@ export function PartnerDeals({ companyId }: Readonly<{ companyId: string }>) {
   });
 
   return (
-    <Panel
-      title={t("partnerDeals.panelTitle")}
-      sub={t("partnerDeals.panelSub")}
-    >
+    <Panel title={t("partnerDeals.panelTitle")}>
       <QueryGate query={query} pendingLabel={t("partnerDeals.panelTitle")}>
         {(deals) => (
           <PanelBody>

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Card, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import {
@@ -38,7 +39,9 @@ export function UnsubscribeScreen({
     // under it.
     return (
       <PublicPage>
-        <h1 className="t-display">{t("prefs.unsub.deadLinkTitle")}</h1>
+        <Heading size="xlarge" className="t-display">
+          {t("prefs.unsub.deadLinkTitle")}
+        </Heading>
         <Card>
           <p>{t("prefs.unsub.deadLinkBody")}</p>
         </Card>
@@ -149,7 +152,7 @@ function UnsubscribeBody({
     return (
       <PublicPage>
         <Callout
-          tone={center.error instanceof RateLimitedError ? "warn" : "danger"}
+          tone={center.error instanceof RateLimitedError ? "warning" : "danger"}
           kind="outcome"
           title={t("prefs.unsub.errorTitle")}
           actions={
@@ -172,7 +175,9 @@ function UnsubscribeBody({
   if (!target) {
     return (
       <PublicPage>
-        <h1 className="t-display">{t("prefs.unsub.unknownPurposeTitle")}</h1>
+        <Heading size="xlarge" className="t-display">
+          {t("prefs.unsub.unknownPurposeTitle")}
+        </Heading>
         <Card>
           <p>{t("prefs.unsub.unknownPurpose")}</p>
         </Card>
@@ -197,7 +202,9 @@ function UnsubscribeBody({
   if (target.locked) {
     return (
       <PublicPage>
-        <h1 className="t-display">{t("prefs.unsub.lockedTitle")}</h1>
+        <Heading size="xlarge" className="t-display">
+          {t("prefs.unsub.lockedTitle")}
+        </Heading>
         <Card>
           <p className="unsub-kind">
             <Lock size={16} aria-hidden="true" /> {labelOf(t, target)}
@@ -211,7 +218,9 @@ function UnsubscribeBody({
 
   return (
     <PublicPage>
-      <h1 className="t-display">{t("prefs.unsub.title")}</h1>
+      <Heading size="xlarge" className="t-display">
+        {t("prefs.unsub.title")}
+      </Heading>
       <p className="unsub-lead">{t("prefs.unsub.lead")}</p>
       <Card>
         <p className="unsub-kind">
@@ -254,7 +263,7 @@ function PressError({ error }: Readonly<{ error: unknown }>) {
   }
   return (
     <Callout
-      tone={error instanceof RateLimitedError ? "warn" : "danger"}
+      tone={error instanceof RateLimitedError ? "warning" : "danger"}
       kind="outcome"
       title={t("prefs.unsub.failedTitle")}
     >
@@ -285,11 +294,11 @@ function StoppedBody({
           <span className="unsub-done-mark" aria-hidden="true">
             <Check size={22} />
           </span>
-          <h1 ref={heading} tabIndex={-1}>
+          <Heading size="xlarge" ref={heading} tabIndex={-1}>
             {stopped.length > 0
               ? t("prefs.unsub.doneTitle")
               : t("prefs.unsub.alreadyOff")}
-          </h1>
+          </Heading>
           {children}
         </div>
       </Card>
@@ -324,7 +333,9 @@ function WithdrawOnlyBody({
   }
   return (
     <PublicPage>
-      <h1 className="t-display">{t("prefs.unsub.title")}</h1>
+      <Heading size="xlarge" className="t-display">
+        {t("prefs.unsub.title")}
+      </Heading>
       <p className="unsub-lead">{t("prefs.unsub.lead")}</p>
       <Card>
         <p className="unsub-kind">

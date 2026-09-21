@@ -16,7 +16,7 @@
  * lives in that line, and the light the orb spills on the rail floor has no edge
  * to stop it.
  *
- * The panel is taken out of the flow, sideways: a 224px column cannot carry five
+ * The panel is taken out of the flow, sideways: a 256px column cannot carry five
  * sections, and a panel that pushed the rail wider would move every destination
  * above it.
  */
@@ -121,7 +121,6 @@
   border-radius: 50%;
   corner-shape: round;
   background: none;
-  color: inherit;
   cursor: pointer;
 }
 .artoggle:focus-visible {
@@ -210,8 +209,6 @@
 .arline,
 .argone {
   max-width: 100%;
-  font-size: var(--fs-body);
-  line-height: 1.3;
   color: var(--textPrimary);
   /* Two lines, always. Not "up to two": the line changes several times a second
      while the agent works, and a box that is one line tall for "Idle" and two for
@@ -279,16 +276,14 @@
 }
 /* The figure leads, because it is the thing being watched. Baseline INSIDE the
    row while the row itself centres: the money and its scope are one reading and
-   sit on one baseline, and the chevron is a glyph rather than a word. */
+   sit on one baseline, and the chevron is a glyph rather than a word.
+   The TYPE is the row's own (`.t-caption .t-num` on `.arlast`), so nothing here
+   sizes it: this rule places the two readings and nothing else. */
 .arspend {
   display: flex;
   align-items: baseline;
   gap: var(--space-1);
   min-width: 0;
-  font-family: var(--f-body);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 /* The figure is never the thing that gets shortened: the scope beside it is. */
@@ -302,9 +297,6 @@
    column this narrow is three frames deep. */
 .arscope {
   max-width: 100%;
-  font-size: var(--fs-eyebrow);
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -316,7 +308,6 @@
    open. */
 .archev {
   flex: none;
-  color: var(--textMeta);
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .archev.open {
@@ -333,8 +324,6 @@
   border-radius: var(--r-sm);
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
   text-align: center;
   text-decoration: none;
 }
@@ -693,16 +682,23 @@
 
 /* ===== The head =====
  *
- * Frosted, and the one place on this surface with a wash of colour in it: the
- * state's own tone bleeding out of the orb across the band, so the panel is
- * visibly the same object as the ball that opened it. */
+ * WHO is reporting, how it is, and what it has cost. Frosted, and the one place
+ * on this surface with a wash of colour in it: the state's own tone bleeding out
+ * of the orb across the band, so the panel is visibly the same object as the
+ * ball that opened it.
+ *
+ * Three rows of one grid, in the order they are asked for. The state and the
+ * month's figure share the meta line; the agent's NAME is the title under it,
+ * because the one thing here that does not change every few seconds is whose
+ * report this is; the live sentence stands under both as the status.
+ */
 .arphead {
   position: relative;
   display: grid;
   grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 2px var(--space-3); /* ds:ignore two lines of one heading, not spaced content */
-  padding: var(--space-3);
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-4);
   overflow: hidden;
   border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;
   background: linear-gradient(
@@ -713,9 +709,9 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* The light in the band, and it MOVES: a slow blurred drift, one long cycle, so
-   the panel is quietly alive while it is open without ever being something a
-   reader has to look away from. This is the one ornamental thing on the surface
-   and it is here because this is the agent's own panel. */
+ * the panel is quietly alive while it is open without ever being something a
+ * reader has to look away from. This is the one ornamental thing on the surface
+ * and it is here because this is the agent's own panel. */
 .arphead::before {
   content: "";
   position: absolute;
@@ -752,97 +748,81 @@
 }
 .arphead > * {
   position: relative;
+  margin: 0;
 }
 
-/* The state, in its own word. It is the only place the vocabulary is written
-   out, and it is written out because the line beside it says what is happening
-   and not what the agent IS. */
+/* The state, in its own word, with the orb's own tone as its mark. It is the
+   only place the vocabulary is written out, and it is written out because the
+   sentence below it says what is HAPPENING rather than what the agent is. */
 .arpstate {
+  grid-column: 1;
   display: flex;
   align-items: center;
-  gap: 5px; /* ds:ignore pip-to-word optics inside one label */
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
+  gap: var(--space-2);
 }
 .arpstate i {
-  width: 5px;
-  height: 5px;
+  flex: none;
+  width: 6px;
+  height: 6px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
-.arptitle {
-  grid-column: 1;
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  line-height: 1.25;
-  color: var(--textPrimary);
-}
-/* The money, right-aligned against the title and spanning both its rows: the
-   figure is the second thing read on this panel and the first thing quoted off
-   it. */
+/* The month's figure, and it is meta rather than a reading: quiet, at the end
+   of the state's line, said once on this panel. It used to be a two-line block
+   at the head's edge, which gave the second-most-important fact the most
+   emphatic slot on the surface. */
 .arpmoney {
   grid-column: 2;
-  grid-row: 1 / span 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-family: var(--f-body);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-eyebrow);
   white-space: nowrap;
 }
-.arpmoney b {
-  font-weight: var(--fw-medium);
+/* The figure itself, in the panel's head and on the rail's last line: ONE
+   reading drawn twice, so it is spelled once. Primary ink against the caption
+   ink of the month beside it, and medium rather than the UA's bold — a figure
+   this small in bold reads as a heading. */
+.arpmoney b,
+.arspend b {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+/* The one title. It takes the whole width whatever stands beside the state. */
+.arptitle {
+  grid-column: 1 / -1;
   color: var(--textPrimary);
 }
-.arpmoney i {
-  font-style: normal;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
+.arpsaying {
+  grid-column: 1 / -1;
+  color: var(--textPrimary);
 }
 
-/* ===== The body ===== */
+/* ===== The body =====
+ *
+ * Four titled sections at ONE inset, each a labelled region: what is running,
+ * what needs the reader, what has been done, what it is all standing on.
+ */
 .arsect {
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-4);
 }
 .arsect:first-of-type {
-  padding-top: var(--space-3);
+  padding-top: var(--space-4);
 }
 .arsect + .arsect {
-  margin-top: var(--space-3);
+  margin-top: var(--space-4);
 }
-/* The panel is a labelled region with no heading of its own, so its sections
-   sit directly under the PAGE's h1. They were h4, which skipped two levels and
-   made every route carrying an open panel fail `heading-order` — invisibly,
-   because axe tags that rule best-practice and the sweep ran WCAG tags only.
-
-   h2 rather than a new panel title: the head already restates what the panel is
-   about in `.arptitle`, and promoting a sentence that changes with the agent's
-   state to a heading would name the region differently every time it opened.
-   It wears `.t-eyebrow`, so nothing moves on screen. */
-.arsect h2 {
+/* The section's name and, at the far end of its line, the one verb that belongs
+   to it. The verb rides the line rather than sitting INSIDE the heading, which
+   is where it used to be: worn as part of the title it took the title's weight
+   and read as a second heading competing with the first. */
+.arsecthead {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
 }
-/* The link a heading can carry, pushed to the far end of it. */
-.arplain {
-  margin-left: auto;
-  color: var(--accentText);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  text-decoration: none;
-}
-.arplain:hover {
-  text-decoration: underline;
+.arsectname {
+  color: var(--textPrimary);
 }
 
 /* The counts, as tiles. They flex from none to both: a read that has not
@@ -858,7 +838,7 @@
    these four declarations is how a surface ends up with two spellings of one
    card that drift apart on the next tone change. */
 .arbox {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgHover);
@@ -869,7 +849,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  line-height: 1.15;
   text-decoration: none;
   transition:
     background 0.16s ease-out,
@@ -881,127 +860,56 @@
 }
 .artile b {
   flex: none;
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-display);
-  line-height: 1;
   color: var(--accentText);
 }
 
-/* No counts at all, which is a report and not an absence. Dashed, because a
-   solid box would read as a tile whose number failed to load. */
+/* Nothing waiting, which is a report and not an absence — so it is said as a
+   quiet line. It was a dashed plate, and a dashed box round two words reads as a
+   tile whose number failed to load, which is the opposite of an all-clear. */
 .arnone {
-  padding: var(--space-3);
-  border: 1px dashed var(--borderSubtle);
-  border-radius: var(--r-md);
+  margin: 0;
 }
 
-/* ===== The small print =====
+/* ===== What it has done =====
  *
- * One strip rather than a section: what the agent is standing on is the footnote
- * of this panel, and a footnote with a heading and four rows reads as more
- * important than the counts above it. */
-.arstrip {
-  margin: var(--space-3) var(--space-3) 0;
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--borderSubtle);
-}
-
-/* The scope claim, above the runtime rows it shares the strip with. It keeps
-   the strip's small-print size and takes air under it so it reads as its own
-   sentence rather than as the first of the rows. */
-.arclaim {
-  margin: 0 0 var(--space-2);
-}
-
-/* ===== The foot =====
- *
- * The panel's one control, at the far end of the last line: everything above it
- * reports, and a setting sitting to the left among the readings would be read as
- * one more of them. No hairline of its own — the strip above already drew the
- * one rule this end of the panel needs, and a second would fence off a single
- * switch. */
-.arfoot {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 var(--space-3) var(--space-3);
-}
-
+ * One row per settled occurrence: how it went, what it was, and how long ago.
+ * The rows are separated by hairlines rather than boxed, because they are a
+ * list of sentences and a box each would be five cards in a 408px column. */
 .aritem {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) 0;
   border-top: 1px solid var(--borderSubtle);
-  /* The inset is inside the row rather than around it, so a hovered row has
-     somewhere to put its own ground. */
-  padding: var(--space-1) var(--space-2);
-  margin: 0 calc(-1 * var(--space-2));
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
-  transition: background 0.16s ease-out;
 }
 .aritem:first-of-type {
+  padding-top: 0;
   border-top: 0;
 }
-/* Only the rows that GO somewhere light up. A hover state on a row that does
-   nothing is a promise the row cannot keep. */
-.arlink:hover {
-  background: var(--bgHover);
-}
+/* The mark says how that one WENT, in the five states — info while it is still
+   the product's own business, and the three verdicts a settled run can carry.
+   It is the one thing on the row nothing else says: position and the stamp at
+   the end already carry the age. */
 .armark {
   flex: none;
-  width: 5px;
-  height: 5px;
-  margin-top: 5px; /* ds:ignore drops the 5px mark onto the first line's baseline */
+  width: 6px;
+  height: 6px;
+  margin-top: 5px; /* ds:ignore drops the 6px mark onto the first line's baseline */
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--arTone);
-  /* The mark is a light rather than a dot: the same tone the orb is running,
-     with its own small halo, so the panel and the ball are visibly one
-     object. */
-  box-shadow: 0 0 6px -1px var(--arTone);
+  background: var(--info);
 }
-
-/* The recap reads as a sequence, so it gets the line that says so: a thread
-   running behind the marks, fading out at the bottom where the list ends. */
-.arsect:has(.armore) {
-  position: relative;
+.armark[data-tone="success"] {
+  background: var(--success);
 }
-.arsect:has(.armore)::before {
-  content: "";
-  position: absolute;
-  top: 2.1rem;
-  bottom: 1.6rem;
-  left: 2px;
-  width: 1px;
-  background: linear-gradient(to bottom, var(--borderSubtle), transparent);
+.armark[data-tone="warning"] {
+  background: var(--warning);
 }
-.arlink {
-  color: inherit;
-  text-decoration: none;
+.armark[data-tone="danger"] {
+  background: var(--danger);
 }
-.arlink:hover .armuted {
-  color: var(--textPrimary);
-}
-.armore {
-  display: inline-block;
-  margin-top: var(--space-1);
-  color: var(--accentText);
-  font-size: var(--fs-meta);
-  text-decoration: none;
-}
-.armore:hover {
-  text-decoration: underline;
-}
-.arempty {
-  color: var(--textMeta);
-  font-style: italic;
-}
-.armeta i:not([class]) {
-  font-style: italic;
-}
-
 /* The recap's sentence, as ONE flex item.
  *
  * A recap line can carry a link around the record it names, and the line is
@@ -1012,75 +920,102 @@
 .arsaid {
   min-width: 0;
 }
-
+/* When, at the row's end and never wrapped: the sentences are ragged and the
+   stamps are a column. */
 .armuted {
   margin-left: auto;
   padding-left: var(--space-2);
-  /* The body face with tabular figures: `tabular-nums` lines the digits up
-     without a second family, and the body face is narrow enough that the strip
-     fits more of the sentence in the same rail. */
-  font-family: var(--f-body);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   white-space: nowrap;
 }
+/* The feed answered and the day holds nothing yet, which is a sentence rather
+   than a row. */
+.arempty {
+  margin: 0;
+}
 
+/* ===== What it is standing on =====
+ *
+ * The small print, and it is small because its rows are: a term in caption type
+ * against its value in body. It is a section like the three above it — the same
+ * inset, the same heading — with a rule over it, because "what this is standing
+ * on" is a different question from "what it has done". */
+.arstrip {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+}
 .armeta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
-  /* Prose, not a payload: this strip is label-and-value pairs with `<b>` and
-     `<i>` inside it. Same reason as `.armuted` above. */
-  font-family: var(--f-body);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
+  flex-direction: column;
+  gap: var(--space-2);
 }
-.armeta b {
+/* The faults, above the facts: neither is a term with a value — each is a
+   repair, and the licence one is the way to the page that makes it. */
+.arflags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* Term and value in two columns, so the column edge says which is which. They
+   were one wrapped line of bold-and-plain fragments, which is the shape of a
+   sentence and read as one. */
+.arfacts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+.arfacts dt {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.arfacts dd {
+  min-width: 0;
+  margin: 0;
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 /* The link around the licence badge. The badge draws the pill; this only
    carries the press, so it adds no ink of its own. A hover underline would be
    dead here, because text decoration does not reach into the badge's
    inline-flex box, so the ring on keyboard focus is the one state it draws. */
-.arwarn {
+.arwarning {
   display: inline-flex;
   text-decoration: none;
 }
-.arwarn:focus-visible {
+.arwarning:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-full);
   corner-shape: round;
 }
+/* Only the sources it CANNOT reach are listed, so the dot is the danger tone
+   and there is no second state for it to be in. Every mark in the panel's body
+   speaks the five states; the head's pip is the orb's own tone, because the
+   head is the orb restated. */
 .arconn {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+.arconn + .arconn {
+  margin-top: var(--space-1);
 }
 .arconn i {
-  width: 5px;
-  height: 5px;
+  flex: none;
+  width: 6px;
+  height: 6px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--success);
-}
-/* A source it cannot reach is `error`, so the dot beside it is the error tone.
-   Amber here would be the panel disagreeing with the orb above it about how bad
-   the same fact is. */
-.arconn.down i {
-  background: var(--orbRed);
+  background: var(--danger);
 }
 
 /* ── Running now ─────────────────────────────────────────────────────────────
    The scheduled runner's own work, which nothing in this tab started. One row
-   per run: the sentence a reader gets, and under it the detail — the operator's
-   reason and whatever the run itself wrote. The detail is set smaller and
-   dimmer than the line on purpose: it is the answer to a question the line
-   already raised, not a second claim of equal weight. */
+   per run, boxed rather than hairlined: these are live and the recap below is
+   settled, and a reader should be able to tell the two lists apart before
+   reading either. */
 .arruns {
   display: flex;
   flex-direction: column;
@@ -1096,6 +1031,21 @@
 }
 .arrunline {
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.35;
+}
+
+/* ===== The one control, and the one promise =====
+ *
+ * Everything above REPORTS; the switch changes something, so it stands under
+ * all of it behind a rule of its own rather than among the readings. The claim
+ * is last and quietest: it is the only line on this panel that no read
+ * produced, a standing promise rather than news. */
+.arfoot {
+  display: flex;
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+}
+.arclaim {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4);
 }

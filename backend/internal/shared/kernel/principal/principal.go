@@ -290,6 +290,28 @@ func CorrelationID(ctx context.Context) (ids.UUID, bool) {
 	return id, ok
 }
 
+// SystemActing binds the provenance a scheduled pass, a boot step or a
+// bus-driven write acts under: the system principal, under the name that work
+// calls itself, and a fresh correlation id.
+//
+// The two belong together and were spelled together in forty-odd places, which
+// is one place too many in the direction that matters. Every audit row and
+// outbox event such a write leaves carries both; a pass that bound only the
+// actor would write rows nobody can replay as one story, and one that bound
+// only the correlation id would leave the actor column saying that nothing
+// acted. Neither omission fails anything at the call, and neither is visible
+// until somebody reads the trail.
+//
+// The NAME is the caller's, deliberately, and the shared part is the shape
+// rather than the id: the lead-SLA scan names itself so its audit rows are
+// distinguishable from the time scan's, and flattening that would cost a
+// distinction worth keeping. Held by TestASystemPassBindsItsProvenanceThroughOneHelper
+// (backend/gates/systemprovenance_test.go).
+func SystemActing(ctx context.Context, name string) context.Context {
+	ctx = WithActor(ctx, Principal{Type: PrincipalSystem, ID: name})
+	return WithCorrelationID(ctx, ids.NewV7())
+}
+
 // WithCausationEvent binds the event_id that caused the current work, so
 // derived events chain causation_id → parent (capture → created →
 // stage_changed, events.md §2). Unbound on direct API calls: their

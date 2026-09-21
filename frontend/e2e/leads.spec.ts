@@ -44,9 +44,7 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
   // open in the middle of it was a page half filled in before anybody asked.
   await page.getByRole("button", { name: "Aktivität erfassen" }).click();
   await page.getByLabel("Betreff *").fill("Rückruf vereinbart");
-  await page
-    .getByRole("button", { name: "Erfassen", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Erfassen", exact: true }).click();
   const request = await posted;
   const body = request.postDataJSON();
   expect(body.subject).toBe("Rückruf vereinbart");

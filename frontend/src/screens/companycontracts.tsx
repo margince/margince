@@ -61,8 +61,8 @@ const STATUS_LABELS: Record<ContractStatus, MessageKey> = {
 // Only two states change how a row should READ. A superseded agreement is
 // history; a cancelled one is a fact the reader needs to notice. The rest are
 // equal citizens and get no tone, because tone on everything is tone on nothing.
-const STATUS_TONE: Partial<Record<ContractStatus, "warn" | "danger">> = {
-  superseded: "warn",
+const STATUS_TONE: Partial<Record<ContractStatus, "warning" | "danger">> = {
+  superseded: "warning",
   cancelled: "danger",
 };
 
@@ -167,7 +167,6 @@ export function CompanyContractsCard({
         titleAction={
           mayAdd ? (
             <Button
-              small
               onClick={() => {
                 setEditing(undefined);
                 setFormOpen(true);
@@ -181,14 +180,12 @@ export function CompanyContractsCard({
         {present && (
           <PanelBody className="docs-filters">
             <Button
-              small
               aria-pressed={!activeOnly}
               onClick={() => setActiveOnly(false)}
             >
               {t("contracts.filter.all")}
             </Button>
             <Button
-              small
               aria-pressed={activeOnly}
               onClick={() => setActiveOnly(true)}
             >
@@ -349,27 +346,25 @@ function ContractRow({
                 A bare <button> here drew as centred unstyled text inside a
                 panel that was otherwise the design system's. */}
             {mayWrite && (
-              <Button small onClick={onEdit}>
-                {t("contracts.edit")}
-              </Button>
+              <Button onClick={onEdit}>{t("contracts.edit")}</Button>
             )}
             {mayRenewThis && (
-              <Button small onClick={() => setRenewing(true)}>
+              <Button onClick={() => setRenewing(true)}>
                 {t("contracts.renew.submit")}
               </Button>
             )}
             {mayWrite && !terminal && (
-              <Button small onClick={() => setChangingStatus(true)}>
+              <Button onClick={() => setChangingStatus(true)}>
                 {t("contracts.statusChange.submit")}
               </Button>
             )}
             {mayWrite && (
-              <Button small onClick={() => setCancelling(true)}>
+              <Button onClick={() => setCancelling(true)}>
                 {t("contracts.cancel.menuLabel")}
               </Button>
             )}
             {mayArchive && (
-              <Button small variant="danger" onClick={() => setAsking(true)}>
+              <Button variant="danger" onClick={() => setAsking(true)}>
                 {t("contracts.archive")}
               </Button>
             )}
@@ -433,7 +428,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
   }
   if (contract.cancellation_effective_on && contract.under_contract) {
     return (
-      <Badge tone="warn">
+      <Badge tone="warning">
         {t("contracts.endsOn", {
           when: formatDate(
             contract.cancellation_effective_on,

@@ -465,7 +465,7 @@ func summaryScopeDay(n int) crmcontracts.Attention {
 // spelling as urgent and another as hygiene is how the same act ends up in two
 // places in the queue.
 func TestEveryOutboundSendKindBlocksCustomerWork(t *testing.T) {
-	for _, kind := range []string{"send_email", "send_account_email", "send_message", "book_meeting"} {
+	for _, kind := range []string{"send_email", "send_company_email", "send_message", "book_meeting"} {
 		day := crmcontracts.Attention{
 			AsOf:     rankInstant,
 			NeedsYou: []crmcontracts.AttentionItem{item("a", "approval", withKind(kind))},

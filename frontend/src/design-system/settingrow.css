@@ -58,19 +58,9 @@
 
 /* The description under the label. Not `.t-caption`'s bottom margin: this
  * sits in a flex column that owns the interval, and a margin on top of the gap
- * reads as a row with a different rhythm from the one above it.
- *
- * --textMeta, never --textMuted. --textMuted is the placeholder-grade ink,
- * about 1.4:1 on the light card — decoration rather than text.
- * This line is what tells a reader what the setting DOES, so it is the one that
- * has to be readable; --textMeta is the canonical AA small-text role. Three
- * other sheets in this tree already carry the same note, which is how many
- * times the wrong token has been reached for. */
+ * reads as a row with a different rhythm from the one above it. */
 .settingrow-description {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
   /* A per-item list names its item here, and an item's name is routinely an
    * identifier with nothing to break on — an address, a slug, a domain. One
    * 60-char address painted 488px wide out of a 252px column on a phone. Prose
@@ -194,8 +184,6 @@
  * value that is not code; a caller whose value names an agent passes
  * `PassportChip` itself. */
 .settingrow-value {
-  color: var(--textMeta);
-  font-size: var(--fs-body);
   text-align: right;
   overflow-wrap: anywhere;
   /* A measure, for the same reason the field below has one: a value that is a

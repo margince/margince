@@ -63,7 +63,7 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 				Value      *string `json:"value"`
 				Confidence *string `json:"confidence"`
 			} `json:"meeting_type"`
-			AccountArc *[]json.RawMessage `json:"account_arc"`
+			CompanyArc *[]json.RawMessage `json:"company_arc"`
 			Questions  *[]json.RawMessage `json:"questions"`
 			Unknowns   *[]json.RawMessage `json:"unknowns"`
 			Advance    *struct {
@@ -90,8 +90,8 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 	if body.Plan.Unknowns == nil {
 		t.Error("`unknowns` is absent rather than an empty array; a client cannot tell 'no gaps' from 'not answered'")
 	}
-	if body.Plan.AccountArc == nil {
-		t.Error("`account_arc` is absent rather than an empty array")
+	if body.Plan.CompanyArc == nil {
+		t.Error("`company_arc` is absent rather than an empty array")
 	}
 	// The advance is required in full: a meeting with two ways to close and no
 	// third is not a plan a rep can act on.

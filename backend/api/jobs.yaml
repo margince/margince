@@ -676,7 +676,7 @@ kinds:
     queue: default
     timeout: 5m
     opts_owner: caller
-    registration: {when: [SendRegistry], absent: registers_nothing}
+    registration: {when: [SendRegistry, SendDelivery], absent: registers_nothing}
     args:
       Workspace: id
       ScheduledSendID: id
@@ -1077,6 +1077,26 @@ kinds:
       Hourly rather than daily: the rows hold verbatim record snapshots and the
       replay window they serve is only 24h, so a daily pass would leave a day of
       expired personal data sitting past its purpose.
+
+
+  stored_object_reap:
+    role: worker
+    fleet: true
+    go_type: StoredObjectReapArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [Blobstore], absent: registers_nothing}
+    reason: >-
+      Hourly, and the cadence is the grace period's neighbour rather than a
+      guess: a key is provisional for at most the transaction between the put
+      and the row, so an hour past that is an orphan. An object nothing
+      references is one an Art. 17 erasure cannot reach — it finds an
+      attachment's bytes by reading storage_key off the row — so the window
+      between the failure and the sweep is a window in which a data subject's
+      file is unreachable rather than destroyed. Daily would make that window a
+      day.
 
 
   linkedin_rematch:

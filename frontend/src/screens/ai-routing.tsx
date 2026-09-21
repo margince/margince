@@ -116,7 +116,7 @@ export function AiRoutingCard({
 
   if (!canSee) {
     return (
-      <Panel title={t("aiRouting.title")} sub={t("aiRouting.sub")}>
+      <Panel title={t("aiRouting.title")}>
         <PanelBody>
           <EmptyState>{t("aiRouting.withheld")}</EmptyState>
         </PanelBody>
@@ -348,7 +348,6 @@ function RoutingForm({
 
         <Panel
           title={t("aiRouting.lanes.title")}
-          sub={t("aiRouting.lanes.sub")}
           titleAction={
             onPriceSheet ? (
               <button
@@ -592,9 +591,9 @@ function LaneRow<
               A lane this build does not know gets no gloss rather than an
               invented one. */}
           <span className="ai-lane-name">
-            <span className="ai-lane-id">{name}</span>
+            <span>{name}</span>
             {laneGloss(name, t) && (
-              <span className="ai-lane-gloss t-sub">{laneGloss(name, t)}</span>
+              <span className="t-sub">{laneGloss(name, t)}</span>
             )}
           </span>
           {/* The binding itself, as ONE flex item. Grouped rather than laid
@@ -615,14 +614,12 @@ function LaneRow<
                 protocol, and every broker on it — OpenRouter, Together, a
                 self-hosted gateway — reads identically on this row without the
                 host. Only this adapter has one, so nothing else grows it. */}
-            {binding.base_url ? (
-              <span className="ai-lane-host">{hostOf(binding.base_url)}</span>
-            ) : null}
+            {binding.base_url ? <span>{hostOf(binding.base_url)}</span> : null}
             {unkeyed?.has(binding.provider) && (
-              <Badge tone="warn">{t("aiRouting.noKey")}</Badge>
+              <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
             )}
             {isUnpriced(catalogue, binding.provider, binding.model, lane) ? (
-              <Badge tone="warn">{t("aiRouting.unpriced")}</Badge>
+              <Badge tone="warning">{t("aiRouting.unpriced")}</Badge>
             ) : (
               // What this lane costs to call, where the sheet can say. It is
               // the reason the ladder is ordered the way it is, and reading it
@@ -885,7 +882,7 @@ function RoutingPreview({
   const t = useT();
   if (!data) return null;
   return (
-    <Panel title={t("aiAdmin.preview")} sub={t("aiAdmin.shared")}>
+    <Panel title={t("aiAdmin.preview")}>
       <PanelBody>
         <AiFeatureTable rows={data.features} />
         {data.unused_tiers.length > 0 && (
@@ -955,7 +952,7 @@ function RoutingConflict({
   const t = useT();
   if (!current || current === expected.replaceAll('"', "")) return null;
   return (
-    <Callout tone="warn" kind="standing" title={t("aiAdmin.routingStale")}>
+    <Callout tone="warning" kind="standing" title={t("aiAdmin.routingStale")}>
       {t("aiAdmin.staleHelp")}
     </Callout>
   );

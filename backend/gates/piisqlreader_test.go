@@ -105,6 +105,11 @@ var erasureCascadeFiles = []string{
 	// transaction, so it counts here; leaving it off would let a table look
 	// uncovered the moment its purge moved file.
 	"internal/modules/privacy/erasuretimeline.go",
+	// The external identities the emptied messages answered to. Its own file
+	// because BOTH erasure arms call it — the per-activity content purge and
+	// this cascade — and a spelling per arm is how the cascade came to have
+	// none at all.
+	"internal/modules/privacy/activityidentityretire.go",
 	// The subject's traces in the relationship graph — the interaction
 	// participants, the imported LinkedIn ghosts, and the projection folded out
 	// of both. Same Art. 17 transaction, its own file for the same size reason

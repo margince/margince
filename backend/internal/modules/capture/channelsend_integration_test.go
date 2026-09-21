@@ -230,7 +230,7 @@ func TestChannelSenderForNamesTheDeploymentFacts(t *testing.T) {
 }
 
 // The send resolver refuses to guess between two live bindings, and F22 makes that
-// state unreachable: uq_channel_connection_ws permits ONE live row per
+// state unreachable: uq_channel_connection_provider permits ONE live row per
 // (workspace, provider). This is the test of that index rather than of the
 // refusal, because the index is what an operator actually meets — a second bot is
 // refused at connect, not silently bound and then discovered when a rep's reply
@@ -254,8 +254,8 @@ func TestASecondLiveBindingCannotBeCreatedForTheResolveToGuessBetween(t *testing
 	if err == nil {
 		t.Fatal("a second live binding was written for this workspace — every reply would then be ambiguous and the resolver would refuse to send at all")
 	}
-	if constraint, unique := storekit.UniqueViolation(err); !unique || constraint != "uq_channel_connection_ws" {
-		t.Fatalf("the second binding failed on %v, want the uq_channel_connection_ws unique index", err)
+	if constraint, unique := storekit.UniqueViolation(err); !unique || constraint != "uq_channel_connection_provider" {
+		t.Fatalf("the second binding failed on %v, want the uq_channel_connection_provider unique index", err)
 	}
 
 	// And the one binding still resolves, so the index bounds the state without

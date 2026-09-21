@@ -269,3 +269,52 @@ func TestTheCaptureTenantRefusesAListAndSaysWhereItGoes(t *testing.T) {
 		}
 	}
 }
+
+// /metrics is closed unless an operator says otherwise, and the two ways of
+// saying so cannot be combined: an open endpoint given a token as well would
+// authenticate nothing while the operator believed it did.
+func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
+	t.Run("unset is token", func(t *testing.T) {
+		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		if err != nil {
+			t.Fatalf("parsing: %v", err)
+		}
+		if cfg.metricsAccess != metricsAccessToken {
+			t.Errorf("metricsAccess = %q, want %q", cfg.metricsAccess, metricsAccessToken)
+		}
+	})
+
+	t.Run("the environment opens it", func(t *testing.T) {
+		t.Setenv("MARGINCE_METRICS_ACCESS", "open")
+		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		if err != nil {
+			t.Fatalf("parsing: %v", err)
+		}
+		if cfg.metricsAccess != metricsAccessOpen {
+			t.Errorf("metricsAccess = %q, want %q", cfg.metricsAccess, metricsAccessOpen)
+		}
+	})
+
+	t.Run("a token with the default posture boots", func(t *testing.T) {
+		if _, err := parseAPIFlags([]string{"--dsn", testDSN, "--metrics-token", "stands-in-for-a-token"}); err != nil {
+			t.Fatalf("parsing: %v", err)
+		}
+	})
+
+	t.Run("open with a token fails the boot", func(t *testing.T) {
+		_, err := parseAPIFlags([]string{"--dsn", testDSN, "--metrics-access", "open", "--metrics-token", "stands-in-for-a-token"})
+		if err == nil || !strings.Contains(err.Error(), "--metrics-access=open") {
+			t.Fatalf("err = %v, want a boot error naming --metrics-access=open", err)
+		}
+		if strings.Contains(err.Error(), "stands-in-for-a-token") {
+			t.Errorf("the boot error echoed the token: %v", err)
+		}
+	})
+
+	t.Run("an unknown posture fails the boot", func(t *testing.T) {
+		_, err := parseAPIFlags([]string{"--dsn", testDSN, "--metrics-access", "public"})
+		if err == nil || !strings.Contains(err.Error(), `--metrics-access "public" is not a posture`) {
+			t.Fatalf("err = %v, want a boot error naming the unknown posture", err)
+		}
+	})
+}

@@ -81,7 +81,7 @@ function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
 /**
  * One reading: what it is, the figure, and what the figure rests on.
  *
- * `warn` is deliberately narrow. Neutral ink is the default for every figure on
+ * `warning` is deliberately narrow. Neutral ink is the default for every figure on
  * the plate, because a row where four numbers are coloured is a traffic light
  * rather than a comparison. It is spent only where the reading counts something
  * that is BREACHING — somebody waiting, a promise going, a meeting starting
@@ -92,14 +92,12 @@ type Reading = Readonly<{
   /** The figure itself, so the slot can tell a floor of none from a floor. */
   count: number | null;
   basis: ReactNode;
-  warn?: boolean;
+  warning?: boolean;
   /** The source behind the figure was read to its bound: it is a floor. */
   floor?: boolean;
   /** The lane this reading counted, which is where its cell leads. */
   lane: WorklistFilter;
   scope: Worklist["scope"];
-  /** What this reading's door says, so five doors are not five "Open"s. */
-  openLabel: string;
   /**
    * This slot spans the whole day rather than naming one topic, so its door
    * stands even at zero.
@@ -133,11 +131,10 @@ function LaneReading({
   label,
   count,
   basis,
-  warn,
+  warning,
   floor,
   lane,
   scope,
-  openLabel,
   spans,
 }: Reading) {
   const t = useT();
@@ -174,12 +171,11 @@ function LaneReading({
     <StatCard
       label={label}
       value={readingFigure(figure, marked)}
-      tone={warn ? "warn" : undefined}
+      tone={warning ? "warning" : undefined}
       detail={basis}
       // On a phone the plate is a list, not five boxes stacked.
       narrow="row"
       onOpen={openable ? () => openLane(lane, scope) : undefined}
-      openLabel={openLabel}
     />
   );
   // A plain SPAN and nothing more where the figure is a floor: it carries the
@@ -226,7 +222,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // the top two levels — somebody waiting or a promise breaking — and
           // the morning's first question is how many of those there are.
           count={unread && day.summary.urgent === 0 ? null : day.summary.urgent}
-          warn={day.summary.urgent > 0}
+          warning={day.summary.urgent > 0}
           // The one slot that genuinely spans the day: `urgent` is every row at
           // the top two levels whatever lane raised it, so any bounded source
           // anywhere makes it a floor. This is what `more_available` is for.
@@ -235,7 +231,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // already reads as "none"; a line repeating that says the same thing
           // twice and drops the one fact it could add.
           basis={t("brief.readings.urgentBasis")}
-          openLabel={t("brief.readings.openUrgent")}
           // ITS OWN LANE, not the whole queue. This figure counts levels 0 to
           // 2; opening `all` landed a reader who was sent by a 4 in a list of
           // thirty, with nothing saying which four it meant.
@@ -252,7 +247,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // Readiness is the breach here: a meeting starting with nothing
           // prepared is the one fact on this slot a reader must act on before
           // it begins. The count of meetings itself is neither good nor bad.
-          warn={meetings.unready !== null && meetings.unready > 0}
+          warning={meetings.unready !== null && meetings.unready > 0}
           floor={
             day.reach?.find((entry) => entry.source === "meeting")
               ?.more_available ||
@@ -261,7 +256,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
             )
           }
           basis={meetingsDetail(meetings, locale, t, plural)}
-          openLabel={t("brief.readings.openMeetings")}
           lane="meetings"
         />
         <LaneReading
@@ -285,7 +279,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
                   value: formatDateTime(soonest, locale, viewerZone()),
                 })
           }
-          openLabel={t("brief.readings.openLeads")}
           lane="leads"
         />
         <RiskReading day={day} />
@@ -310,7 +303,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
                   count: formatNumber(blocking, locale),
                 })
           }
-          openLabel={t("brief.readings.openDecisions")}
           lane="decisions"
         />
       </StatStrip>
@@ -483,7 +475,6 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
             : t("brief.readings.riskBasis")
       }
       onOpen={() => openLane("deals_at_risk", day.scope)}
-      openLabel={t("brief.readings.openRisk")}
     />
   );
 }

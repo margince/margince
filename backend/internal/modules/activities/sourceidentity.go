@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,8 +39,36 @@ const (
 // weekly call is one UID and fifty-two meetings — so the UID names the series
 // and the occurrence's own start names the meeting within it. Keying on the UID
 // alone would resolve every occurrence to the first one.
+//
+// BOTH ingestion doors compose their key here, which is what stops them
+// disagreeing: an importer states `ical_instance` as text, a connector reads the
+// occurrence from the provider as an instant, and normalizedInstant folds either
+// into one spelling. A second composition would fail silently — the resolve
+// would simply never match, and both doors would go on landing a row each.
 func MeetingIdentityKey(icalUID, instance string) string {
-	return strings.TrimSpace(icalUID) + "/" + strings.TrimSpace(instance)
+	return strings.TrimSpace(icalUID) + "/" + normalizedInstant(strings.TrimSpace(instance))
+}
+
+// normalizedInstant folds an occurrence start to one spelling, so the same
+// instant written by two callers compares equal.
+//
+// The contract asks for "the occurrence's own original start, as the calendar
+// states it", which leaves the offset and the precision to whoever writes it:
+// Google says `2026-09-23T10:00:00+02:00`, Graph says
+// `2026-09-23T08:00:00.0000000Z`, and a client may say either. One instant, so
+// one key.
+//
+// A value that will not parse is kept VERBATIM rather than refused. This key is
+// an opaque identity, not a validated field, and failing here would refuse an
+// import over a format question the identity does not care about — while two
+// callers who spell an unparseable instance the same way still meet.
+func normalizedInstant(instance string) string {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"} {
+		if t, err := time.Parse(layout, instance); err == nil {
+			return t.UTC().Format(time.RFC3339)
+		}
+	}
+	return instance
 }
 
 // ResolveIdentity answers which activity already holds an external identity.
@@ -156,6 +185,96 @@ func BindableTo(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID) (bool,
 	return actingHumanOf(capturedBy) == arrivingHuman(ctx), nil
 }
 
+// AddressProver answers whether ONE seat has proven ONE address is theirs — the
+// question capture's own tables can answer and this module's cannot.
+//
+// It is a seam because the answer lives in `capture` (the connection a provider
+// attested at grant, and the aliases the receiving server's own Delivered-To
+// established) while the binding decision lives here, and neither module may
+// import the other. Compose injects it.
+//
+// PROVEN, not merely known. The implementation must refuse an address a seat
+// simply declared about themselves and must refuse a domain claim, because both
+// are things a seat can assert with no third party behind them — see
+// capture.SeatProvedAddressTx, which is where that is argued and enforced.
+type AddressProver func(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error)
+
+// attributableTo reports whether an IMPORTED row belongs to the arriving seat,
+// on the strength of an address the import states AND the seat has proven.
+//
+// This is the cross-seat case: an admin imports the company's history and the
+// rep whose mailbox actually held those messages syncs them afterwards. Under
+// the same-seat rule alone the two never bind and every message in the overlap
+// is filed twice.
+//
+// THE DIRECTION IS THE WHOLE THING, and it looks exactly like a design that was
+// rejected twice, so it is spelled out here rather than left to be re-derived.
+// The addresses this reads are the IMPORTER'S OWN TEXT — participantlog.go
+// writes activity_participant.address from the request body — and are therefore
+// forgeable. They are used only as a LOOKUP KEY. The ANSWER comes from the
+// arriving seat's proven set, which the importer cannot write. So:
+//
+//   - A forged address that names nobody resolves to nothing, and nothing binds.
+//   - A forged address that names a COLLEAGUE does not help the forger either:
+//     it can only ever attribute the row to that colleague, never to the forger,
+//     because the proof is asked of the ARRIVING seat and about THEIR addresses.
+//
+// What an importer can still do is cause a row they filed to be joined by the
+// colleague whose address they named. That colleague sees their own mail either
+// way; what changes is whether they see it once or twice. It buys the importer
+// no reach into anything.
+//
+// Only an ASSERTED incumbent is attributable. A row a connector captured is
+// already covered by the same-seat rule, and widening this to observed rows
+// would let one mailbox join another's captured copy on a stated address.
+func attributableTo(
+	ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, proved AddressProver,
+) (bool, error) {
+	if proved == nil {
+		return false, nil
+	}
+	seat := arrivingHuman(ctx)
+	if seat == "" {
+		return false, nil
+	}
+	seatID, err := ids.Parse(seat)
+	if err != nil {
+		return false, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT p.address
+		  FROM activity_participant p
+		  JOIN activity a ON a.id = p.activity_id
+		 WHERE p.activity_id = $1
+		   AND a.captured_by LIKE 'human:%'
+		   AND coalesce(p.address, '') <> ''`, incumbent)
+	if err != nil {
+		return false, fmt.Errorf("activities: reading the addresses an import states: %w", err)
+	}
+	defer rows.Close()
+	var stated []string
+	for rows.Next() {
+		var address string
+		if err := rows.Scan(&address); err != nil {
+			return false, fmt.Errorf("activities: reading the addresses an import states: %w", err)
+		}
+		stated = append(stated, address)
+	}
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("activities: reading the addresses an import states: %w", err)
+	}
+	for _, address := range stated {
+		proven, err := proved(ctx, tx, seatID, address)
+		if err != nil {
+			return false, err
+		}
+		if proven {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // arrivingHuman is the seat behind the call trying to bind, or empty when there
 // is no human behind it.
 //
@@ -253,13 +372,43 @@ func trailingIDOf(capturedBy string) (string, bool) {
 // tell "somebody else holds this" from "nothing holds this" would have an
 // existence oracle over colleagues' mail, keyed on a header they can type.
 func ResolveBindableIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (ids.ActivityID, bool, error) {
+	return bindableIdentityUnder(ctx, tx, kind, key, nil)
+}
+
+// ResolveBindableIdentityProving is ResolveBindableIdentity with the cross-seat
+// arm armed: an imported row also binds when it states an address the arriving
+// seat has PROVEN is theirs (attributableTo).
+//
+// Two entry points rather than a changed signature, because the import door and
+// the capture door want different answers to the same question. An import
+// resolving its own write has no mailbox behind it and nothing to prove, so it
+// keeps the same-seat rule alone; a mailbox sync is exactly the case the proof
+// is for. Compose injects the prover into the capture seam only.
+func ResolveBindableIdentityProving(proved AddressProver) func(context.Context, pgx.Tx, string, string) (ids.ActivityID, bool, error) {
+	return func(ctx context.Context, tx pgx.Tx, kind, key string) (ids.ActivityID, bool, error) {
+		return bindableIdentityUnder(ctx, tx, kind, key, proved)
+	}
+}
+
+func bindableIdentityUnder(
+	ctx context.Context, tx pgx.Tx, kind, key string, proved AddressProver,
+) (ids.ActivityID, bool, error) {
 	incumbent, found, err := ResolveIdentity(ctx, tx, kind, key)
 	if err != nil || !found {
 		return ids.ActivityID{}, false, err
 	}
 	bindable, err := BindableTo(ctx, tx, incumbent)
-	if err != nil || !bindable {
+	if err != nil {
 		return ids.ActivityID{}, false, err
+	}
+	if !bindable {
+		// The same seat did not write both rows. One more way to say yes, and
+		// only one: the incumbent is an IMPORT stating an address this seat has
+		// proven is theirs. Everything else still refuses.
+		bindable, err = attributableTo(ctx, tx, incumbent, proved)
+		if err != nil || !bindable {
+			return ids.ActivityID{}, false, err
+		}
 	}
 	live, err := identityHolderIsLive(ctx, tx, incumbent)
 	if err != nil || !live {

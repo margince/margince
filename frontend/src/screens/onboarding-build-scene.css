@@ -146,11 +146,7 @@
      squash, which is the difference between the word standing up and the word
      being scaled. */
   perspective: 480px;
-  font-family: var(--f-display);
-  font-size: var(--fs-hero-fluid);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   animation: ob-build-letters-out calc(var(--obBuildMs) * 0.14)
     calc(var(--obBuildMs) * 0.56) ease both;
@@ -216,7 +212,7 @@
 .ob-build-sub {
   position: relative;
   z-index: 1;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: center;
   animation: ob-build-sub-in calc(var(--obBuildMs) * 0.24)
     calc(var(--obBuildMs) * 0.1) cubic-bezier(0.23, 1, 0.32, 1) both;

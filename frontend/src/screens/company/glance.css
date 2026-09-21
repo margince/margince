@@ -34,8 +34,6 @@
    row runs out of width — the label and the chevron are what make the row
    legible as a control. */
 .co-thread-teaser {
-  color: var(--textMeta);
-  font-weight: var(--fw-regular);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -44,31 +42,10 @@
 
 /* The teaser sits after the section's name on one line, with the room between
    them that keeps it from reading as part of the name. */
-.co-thread-fold .disclosure-summary .t-label {
+.co-thread-fold .disclosure-summary .disclosure-label {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  min-width: 0;
-}
-
-/* The lead row of the needs list: the moment, at the weight of a headline.
-   The eyebrow names the rule, the headline is set in the display face because
-   it is the one sentence about the reader on the page, and the verb under it
-   is the page's one filled control (DESIGN.md §6). */
-.co-move-lead .co-move-headline {
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-  line-height: 1.3;
-}
-.co-move-lead .co-move-by {
-  color: var(--textMeta);
-}
-/* The lead's verb ends its row like every other verb in the list: one margin
-   for everything a reader can press, whichever row they are on. */
-.co-move-lead .co-move-do {
-  margin-top: var(--space-3);
 }
 
 /* Ask as prepared questions: each one a full-width row rather than a chip in

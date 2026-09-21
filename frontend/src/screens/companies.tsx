@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { Heading } from "../design-system/heading";
 import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
@@ -149,7 +150,7 @@ import {
   standardViews,
   tagsColumn,
 } from "./recordlist";
-import { RelationshipsTab } from "./relationships";
+import { RelationshipsTab } from "./relationshiprows";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { listQueryParams } from "./tagfilter";
 import {
@@ -275,7 +276,7 @@ export function CompaniesScreen() {
         })}
         action={
           <>
-            <Button small onClick={() => navigate({ screen: "partners" })}>
+            <Button onClick={() => navigate({ screen: "partners" })}>
               {t("nav.partners")}
             </Button>
             <CreateAction
@@ -304,7 +305,7 @@ export function CompaniesScreen() {
                 />
                 <strong>{company.display_name}</strong>
                 {company.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
+                  <Badge tone="warning">{t("record.archived")}</Badge>
                 )}
               </span>
             ),
@@ -1331,11 +1332,7 @@ function CompanyPage({
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-            {verbRefusal && (
-              <p className="t-caption" id={archivedParagraphId}>
-                {verbRefusal}
-              </p>
-            )}
+            {verbRefusal && <p id={archivedParagraphId}>{verbRefusal}</p>}
             <CompanyHeaderActions
               company={company}
               composerOpen={writingEmail}
@@ -1441,9 +1438,13 @@ function CompanyPage({
           labelledBy="co-audit-title"
           size="wide"
         >
-          <h2 id="co-audit-title" className="t-h2 modal-title">
+          <Heading
+            size="large"
+            id="co-audit-title"
+            className="t-h2 modal-title"
+          >
             {t("record.fullHistory")}
-          </h2>
+          </Heading>
           {/* Mounted only while open: the two history reads behind it are the
             page's most expensive, and nobody who never opens the panel should
             pay for them. */}

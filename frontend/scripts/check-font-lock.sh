@@ -5,15 +5,17 @@
 #    frontend/src or an extension unit's frontend names only Outfit (display),
 #    Geist (body), or Geist Mono (code). Allowed besides the three families: the
 #    generic stack fallbacks the §2 token definitions name (system-ui,
-#    sans-serif, ui-monospace, monospace) and var(--f-*) references, which
-#    resolve inside tokens.css.
+#    sans-serif, ui-monospace, monospace), var(--f-*) references, which resolve
+#    inside tokens.css, and the `inherit` keyword, which names no family at all
+#    — it takes whatever the root already resolved, and the root is the one
+#    place a family is chosen.
 #
 # 2. Mono is for code. The code face is worn only by an element that IS code —
 #    a rule whose selectors all have `code`, `pre`, `samp` or `.code-block` as
 #    their subject. So this refuses:
 #      - the `t-mono` class, anywhere, comments included (a figure takes t-num);
 #      - a `font-family` / `font` declaration naming a mono family on any other
-#        rule, and a custom property carrying one other than the `--f-mono`
+#        rule, and a custom property carrying one other than the `--fontFamilyMono`
 #        token in design-system/tokens.css;
 #      - a mono family inside a quoted TS/TSX string (an inline fontFamily, a
 #        style string, a constant) unless that string is itself a code rule.
@@ -62,16 +64,18 @@ echo "==> Font-lock check (${#FILES[@]} files under frontend/src + extensions/*/
 
 EXIT=0
 
-# For each font-family declaration, strip everything allowed; any residue is
-# a family outside the three-family rule.
-while IFS= read -r hit; do
-  # A declaration whose value starts on the next line matches nothing here, and
-  # under pipefail that no-match would end the whole gate with a bare exit 1.
-  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | head -1 || true)
-  [[ -z "$value" ]] && continue
-  stripped=$(echo "$value" \
-    | sed -E 's/font-family\s*://g' \
-    | sed -E 's/var\(--[A-Za-z0-9-]+\)//g' \
+# A var() reference names no family here — the token resolves in tokens.css —
+# so the whole reference comes out. It is removed INNERMOST FIRST, one layer per
+# pass, because a fallback may itself be a var(): `var(--fontFamilyHeading,
+# var(--fontFamilyBody))` reduces to `var(--fontFamilyHeading, )` and only then to nothing.
+#
+# What must NOT happen is a var() swallowing its fallback whole: a rule written
+# `var(--fontFamilyBody, "Comic Sans MS")` renders in Comic Sans on any document that
+# never defined the token, so the fallback is held to the rule like any other
+# value. That is why the second pattern requires the fallback to be EMPTY by the
+# time it fires — an unstripped family inside one is residue, and residue fails.
+strip_allowed() {
+  sed -E 's/font-family[[:space:]]*://g' \
     | sed -E 's/Geist Mono//g' \
     | sed -E 's/Geist//g' \
     | sed -E 's/Outfit//g' \
@@ -79,7 +83,25 @@ while IFS= read -r hit; do
     | sed -E 's/sans-serif//g' \
     | sed -E 's/ui-monospace//g' \
     | sed -E 's/monospace//g' \
-    | tr -d '",'"'"',; \t')
+    | sed -E 's/(^|[^A-Za-z0-9_-])inherit([^A-Za-z0-9_-]|$)/\1\2/g'
+}
+
+# For each font-family declaration, strip everything allowed; any residue is
+# a family outside the three-family rule.
+while IFS= read -r hit; do
+  # A declaration whose value starts on the next line matches nothing here, and
+  # under pipefail that no-match would end the whole gate with a bare exit 1.
+  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | head -1 || true)
+  [[ -z "$value" ]] && continue
+  stripped=$(echo "$value" | strip_allowed)
+  while :; do
+    peeled=$(echo "$stripped" \
+      | sed -E 's/var\([[:space:]]*--[A-Za-z0-9-]+[[:space:]]*\)//g' \
+      | sed -E 's/var\([[:space:]]*--[A-Za-z0-9-]+[[:space:]]*,[[:space:]]*\)//g')
+    [[ "$peeled" == "$stripped" ]] && break
+    stripped="$peeled"
+  done
+  stripped=$(echo "$stripped" | tr -d '",'"'"',; \t')
   if [[ -n "$stripped" ]]; then
     echo "FAIL (family outside the three-family rule): $hit"
     EXIT=1
@@ -127,9 +149,11 @@ function decomment(line,   out, p) {
   }
   return out
 }
-function is_mono(value) {
-  value = tolower(value)
-  return value ~ /var\([ \t]*--f-mono[ \t]*\)/ || value ~ /geist mono/ || value ~ /monospace/
+function is_mono(value,   lower) {
+  # The token is matched as written — it has exactly one spelling in the tree,
+  # capitals included — while a FAMILY name is cased however its author typed it.
+  lower = tolower(value)
+  return value ~ /var\([ \t]*--fontFamilyMono[ \t]*\)/ || lower ~ /geist mono/ || lower ~ /monospace/
 }
 # 1 = code, 0 = not code, 2 = "the parent`s verdict" (a subject starting with &).
 function part_verdict(part,   n, arr, comp) {
@@ -168,8 +192,8 @@ function judge(   decl, prop, value) {
   value = decl; sub(/^[^:]*:/, "", value)
   if (!is_mono(value)) return
   if (prop ~ /^--/) {
-    if (prop == "--f-mono" && FILENAME ~ /design-system\/tokens\.css$/) return
-    printf "%s:%d: %s carries a mono family — the one code-face token is --f-mono in tokens.css\n", FILENAME, declline, prop
+    if (prop == "--fontFamilyMono" && FILENAME ~ /design-system\/tokens\.css$/) return
+    printf "%s:%d: %s carries a mono family — the one code-face token is --fontFamilyMono in tokens.css\n", FILENAME, declline, prop
   } else if (!code[depth]) {
     printf "%s:%d: %s names a mono family on a rule that does not dress code, pre, samp or .code-block\n", FILENAME, declline, prop
   }
@@ -225,17 +249,17 @@ if [[ "${#CSS_FILES[@]}" -gt 0 ]]; then
 fi
 
 # A quoted string naming the family. A string that is itself a code rule
-# (`"pre code { font-family: var(--f-mono) }"`) is the one shape let through.
+# (`"pre code { font-family: var(--fontFamilyMono) }"`) is the one shape let through.
 if [[ "${#SCRIPT_FILES[@]}" -gt 0 ]]; then
   while IFS= read -r hit; do
-    if grep -qE '(^|[^A-Za-z0-9_-])(code|pre|samp|\.code-block)[^{"'"'"'`]*\{[^}]*(f-mono|Geist Mono|monospace)' <<<"$hit"; then
+    if grep -qE '(^|[^A-Za-z0-9_-])(code|pre|samp|\.code-block)[^{"'"'"'`]*\{[^}]*(fontFamilyMono|Geist Mono|monospace)' <<<"$hit"; then
       continue
     fi
     echo "FAIL (mono family in a string — mono is for code): $hit"
     EXIT=1
   done < <(
     printf '%s\0' "${SCRIPT_FILES[@]}" \
-      | xargs -0 grep -nHE '["'"'"'`][^"'"'"'`]*(var\(--f-mono\)|Geist Mono|monospace)[^"'"'"'`]*["'"'"'`]' 2>/dev/null \
+      | xargs -0 grep -nHE '["'"'"'`][^"'"'"'`]*(var\(--fontFamilyMono\)|Geist Mono|monospace)[^"'"'"'`]*["'"'"'`]' 2>/dev/null \
     || true
   )
 fi
@@ -245,7 +269,8 @@ if [[ "$EXIT" == "0" ]]; then
 else
   echo ""
   echo "Allowed: Outfit, Geist, Geist Mono; generics system-ui,"
-  echo "sans-serif, ui-monospace, monospace; var(--f-*) token references."
+  echo "sans-serif, ui-monospace, monospace; var(--fontFamily*) token references,"
+  echo "their fallbacks held to the same rule; and the inherit keyword."
   echo "Mono is for code: only code, pre, samp and .code-block wear it; a figure"
   echo "aligns with t-num (font-variant-numeric: tabular-nums) in the body face."
 fi
