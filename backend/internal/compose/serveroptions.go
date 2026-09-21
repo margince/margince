@@ -38,17 +38,12 @@ type Option func(*Server, *pgxpool.Pool)
 // ADR-0056 transport the INSTALLATION sends through, as distinct from a
 // rep's mailbox, which is what correspondence goes out on.
 //
-// It is named for the transport rather than for one consumer because it
-// has more than one. Password reset is the consumer that exists today, and
-// the invite mail rides the same door; the emailed daily digest
-// (UC-NOTIFY-03) is the next one, and it would otherwise have had to be
-// wired through an option whose name says password reset.
-//
-// Without it, forgot-password answers its explicit 501 and the
-// capabilities probe reports password_reset=false (A107 — the login UI
-// renders only what works). The link base is NOT wired here; it arrives
-// through WithPublicBaseURL, because an installation with no mailer still
-// builds set-password links (ADR-0061 Amendment 1).
+// Named for the transport rather than for one consumer, because it has several:
+// password reset today, the invite mail on the same door, the emailed digest
+// next. Without it, forgot-password answers its 501 and the capabilities probe
+// reports password_reset=false. The link base arrives separately through
+// WithPublicBaseURL, since an installation with no mailer still builds
+// set-password links.
 func WithOperatorMail(m mailer.Mailer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.authHandlers = s.WithPasswordReset(m)
@@ -63,20 +58,16 @@ func WithOperatorMail(m mailer.Mailer) Option {
 
 // WithDealRoomInviteMail wires the operator relay into Deal Room invitations.
 //
-// It rides the SAME mailer as password reset rather than a second channel: both
-// are product-originated transactional mail an operator configures once, and a
-// separate relay would let an installation deliver one and silently not the
-// other. The link base arrives separately through WithPublicBaseURL, for the
-// reason stated there — a buyer link carries a live credential, so its origin
-// must never come from a request Host.
+// It rides the SAME mailer as password reset: both are product-originated
+// transactional mail configured once, and a separate relay would let an
+// installation deliver one and silently not the other. The link base arrives
+// through WithPublicBaseURL, because a buyer link carries a live credential and
+// its origin must never come from a request Host.
 //
-// NOT WIRED BY ANY ROLE YET, deliberately. The link this would mail points at a
-// buyer screen the SPA does not serve, so a recipient would land on the
-// not-found page having spent their one credential getting there. Until that
-// screen and the credential exchange exist, the invite response hands the raw
-// credential to the seller, who passes it on — the same path an installation
-// with no mail relay already takes. cmd/api adds this option in the slice that
-// builds the buyer surface.
+// NOT WIRED BY ANY ROLE YET, deliberately: the link points at a buyer screen the
+// SPA does not serve, so a recipient would land on the not-found page having
+// spent their one credential. Until that screen exists the invite response hands
+// the raw credential to the seller, who passes it on.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.dealroomsHandlers = s.WithInviteMailer(m)
@@ -204,15 +195,11 @@ func WithBlobstore(store blobstore.Store) Option {
 // nil-derefing at Authenticate — a capture-capable role must pass this or
 // fail to boot (enforced in cmd).
 //
-// It ALSO installs the outbound send pre-flight (WithSendAuthority) over the
-// registry it just ensured exists, so the channel half of that check — is
-// there a live bot bound for this provider? — is live on every
-// capture-capable role, Google app or not: NewCaptureRegistry registers
-// Telegram unconditionally, so the registry answers that question correctly
-// even with no Gmail/Graph app configured. A role that later configures
-// Gmail (WithGmailCapture) re-wires this over its own richer registry, which
-// upgrades the mailbox half without ever making the channel half depend on
-// that config.
+// It ALSO installs the outbound send pre-flight over the registry it just
+// ensured exists, so the channel half of that check is live on every
+// capture-capable role whether or not a Google app is configured. A role that
+// later configures Gmail re-wires this over its richer registry, upgrading the
+// mailbox half without making the channel half depend on that config.
 func WithKeyvault(vault keyvault.Vault) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.vault = vault
@@ -294,22 +281,19 @@ func WithKeyvault(vault keyvault.Vault) Option {
 	}
 }
 
-// WithAgentVolume Rebinds the Server's shared MCP-SESS-* meter to the live,
-// Redis-backed one cmd built. newServer constructs it fail-closed (nil Redis)
-// and hands that ONE pointer to both halves of the bound — the admission gate
-// that refuses on it and the tool registry that charges it — so this
-// RebindFrom reaches both together and they can never end up counting against
-// different windows.
+// WithAgentVolume rebinds the Server's shared MCP-SESS-* meter to the live,
+// Redis-backed one cmd built. newServer constructs it fail-closed and hands ONE
+// pointer to both the admission gate and the tool registry, so this rebind
+// reaches both and they cannot count against different windows.
 //
-// Taking the already-built *agentvolume.Meter (not a *redis.Client) keeps the
-// raw-Redis dependency in cmd, never in compose. Without this option the meter
-// stays fail-closed: a role serving the agent surface with no Redis cannot
-// tell whether an agent has passed any of its bounds, and answers that it has.
+// Taking the built *agentvolume.Meter rather than a *redis.Client keeps the
+// raw-Redis dependency in cmd. Without this option the meter stays fail-closed:
+// a role serving agents with no Redis cannot tell whether a bound was passed,
+// and answers that it was.
 //
-// The COST ceiling is installed here rather than in cmd because both halves of
-// that division live behind the pool this option is handed: the workspace's AI
-// budget and the credentials sharing it. cmd owns the Redis client; compose
-// owns what the workspace's own numbers mean.
+// The COST ceiling is installed here because both halves of that division live
+// behind the pool this option is handed. cmd owns the Redis client; compose owns
+// what the workspace's numbers mean.
 func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))

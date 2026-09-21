@@ -5,18 +5,15 @@ package commsauthz
 
 // Who decided that we may or may not write to somebody, and who may overrule it.
 //
-// One rule, and it has no special cases: YOU MAY OVERRULE A DECISION MADE BELOW
-// YOUR LEVEL, NEVER AT OR ABOVE IT. The tiers are ordered by how much authority
-// the decision carries, not by how senior the contact is — which is why the
-// subject outranks the admin who administers the installation they are recorded
-// in.
+// One rule with no special cases: YOU MAY OVERRULE A DECISION MADE BELOW YOUR
+// LEVEL, NEVER AT OR ABOVE IT. The tiers order how much authority a decision
+// carries, not how senior the contact is, which is why the subject outranks the
+// admin administering the installation they are recorded in.
 //
-// The engine deciding from evidence is the weakest, because it is a reading of
-// what the record happens to show and the record is often incomplete. A rep who
-// knows the customer phoned them can say so. An admin can overrule the rep. And
-// nobody overrules the contact themselves: an Art. 21 objection to direct
-// marketing is absolute in law, so a product that offered an admin a button to
-// lift one would be offering a button that cannot lawfully be pressed.
+// The engine is weakest, being a reading of a record that is often incomplete. A
+// rep who knows the customer phoned can say so, and an admin can overrule the
+// rep. Nobody overrules the contact: an Art. 21 objection to direct marketing is
+// absolute in law, so a button to lift one could not lawfully be pressed.
 
 // AuthorityLevel is the tier of the party a decision came from.
 type AuthorityLevel string
@@ -26,40 +23,30 @@ const (
 	LevelMachine AuthorityLevel = "machine"
 	// LevelUser is a rep or SDR exercising judgement about a contact they know.
 	LevelUser AuthorityLevel = "user"
-	// LevelAdmin is a workspace administrator: a seat that passes
-	// auth.RequireAdmin, which is the literal admin role and nothing else.
-	//
-	// NOT the `ops` role, despite ops administering most of the installation's
-	// wiring. The RBAC defaults separate the two deliberately — ops differs from
-	// admin "in row scope alone at this layer: what actually separates them is
-	// the literal-admin gate on identity and governance routes" — and reversing
-	// somebody's recorded stop is a governance act, not wiring. An ops seat
-	// therefore decides at LevelUser and cannot overrule a rep's judgement.
+	// LevelAdmin is a seat passing auth.RequireAdmin: the literal admin role and
+	// nothing else. NOT `ops`, despite ops administering most of the wiring —
+	// reversing somebody's recorded stop is a governance act, so an ops seat
+	// decides at LevelUser and cannot overrule a rep's judgement.
 	LevelAdmin AuthorityLevel = "admin"
 	// LevelSubject is the contact the data is about, acting for themselves.
 	LevelSubject AuthorityLevel = "subject"
 )
 
-// rank orders the tiers. Unexported and unexported-only: a caller comparing
-// ranks is a caller reimplementing CanOverrule, and the second implementation
-// is the one that stops matching.
-//
-// An unknown level ranks ABOVE every real one rather than below. A level this
-// build does not recognise is a level written by a newer build, and treating it
-// as weak would let this one overrule a decision it cannot even name.
-// LevelsWeakestFirst is the authority ladder in rank order, exported so a
-// caller that must express the SAME comparison in SQL derives it from here
-// rather than retyping it.
-//
-// A retyped ladder is a second answer to "who outranks whom", and the copy that
-// stops matching is the one nobody notices — a stop somebody could suddenly
-// lift. Anything NOT in this list outranks everything in it, which is rank()'s
-// own default: an unrecognised level is not a weak one, it is one this build
-// does not understand, and it must not be overruled.
+// LevelsWeakestFirst is the authority ladder in rank order, exported so a caller
+// expressing the SAME comparison in SQL derives it here rather than retyping it:
+// a retyped ladder is a second answer to "who outranks whom", and the copy that
+// stops matching is a stop somebody could suddenly lift. Anything NOT in this
+// list outranks everything in it.
 func LevelsWeakestFirst() []AuthorityLevel {
 	return []AuthorityLevel{LevelMachine, LevelUser, LevelAdmin, LevelSubject}
 }
 
+// rank orders the tiers, unexported: a caller comparing ranks is a caller
+// reimplementing CanOverrule, and the second implementation stops matching.
+//
+// An unknown level ranks ABOVE every real one. A level this build does not
+// recognise was written by a newer one, and treating it as weak would let this
+// build overrule a decision it cannot even name.
 func (l AuthorityLevel) rank() int {
 	switch l {
 	case LevelMachine:

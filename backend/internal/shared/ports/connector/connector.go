@@ -50,13 +50,10 @@ type Connector interface {
 	HealthCheck(ctx context.Context, auth Auth) error
 }
 
-// Watcher is the OPTIONAL push-watch seam a connector implements when its
-// provider delivers change notifications through a subscription that must be
-// renewed before it lapses (Gmail Pub/Sub's 7-day watch, Graph's ≤3-day
-// subscription). It is separate from Connector because a provider without a
-// renewable push subscription (the one-shot IMAP puller) does not implement it;
-// the registry's watch-renewal scan type-asserts for it and skips a connector
-// that is not a Watcher.
+// Watcher is the OPTIONAL push-watch seam for a provider whose change
+// notifications come through a subscription that lapses (Gmail Pub/Sub's 7 days,
+// Graph's ≤3). Separate from Connector because the one-shot IMAP puller has no
+// such subscription; the renewal scan type-asserts and skips a non-Watcher.
 type Watcher interface {
 	// Watch registers (or, on a repeat call, renews) the provider push
 	// subscription against topic and returns the watermark to resume from plus
@@ -65,47 +62,32 @@ type Watcher interface {
 	Watch(ctx context.Context, auth Auth, topic string) (WatchResult, error)
 }
 
-// WatchResult is the outcome of registering/renewing a provider push watch:
-// the historyId/delta anchor at watch time and when the watch expires. The
-// registry stores ExpiresAt in capture_connection.watch_expires_at, which the
-// renewal scan keys on (CAP-DDL-2, idx_capture_watch_renew).
+// WatchResult is the outcome of registering or renewing a provider push watch:
+// the historyId/delta anchor and when the watch expires. The registry stores
+// ExpiresAt in capture_connection.watch_expires_at, which the renewal scan
+// keys on.
 type WatchResult struct {
 	HistoryID string
 	ExpiresAt time.Time
-	// Ref is the connector's OPAQUE HANDLE on the subscription it just made.
-	// Stored verbatim in capture_connection.watch_ref and handed back to
-	// WatchRenewer.RenewWatch, so a renewal addresses the subscription it made
-	// rather than going looking for it.
+	// The connector's OPAQUE HANDLE on the subscription it just made, handed
+	// back to RenewWatch so a renewal addresses that subscription rather than
+	// going looking for one. The contract says nothing about its FORM: this
+	// column reaches every database reader and every backup, so a handle holds
+	// what a renewal needs and nothing more — for Graph the subscription id, and
+	// never a URL carrying the token that admits a notification.
 	//
-	// Opaque to everything outside the connector that minted it, which is what
-	// lets a connector decide for itself what a renewal needs to hold. It is
-	// also the reason the contract says nothing about the FORM: for Graph it is
-	// the subscription id and nothing else, because whether that subscription
-	// still points at the endpoint being renewed is a question Microsoft
-	// answers, and a stored answer would be a copy of a URL carrying the token
-	// that admits a notification. This column reaches every database reader and
-	// every backup, so what a handle does not have to hold, it does not hold.
-	//
-	// Empty where the provider has no such handle: a Gmail watch is addressed by
-	// the mailbox and the topic, and there is nothing to remember.
-	//
-	// The registry's side of the contract is to store it and to CLEAR it when
-	// the connection is rebound to a different account — a handle names a
-	// subscription in the mailbox it was made against, and that mailbox is gone.
+	// Empty where the provider has no handle: a Gmail watch is addressed by the
+	// mailbox and the topic. The registry stores it and CLEARS it when the
+	// connection is rebound, because the mailbox it named is gone.
 	Ref string
 }
 
 // WatchRenewer renews a push subscription BY THE HANDLE the provider gave it.
+// Optional and type-asserted like Watcher; the registry falls back to Watch,
+// which is also the first registration's path.
 //
-// Optional and type-asserted, exactly like Watcher: a provider whose watch is
-// addressed by the mailbox alone has no handle to renew by and does not
-// implement this. The registry falls back to Watch, which is also what happens
-// on the first registration and for a connection made before any handle was
-// stored.
-//
-// Separate from Watcher rather than a wider Watch, because the two questions are
-// different: Watch says "make sure there is a subscription", and answering it
-// without a handle means finding one first. RenewWatch says "extend THIS one",
+// Separate rather than a wider Watch because the questions differ: Watch says
+// "make sure there is a subscription" and RenewWatch says "extend THIS one",
 // which is the question a renewal actually has.
 type WatchRenewer interface {
 	// RenewWatch extends the subscription named by ref and returns its new
@@ -196,54 +178,34 @@ type NormalizedRecord struct {
 	CapturedBy string // "connector:<name>" — REQUIRED
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
 
-	// CrossDoorIdentity is what this record is known by to EVERY door, as
-	// distinct from the natural key, which is only what THIS provider called it.
-	// Empty when the provider states none, which is the common case.
+	// What this record is known by to EVERY door, as distinct from the natural
+	// key, which is only what THIS provider called it. Empty when the provider
+	// states none. Mail needs none — its natural key already IS the shared
+	// identity — but one MEETING on two calendars carries two provider event ids
+	// and needs the iCal UID plus occurrence to resolve as one.
 	//
-	// Mail needs no value here: its natural key already IS the shared identity
-	// (EmailSourceSystem plus the RFC Message-ID), because every transport
-	// agrees on it. A MEETING's natural key is the provider's own event id, so
-	// one meeting on two calendars carries two keys and needs this to resolve as
-	// one — the iCal UID plus the occurrence, since a recurring series shares a
-	// single UID across every meeting in it.
-	//
-	// A connector fills it only from a value the PROVIDER stated, and never
-	// synthesizes one: a made-up identity would collide two unrelated records,
-	// which is worse than the duplicate it set out to prevent.
-	//
-	// It carries the identity's PARTS rather than a finished key, because the
-	// spelling of the key belongs to the module that owns `activity_identity`
-	// and a connector may not import it. Capture composes the two through the
-	// seam compose injects, so one rule writes every key.
+	// Filled only from a value the PROVIDER stated, never synthesized: a made-up
+	// identity collides two unrelated records, which is worse than the duplicate
+	// it set out to prevent. It carries the PARTS rather than a finished key,
+	// because the key's spelling belongs to the module owning `activity_identity`
+	// and a connector may not import it.
 	CrossDoorIdentity CrossDoorIdentity
 
-	// DeliveredTo is the address the RECEIVING infrastructure recorded this
-	// message as delivered to, and empty whenever no such claim could be
-	// trusted. It is how a forwarding alias is discoverable at all: an alias
-	// is never the From of anything the mailbox sends, so the send side cannot
-	// see it.
-	//
-	// A connector fills this only from a header position a sender could not
-	// have authored — mailmap.TopDeliveredTo is that decision, made once. An
-	// empty value is the safe answer and the common one; a connector that
-	// cannot make the judgement leaves it empty rather than guessing.
+	// The address the RECEIVING infrastructure recorded delivery to, empty when
+	// no such claim could be trusted. It is how a forwarding alias is
+	// discoverable at all — an alias is never the From of anything the mailbox
+	// sends. Filled only from a header position a sender could not have authored
+	// (mailmap.TopDeliveredTo); empty is the safe answer and the common one.
 	DeliveredTo string
 
-	// Containers are the provider's own filing places for this message, each
-	// qualified by the provider whose namespace it belongs to:
-	// "gmail:<labelId>", "graph:<folderId>", "imap:<mailbox>". A message can
-	// sit in several (Gmail applies many labels to one message), and a
-	// connector that has no such notion leaves this empty.
+	// The provider's own filing places, each qualified by its namespace:
+	// "gmail:<labelId>", "graph:<folderId>", "imap:<mailbox>". Qualified rather
+	// than bare because one contact may have connected two mailboxes on
+	// different providers, and an unqualified "inbox" would be one rule matching
+	// two unrelated places. A message can sit in several.
 	//
-	// Qualified rather than bare because a label id means nothing without the
-	// provider it came from, and one contact may have connected two mailboxes on
-	// different providers — an unqualified "inbox" would then be one rule
-	// matching two unrelated places.
-	//
-	// The values are NOT folded to lower case. A Graph folder id is base64url,
-	// where two distinct folders can differ only in case, and an IMAP mailbox
-	// name is case-sensitive except for INBOX. Only the provider prefix is
-	// fixed, and it is written lower case by every connector.
+	// NOT folded to lower case: a Graph folder id is base64url and an IMAP
+	// mailbox is case-sensitive except INBOX. Only the provider prefix is fixed.
 	Containers []string
 
 	// Counterparty is the human on the other side of a captured message —
@@ -252,69 +214,53 @@ type NormalizedRecord struct {
 	// resolver never runs for those.
 	Counterparty Counterparty
 
-	// ThreadKey is the conversation identity, and what counts as "the
-	// conversation" differs by shape. Mail roots on a MESSAGE id — the
-	// References root, else In-Reply-To, else the message's own id — never a
-	// provider's private conversation id, a different namespace joining
-	// nothing here (see SendReceipt); a fresh message with no reply headers
-	// roots at its OWN Message-ID rather than empty, so a later reply joins
-	// from the first message onward. A channel (Telegram) has no message-id
-	// chain to root on — the chat itself IS the conversation, so ThreadKey is
-	// the provider's chat id ("telegram:<bot_id>:<chat_id>"), the one case
-	// where a provider conversation id is the right join key. Both feed the
-	// same CAP-FORMULA-1 reply join and activity.thread_key. Empty only for a
-	// mail record with none of its three sources; a channel record always has one.
+	// The conversation identity, and what counts as "the conversation" differs by
+	// shape. Mail roots on a MESSAGE id — the References root, else In-Reply-To,
+	// else its own — never a provider's private conversation id, which joins
+	// nothing here; a fresh message roots at its own Message-ID so a later reply
+	// joins from the first message onward. A channel has no such chain: the chat
+	// IS the conversation, so it is the provider's chat id
+	// ("telegram:<bot_id>:<chat_id>"), the one case where that is the right join
+	// key. Empty only for a mail record with none of its three sources.
 	ThreadKey string
 
-	// Participants are the FURTHER parties to this message beyond the mailbox
-	// owner and Counterparty — the CCs on a thread, the attendees and organizer
-	// of a meeting. A connector that reports none behaves exactly as before,
-	// which is why this is additive rather than a replacement for Counterparty:
-	// the two ends of the exchange are what direction is defined against, and
-	// everyone else is present without being either end.
+	// The FURTHER parties beyond the mailbox owner and Counterparty — CCs, a
+	// meeting's attendees and organizer. Additive rather than a replacement,
+	// because direction is defined against the two ENDS of the exchange and
+	// everyone else is present without being either.
 	//
-	// They are addresses, not records. Resolving one to a colleague or a known
-	// contact is capture's job at stamping time, and an address that resolves to
-	// neither is still kept — an attendee nobody has a record for is a fact
-	// about the meeting.
+	// Addresses, not records: resolving one is capture's job at stamping time,
+	// and one that resolves to nobody is still kept — an attendee without a
+	// record is a fact about the meeting.
 	Participants []MessageParticipant
 
-	// participantsAreProviderAttested reports that the provider itself
-	// enumerated Participants, so binding one to a colleague's user_id records
-	// what the provider stated rather than what a sender typed.
+	// Reports that the PROVIDER enumerated Participants, so binding one to a
+	// colleague's user_id records what the provider stated rather than what a
+	// sender typed. The mail and calendar answers differ: a recipient list on
+	// inbound mail is the sender's own text, so an outsider could mail a synced
+	// mailbox with `Cc: ceo@ourcompany.com` and manufacture an interaction edge,
+	// while a calendar attendee list is the provider's own record read back over
+	// an authenticated connection.
 	//
-	// It exists because the mail answer and the calendar answer differ. A
-	// recipient list on inbound MAIL is the sender's own text: nothing
-	// authenticates it, so capture refuses to bind a user_id from one, or an
-	// outsider could mail a synced mailbox with `Cc: ceo@ourcompany.com` and
-	// manufacture an interaction edge. A calendar attendee list is not text on a
-	// message — it is the provider's own record of who was invited, read back
-	// over the authenticated connection of a seat that is on the event.
-	//
-	// Unexported with one setter, like Counterparty's own attestation, so a
-	// caller cannot set it by assignment and a record crossing a serialization
-	// boundary arrives un-attested rather than wrongly attested. The zero value
-	// refuses the binding, so a connector that attests nothing keeps the mail
-	// rule it has today.
+	// Unexported with one setter, so a record crossing a serialization boundary
+	// arrives un-attested rather than wrongly attested; the zero value refuses
+	// the binding.
 	participantsAreProviderAttested bool
 
-	// Addresses is EVERY address this record names — for mail the union of
-	// From, To, Cc and whatever Bcc survived; for calendar the organizer and
-	// attendees — including the connected owner's own. It is what the
-	// internal-vs-external decision is taken over (ADR-0082/A127, formulas
-	// §20), which is why it overlaps Counterparty and Participants rather than
-	// complementing them: those two are the derived ENDS of the exchange, and
-	// a message is internal only when every party to it is.
+	// Addresses is EVERY address this record names, including the connected
+	// owner's own. The internal-vs-external decision is taken over it, which is
+	// why it overlaps Counterparty and Participants rather than complementing
+	// them: those are the derived ENDS, and a message is internal only when
+	// every party to it is.
 	//
-	// A connector that reports none is saying "I cannot enumerate the parties",
-	// not "there are none" — and an unenumerable message is never treated as
-	// internal, so it is captured.
+	// None means "I cannot enumerate the parties", not "there are none" — an
+	// unenumerable message is never treated as internal, so it is captured.
 	Addresses []string
 
-	// Parts are the files this record carried, already bounded, renamed safely
-	// and typed by their bytes. A connector never enforces those rules itself:
-	// they belong to the one parser every mail adapter shares, so a new adapter
-	// cannot arrive without them.
+	// The files this record carried, already bounded, renamed safely and typed by
+	// their bytes. A connector never enforces those rules itself: they belong to
+	// the one parser every mail adapter shares, so a new adapter cannot arrive
+	// without them.
 	Parts []Part
 
 	// PartDrops names the files the bounds refused. It is carried rather than
@@ -350,25 +296,16 @@ func (r NormalizedRecord) ParticipantsAreProviderAttested() bool {
 }
 
 // CrossDoorIdentity is what a record is known by to every door, in its parts.
-//
-// Only meetings carry one today: a calendar occurrence is a SERIES plus the
-// meeting within it, because a recurring event shares one iCal UID across all
-// fifty-two of its occurrences. Mail needs no value here — its natural key is
-// already the shared identity, since every transport agrees on the Message-ID.
-//
-// The parts travel unjoined, and that is deliberate: how the two compose into a
-// key is a rule owned by the module that owns `activity_identity`, and a
-// connector may not import it. Capture joins them through the seam compose
-// injects, so exactly one function writes every key and the two doors cannot
-// spell one meeting two ways.
+// Only meetings carry one: an occurrence is a SERIES plus the meeting within it,
+// because a recurring event shares one iCal UID across all of them. The parts
+// travel unjoined so exactly one function — capture's, through the seam compose
+// injects — writes every key, and the two doors cannot spell one meeting twice.
 type CrossDoorIdentity struct {
-	// Series is the provider-stated identity of the recurring event, or of a
-	// one-off meeting. Empty means the provider stated none, and then the record
-	// carries no cross-door identity at all.
+	// The provider-stated identity of the recurring event, or of a one-off.
+	// Empty yields no cross-door identity at all.
 	Series string
-	// Occurrence is which meeting within the series this is — the occurrence's
-	// own start, as an instant. Zero when unknown, which likewise yields no
-	// identity: a series without an occurrence names every meeting in it at once.
+	// Which meeting within the series, as its own start. Zero likewise yields no
+	// identity: a series without one names every meeting in it at once.
 	Occurrence time.Time
 }
 
@@ -385,57 +322,39 @@ type NaturalKey struct {
 	SourceSystem string
 	SourceID     string
 
-	// SourceIDNamesAContact reports that SourceID embeds the provider's
-	// identifier for a HUMAN — a chat id that is the customer's own account id,
-	// say — rather than naming a message, an event or a notification.
+	// Reports that SourceID embeds the provider's identifier for a HUMAN rather
+	// than naming a message, event or notification, which decides whether the
+	// pipeline trace stores the id or a hash of it. Declared HERE because the
+	// producer is the only party that knows: inferring it from how the record
+	// named its counterparty answers a different question, and a connector
+	// keying on notification ids while naming counterparties two ways had half
+	// its traces hashed and half not.
 	//
-	// It decides whether the pipeline trace stores the id or a hash of it, and
-	// it is declared HERE because the producer is the only party that knows.
-	// The trace used to infer it from how the record named its counterparty,
-	// which is a different question with a different answer: a connector whose
-	// key is a notification id on every branch, and which names some
-	// counterparties by a channel account and others by an address, had half
-	// its traces hashed and half not (issue #1465). Neither half was wrong
-	// about privacy and both were wrong about the key.
-	//
-	// False is the ordinary case and the zero value on purpose: a message id is
-	// what a natural key almost always is, and it is what ADR-0082 §1 permits a
-	// trace to record — it identifies a message rather than a contact, and it is
-	// what makes a support question answerable.
+	// False is the ordinary case and the zero value on purpose: a natural key is
+	// almost always a message id, which identifies a message rather than a
+	// contact and is what makes a support question answerable.
 	SourceIDNamesAContact bool
 }
 
-// EmailSourceSystem is the natural-key SOURCE SYSTEM every transport that
-// carries an RFC822 message writes: one message is one activity whether it
-// arrived over Gmail, Graph or IMAP, and whether we sent it or received it.
+// EmailSourceSystem is the natural-key SOURCE SYSTEM every transport carrying an
+// RFC822 message writes: one message is one activity whether it arrived over
+// Gmail, Graph or IMAP, sent or received. The transport is not lost — it stays
+// in `source`, `captured_by` and capture_connection.provider — it just stops
+// being part of the answer to "is this the same message", because one message
+// reaching a workspace over two connectors is one message.
 //
-// The transport is NOT lost, it just stops being part of the identity. It
-// stays in `source` (`gmail:<message-id>`) and in `captured_by`
-// (`connector:gmail:<user>`), which is where every provenance reader already
-// looks, and it stays in capture_connection.provider, which is what actually
-// names a mailbox. What the transport must never be again is part of the
-// answer to "is this the same message", because the same RFC822 message
-// reaching one workspace over two connectors is one message and used to be two
-// timeline rows.
+// Identity is exactly equality of the parsed Message-ID, which the mail parser
+// already requires. Nothing is fuzzy-matched: two Message-IDs stay two
+// activities however alike they read, and a forged one gets the collision this
+// key has always had.
 //
-// Identity here is exactly equality of the parsed Message-ID, which the mail
-// parser has already required — a message without one is skipped before any
-// write. Nothing is fuzzy-matched: two different Message-IDs stay two
-// activities however alike they read, and a sender who reuses or forges one
-// gets the collision this key has always had, now spanning the mail providers
-// rather than sitting inside each.
-//
-// A caller-facing create path may not write it (activities' create mapper
-// refuses it): only a connector that authenticated as one, or our own send,
-// may claim a mail identity.
+// A caller-facing create path may not write it: only a connector that
+// authenticated as one, or our own send, may claim a mail identity.
 const EmailSourceSystem = "email"
 
-// ExtensionSourceSystemPrefix namespaces the natural key of every record an
-// extension unit lands, so a unit can never spell a core connector's identity
-// — including the shared mail one above. Spelled here because two callers need
-// the same string for opposite reasons: compose WRITES it onto a unit's
-// records, and capture's admit check READS it to tell a unit's mail apart from
-// a core connector's.
+// ExtensionSourceSystemPrefix namespaces every record an extension unit lands,
+// so a unit can never spell a core connector's identity. Spelled here because
+// compose WRITES it onto a unit's records and capture's admit check READS it.
 const ExtensionSourceSystemPrefix = "ext:"
 
 type (

@@ -211,20 +211,16 @@ var decisionGrants = map[string][]grantRequirement{
 	// A rate refresh proposes an effective-dated row on a workspace-shared price
 	// sheet, and deciding it requires BOTH write verbs on that sheet.
 	//
-	// The release is an upsert: it inserts a new (currency, day) or replaces an
-	// existing rate, and which one it will be is not knowable when the decision
-	// is made — the sheet can change between the decision and the apply. The
-	// apply also runs as the system principal, so the store's in-transaction
-	// check on the specific verb never fires here; this is the only grant
-	// standing between an approver and the row the release replaces.
+	// The release is an upsert and which half it will be is not knowable when the
+	// decision is made. The apply runs as the system principal, so the store's
+	// in-transaction check never fires here; this is the only grant standing
+	// between an approver and the row the release replaces.
 	//
-	// Either verb alone would authorize the operation it does not name: a
-	// create-only approver could release an overwrite, precisely the
-	// substitution the store's second check exists to refuse. Requiring both is
-	// the conservative reading — approve an upsert only if you could have
-	// performed either half yourself. Every seeded role holding one holds the
-	// other (writeNoDelete for admin and ops, the zero grant for everyone
-	// else), so this constrains edited roles only, and constrains them right.
+	// Either verb alone would authorize the operation it does not name — a
+	// create-only approver releasing an overwrite. Requiring both is the
+	// conservative reading: approve an upsert only if you could have performed
+	// either half. Every seeded role holding one holds the other, so this
+	// constrains edited roles only.
 	"fx_rate_proposal": {
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
