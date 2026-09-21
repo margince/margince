@@ -10829,6 +10829,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/retention/legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the records a legal hold is preserving. */
+        get: operations["listLegalHolds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retention/legal-holds/{entityType}/{recordId}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entityType: components["schemas"]["HeldEntityType"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Place a legal hold on a record. Requires a stated reason; audited. */
+        post: operations["placeLegalHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retention/legal-holds/{entityType}/{recordId}/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entityType: components["schemas"]["HeldEntityType"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lift a legal hold. Requires a stated reason; audited. */
+        post: operations["liftLegalHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/retention-policies": {
         parameters: {
             query?: never;
@@ -19321,6 +19378,8 @@ export interface components {
         };
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
+            readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
@@ -19641,6 +19700,8 @@ export interface components {
         };
         /** @description A company. Mirrors the `company` table. */
         Company: {
+            /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
+            readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
             /** @description Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows. */
             linkedin_url?: string | null;
@@ -23272,6 +23333,8 @@ export interface components {
         };
         /** @description A deal. Mirrors the `deal` table. */
         Deal: {
+            /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
+            readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
             /** Format: uuid */
             id: string;
@@ -23900,6 +23963,8 @@ export interface components {
         };
         /** @description A project — the body of work a client relationship is made of. Mirrors the `project` table. */
         Project: {
+            /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
+            readonly legal_hold?: boolean;
             /** Format: uuid */
             id: string;
             name: string;
@@ -26288,6 +26353,8 @@ export interface components {
         };
         /** @description A thin, segregated prospect. Mirrors the `lead` table. NO company FK. */
         Lead: {
+            /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
+            readonly legal_hold?: boolean;
             /** Format: uuid */
             id: string;
             full_name?: string | null;
@@ -29014,7 +29081,7 @@ export interface components {
             /** @description Resolved display name for on_behalf_of. */
             on_behalf_of_name?: string | null;
             /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete";
+            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold";
             entity_type: string;
             /**
              * Format: uuid
@@ -31077,6 +31144,15 @@ export interface components {
         };
         RetentionOverrideRequest: {
             reason: string;
+        };
+        /** @enum {string} */
+        HeldEntityType: "contact" | "company" | "deal" | "lead" | "project";
+        HeldRecord: {
+            entity_type: components["schemas"]["HeldEntityType"];
+            /** Format: uuid */
+            record_id: string;
+            /** @description The record's own name, so a controller can recognise it without a second read. */
+            label: string;
         };
         RestrictedRecord: {
             /** Format: uuid */
@@ -52848,6 +52924,153 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             /** @description The record is already restricted. Pinning is not a way to extend a window already running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLegalHolds: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of held records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["HeldRecord"][];
+                        page: components["schemas"]["PageInfo"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    placeLegalHold: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                entityType: components["schemas"]["HeldEntityType"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description The record is held. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The record is already held. Placing is not a way to restate a hold already running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftLegalHold: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                entityType: components["schemas"]["HeldEntityType"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description The hold is lifted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The record is not held. */
             409: {
                 headers: {
                     [name: string]: unknown;

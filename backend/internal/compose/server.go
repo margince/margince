@@ -185,8 +185,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// original destroys the parsed text while an Art. 15 export serves the
 		// verbatim copy back. Left to an option, a role that forgot it would
 		// answer success to a release that erased half a record.
+		// The hold seam is wired HERE and not left to an option for the reason
+		// the purger above is not: a role that forgot it would answer 404 to a
+		// controller placing a litigation hold, which reads as "no such record"
+		// rather than as "this installation cannot hold one".
 		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
-			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
+			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
+			WithLegalHoldWriter(NewLegalHoldSeam(pool)),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the

@@ -49,9 +49,15 @@ openapi: 3.1.0
 #     (403 code: permission_denied), whatever its scope/seat. Used for governance the agent must not
 #     self-serve: approval decisions (approve/reject — an agent may STAGE a 🟡 action but never
 #     APPROVE it, incl. its own), consent + DSR writes, and pipeline/stage *config* (the semantic
-#     ground truth advance_deal's 🟡 floor reads). DEFENSE IN DEPTH: these ops also OVERRIDE the global
-#     `security:` to `cookieAuth` only (human session) — an agent bearer/Passport is not even an accepted
-#     credential at the transport, so the human-only rule holds at the contract layer, not only in the gate.
+#     ground truth advance_deal's 🟡 floor reads). DEFENSE IN DEPTH: an operation authenticated by a SEAT
+#     also OVERRIDES the global `security:` to `cookieAuth` only (human session) — an agent bearer/Passport
+#     is not even an accepted credential at the transport, so the human-only rule holds at the contract
+#     layer, not only in the gate. A human-only operation whose caller holds NO seat cannot say that and
+#     does not: the public booking page, the preference centre and the login screen's own endpoints
+#     declare `security: []` because the capability is the token in the URL, and the buyer's Deal Room
+#     declares the `dealRoomSession` that room mints. Those are named one by one in
+#     backend/gates/humanonlytransport_test.go, which holds every part of this paragraph — including that
+#     a human-only operation may not simply inherit the global, which ninety-six of them silently did.
 #     `x-agent-access: auth-bootstrap` — the auth/session machinery itself (workspace bootstrap,
 #     login/logout); the pre-auth endpoints (bootstrap, login) override `security: []` (no prior
 #     credential required); not tier-gated, not an agent tool.
@@ -827,6 +833,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: applyContactEmploymentImport
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Apply retained employer evidence, resolve a company match, or dismiss an incorrect role.
       requestBody:
@@ -849,6 +856,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: backfillEmploymentImport
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Administratively preview or apply one resumable batch of retained employment evidence.
       requestBody:
@@ -1050,6 +1058,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: quickCaptureContact
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Create a contact, their employer and the employment edge in one write.
       description: |
         The fast path for a contact researching a public profile in their own browser and
@@ -1107,6 +1116,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: importVCards
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Import a .vcf address-card file.
       description: |
         A handed-over card is first-party data: the contact gave it, which is what justifies
@@ -3669,6 +3679,7 @@ paths:
     post:
       tags: [Companies]
       operationId: acknowledgeCompanyView
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Record that the calling human has now seen this company — the baseline `since_last_visit` counts from.
       description: |
@@ -3934,6 +3945,7 @@ paths:
     post:
       tags: [Companies]
       operationId: requestCompanyVatCheck
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Ask the register again about the number this company states.
       x-agent-access: human-only
       description: |
@@ -4684,6 +4696,7 @@ paths:
     post:
       tags: [Projects]
       operationId: transferProjectOwnership
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Move every live project one user owns to another user, in one transaction.
       description: |
         The bulk twin of `updateProject.owner_id`, for a handover or a leaver. Every live
@@ -4880,6 +4893,7 @@ paths:
     post:
       tags: [Projects]
       operationId: createProjectHealthAssessment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Record how this project is going.
       description: |
@@ -4913,6 +4927,7 @@ paths:
     post:
       tags: [Projects]
       operationId: correctProjectHealthAssessment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Correct one reading, keeping when it was said.
       description: |
@@ -5312,6 +5327,7 @@ paths:
     post:
       tags: [Deals]
       operationId: acceptAppliedDealChange
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Accept a recorded automatic deal change.
       description: |
         Records the human's acceptance of a close-date correction (audit id) or
@@ -5343,6 +5359,7 @@ paths:
     post:
       tags: [Deals]
       operationId: revertStageProgression
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Take back a stage move the product made by itself.
       # human-only, and deliberately. Undoing what the autopilot did is a
       # judgement about whether the product was right, and an agent reversing
@@ -5522,6 +5539,7 @@ paths:
     put:
       tags: [Pipelines]
       operationId: setTransitionPolicy
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Decide what one transition may do.
       # human-only: trusting a transition to move deals without asking is a
       # governance decision about the product's own autonomy, and an agent
@@ -5569,6 +5587,7 @@ paths:
     post:
       tags: [Pipelines]
       operationId: resumeTransitionPolicy
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Lift a suspension the product put on a transition.
       x-agent-access: human-only
       description: |
@@ -6366,6 +6385,7 @@ paths:
     post:
       tags: [Activities, AI]
       operationId: readTranscriptForNextSteps
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
       description: |
         S-E04.3. Reads the transcript's normalized lines (ADR-0058: line N is the Nth newline-split
@@ -6739,6 +6759,7 @@ paths:
     get:
       tags: [Activities]
       operationId: listScheduledSends
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The caller's own messages waiting to be sent.
       description: |
         Scheduled mail is the SENDER's own (ADR-0104). An unsent message's body and its
@@ -6766,6 +6787,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getScheduledSend
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: One of the caller's scheduled messages.
       x-agent-access: human-only
       responses:
@@ -6784,6 +6806,7 @@ paths:
     patch:
       tags: [Activities]
       operationId: rescheduleScheduledSend
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Move a scheduled message to a different moment.
       description: |
         Time only. The content is what the approval bound to, so changing it is
@@ -6825,6 +6848,7 @@ paths:
     post:
       tags: [Activities]
       operationId: cancelScheduledSend
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Withdraw a scheduled message before it fires.
       description: |
         Nothing is transmitted and nothing reaches the timeline. Human-only, for the same
@@ -8198,6 +8222,7 @@ paths:
     get:
       tags: [Leads]
       operationId: previewLeadPromotion
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only for now: this ships as the promote dialog's confirm step. The
       # governed read tool is a separate, additive decision (see the note on
       # explainLeadScore).
@@ -8287,6 +8312,7 @@ paths:
     post:
       tags: [Leads]
       operationId: reopenLead
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only, on the same ground the disqualify it reverses is: deciding a
       # lead is worth pursuing again is a judgement, and the governed tool would
       # need its own registry entry and approvals authority.
@@ -8327,6 +8353,7 @@ paths:
     get:
       tags: [Leads]
       operationId: explainLeadScore
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only for now: this ships as the lead SCREEN's explanation. A
       # governed read tool is a separate, additive decision — and declaring a
       # verb tools/list cannot offer advertises a capability that is not there.
@@ -8434,6 +8461,7 @@ paths:
     get:
       tags: [Leads]
       operationId: listLeadManualSignals
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: List current and superseded human-provided qualification signals.
       description: |
@@ -8450,6 +8478,7 @@ paths:
     put:
       tags: [Leads]
       operationId: setLeadManualSignal
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only by nature, not by caution: the row records what a NAMED
       # contact judged to be true, with their written reason. An agent typing
       # one would be a judgement with nobody behind it.
@@ -8499,6 +8528,7 @@ paths:
     delete:
       tags: [Leads]
       operationId: clearLeadManualSignal
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only for the same reason as the set: withdrawing a judgement is
       # the judge's own act.
       x-agent-access: human-only
@@ -8786,6 +8816,7 @@ paths:
     post:
       tags: [Assignments]
       operationId: createRecordAssignment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Make a colleague or team responsible for this record.
       description: |
@@ -8815,6 +8846,7 @@ paths:
     patch:
       tags: [Assignments]
       operationId: updateRecordAssignment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Hand a responsibility to someone else, or change its role.
       description: |
@@ -8840,6 +8872,7 @@ paths:
     delete:
       tags: [Assignments]
       operationId: archiveRecordAssignment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: End a responsibility, keeping it in history.
       description: |
@@ -9749,6 +9782,7 @@ paths:
     post:
       tags: [Tags]
       operationId: restoreTag
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only by decision, not by omission. Restoring is the one tag verb an
       # agent cannot reach, and the reason is asymmetry rather than danger: the
       # act itself is nearly harmless — it moves no record and a contact undoes it
@@ -10166,6 +10200,7 @@ paths:
     post:
       tags: [AI]
       operationId: coldStartReadback
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-waits-on-model: always
       summary: Website cold-start read-back — returns a staged proposal with evidence.
       description: |
@@ -10239,6 +10274,7 @@ paths:
     post:
       tags: [AI]
       operationId: coldStartPreview
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-waits-on-model: always
       summary: Read a company back from a website (or text) to PRE-FILL the company form. Stages nothing.
       description: |
@@ -11759,6 +11795,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getAttention
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
       description: |
         The day's one surface. Five producers already ask a rep for something — staged
@@ -11797,6 +11834,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getMagic
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: What the machinery did, what it needs, what it could not finish, and what it is watching.
       description: |
         The receipt for everything that ran without being asked.
@@ -11862,6 +11900,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getWorklist
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
       description: |
         The Worklist. `/attention` answers "which producers have rows?" and leaves the
@@ -12135,6 +12174,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamBoard
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: One row per teammate — who is carrying what, so a lead can see where to help.
       description: |
         The manager's read of the same work `/worklist` ranks for one contact. It answers
@@ -12182,6 +12222,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getHandledForYou
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: What the product did on your behalf, so you can check it.
       description: |
         The opposite surface to the queue. That one lists obligations; this reports work
@@ -12212,6 +12253,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamExceptions
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: What is going wrong on this lead's team, and what it was judged against.
       description: |
         The lead's own page. `/worklist/team` answers "who is carrying what" and routes to
@@ -12246,6 +12288,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getHiddenBacklog
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: What the queue is not showing, and which rule is holding it back.
       description: |
         The Worklist is designed to look finite: a rep works it to the bottom and the day
@@ -12288,6 +12331,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getResponseMetrics
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: How fast the workspace answers, and how much of the queue it puts down.
       description: |
         The hidden-backlog guardrail says what the queue is NOT showing. This says what
@@ -15638,6 +15682,99 @@ paths:
         '409':
           description: The record is already restricted. Pinning is not a way to extend a window already running.
         '422': { $ref: '#/components/responses/ValidationError' }
+  /retention/legal-holds:
+    get:
+      tags: [Compliance]
+      operationId: listLegalHolds
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # What a litigation or investigation hold is currently preserving. The
+      # read side of the hold has always existed — every retention selector
+      # carries `NOT legal_hold` and the Art. 17 cascade refuses a held record
+      # — and this is the controller's view of which records that is.
+      #
+      # Why, when and by whom are NOT here: the write commits an audit row in
+      # the same transaction, so the reason is recorded verbatim against the
+      # actor and the moment. A second copy on the record would be a second
+      # answer to one question.
+      summary: List the records a legal hold is preserving.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of held records.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/HeldRecord' }
+                  page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /retention/legal-holds/{entityType}/{recordId}/place:
+    parameters:
+      - { name: entityType, in: path, required: true, schema: { $ref: '#/components/schemas/HeldEntityType' } }
+      - { name: recordId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: placeLegalHold
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # A hold overrides the storage-limitation ladder for records litigation
+      # or an investigation may need, so it is the controller's judgement and
+      # never an agent's. The reason is mandatory for the reason the retention
+      # override's is: it is what makes the hold a decision rather than a
+      # toggle, and it is audited verbatim.
+      summary: Place a legal hold on a record. Requires a stated reason; audited.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionOverrideRequest' }
+      responses:
+        '204': { description: The record is held. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: The record is already held. Placing is not a way to restate a hold already running. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /retention/legal-holds/{entityType}/{recordId}/lift:
+    parameters:
+      - { name: entityType, in: path, required: true, schema: { $ref: '#/components/schemas/HeldEntityType' } }
+      - { name: recordId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: liftLegalHold
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      # Lifting returns the record to the ordinary ladder: a retention sweep
+      # may then act on it, and a suspended erasure request may be asked again.
+      # It does not itself delete anything.
+      summary: Lift a legal hold. Requires a stated reason; audited.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionOverrideRequest' }
+      responses:
+        '204': { description: The hold is lifted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: The record is not held. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /retention-policies:
     get:
       tags: [Compliance]
@@ -16314,6 +16451,7 @@ paths:
     post:
       tags: [Access]
       operationId: createRecordGrant
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Share one record with a user or team (human-only).
       description: |
         Grants `read` or `write` on a single record to a user or team otherwise out of their own/team/all
@@ -16373,6 +16511,7 @@ paths:
     delete:
       tags: [Access]
       operationId: revokeRecordGrant
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Revoke a manual record grant (human-only).
       description: |
         Deletes the grant; the subject loses the widened access immediately (the next query no longer
@@ -16431,6 +16570,7 @@ paths:
     post:
       tags: [Identity]
       operationId: inviteUser
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Invite a new member. Admin-only, human-only.
       description: |
         Creates an active member with the chosen system role and no password, then issues a
@@ -16548,6 +16688,7 @@ paths:
     post:
       tags: [Identity]
       operationId: createFormerMember
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Record a colleague who has already left. Admin-only, human-only.
       description: |
         Creates a DEACTIVATED seat for somebody who worked here before this installation
@@ -16613,6 +16754,7 @@ paths:
     patch:
       tags: [Identity]
       operationId: changeUserRole
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Set a member's system role. Admin-only, human-only.
       description: |
         Replaces the member's role assignments with the one target system role and emits
@@ -16655,6 +16797,7 @@ paths:
     post:
       tags: [Identity]
       operationId: deactivateUser
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Deactivate a member and revoke their live access. Admin-only, human-only.
       description: |
         Flips the member to `deactivated` and hard-revokes every live session and passport they
@@ -16689,6 +16832,7 @@ paths:
     post:
       tags: [Identity]
       operationId: reactivateUser
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Reactivate a deactivated member. Admin-only, human-only.
       description: |
         Returns a `deactivated` member to `active`; they may sign in again (existing sessions
@@ -16732,6 +16876,7 @@ paths:
     post:
       tags: [Identity]
       operationId: issueUserPasswordLink
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Mint a single-use set-password link for a member. Admin-only, human-only.
       description: |
         The email-less installation's provisioning path (ADR-0061 Amendment 1). Mints a single-use
@@ -17785,6 +17930,7 @@ paths:
     patch:
       tags: [Deals]
       operationId: updateDealRoom
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Edit a Deal Room's title and welcome message (partial).
       description: |
         Edits the WORKING copy only. A live room keeps serving its last published
@@ -17815,6 +17961,7 @@ paths:
     delete:
       tags: [Deals]
       operationId: archiveDealRoom
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Archive a Deal Room, ending buyer access.
       description: |
         Terminal and deliberate: archiving revokes every live session, so buyers lose
@@ -17840,6 +17987,7 @@ paths:
     post:
       tags: [Deals]
       operationId: pauseDealRoom
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Pause buyer access without ending it.
       description: |
         A paused room refuses buyer reads while every credential stays valid, so
@@ -17863,6 +18011,7 @@ paths:
     post:
       tags: [Deals]
       operationId: resumeDealRoom
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Resume a paused Deal Room.
       description: |
         Returns a `paused` room to `live` on its existing release — no republish, and
@@ -17886,6 +18035,7 @@ paths:
     post:
       tags: [Deals]
       operationId: closeDealRoom
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Freeze the room's content, keeping buyer access.
       description: |
         Closing freezes CONTENT, not ACCESS. The buyer keeps reading documents and
@@ -17913,6 +18063,7 @@ paths:
     put:
       tags: [Deals]
       operationId: setDealRoomExpiry
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Set or clear when buyer access lapses.
       description: |
         HUMAN-ONLY: this moves the moment an outside party stops being able to read
@@ -18007,6 +18158,7 @@ paths:
     post:
       tags: [Deals]
       operationId: inviteDealRoomParticipant
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Admit a named contact to the room.
       description: |
         HUMAN-ONLY. Records the colleague and mints one credential for them. Whether a mail
@@ -18057,6 +18209,7 @@ paths:
     patch:
       tags: [Deals]
       operationId: updateDealRoomParticipant
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Correct a participant's name, address or capability.
       description: |
         HUMAN-ONLY. Correcting the ADDRESS is only possible while their credential is
@@ -18094,6 +18247,7 @@ paths:
     post:
       tags: [Deals]
       operationId: resendDealRoomInvitation
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Issue a fresh credential, retiring the previous one.
       description: |
         HUMAN-ONLY. Supersedes rather than accumulates: the moment a new credential is
@@ -18125,6 +18279,7 @@ paths:
     post:
       tags: [Deals]
       operationId: revokeDealRoomParticipant
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Take a contact's access away.
       description: |
         HUMAN-ONLY, and deliberately available in EVERY room state including closed and
@@ -18170,6 +18325,7 @@ paths:
     post:
       tags: [Deals]
       operationId: addDealRoomDocument
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Put an attachment of the deal in front of the buyer.
       description: |
         The attachment must be filed on THIS room's deal (`entity_type: deal`, the
@@ -18204,6 +18360,7 @@ paths:
     patch:
       tags: [Deals]
       operationId: updateDealRoomDocument
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Rename, regroup or reorder a room document.
       description: Editorial, like adding one — the buyer sees the change at the next publish.
       x-agent-access: human-only
@@ -18228,6 +18385,7 @@ paths:
     delete:
       tags: [Deals]
       operationId: removeDealRoomDocument
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Take a document out of the room.
       description: |
         Marks the entry removed; the attachment itself is untouched. The buyer stops
@@ -18334,6 +18492,7 @@ paths:
     post:
       tags: [Deals]
       operationId: resolveDealRoomThread
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Close a thread — the seller's side saying the point is settled.
       description: |
         Human-only: resolving a required-change thread is the seller answering the
@@ -18526,6 +18685,7 @@ paths:
     post:
       tags: [Deals]
       operationId: createDealOutcomeReview
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Write a review of how this deal's current closing went.
       description: |
         Writes a note against the deal and freezes the questions it was asked beside the
@@ -18578,6 +18738,7 @@ paths:
     patch:
       tags: [Activities]
       operationId: updateActivityReviewTemplate
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Edit the questions for future outcome reviews.
       description: Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
       x-agent-access: human-only
@@ -19007,6 +19168,7 @@ paths:
     post:
       tags: [Signals]
       operationId: createSignal
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution).
       description: |
         A signal about a known record carries its subject (`entity_type`+`entity_id`, both or
@@ -19070,6 +19232,7 @@ paths:
     patch:
       tags: [Signals]
       operationId: updateSignal
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Triage a signal (acknowledge / resolve / dismiss, severity).
       description: |
         A status change to `acknowledged`/`resolved`/`dismissed` appends the human-outcome
@@ -19095,6 +19258,7 @@ paths:
     delete:
       tags: [Signals]
       operationId: archiveSignal
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Archive (soft-delete) a signal.
       x-agent-access: human-only
       responses:
@@ -19111,6 +19275,7 @@ paths:
     post:
       tags: [Signals]
       operationId: resolveSignal
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident).
       description: |
         Maps the raw source pointer to a specific company via the domain index,
@@ -19236,6 +19401,7 @@ paths:
     post:
       tags: [Brief]
       operationId: generateMorningBrief
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-waits-on-model: on-miss
       summary: Assemble the acting rep's brief for today if the overnight pass has not already.
       description: |
@@ -19269,6 +19435,7 @@ paths:
     get:
       tags: [Brief]
       operationId: listWeeklyReviews
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The weeks the acting rep has a review for, newest first.
       description: |
         The archive's index — a list of doors, not the reviews themselves. Reachable without a
@@ -19286,6 +19453,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: |
         The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
@@ -19335,6 +19503,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getLatestWeeklyReview
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The acting rep's most recent weekly review, or a named week's.
       description: |
         Serves a review that was WRITTEN when its week closed; it never assembles one. A read
@@ -19417,6 +19586,7 @@ paths:
     post:
       tags: [Brief]
       operationId: markBriefItemActed
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
       # Per-rep queue state on the human home surface; a second mark on an
       # already-marked item is a 409 conflict, never a silent overwrite.
@@ -19598,6 +19768,7 @@ paths:
     post:
       tags: [Reports]
       operationId: resolveInputCheck
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Answer a finding from the nightly input check.
       description: |
         Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
@@ -19780,6 +19951,7 @@ paths:
     post:
       tags: [Reports]
       operationId: recordForecastCall
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Record what somebody believes will close.
       description: |
         A call is an assertion by a contact, not a derivation — a manager saying what they
@@ -19821,6 +19993,7 @@ paths:
     post:
       tags: [Reports]
       operationId: createForecastShare
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Issue a link that shows a forecast reading to a colleague.
       description: |
         Two kinds, and they make different promises. A `live` share re-runs the reading
@@ -19872,6 +20045,7 @@ paths:
     delete:
       tags: [Reports]
       operationId: revokeForecastShare
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Close a share link before it expires.
       description: |
         Idempotent: revoking a revoked share is the outcome the caller asked for, and
@@ -19897,6 +20071,7 @@ paths:
     get:
       tags: [Reports]
       operationId: openForecastShare
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Open a shared forecast view.
       description: |
         Answers the reading the share names, computed for the CALLER rather than for whoever
@@ -19929,6 +20104,7 @@ paths:
     get:
       tags: [Reports]
       operationId: exportForecastShare
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The rows behind a shared reading, as CSV.
       description: |
         One row per deal the CALLER may read, which is the same set the headline above it
@@ -19954,6 +20130,7 @@ paths:
     get:
       tags: [Reports]
       operationId: getAnalyticsContext
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Which population this caller measures by default, and which they may choose.
       description: |
         The frame every analytics answer is placed in: the population this caller measures
@@ -19986,6 +20163,7 @@ paths:
     get:
       tags: [Reports]
       operationId: getAnalyticsSchema
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: What questions this caller may ask, and in what words.
       description: |
         The vocabulary a generic analytics question is written in: the populations, the
@@ -20071,6 +20249,7 @@ paths:
     get:
       tags: [Reports]
       operationId: getReportRun
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The answer a report sentence points at.
       description: |
         A report block carries the id of a run and the coordinates of a cell inside it, not
@@ -20108,6 +20287,7 @@ paths:
     post:
       tags: [Reports]
       operationId: explainReportRunCell
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The records behind one cell of a saved run.
       description: |
         The evidence a report block's drawer opens. A block cites a run and a cell; this
@@ -20214,6 +20394,7 @@ paths:
     post:
       tags: [Reports]
       operationId: explainAnalyticsCell
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The records one cell of an analytics answer was computed from.
       description: |
         A number is worth having only if somebody can open it, and opening it means the
@@ -20257,6 +20438,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getCurrentWeeklyPlan
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The caller's plan for this week — what they said they would do.
       description: |
         The forward half of the Brief's weekly. `/weekly-reviews/latest` is the week that
@@ -20282,6 +20464,7 @@ paths:
     post:
       tags: [Brief]
       operationId: startWeeklyPlan
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Open a plan for this week.
       description: |
         Idempotent: a second call answers the plan the first opened rather than reporting a
@@ -20299,6 +20482,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeammateWeeklyPlan
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: A teammate's plan for this week, for their lead.
       description: |
         The second reader, and the only path that names a contact. Gated on the same
@@ -20327,6 +20511,7 @@ paths:
     post:
       tags: [Brief]
       operationId: addWeeklyPlanCommitment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Write one thing onto this week's plan.
       description: |
         Onto the CALLER's own plan, opening one for the week if they have none. There is no
@@ -20351,6 +20536,7 @@ paths:
     patch:
       tags: [Brief]
       operationId: editWeeklyPlanCommitment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Correct what a commitment says, when it is due, or what it is about.
       description: |
         The CALLER's own commitment, on an open week. A rep types a commitment on Monday and
@@ -20386,6 +20572,7 @@ paths:
     put:
       tags: [Brief]
       operationId: setWeeklyPlanCommitmentState
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Mark one commitment done, reopen it, or drop it.
       description: |
         `missed` is not settable. It is what the week's CLOSE writes over a commitment left
@@ -20417,6 +20604,7 @@ paths:
     put:
       tags: [Brief]
       operationId: askForWeeklyPlanHelp
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Say what you need from your lead on one commitment.
       description: |
         An empty ask withdraws a standing request. The withdrawal emits the ordinary plan
@@ -20448,6 +20636,7 @@ paths:
     put:
       tags: [Brief]
       operationId: setWeeklyPlanContract
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Say what could go wrong this week, and what room there is for it.
       description: |
         Both fields are written together and either may be omitted to leave that half alone.
@@ -20486,6 +20675,7 @@ paths:
     put:
       tags: [Brief]
       operationId: answerWeeklyPlanCommitment
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Answer a teammate's request for help.
       description: |
         The lead's one write, and it touches three columns together — the answer, who wrote
@@ -20520,6 +20710,7 @@ paths:
     post:
       tags: [Notices]
       operationId: raiseNotice
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
       x-agent-access: human-only
       description: |
@@ -20570,6 +20761,7 @@ paths:
     post:
       tags: [Notices]
       operationId: markNoticeRead
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane.
       x-agent-access: human-only
       responses:
@@ -20591,6 +20783,7 @@ paths:
     post:
       tags: [Brief]
       operationId: markBriefItemDismissed
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark.
       x-agent-access: human-only
       responses:
@@ -20620,6 +20813,7 @@ paths:
     post:
       tags: [Brief]
       operationId: snoozeBriefItem
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
       description: |
         Sets the item to `state=snoozed` with the given `snoozed_until`. While the instant has not
@@ -20665,6 +20859,7 @@ paths:
     post:
       tags: [Brief]
       operationId: unsnoozeBriefItem
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Take back a snooze — the item returns to the queue immediately.
       description: |
         Clears `snoozed_until`, `reopen_on` and `reopen_ref` and returns the item to `state=new`,
@@ -27349,6 +27544,14 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped: a chip strip shows a few and
         # says "+N", so a row does not need every word to draw one. Archived
         # tags are omitted — a retired word is not drawn on a list.
@@ -27764,6 +27967,14 @@ components:
       description: A company. Mirrors the `company` table.
       required: [id, display_name, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped: a chip strip shows a few and
         # says "+N", so a row does not need every word to draw one. Archived
         # tags are omitted — a retired word is not drawn on a list.
@@ -32491,6 +32702,14 @@ components:
       description: A deal. Mirrors the `deal` table.
       required: [id, name, pipeline_id, stage_id, status, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped: a chip strip shows a few and
         # says "+N", so a row does not need every word to draw one. Archived
         # tags are omitted — a retired word is not drawn on a list.
@@ -33135,6 +33354,14 @@ components:
       description: A project — the body of work a client relationship is made of. Mirrors the `project` table.
       required: [id, name, phase, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         id: { type: string, format: uuid }
         name: { type: string }
         key:
@@ -35960,6 +36187,14 @@ components:
       description: A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
+        legal_hold:
+          type: boolean
+          readOnly: true
+          description: >-
+            True while a litigation or investigation hold is preserving this record. A held
+            record is never acted on by a retention sweep and an Art. 17 erasure against it is
+            refused, so a screen that offers either action has to know. Placed and lifted
+            through /retention/legal-holds, never by an ordinary edit.
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
@@ -39555,7 +39790,7 @@ components:
           # `close` freezes content while access continues, and `pause`/`resume`
           # suspend reads without touching a single credential. `hold`/`release`
           # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete]
+          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         before:
@@ -41987,6 +42222,25 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 2000 }
+    HeldEntityType:
+      type: string
+      # The five records that carry a hold. Not the whole record vocabulary:
+      # an activity is held TRANSITIVELY, through whichever of these it is
+      # filed under, because a hold on a subject must cover the evidence and
+      # holding the evidence separately would let the two disagree.
+      enum: [contact, company, deal, lead, project]
+    HeldRecord:
+      type: object
+      # What a hold is preserving, named well enough to recognise and no more.
+      # The reason, the actor and the moment are in the audit row the write
+      # committed; this answers only "what is held".
+      required: [entity_type, record_id, label]
+      properties:
+        entity_type: { $ref: '#/components/schemas/HeldEntityType' }
+        record_id: { type: string, format: uuid }
+        label:
+          type: string
+          description: The record's own name, so a controller can recognise it without a second read.
     RestrictedRecord:
       type: object
       # ADR-0114. What a statutory obligation is holding, stated without
