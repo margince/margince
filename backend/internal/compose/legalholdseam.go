@@ -59,6 +59,9 @@ var _ privacy.LegalHoldWriter = LegalHoldSeam{}
 // entityType as a closed enum, so an unknown one cannot arrive over HTTP — but
 // a value that reaches here unrecognised means the enum and this switch have
 // drifted, and quietly doing nothing would report a hold that was never placed.
+//
+// Held by: TestTheHoldSeamRefusesARecordTypeNoModuleOwns
+// (internal/compose/legalholdseam_test.go)
 func (s LegalHoldSeam) SetLegalHold(
 	ctx context.Context, entityType string, id ids.UUID, held bool, reason string,
 ) error {

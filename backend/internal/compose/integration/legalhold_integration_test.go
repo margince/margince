@@ -165,3 +165,68 @@ func TestTheHoldListNamesWhatIsHeldAndNothingElse(t *testing.T) {
 		t.Error("an unheld contact reached the hold list, which would make the list useless for reviewing a hold")
 	}
 }
+
+// The list pages, and the second page continues the first rather than
+// repeating it.
+//
+// `limit=1` rather than fifty rows: the keyset is what is under test, not the
+// default page size, and a fixture sized to the default would be fifty holds
+// to prove one cursor works.
+func TestTheHoldListPagesWithoutRepeatingOrSkippingARecord(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	held := map[string]bool{}
+	for _, name := range []string{"Dana Meyer", "Sam Okafor", "Mira Voss"} {
+		id := createdID(t, e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
+		if status := placeHold(t, e, "contact", id, "Anwaltsschreiben 2026-14"); status != http.StatusNoContent {
+			t.Fatalf("placing a hold on %s = %d, want 204", name, status)
+		}
+		held[id] = true
+	}
+
+	seen := map[string]int{}
+	cursor := ""
+	for page := 0; page < len(held)+1; page++ {
+		path := "/v1/retention/legal-holds?limit=1"
+		if cursor != "" {
+			path += "&cursor=" + cursor
+		}
+		var got struct {
+			Data []struct {
+				RecordID string `json:"record_id"`
+			} `json:"data"`
+			Page struct {
+				NextCursor *string `json:"next_cursor"`
+				HasMore    bool    `json:"has_more"`
+			} `json:"page"`
+		}
+		if status := e.Call(t, "GET", path, nil, nil, &got); status != http.StatusOK {
+			t.Fatalf("page %d = %d, want 200", page, status)
+		}
+		if len(got.Data) != 1 {
+			t.Fatalf("page %d carried %d rows, want 1 — the limit was not honoured", page, len(got.Data))
+		}
+		seen[got.Data[0].RecordID]++
+		if !got.Page.HasMore {
+			break
+		}
+		if got.Page.NextCursor == nil {
+			t.Fatal("a page says more follows and hands back no cursor, so a reader cannot ask for it")
+		}
+		cursor = *got.Page.NextCursor
+	}
+
+	// Every held record exactly once. Counting rather than comparing lengths:
+	// a keyset that repeated a row and skipped another would hand back the
+	// right NUMBER of rows and the wrong ones.
+	for id := range held {
+		if seen[id] != 1 {
+			t.Errorf("held record %s appeared %d time(s) across the pages, want exactly 1", id, seen[id])
+		}
+	}
+	for id := range seen {
+		if !held[id] {
+			t.Errorf("the pages carried %s, which is not held", id)
+		}
+	}
+}

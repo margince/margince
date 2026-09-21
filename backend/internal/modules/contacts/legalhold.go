@@ -58,8 +58,10 @@ func (s *Store) SetLegalHold(
 		case HeldContact, HeldCompany, HeldLead:
 			return storekit.SetLegalHold(ctx, tx, object, id, held, reason)
 		default:
-			// Unreachable through the exported constants, and a fail-closed
+			// Not reachable through the exported constants, and a fail-closed
 			// answer rather than a statement built from an unknown name.
+			// Held by: TestTheHoldWriterRefusesATableThisModuleDoesNotOwn
+			// (internal/modules/contacts/legalhold_test.go)
 			return fmt.Errorf("legal hold on %q: %w", table, apperrors.ErrInvalidArgument)
 		}
 	})
