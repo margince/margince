@@ -122,7 +122,8 @@ export const vi = {
   "brief.schedule.more": "Tải thêm mục để xem các cuộc họp còn lại.",
   "brief.readings.riskPartial":
     "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
-  "brief.readings.unpricedCount_one": "1 deal chưa định giá · không được tính",
+  "brief.readings.unpricedCount_one":
+    "1 cơ hội chưa định giá · không được tính",
   "brief.readings.unpricedCount_other":
     "{count} cơ hội không có giá trị so sánh được nên không được tính.",
   "brief.coverage.source.generic": "Công việc khác",
@@ -194,11 +195,12 @@ export const vi = {
   "brief.readings.summary": "Tổng quan công việc",
   "brief.readings.unpriced": "Chưa có giá trị",
   "brief.readings.noDealWork": "Không có giao dịch được đánh dấu",
-  "brief.readings.noDealWorkWhy": "Hôm nay không deal nào bị đánh dấu",
+  "brief.readings.noDealWorkWhy": "Hôm nay không giao dịch nào bị đánh dấu",
   "brief.readings.unavailable": "Chưa rõ",
   "brief.readings.unavailable.urgent": "Các nguồn không khả dụng",
   "brief.readings.unavailable.meetings": "Lịch không khả dụng",
-  "brief.readings.unavailable.leads": "Nguồn lead không khả dụng",
+  "brief.readings.unavailable.leads":
+    "Nguồn khách hàng tiềm năng không khả dụng",
   "brief.readings.unavailable.decisions": "Nguồn không khả dụng",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
@@ -2884,7 +2886,7 @@ export const vi = {
     "Cho các giai đoạn cơ hội rời khỏi tuần này",
   "brief.weekly.scorecard.withNextStep": "Có bước tiếp theo",
   "brief.weekly.scorecard.ofOpen": "trên {total} cơ hội đang mở",
-  "brief.weekly.scorecard.noOpen": "Không có deal đang mở",
+  "brief.weekly.scorecard.noOpen": "Không có cơ hội đang mở",
   "brief.weekly.scorecard.multiThreaded": "Nhiều hơn một liên hệ",
   "brief.weekly.scorecard.multiThreadedBasis":
     "trên {total} cơ hội đang mở, trong 30 ngày qua",
@@ -9859,7 +9861,7 @@ export const vi = {
   "lead.readings.noClock": "chưa đặt mục tiêu phản hồi",
   "lead.readings.archived": "Đã lưu trữ",
   "lead.readings.merged": "Đã gộp",
-  "lead.readings.mergedInto": "Vào một lead khác",
+  "lead.readings.mergedInto": "Vào một khách hàng tiềm năng khác",
   "lead.readings.company": "Công ty",
   "lead.readings.noCompany": "Không có",
   "lead.readings.scoreManual": "Đặt thủ công",

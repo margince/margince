@@ -184,4 +184,43 @@ describe("the seat's own readings when the report answers with nothing", () => {
     expect(screen.getByText(en["analytics.noBaseCurrency"])).toBeTruthy();
     expect(screen.getByText(en["analytics.noBaseCurrencyWhy"])).toBeTruthy();
   });
+
+  // The OTHER absence, and the reason it is not the one above: the currency is
+  // there and the sum is not. "Currency not set" here would send an admin to a
+  // setting that is already filled.
+  it("says the amount is missing when the currency is not", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        context: ownLensContext,
+        stageRows: [{ deal_count: 4, raw_minor: null }],
+      }),
+    );
+    await openOutcomes();
+
+    expect(
+      await screen.findByText(
+        en["analytics.baseValue"].replace("{currency}", "EUR"),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(en["analytics.forecastNoAmount"])).toBeTruthy();
+    expect(screen.queryByText(en["analytics.noBaseCurrencyWhy"])).toBeNull();
+  });
+
+  it("states the figure when the row carries both halves", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        context: ownLensContext,
+        stageRows: [{ deal_count: 4, raw_minor: 250_000 }],
+      }),
+    );
+    await openOutcomes();
+
+    expect(
+      await screen.findByText(formatMoneyCompact(250_000, "EUR", "en")),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["analytics.noBaseCurrency"])).toBeNull();
+    expect(screen.queryByText(en["analytics.forecastNoAmount"])).toBeNull();
+  });
 });

@@ -351,10 +351,8 @@ export function ForecastTile({
   const t = useT();
   const plural = usePlural();
   // "1 deals" is a sentence no call site should be able to spell.
-  const deals = (count: number) =>
-    plural("analytics.forecastDeals", count, {
-      count: formatNumber(count, locale),
-    });
+  const deals = (n: number) =>
+    plural("analytics.forecastDeals", n, { count: formatNumber(n, locale) });
   if (amountMinor == null || !currency) {
     // A word, never a glyph: with no money the deals the category HOLDS are
     // the reading, and with no count either nothing was measured at all.
@@ -1321,15 +1319,17 @@ function MyOutcomesView({
     : noRow;
   const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
   // The currency names what the figure is IN, so a read with none to name drops
-  // the parenthetical — and has no figure to draw either, because money
-  // without a currency is not money.
+  // the parenthetical. TWO absences follow, never one word for both: no
+  // currency is a setting to fill, an absent sum is a row with no priced deal
+  // in it — and only the first has a reason worth a detail line.
   const valueLabel = baseCurrency
     ? t("analytics.baseValue", { currency: baseCurrency })
     : t("analytics.baseValueUnnamed");
-  const openMoney =
-    baseCurrency && rawMinor != null
-      ? formatMoneyCompact(rawMinor, baseCurrency, locale)
-      : t("analytics.noBaseCurrency");
+  const openMoney = !baseCurrency
+    ? t("analytics.noBaseCurrency")
+    : rawMinor == null
+      ? t("analytics.forecastNoAmount")
+      : formatMoneyCompact(rawMinor, baseCurrency, locale);
   const meetingRows = meetingsQuery.data?.rows ?? [];
   const meetingsByStatus = new Map(
     meetingRows

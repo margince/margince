@@ -32,7 +32,7 @@ export function RelayPanel({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const reader = useMe().data?.user.display_name;
+  const reader = useMe().data?.user;
   const steps = stepsFor(ask, t);
   const owner =
     ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
@@ -106,16 +106,23 @@ export function RelayPanel({
 export function ownerOf(
   ask: IntroRequest,
   t: ReturnType<typeof useT>,
-  // The reader's own display name, for the ask whose requester the payload
-  // leaves unnamed. Absent while the session is still being read.
-  reader?: string,
+  // The session, for the ask whose requester the payload leaves unnamed.
+  // Absent while it is still being read.
+  reader?: Readonly<{ id: string; display_name: string }>,
 ): string | undefined {
   switch (ask.status) {
     case "requested":
       return ask.introducer_display_name ?? t("contact.intro.ownerColleague");
     case "accepted":
     case "name_drop_approved":
-      return ask.requester_display_name ?? reader;
+      // The reader's name only where the reader IS the requester. An ask this
+      // page can show was not necessarily made by whoever is looking at it,
+      // and a colleague's ask read by somebody else would otherwise be signed
+      // with the wrong name — worse than leaving the line off.
+      return (
+        ask.requester_display_name ??
+        (reader?.id === ask.requester_user_id ? reader.display_name : undefined)
+      );
     default:
       return t("contact.intro.ownerNobody");
   }

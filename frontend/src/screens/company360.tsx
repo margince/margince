@@ -880,6 +880,10 @@ export function StateStrip({
   // is readable rather than guessable — and guessing is how a grant boundary
   // gets reported as an account nobody has assessed.
   const healthWithheld = view != null && omitted(view, "health");
+  // The same boundary read ONCE for the two cards that depend on it: the last
+  // contact IS this section, and the relationship card reads its outbound date
+  // to tell silence with nothing sent from silence after we wrote.
+  const touchWithheld = view != null && omitted(view, "last_touch");
   const door = (tab: CompanyTab) => onOpenTab && (() => onOpenTab(tab));
   return (
     // The shared strip: five readings read ACROSS as one row of doors, each
@@ -907,11 +911,11 @@ export function StateStrip({
       />
       {/* The relationship and the last contact both read off the account's
           exchanges: one says how balanced the talk has been, the other how
-          long ago the last word fell. The outbound date rides along because
-          silence with nothing sent and silence after we wrote are opposite
-          problems, and the reading itself carries only the inbound side. */}
+          long ago the last word fell. The outbound date and its boundary ride
+          along because the reading carries only the inbound side. */}
       <HealthStat
         health={view?.health}
+        touchWithheld={touchWithheld}
         lastOutboundAt={view?.last_outbound_at ?? undefined}
         asOf={view?.as_of}
         locale={locale}
@@ -921,6 +925,7 @@ export function StateStrip({
       />
       <LastTouchStat
         view={view}
+        withheld={touchWithheld}
         locale={locale}
         recordZone={recordZone}
         onOpen={door("timeline")}
@@ -947,23 +952,26 @@ function daysAgo(at: string, asOf: string): number | undefined {
 }
 
 // The last word exchanged, as days since it fell, and who said it. Read off
-// the account's own timestamps rather than the health reading: those two
-// dates are the fact, and the reading is a judgement made from them.
+// the account's own timestamps rather than the health reading: the two dates
+// are the fact, and the reading is a judgement made from them.
 function LastTouchStat({
   view,
+  withheld,
   locale,
   recordZone,
   onOpen,
   t,
 }: Readonly<{
   view?: Company360;
+  // Refused, read once by the strip and shared with the relationship card.
+  withheld: boolean;
   locale: Locale;
   recordZone: string;
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
   const slot = { label: t("co.strip.lastTouch"), narrow: "row" } as const;
-  if (!view || omitted(view, "last_touch")) {
+  if (!view || withheld) {
     return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
   }
   const inbound = view.last_inbound_at ?? undefined;
@@ -1440,20 +1448,26 @@ function noReply(days: number, locale: Locale, t: Translate): string {
   return t("co.strip.unansweredDetail", { days: formatNumber(days, locale) });
 }
 
-// They have never written, which is two different accounts and only one is bad
-// news. With nothing sent either, nobody has approached them — a fact about how
-// far the account has been worked, and a row that lit up for every untouched
-// account would say the same of the ones being ignored. With something sent we
-// are talking into silence.
-//
-// A letter posted TODAY is not yet unanswered news: the word stands, but there
-// is no span to state and nothing to warn about until a day has passed.
+// They have never written, which is three different accounts and only one is
+// bad news. With nothing sent either, the account has not been worked — a row
+// that lit up for every untouched account would say the same of the ones being
+// ignored. With something sent we are talking into silence, and a letter
+// posted TODAY is not yet unanswered news: the word stands, but there is no
+// span to state and nothing to warn about until a day has passed. And with the
+// outbound date refused, the row says so rather than guessing which it is.
 function silenceReading(
+  touchWithheld: boolean,
   lastOutboundAt: string | undefined,
   asOf: string | undefined,
   locale: Locale,
   t: Translate,
 ): Readonly<{ value: string; detail?: string; tone?: "warning" }> {
+  if (touchWithheld) {
+    // "No exchange" here would report a refusal as a fact about the account,
+    // the one thing this row may never do, and what the health section still
+    // supports has no word left in this catalogue.
+    return { value: t(WITHHELD_READING) };
+  }
   if (!lastOutboundAt || !asOf) {
     return { value: t("co.strip.noInboundEver") };
   }
@@ -1470,12 +1484,13 @@ function silenceReading(
 // Health as a STATUS with its reason, never a 0-100 verdict (§4.2). The card
 // below the fold decomposes it; this says which way it points and why.
 //
-// A LIVE relationship is reported by the balance of the exchange rather than by
-// its recency: one where they write and we do not answer, and one where we
+// A LIVE relationship is reported by the balance of the exchange rather than
+// by its recency: one where they write and we do not answer, and one where we
 // write into silence, are equally recent and opposite problems. A silent one
-// has no balance worth stating — that nothing came back, and for how long.
+// has no balance worth stating — nothing came back, and for how long.
 function HealthStat({
   health,
+  touchWithheld,
   lastOutboundAt,
   asOf,
   locale,
@@ -1484,6 +1499,9 @@ function HealthStat({
   t,
 }: Readonly<{
   health?: Health;
+  // Whether the section the outbound date lives in was refused: without it, a
+  // missing date is not evidence that nothing was ever sent.
+  touchWithheld: boolean;
   // The last word WE sent, which the reading itself does not carry.
   lastOutboundAt?: string;
   // The instant the 360 was read at, which every age on this row measures from.
@@ -1514,8 +1532,8 @@ function HealthStat({
   } as const;
   if (!health) {
     // No health section at all. Withheld says so; anything else has simply not
-    // been assessed. Neither is "they have never written" — that is a claim
-    // about the account this read has no basis for.
+    // been assessed. Neither is "they have never written", a claim about the
+    // account this read has no basis for.
     return (
       <StatCard
         onOpen={onOpen}
@@ -1527,7 +1545,13 @@ function HealthStat({
   const days = health.days_since_last_inbound;
   const share = health.reply_balance;
   if (days == null) {
-    const silence = silenceReading(lastOutboundAt, asOf, locale, t);
+    const silence = silenceReading(
+      touchWithheld,
+      lastOutboundAt,
+      asOf,
+      locale,
+      t,
+    );
     return (
       <StatCard
         onOpen={onOpen}

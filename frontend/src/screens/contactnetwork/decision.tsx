@@ -57,7 +57,7 @@ export function DecisionStrip({
   const t = useT();
   const { locale } = useLocale();
   const own = useOwnRoute();
-  const reader = useMe().data?.user.display_name;
+  const reader = useMe().data?.user;
   // A name the server sent as whitespace is a name it does not have. A
   // StatCard value is a non-empty string by contract, and a blank one draws a
   // slot that reads as a reading which failed to load.
@@ -183,7 +183,7 @@ function changeDetail(
 // while the session is still being read.
 function handoffDetail(
   open: IntroRequest,
-  reader: string | undefined,
+  reader: Readonly<{ id: string; display_name: string }> | undefined,
   t: Translate,
 ): string | undefined {
   if (open.status === "suggest_other") {

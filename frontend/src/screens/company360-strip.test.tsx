@@ -382,6 +382,32 @@ describe("silence on the relationship slot names which silence it is", () => {
     expect(within(card).getByText(noReply(10))).toBeTruthy();
   });
 
+  // The outbound date lives in `last_touch`. With that section refused the row
+  // cannot tell "nothing was ever sent" from "we wrote and nothing came back",
+  // and picking either would state a fact about the account out of a grant
+  // boundary — which is the one thing this row exists not to do.
+  it("claims neither silence when the last contact is withheld", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: { days_since_last_inbound: null },
+        last_outbound_at: "2026-08-08T09:00:00Z",
+        sections_omitted: ["last_touch"],
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText(en["reading.restricted"])).toBeTruthy();
+    expect(card.textContent).not.toMatch(/No exchange|Unanswered/i);
+    expect(card.querySelector(".stat-card-detail")).toBeNull();
+    expect(
+      within(card)
+        .getByText(en["reading.restricted"])
+        .className.includes("stat-card-warning"),
+    ).toBe(false);
+  });
+
   // A letter posted TODAY is not yet unanswered news. The word stands — they
   // have not replied to it — but there is no span to state and nothing to warn
   // about, and clock skew between a timestamp and the read instant would

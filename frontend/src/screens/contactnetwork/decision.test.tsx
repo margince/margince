@@ -35,24 +35,37 @@ afterEach(() => {
 });
 
 /**
- * The session the strip reads its own reader's name from.
+ * The session the strip reads its own reader's name from, and a signal for
+ * when it has answered.
  *
  * `pending` is a probe that never settles, which is the state the flicker
  * case is about — a promise that never resolves rather than a slow one,
  * because a duration would make the case a race with the scheduler.
+ *
+ * `answered` is what a case asserting the owner line is ABSENT has to wait on.
+ * The value renders without the session, so an absence checked before the
+ * probe lands passes against a strip that has not consulted it yet — which is
+ * exactly the reading the case is about.
  */
 function stubSession(session: "answered" | "pending" = "answered") {
+  let landed: () => void = () => {};
+  const answered = new Promise<void>((resolve) => {
+    landed = resolve;
+  });
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      session === "pending"
-        ? new Promise<Response>(() => {})
-        : new Response(JSON.stringify(meFixture({ roles: ["rep"] })), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }),
-    ),
+    vi.fn(async () => {
+      if (session === "pending") {
+        return new Promise<Response>(() => {});
+      }
+      landed();
+      return new Response(JSON.stringify(meFixture({ roles: ["rep"] })), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
   );
+  return { answered };
 }
 
 function renderStrip(
@@ -87,6 +100,23 @@ function cardOf(value: string): HTMLElement {
   }
   return card;
 }
+
+const route: RouteCandidate = {
+  route_id: `direct:${SOFIA}`,
+  route_type: "direct",
+  via_user_id: SOFIA,
+  via_display_name: "Sofia Meier",
+  strength_bucket: "strong",
+  evidence: { interactions_90d: 6, two_way: true },
+  availability: "available",
+};
+
+// The route the READER is on, which `useOwnRoute` recognises off the same
+// session query the handoff reads its own name from.
+const ownRoute: RouteCandidate = {
+  ...route,
+  via_user_id: meFixture({}).user.id,
+};
 
 function ask(over: Partial<IntroRequest> = {}): IntroRequest {
   return {
@@ -169,21 +199,28 @@ describe("a name the server sent blank is no name", () => {
   });
 });
 
-// Once the colleague has agreed the move is the requester's — usually the
-// reader's own — and their name comes from the session rather than the ask.
-// A colleague standing in while that read is in flight made the slot say
-// someone owed the move and then replace them with another, with nothing about
-// the ask having changed.
+// Once the colleague has agreed the move is the REQUESTER's, and where the
+// payload leaves them unnamed the session is the only thing that can name
+// them — which it may do only when the reader IS that requester. Two ways to
+// get this wrong: standing a colleague in while the read is in flight made the
+// slot say someone owed the move and then replace them with another, and
+// signing an ask from a different requester with the reader's own name states
+// a fact about the record that nothing supports.
 describe("the handoff names nobody it cannot name yet", () => {
-  const accepted = ask({
+  const mine = ask({
     status: "accepted",
+    requester_user_id: meFixture({}).user.id,
     requester_display_name: undefined,
     decided_at: "2026-09-04T09:00:00Z",
+  });
+  const theirs = ask({
+    ...mine,
+    requester_user_id: "018f3a1b-0000-7000-8000-0000000000a9",
   });
 
   it("leaves the owner line off while the session is still being read", () => {
     stubSession("pending");
-    renderStrip({ open: accepted });
+    renderStrip({ open: mine });
 
     const card = cardOf(en["contact.intro.stateAccepted"]);
     expect(card.querySelector(".stat-card-detail")).toBeNull();
@@ -192,7 +229,7 @@ describe("the handoff names nobody it cannot name yet", () => {
 
   it("names the reader once the session has answered", async () => {
     stubSession();
-    renderStrip({ open: accepted });
+    renderStrip({ open: mine });
 
     expect(
       await screen.findByText(
@@ -202,6 +239,24 @@ describe("the handoff names nobody it cannot name yet", () => {
         ),
       ),
     ).toBeTruthy();
+  });
+
+  // The ask is somebody else's. The session can still be read, and it still
+  // must not be the answer: an unnamed requester stays unnamed.
+  //
+  // The wait is a route the READER owns, drawn from the same session query, so
+  // the absence below is checked against a strip that has consulted the
+  // session rather than one that has not reached it yet.
+  it("signs no other requester's ask with the reader's name", async () => {
+    stubSession();
+    renderStrip({ open: theirs, routes: [ownRoute] });
+    await screen.findByText(en["contact.intro.stripWhoOwn"]);
+
+    const card = cardOf(en["contact.intro.stateAccepted"]);
+    expect(card.querySelector(".stat-card-detail")).toBeNull();
+    expect(
+      screen.queryByText(new RegExp(meFixture({}).user.display_name)),
+    ).toBeNull();
   });
 
   // A settled ask owes nobody anything, so naming an owner there would point
@@ -228,21 +283,9 @@ describe("every slot on the strip declares the narrow shape", () => {
 });
 
 describe("the ways in are counted, and the reader is one of them", () => {
-  const route: RouteCandidate = {
-    route_id: `direct:${SOFIA}`,
-    route_type: "direct",
-    via_user_id: SOFIA,
-    via_display_name: "Sofia Meier",
-    strength_bucket: "strong",
-    evidence: { interactions_90d: 6, two_way: true },
-    availability: "available",
-  };
-
   it("counts every route and names the reader's own on its own line", async () => {
     stubSession();
-    renderStrip({
-      routes: [route, { ...route, via_user_id: meFixture({}).user.id }],
-    });
+    renderStrip({ routes: [route, ownRoute] });
 
     expect(
       await screen.findByText(en["contact.intro.stripWhoOwn"]),
