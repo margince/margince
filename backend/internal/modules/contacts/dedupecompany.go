@@ -12,7 +12,6 @@ package contacts
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -51,6 +50,22 @@ type CompanyMatch struct {
 	// dispositioned `not_a_duplicate`, and a single-winner result would let
 	// that dismissal mask a genuine duplicate behind it forever.
 	Ranked []CompanyCandidateScore
+	// DomainSplit is non-nil when the candidate's own domains named more than
+	// one live company: two employers' addresses on one card, an import row
+	// carrying a parent and a subsidiary. It is a REPORT — this resolver writes
+	// nothing — and the routed company is still the lowest id, which is the
+	// answer this ladder has always given.
+	//
+	// There is only ONE exact lane for a company, so unlike the contact side
+	// this can never be two lanes disagreeing; it is always the payload
+	// disagreeing with itself.
+	DomainSplit *DomainSplit
+}
+
+// DomainSplit names both companies a candidate's domains reached, so the
+// caller's policy has the evidence without re-running the ladder.
+type DomainSplit struct {
+	RoutedTo, Rival ids.CompanyID
 }
 
 // CompanyCandidateScore is one scored rival from the fuzzy tier, with the
@@ -84,8 +99,16 @@ type CompanyCandidateScore struct {
 // implementation. Domain is the exact key; name similarity alone is the
 // fuzzy tier, because without a domain there is nothing to anchor on.
 func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMatch, error) {
-	if hit, found, err := exactCompanyByDomain(ctx, tx, c.Domains, c.ExcludeID); err != nil || found {
-		return CompanyMatch{Decision: DecisionExactCollision, CompanyID: hit}, err
+	hits, err := exactCompanyByDomain(ctx, tx, c.Domains, c.ExcludeID)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+	if len(hits) > 0 {
+		match := CompanyMatch{Decision: DecisionExactCollision, CompanyID: hits[0]}
+		if len(hits) > 1 {
+			match.DomainSplit = &DomainSplit{RoutedTo: hits[0], Rival: hits[1]}
+		}
+		return match, nil
 	}
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
@@ -114,29 +137,42 @@ func DedupeCompanyForCreate(ctx context.Context, tx pgx.Tx, c CompanyCandidate) 
 // exactCompanyByDomain is PO-F-2 tier 1: any candidate domain already mapped
 // to a live company. This is also the capture employer-inference path — a
 // domain hit lands the contact on the existing company.
-func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, exclude *ids.CompanyID) (ids.CompanyID, bool, error) {
+// AT MOST TWO are returned, and the statement's own LIMIT says so. The first is
+// the company this routes to — the same lowest id the `LIMIT 1` this replaced
+// returned, which is what makes the routing outcome unchanged — and the second
+// is the evidence that the candidate's own domains named more than one. The
+// report names ONE rival, so a third adds nothing a review row can carry.
+func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, exclude *ids.CompanyID) ([]ids.CompanyID, error) {
 	if len(domains) == 0 {
-		return ids.CompanyID{}, false, nil
+		return nil, nil
 	}
 	lowered := make([]string, 0, len(domains))
 	for _, d := range domains {
 		lowered = append(lowered, normalizeDomain(d))
 	}
-	var id ids.CompanyID
-	err := tx.QueryRow(ctx, `
-		SELECT company_id FROM company_domain
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT company_id FROM company_domain
 		WHERE domain = ANY($1) AND archived_at IS NULL
 		  
 		  AND ($2::uuid IS NULL OR company_id <> $2)
 		ORDER BY company_id
-		LIMIT 1`, lowered, exclude).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.CompanyID{}, false, nil
-	}
+		LIMIT 2`, lowered, exclude)
 	if err != nil {
-		return ids.CompanyID{}, false, fmt.Errorf("dedupe company exact tier: %w", err)
+		return nil, fmt.Errorf("dedupe company exact tier: %w", err)
 	}
-	return id, true, nil
+	defer rows.Close()
+	var out []ids.CompanyID
+	for rows.Next() {
+		var id ids.CompanyID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("dedupe company exact tier: %w", err)
+		}
+		out = append(out, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("dedupe company exact tier: %w", err)
+	}
+	return out, nil
 }
 
 // fuzzyCompany scores name similarity over the trigram-restricted

@@ -1793,6 +1793,7 @@ func (e AttentionPairEvidenceField) Valid() bool {
 const (
 	AttentionPairEvidenceSignalCollide       AttentionPairEvidenceSignal = "collide"
 	AttentionPairEvidenceSignalExactConflict AttentionPairEvidenceSignal = "exact_conflict"
+	AttentionPairEvidenceSignalLaneSplit     AttentionPairEvidenceSignal = "lane_split"
 	AttentionPairEvidenceSignalOneSided      AttentionPairEvidenceSignal = "one_sided"
 )
 
@@ -1802,6 +1803,8 @@ func (e AttentionPairEvidenceSignal) Valid() bool {
 	case AttentionPairEvidenceSignalCollide:
 		return true
 	case AttentionPairEvidenceSignalExactConflict:
+		return true
+	case AttentionPairEvidenceSignalLaneSplit:
 		return true
 	case AttentionPairEvidenceSignalOneSided:
 		return true

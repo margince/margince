@@ -144,6 +144,8 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		return result, nil
 	}
 
+	// The ladder's report about THIS card, raised after the transaction below.
+	var split *LaneConflict
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// The dedupe first, and it takes no row lock — it is a read, so it
 		// orders nothing. What comes after it is ordered, and strictly: the
@@ -152,6 +154,11 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		if err != nil {
 			return err
 		}
+		// A card that states two addresses can state two contacts'. Carried out
+		// of this transaction and raised below: the review row hangs off two
+		// records this card holds no subject lock on, and taking one here
+		// would order this writer against the eraser the wrong way round.
+		split = decision.Conflict
 		switch decision.Decision {
 		case DecisionExactCollision:
 			// The card names somebody who exists, so the caller's authority
@@ -210,6 +217,18 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	}
 	if err != nil {
 		return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+	}
+	// Raised in its own transaction, and its failure FAILS the card: an import
+	// keeps no promise a captured message does, so a review nobody can write
+	// is a card nobody should think landed cleanly.
+	if split != nil {
+		by, byErr := storekit.CapturedBy(ctx)
+		if byErr != nil {
+			return VCardResult{}, byErr
+		}
+		if _, err := s.EnqueueIdentityConflict(ctx, *split, vcardSource, by); err != nil {
+			return VCardResult{}, fmt.Errorf("contacts: card %d named two contacts and the review could not be raised: %w", index+1, err)
+		}
 	}
 	return result, nil
 }
