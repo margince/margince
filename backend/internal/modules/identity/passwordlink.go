@@ -74,15 +74,24 @@ func (h Handlers) canSendPasswordLink() bool {
 func (h Handlers) canIssuePasswordLink(ctx context.Context, id Identity) bool {
 	// The grant and not the role name, so an installation that delegates member
 	// administration advertises the action to the holder it delegated it to.
-	// The other three conditions are unchanged: this stays a caller capability
-	// folding authority, seat and deployment posture, because each of the three
-	// can refuse a call the other two would allow.
+	// This stays a caller capability folding authority, seat and deployment
+	// posture, because each of the three can refuse a call the others allow.
 	//
 	// actorCtx binds everything auth.Require reads out of the identity itself —
 	// the grants, the seat, the teams — onto the caller's own context, so the
 	// predicate is decided under the request that asked it.
+	//
+	// A CONFIGURED MAILER NO LONGER REFUSES IT. This used to require that no
+	// mailer was wired, on the assumption that the mailed flow works when one
+	// is — and the installation that assumption is wrong about is the one with
+	// no escape: a dead relay answers 201 to an invite and delivers nothing,
+	// while the admin-issued link is refused PRECISELY BECAUSE a mailer is
+	// configured. The fallback was disabled by the thing that was broken.
+	//
+	// It also needs no definition of "healthy", which is what the two obvious
+	// fixes were both waiting on. Whether a wired relay actually works is
+	// #5585's question; this half is true either way.
 	return auth.Require(actorCtx(ctx, id), objectUserAdmin, principal.ActionUpdate) == nil &&
 		principal.SeatType(id.SeatType).CanMutate() &&
-		h.resetMailer == nil &&
 		h.passwordLinkBaseURL != ""
 }
