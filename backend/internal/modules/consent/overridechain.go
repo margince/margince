@@ -62,12 +62,14 @@ type revokedOverride struct {
 
 // lockOverrideFamily serialises every writer of one carry chain.
 //
-// Keyed on the chain's ROOT, which every member can derive and which never
-// moves: carried_from is written once at the copy and never updated, so the
-// walk upward is over rows already settled. Erasure can cut the link — the
-// reference is ON DELETE SET NULL — and that is harmless here: the orphaned
-// copy simply becomes a root of its own, and the rows that would have shared
-// its key are gone.
+// Keyed on the chain's ROOT, which every member can derive and which does not
+// move: the carry's INSERT sets carried_from and no statement in this package
+// touches it afterwards, and TestEveryPackageOnlyWritesTablesItOwns
+// (backend/gates/tableownership_test.go) keeps this package the only one that
+// may. The walk upward is therefore over rows already settled. Erasure can cut
+// the link — the reference is ON DELETE SET NULL — and that is harmless here:
+// the orphaned copy becomes a root of its own, and the rows that would have
+// shared its key are gone with it.
 //
 // Transaction-scoped and spelled like every other lock in this package, over a
 // key no subject can collide with.
