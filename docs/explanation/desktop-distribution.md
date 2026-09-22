@@ -172,6 +172,12 @@ that changes every restart. A port already in use is **refused**, not
 silently moved, for the same reason. The api, the bus and — on Windows — the
 database use ephemeral ports because nothing outside the folder addresses them.
 
+The UI listener binds `127.0.0.1`. A container image that publishes the port
+sets `MARGINCE_WEB_BIND=0.0.0.0` in the launcher's process environment to bind
+every interface; the setting is not read from `margince.env`, because it
+describes the host the launcher runs on, not the installation. The api, the
+bus and the database keep loopback whatever the value.
+
 The launcher serves the SPA itself and proxies the api paths — the same list
 `frontend/vite.config.ts` proxies in dev. One origin means no CORS
 configuration the server has no other reason to carry, and it keeps the api's
