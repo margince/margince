@@ -1,4 +1,6 @@
-/* Base controls (foundation v0 vocabulary) — grows as tickets need atoms. */
+/* The DOCUMENT layer: element defaults, the chrome the browser paints itself,
+   and the base classes any markup may wear. app.css loads it once for the whole
+   page; a sheet owned by ONE component is imported by that component instead. */
 
 /* Which palette the BROWSER draws its own widgets from.
  *

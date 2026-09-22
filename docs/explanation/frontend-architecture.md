@@ -64,7 +64,7 @@ it, so a `?utm=…` never leaks into a screen name.
   verbatim from the design source of truth and pinned value-by-value by
   `tokens.test.ts`. `brand.css` is the DERIVED layer: every value there is a
   `color-mix()` of a canonical token, never a new hex. Then `atoms.tsx` (Button,
-  Badge, Avatar, Card, DataTable, Modal, …), `trust.tsx` (the trust vocabulary
+  Badge, Avatar, Card, Modal, …), `trust.tsx` (the trust vocabulary
   of §4 of the design language — `design/00-design-language.md` in the spec
   repo, which the section numbers on this page all refer to:
   `AutonomyDot`, `EvidenceChip`, `ConfidenceMeter`, `ProvenanceTag`,

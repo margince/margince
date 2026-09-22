@@ -16,7 +16,6 @@ import { useCanWrite, useHoldsAdminRole } from "../app/capability";
 import {
   Badge,
   Button,
-  DataTable,
   Disclosure,
   EmptyState,
   Field,
@@ -25,6 +24,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";

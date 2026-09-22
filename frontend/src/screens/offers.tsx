@@ -5,15 +5,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { navigate } from "../app/router";
-import {
-  Badge,
-  Button,
-  DataTable,
-  Field,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
+import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";

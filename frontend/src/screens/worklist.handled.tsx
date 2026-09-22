@@ -22,7 +22,7 @@
 // panel here does: one shape, so a reader learns it once.
 
 import { useRecordZone } from "../app/recordzone";
-import { DataTable } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";

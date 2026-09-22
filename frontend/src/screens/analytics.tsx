@@ -7,13 +7,13 @@ import { ENTITY } from "../app/entity";
 import { routeHash, useRoute } from "../app/router";
 import {
   Button,
-  DataTable,
   EmptyState,
   SectionHeader,
   Skeleton,
   StatCard,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";

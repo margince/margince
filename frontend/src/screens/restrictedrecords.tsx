@@ -6,7 +6,6 @@ import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
-  DataTable,
   EmptyState,
   Field,
   Textarea,
@@ -14,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";

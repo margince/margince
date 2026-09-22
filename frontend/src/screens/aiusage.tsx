@@ -3,12 +3,8 @@ import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import {
-  Button,
-  DataTable,
-  Disclosure,
-  EmptyState,
-} from "../design-system/atoms";
+import { Button, Disclosure, EmptyState } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber } from "../format/format";

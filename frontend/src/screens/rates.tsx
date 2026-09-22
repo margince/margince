@@ -5,12 +5,12 @@ import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
 import {
   Button,
-  DataTable,
   EmptyState,
   Field,
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";

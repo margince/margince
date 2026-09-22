@@ -11,13 +11,13 @@ import { useUnsavedGuard } from "../app/unsaved";
 import {
   Badge,
   Button,
-  DataTable,
   Disclosure,
   EmptyState,
   Field,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";

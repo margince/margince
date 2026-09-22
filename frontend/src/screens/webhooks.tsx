@@ -14,7 +14,6 @@ import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
-  DataTable,
   EmptyState,
   Modal,
   OverflowMenu,
@@ -22,6 +21,7 @@ import {
 } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
