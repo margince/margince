@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { stubClipboard } from "./clipboard-testing";
+import { stubClipboard, stubDeferredClipboard } from "./clipboard-testing";
 import { useClipboardCopy } from "./clipboardcopy";
 
 const LABELS = {
@@ -123,5 +123,30 @@ describe("useClipboardCopy", () => {
     expect(
       screen.queryByText(/this browser refused the clipboard/i),
     ).toBeNull();
+  });
+
+  it("ignores a write a later press has already overtaken", async () => {
+    // Two presses are two writes, and they can settle in either order. A
+    // rejection arriving after a success used to draw the failure notice over a
+    // copy that had worked, and to retract a Copied the reader had already read.
+    const user = userEvent.setup();
+    const deferred = stubDeferredClipboard();
+    renderProbe("the-link");
+    const button = screen.getByRole("button", { name: "Copy link" });
+
+    await user.click(button);
+    await user.click(button);
+    expect(deferred.writes).toHaveLength(2);
+    deferred.writes[1].resolve();
+    await screen.findByRole("button", { name: "Copied" });
+    deferred.writes[0].reject();
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/this browser refused the clipboard/i),
+      ).toBeNull(),
+    );
+    expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
+    deferred.restore();
   });
 });

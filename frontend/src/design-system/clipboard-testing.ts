@@ -84,3 +84,49 @@ export function restoreClipboardStubs(): void {
     restore();
   }
 }
+
+/** One write the test settles by hand, so two can be settled out of order. */
+export type DeferredWrite = Readonly<{
+  text: string;
+  resolve: () => void;
+  reject: () => void;
+}>;
+
+/**
+ * A clipboard whose writes hang until the test says otherwise.
+ *
+ * Two presses are two independent writes, and the order they SETTLE in is not
+ * the order they were made — which is the only way to prove a control ignores
+ * an attempt a newer one has overtaken. `stubClipboard` cannot express it: its
+ * writes settle before the click handler returns.
+ */
+export function stubDeferredClipboard(): Readonly<{
+  writes: readonly DeferredWrite[];
+  restore: () => void;
+}> {
+  const writes: DeferredWrite[] = [];
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
+      writeText: (text: string) =>
+        new Promise<void>((resolve, reject) => {
+          writes.push({
+            text,
+            resolve,
+            reject: () => reject(new Error("refused")),
+          });
+        }),
+    },
+  });
+  return {
+    writes,
+    restore: () => {
+      if (original === undefined) {
+        Reflect.deleteProperty(navigator, "clipboard");
+        return;
+      }
+      Object.defineProperty(navigator, "clipboard", original);
+    },
+  };
+}

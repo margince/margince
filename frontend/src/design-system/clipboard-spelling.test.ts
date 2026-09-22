@@ -111,9 +111,31 @@ function destructuresTheClipboard(node: ts.Node): boolean {
     return false;
   }
   return node.name.elements.some(
-    (element) =>
-      (element.propertyName ?? element.name).getText() === "clipboard",
+    (element) => boundPropertyName(element) === "clipboard",
   );
+}
+
+/**
+ * The property a binding element takes, where the source states which.
+ *
+ * `{ clipboard }`, `{ clipboard: writer }`, `{ "clipboard": writer }` and
+ * `{ ["clipboard"]: writer }` all bind the same property; only the first two
+ * spell it as a bare identifier. Reading the node's TEXT would carry the quotes
+ * and the brackets into the comparison, so the quoted forms would fail to match
+ * — and a spelling this cannot see is the one way the gate fails short.
+ */
+function boundPropertyName(element: ts.BindingElement): string | null {
+  const key = element.propertyName ?? element.name;
+  if (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) {
+    return key.text;
+  }
+  if (
+    ts.isComputedPropertyName(key) &&
+    ts.isStringLiteralLike(key.expression)
+  ) {
+    return key.expression.text;
+  }
+  return null;
 }
 
 /** Whether `expression` names the navigator, however it was reached. */
@@ -186,6 +208,8 @@ const PLANTED_SPELLINGS = [
   'window["navigator"].clipboard.writeText(d).then(ok, no);',
   "const { clipboard } = navigator;",
   "const { clipboard: writer } = window.navigator;",
+  'const { "clipboard": quoted } = navigator;',
+  'const { ["clipboard"]: computed } = navigator;',
 ] as const;
 
 describe("one clipboard spelling", () => {

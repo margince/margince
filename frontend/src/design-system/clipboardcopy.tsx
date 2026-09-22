@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { Callout } from "./callout";
 
@@ -52,6 +52,11 @@ export function useClipboardCopy(
   const t = useT();
   const [written, setWritten] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // Which attempt the reader is waiting on. Two presses are two independent
+  // writes that can settle in either order, and an older one landing last would
+  // speak for the newer: a rejection arriving after a success draws the failure
+  // notice over a copy that worked.
+  const attempt = useRef(0);
   const copied = written === text;
 
   function copy() {
@@ -59,6 +64,7 @@ export function useClipboardCopy(
     // clipboard throws on the property access rather than rejecting, and a bare
     // `.writeText(…).catch(…)` never reaches its handler. An email-less
     // installation served over plain http is that deployment, not an edge case.
+    const mine = ++attempt.current;
     const writer = navigator.clipboard;
     if (!writer) {
       // Dropping the claim as the rejection branch does: a control that had
@@ -70,11 +76,13 @@ export function useClipboardCopy(
     }
     writer.writeText(text).then(
       () => {
+        if (mine !== attempt.current) return;
         setWritten(text);
         setFailed(false);
         onCopied?.();
       },
       () => {
+        if (mine !== attempt.current) return;
         setWritten(null);
         setFailed(true);
       },
