@@ -167,12 +167,23 @@ nothing for a role whose deal cell reads ----.
 ### Hiding individual fields
 
 A role can withhold single fields from the records it may otherwise read. The
-server enforces it — platform/auth renders the predicate and refuses a sort or
-filter over a withheld column — but only the DEAL read applies a role's mask
-today, and no SEEDED role carries one, so nothing on this page says "this role
-sees the record but not the amount on it". The last seeded mask, a rep's
-withheld deal amount, was dropped in a later migration; the machinery stayed,
-because an operator may still author a mask on a custom role.
+server enforces it on every path that returns the value: the record reads, the
+exports and the filter preview, the report aggregates, the structured query —
+which refuses a predicate as it refuses a sort, since filtering by a value is
+reading it — and the audit history, which withholds a field in both the before
+and after images. A mask also takes the fields its own would be recoverable
+from, so a currency never travels beside a withheld amount.
+
+What an operator may configure is narrower than what a mask withholds, and the
+catalog in migrations/testdata/maskable_fields.txt is the list. A commission
+entry's tier is withheld because a partner mask reaches it, never because
+anybody named it — a second configuration for one fact is how the withholding
+comes apart.
+
+No SEEDED role carries a mask, so nothing on this page says "this role sees the
+record but not the amount on it". The last seeded one, a rep's withheld deal
+amount, was dropped in a later migration; the machinery stayed, because an
+operator may still author a mask on a custom role.
 
 The deal, project and contract reads also report masked_fields, and it is a
 DIFFERENT mechanism: each withholds a REFERENCE to another record the reader
