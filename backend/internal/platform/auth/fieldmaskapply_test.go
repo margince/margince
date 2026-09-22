@@ -81,8 +81,8 @@ func TestAConditionedMaskOnAnUnshareableObjectWithholdsEveryRow(t *testing.T) {
 		if row.unitPrice != nil {
 			t.Errorf("row %d kept its unit price under a condition nothing can lift", i)
 		}
-		if !slices.Equal(row.masked, []string{"unit_price_minor", "currency"}) {
-			t.Errorf("row %d named %v, want the price and the currency that would give it back", i, row.masked)
+		if !slices.Equal(row.masked, []string{"unit_price_minor"}) {
+			t.Errorf("row %d named %v, want the price the condition could not lift on", i, row.masked)
 		}
 	}
 }

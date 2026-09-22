@@ -27,7 +27,6 @@ type maskSubject struct{ object, field string }
 // offer has no table here, so it gets a name of its own.
 const (
 	maskObjDeal       = tableDeal
-	maskObjOffer      = "offer"
 	maskFieldCurrency = "currency"
 )
 
@@ -50,22 +49,7 @@ var maskGroups = map[maskSubject][]maskSubject{
 	// currency that would otherwise still read as a priced deal.
 	{maskObjDeal, "amount_minor"}:       {{maskObjDeal, "expected_arr_minor"}, {maskObjDeal, maskFieldCurrency}},
 	{maskObjDeal, "expected_arr_minor"}: {{maskObjDeal, "amount_minor"}, {maskObjDeal, maskFieldCurrency}},
-	{"product", "unit_price_minor"}:     {{"product", maskFieldCurrency}},
-	// An offer's money surface is one thing or nothing. Quantity and discount
-	// stay readable, so a line net gives the unit price back by division, and a
-	// one-line offer's gross simply is that price plus its tax.
-	{maskObjOffer, "unit_price_minor"}: {
-		{maskObjOffer, "line_net_minor"},
-		{maskObjOffer, "line_tax_minor"},
-		{maskObjOffer, "line_total_minor"},
-		{maskObjOffer, "net_minor"},
-		{maskObjOffer, "tax_minor"},
-		{maskObjOffer, "gross_minor"},
-		{maskObjOffer, "net_tcv_minor"},
-		{maskObjOffer, "arr_minor"},
-		{maskObjOffer, maskFieldCurrency},
-	},
-	{"partner", "margin_tier"}: {{"commission", "margin_tier_at_accrual"}},
+	{"partner", "margin_tier"}:          {{"commission", "margin_tier_at_accrual"}},
 }
 
 // withheldSubjects is the closure of ONE configured mask: the pair it names,
